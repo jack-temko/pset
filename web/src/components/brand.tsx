@@ -10,7 +10,7 @@ export function Mark({ className }: { className?: string }) {
     <svg
       viewBox="0 0 32 32"
       aria-hidden
-      className={cn('size-6 shrink-0', className)}
+      className={cn('size-mark shrink-0', className)}
     >
       <rect width="32" height="32" rx="7" fill="#224dac" />
       <g transform="translate(4.40 20.91)">
