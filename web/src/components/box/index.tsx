@@ -130,7 +130,7 @@ export function Counter({ className, ...props }: ComponentProps<'span'>) {
   return (
     <span
       className={cn(
-        'ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground/20 px-1 text-xs font-medium tabular-nums',
+        'ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground/20 px-1 font-sans text-xs font-medium tabular-nums',
         className,
       )}
       {...props}

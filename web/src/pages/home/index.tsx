@@ -1,9 +1,10 @@
+import { useState } from 'react'
 import { BookOpen } from 'lucide-react'
 
 import { AppShell, PageShell } from '@/components/shell'
 import { BookTile } from '@/components/book-tile'
 import { Button } from '@/components/button'
-import { Box, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@/components/box'
+import { Box, BoxFooter, BoxRow, Counter, RowValue } from '@/components/box'
 import { DurationValue, StatTile, type Segment } from '@/components/stat-tile'
 import { BOOKS, DUE, DUE_TOTAL, WEEK, type Book, type Due, type Week } from '@/lib/sample'
 import { cn } from '@/lib/utils'
@@ -14,44 +15,23 @@ function greeting(hour: number): string {
   return 'Good evening'
 }
 
-/** What is due across every book — the first thing on the page, because it
- *  is the only thing with a deadline. */
-function DueList({ items, total }: { items: Due[]; total: number }) {
+/** A section's header row: the serif title (and an optional count) on the
+ *  left, one optional quiet action on the right. */
+function SectionHeader({ title, count, action }: { title: string; count?: number; action?: React.ReactNode }) {
   return (
-    <Box>
-      <BoxHeader>
-        <span>
-          Due
-          <Counter>{total}</Counter>
-        </span>
-        <Button variant="outline" size="sm">
-          New homework
-        </Button>
-      </BoxHeader>
-      {items.map((d) => (
-        <BoxRow
-          key={d.id}
-          href={`/homework/${d.id}`}
-          leading={<BookOpen />}
-          title={d.title}
-          description={`${d.book} · ${d.questions} questions`}
-          trailing={<RowValue className={cn(d.urgent && 'text-warning')}>{d.due}</RowValue>}
-        />
-      ))}
-      {total > items.length && (
-        <BoxFooter>
-          <span>
-            Showing {items.length} of {total}
-          </span>
-        </BoxFooter>
-      )}
-    </Box>
+    <div className="flex min-h-control items-center justify-between gap-3">
+      <h2 className="font-heading text-xl">
+        {title}
+        {count !== undefined && <Counter>{count}</Counter>}
+      </h2>
+      {action}
+    </div>
   )
 }
 
 /** This week's numbers: time on each activity, then questions worked with
  *  the split as a stacked bar. Reports, never nags — no targets, no deltas,
- *  no streaks. */
+ *  no streaks. First on the page, so the week is visible without scrolling. */
 function ThisWeek({ week }: { week: Week }) {
   const total = week.homework + week.reading + week.asking
   const segments: Segment[] =
@@ -66,7 +46,7 @@ function ThisWeek({ week }: { week: Week }) {
 
   return (
     <section className="space-y-5">
-      <h2 className="font-heading text-xl">This week</h2>
+      <SectionHeader title="This week" />
       <div className="grid grid-cols-4 gap-4">
         <StatTile
           label="Homework"
@@ -101,12 +81,66 @@ function ThisWeek({ week }: { week: Week }) {
   )
 }
 
-function Shelf({ books }: { books: Book[] }) {
+/** What is due across every book — the only thing on the page with a
+ *  deadline. The section header owns the title, count and action; the Box
+ *  holds only rows and its door. */
+function Homework({ items, total }: { items: Due[]; total: number }) {
   return (
     <section className="space-y-5">
-      <h2 className="font-heading text-xl">Your books</h2>
+      <SectionHeader
+        title="Homework"
+        count={total}
+        action={
+          <Button variant="outline" size="sm">
+            New homework
+          </Button>
+        }
+      />
+      <Box>
+        {items.map((d) => (
+          <BoxRow
+            key={d.id}
+            href={`/homework/${d.id}`}
+            leading={<BookOpen />}
+            title={d.title}
+            description={`${d.book} · ${d.questions} questions`}
+            trailing={<RowValue className={cn(d.urgent && 'text-warning')}>{d.due}</RowValue>}
+          />
+        ))}
+        {total > items.length && (
+          <BoxFooter>
+            <span>
+              Showing {items.length} of {total}
+            </span>
+          </BoxFooter>
+        )}
+      </Box>
+    </section>
+  )
+}
+
+/** One row of covers by default — the door shows the rest in place, since
+ *  there is no other screen for the shelf to lead to. */
+const SHELF_ROW = 5
+
+function Shelf({ books }: { books: Book[] }) {
+  const [open, setOpen] = useState(false)
+  const shown = open ? books : books.slice(0, SHELF_ROW)
+
+  return (
+    <section className="space-y-5">
+      <SectionHeader
+        title="Your books"
+        action={
+          books.length > SHELF_ROW && (
+            <Button variant="ghost" size="sm" onClick={() => setOpen((o) => !o)}>
+              {open ? 'Show fewer' : `Show all ${books.length}`}
+            </Button>
+          )
+        }
+      />
       <div className="grid grid-cols-5 items-start gap-6">
-        {books.map((b) => (
+        {shown.map((b) => (
           <BookTile key={b.sha256} book={b} />
         ))}
       </div>
@@ -115,8 +149,8 @@ function Shelf({ books }: { books: Book[] }) {
 }
 
 /**
- * Home. The greeting, what's due across every book, the shelf, and this
- * week's numbers. The top bar's middle is empty here: you are home, and the
+ * Home. The greeting, this week's numbers, what's due across every book,
+ * then the shelf. The top bar's middle is empty here: you are home, and the
  * greeting says so.
  */
 export function Home() {
@@ -124,9 +158,9 @@ export function Home() {
     <AppShell>
       <PageShell>
         <h1 className="font-heading text-4xl">{greeting(new Date().getHours())}.</h1>
-        <DueList items={DUE} total={DUE_TOTAL} />
-        <Shelf books={BOOKS} />
         <ThisWeek week={WEEK} />
+        <Homework items={DUE} total={DUE_TOTAL} />
+        <Shelf books={BOOKS} />
       </PageShell>
     </AppShell>
   )
