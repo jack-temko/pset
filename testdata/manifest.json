@@ -1,0 +1,226 @@
+{
+  "digital": {
+    "file": "sample-digital.pdf",
+    "sha256": "e77a0b90ce003fde3a5df3c113401cce91a115608c883642dbdaea17e1a74898",
+    "pages": 6,
+    "title": "Foundations of Brontolithics",
+    "author": "H. Marlowe Voss",
+    "subject": "Brontolithics: engineered thunder, kettle arrays, and the Voss Register",
+    "facts": [
+      {
+        "id": "F1",
+        "text": "The Voss Register of 1912 catalogued 34 storm families across the Mirefill Basin.",
+        "page": 3
+      },
+      {
+        "id": "F2",
+        "text": "Practitioners call a single manufactured clap a gavel, from the old Vairic word gavvel.",
+        "page": 3
+      },
+      {
+        "id": "F3",
+        "text": "Every kettle carries a call sign stamped on its collar, such as KAX-4471, and no two kettles may share a sign.",
+        "page": 4
+      },
+      {
+        "id": "F4",
+        "text": "Station Umbel-7 on Lake Vair runs 12 kettles at a mooring depth of 40 fathoms.",
+        "page": 4
+      },
+      {
+        "id": "F5",
+        "text": "A collar must be re-silvered every 82 days; ringers call the chore silverpoint and chalk it above the bell shed.",
+        "page": 4
+      },
+      {
+        "id": "F6",
+        "text": "Loudness is measured in karsts, and a healthy gavel reads 0.37 karsts on the collar meter.",
+        "page": 5
+      },
+      {
+        "id": "F7",
+        "text": "The karst scale was fixed by Dr. Odile Prane at the Ninth Concord of 1954 and has not changed since.",
+        "page": 5
+      },
+      {
+        "id": "F8",
+        "text": "A storm family is called settled once it has gone 19 days without an echo.",
+        "page": 5
+      },
+      {
+        "id": "F9",
+        "text": "Rule 9 forbids kettle work within 3 leagues of a heronry during nesting season.",
+        "page": 6
+      },
+      {
+        "id": "F10",
+        "text": "Every gavel must be filed on a TVR-09 slip and countersigned by a second ringer.",
+        "page": 6
+      },
+      {
+        "id": "F11",
+        "text": "The deepest gavel on record came from Vair-Deep 5, at 212 fathoms, on 17 October 1961.",
+        "page": 6
+      },
+      {
+        "id": "F12",
+        "text": "Apprentices end each day by speaking the closing words of the Oath: quiet skies, loud learning.",
+        "page": 6
+      }
+    ],
+    "outline": [
+      {
+        "id": "O1",
+        "title": "What Is Brontolithics?",
+        "page": 3,
+        "level": 1
+      },
+      {
+        "id": "O2",
+        "title": "The Voss Register",
+        "page": 3,
+        "level": 2
+      },
+      {
+        "id": "O3",
+        "title": "The Kettle Array",
+        "page": 4,
+        "level": 1
+      },
+      {
+        "id": "O4",
+        "title": "Measuring a Storm",
+        "page": 5,
+        "level": 1
+      },
+      {
+        "id": "O5",
+        "title": "Karsts and the Collar Meter",
+        "page": 5,
+        "level": 2
+      },
+      {
+        "id": "O6",
+        "title": "Safety and Ethics",
+        "page": 6,
+        "level": 1
+      }
+    ]
+  },
+  "scanned": {
+    "file": "sample-scanned.pdf",
+    "sha256": "60462f01df7423284df0c6b56b0ee6b030a24d3383541de676ca745f6cd8a4d5",
+    "pages": 6,
+    "facts": [
+      {
+        "id": "S1",
+        "text": "This primer was printed for the station school at Umbel-7 in the winter of 1963.",
+        "page": 3
+      },
+      {
+        "id": "S2",
+        "text": "A first-year apprentice is expected to ring a clean gavel within 40 tries.",
+        "page": 3
+      },
+      {
+        "id": "S3",
+        "text": "Gavel slips use the TVR-09 form, one slip per gavel, filed by storm family.",
+        "page": 4
+      },
+      {
+        "id": "S4",
+        "text": "By the winter of 1971 the Register held 4,006 gavels.",
+        "page": 4
+      },
+      {
+        "id": "S5",
+        "text": "Lake Vair freezes for 55 nights each year, and while it freezes the kettles fall silent.",
+        "page": 5
+      },
+      {
+        "id": "S6",
+        "text": "The oldest family, Brontide, has returned every winter since 1908.",
+        "page": 5
+      },
+      {
+        "id": "S7",
+        "text": "The Oath ends with six words: quiet skies, loud learning.",
+        "page": 6
+      },
+      {
+        "id": "S8",
+        "text": "A ringer may take the Oath only in sight of open water, with one hand on the collar of the oldest kettle at the station.",
+        "page": 6
+      }
+    ]
+  },
+  "flat": {
+    "file": "sample-flat.pdf",
+    "sha256": "28cc80e4854a5fbdf30f5fbff23b3aa4e1ee5975021907711a63bddccf9337f8",
+    "pages": 4,
+    "title": "Field Notes on Kettle Weather",
+    "author": "Odile Prane",
+    "facts": [
+      {
+        "id": "T1",
+        "text": "A steady east wind means the collars will sing flat, and every ringer learns to read the sky before touching a striker.",
+        "page": 1
+      },
+      {
+        "id": "T2",
+        "text": "Cloud bases below 600 feet sharpen a gavel; above 1,200 feet the sound spreads and loses its edge.",
+        "page": 1
+      },
+      {
+        "id": "T3",
+        "text": "The Register recommends waiting out a sandstorm entirely; a gritty gavel is a broken kettle.",
+        "page": 2
+      },
+      {
+        "id": "T4",
+        "text": "A collar cleaned at every silverpoint lasts a full season; one that is skipped cracks along the striking ridge.",
+        "page": 3
+      },
+      {
+        "id": "T5",
+        "text": "Ringers polish with soft wool only, never with the abrasive pads sold at the harbor stalls.",
+        "page": 3
+      },
+      {
+        "id": "T6",
+        "text": "A collar crack is called a whisper line, and any kettle with one is moored apart until re-silvered.",
+        "page": 3
+      },
+      {
+        "id": "T7",
+        "text": "When the lake freezes the kettles fall silent, and the sheds turn to mending nets and copying the Register.",
+        "page": 4
+      },
+      {
+        "id": "T8",
+        "text": "The silence ends on the first open-water dawn, when the oldest ringer strikes the welcome gavel.",
+        "page": 4
+      }
+    ],
+    "headings": [
+      {
+        "id": "H1",
+        "title": "Reading the Sky",
+        "page": 1,
+        "level": 1
+      },
+      {
+        "id": "H3",
+        "title": "Collar Maintenance",
+        "page": 3,
+        "level": 1
+      },
+      {
+        "id": "H4",
+        "title": "Winter Silence",
+        "page": 4,
+        "level": 1
+      }
+    ]
+  }
+}

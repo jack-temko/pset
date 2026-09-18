@@ -1,0 +1,121 @@
+# PSet
+
+PSet is a study engine for digital textbooks: it ingests textbook PDFs and
+powers homework walkthroughs, quizzes, and answers. The core is a Go engine
+with a single adapter: an HTTP server that serves the JSON API and the
+embedded web interface.
+
+## Status: S5
+
+One-shot ingest as a background job. Importing a PDF hashes it, copies it
+into the library, extracts its text, OCRs scans page by page (resumable,
+local tesseract), and indexes structure (PDF bookmarks, font-size inference,
+or structural patterns over OCR text) — one queued, cancellable job that
+survives restarts. Serial job queue with progress, ETA, and cancel over the
+API; the web UI adds a Tasks card in the sidebar, live progress in the
+library, and a
+clickable table of contents in the reader. SQLite model layer (pure Go, no
+cgo), doctor checks, deterministic sample textbooks, two-tier test suite.
+
+S5 adds Ask: full-text and local-embedding retrieval fused over a book's
+pages, and vision-augmented streaming answers — each page is sent to a
+hardcoded vision chat model both as extracted text and as a rendered image.
+The model writes structured JSON envelopes (equation, steps, theorem,
+definition, note) inside the streamed markdown; the engine extracts them
+mid-stream, validates each against an embedded JSON Schema, repairs a
+broken payload with one extra model round, and re-emits typed SSE events.
+Completed answers persist as ordered segment lists (prose, validated
+envelopes, degraded raw), with inline `[p. N]` citations parsed in the
+engine and stored on the answer; the web renders cards and never parses a
+fence. Page
+embeddings are built by a queued, resumable `embed` job; questions run over
+SSE; conversations persist per book. The LLM connection (endpoints, key,
+embedding model) lives in `~/.pset/config.json`, editable through the
+settings API.
+
+## Usage
+
+```sh
+go build -o pset ./cmd/pset
+
+# Serve the web interface + API (the SPA is embedded in the binary):
+pset                       # http://127.0.0.1:8420
+pset --addr 0.0.0.0:8420   # listen address override
+pset --db /tmp/pset.db     # database override (also $PSET_DB)
+pset --verbose             # developer trace on stderr
+pset --version
+```
+
+Import happens in the UI — drag & drop, or a path on the server machine —
+and runs as a background job: the book appears in the library immediately
+while text extraction, OCR, and structure indexing continue. The task
+center in the navbar shows every job's stage, progress, ETA, and cancel
+button, and survives server restarts (paused jobs auto-resume).
+
+Data lives in `~/.pset/`: `pset.db` (SQLite), `config.json` (LLM
+connection: `apiBaseURL`, `apiKey`, `embedBaseURL`, `embedModel`),
+`library/<sha256>.pdf` (content-addressed imports), `spool/` (staged upload
+sources).
+
+## Layout
+
+```
+cmd/pset/         server entrypoint (flags, signals, job runner)
+internal/engine/  core: ingest stages, job runner, OCR, structure, ask, doctor
+internal/llm/     OpenAI-compatible client: streaming chat + embeddings
+internal/api/     HTTP adapter: /api JSON + SSE + embedded SPA serving
+internal/pdf/     poppler wrapper (metadata, text extraction, XML, page images)
+internal/store/   SQLite model layer and migrations
+web/              frontend adapter (React SPA, embedded via web/embed.go)
+tools/samplegen/  generates the deterministic sample textbooks
+testdata/         committed sample books + manifest used by tests
+```
+
+The engine never parses input or renders output; adapters own both. Doctor
+results are a `Report` of checks with findings (`info`/`warning`/`error`),
+so the API and frontend render the same data their own way.
+
+Each layer folder carries its own README covering purpose, dependencies, and
+contracts — start there before changing a layer.
+
+## Development
+
+```sh
+go build ./... && go test ./...
+go build -o pset ./cmd/pset
+```
+
+### Frontend
+
+```sh
+cd web
+npm install
+npm run build    # dist/ is embedded by web/embed.go; rebuild the binary after
+npm run dev      # Vite dev server, /api/* proxied to pset
+```
+
+`web/README.md` carries the UI standards — the design language, tokens, and
+component conventions every page follows.
+
+### Testing
+
+Two tiers, separated by cost:
+
+- **Deterministic** (free, offline): `go test ./...`. Poppler/tesseract
+  tests skip automatically when the tools are not installed; the LLM client
+  and SSE paths run against httptest fakes, so nothing needs a network.
+- **Costs tokens**: `go test -tags llm ./...` — gated behind the `llm`
+  build tag, never run by default. A live smoke test sends one embedding
+  and one streamed "reply with the word ok" ask to the real endpoints;
+  envelope prompt-conformance probes make the real model emit all five
+  kinds and repair one deliberately broken payload. Everything skips
+  unless `~/.pset/config.json` carries an API key and the endpoints
+  answer.
+
+Sample textbooks in `testdata/` are generated by `tools/samplegen` and must
+regenerate byte-identical; `testdata/README.md` maps every pipeline stage to
+the test covering it.
+
+External tools: poppler-utils (`pdfinfo`, `pdftotext`, `pdftohtml`,
+`pdftoppm`) for ingest, indexing, and page images, and tesseract-ocr for
+OCR of scanned books. The doctor page reports any of them when missing.

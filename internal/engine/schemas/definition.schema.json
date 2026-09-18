@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "definition.schema.json",
+  "$comment": "Same shape and caps as theorem: statement 5000 chars, title 200, note 500.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "statement"],
+  "properties": {
+    "title": { "type": "string", "maxLength": 200 },
+    "statement": { "type": "string", "maxLength": 5000 },
+    "note": { "type": "string", "maxLength": 500 }
+  }
+}

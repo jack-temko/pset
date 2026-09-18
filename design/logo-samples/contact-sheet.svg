@@ -1,0 +1,404 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="486" height="896" viewBox="0 0 486 896" font-family="DejaVu Sans">
+<rect width="486" height="896" fill="#fbfaf6"/>
+<text x="18" y="30" font-size="17" font-weight="bold" fill="#23201a">PSet — mark samples</text>
+<text x="18" y="48" font-size="10.5" fill="#23201a" opacity="0.55">tile 48 / 32 / 16 · paper 32 · dark sidebar 32</text><text x="18" y="104" font-size="11.5" fill="#23201a">folio</text><svg x="138" y="76" width="48" height="48" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 10 C13.8 8.45 11.2 8.05 8.5 8.6 V21.6 C11.2 21.05 13.8 21.45 16 23"/>
+    <path d="M16 10 C18.2 8.45 20.8 8.05 23.5 8.6 V21.6 C20.8 21.05 18.2 21.45 16 23"/>
+  </g>
+</svg><svg x="210" y="84" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 10 C13.8 8.45 11.2 8.05 8.5 8.6 V21.6 C11.2 21.05 13.8 21.45 16 23"/>
+    <path d="M16 10 C18.2 8.45 20.8 8.05 23.5 8.6 V21.6 C20.8 21.05 18.2 21.45 16 23"/>
+  </g>
+</svg><svg x="282" y="92" width="16" height="16" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 10 C13.8 8.45 11.2 8.05 8.5 8.6 V21.6 C11.2 21.05 13.8 21.45 16 23"/>
+    <path d="M16 10 C18.2 8.45 20.8 8.05 23.5 8.6 V21.6 C20.8 21.05 18.2 21.45 16 23"/>
+  </g>
+</svg><svg x="338" y="84" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#fffefc" stroke="#e1e0da" stroke-width="1"/>
+  
+  <g fill="none" stroke="#23201a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 10 C13.8 8.45 11.2 8.05 8.5 8.6 V21.6 C11.2 21.05 13.8 21.45 16 23"/>
+    <path d="M16 10 C18.2 8.45 20.8 8.05 23.5 8.6 V21.6 C20.8 21.05 18.2 21.45 16 23"/>
+  </g>
+</svg><svg x="402" y="84" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#201e18"/>
+  
+  <g fill="none" stroke="#dfded8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 10 C13.8 8.45 11.2 8.05 8.5 8.6 V21.6 C11.2 21.05 13.8 21.45 16 23"/>
+    <path d="M16 10 C18.2 8.45 20.8 8.05 23.5 8.6 V21.6 C20.8 21.05 18.2 21.45 16 23"/>
+  </g>
+</svg><text x="18" y="176" font-size="11.5" fill="#23201a">folio-spark</text><svg x="138" y="148" width="48" height="48" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 11.2 C14 9.9 11.7 9.4 9.25 10 V21.5 C11.7 21 14 21.4 16 22.8"/>
+    <path d="M16 11.2 C18 9.9 20.3 9.4 22.75 10 V21.5 C20.3 21 18 21.4 16 22.8"/>
+    <path d="M16 11.2 V22.8"/>
+  </g>
+  <path d="M25.5 3 C25.83 5.05 26.7 5.92 28.75 6.25 C26.7 6.58 25.83 7.45 25.5 9.5 C25.17 7.45 24.3 6.58 22.25 6.25 C24.3 5.92 25.17 5.05 25.5 3 Z" fill="#fbfaf6"/>
+</svg><svg x="210" y="156" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 11.2 C14 9.9 11.7 9.4 9.25 10 V21.5 C11.7 21 14 21.4 16 22.8"/>
+    <path d="M16 11.2 C18 9.9 20.3 9.4 22.75 10 V21.5 C20.3 21 18 21.4 16 22.8"/>
+    <path d="M16 11.2 V22.8"/>
+  </g>
+  <path d="M25.5 3 C25.83 5.05 26.7 5.92 28.75 6.25 C26.7 6.58 25.83 7.45 25.5 9.5 C25.17 7.45 24.3 6.58 22.25 6.25 C24.3 5.92 25.17 5.05 25.5 3 Z" fill="#fbfaf6"/>
+</svg><svg x="282" y="164" width="16" height="16" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 11.2 C14 9.9 11.7 9.4 9.25 10 V21.5 C11.7 21 14 21.4 16 22.8"/>
+    <path d="M16 11.2 C18 9.9 20.3 9.4 22.75 10 V21.5 C20.3 21 18 21.4 16 22.8"/>
+    <path d="M16 11.2 V22.8"/>
+  </g>
+  <path d="M25.5 3 C25.83 5.05 26.7 5.92 28.75 6.25 C26.7 6.58 25.83 7.45 25.5 9.5 C25.17 7.45 24.3 6.58 22.25 6.25 C24.3 5.92 25.17 5.05 25.5 3 Z" fill="#fbfaf6"/>
+</svg><svg x="338" y="156" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#fffefc" stroke="#e1e0da" stroke-width="1"/>
+  
+  <g fill="none" stroke="#23201a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 11.2 C14 9.9 11.7 9.4 9.25 10 V21.5 C11.7 21 14 21.4 16 22.8"/>
+    <path d="M16 11.2 C18 9.9 20.3 9.4 22.75 10 V21.5 C20.3 21 18 21.4 16 22.8"/>
+    <path d="M16 11.2 V22.8"/>
+  </g>
+  <path d="M25.5 3 C25.83 5.05 26.7 5.92 28.75 6.25 C26.7 6.58 25.83 7.45 25.5 9.5 C25.17 7.45 24.3 6.58 22.25 6.25 C24.3 5.92 25.17 5.05 25.5 3 Z" fill="#23201a"/>
+</svg><svg x="402" y="156" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#201e18"/>
+  
+  <g fill="none" stroke="#dfded8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 11.2 C14 9.9 11.7 9.4 9.25 10 V21.5 C11.7 21 14 21.4 16 22.8"/>
+    <path d="M16 11.2 C18 9.9 20.3 9.4 22.75 10 V21.5 C20.3 21 18 21.4 16 22.8"/>
+    <path d="M16 11.2 V22.8"/>
+  </g>
+  <path d="M25.5 3 C25.83 5.05 26.7 5.92 28.75 6.25 C26.7 6.58 25.83 7.45 25.5 9.5 C25.17 7.45 24.3 6.58 22.25 6.25 C24.3 5.92 25.17 5.05 25.5 3 Z" fill="#dfded8"/>
+</svg><text x="18" y="248" font-size="11.5" fill="#23201a">bookmark</text><svg x="138" y="220" width="48" height="48" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M10.5 6.75 H21.5 V25.25 L16 20.25 L10.5 25.25 Z"
+        fill="none" stroke="#fbfaf6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg><svg x="210" y="228" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M10.5 6.75 H21.5 V25.25 L16 20.25 L10.5 25.25 Z"
+        fill="none" stroke="#fbfaf6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg><svg x="282" y="236" width="16" height="16" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M10.5 6.75 H21.5 V25.25 L16 20.25 L10.5 25.25 Z"
+        fill="none" stroke="#fbfaf6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg><svg x="338" y="228" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#fffefc" stroke="#e1e0da" stroke-width="1"/>
+  
+  <path d="M10.5 6.75 H21.5 V25.25 L16 20.25 L10.5 25.25 Z"
+        fill="none" stroke="#23201a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg><svg x="402" y="228" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#201e18"/>
+  
+  <path d="M10.5 6.75 H21.5 V25.25 L16 20.25 L10.5 25.25 Z"
+        fill="none" stroke="#dfded8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg><text x="18" y="320" font-size="11.5" fill="#23201a">pdot</text><svg x="138" y="292" width="48" height="48" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M11.75 25.25 V7.75 H17.5 A5.25 5.25 0 0 1 17.5 18.25 H11.75"
+        fill="none" stroke="#fbfaf6" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="23.6" cy="24.4" r="2.35" fill="#dca331"/>
+</svg><svg x="210" y="300" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M11.75 25.25 V7.75 H17.5 A5.25 5.25 0 0 1 17.5 18.25 H11.75"
+        fill="none" stroke="#fbfaf6" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="23.6" cy="24.4" r="2.35" fill="#dca331"/>
+</svg><svg x="282" y="308" width="16" height="16" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M11.75 25.25 V7.75 H17.5 A5.25 5.25 0 0 1 17.5 18.25 H11.75"
+        fill="none" stroke="#fbfaf6" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="23.6" cy="24.4" r="2.35" fill="#dca331"/>
+</svg><svg x="338" y="300" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#fffefc" stroke="#e1e0da" stroke-width="1"/>
+  
+  <path d="M11.75 25.25 V7.75 H17.5 A5.25 5.25 0 0 1 17.5 18.25 H11.75"
+        fill="none" stroke="#23201a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="23.6" cy="24.4" r="2.35" fill="#224dac"/>
+</svg><svg x="402" y="300" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#201e18"/>
+  
+  <path d="M11.75 25.25 V7.75 H17.5 A5.25 5.25 0 0 1 17.5 18.25 H11.75"
+        fill="none" stroke="#dfded8" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="23.6" cy="24.4" r="2.35" fill="#7ca4f0"/>
+</svg><text x="18" y="392" font-size="11.5" fill="#23201a">problem-set</text><svg x="138" y="364" width="48" height="48" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19.25 6.25 H10.25 A2 2 0 0 0 8.25 8.25 V23.75 A2 2 0 0 0 10.25 25.75 H21 A2 2 0 0 0 23 23.75 V10 Z"/>
+    <path d="M19.25 6.25 V8 A2 2 0 0 0 21.25 10 H23"/>
+    <path d="M12 12.5 H17.75"/>
+    <path d="M12 16 H14.75"/>
+    <path d="M12.25 20 L14.75 22.5 L19.75 16.75"/>
+  </g>
+</svg><svg x="210" y="372" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19.25 6.25 H10.25 A2 2 0 0 0 8.25 8.25 V23.75 A2 2 0 0 0 10.25 25.75 H21 A2 2 0 0 0 23 23.75 V10 Z"/>
+    <path d="M19.25 6.25 V8 A2 2 0 0 0 21.25 10 H23"/>
+    <path d="M12 12.5 H17.75"/>
+    <path d="M12 16 H14.75"/>
+    <path d="M12.25 20 L14.75 22.5 L19.75 16.75"/>
+  </g>
+</svg><svg x="282" y="380" width="16" height="16" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19.25 6.25 H10.25 A2 2 0 0 0 8.25 8.25 V23.75 A2 2 0 0 0 10.25 25.75 H21 A2 2 0 0 0 23 23.75 V10 Z"/>
+    <path d="M19.25 6.25 V8 A2 2 0 0 0 21.25 10 H23"/>
+    <path d="M12 12.5 H17.75"/>
+    <path d="M12 16 H14.75"/>
+    <path d="M12.25 20 L14.75 22.5 L19.75 16.75"/>
+  </g>
+</svg><svg x="338" y="372" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#fffefc" stroke="#e1e0da" stroke-width="1"/>
+  
+  <g fill="none" stroke="#23201a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19.25 6.25 H10.25 A2 2 0 0 0 8.25 8.25 V23.75 A2 2 0 0 0 10.25 25.75 H21 A2 2 0 0 0 23 23.75 V10 Z"/>
+    <path d="M19.25 6.25 V8 A2 2 0 0 0 21.25 10 H23"/>
+    <path d="M12 12.5 H17.75"/>
+    <path d="M12 16 H14.75"/>
+    <path d="M12.25 20 L14.75 22.5 L19.75 16.75"/>
+  </g>
+</svg><svg x="402" y="372" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#201e18"/>
+  
+  <g fill="none" stroke="#dfded8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19.25 6.25 H10.25 A2 2 0 0 0 8.25 8.25 V23.75 A2 2 0 0 0 10.25 25.75 H21 A2 2 0 0 0 23 23.75 V10 Z"/>
+    <path d="M19.25 6.25 V8 A2 2 0 0 0 21.25 10 H23"/>
+    <path d="M12 12.5 H17.75"/>
+    <path d="M12 16 H14.75"/>
+    <path d="M12.25 20 L14.75 22.5 L19.75 16.75"/>
+  </g>
+</svg><text x="18" y="464" font-size="11.5" fill="#23201a">flashcards</text><svg x="138" y="436" width="48" height="48" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="12.25" y="6.25" width="13" height="16" rx="2"/>
+    <rect x="6.75" y="9.75" width="13" height="16" rx="2" fill="#224dac"/>
+    <path d="M9.9 18.5 L12.5 21.1 L17.3 15.5"/>
+  </g>
+</svg><svg x="210" y="444" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="12.25" y="6.25" width="13" height="16" rx="2"/>
+    <rect x="6.75" y="9.75" width="13" height="16" rx="2" fill="#224dac"/>
+    <path d="M9.9 18.5 L12.5 21.1 L17.3 15.5"/>
+  </g>
+</svg><svg x="282" y="452" width="16" height="16" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="12.25" y="6.25" width="13" height="16" rx="2"/>
+    <rect x="6.75" y="9.75" width="13" height="16" rx="2" fill="#224dac"/>
+    <path d="M9.9 18.5 L12.5 21.1 L17.3 15.5"/>
+  </g>
+</svg><svg x="338" y="444" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#fffefc" stroke="#e1e0da" stroke-width="1"/>
+  
+  <g fill="none" stroke="#23201a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="12.25" y="6.25" width="13" height="16" rx="2"/>
+    <rect x="6.75" y="9.75" width="13" height="16" rx="2" fill="#fffefc"/>
+    <path d="M9.9 18.5 L12.5 21.1 L17.3 15.5"/>
+  </g>
+</svg><svg x="402" y="444" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#201e18"/>
+  
+  <g fill="none" stroke="#dfded8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="12.25" y="6.25" width="13" height="16" rx="2"/>
+    <rect x="6.75" y="9.75" width="13" height="16" rx="2" fill="#201e18"/>
+    <path d="M9.9 18.5 L12.5 21.1 L17.3 15.5"/>
+  </g>
+</svg><text x="18" y="536" font-size="11.5" fill="#23201a">ink</text><svg x="138" y="508" width="48" height="48" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M16 6.25 C19.75 11.25 23.25 15.5 23.25 19.75 A7.25 7.25 0 0 1 8.75 19.75 C8.75 15.5 12.25 11.25 16 6.25 Z" fill="#fbfaf6"/>
+  <circle cx="23.4" cy="9.2" r="1.7" fill="#fbfaf6"/>
+</svg><svg x="210" y="516" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M16 6.25 C19.75 11.25 23.25 15.5 23.25 19.75 A7.25 7.25 0 0 1 8.75 19.75 C8.75 15.5 12.25 11.25 16 6.25 Z" fill="#fbfaf6"/>
+  <circle cx="23.4" cy="9.2" r="1.7" fill="#fbfaf6"/>
+</svg><svg x="282" y="524" width="16" height="16" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M16 6.25 C19.75 11.25 23.25 15.5 23.25 19.75 A7.25 7.25 0 0 1 8.75 19.75 C8.75 15.5 12.25 11.25 16 6.25 Z" fill="#fbfaf6"/>
+  <circle cx="23.4" cy="9.2" r="1.7" fill="#fbfaf6"/>
+</svg><svg x="338" y="516" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#fffefc" stroke="#e1e0da" stroke-width="1"/>
+  
+  <path d="M16 6.25 C19.75 11.25 23.25 15.5 23.25 19.75 A7.25 7.25 0 0 1 8.75 19.75 C8.75 15.5 12.25 11.25 16 6.25 Z" fill="#23201a"/>
+  <circle cx="23.4" cy="9.2" r="1.7" fill="#23201a"/>
+</svg><svg x="402" y="516" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#201e18"/>
+  
+  <path d="M16 6.25 C19.75 11.25 23.25 15.5 23.25 19.75 A7.25 7.25 0 0 1 8.75 19.75 C8.75 15.5 12.25 11.25 16 6.25 Z" fill="#dfded8"/>
+  <circle cx="23.4" cy="9.2" r="1.7" fill="#dfded8"/>
+</svg><text x="18" y="608" font-size="11.5" fill="#23201a">ask</text><svg x="138" y="580" width="48" height="48" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="6.25" y="13.25" width="13" height="12.75" rx="2"/>
+    <path d="M9.5 17.75 H16"/>
+    <path d="M9.5 21.5 H13"/>
+  </g>
+  <path d="M23.25 4.25 C23.8 7.55 25.45 9.2 28.75 9.75 C25.45 10.3 23.8 11.95 23.25 15.25 C22.7 11.95 21.05 10.3 17.75 9.75 C21.05 9.2 22.7 7.55 23.25 4.25 Z" fill="#fbfaf6"/>
+</svg><svg x="210" y="588" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="6.25" y="13.25" width="13" height="12.75" rx="2"/>
+    <path d="M9.5 17.75 H16"/>
+    <path d="M9.5 21.5 H13"/>
+  </g>
+  <path d="M23.25 4.25 C23.8 7.55 25.45 9.2 28.75 9.75 C25.45 10.3 23.8 11.95 23.25 15.25 C22.7 11.95 21.05 10.3 17.75 9.75 C21.05 9.2 22.7 7.55 23.25 4.25 Z" fill="#fbfaf6"/>
+</svg><svg x="282" y="596" width="16" height="16" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="6.25" y="13.25" width="13" height="12.75" rx="2"/>
+    <path d="M9.5 17.75 H16"/>
+    <path d="M9.5 21.5 H13"/>
+  </g>
+  <path d="M23.25 4.25 C23.8 7.55 25.45 9.2 28.75 9.75 C25.45 10.3 23.8 11.95 23.25 15.25 C22.7 11.95 21.05 10.3 17.75 9.75 C21.05 9.2 22.7 7.55 23.25 4.25 Z" fill="#fbfaf6"/>
+</svg><svg x="338" y="588" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#fffefc" stroke="#e1e0da" stroke-width="1"/>
+  
+  <g fill="none" stroke="#23201a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="6.25" y="13.25" width="13" height="12.75" rx="2"/>
+    <path d="M9.5 17.75 H16"/>
+    <path d="M9.5 21.5 H13"/>
+  </g>
+  <path d="M23.25 4.25 C23.8 7.55 25.45 9.2 28.75 9.75 C25.45 10.3 23.8 11.95 23.25 15.25 C22.7 11.95 21.05 10.3 17.75 9.75 C21.05 9.2 22.7 7.55 23.25 4.25 Z" fill="#23201a"/>
+</svg><svg x="402" y="588" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#201e18"/>
+  
+  <g fill="none" stroke="#dfded8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="6.25" y="13.25" width="13" height="12.75" rx="2"/>
+    <path d="M9.5 17.75 H16"/>
+    <path d="M9.5 21.5 H13"/>
+  </g>
+  <path d="M23.25 4.25 C23.8 7.55 25.45 9.2 28.75 9.75 C25.45 10.3 23.8 11.95 23.25 15.25 C22.7 11.95 21.05 10.3 17.75 9.75 C21.05 9.2 22.7 7.55 23.25 4.25 Z" fill="#dfded8"/>
+</svg><text x="18" y="680" font-size="11.5" fill="#23201a">pencil</text><svg x="138" y="652" width="48" height="48" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g transform="rotate(45 16 16)">
+    <path d="M13.2 8.4 A2.8 2.8 0 0 1 18.8 8.4 V20.9 H13.2 Z" fill="#fbfaf6"/>
+    <path d="M13.2 11.2 H18.8" stroke="#dca331" stroke-width="1.6" fill="none"/>
+    <path d="M13.2 20.9 L16 26.3 L18.8 20.9 Z" fill="#fbfaf6"/>
+    <path d="M14.6 23.2 L16 26.3 L17.4 23.2 Z" fill="#dca331"/>
+  </g>
+</svg><svg x="210" y="660" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g transform="rotate(45 16 16)">
+    <path d="M13.2 8.4 A2.8 2.8 0 0 1 18.8 8.4 V20.9 H13.2 Z" fill="#fbfaf6"/>
+    <path d="M13.2 11.2 H18.8" stroke="#dca331" stroke-width="1.6" fill="none"/>
+    <path d="M13.2 20.9 L16 26.3 L18.8 20.9 Z" fill="#fbfaf6"/>
+    <path d="M14.6 23.2 L16 26.3 L17.4 23.2 Z" fill="#dca331"/>
+  </g>
+</svg><svg x="282" y="668" width="16" height="16" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <g transform="rotate(45 16 16)">
+    <path d="M13.2 8.4 A2.8 2.8 0 0 1 18.8 8.4 V20.9 H13.2 Z" fill="#fbfaf6"/>
+    <path d="M13.2 11.2 H18.8" stroke="#dca331" stroke-width="1.6" fill="none"/>
+    <path d="M13.2 20.9 L16 26.3 L18.8 20.9 Z" fill="#fbfaf6"/>
+    <path d="M14.6 23.2 L16 26.3 L17.4 23.2 Z" fill="#dca331"/>
+  </g>
+</svg><svg x="338" y="660" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#fffefc" stroke="#e1e0da" stroke-width="1"/>
+  
+  <g transform="rotate(45 16 16)">
+    <path d="M13.2 8.4 A2.8 2.8 0 0 1 18.8 8.4 V20.9 H13.2 Z" fill="#23201a"/>
+    <path d="M13.2 11.2 H18.8" stroke="#224dac" stroke-width="1.6" fill="none"/>
+    <path d="M13.2 20.9 L16 26.3 L18.8 20.9 Z" fill="#23201a"/>
+    <path d="M14.6 23.2 L16 26.3 L17.4 23.2 Z" fill="#224dac"/>
+  </g>
+</svg><svg x="402" y="660" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#201e18"/>
+  
+  <g transform="rotate(45 16 16)">
+    <path d="M13.2 8.4 A2.8 2.8 0 0 1 18.8 8.4 V20.9 H13.2 Z" fill="#dfded8"/>
+    <path d="M13.2 11.2 H18.8" stroke="#7ca4f0" stroke-width="1.6" fill="none"/>
+    <path d="M13.2 20.9 L16 26.3 L18.8 20.9 Z" fill="#dfded8"/>
+    <path d="M14.6 23.2 L16 26.3 L17.4 23.2 Z" fill="#7ca4f0"/>
+  </g>
+</svg><text x="18" y="752" font-size="11.5" fill="#23201a">quill</text><svg x="138" y="724" width="48" height="48" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M25.9 6.1 C17.7 6.8 11.8 11.2 9.5 17.6 C8.75 19.7 8.2 21.85 7.9 23.85 L6.35 25.65 L8.75 24.3 C10.85 23.95 13.1 23.35 15.25 22.5 C21.6 19.95 25.4 13.7 25.9 6.1 Z" fill="#fbfaf6"/>
+  <path d="M22.3 9.3 C18.6 10.7 13.9 14.2 10.9 19.9" stroke="#dca331" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+</svg><svg x="210" y="732" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M25.9 6.1 C17.7 6.8 11.8 11.2 9.5 17.6 C8.75 19.7 8.2 21.85 7.9 23.85 L6.35 25.65 L8.75 24.3 C10.85 23.95 13.1 23.35 15.25 22.5 C21.6 19.95 25.4 13.7 25.9 6.1 Z" fill="#fbfaf6"/>
+  <path d="M22.3 9.3 C18.6 10.7 13.9 14.2 10.9 19.9" stroke="#dca331" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+</svg><svg x="282" y="740" width="16" height="16" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M25.9 6.1 C17.7 6.8 11.8 11.2 9.5 17.6 C8.75 19.7 8.2 21.85 7.9 23.85 L6.35 25.65 L8.75 24.3 C10.85 23.95 13.1 23.35 15.25 22.5 C21.6 19.95 25.4 13.7 25.9 6.1 Z" fill="#fbfaf6"/>
+  <path d="M22.3 9.3 C18.6 10.7 13.9 14.2 10.9 19.9" stroke="#dca331" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+</svg><svg x="338" y="732" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#fffefc" stroke="#e1e0da" stroke-width="1"/>
+  
+  <path d="M25.9 6.1 C17.7 6.8 11.8 11.2 9.5 17.6 C8.75 19.7 8.2 21.85 7.9 23.85 L6.35 25.65 L8.75 24.3 C10.85 23.95 13.1 23.35 15.25 22.5 C21.6 19.95 25.4 13.7 25.9 6.1 Z" fill="#23201a"/>
+  <path d="M22.3 9.3 C18.6 10.7 13.9 14.2 10.9 19.9" stroke="#224dac" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+</svg><svg x="402" y="732" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#201e18"/>
+  
+  <path d="M25.9 6.1 C17.7 6.8 11.8 11.2 9.5 17.6 C8.75 19.7 8.2 21.85 7.9 23.85 L6.35 25.65 L8.75 24.3 C10.85 23.95 13.1 23.35 15.25 22.5 C21.6 19.95 25.4 13.7 25.9 6.1 Z" fill="#dfded8"/>
+  <path d="M22.3 9.3 C18.6 10.7 13.9 14.2 10.9 19.9" stroke="#7ca4f0" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+</svg><text x="18" y="824" font-size="11.5" fill="#23201a">continuity</text><svg x="138" y="796" width="48" height="48" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M9.25 22.5 V9.5 A2 2 0 0 1 11.25 7.5 H15.5 A1 1 0 0 1 16.5 8.5 V23.5 A1 1 0 0 1 15.5 24.5 H11.25 A2 2 0 0 1 9.25 22.5 Z"
+        fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M23.75 22.5 V9.5 A2 2 0 0 0 21.75 7.5 H17.5 A1 1 0 0 0 16.5 8.5 V23.5 A1 1 0 0 0 17.5 24.5 H21.75 A2 2 0 0 0 23.75 22.5 Z"
+        fill="#fbfaf6" fill-opacity="0.3" stroke="#fbfaf6" stroke-width="2" stroke-linejoin="round"/>
+</svg><svg x="210" y="804" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M9.25 22.5 V9.5 A2 2 0 0 1 11.25 7.5 H15.5 A1 1 0 0 1 16.5 8.5 V23.5 A1 1 0 0 1 15.5 24.5 H11.25 A2 2 0 0 1 9.25 22.5 Z"
+        fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M23.75 22.5 V9.5 A2 2 0 0 0 21.75 7.5 H17.5 A1 1 0 0 0 16.5 8.5 V23.5 A1 1 0 0 0 17.5 24.5 H21.75 A2 2 0 0 0 23.75 22.5 Z"
+        fill="#fbfaf6" fill-opacity="0.3" stroke="#fbfaf6" stroke-width="2" stroke-linejoin="round"/>
+</svg><svg x="282" y="812" width="16" height="16" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#224dac"/>
+  
+  <path d="M9.25 22.5 V9.5 A2 2 0 0 1 11.25 7.5 H15.5 A1 1 0 0 1 16.5 8.5 V23.5 A1 1 0 0 1 15.5 24.5 H11.25 A2 2 0 0 1 9.25 22.5 Z"
+        fill="none" stroke="#fbfaf6" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M23.75 22.5 V9.5 A2 2 0 0 0 21.75 7.5 H17.5 A1 1 0 0 0 16.5 8.5 V23.5 A1 1 0 0 0 17.5 24.5 H21.75 A2 2 0 0 0 23.75 22.5 Z"
+        fill="#fbfaf6" fill-opacity="0.3" stroke="#fbfaf6" stroke-width="2" stroke-linejoin="round"/>
+</svg><svg x="338" y="804" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#fffefc" stroke="#e1e0da" stroke-width="1"/>
+  
+  <path d="M9.25 22.5 V9.5 A2 2 0 0 1 11.25 7.5 H15.5 A1 1 0 0 1 16.5 8.5 V23.5 A1 1 0 0 1 15.5 24.5 H11.25 A2 2 0 0 1 9.25 22.5 Z"
+        fill="none" stroke="#23201a" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M23.75 22.5 V9.5 A2 2 0 0 0 21.75 7.5 H17.5 A1 1 0 0 0 16.5 8.5 V23.5 A1 1 0 0 0 17.5 24.5 H21.75 A2 2 0 0 0 23.75 22.5 Z"
+        fill="#23201a" fill-opacity="0.3" stroke="#23201a" stroke-width="2" stroke-linejoin="round"/>
+</svg><svg x="402" y="804" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#201e18"/>
+  
+  <path d="M9.25 22.5 V9.5 A2 2 0 0 1 11.25 7.5 H15.5 A1 1 0 0 1 16.5 8.5 V23.5 A1 1 0 0 1 15.5 24.5 H11.25 A2 2 0 0 1 9.25 22.5 Z"
+        fill="none" stroke="#dfded8" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M23.75 22.5 V9.5 A2 2 0 0 0 21.75 7.5 H17.5 A1 1 0 0 0 16.5 8.5 V23.5 A1 1 0 0 0 17.5 24.5 H21.75 A2 2 0 0 0 23.75 22.5 Z"
+        fill="#dfded8" fill-opacity="0.3" stroke="#dfded8" stroke-width="2" stroke-linejoin="round"/>
+</svg><text x="18" y="882" font-size="9.5" fill="#23201a" opacity="0.45">geometry: 32-grid, rx 7 tile · ink &amp; paper palette (oklch tokens converted)</text></svg>
