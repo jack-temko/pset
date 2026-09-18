@@ -1,0 +1,139 @@
+import type { ComponentProps, ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+
+import { cn } from '@/lib/utils'
+
+type Tone = 'default' | 'warning' | 'destructive'
+
+const tones: Record<Tone, string> = {
+  default: 'border-border bg-card',
+  warning: 'border-warning bg-warning-soft',
+  destructive: 'border-destructive bg-destructive-soft',
+}
+
+/**
+ * The one container: a bordered card surface with an optional header band,
+ * rows or a body, and an optional footer.
+ *
+ * A Box never sets its own margin — the parent's stack does — and its
+ * children are Box parts only. A Box that carries a state takes the status
+ * ink as its frame and the status tint as its ground.
+ */
+export function Box({
+  tone = 'default',
+  className,
+  ...props
+}: ComponentProps<'div'> & { tone?: Tone }) {
+  return (
+    <div className={cn('overflow-hidden rounded-md border', tones[tone], className)} {...props} />
+  )
+}
+
+export function BoxHeader({ className, children, ...props }: ComponentProps<'div'>) {
+  return (
+    <div
+      className={cn(
+        'flex min-h-row items-center justify-between gap-3 border-b bg-card-header px-card py-2 text-base font-semibold',
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+}
+
+export function BoxBody({ className, ...props }: ComponentProps<'div'>) {
+  return <div className={cn('p-card text-base', className)} {...props} />
+}
+
+export function BoxFooter({ className, ...props }: ComponentProps<'div'>) {
+  return (
+    <div
+      className={cn(
+        'flex min-h-row items-center justify-between gap-3 border-t bg-card-header px-card py-2 text-xs text-muted-foreground',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
+/**
+ * A row is ActionList-shaped: a leading visual, a title with an optional
+ * description, and something trailing. The row owns its padding, so a
+ * caller never pads one by hand.
+ */
+export function BoxRow({
+  leading,
+  title,
+  description,
+  trailing,
+  href,
+  selected,
+  className,
+}: {
+  leading?: ReactNode
+  title: ReactNode
+  description?: ReactNode
+  trailing?: ReactNode
+  href?: string
+  selected?: boolean
+  className?: string
+}) {
+  const content = (
+    <>
+      {leading && (
+        <span className="flex shrink-0 items-center text-muted-foreground [&_svg]:size-4">
+          {leading}
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate">{title}</span>
+        {description && (
+          <span className="block truncate text-xs text-muted-foreground">{description}</span>
+        )}
+      </span>
+      {trailing && <span className="shrink-0">{trailing}</span>}
+    </>
+  )
+
+  const classes = cn(
+    'flex min-h-row items-center gap-3 border-t border-border-muted px-card py-2 text-sm first:border-t-0',
+    selected && 'bg-primary-soft text-primary',
+    href && 'hover:bg-muted',
+    className,
+  )
+
+  if (href) {
+    return (
+      <Link to={href} className={classes} aria-current={selected ? 'page' : undefined}>
+        {content}
+      </Link>
+    )
+  }
+  return <div className={classes}>{content}</div>
+}
+
+/** The count beside a title. Sits at the type floor, not below it. */
+export function Counter({ className, ...props }: ComponentProps<'span'>) {
+  return (
+    <span
+      className={cn(
+        'ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1 text-xs font-medium tabular-nums',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
+/** A trailing value: mono, at the floor size, figures aligned. */
+export function RowValue({ className, ...props }: ComponentProps<'span'>) {
+  return (
+    <span
+      className={cn('font-mono text-xs text-muted-foreground tabular-nums', className)}
+      {...props}
+    />
+  )
+}

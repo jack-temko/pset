@@ -103,6 +103,11 @@
     --spacing-card: 1rem;
 
     /* The shell's fixed dimensions. */
+    /* The mark in the top-bar lockup. Off the 4px grid deliberately: a brand
+       size tuned against the bar and the icons opposite, not a layout step.
+       28px sat a touch small, 32px (size-8) reads as a step too far. */
+    --spacing-mark: 1.875rem;
+
     --spacing-topbar: 3.5rem;
     --spacing-rail: 16rem;
     --spacing-panel: 27.5rem;
