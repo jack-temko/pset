@@ -24,5 +24,3 @@ dist-ssr
 *.sln
 *.sw?
 
-# The workboard bundles the app into artboards; the output is generated.
-workboard/build/

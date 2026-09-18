@@ -1,7 +1,4 @@
 @import "tailwindcss";
-/* The workboard's generated artboards inline this very stylesheet. Scanning
-   them would feed the app's own CSS back into itself, growing it every build. */
-@source not "../workboard/build";
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/newsreader";
 @import "@fontsource-variable/jetbrains-mono";
@@ -102,12 +99,12 @@
     --spacing-section: 2.5rem;
     --spacing-card: 1rem;
 
-    /* The shell's fixed dimensions. */
     /* The mark in the top-bar lockup. Off the 4px grid deliberately: a brand
        size tuned against the bar and the icons opposite, not a layout step.
        28px sat a touch small, 32px (size-8) reads as a step too far. */
     --spacing-mark: 1.875rem;
 
+    /* The shell's fixed dimensions. */
     --spacing-topbar: 3.5rem;
     --spacing-rail: 16rem;
     --spacing-panel: 27.5rem;
