@@ -9,9 +9,11 @@ closes.
   adds the border, since the door doesn't know where it sits).
 - **Under a grid** — the row after the shelf's covers, no border.
 
-`h-row` (40px) tall, `text-xs` in `muted-foreground`, the row hover wash
-(`muted/50`, 150ms) with the text stepping up to `foreground`. Announces
-itself with `aria-expanded`.
+The row is `h-row` (40px) of quiet space; the button inside it is a 28px
+pill — `text-xs` in `muted-foreground`, the hover wash (`muted/50`, 150ms)
+with the text stepping up to `foreground`. Wash and click target are the
+same shape: a full-width target that highlights only its middle lies about
+where it is. Announces itself with `aria-expanded`.
 
 **What the consumer provides:** `open`, `total`, `onToggle`. The door
 names what it opens onto — the count is the whole list, not the hidden

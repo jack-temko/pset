@@ -11,9 +11,9 @@ activity.
   inside one.
 - **Label** — `text-xs` in `muted-foreground`, with a `size-2` dot in the
   activity's chart colour when the tile is an activity.
-- **Value** — `text-3xl` in the heading face, tabular figures. Unit letters
-  go in `<small>` and drop to `text-lg` in `muted-foreground` so the
-  figures carry ("4h 23m"). `DurationValue` renders minutes that way.
+- **Value** — `text-2xl` in JetBrains Mono at 400, tabular figures. Unit
+  letters go in `<small>` and drop to `text-xs` in `muted-foreground` so
+  the figures carry ("4h 23m"). `DurationValue` renders minutes that way.
 - **Context** — `text-xs` at 400 in `muted-foreground`.
 - **Bar** — optional `segments`, a 4px stacked bar on a `muted` track.
 
@@ -26,6 +26,12 @@ An empty week shows "—" and "nothing yet this week".
 put more than four in a row.
 
 ## Changes from baseline
+
+- **The value is mono, not serif.** The baseline sets it in the heading
+  face at 30px; Jack compared four treatments and picked JetBrains Mono —
+  which is also what the system's own type rule says: counts, durations
+  and page numbers are machine strings. `text-2xl` keeps the size on the
+  nine-step scale (the mock's 26px is not a step).
 
 - **The stacked bar is 4px (`h-1`), not 6px.** The spacing scale is
   integer 4px steps and 6px is off the grid; BookStatus's progress bar is

@@ -48,7 +48,7 @@ export function StatTile({
         {chart && <span aria-hidden className={cn('size-2 rounded-full', dotBg[chart])} />}
         {label}
       </div>
-      <div className="font-heading text-3xl tabular-nums [&_small]:text-lg [&_small]:font-normal [&_small]:tracking-normal [&_small]:text-muted-foreground">
+      <div className="font-mono text-2xl font-normal tracking-normal tabular-nums [&_small]:text-xs [&_small]:font-normal [&_small]:text-muted-foreground">
         {value}
       </div>
       <p className="text-xs font-normal text-muted-foreground">{context}</p>
@@ -65,7 +65,7 @@ export function StatTile({
 
 /**
  * Minutes as a stat value: "4h 23m", "40m", or "—" for an empty week.
- * The unit letters drop to `text-lg` in muted ink so the figures carry.
+ * The unit letters drop to `text-xs` in muted ink so the figures carry.
  */
 export function DurationValue({ minutes }: { minutes: number }) {
   if (minutes <= 0) return <>—</>
@@ -76,7 +76,9 @@ export function DurationValue({ minutes }: { minutes: number }) {
       {h > 0 && (
         <>
           {h}
-          <small>h</small>{' '}
+          {/* The space lives inside the small so it advances at 14px, not a
+          full 24px mono cell. */}
+          <small>h </small>
         </>
       )}
       {(m > 0 || h === 0) && (
