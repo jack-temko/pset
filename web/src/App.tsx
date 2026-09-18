@@ -1,35 +1,23 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
-import { AppShell } from '@/components/app-shell'
-import { Ask } from '@/pages/ask'
-import { BookDetail } from '@/pages/book-detail'
-import { Doctor } from '@/pages/doctor'
-import { Homework } from '@/pages/homework'
-import { HomeworkWorkspace } from '@/pages/homework-workspace'
-import { Library } from '@/pages/library'
-import { NotFound } from '@/pages/not-found'
-import { Reader } from '@/pages/reader'
-import { Settings } from '@/pages/settings'
-import { Tasks } from '@/pages/tasks'
+/** Placeholder while the frontend is rebuilt page by page on `overhaul`.
+ *  The first unit — the shell and the Home dashboard — replaces this. */
+function Rebuilding() {
+  return (
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-page text-center">
+      <p className="font-heading text-4xl">Rebuilding.</p>
+      <p className="font-heading text-lg text-muted-foreground italic">
+        The shell and the dashboard land first.
+      </p>
+    </div>
+  )
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<AppShell />}>
-          <Route index element={<Library />} />
-          <Route path="library" element={<Navigate to="/" replace />} />
-          <Route path="library/:bookId" element={<BookDetail />} />
-          <Route path="library/:bookId/read" element={<Reader />} />
-          <Route path="import" element={<Navigate to="/" replace />} />
-          <Route path="homework" element={<Homework />} />
-          <Route path="homework/:homeworkId" element={<HomeworkWorkspace />} />
-          <Route path="ask" element={<Ask />} />
-          <Route path="tasks" element={<Tasks />} />
-          <Route path="doctor" element={<Doctor />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="*" element={<NotFound />} />
-        </Route>
+        <Route path="*" element={<Rebuilding />} />
       </Routes>
     </BrowserRouter>
   )
