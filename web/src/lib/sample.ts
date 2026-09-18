@@ -96,7 +96,7 @@ export const DUE: Due[] = [
     id: '1',
     title: 'Problem set 4',
     book: 'Linear Algebra Done Right',
-    questions: 8,
+    questions: 4,
     due: 'today',
     urgent: true,
   },
@@ -227,7 +227,7 @@ export type BookHomework = {
 }
 
 export const BOOK_HOMEWORK: BookHomework[] = [
-  { id: '1', title: 'Problem set 4', due: 'today', urgent: true, done: 3, total: 8 },
+  { id: '1', title: 'Problem set 4', due: 'today', urgent: true, done: 0, total: 4 },
   { id: '9', title: 'Problem set 6', due: 'next Fri', done: 0, total: 8 },
   { id: '10', title: 'Problem set 3', due: 'turned in', done: 6, total: 6 },
 ]

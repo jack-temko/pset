@@ -79,6 +79,31 @@ built.
 - A Home due-row click lands **straight in that walkthrough**, scan on
   the question's page.
 
+### Walkthrough (2026-09-18 grill)
+
+- **One question at a time**: prev/next plus a "3 of 8" position row.
+  440px is one problem's screenful; focus is the point.
+- **Statement = extracted text + figure crops** (math rendered), never a
+  flat page image.
+- **Scan jumps on demand**: a page chip in the question header; opening a
+  question never moves the scan by itself.
+- **Reveals are sequential but skippable** — hint, then approach, then
+  solution, with a quiet skip-to-solution always present. The student is
+  an adult. Guide stages reuse the transcript's pieces (math, page chips).
+- **"Got it" marks done and advances** to the next unfinished question.
+  When the last one is marked: quiet close back to the list, the row
+  showing 8 of 8 with a Turn in affordance. Done is a fact, not a party.
+- **"Ask about this"** on every question flips to the Ask tab with the
+  problem as context — the canned guide's escape hatch.
+- **Failed question**: one line saying why, Try again, and "It's on
+  page …" — a typed page relocates from human knowledge.
+- **Sets are editable: add and remove** questions (paste more text to
+  add; remove from the question's overflow). No reorder yet.
+- **Turn in is manual** (header overflow), undoable; turned-in sets drop
+  to a collapsed group at the list's bottom and leave Home's due list.
+- **New homework is a dialog**: paste box, optional title (auto-named
+  when blank), optional due date; the list then fills progressively.
+
 ## Panel header
 
 One row: **Ask | Homework as UnderlineNav tabs** left, Focus toggle

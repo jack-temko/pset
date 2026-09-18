@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
-import { ArrowUp, Focus, Plus } from 'lucide-react'
+import { ArrowUp, Check, ChevronLeft, ChevronRight, Focus, Plus, Printer } from 'lucide-react'
 
 import { AppShell } from '@/components/shell'
 import { Box, BoxRow, RowValue } from '@/components/box'
@@ -262,8 +262,301 @@ function AskTab({ onJump }: { onJump: (page: number) => void }) {
   )
 }
 
-/** The homework list — the walkthrough it opens into is not built yet. */
-function HomeworkTab({ items }: { items: BookHomework[] }) {
+/** Sample walkthrough content until the backend lands. Statements are
+ *  extracted text with math rendered; stages reuse the transcript's
+ *  pieces, per the spec. */
+type SampleQuestion = {
+  label: string
+  page: number
+  statement: ReactNode
+  hint: ReactNode
+  approach: ReactNode
+  solution: ReactNode
+  figure?: string
+}
+
+const QUESTIONS: SampleQuestion[] = [
+  {
+    label: '3.A.4',
+    page: 57,
+    statement: (
+      <>
+        Suppose <MathInline tex="T \in \mathcal{L}(V, W)" /> and{' '}
+        <MathInline tex="v_1, \dots, v_m" /> is a list of vectors in <MathInline tex="V" /> such
+        that <MathInline tex="Tv_1, \dots, Tv_m" /> is linearly independent in{' '}
+        <MathInline tex="W" />. Prove that <MathInline tex="v_1, \dots, v_m" /> is linearly
+        independent.
+      </>
+    ),
+    hint: <>Start from a dependence among the {'​'}<MathInline tex="v_k" /> and apply{' '}<MathInline tex="T" /> to it.</>,
+    approach: (
+      <>
+        Suppose <MathInline tex="a_1 v_1 + \dots + a_m v_m = 0" />. Linearity moves the whole
+        equation across <MathInline tex="T" />, where independence of the images forces every
+        coefficient to vanish.
+      </>
+    ),
+    solution: (
+      <>
+        <p>
+          Apply <MathInline tex="T" />:{' '}
+          <MathInline tex="0 = T(0) = a_1 Tv_1 + \dots + a_m Tv_m" />. Since the{' '}
+          <MathInline tex="Tv_k" /> are independent, each <MathInline tex="a_k = 0" /> — which is
+          exactly the statement that the <MathInline tex="v_k" /> are independent.
+        </p>
+      </>
+    ),
+  },
+  {
+    label: '3.A.7',
+    page: 57,
+    statement: (
+      <>
+        Show that every linear map from a one-dimensional vector space to itself is
+        multiplication by some scalar: if <MathInline tex="\dim V = 1" /> and{' '}
+        <MathInline tex="T \in \mathcal{L}(V)" />, then there exists{' '}
+        <MathInline tex="\lambda \in \mathbf{F}" /> with <MathInline tex="Tv = \lambda v" /> for
+        all <MathInline tex="v \in V" />.
+      </>
+    ),
+    hint: <>Pick any nonzero <MathInline tex="w \in V" /> — what does <MathInline tex="Tw" /> have to be?</>,
+    approach: (
+      <>
+        With <MathInline tex="\dim V = 1" />, a nonzero <MathInline tex="w" /> spans, so{' '}
+        <MathInline tex="Tw = \lambda w" /> for some scalar. Extend to every vector by writing it
+        as a multiple of <MathInline tex="w" />.
+      </>
+    ),
+    solution: (
+      <>
+        <p>
+          Choose <MathInline tex="w \neq 0" />; since <MathInline tex="V = \operatorname{span}(w)" />,{' '}
+          <MathInline tex="Tw = \lambda w" /> for some <MathInline tex="\lambda" />. Any{' '}
+          <MathInline tex="v = c\,w" /> then gives
+        </p>
+        <MathDisplay tex="Tv = T(c\,w) = c\,Tw = c\,\lambda w = \lambda v." />
+      </>
+    ),
+  },
+  {
+    label: '3.B.12',
+    page: 63,
+    figure: 'figure · p. 63',
+    statement: (
+      <>
+        Suppose <MathInline tex="V" /> is finite-dimensional and{' '}
+        <MathInline tex="T \in \mathcal{L}(V, W)" />. Prove that{' '}
+        <MathInline tex="\dim V = \dim \operatorname{null} T + \dim \operatorname{range} T" />{' '}
+        using the diagram of the quotient map shown in the margin.
+      </>
+    ),
+    hint: <>Extend a basis of the null space to a basis of <MathInline tex="V" />.</>,
+    approach: (
+      <>
+        The extension's images span the range and stay independent — count both lists.
+      </>
+    ),
+    solution: (
+      <p>
+        Take <MathInline tex="u_1, \dots, u_k" /> a basis of{' '}
+        <MathInline tex="\operatorname{null} T" />, extend by{' '}
+        <MathInline tex="v_1, \dots, v_r" /> to a basis of <MathInline tex="V" />. The images{' '}
+        <MathInline tex="Tv_1, \dots, Tv_r" /> form a basis of the range, so{' '}
+        <MathInline tex="\dim V = k + r" />.
+      </p>
+    ),
+  },
+  {
+    label: '3.B.20',
+    page: 64,
+    statement: (
+      <>
+        Suppose <MathInline tex="W" /> is finite-dimensional and{' '}
+        <MathInline tex="T \in \mathcal{L}(V, W)" />. Prove that <MathInline tex="T" /> is
+        injective if and only if there exists <MathInline tex="S \in \mathcal{L}(W, V)" /> such
+        that <MathInline tex="ST" /> is the identity on <MathInline tex="V" />.
+      </>
+    ),
+    hint: <>One direction is immediate — which one, and why?</>,
+    approach: (
+      <>
+        If <MathInline tex="ST = I" /> then <MathInline tex="T" /> kills nothing. Conversely an
+        injective <MathInline tex="T" /> inverts on its range; extend that inverse to all of{' '}
+        <MathInline tex="W" /> along a direct-sum decomposition.
+      </>
+    ),
+    solution: (
+      <p>
+        Given injectivity, <MathInline tex="T^{-1}" /> exists on{' '}
+        <MathInline tex="\operatorname{range} T" />; write{' '}
+        <MathInline tex="W = \operatorname{range} T \oplus U" /> and define{' '}
+        <MathInline tex="S" /> as the inverse on the first summand, <MathInline tex="0" /> on{' '}
+        <MathInline tex="U" />. Then <MathInline tex="STv = v" /> for every{' '}
+        <MathInline tex="v" />.
+      </p>
+    ),
+  },
+]
+
+/** One revealed stage of the guide: a quiet label over the content. */
+function Stage({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-xs text-muted-foreground uppercase">{label}</p>
+      <div className="space-y-3 text-base">{children}</div>
+    </div>
+  )
+}
+
+const STAGE_NAMES = ['hint', 'approach', 'solution'] as const
+
+/** One question at a time: statement, sequential (skippable) reveals,
+ *  "got it" marking done and advancing. Spec: design/workspace.md. */
+function Walkthrough({
+  title,
+  onBack,
+  onJump,
+  onAskAbout,
+}: {
+  title: string
+  onBack: () => void
+  onJump: (page: number) => void
+  onAskAbout: () => void
+}) {
+  const [index, setIndex] = useState(0)
+  // Per-question progress, sample-local: how many stages are open, done?
+  const [revealed, setRevealed] = useState<number[]>(() => QUESTIONS.map(() => 0))
+  const [done, setDone] = useState<boolean[]>(() => QUESTIONS.map(() => false))
+
+  const q = QUESTIONS[index]
+  const open = revealed[index]
+  const isDone = done[index]
+
+  const reveal = (n: number) =>
+    setRevealed((r) => r.map((v, i) => (i === index ? Math.max(v, n) : v)))
+
+  const gotIt = () => {
+    const next = done.map((d, i) => (i === index ? true : d))
+    setDone(next)
+    // Advance to the next unfinished question; the last one closes quietly.
+    const ahead = QUESTIONS.findIndex((_, i) => !next[i])
+    if (ahead === -1) onBack()
+    else setIndex(ahead)
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex h-row shrink-0 items-center gap-2 border-b px-2">
+        <IconButton variant="ghost" size="sm" aria-label="Back to homework" onClick={onBack}>
+          <ChevronLeft />
+        </IconButton>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{title}</span>
+        <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
+          {index + 1} of {QUESTIONS.length}
+        </span>
+        <IconButton variant="ghost" size="sm" aria-label="Print this homework">
+          <Printer />
+        </IconButton>
+      </div>
+
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-card">
+        <div className="flex items-center gap-2">
+          <span className="text-lg font-semibold">{q.label}</span>
+          <PageRef page={q.page} onJump={onJump} />
+          {isDone && <Check aria-label="Done" className="size-4 text-success" />}
+        </div>
+        <div className="space-y-3 text-base">{q.statement}</div>
+        {q.figure && (
+          <div className="grid h-32 place-items-center rounded-md border bg-card font-mono text-xs text-muted-foreground">
+            {q.figure}
+          </div>
+        )}
+
+        {STAGE_NAMES.map(
+          (name, i) =>
+            open > i && (
+              <Stage key={name} label={name}>
+                {q[name]}
+              </Stage>
+            ),
+        )}
+
+        {open < 3 && (
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={() => reveal(open + 1)}>
+              Reveal {STAGE_NAMES[open]}
+            </Button>
+            {open < 2 && (
+              <button
+                type="button"
+                onClick={() => reveal(3)}
+                className="text-xs text-muted-foreground underline underline-offset-2 transition-colors duration-150 ease-out hover:text-foreground motion-reduce:transition-none"
+              >
+                Skip to solution
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="flex shrink-0 items-center justify-between border-t p-card">
+        <Button variant="ghost" size="sm" onClick={onAskAbout}>
+          Ask about this
+        </Button>
+        <div className="flex items-center gap-2">
+          <IconButton
+            variant="ghost"
+            size="sm"
+            aria-label="Previous question"
+            disabled={index === 0}
+            onClick={() => setIndex((i) => i - 1)}
+          >
+            <ChevronLeft />
+          </IconButton>
+          <IconButton
+            variant="ghost"
+            size="sm"
+            aria-label="Next question"
+            disabled={index === QUESTIONS.length - 1}
+            onClick={() => setIndex((i) => i + 1)}
+          >
+            <ChevronRight />
+          </IconButton>
+          <Button variant="primary" size="sm" onClick={gotIt} disabled={isDone}>
+            {isDone ? 'Done' : 'Got it'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** The homework list: active sets, then turned-in ones under a quiet
+ *  label. Opening a set fills the panel with its walkthrough. */
+function HomeworkTab({
+  items,
+  onJump,
+  onAskAbout,
+}: {
+  items: BookHomework[]
+  onJump: (page: number) => void
+  onAskAbout: () => void
+}) {
+  const [openSet, setOpenSet] = useState<BookHomework | null>(null)
+  const active = items.filter((h) => h.due !== 'turned in')
+  const turnedIn = items.filter((h) => h.due === 'turned in')
+
+  if (openSet) {
+    return (
+      <Walkthrough
+        title={openSet.title}
+        onBack={() => setOpenSet(null)}
+        onJump={onJump}
+        onAskAbout={onAskAbout}
+      />
+    )
+  }
+
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-card">
       <Button variant="outline" size="sm" className="w-full">
@@ -271,16 +564,38 @@ function HomeworkTab({ items }: { items: BookHomework[] }) {
         New homework
       </Button>
       <Box>
-        {items.map((h) => (
+        {active.map((h) => (
           <BoxRow
             key={h.id}
-            href={`/homework/${h.id}`}
-            title={h.title}
+            title={
+              <button
+                type="button"
+                onClick={() => setOpenSet(h)}
+                className="block w-full truncate text-left"
+              >
+                {h.title}
+              </button>
+            }
             description={`${h.done} of ${h.total} questions`}
             trailing={<RowValue className={cn(h.urgent && 'text-warning')}>{h.due}</RowValue>}
           />
         ))}
       </Box>
+      {turnedIn.length > 0 && (
+        <>
+          <p className="text-xs text-muted-foreground">Turned in</p>
+          <Box>
+            {turnedIn.map((h) => (
+              <BoxRow
+                key={h.id}
+                title={h.title}
+                description={`${h.done} of ${h.total} questions`}
+                trailing={<RowValue>turned in</RowValue>}
+              />
+            ))}
+          </Box>
+        </>
+      )}
     </div>
   )
 }
@@ -329,7 +644,11 @@ function Panel({
           <Focus />
         </IconButton>
       </div>
-      {tab === 'ask' ? <AskTab onJump={onJump} /> : <HomeworkTab items={BOOK_HOMEWORK} />}
+      {tab === 'ask' ? (
+        <AskTab onJump={onJump} />
+      ) : (
+        <HomeworkTab items={BOOK_HOMEWORK} onJump={onJump} onAskAbout={() => pick('ask')} />
+      )}
     </aside>
   )
 }
