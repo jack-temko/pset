@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
 import { BookOpen, Plus, Settings } from 'lucide-react'
 
-import { AppShell, PageShell } from '@/components/app-shell'
+import { AppShell, PageShell } from '@/components/shell'
 import { BrandLockup, Mark } from '@/components/brand'
-import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@/components/ui/box'
-import { Button, IconButton } from '@/components/ui/button'
+import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@/components/box'
+import { Button, IconButton } from '@/components/button'
 
 /**
  * Every component and every variant, on one page, in the app itself.

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Moon, Settings, Sun } from 'lucide-react'
 
 import { BrandLockup } from '@/components/brand'
-import { buttonVariants, IconButton } from '@/components/ui/button'
+import { buttonVariants, IconButton } from '@/components/button'
 import { applyTheme, isDark } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 

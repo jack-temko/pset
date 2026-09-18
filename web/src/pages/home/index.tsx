@@ -1,8 +1,8 @@
 import { BookOpen } from 'lucide-react'
 
-import { AppShell, PageShell } from '@/components/app-shell'
-import { Button } from '@/components/ui/button'
-import { Box, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@/components/ui/box'
+import { AppShell, PageShell } from '@/components/shell'
+import { Button } from '@/components/button'
+import { Box, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@/components/box'
 import { cn } from '@/lib/utils'
 
 function greeting(hour: number): string {

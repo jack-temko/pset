@@ -1,0 +1,123 @@
+# Ink & Paper
+
+The design system, as the app actually implements it. It covers what has
+been built and decided — it grows as the rewrite does, and nothing is
+written here before it exists in code.
+
+`web/src/index.css` is the machine-readable truth: every token below is a
+custom property there, and the Tailwind theme is generated from them. This
+file explains what the values mean and why they are what they are. Each
+component carries its own `README.md` beside it in `web/src/components/`.
+
+**Baseline.** The system started as the "Ink & Paper v2" artifact, locked on
+2026-09-17. Where the app now differs, it is recorded under
+[Divergences](#divergences-from-the-baseline) with the reason.
+
+## The aesthetic
+
+A quiet study room. Warm paper neutrals, ink text, one fountain-pen blue
+for actions, serif display type. Calm and content-first — decoration never
+competes with the textbook. Geometry is Primer's: 6px radius, 32px
+controls, 40px rows. Desktop only; below 1024px the app hides and a static
+gate shows instead.
+
+## Color
+
+OKLCH throughout, two themes — Paper (light) and Night study (dark). Use
+the semantic token, never a raw value; both themes then come free.
+
+| Token | Use |
+|---|---|
+| `background` / `foreground` | The page ground and its ink. |
+| `card` / `card-foreground` | Every Box, dialog and menu. Always with a border. |
+| `card-header` | The header band of a Box and the footer of a dialog. |
+| `rail` | The workspace's contents rail and panel ground. Follows the theme. |
+| `primary` / `primary-foreground` | The one blue: primary buttons, links, the current item. |
+| `primary-soft` | Its only tint: selected rows, the active tab, an anchor chip. |
+| `secondary` / `secondary-foreground` | The secondary button's fill. |
+| `muted` | Quiet fills: ghost hover, skeletons, roundels, progress tracks. |
+| `muted-foreground` | Secondary text — leads, hints, meta lines — and icons at rest. |
+| `accent` / `accent-foreground` | Ochre highlight **fill** only. Never as text. |
+| `success` · `warning` · `destructive` | Status, as **ink**: text, icon, border. Never a solid fill. |
+| `*-soft` | The one tint of each status: badges, a failed row's ground. |
+| `border` | The hairline that does the work of elevation. |
+| `border-muted` | A quieter divider between rows inside a Box. |
+| `input` | Control borders — fields, the outline button. Darker than `border` on purpose. |
+| `ring` | Focus: a solid 2px ring, offset 2px. |
+| `chart-1..5` | Data series, in order. |
+| `cover-*` | The six book-cloth hues. Identical in both themes — a book is an object. |
+
+**Status is ink, not fill.** A status colour sets text, icons and borders;
+its `-soft` tint is the only ground it gets. There is no solid red button.
+
+**Contrast is measured, not assumed.** Body and secondary text clear 4.5:1
+on every surface they land on. Quiet fills are checked against the surfaces
+they sit on, not in isolation — the palette's neutrals sit close together,
+so a fill that looks fine alone can vanish in place. The current floor for a
+fill that carries shape is ~1.3:1 against its ground; anything thinner needs
+a border to delineate it.
+
+## Type
+
+Three faces: **Newsreader** for display and leads, **Inter** for everything
+else, **JetBrains Mono** for machine strings — hashes, paths, versions,
+counts, page numbers.
+
+Nine steps, and no others. **14px is the floor**; nothing in the product is
+smaller, chips and counters included.
+
+| Step | Size / line | Role |
+|---|---|---|
+| `text-xs` | 14 / 20 | Labels, badges, timestamps, hints. The floor. |
+| `text-sm` | 15 / 22 | Buttons, rail rows, tabs, table cells. |
+| `text-base` | 16 / 24 | Default UI copy. |
+| `text-reading` | 17 / 28 | Long-form text a student reads. |
+| `text-lg` | 18 / 28 | Card titles (sans 600) and leads (serif italic). |
+| `text-xl` | 20 / 28 | Section heads. |
+| `text-2xl` | 24 / 32 | Panel and dialog titles. |
+| `text-3xl` | 30 / 36 | The one `h1` on a page-shell page. |
+| `text-4xl` | 36 / 40 | The dashboard greeting and empty-state heroes. |
+
+Each step carries its own weight and tracking, so a call site sets size
+alone. `text-lg` is the exception and stays weightless: it is the one step
+two styles share.
+
+## Space, shape, elevation
+
+**One lever.** Every spacing step is an integer multiple of 4px. The bare
+Tailwind multiplier is removed, so fractional utilities (`p-2.5`, `gap-1.5`)
+and arbitrary values do not compile. If a value you need does not exist,
+that is a design question — add a named token, never an arbitrary value.
+
+Semantic tokens own page rhythm: `page` (40px gutters), `section` (40px
+between sections), `card` (16px Box interior). The shell's fixed dimensions
+are tokens too: `topbar` 56, `rail` 256, `panel` 440, `control` 32 (`-sm`
+28, `-lg` 40), `row` 40, `mark` 30.
+
+Radius: `sm` 4, **`md` 6 — the default for controls and containers alike**,
+`lg` 12 for large floating surfaces, `full` for pills.
+
+Elevation is a hairline border. Two shadows exist — `floating` for layers
+that genuinely float, `lift` for a book cover picked off the shelf. Static
+surfaces get neither.
+
+## Rules the code enforces
+
+- Semantic tokens only. No raw colour values in components.
+- No type below 14px, and no size outside the nine steps.
+- No fractional or arbitrary spacing — the scale is the scale.
+- One focus ring, defined once in the base layer, on everything.
+- A component never sets its own outer margin; the parent's stack does.
+
+## Divergences from the baseline
+
+Each is a deliberate change from the v2 artifact, kept here so the two do
+not silently disagree.
+
+| Change | Why |
+|---|---|
+| `muted` and `secondary` darkened — light 0.945 → **0.88**, dark 0.262 → **0.34** | At the baseline values they measured 1.06–1.16:1 against every surface, so ghost hover, skeletons, roundels and the secondary button were near-invisible. The new values are capped by text, not taste: `muted-foreground` on `muted` lands at 4.56:1 light and 4.75:1 dark, and one more step fails 4.5. |
+| The mark is **30px**, the wordmark 16px | The baseline's 28px mark with an 18px name let the lockup dominate a 56px bar against 20px icons opposite. The name coming down was the actual fix; 30px is where the mark settled. |
+| Counters and chips sit at **14px** | The baseline's Box and ActionList previews set them at 12px, which contradicts the system's own type floor. The floor wins. |
+| The Counter's fill is translucent ink, not `muted` | It sits on `card-header`, the surface where `muted` is weakest even after the correction (1.24:1). Ink at 20% gives it 1.50:1 and inverts with the theme for free. |
+| `card-header` left at its baseline value | It is 1.08:1 against `card` and cannot improve without reading as a different surface — but it always carries a border, and that hairline is what separates the band. |
