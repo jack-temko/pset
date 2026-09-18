@@ -2,9 +2,11 @@ import type { ReactNode } from 'react'
 import { BookOpen, Plus, Settings } from 'lucide-react'
 
 import { AppShell, PageShell } from '@/components/shell'
+import { BookCover } from '@/components/book-cover'
 import { BrandLockup, Mark } from '@/components/brand'
 import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@/components/box'
 import { Button, IconButton } from '@/components/button'
+import { coverHueFromSha } from '@/lib/covers'
 
 /**
  * Every component and every variant, on one page, in the app itself.
@@ -156,6 +158,29 @@ export function Components() {
               <Box tone="destructive">
                 <BoxBody>Couldn&apos;t prepare this book — the PDF has no extractable text.</BoxBody>
               </Box>
+            </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="BookCover"
+          note="Six hues, derived from the sha — never chosen. Sized by its container at a 3:4 ratio."
+        >
+          <Shelf label="hues">
+            <div className="grid w-full grid-cols-6 gap-4">
+              {[
+                { sha: 'd8', title: 'Linear Algebra Done Right', author: 'Sheldon Axler' },
+                { sha: '4f', title: 'Nonlinear Dynamics and Chaos', author: 'Steven Strogatz' },
+                { sha: '7a', title: 'Introduction to Electrodynamics', author: 'David Griffiths' },
+                { sha: '93', title: 'Principles of Mathematical Analysis', author: 'Walter Rudin' },
+                { sha: 'b8', title: 'Introduction to the Theory of Computation', author: 'Michael Sipser' },
+                { sha: 'c5', title: 'Structure and Interpretation of Computer Programs', author: 'Abelson & Sussman' },
+              ].map((b) => (
+                <div key={b.sha} className="space-y-2">
+                  <BookCover title={b.title} author={b.author} hue={coverHueFromSha(b.sha)} />
+                  <p className="font-mono text-xs text-muted-foreground">{coverHueFromSha(b.sha)}</p>
+                </div>
+              ))}
             </div>
           </Shelf>
         </Section>
