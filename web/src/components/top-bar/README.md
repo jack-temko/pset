@@ -22,8 +22,11 @@ add a search box; show a Tasks entry when nothing is happening.
   decision, opening an activity sheet. It arrives with the task store; until
   then the right zone is the toggle and the gear.
 - **The middle's book treatment is not built** — it needs the workspace.
-- The bar is `sticky top-0`, which the baseline does not specify. Home
-  scrolls under it; the workspace will need it fixed regardless.
+- The bar is fixed chrome inside `AppShell` — the shell owns the viewport
+  and the scroll region starts beneath the bar, so it never moves.
+- **A dev-only components toggle** (`SwatchBook`, DEV builds only) sits
+  first in the right zone: it flips to `/components` and back to wherever
+  you were. It does not exist in production bundles.
 
 ## Open
 

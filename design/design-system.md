@@ -118,9 +118,10 @@ component.**
 - **A document page** (Home, Settings) has exactly one scroll region: the
   area under the bar. It is as tall as its content. **Nothing inside it
   gets its own vertical scrollbar.** Content that would be too long is
-  truncated with a door — "Showing 3 of 9", and a way through — because a
-  scrollbar inside a scrolling page hides content twice over and traps the
-  wheel.
+  truncated with a **Door** — one component, everywhere: a full-width
+  quiet row at the bottom edge saying "Show all 9", which opens in place
+  and flips to "Show fewer" — because a scrollbar inside a scrolling page
+  hides content twice over and traps the wheel.
 - **A filled screen** (the book workspace) is exactly the remaining height
   and never scrolls as a whole. Its panes scroll independently, because
   each is a genuinely separate stream: the contents rail, the page scan,

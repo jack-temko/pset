@@ -4,9 +4,10 @@ import { BookOpen } from 'lucide-react'
 import { AppShell, PageShell } from '@/components/shell'
 import { BookTile } from '@/components/book-tile'
 import { Button } from '@/components/button'
-import { Box, BoxFooter, BoxRow, Counter, RowValue } from '@/components/box'
+import { Box, BoxRow, Counter, RowValue } from '@/components/box'
+import { Door } from '@/components/door'
 import { DurationValue, StatTile, type Segment } from '@/components/stat-tile'
-import { BOOKS, DUE, DUE_TOTAL, WEEK, type Book, type Due, type Week } from '@/lib/sample'
+import { BOOKS, DUE, DUE_SHOWN, WEEK, type Book, type Due, type Week } from '@/lib/sample'
 import { cn } from '@/lib/utils'
 
 function greeting(hour: number): string {
@@ -84,12 +85,15 @@ function ThisWeek({ week }: { week: Week }) {
 /** What is due across every book — the only thing on the page with a
  *  deadline. The section header owns the title, count and action; the Box
  *  holds only rows and its door. */
-function Homework({ items, total }: { items: Due[]; total: number }) {
+function Homework({ items, shown }: { items: Due[]; shown: number }) {
+  const [open, setOpen] = useState(false)
+  const visible = open ? items : items.slice(0, shown)
+
   return (
     <section className="space-y-5">
       <SectionHeader
         title="Homework"
-        count={total}
+        count={items.length}
         action={
           <Button variant="outline" size="sm">
             New homework
@@ -97,7 +101,7 @@ function Homework({ items, total }: { items: Due[]; total: number }) {
         }
       />
       <Box>
-        {items.map((d) => (
+        {visible.map((d) => (
           <BoxRow
             key={d.id}
             href={`/homework/${d.id}`}
@@ -107,12 +111,13 @@ function Homework({ items, total }: { items: Due[]; total: number }) {
             trailing={<RowValue className={cn(d.urgent && 'text-warning')}>{d.due}</RowValue>}
           />
         ))}
-        {total > items.length && (
-          <BoxFooter>
-            <span>
-              Showing {items.length} of {total}
-            </span>
-          </BoxFooter>
+        {items.length > shown && (
+          <Door
+            className="border-t border-border-muted"
+            open={open}
+            total={items.length}
+            onToggle={() => setOpen((o) => !o)}
+          />
         )}
       </Box>
     </section>
@@ -129,21 +134,15 @@ function Shelf({ books }: { books: Book[] }) {
 
   return (
     <section className="space-y-5">
-      <SectionHeader
-        title="Your books"
-        action={
-          books.length > SHELF_ROW && (
-            <Button variant="ghost" size="sm" onClick={() => setOpen((o) => !o)}>
-              {open ? 'Show fewer' : `Show all ${books.length}`}
-            </Button>
-          )
-        }
-      />
+      <SectionHeader title="Your books" />
       <div className="grid grid-cols-5 items-start gap-6">
         {shown.map((b) => (
           <BookTile key={b.sha256} book={b} />
         ))}
       </div>
+      {books.length > SHELF_ROW && (
+        <Door open={open} total={books.length} onToggle={() => setOpen((o) => !o)} />
+      )}
     </section>
   )
 }
@@ -159,7 +158,7 @@ export function Home() {
       <PageShell>
         <h1 className="font-heading text-4xl">{greeting(new Date().getHours())}.</h1>
         <ThisWeek week={WEEK} />
-        <Homework items={DUE} total={DUE_TOTAL} />
+        <Homework items={DUE} shown={DUE_SHOWN} />
         <Shelf books={BOOKS} />
       </PageShell>
     </AppShell>

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { BookOpen, Plus, Settings } from 'lucide-react'
 
 import { AppShell, PageShell } from '@/components/shell'
@@ -7,9 +7,10 @@ import { BrandLockup, Mark } from '@/components/brand'
 import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@/components/box'
 import { Button, IconButton } from '@/components/button'
 import { BookStatus } from '@/components/book-status'
+import { Door } from '@/components/door'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { coverHueFromSha } from '@/lib/covers'
-import { BOOKS } from '@/lib/sample'
+import { BOOKS, DUE } from '@/lib/sample'
 import { BookTile } from '@/components/book-tile'
 
 /**
@@ -40,6 +41,25 @@ function Shelf({ label, children }: { label: string; children: ReactNode }) {
       <div className="pt-2 font-mono text-xs text-muted-foreground">{label}</div>
       <div className="flex flex-wrap items-center gap-3">{children}</div>
     </div>
+  )
+}
+
+/** The Door needs state to be worth looking at, so it gets a live demo. */
+function DoorDemo() {
+  const [open, setOpen] = useState(false)
+  const rows = open ? DUE : DUE.slice(0, 2)
+  return (
+    <Box>
+      {rows.map((d) => (
+        <BoxRow key={d.id} href="#" title={d.title} description={d.book} />
+      ))}
+      <Door
+        className="border-t border-border-muted"
+        open={open}
+        total={DUE.length}
+        onToggle={() => setOpen((o) => !o)}
+      />
+    </Box>
   )
 }
 
@@ -162,6 +182,17 @@ export function Components() {
               <Box tone="destructive">
                 <BoxBody>Couldn&apos;t prepare this book — the PDF has no extractable text.</BoxBody>
               </Box>
+            </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Door"
+          note="The way through truncated content — opens in place, everywhere the same. Nothing scrolls by itself."
+        >
+          <Shelf label="in a Box">
+            <div className="w-full max-w-xl">
+              <DoorDemo />
             </div>
           </Shelf>
         </Section>

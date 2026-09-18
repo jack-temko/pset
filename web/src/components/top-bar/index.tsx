@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { Moon, Settings, Sun } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { Moon, Settings, Sun, SwatchBook } from 'lucide-react'
 
 import { BrandLockup } from '@/components/brand'
 import { buttonVariants, IconButton } from '@/components/button'
@@ -15,6 +15,26 @@ import { cn } from '@/lib/utils'
  * "Settings" on settings. It never repeats a page's h1, and no actions live
  * up here — the page or panel owns those.
  */
+/** Dev only: flip between wherever you are and /components, and back. */
+function ComponentsToggle() {
+  const location = useLocation()
+  const there = location.pathname === '/components'
+  return (
+    <Link
+      to={there ? ((location.state as { from?: string } | null)?.from ?? '/') : '/components'}
+      state={there ? undefined : { from: location.pathname }}
+      aria-label={there ? 'Back to the app' : 'Components'}
+      className={cn(
+        buttonVariants({ variant: 'ghost' }),
+        'w-control px-0',
+        there && 'bg-muted/50 text-foreground',
+      )}
+    >
+      <SwatchBook className="size-5" />
+    </Link>
+  )
+}
+
 export function TopBar({ middle }: { middle?: ReactNode }) {
   const [dark, setDark] = useState(isDark)
 
@@ -30,6 +50,7 @@ export function TopBar({ middle }: { middle?: ReactNode }) {
         <div className="flex items-center gap-2 text-base">{middle}</div>
 
         <div className="flex items-center justify-end gap-2 text-muted-foreground">
+          {import.meta.env.DEV && <ComponentsToggle />}
           <IconButton
             variant="ghost"
             aria-label={dark ? 'Switch to the paper theme' : 'Switch to the night theme'}

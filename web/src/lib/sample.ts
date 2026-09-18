@@ -114,9 +114,52 @@ export const DUE: Due[] = [
     questions: 3,
     due: 'Fri',
   },
+  {
+    id: '4',
+    title: 'Problem set 5',
+    book: 'Principles of Mathematical Analysis',
+    questions: 6,
+    due: 'Fri',
+  },
+  {
+    id: '5',
+    title: 'Recurrence practice',
+    book: 'Introduction to Algorithms',
+    questions: 10,
+    due: 'Sat',
+  },
+  {
+    id: '6',
+    title: 'Streams and laziness',
+    book: 'Structure and Interpretation of Computer Programs',
+    questions: 4,
+    due: 'Sun',
+  },
+  {
+    id: '7',
+    title: 'Chapter 12 review',
+    book: 'The Feynman Lectures on Physics',
+    questions: 7,
+    due: 'Mon',
+  },
+  {
+    id: '8',
+    title: 'Combinatorics warm-up',
+    book: 'A First Course in Probability',
+    questions: 9,
+    due: 'Tue',
+  },
+  {
+    id: '9',
+    title: 'Problem set 6',
+    book: 'Linear Algebra Done Right',
+    questions: 8,
+    due: 'next Fri',
+  },
 ]
 
-export const DUE_TOTAL = 9
+/** How many of the due list Home shows before its door. */
+export const DUE_SHOWN = 3
 
 export type Week = {
   /** Minutes this week, by activity. */

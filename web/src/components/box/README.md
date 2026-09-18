@@ -15,7 +15,7 @@ Box.
   is `primary-soft`.
 - **`BoxBody`** — `spacing-card` padding, `text-base`, for prose and forms.
 - **`BoxFooter`** — a `card-header` band with a border above it: totals,
-  counts, facts in mono.
+  counts, facts in mono. A truncated list ends in a `Door` instead.
 - **`Counter`** — the count beside a title.
 - **`RowValue`** — a trailing value: mono, at the floor size, figures
   aligned.
