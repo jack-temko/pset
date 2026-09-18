@@ -10,7 +10,7 @@ export function Mark({ className }: { className?: string }) {
     <svg
       viewBox="0 0 32 32"
       aria-hidden
-      className={cn('size-7 shrink-0', className)}
+      className={cn('size-6 shrink-0', className)}
     >
       <rect width="32" height="32" rx="7" fill="#224dac" />
       <g transform="translate(4.40 20.91)">
@@ -51,9 +51,9 @@ export function Mark({ className }: { className?: string }) {
  *  braced wordmark is for outside the product, never in here. */
 export function BrandLockup() {
   return (
-    <span className="flex items-center gap-3">
+    <span className="flex items-center gap-2">
       <Mark />
-      <span className="font-heading text-lg font-semibold tracking-tight">PSet</span>
+      <span className="font-heading text-base font-semibold tracking-tight">PSet</span>
     </span>
   )
 }

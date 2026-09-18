@@ -5,8 +5,8 @@
  * the canvas manifest.
  *
  * The canvas runs the app's own code, so an artboard is never a copy of a
- * component that can drift — it IS the component. Run `npm run build` in web/
- * first: the stylesheet comes from that output.
+ * component that can drift — it IS the component. Run `npm run build` first:
+ * the stylesheet comes from that output.
  *
  *   npm run workboard
  */
@@ -19,14 +19,26 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const web = root
 const out = join(root, 'workboard/build')
 
-/** Every artboard: what it mounts, how big its frame is, and the states you
- *  can step through. A state is a name, some props and a theme. */
+/** The side panel's width, in canvas px. A frame is its stage plus this, so
+ *  the stage stays exactly the size the design is meant to be seen at. */
+const PANEL = 200
+
+/**
+ * Every artboard: what it mounts, the size the stage should be, and its
+ * states.
+ *
+ * **States earn their place.** One exists to reach something you otherwise
+ * can't see — the other theme, a loading or error state, an empty
+ * collection — or to play an animation. A variant you can simply lay out
+ * beside its siblings is a specimen, not a state: give it one artboard that
+ * shows them all at once.
+ */
 const ARTBOARDS = [
   {
     file: 'Main',
-    title: 'Home',
     component: 'Home',
-    frame: { w: 1280, h: 820, x: 0, y: 0 },
+    stage: { w: 1280, h: 820 },
+    at: { x: 0, y: 0 },
     states: [
       { name: 'Paper', theme: 'light' },
       { name: 'Night study', theme: 'dark' },
@@ -35,29 +47,28 @@ const ARTBOARDS = [
   {
     file: 'TopBar',
     component: 'TopBar',
-    frame: { w: 1280, h: 220, x: 0, y: 940 },
+    stage: { w: 1280, h: 140 },
+    at: { x: 0, y: 940 },
     states: [
-      { name: 'Home', theme: 'light', props: {} },
-      { name: 'Home · night', theme: 'dark', props: {} },
+      { name: 'Paper', theme: 'light' },
+      { name: 'Night study', theme: 'dark' },
     ],
   },
   {
-    file: 'Button',
-    component: 'Button',
-    frame: { w: 520, h: 260, x: 0, y: 1280 },
+    file: 'Buttons',
+    component: 'ButtonSpecimen',
+    stage: { w: 680, h: 220 },
+    at: { x: 0, y: 1340 },
     states: [
-      { name: 'primary', props: { variant: 'primary', children: 'New homework' } },
-      { name: 'outline', props: { variant: 'outline', children: 'Try again' } },
-      { name: 'secondary', props: { variant: 'secondary', children: 'Start over' } },
-      { name: 'ghost', props: { variant: 'ghost', children: 'Cancel' } },
-      { name: 'destructive', props: { variant: 'destructive', children: 'Remove book' } },
-      { name: 'disabled', props: { variant: 'primary', children: 'New homework', disabled: true } },
+      { name: 'Paper', theme: 'light' },
+      { name: 'Night study', theme: 'dark' },
     ],
   },
   {
     file: 'Brand',
     component: 'BrandLockup',
-    frame: { w: 400, h: 200, x: 600, y: 1280 },
+    stage: { w: 320, h: 140 },
+    at: { x: 960, y: 1340 },
     states: [
       { name: 'Paper', theme: 'light' },
       { name: 'Night study', theme: 'dark' },
@@ -93,7 +104,7 @@ async function appCss() {
   const dir = join(web, 'dist/assets')
   const files = await readdir(dir)
   const css = files.find((f) => f.startsWith('index-') && f.endsWith('.css'))
-  if (!css) throw new Error('no built stylesheet in web/dist/assets — run `npm run build` in web/ first')
+  if (!css) throw new Error('no built stylesheet in dist/assets — run `npm run build` first')
   const text = await readFile(join(dir, css), 'utf8')
   return text.replace(/@font-face\s*\{[^}]*\}/g, '')
 }
@@ -104,6 +115,7 @@ const FONTS =
 function artboard({ spec, bundle, css }) {
   const states = spec.states.map((s) => ({ theme: 'light', props: {}, ...s }))
   const names = states.map((s) => s.name)
+  const many = states.length > 1
 
   return `<!doctype html>
 <html>
@@ -125,26 +137,40 @@ function artboard({ spec, bundle, css }) {
       --font-mono: "JetBrains Mono", ui-monospace, monospace;
     }
     html, body { height: 100%; }
+    .wb { display: flex; height: 100%; align-items: stretch; }
+    .wb-stage { flex: 0 0 ${spec.stage.w}px; width: ${spec.stage.w}px; overflow: hidden; }
     /* Workboard chrome — deliberately not the product's type or color, so it
        is never mistaken for the design under test. */
-    .wb-bar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 6px;
-      padding: 6px 8px; background: #1b1b1f; color: #e7e7ea; font: 500 12px/1 ui-sans-serif, system-ui, sans-serif; }
-    .wb-bar button { height: 22px; padding: 0 8px; border-radius: 4px; border: 1px solid #3a3a42;
-      background: #26262c; color: #e7e7ea; font: inherit; cursor: pointer; }
-    .wb-bar button[data-on="1"] { background: #e7e7ea; color: #1b1b1f; border-color: #e7e7ea; }
-    .wb-bar .wb-play { margin-left: auto; }
-    .wb-stage { min-height: calc(100% - 34px); }
+    .wb-panel { flex: 0 0 ${PANEL}px; width: ${PANEL}px; display: flex; flex-direction: column; gap: 10px;
+      padding: 12px; background: #17171a; color: #e7e7ea; border-left: 1px solid #2a2a30;
+      font: 500 12px/1.4 ui-sans-serif, system-ui, sans-serif; }
+    .wb-name { font-size: 13px; font-weight: 600; }
+    .wb-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #8b8b95; }
+    .wb-panel button { display: block; width: 100%; text-align: left; height: 26px; padding: 0 8px;
+      border-radius: 4px; border: 1px solid #33333c; background: #23232a; color: #e7e7ea;
+      font: inherit; cursor: pointer; }
+    .wb-panel button[data-on="1"] { background: #e7e7ea; color: #17171a; border-color: #e7e7ea; }
+    /* Directly under the states it plays through, not pinned to the floor of
+       a panel that can be 800px tall. */
+    .wb-play { margin-top: 4px; }
+    .wb-hint { color: #6f6f79; font-size: 11px; font-weight: 400; }
   </style>
 </helmet>
-<div>
-  <div class="wb-bar">
-    <span>${spec.component}</span>
-    <sc-for list="{{stateButtons}}" as="s" hint-placeholder-count="2">
-      <button data-on="{{s.on}}" onClick="{{s.pick}}">{{s.name}}</button>
-    </sc-for>
-    <button class="wb-play" onClick="{{togglePlay}}">{{playLabel}}</button>
-  </div>
+<div class="wb">
   <div class="wb-stage" ref="{{stageRef}}"></div>
+  <div class="wb-panel">
+    <div class="wb-name">${spec.component}</div>
+    <sc-if value="{{many}}" hint-placeholder-val="{{true}}">
+      <div class="wb-label">State</div>
+      <sc-for list="{{stateButtons}}" as="s" hint-placeholder-count="2">
+        <button data-on="{{s.on}}" onClick="{{s.pick}}">{{s.name}}</button>
+      </sc-for>
+      <button class="wb-play" onClick="{{togglePlay}}">{{playLabel}}</button>
+    </sc-if>
+    <sc-if value="{{one}}" hint-placeholder-val="{{false}}">
+      <div class="wb-hint">A specimen — nothing to step through.</div>
+    </sc-if>
+  </div>
 </div>
 </x-dc>
 <script data-dc-script data-props='{
@@ -192,8 +218,10 @@ class Component extends DCLogic {
   renderVals() {
     var currentName = this.current().name;
     return {
+      many: ${many},
+      one: ${!many},
       stageRef: (el) => { if (el && el !== this.stage) { this.stage = el; this.paint(); } },
-      playLabel: this.state && this.state.playing ? '\\u25A0 stop' : '\\u25B6 play',
+      playLabel: this.state && this.state.playing ? '\\u25A0 Stop' : '\\u25B6 Play',
       togglePlay: () => this.togglePlay(),
       stateButtons: WB_STATES.map((s) => ({
         name: s.name,
@@ -220,18 +248,18 @@ for (const spec of ARTBOARDS) {
 const canvas = {
   artboards: ARTBOARDS.map((s) => ({
     file: `${s.file}.dc.html`,
-    x: s.frame.x,
-    y: s.frame.y,
-    w: s.frame.w,
-    h: s.frame.h,
+    x: s.at.x,
+    y: s.at.y,
+    w: s.stage.w + PANEL,
+    h: Math.max(s.stage.h, 240),
   })),
   annotations: [
     {
       id: 'note-live',
       x: 0,
-      y: -140,
-      w: 520,
-      text: 'These artboards run the app’s real components, bundled from web/src.\nPick a state in the dark bar, or press play to step through them.\nRebuild with: npm run workboard',
+      y: -150,
+      w: 560,
+      text: 'These artboards run the app’s real components, bundled from web/src — not copies of them.\nThe panel on the right of each one switches state and plays through them.\nRebuild after changing a component: npm run workboard',
     },
   ],
   launch: { view: 'canvas' },

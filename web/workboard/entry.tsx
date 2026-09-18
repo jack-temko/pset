@@ -1,6 +1,7 @@
 import { createElement, type ComponentType } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
+import { Settings } from 'lucide-react'
 
 import { BrandLockup, Mark } from '@/components/brand'
 import { PageShell } from '@/components/app-shell'
@@ -16,10 +17,37 @@ import { Home } from '@/pages/home'
  * Add a component here the moment the app grows one; an artboard can only
  * show what this registry exposes.
  */
+/** Every variant and size at once, built from the real Button — a specimen
+ *  sheet, not a state machine. Seeing them side by side is the point; there
+ *  is nothing here to step through. */
+function ButtonSpecimen() {
+  return (
+    <div className="flex flex-col gap-6 p-8">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="primary">New homework</Button>
+        <Button variant="outline">Try again</Button>
+        <Button variant="secondary">Start over</Button>
+        <Button variant="ghost">Cancel</Button>
+        <Button variant="destructive">Remove book</Button>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button size="sm">Small · 28</Button>
+        <Button>Default · 32</Button>
+        <Button size="lg">Large · 40</Button>
+        <IconButton variant="outline" aria-label="Settings">
+          <Settings className="size-4" />
+        </IconButton>
+        <Button disabled>Disabled</Button>
+      </div>
+    </div>
+  )
+}
+
 const registry: Record<string, ComponentType<Record<string, unknown>>> = {
   Home,
   TopBar,
   PageShell,
+  ButtonSpecimen,
   Button,
   IconButton,
   BrandLockup,
