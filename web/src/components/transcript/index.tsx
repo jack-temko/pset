@@ -1,0 +1,161 @@
+import { useState, type ReactNode } from 'react'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
+import { Check, CircleAlert, Copy } from 'lucide-react'
+
+import { Button } from '@/components/button'
+
+/**
+ * The Ask transcript's pieces. Asymmetric by design: you speak in a
+ * compact soft block, the book answers in full-width quiet text — chat
+ * where you ask, page where it answers. Spec: design/workspace.md.
+ */
+
+/** The question: a compact `primary-soft` block on the right. */
+export function UserTurn({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex justify-end">
+      <div className="max-w-5/6 rounded-md bg-primary-soft px-3 py-2 text-sm text-primary">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/** The step feed: one quiet line per tool call — verb, object, count.
+ *  The line is the whole story; nothing expands. */
+export function Steps({ steps }: { steps: string[] }) {
+  return (
+    <div className="space-y-1">
+      {steps.map((s, i) => (
+        <p key={i} className="text-xs font-normal text-muted-foreground">
+          {s}
+        </p>
+      ))}
+    </div>
+  )
+}
+
+/** The answer: full-width on the panel ground, with Copy on hover. */
+export function AssistantTurn({ children }: { children: ReactNode }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <div className="group relative space-y-3 text-base">
+      {children}
+      <button
+        type="button"
+        aria-label="Copy answer"
+        onClick={(e) => {
+          const text = e.currentTarget.parentElement?.innerText ?? ''
+          try {
+            void navigator.clipboard.writeText(text)
+          } catch {
+            /* clipboard can be blocked; the button just doesn't confirm */
+          }
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        }}
+        className="flex h-control-sm w-control-sm items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100 hover:bg-muted/50 hover:text-foreground focus-visible:opacity-100 motion-reduce:transition-none"
+      >
+        {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+      </button>
+    </div>
+  )
+}
+
+/** An inline citation: a small mono chip that reads as an object in the
+ *  prose. Click scrolls the scan to the page and flashes its edge. */
+export function PageRef({ page, onJump }: { page: number; onJump?: (page: number) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onJump?.(page)}
+      className="mx-px inline-flex translate-y-px items-center rounded-sm bg-primary-soft px-1 font-mono text-xs text-primary transition-colors duration-150 ease-out hover:bg-primary hover:text-primary-foreground motion-reduce:transition-none"
+    >
+      p.&thinsp;{page}
+    </button>
+  )
+}
+
+/** Inline math, in the prose's own size. */
+export function MathInline({ tex }: { tex: string }) {
+  return (
+    <span
+      dangerouslySetInnerHTML={{
+        __html: katex.renderToString(tex, { throwOnError: false }),
+      }}
+    />
+  )
+}
+
+/** Display math: a centered block with room to breathe. */
+export function MathDisplay({ tex }: { tex: string }) {
+  return (
+    <div
+      className="overflow-x-auto py-1"
+      dangerouslySetInnerHTML={{
+        __html: katex.renderToString(tex, { throwOnError: false, displayMode: true }),
+      }}
+    />
+  )
+}
+
+/** The date changed: a quiet centered mark on a hairline. */
+export function DayDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3" role="separator" aria-label={label}>
+      <span className="h-px flex-1 bg-border-muted" />
+      <span className="text-xs font-normal text-muted-foreground">{label}</span>
+      <span className="h-px flex-1 bg-border-muted" />
+    </div>
+  )
+}
+
+/** The very top of the history: where it begins, and the one way to
+ *  start over. Clearing asks once, in place. */
+export function ConversationStart({ onClear }: { onClear?: () => void }) {
+  const [confirming, setConfirming] = useState(false)
+  return (
+    <div className="flex items-center justify-center gap-2 text-xs font-normal text-muted-foreground">
+      {confirming ? (
+        <>
+          <span>Clear this conversation?</span>
+          <Button variant="destructive" size="sm" onClick={onClear}>
+            Clear
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+            Keep
+          </Button>
+        </>
+      ) : (
+        <>
+          <span>Start of conversation</span>
+          <span aria-hidden>·</span>
+          <button
+            type="button"
+            onClick={() => setConfirming(true)}
+            className="underline underline-offset-2 transition-colors duration-150 ease-out hover:text-foreground motion-reduce:transition-none"
+          >
+            Clear
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+/** A loop that died: the feed above freezes, this says why in one line,
+ *  and Try again re-runs the same question. */
+export function FailedTurn({ reason, onRetry }: { reason: string; onRetry?: () => void }) {
+  return (
+    <div className="flex items-center gap-2 text-xs text-destructive">
+      <span className="flex h-5 shrink-0 items-center">
+        <CircleAlert className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1 font-normal">{reason}</span>
+      <Button variant="outline" size="sm" onClick={onRetry} className="shrink-0">
+        Try again
+      </Button>
+    </div>
+  )
+}

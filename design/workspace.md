@@ -37,11 +37,25 @@ question gets page context is deliberately left open until that loop is
 built.
 
 - **Visible step feed**: each tool call renders as its own quiet row in
-  the transcript, as it happens, and stays.
-- Cards, first two: **page citation** (names pages + snippet; click
-  scrolls the scan there) and **rendered math** (display blocks).
+  the transcript, as it happens, and stays. One line per call — verb,
+  object, count ("Searched 'eigenvalue' · 6 pages") — no expansion.
+- **Turns are asymmetric**: the question is a compact `primary-soft`
+  block on the right; the answer is full-width quiet text on the panel
+  ground. The answer **streams** in after the steps.
+- **Citations are inline page chips** — a distinct small mono element
+  ("p. 142") in the prose, not underlined text and not a card. Click
+  scrolls the scan there and flashes the page's edge.
+- **Math renders inline and display**, KaTeX. Answers about a math book
+  are math; half-rendering looks broken.
 - **Send becomes Stop** while the loop runs; stopping freezes the feed
   and keeps the partial answer with a "stopped" note.
+- **A failed loop** freezes the feed, says what happened in one
+  destructive-ink line, and offers Try again. Partial text stays.
+- **Past turns**: Copy on the answer, nothing else — history is
+  append-only, no edit, no retry of old turns.
+- **Endless history with day dividers** (quiet centered hairline:
+  "Yesterday", "Sep 12"); the very top of the transcript carries
+  "Start of conversation · Clear" with a confirm.
 - Empty conversation: a prompt line plus one short sentence of what the
   agent can do. No generated suggestions.
 - One running conversation per book (locked earlier).

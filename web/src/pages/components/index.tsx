@@ -8,6 +8,17 @@ import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@
 import { Button, IconButton } from '@/components/button'
 import { BookStatus } from '@/components/book-status'
 import { Door } from '@/components/door'
+import {
+  AssistantTurn,
+  ConversationStart,
+  DayDivider,
+  FailedTurn,
+  MathDisplay,
+  MathInline,
+  PageRef,
+  Steps,
+  UserTurn,
+} from '@/components/transcript'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { coverHueFromSha } from '@/lib/covers'
 import { BOOKS, DUE } from '@/lib/sample'
@@ -281,6 +292,37 @@ export function Components() {
           <Shelf label="empty week">
             <div className="w-56">
               <StatTile label="Homework" chart={1} value="—" context="nothing yet this week" />
+            </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Transcript"
+          note="Asymmetric: you speak in a soft block, the book answers full-width. Steps are one line per tool call."
+        >
+          <Shelf label="turn">
+            <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
+              <UserTurn>Why does every operator have a minimal polynomial?</UserTurn>
+              <Steps steps={['Searched ‘minimal polynomial’ · 6 pages', 'Read p. 142–145']} />
+              <AssistantTurn>
+                <p>
+                  Because powers of <MathInline tex="T" /> cannot stay independent forever{' '}
+                  <PageRef page={142} /> — the space has dimension <MathInline tex="n^2" />.
+                </p>
+                <MathDisplay tex="I,\;T,\;T^2,\;\dots,\;T^{n^2}" />
+              </AssistantTurn>
+            </div>
+          </Shelf>
+          <Shelf label="failed">
+            <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
+              <Steps steps={['Searched ‘spectral theorem’ · 5 pages']} />
+              <FailedTurn reason="The model connection dropped." />
+            </div>
+          </Shelf>
+          <Shelf label="marks">
+            <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
+              <ConversationStart />
+              <DayDivider label="Yesterday" />
             </div>
           </Shelf>
         </Section>

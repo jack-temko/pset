@@ -5,6 +5,16 @@ import { ArrowUp, Focus, Plus } from 'lucide-react'
 import { AppShell } from '@/components/shell'
 import { Box, BoxRow, RowValue } from '@/components/box'
 import { Button, IconButton } from '@/components/button'
+import {
+  AssistantTurn,
+  ConversationStart,
+  DayDivider,
+  MathDisplay,
+  MathInline,
+  PageRef,
+  Steps,
+  UserTurn,
+} from '@/components/transcript'
 import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
 import {
   BOOK_HOMEWORK,
@@ -180,18 +190,58 @@ function Scan({
 
 // ---------------------------------------------------------------- panel
 
-/** Empty Ask: a prompt line and one sentence of what the agent can do.
- *  No generated suggestions. */
-function AskTab() {
+/** Sample history until the loop backend exists — it exercises every
+ *  transcript piece the spec names. */
+function SampleConversation({ onJump }: { onJump: (page: number) => void }) {
+  return (
+    <div className="space-y-5">
+      <ConversationStart />
+      <DayDivider label="Yesterday" />
+      <UserTurn>Where does the book define linear independence?</UserTurn>
+      <Steps steps={['Searched ‘linear independence’ · 4 pages', 'Read p. 27–33']} />
+      <AssistantTurn>
+        <p>
+          In section 2.A <PageRef page={32} onJump={onJump} />: a list{' '}
+          <MathInline tex="v_1,\dots,v_m" /> is linearly independent when the only way to write{' '}
+          <MathInline tex="0" /> as a combination of the list is to take every coefficient to be{' '}
+          <MathInline tex="0" />. The lead-up on <PageRef page={28} onJump={onJump} /> builds the
+          span first, so independence arrives as “no vector is wasted.”
+        </p>
+      </AssistantTurn>
+      <DayDivider label="Today" />
+      <UserTurn>Why does every operator have a minimal polynomial?</UserTurn>
+      <Steps
+        steps={[
+          'Searched ‘minimal polynomial’ · 6 pages',
+          'Read p. 142–145',
+          'Solved · 3 steps',
+        ]}
+      />
+      <AssistantTurn>
+        <p>
+          Because powers of <MathInline tex="T" /> cannot stay independent forever. On{' '}
+          <PageRef page={142} onJump={onJump} /> the argument is a dimension count: the operator
+          space <MathInline tex="\mathcal{L}(V)" /> has dimension <MathInline tex="n^2" />, so
+          the list
+        </p>
+        <MathDisplay tex="I,\;T,\;T^2,\;\dots,\;T^{n^2}" />
+        <p>
+          has <MathInline tex="n^2+1" /> entries and must be dependent. The first dependence
+          gives a monic polynomial with <MathInline tex="p(T)=0" />; uniqueness of the smallest
+          one follows from the division algorithm <PageRef page={144} onJump={onJump} />.
+        </p>
+      </AssistantTurn>
+    </div>
+  )
+}
+
+/** Ask: the transcript over the composer. An empty conversation is a
+ *  prompt line and one sentence of capability — no generated suggestions. */
+function AskTab({ onJump }: { onJump: (page: number) => void }) {
   return (
     <>
-      <div className="grid min-h-0 flex-1 place-items-center px-6">
-        <div className="space-y-2 text-center">
-          <p className="text-base">Ask about this book.</p>
-          <p className="text-xs font-normal text-muted-foreground">
-            It can search the pages, read them, and work through the math.
-          </p>
-        </div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-card">
+        <SampleConversation onJump={onJump} />
       </div>
       <div className="shrink-0 border-t p-card">
         <form
@@ -239,10 +289,12 @@ function Panel({
   sha,
   focus,
   onFocusToggle,
+  onJump,
 }: {
   sha: string
   focus: boolean
   onFocusToggle: () => void
+  onJump: (page: number) => void
 }) {
   const [tab, setTab] = useState<Tab>(() => readTab(sha))
   const pick = (t: Tab) => {
@@ -277,7 +329,7 @@ function Panel({
           <Focus />
         </IconButton>
       </div>
-      {tab === 'ask' ? <AskTab /> : <HomeworkTab items={BOOK_HOMEWORK} />}
+      {tab === 'ask' ? <AskTab onJump={onJump} /> : <HomeworkTab items={BOOK_HOMEWORK} />}
     </aside>
   )
 }
@@ -318,7 +370,12 @@ export function Workspace() {
           scrollRef={scrollRef}
           pageRefs={pageRefs}
         />
-        <Panel sha={book.sha256} focus={focus} onFocusToggle={() => setFocus((f) => !f)} />
+        <Panel
+          sha={book.sha256}
+          focus={focus}
+          onFocusToggle={() => setFocus((f) => !f)}
+          onJump={jump}
+        />
       </div>
     </AppShell>
   )
