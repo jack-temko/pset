@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/pset-mark.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PSet</title>
+    <style>
+      /* The gate's visibility lives here, not in index.css: the stylesheet
+         arrives after first paint, so a gate hidden only there flashes on
+         every load. Its looks stay in index.css. */
+      #pset-gate {
+        display: none;
+      }
+      @media (max-width: 1023px) {
+        #root {
+          display: none;
+        }
+        #pset-gate {
+          display: flex;
+        }
+      }
+    </style>
     <script>
       // Resolve the theme before first paint, the same way src/lib/theme.ts
       // does: only an explicit choice is stored, anything else follows the OS.

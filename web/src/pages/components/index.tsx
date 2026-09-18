@@ -6,7 +6,10 @@ import { BookCover } from '@/components/book-cover'
 import { BrandLockup, Mark } from '@/components/brand'
 import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@/components/box'
 import { Button, IconButton } from '@/components/button'
+import { BookStatus } from '@/components/book-status'
 import { coverHueFromSha } from '@/lib/covers'
+import { BOOKS } from '@/lib/sample'
+import { BookTile } from '@/components/book-tile'
 
 /**
  * Every component and every variant, on one page, in the app itself.
@@ -168,20 +171,47 @@ export function Components() {
         >
           <Shelf label="hues">
             <div className="grid w-full grid-cols-6 gap-4">
-              {[
-                { sha: 'd8', title: 'Linear Algebra Done Right', author: 'Sheldon Axler' },
-                { sha: '4f', title: 'Nonlinear Dynamics and Chaos', author: 'Steven Strogatz' },
-                { sha: '7a', title: 'Introduction to Electrodynamics', author: 'David Griffiths' },
-                { sha: '93', title: 'Principles of Mathematical Analysis', author: 'Walter Rudin' },
-                { sha: 'b8', title: 'Introduction to the Theory of Computation', author: 'Michael Sipser' },
-                { sha: 'c5', title: 'Structure and Interpretation of Computer Programs', author: 'Abelson & Sussman' },
-              ].map((b) => (
-                <div key={b.sha} className="space-y-2">
-                  <BookCover title={b.title} author={b.author} hue={coverHueFromSha(b.sha)} />
-                  <p className="font-mono text-xs text-muted-foreground">{coverHueFromSha(b.sha)}</p>
+              {BOOKS.slice(0, 6).map((b) => (
+                <div key={b.sha256} className="space-y-2">
+                  <BookCover
+                    title={b.title}
+                    author={b.author}
+                    hue={coverHueFromSha(b.sha256)}
+                  />
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {coverHueFromSha(b.sha256)}
+                  </p>
                 </div>
               ))}
             </div>
+          </Shelf>
+          <Shelf label="book tile">
+            <div className="grid w-full grid-cols-6 gap-4">
+              {[BOOKS[0], BOOKS[4], BOOKS[8]].map((b) => (
+                <BookTile key={b.sha256} book={b} />
+              ))}
+            </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="BookStatus"
+          note="Ready renders nothing — the normal state is silence, so anything drawn here is worth reading."
+        >
+          <Shelf label="preparing">
+            <div className="w-64">
+              <BookStatus state={{ kind: 'preparing', done: 140, total: 312 }} />
+            </div>
+          </Shelf>
+          <Shelf label="failed">
+            <div className="w-64">
+              <BookStatus state={{ kind: 'failed', reason: 'No extractable text' }} />
+            </div>
+          </Shelf>
+          <Shelf label="ready">
+            <p className="text-xs text-muted-foreground">
+              Renders nothing at all — this row is deliberately empty.
+            </p>
           </Shelf>
         </Section>
 

@@ -301,9 +301,10 @@
 }
 
 /* Desktop-only: below layout-gate (1024px) the app hides and the static gate
-   in index.html shows instead. */
+   in index.html shows instead. Whether the gate is shown is decided by an
+   inline style in index.html — before first paint, so it never flashes. What
+   it looks like is here. */
 #pset-gate {
-    display: none;
     min-height: 100dvh;
     flex-direction: column;
     align-items: center;
@@ -334,12 +335,4 @@
     font-weight: 600;
     letter-spacing: 0.22em;
     color: var(--primary);
-}
-@media (max-width: 1023px) {
-    #root {
-        display: none;
-    }
-    #pset-gate {
-        display: flex;
-    }
 }
