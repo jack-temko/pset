@@ -117,3 +117,21 @@ export const DUE: Due[] = [
 ]
 
 export const DUE_TOTAL = 9
+
+export type Week = {
+  /** Minutes this week, by activity. */
+  homework: number
+  reading: number
+  asking: number
+  /** Questions worked, and the problem sets they came from. */
+  questions: number
+  problemSets: number
+}
+
+export const WEEK: Week = {
+  homework: 263,
+  reading: 70,
+  asking: 40,
+  questions: 14,
+  problemSets: 3,
+}

@@ -7,6 +7,7 @@ import { BrandLockup, Mark } from '@/components/brand'
 import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@/components/box'
 import { Button, IconButton } from '@/components/button'
 import { BookStatus } from '@/components/book-status'
+import { DurationValue, StatTile } from '@/components/stat-tile'
 import { coverHueFromSha } from '@/lib/covers'
 import { BOOKS } from '@/lib/sample'
 import { BookTile } from '@/components/book-tile'
@@ -212,6 +213,53 @@ export function Components() {
             <p className="text-xs text-muted-foreground">
               Renders nothing at all — this row is deliberately empty.
             </p>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="StatTile"
+          note="A label, a big serif value, one quiet line of context. Reports, never nags."
+        >
+          <Shelf label="time">
+            <div className="grid w-full max-w-2xl grid-cols-3 gap-4">
+              <StatTile
+                label="Homework"
+                chart={1}
+                value={<DurationValue minutes={263} />}
+                context="so far this week"
+              />
+              <StatTile
+                label="Reading"
+                chart={2}
+                value={<DurationValue minutes={70} />}
+                context="so far this week"
+              />
+              <StatTile
+                label="Asking"
+                chart={3}
+                value={<DurationValue minutes={40} />}
+                context="so far this week"
+              />
+            </div>
+          </Shelf>
+          <Shelf label="with split">
+            <div className="w-56">
+              <StatTile
+                label="Questions worked"
+                value={14}
+                context="across 3 problem sets"
+                segments={[
+                  { chart: 1, pct: 62 },
+                  { chart: 2, pct: 18 },
+                  { chart: 3, pct: 10 },
+                ]}
+              />
+            </div>
+          </Shelf>
+          <Shelf label="empty week">
+            <div className="w-56">
+              <StatTile label="Homework" chart={1} value="—" context="nothing yet this week" />
+            </div>
           </Shelf>
         </Section>
 
