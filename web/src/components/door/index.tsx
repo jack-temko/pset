@@ -29,12 +29,16 @@ export function Door({
       onClick={onToggle}
       aria-expanded={open}
       className={cn(
-        'flex h-row w-full items-center justify-center gap-1 text-xs text-muted-foreground transition-colors duration-150 ease-out hover:bg-muted/50 hover:text-foreground motion-reduce:transition-none',
+        'group flex h-row w-full items-center justify-center text-xs text-muted-foreground hover:text-foreground',
         className,
       )}
     >
-      {open ? 'Show fewer' : `Show all ${total}`}
-      <Chevron aria-hidden className="size-4" />
+      {/* The wash hugs the words rather than filling the row — a bar the
+          width of a whole grid darkening at once reads as a giant button. */}
+      <span className="flex h-control-sm items-center gap-1 rounded-md px-3 transition-colors duration-150 ease-out group-hover:bg-muted/50 motion-reduce:transition-none">
+        {open ? 'Show fewer' : `Show all ${total}`}
+        <Chevron aria-hidden className="size-4" />
+      </span>
     </button>
   )
 }
