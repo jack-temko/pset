@@ -115,12 +115,20 @@ export function BoxRow({
   return <div className={classes}>{content}</div>
 }
 
-/** The count beside a title. Sits at the type floor, not below it. */
+/**
+ * The count beside a title. Sits at the type floor, not below it.
+ *
+ * The fill is translucent ink rather than `muted`: muted is 1.07:1 against
+ * the header band it usually sits on (1.06–1.16:1 against every surface in
+ * the palette), so the pill simply wasn't visible. Ink at 20% darkens
+ * whatever ground it lands on — 1.50:1 light, 1.74:1 dark — and inverts
+ * with the theme for free.
+ */
 export function Counter({ className, ...props }: ComponentProps<'span'>) {
   return (
     <span
       className={cn(
-        'ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1 text-xs font-medium tabular-nums',
+        'ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground/20 px-1 text-xs font-medium tabular-nums',
         className,
       )}
       {...props}
