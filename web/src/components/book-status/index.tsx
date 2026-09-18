@@ -16,7 +16,11 @@ export function BookStatus({ state, className }: { state: BookState; className?:
   if (state.kind === 'failed') {
     return (
       <p className={cn('flex items-start gap-2 text-xs text-destructive', className)}>
-        <CircleAlert className="size-4 shrink-0" />
+        {/* A line box the height of the text's line-height, so the icon
+            centres on the FIRST line and stays there when the reason wraps. */}
+        <span className="flex h-5 shrink-0 items-center">
+          <CircleAlert className="size-4" />
+        </span>
         <span className="min-w-0">{state.reason}</span>
       </p>
     )

@@ -19,7 +19,7 @@ export function TopBar({ middle }: { middle?: ReactNode }) {
   const [dark, setDark] = useState(isDark)
 
   return (
-    <header className="sticky top-0 z-10 h-topbar border-b bg-background">
+    <header className="h-topbar shrink-0 border-b bg-background">
       <div className="grid h-full grid-cols-[1fr_auto_1fr] items-center px-4">
         <div className="flex items-center">
           <Link to="/" className="rounded-md" aria-label="PSet home">

@@ -101,6 +101,39 @@ Elevation is a hairline border. Two shadows exist — `floating` for layers
 that genuinely float, `lift` for a book cover picked off the shelf. Static
 surfaces get neither.
 
+## Layout and scrolling
+
+**Widths.** A document page is `layout-page` (72rem) wide with `page`
+gutters. Anything read as prose is `layout-reading` (48rem) — the measure,
+not the container.
+
+**The shell is fixed chrome.** The window itself never scrolls: the shell
+is exactly the viewport, the top bar takes its 56px, and what remains is
+the scroll region. A scrollbar therefore starts *below* the bar rather than
+running past it, and the bar cannot drift.
+
+**There are two kinds of screen, and the screen decides — never the
+component.**
+
+- **A document page** (Home, Settings) has exactly one scroll region: the
+  area under the bar. It is as tall as its content. **Nothing inside it
+  gets its own vertical scrollbar.** Content that would be too long is
+  truncated with a door — "Showing 3 of 9", and a way through — because a
+  scrollbar inside a scrolling page hides content twice over and traps the
+  wheel.
+- **A filled screen** (the book workspace) is exactly the remaining height
+  and never scrolls as a whole. Its panes scroll independently, because
+  each is a genuinely separate stream: the contents rail, the page scan,
+  the Ask transcript. The frame stays put; the panes move.
+
+**The one sanctioned inner scroll is horizontal**, for content that cannot
+reflow — a wide table, a code block, a diagram. It goes in its own
+container, and the page body never scrolls sideways.
+
+A scrolling flex child must set `min-h-0`. Flex items default to
+`min-height: auto` and refuse to shrink below their content, so a pane
+without it silently pushes the layout taller instead of scrolling.
+
 ## Motion
 
 Motion is functional and fast: **150ms, ease-out**. It exists to make a
