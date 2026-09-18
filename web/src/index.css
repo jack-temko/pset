@@ -80,8 +80,11 @@
     --spacing-4: calc(var(--spacing-1) * 4);
     --spacing-5: calc(var(--spacing-1) * 5);
     --spacing-6: calc(var(--spacing-1) * 6);
+    --spacing-7: calc(var(--spacing-1) * 7);
     --spacing-8: calc(var(--spacing-1) * 8);
+    --spacing-9: calc(var(--spacing-1) * 9);
     --spacing-10: calc(var(--spacing-1) * 10);
+    --spacing-11: calc(var(--spacing-1) * 11);
     --spacing-12: calc(var(--spacing-1) * 12);
     --spacing-14: calc(var(--spacing-1) * 14);
     --spacing-16: calc(var(--spacing-1) * 16);
@@ -100,11 +103,6 @@
     --spacing-card: 1rem;
 
     /* The shell's fixed dimensions. */
-    /* The mark's size in the top-bar lockup. Off the 4px grid on purpose: it
-       is a brand measurement tuned against the bar and the 20px icons
-       opposite, not a layout step — 28px dominated the bar, 24px vanished. */
-    --spacing-mark: 1.625rem;
-
     --spacing-topbar: 3.5rem;
     --spacing-rail: 16rem;
     --spacing-panel: 27.5rem;
