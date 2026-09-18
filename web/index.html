@@ -2,24 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/pset.svg" />
+    <link rel="icon" type="image/svg+xml" href="/pset-mark.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PSet</title>
     <script>
-      // Apply the theme before first paint to avoid a flash of the wrong mode.
+      // Resolve the theme before first paint, the same way src/lib/theme.ts
+      // does: only an explicit choice is stored, anything else follows the OS.
       ;(() => {
         const stored = localStorage.getItem('pset-theme')
-        const dark = stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
+        const dark =
+          stored === 'light' || stored === 'dark'
+            ? stored === 'dark'
+            : matchMedia('(prefers-color-scheme: dark)').matches
         document.documentElement.classList.toggle('dark', dark)
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
       })()
     </script>
   </head>
   <body>
     <div id="root"></div>
-    <div id="pset-gate" role="alertdialog" aria-label="PSET needs a wider window">
-      <p class="pset-gate-mark">PSET</p>
+    <div id="pset-gate" role="alertdialog" aria-label="PSet needs a wider window">
+      <p class="pset-gate-mark">PSet</p>
       <h1>This desk needs a bit more room</h1>
-      <p>PSET is built for laptops. Come back with a window at least 1024 pixels wide.</p>
+      <p>PSet is built for laptops. Come back with a window at least 1024 pixels wide.</p>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

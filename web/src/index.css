@@ -55,8 +55,11 @@
     --shadow-floating: var(--shadow-floating-value);
     --shadow-lift: var(--shadow-lift-value);
 
-    --container-page: 72rem;
-    --container-reading: 48rem;
+    /* Named for the system's layout tokens, and deliberately not "page" /
+       "reading": a --container-page would be shadowed by --spacing-page,
+       and max-w-page would silently resolve to the 40px gutter. */
+    --container-layout-page: 72rem;
+    --container-layout-reading: 48rem;
 }
 
 /* ── Lockdown ─────────────────────────────────────────────────────────────
@@ -102,10 +105,15 @@
     --spacing-control-lg: 2.5rem;
     --spacing-row: 2.5rem;
 
+    /* Each step carries the system's weight and tracking for its style, so a
+       call site sets size alone. The four display steps are serif-only
+       (font-heading); text-lg is the one shared step — card-title is sans 600,
+       the lead is serif 400 italic — so it stays weightless on purpose. */
     --text-*: initial;
     /* 14px — THE FLOOR. Labels, badges, timestamps, hints. */
     --text-xs: 0.875rem;
     --text-xs--line-height: calc(1.25 / 0.875);
+    --text-xs--font-weight: 500;
     /* 15px — buttons, rail rows, tabs, table cells. */
     --text-sm: 0.9375rem;
     --text-sm--line-height: calc(1.375 / 0.9375);
@@ -121,15 +129,22 @@
     /* 20px — section heads. */
     --text-xl: 1.25rem;
     --text-xl--line-height: calc(1.75 / 1.25);
+    --text-xl--font-weight: 500;
     /* 24px — panel titles, dialog titles. */
     --text-2xl: 1.5rem;
     --text-2xl--line-height: calc(2 / 1.5);
+    --text-2xl--font-weight: 500;
+    --text-2xl--letter-spacing: -0.01em;
     /* 30px — the one h1 on a page-shell page. */
     --text-3xl: 1.875rem;
     --text-3xl--line-height: calc(2.25 / 1.875);
+    --text-3xl--font-weight: 500;
+    --text-3xl--letter-spacing: -0.02em;
     /* 36px — the dashboard greeting and empty-state heroes. */
     --text-4xl: 2.25rem;
     --text-4xl--line-height: calc(2.5 / 2.25);
+    --text-4xl--font-weight: 500;
+    --text-4xl--letter-spacing: -0.02em;
 }
 
 /* Paper. */
