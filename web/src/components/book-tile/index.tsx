@@ -19,7 +19,10 @@ export function BookTile({ book }: { book: Book }) {
       title={book.title}
       author={book.author}
       hue={coverHueFromSha(book.sha256)}
-      className={cn(isReady(book.state) && 'group-hover:-translate-y-1 group-hover:shadow-lift')}
+      className={cn(
+        'transition duration-150 ease-out motion-reduce:transition-none',
+        isReady(book.state) && 'group-hover:-translate-y-1 group-hover:shadow-lift',
+      )}
     />
   )
 

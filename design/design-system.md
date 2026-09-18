@@ -101,6 +101,18 @@ Elevation is a hairline border. Two shadows exist — `floating` for layers
 that genuinely float, `lift` for a book cover picked off the shelf. Static
 surfaces get neither.
 
+## Motion
+
+Motion is functional and fast: **150ms, ease-out**. It exists to make a
+state change legible, never to decorate. There is one movement in the
+system — a book cover lifting 4px off the shelf on hover, with
+`shadow-lift` — and everything else is a colour or opacity change.
+
+Anything that moves states `transition duration-150 ease-out` explicitly.
+A hover class without it doesn't animate, it snaps, and the difference is
+quiet enough to ship by accident. Pair it with
+`motion-reduce:transition-none`.
+
 ## Rules the code enforces
 
 - Semantic tokens only. No raw colour values in components.

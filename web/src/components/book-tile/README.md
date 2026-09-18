@@ -4,9 +4,9 @@ A book on a shelf: `BookCover` plus `BookStatus`, and the rule about which
 of them is a link.
 
 - **Ready** — the cover alone, wrapped in a link to the book. Hovering
-  lifts it 4px with `shadow-lift`, the one lift in the system. No caption:
-  the cover's plate already carries the title and author, so a line under it
-  would only repeat them.
+  lifts it 4px with `shadow-lift`, the one lift in the system, over 150ms
+  ease-out. No caption: the cover's plate already carries the title and
+  author, so a line under it would only repeat them.
 - **Not ready** — the cover at 60% opacity, not a link, with `BookStatus`
   under it saying why.
 
@@ -28,6 +28,11 @@ clickable; put the status anywhere but under the cover.
 
 ## Open
 
+- The lift's `transition` was dropped once while promoting this out of
+  `pages/home`, and the cover snapped instead of rising. Tailwind v4 moves
+  the translate to the standalone `translate` property, so a computed
+  `transform` reads `none` either way — check `translate` when verifying
+  this.
 - Promoted here from `pages/home` the moment the components page needed it
   too. If a third surface wants a shelf, the grid around the tiles should
   probably come with it.
