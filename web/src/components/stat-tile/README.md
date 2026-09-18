@@ -8,14 +8,14 @@ activity.
 
 - **Frame** — `card` fill, hairline border, `radius-md`, 16×20 interior.
   Card-shaped but not a Box: it has no parts, and nothing else ever goes
-  inside one.
+  inside one — the by-book split bar lives under the tile row on Home,
+  full width, its splits in cover hues and named in a legend.
 - **Label** — `text-xs` in `muted-foreground`, with a `size-2` dot in the
   activity's chart colour when the tile is an activity.
 - **Value** — `text-2xl` in JetBrains Mono at 400, tabular figures. Unit
   letters go in `<small>` and drop to `text-xs` in `muted-foreground` so
   the figures carry ("4h 23m"). `DurationValue` renders minutes that way.
 - **Context** — `text-xs` at 400 in `muted-foreground`.
-- **Bar** — optional `segments`, a 4px stacked bar on a `muted` track.
 
 **Voice.** The context line says what the number is ("so far this week",
 "across 3 problem sets"). It never sets a target, shows a delta against

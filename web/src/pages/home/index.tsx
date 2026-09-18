@@ -1,13 +1,24 @@
 import { useState } from 'react'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, Plus } from 'lucide-react'
 
 import { AppShell, PageShell } from '@/components/shell'
 import { BookTile } from '@/components/book-tile'
-import { Button } from '@/components/button'
+import { IconButton } from '@/components/button'
 import { Box, BoxRow, Counter, RowValue } from '@/components/box'
 import { Door } from '@/components/door'
-import { DurationValue, StatTile, type Segment } from '@/components/stat-tile'
-import { BOOKS, DUE, DUE_SHOWN, WEEK, type Book, type Due, type Week } from '@/lib/sample'
+import { DurationValue, StatTile } from '@/components/stat-tile'
+import { coverHueFromSha } from '@/lib/covers'
+import {
+  BOOKS,
+  DUE,
+  DUE_SHOWN,
+  WEEK,
+  WEEK_BY_BOOK,
+  type Book,
+  type Due,
+  type Week,
+  type WeekBook,
+} from '@/lib/sample'
 import { cn } from '@/lib/utils'
 
 function greeting(hour: number): string {
@@ -33,16 +44,48 @@ function SectionHeader({ title, count, action }: { title: string; count?: number
 /** This week's numbers: time on each activity, then questions worked with
  *  the split as a stacked bar. Reports, never nags — no targets, no deltas,
  *  no streaks. First on the page, so the week is visible without scrolling. */
-function ThisWeek({ week }: { week: Week }) {
+/** The week's time as one full-width bar, split by book — the shelf,
+ *  flattened. Each split takes its book's cover hue and is named below. */
+function WeekByBook({ books }: { books: WeekBook[] }) {
+  const total = books.reduce((sum, b) => sum + b.minutes, 0)
+  if (total === 0) return null
+
+  return (
+    <div className="space-y-3">
+      <div className="flex h-2 overflow-hidden rounded-full">
+        {books.map((b) => (
+          <span
+            key={b.sha256}
+            className="h-full"
+            style={{
+              width: `${(b.minutes / total) * 100}%`,
+              background: `var(--cover-${coverHueFromSha(b.sha256)})`,
+            }}
+          />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-x-6 gap-y-1">
+        {books.map((b) => (
+          <span key={b.sha256} className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span
+              aria-hidden
+              className="size-2 shrink-0 rounded-full"
+              style={{ background: `var(--cover-${coverHueFromSha(b.sha256)})` }}
+            />
+            {b.title}
+            <span className="font-mono font-normal tabular-nums">
+              {Math.floor(b.minutes / 60) > 0 && `${Math.floor(b.minutes / 60)}h `}
+              {b.minutes % 60}m
+            </span>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ThisWeek({ week, byBook }: { week: Week; byBook: WeekBook[] }) {
   const total = week.homework + week.reading + week.asking
-  const segments: Segment[] =
-    total > 0
-      ? ([
-          { chart: 1, pct: (week.homework / total) * 100 },
-          { chart: 2, pct: (week.reading / total) * 100 },
-          { chart: 3, pct: (week.asking / total) * 100 },
-        ] satisfies Segment[])
-      : []
   const empty = total === 0 && week.questions === 0
 
   return (
@@ -75,9 +118,9 @@ function ThisWeek({ week }: { week: Week }) {
               ? `across ${week.problemSets} problem set${week.problemSets === 1 ? '' : 's'}`
               : 'nothing yet this week'
           }
-          segments={segments}
         />
       </div>
+      <WeekByBook books={byBook} />
     </section>
   )
 }
@@ -91,15 +134,9 @@ function Homework({ items, shown }: { items: Due[]; shown: number }) {
 
   return (
     <section className="space-y-5">
-      <SectionHeader
-        title="Homework"
-        count={items.length}
-        action={
-          <Button variant="outline" size="sm">
-            New homework
-          </Button>
-        }
-      />
+      {/* No New homework here — homework is always tied to a book, so the
+          one place to create it is the book's Homework tab. */}
+      <SectionHeader title="Homework" count={items.length} />
       <Box>
         {visible.map((d) => (
           <BoxRow
@@ -134,7 +171,14 @@ function Shelf({ books }: { books: Book[] }) {
 
   return (
     <section className="space-y-5">
-      <SectionHeader title="Your books" />
+      <SectionHeader
+        title="Your books"
+        action={
+          <IconButton variant="outline" size="sm" aria-label="Add a textbook">
+            <Plus />
+          </IconButton>
+        }
+      />
       <div className="grid grid-cols-5 items-start gap-6">
         {shown.map((b) => (
           <BookTile key={b.sha256} book={b} />
@@ -157,7 +201,7 @@ export function Home() {
     <AppShell>
       <PageShell>
         <h1 className="font-heading text-4xl">{greeting(new Date().getHours())}.</h1>
-        <ThisWeek week={WEEK} />
+        <ThisWeek week={WEEK} byBook={WEEK_BY_BOOK} />
         <Homework items={DUE} shown={DUE_SHOWN} />
         <Shelf books={BOOKS} />
       </PageShell>

@@ -273,18 +273,9 @@ export function Components() {
               />
             </div>
           </Shelf>
-          <Shelf label="with split">
+          <Shelf label="count">
             <div className="w-56">
-              <StatTile
-                label="Questions worked"
-                value={14}
-                context="across 3 problem sets"
-                segments={[
-                  { chart: 1, pct: 62 },
-                  { chart: 2, pct: 18 },
-                  { chart: 3, pct: 10 },
-                ]}
-              />
+              <StatTile label="Questions worked" value={14} context="across 3 problem sets" />
             </div>
           </Shelf>
           <Shelf label="empty week">

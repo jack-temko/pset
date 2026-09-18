@@ -13,25 +13,21 @@ const dotBg: Record<Chart, string> = {
   5: 'bg-chart-5',
 }
 
-export type Segment = { chart: Chart; pct: number }
-
 /**
- * A dashboard number: a label, a big serif value, one quiet line of context.
+ * A dashboard number: a label, a big mono value, one quiet line of context.
  *
  * The context line says what the number is — "so far this week", "across 3
  * problem sets". It never sets a target, shows a delta, or counts a streak:
  * the dashboard reports, it does not nag. A week with nothing in it shows
  * "—" and "nothing yet this week".
  *
- * `chart` puts the activity's dot beside the label; `segments` draws a
- * stacked bar under the context for a number that has a split.
+ * `chart` puts the activity's dot beside the label.
  */
 export function StatTile({
   label,
   value,
   context,
   chart,
-  segments,
   className,
 }: {
   label: string
@@ -39,7 +35,6 @@ export function StatTile({
   value: ReactNode
   context: string
   chart?: Chart
-  segments?: Segment[]
   className?: string
 }) {
   return (
@@ -52,13 +47,6 @@ export function StatTile({
         {value}
       </div>
       <p className="text-xs font-normal text-muted-foreground">{context}</p>
-      {segments && (
-        <div aria-hidden className="mt-1 flex h-1 overflow-hidden rounded-full bg-muted">
-          {segments.map((s, i) => (
-            <span key={i} className={cn('h-full', dotBg[s.chart])} style={{ width: `${s.pct}%` }} />
-          ))}
-        </div>
-      )}
     </div>
   )
 }

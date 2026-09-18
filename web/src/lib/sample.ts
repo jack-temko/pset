@@ -161,6 +161,77 @@ export const DUE: Due[] = [
 /** How many of the due list Home shows before its door. */
 export const DUE_SHOWN = 3
 
+export function bookBySha(sha: string): Book | undefined {
+  return BOOKS.find((b) => b.sha256 === sha)
+}
+
+/** A book's contents: chapters with sections, each pinned to a page. A book
+ *  whose TOC couldn't be read has none — and then no rail. */
+export type TocSection = { id: string; title: string; page: number }
+export type TocChapter = { id: string; title: string; page: number; sections: TocSection[] }
+
+export const PAGE_COUNT = 312
+
+export const TOC: TocChapter[] = [
+  {
+    id: 'c1',
+    title: '1 · Vector Spaces',
+    page: 1,
+    sections: [
+      { id: 'c1s1', title: 'Rⁿ and Cⁿ', page: 2 },
+      { id: 'c1s2', title: 'Definition of Vector Space', page: 12 },
+      { id: 'c1s3', title: 'Subspaces', page: 18 },
+    ],
+  },
+  {
+    id: 'c2',
+    title: '2 · Finite-Dimensional Vector Spaces',
+    page: 27,
+    sections: [
+      { id: 'c2s1', title: 'Span and Linear Independence', page: 28 },
+      { id: 'c2s2', title: 'Bases', page: 39 },
+      { id: 'c2s3', title: 'Dimension', page: 44 },
+    ],
+  },
+  {
+    id: 'c3',
+    title: '3 · Linear Maps',
+    page: 51,
+    sections: [
+      { id: 'c3s1', title: 'The Vector Space of Linear Maps', page: 52 },
+      { id: 'c3s2', title: 'Null Spaces and Ranges', page: 59 },
+      { id: 'c3s3', title: 'Matrices', page: 70 },
+      { id: 'c3s4', title: 'Invertibility and Isomorphism', page: 80 },
+    ],
+  },
+  {
+    id: 'c5',
+    title: '5 · Eigenvalues and Eigenvectors',
+    page: 131,
+    sections: [
+      { id: 'c5s1', title: 'Invariant Subspaces', page: 132 },
+      { id: 'c5s2', title: 'The Minimal Polynomial', page: 142 },
+      { id: 'c5s3', title: 'Upper-Triangular Matrices', page: 154 },
+    ],
+  },
+]
+
+/** Homework for the open book, as the panel's list shows it. */
+export type BookHomework = {
+  id: string
+  title: string
+  due: string
+  urgent?: boolean
+  done: number
+  total: number
+}
+
+export const BOOK_HOMEWORK: BookHomework[] = [
+  { id: '1', title: 'Problem set 4', due: 'today', urgent: true, done: 3, total: 8 },
+  { id: '9', title: 'Problem set 6', due: 'next Fri', done: 0, total: 8 },
+  { id: '10', title: 'Problem set 3', due: 'turned in', done: 6, total: 6 },
+]
+
 export type Week = {
   /** Minutes this week, by activity. */
   homework: number
@@ -178,3 +249,14 @@ export const WEEK: Week = {
   questions: 14,
   problemSets: 3,
 }
+
+/** The week's time split by book, for the bar under the stat tiles. The
+ *  colour comes from the book's cover hue — the bar is the shelf, flattened. */
+export type WeekBook = { sha256: string; title: string; minutes: number }
+
+export const WEEK_BY_BOOK: WeekBook[] = [
+  { sha256: 'd8f1a9c2', title: 'Linear Algebra Done Right', minutes: 195 },
+  { sha256: '4f3b81d0', title: 'Nonlinear Dynamics and Chaos', minutes: 96 },
+  { sha256: '7a07f452', title: 'Introduction to Electrodynamics', minutes: 54 },
+  { sha256: '61f2704c', title: 'A First Course in Probability', minutes: 28 },
+]

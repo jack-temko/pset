@@ -108,6 +108,8 @@
     --spacing-topbar: 3.5rem;
     --spacing-rail: 16rem;
     --spacing-panel: 27.5rem;
+    /* Focus mode: the rail's width moves into the panel (440 + 256). */
+    --spacing-panel-wide: 43.5rem;
     --spacing-control: 2rem;
     --spacing-control-sm: 1.75rem;
     --spacing-control-lg: 2.5rem;
