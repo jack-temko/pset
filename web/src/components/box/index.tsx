@@ -101,7 +101,9 @@ export function BoxRow({
   const classes = cn(
     'flex min-h-row items-center gap-3 border-t border-border-muted px-card py-2 text-sm first:border-t-0',
     selected && 'bg-primary-soft text-primary',
-    href && 'hover:bg-muted',
+    // Half-strength muted: a hover wash only signals, it doesn't have to
+    // carry shape, and full muted (1.43:1 on card) reads as selection.
+    href && 'transition-colors duration-150 ease-out hover:bg-muted/50 motion-reduce:transition-none',
     className,
   )
 

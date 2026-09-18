@@ -35,7 +35,7 @@ the semantic token, never a raw value; both themes then come free.
 | `primary` / `primary-foreground` | The one blue: primary buttons, links, the current item. |
 | `primary-soft` | Its only tint: selected rows, the active tab, an anchor chip. |
 | `secondary` / `secondary-foreground` | The secondary button's fill. |
-| `muted` | Quiet fills: ghost hover, skeletons, roundels, progress tracks. |
+| `muted` | Quiet fills: ghost hover, skeletons, roundels, progress tracks. A row's hover wash is `muted/50` — hover only signals, it doesn't carry shape, and full muted reads as selection. |
 | `muted-foreground` | Secondary text — leads, hints, meta lines — and icons at rest. |
 | `accent` / `accent-foreground` | Ochre highlight **fill** only. Never as text. |
 | `success` · `warning` · `destructive` | Status, as **ink**: text, icon, border. Never a solid fill. |
