@@ -166,9 +166,13 @@
     --primary: oklch(0.45 0.16 263);
     --primary-foreground: oklch(0.985 0.005 95);
     --primary-soft: oklch(0.955 0.02 263);
-    --secondary: oklch(0.945 0.007 95);
+    /* Darkened from the v2 value of 0.945, which measured 1.06–1.16:1 against
+       every surface in the palette — ghost hover, skeletons, roundels and
+       progress tracks were all but invisible. 0.88 is as far as it goes:
+       muted-foreground on it is 4.56:1, and the next step down fails 4.5. */
+    --secondary: oklch(0.88 0.007 95);
     --secondary-foreground: oklch(0.3 0.014 90);
-    --muted: oklch(0.945 0.007 95);
+    --muted: oklch(0.88 0.007 95);
     --muted-foreground: oklch(0.48 0.017 90);
     --accent: oklch(0.94 0.03 88);
     --accent-foreground: oklch(0.3 0.02 85);
@@ -202,9 +206,12 @@
     --primary: oklch(0.72 0.12 263);
     --primary-foreground: oklch(0.17 0.03 263);
     --primary-soft: oklch(0.27 0.05 263);
-    --secondary: oklch(0.262 0.01 90);
+    /* As in light: up from the v2 value of 0.262 (1.13–1.25:1 against the
+       surfaces) to 0.34, which reads at 1.50–1.66:1 and keeps
+       muted-foreground on it at 4.75:1. */
+    --secondary: oklch(0.34 0.01 90);
     --secondary-foreground: oklch(0.9 0.007 95);
-    --muted: oklch(0.262 0.01 90);
+    --muted: oklch(0.34 0.01 90);
     --muted-foreground: oklch(0.72 0.012 95);
     --accent: oklch(0.3 0.025 85);
     --accent-foreground: oklch(0.93 0.01 90);
