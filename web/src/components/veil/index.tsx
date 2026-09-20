@@ -3,10 +3,14 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 /**
- * Frosted glass over content that exists but shouldn't be read yet — a
- * hint before it's wanted, a solution before the attempt. The content is
- * real and laid out at its true size; the veil is a backdrop blur with an
- * invitation, and one click lifts it for good.
+ * Content that exists but shouldn't be read yet — a hint before it's
+ * wanted, a worked solution before the attempt.
+ *
+ * The content is always there and always laid out at its true size: it
+ * is simply blurred and faded back, so its shape reads (how long the
+ * answer is, whether it has a display equation) while its words don't.
+ * Hovering eases it a little closer, and revealing lets it resolve
+ * rather than snap.
  */
 export function Veil({
   label = 'Click to reveal',
@@ -21,34 +25,32 @@ export function Veil({
   className?: string
   children: ReactNode
 }) {
-  if (revealed) return <>{children}</>
   return (
-    <button
-      type="button"
-      onClick={onReveal}
-      aria-label={label}
-      className={cn(
-        'group/veil relative block w-full cursor-pointer overflow-hidden rounded-md text-left',
-        className,
-      )}
-    >
-      <div aria-hidden inert className="select-none">
+    <div className={cn('group/veil relative', className)}>
+      <div
+        aria-hidden={!revealed}
+        inert={!revealed}
+        className={cn(
+          'transition-[opacity,filter] duration-150 ease-out motion-reduce:transition-none',
+          !revealed &&
+            'opacity-45 blur-[6px] select-none group-hover/veil:opacity-60 group-hover/veil:blur-[4px]',
+        )}
+      >
         {children}
       </div>
-      {/* The blur covers everything and is never masked — a gap in it
-          would hand back the words. The tint is what fades, so the veil
-          has no hard rectangle edge against the panel. */}
-      <span aria-hidden className="absolute inset-0 rounded-md backdrop-blur-[5px]" />
-      <span
-        aria-hidden
-        className="absolute inset-0 rounded-md bg-card/45 transition-opacity duration-150 ease-out group-hover/veil:opacity-75 motion-reduce:transition-none"
-        style={{
-          maskImage: 'radial-gradient(115% 115% at 50% 50%, #000 25%, transparent 88%)',
-        }}
-      />
-      <span aria-hidden className="absolute inset-0 flex items-center justify-center">
-        <span className="text-xs text-muted-foreground">{label}</span>
-      </span>
-    </button>
+
+      {!revealed && (
+        <button
+          type="button"
+          onClick={onReveal}
+          aria-label={label}
+          className="absolute inset-0 flex cursor-pointer items-center justify-center"
+        >
+          <span className="flex h-control-sm items-center rounded-md border bg-card px-3 text-xs text-muted-foreground shadow-floating transition-colors duration-150 ease-out group-hover/veil:text-foreground motion-reduce:transition-none">
+            {label}
+          </span>
+        </button>
+      )}
+    </div>
   )
 }

@@ -138,9 +138,17 @@ without it silently pushes the layout taller instead of scrolling.
 ## Motion
 
 Motion is functional and fast: **150ms, ease-out**. It exists to make a
-state change legible, never to decorate. There is one movement in the
-system — a book cover lifting 4px off the shelf on hover, with
-`shadow-lift` — and everything else is a colour or opacity change.
+state change legible, never to decorate. Two movements exist, and no
+others:
+
+- **A book cover lifts 4px** off the shelf on hover, with `shadow-lift`.
+- **Veiled content resolves** — blur and opacity easing back to nothing
+  when a hint or a walkthrough is revealed, and easing part of the way
+  on hover.
+
+Everything else is a colour or opacity change. Nothing in the system
+loops: a repeating animation means "waiting", and anything that isn't
+waiting must not borrow that meaning.
 
 Anything that moves states `transition duration-150 ease-out` explicitly.
 A hover class without it doesn't animate, it snaps, and the difference is
