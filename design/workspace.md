@@ -94,11 +94,12 @@ built.
   over it. One click lifts it. No sequence, no skip link — both are
   always available, and the student is an adult. Stages reuse the
   transcript's pieces (math, page chips).
-- **Complete is a checkbox**, not a button: checking marks the question
-  done and advances to the next unfinished one; unchecking is the undo
-  and stays put. When the last one is checked: quiet close back to the
-  list, the row showing 8 of 8 with a Turn in affordance. Done is a
-  fact, not a party.
+- **Complete is a checkbox**, not a button, and it does exactly one
+  thing: marks the question done. It never advances — you move on when
+  you decide to, not when the app decides for you — and unchecking is
+  the undo. Progress is the count of checked questions, shown in the
+  list row; a finished set carries a Turn in affordance there. Done is
+  a fact, not a party.
 - **"Ask about this"** on every question flips to the Ask tab with the
   problem as context — the canned guide's escape hatch.
 - **Failed question**: one line saying why, Try again, and "It's on

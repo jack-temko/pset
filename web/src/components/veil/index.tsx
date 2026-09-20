@@ -27,15 +27,26 @@ export function Veil({
       type="button"
       onClick={onReveal}
       aria-label={label}
-      className={cn('relative block w-full cursor-pointer overflow-hidden rounded-md text-left', className)}
+      className={cn(
+        'group/veil relative block w-full cursor-pointer overflow-hidden rounded-md text-left',
+        className,
+      )}
     >
       <div aria-hidden inert className="select-none">
         {children}
       </div>
+      {/* The blur covers everything and is never masked — a gap in it
+          would hand back the words. The tint is what fades, so the veil
+          has no hard rectangle edge against the panel. */}
+      <span aria-hidden className="absolute inset-0 rounded-md backdrop-blur-[5px]" />
       <span
         aria-hidden
-        className="absolute inset-0 flex items-center justify-center rounded-md border border-border-muted bg-card/40 backdrop-blur-md transition-colors duration-150 ease-out hover:bg-card/60 motion-reduce:transition-none"
-      >
+        className="absolute inset-0 rounded-md bg-card/45 transition-opacity duration-150 ease-out group-hover/veil:opacity-75 motion-reduce:transition-none"
+        style={{
+          maskImage: 'radial-gradient(115% 115% at 50% 50%, #000 25%, transparent 88%)',
+        }}
+      />
+      <span aria-hidden className="absolute inset-0 flex items-center justify-center">
         <span className="text-xs text-muted-foreground">{label}</span>
       </span>
     </button>

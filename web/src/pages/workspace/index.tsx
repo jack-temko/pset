@@ -431,15 +431,11 @@ function Walkthrough({
 
   const reveal = (name: string) => setRevealed((r) => new Set(r).add(`${index}:${name}`))
 
-  const toggleDone = () => {
-    const next = done.map((d, i) => (i === index ? !d : d))
-    setDone(next)
-    if (!next[index]) return // unchecking is the undo — stay put
-    // Advance to the next unfinished question; the last one closes quietly.
-    const ahead = QUESTIONS.findIndex((_, i) => !next[i])
-    if (ahead === -1) onBack()
-    else setIndex(ahead)
-  }
+  // Marking a question complete does exactly that and nothing else. You
+  // move on when you decide to, not when the app decides for you — and
+  // unchecking is the undo.
+  const toggleDone = () =>
+    setDone((d) => d.map((v, i) => (i === index ? !v : v)))
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
