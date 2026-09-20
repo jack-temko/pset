@@ -158,9 +158,15 @@ others:
   when a hint or a walkthrough is revealed, and easing part of the way
   on hover.
 
-Everything else is a colour or opacity change. Nothing in the system
-loops: a repeating animation means "waiting", and anything that isn't
-waiting must not borrow that meaning.
+Everything else is a colour or opacity change.
+
+**One thing loops, and only one: the `Spinner`.** A repeating animation
+means "waiting", so it appears where work is genuinely running and
+genuinely cannot be counted — examining a PDF, building a search index.
+Work that can be counted gets a determinate bar instead, and something
+merely queued gets the word "Queued" and no motion at all: nothing is
+happening to it yet. Anything that isn't waiting must not borrow the
+meaning.
 
 Anything that moves states `transition duration-150 ease-out` explicitly.
 A hover class without it doesn't animate, it snaps, and the difference is

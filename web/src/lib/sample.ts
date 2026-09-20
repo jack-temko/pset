@@ -7,9 +7,23 @@
 
 import type { HomeworkStatus } from '@/components/homework-status'
 
+/** The engine's four phases, in the words it already uses. */
+export const IMPORT_PHASES = {
+  examine: 'Examine the pages',
+  read: 'Read the pages',
+  index: 'Index the sections',
+  search: 'Build search',
+} as const
+
+export type ImportPhase = keyof typeof IMPORT_PHASES
+
 export type BookState =
   | { kind: 'ready' }
-  | { kind: 'preparing'; done: number; total: number }
+  /** Staged and waiting its turn — the runner prepares one book at a time. */
+  | { kind: 'queued' }
+  /** `done`/`total` only where the phase can count; reading pages can, examining
+   *  and building search cannot. */
+  | { kind: 'preparing'; phase: ImportPhase; done?: number; total?: number }
   | { kind: 'failed'; reason: string }
 
 export type Book = {
@@ -48,7 +62,15 @@ export const BOOKS: Book[] = [
     sha256: 'b89d3b72',
     title: 'Introduction to the Theory of Computation',
     author: 'Michael Sipser',
-    state: { kind: 'preparing', done: 140, total: 312 },
+    state: { kind: 'preparing', phase: 'read', done: 140, total: 312 },
+  },
+  {
+    sha256: '7ce04a15',
+    // Until the PDF's metadata is read, the title is the tidied filename —
+    // exactly the fallback the engine uses.
+    title: 'Griffiths Introduction To Electrodynamics',
+    author: '',
+    state: { kind: 'queued' },
   },
   {
     sha256: 'c51c6ef3',
@@ -72,7 +94,7 @@ export const BOOKS: Book[] = [
     sha256: '3a80b5d4',
     title: 'Organic Chemistry',
     author: 'Clayden and Greeves',
-    state: { kind: 'failed', reason: 'No extractable text' },
+    state: { kind: 'failed', reason: "This PDF can't be read — pset couldn't open it." },
   },
   {
     sha256: '61f2704c',

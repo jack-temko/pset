@@ -12,8 +12,21 @@ import { cn } from '@/lib/utils'
  * A ready book is a link and says nothing — the cover carries the title, so
  * a caption would only repeat it. A book that isn't ready is dimmed, isn't a
  * link, and says why. A shelf that doesn't lie.
+ *
+ * An importing book is a tile from the first frame: the sha is known as
+ * soon as the file is staged, so it has its cloth colour immediately, and
+ * the title is the tidied filename until the PDF's own metadata replaces
+ * it. It never changes place and never changes shape — it only finishes.
  */
-export function BookTile({ book }: { book: Book }) {
+export function BookTile({
+  book,
+  onRetry,
+  onCancel,
+}: {
+  book: Book
+  onRetry?: () => void
+  onCancel?: () => void
+}) {
   const cover = (
     <BookCover
       title={book.title}
@@ -29,8 +42,14 @@ export function BookTile({ book }: { book: Book }) {
   if (!isReady(book.state)) {
     return (
       <div className="space-y-3">
-        <div className="opacity-60">{cover}</div>
-        <BookStatus state={book.state} />
+        <div className={cn(book.state.kind === 'failed' ? 'opacity-40' : 'opacity-60')}>
+          {cover}
+        </div>
+        <BookStatus
+          state={book.state}
+          onRetry={book.state.kind === 'failed' ? onRetry : undefined}
+          onDismiss={onCancel}
+        />
       </div>
     )
   }

@@ -22,6 +22,7 @@ import {
   UserTurn,
 } from '@/components/transcript'
 import { Veil } from '@/components/veil'
+import { Spinner } from '@/components/spinner'
 import { Checkbox } from '@/components/checkbox'
 import { Dialog } from '@/components/dialog'
 import { AutoTextarea, Field, Input } from '@/components/input'
@@ -314,17 +315,45 @@ export function Components() {
         </Section>
 
         <Section
-          title="BookStatus"
-          note="Ready renders nothing — the normal state is silence, so anything drawn here is worth reading."
+          title="Spinner"
+          note="The one looping animation in the system. A repeating motion means ‘waiting’, so nothing that isn't waiting may borrow it."
         >
-          <Shelf label="preparing">
+          <Shelf label="spinner">
+            <Spinner />
+            <Spinner className="size-3 text-warning" />
+            <Spinner className="size-5 text-muted-foreground" />
+          </Shelf>
+        </Section>
+
+        <Section
+          title="BookStatus"
+          note="The engine's own phase names. A phase that can count fills a bar; one that can't spins. Ready renders nothing at all."
+        >
+          <Shelf label="queued">
             <div className="w-64">
-              <BookStatus state={{ kind: 'preparing', done: 140, total: 312 }} />
+              <BookStatus state={{ kind: 'queued' }} onDismiss={() => {}} />
+            </div>
+          </Shelf>
+          <Shelf label="counted">
+            <div className="w-64">
+              <BookStatus
+                state={{ kind: 'preparing', phase: 'read', done: 140, total: 312 }}
+                onDismiss={() => {}}
+              />
+            </div>
+          </Shelf>
+          <Shelf label="uncounted">
+            <div className="w-64">
+              <BookStatus state={{ kind: 'preparing', phase: 'search' }} onDismiss={() => {}} />
             </div>
           </Shelf>
           <Shelf label="failed">
             <div className="w-64">
-              <BookStatus state={{ kind: 'failed', reason: 'No extractable text' }} />
+              <BookStatus
+                state={{ kind: 'failed', reason: "This PDF can't be read — pset couldn't open it." }}
+                onRetry={() => {}}
+                onDismiss={() => {}}
+              />
             </div>
           </Shelf>
           <Shelf label="ready">
