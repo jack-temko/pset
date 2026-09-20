@@ -4,7 +4,7 @@ import { ArrowUp, Check, ChevronLeft, ChevronRight, Focus, Plus, Printer } from 
 
 import { AppShell } from '@/components/shell'
 import { Box, BoxRow } from '@/components/box'
-import { DueStatus } from '@/components/due-status'
+import { HomeworkStatusLabel, dueText } from '@/components/homework-status'
 import { Button, IconButton } from '@/components/button'
 import {
   AssistantTurn,
@@ -568,8 +568,8 @@ function HomeworkTab({
             key={h.id}
             onClick={() => setOpenSet(h)}
             title={h.title}
-            description={`${h.done} of ${h.total} questions`}
-            trailing={<DueStatus due={h.due} status={h.status} />}
+            description={`${h.done} of ${h.total} questions · ${dueText(h.due, h.status)}`}
+            trailing={<HomeworkStatusLabel status={h.status} />}
           />
         ))}
       </Box>
@@ -582,8 +582,8 @@ function HomeworkTab({
                 key={h.id}
                 onClick={() => setOpenSet(h)}
                 title={h.title}
-                description={`${h.done} of ${h.total} questions`}
-                trailing={<DueStatus due={h.due} status={h.status} />}
+                description={`${h.done} of ${h.total} questions · ${dueText(h.due, h.status)}`}
+                trailing={<HomeworkStatusLabel status={h.status} />}
               />
             ))}
           </Box>

@@ -8,7 +8,7 @@ import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@
 import { Button, IconButton } from '@/components/button'
 import { BookStatus } from '@/components/book-status'
 import { Door } from '@/components/door'
-import { DueStatus } from '@/components/due-status'
+import { HomeworkStatusLabel } from '@/components/homework-status'
 import { Label } from '@/components/label'
 import {
   AssistantTurn,
@@ -178,14 +178,14 @@ export function Components() {
                 <BoxRow
                   leading={<BookOpen />}
                   title="Problem set 4"
-                  description="Linear Algebra Done Right · 8 questions"
-                  trailing={<DueStatus due="today" status="soon" />}
+                  description="Linear Algebra Done Right · 8 questions · due today"
+                  trailing={<HomeworkStatusLabel status="soon" />}
                 />
                 <BoxRow
                   leading={<BookOpen />}
                   title="Chapter 3 exercises"
-                  description="Nonlinear Dynamics and Chaos · 5 questions"
-                  trailing={<DueStatus due="tomorrow" />}
+                  description="Nonlinear Dynamics and Chaos · 5 questions · due tomorrow"
+                  trailing={<HomeworkStatusLabel />}
                 />
                 <BoxFooter>
                   <span>Showing 2 of 9</span>
@@ -354,11 +354,10 @@ export function Components() {
               Ready
             </Label>
           </Shelf>
-          <Shelf label="due status">
-            <DueStatus due="today" status="soon" />
-            <DueStatus due="Friday" />
-            <DueStatus due="last Friday" status="overdue" />
-            <DueStatus due="Sep 12" status="turned-in" />
+          <Shelf label="homework status">
+            <HomeworkStatusLabel status="soon" />
+            <HomeworkStatusLabel status="overdue" />
+            <HomeworkStatusLabel status="turned-in" />
           </Shelf>
         </Section>
 

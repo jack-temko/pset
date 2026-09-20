@@ -5,7 +5,7 @@ import { AppShell, PageShell } from '@/components/shell'
 import { BookTile } from '@/components/book-tile'
 import { IconButton } from '@/components/button'
 import { Box, BoxRow, Counter } from '@/components/box'
-import { DueStatus } from '@/components/due-status'
+import { HomeworkStatusLabel, dueText } from '@/components/homework-status'
 import { Door } from '@/components/door'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { coverHueFromSha } from '@/lib/covers'
@@ -143,8 +143,8 @@ function Homework({ items, shown }: { items: Due[]; shown: number }) {
             key={d.id}
             href={`/homework/${d.id}`}
             title={d.title}
-            description={`${d.book} · ${d.questions} questions`}
-            trailing={<DueStatus due={d.due} status={d.status} />}
+            description={`${d.book} · ${d.questions} questions · ${dueText(d.due, d.status)}`}
+            trailing={<HomeworkStatusLabel status={d.status} />}
           />
         ))}
         {items.length > shown && (

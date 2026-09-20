@@ -5,7 +5,7 @@
  * Delete this file when the API is wired — nothing here should outlive it.
  */
 
-import type { HomeworkStatus } from '@/components/due-status'
+import type { HomeworkStatus } from '@/components/homework-status'
 
 export type BookState =
   | { kind: 'ready' }
