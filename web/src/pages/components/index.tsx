@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { BookOpen, Plus, Settings } from 'lucide-react'
+import { BookOpen, Check, Clock, Plus, Settings, TriangleAlert } from 'lucide-react'
 
 import { AppShell, PageShell } from '@/components/shell'
 import { BookCover } from '@/components/book-cover'
@@ -8,6 +8,8 @@ import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@
 import { Button, IconButton } from '@/components/button'
 import { BookStatus } from '@/components/book-status'
 import { Door } from '@/components/door'
+import { DueStatus } from '@/components/due-status'
+import { Label } from '@/components/label'
 import {
   AssistantTurn,
   ConversationStart,
@@ -177,13 +179,13 @@ export function Components() {
                   leading={<BookOpen />}
                   title="Problem set 4"
                   description="Linear Algebra Done Right · 8 questions"
-                  trailing={<RowValue className="text-warning">today</RowValue>}
+                  trailing={<DueStatus due="today" status="soon" />}
                 />
                 <BoxRow
                   leading={<BookOpen />}
                   title="Chapter 3 exercises"
                   description="Nonlinear Dynamics and Chaos · 5 questions"
-                  trailing={<RowValue>tomorrow</RowValue>}
+                  trailing={<DueStatus due="tomorrow" />}
                 />
                 <BoxFooter>
                   <span>Showing 2 of 9</span>
@@ -323,6 +325,40 @@ export function Components() {
             <div className="w-56">
               <StatTile label="Homework" chart={1} value="—" context="nothing yet this week" />
             </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Label"
+          note="Outlined by default — border and text share one ink. A status label always carries a word."
+        >
+          <Shelf label="tone">
+            <Label>Scanned</Label>
+            <Label tone="primary">Due Sep 21</Label>
+            <Label tone="success">
+              <Check />
+              Turned in
+            </Label>
+            <Label tone="warning">
+              <Clock />
+              Due today
+            </Label>
+            <Label tone="danger">Overdue · Sep 12</Label>
+          </Shelf>
+          <Shelf label="filled">
+            <Label tone="danger" filled>
+              <TriangleAlert />
+              Needs you
+            </Label>
+            <Label tone="success" filled>
+              Ready
+            </Label>
+          </Shelf>
+          <Shelf label="due status">
+            <DueStatus due="today" status="soon" />
+            <DueStatus due="Friday" />
+            <DueStatus due="last Friday" status="overdue" />
+            <DueStatus due="Sep 12" status="turned-in" />
           </Shelf>
         </Section>
 

@@ -4,7 +4,8 @@ import { BookOpen, Plus } from 'lucide-react'
 import { AppShell, PageShell } from '@/components/shell'
 import { BookTile } from '@/components/book-tile'
 import { IconButton } from '@/components/button'
-import { Box, BoxRow, Counter, RowValue } from '@/components/box'
+import { Box, BoxRow, Counter } from '@/components/box'
+import { DueStatus } from '@/components/due-status'
 import { Door } from '@/components/door'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { coverHueFromSha } from '@/lib/covers'
@@ -19,7 +20,6 @@ import {
   type Week,
   type WeekBook,
 } from '@/lib/sample'
-import { cn } from '@/lib/utils'
 
 function greeting(hour: number): string {
   if (hour < 12) return 'Good morning'
@@ -41,9 +41,6 @@ function SectionHeader({ title, count, action }: { title: string; count?: number
   )
 }
 
-/** This week's numbers: time on each activity, then questions worked with
- *  the split as a stacked bar. Reports, never nags — no targets, no deltas,
- *  no streaks. First on the page, so the week is visible without scrolling. */
 /** The week's time as one full-width bar, split by book — the shelf,
  *  flattened. Each split takes its book's cover hue and is named below. */
 function WeekByBook({ books }: { books: WeekBook[] }) {
@@ -84,6 +81,9 @@ function WeekByBook({ books }: { books: WeekBook[] }) {
   )
 }
 
+/** This week's numbers: time on each activity, then questions worked, with
+ *  the by-book bar below. Reports, never nags — no targets, no deltas, no
+ *  streaks. First on the page, so the week is visible without scrolling. */
 function ThisWeek({ week, byBook }: { week: Week; byBook: WeekBook[] }) {
   const total = week.homework + week.reading + week.asking
   const empty = total === 0 && week.questions === 0
@@ -145,7 +145,7 @@ function Homework({ items, shown }: { items: Due[]; shown: number }) {
             leading={<BookOpen />}
             title={d.title}
             description={`${d.book} · ${d.questions} questions`}
-            trailing={<RowValue className={cn(d.urgent && 'text-warning')}>{d.due}</RowValue>}
+            trailing={<DueStatus due={d.due} status={d.status} />}
           />
         ))}
         {items.length > shown && (

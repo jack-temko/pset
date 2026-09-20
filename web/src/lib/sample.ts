@@ -5,6 +5,8 @@
  * Delete this file when the API is wired — nothing here should outlive it.
  */
 
+import type { HomeworkStatus } from '@/components/due-status'
+
 export type BookState =
   | { kind: 'ready' }
   | { kind: 'preparing'; done: number; total: number }
@@ -85,10 +87,11 @@ export type Due = {
   title: string
   book: string
   questions: number
-  /** Plain words, already relative: "today", "tomorrow", "Fri". */
+  /** Always words, already relative to today: "tomorrow", "Friday",
+   *  "next Friday", "in two weeks". Never a raw date. */
   due: string
-  /** Due today or overdue — the row's date takes warning ink. */
-  urgent?: boolean
+  /** Only when it is worth flagging; most homework has none. */
+  status?: HomeworkStatus
 }
 
 export const DUE: Due[] = [
@@ -98,7 +101,7 @@ export const DUE: Due[] = [
     book: 'Linear Algebra Done Right',
     questions: 4,
     due: 'today',
-    urgent: true,
+    status: 'soon',
   },
   {
     id: '2',
@@ -106,55 +109,56 @@ export const DUE: Due[] = [
     book: 'Nonlinear Dynamics and Chaos',
     questions: 5,
     due: 'tomorrow',
+    status: 'soon',
   },
   {
     id: '3',
     title: 'Lab report 2',
     book: 'Introduction to Electrodynamics',
     questions: 3,
-    due: 'Fri',
+    due: 'Friday',
   },
   {
     id: '4',
     title: 'Problem set 5',
     book: 'Principles of Mathematical Analysis',
     questions: 6,
-    due: 'Fri',
+    due: 'Friday',
   },
   {
     id: '5',
     title: 'Recurrence practice',
     book: 'Introduction to Algorithms',
     questions: 10,
-    due: 'Sat',
+    due: 'Saturday',
   },
   {
     id: '6',
     title: 'Streams and laziness',
     book: 'Structure and Interpretation of Computer Programs',
     questions: 4,
-    due: 'Sun',
+    due: 'Sunday',
   },
   {
     id: '7',
     title: 'Chapter 12 review',
     book: 'The Feynman Lectures on Physics',
     questions: 7,
-    due: 'Mon',
+    due: 'next Monday',
   },
   {
     id: '8',
     title: 'Combinatorics warm-up',
     book: 'A First Course in Probability',
     questions: 9,
-    due: 'Tue',
+    due: 'next Tuesday',
   },
   {
     id: '9',
     title: 'Problem set 6',
     book: 'Linear Algebra Done Right',
     questions: 8,
-    due: 'next Fri',
+    due: 'in two weeks',
   },
 ]
 
@@ -221,15 +225,16 @@ export type BookHomework = {
   id: string
   title: string
   due: string
-  urgent?: boolean
+  status?: HomeworkStatus
   done: number
   total: number
 }
 
 export const BOOK_HOMEWORK: BookHomework[] = [
-  { id: '1', title: 'Problem set 4', due: 'today', urgent: true, done: 0, total: 4 },
-  { id: '9', title: 'Problem set 6', due: 'next Fri', done: 0, total: 8 },
-  { id: '10', title: 'Problem set 3', due: 'turned in', done: 6, total: 6 },
+  { id: '1', title: 'Problem set 4', due: 'today', status: 'soon', done: 0, total: 4 },
+  { id: '9', title: 'Problem set 6', due: 'in two weeks', done: 0, total: 8 },
+  { id: '11', title: 'Chapter 2 proofs', due: 'last Friday', status: 'overdue', done: 2, total: 5 },
+  { id: '10', title: 'Problem set 3', due: 'Sep 12', status: 'turned-in', done: 6, total: 6 },
 ]
 
 export type Week = {

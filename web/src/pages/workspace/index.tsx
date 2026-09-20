@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom'
 import { ArrowUp, Check, ChevronLeft, ChevronRight, Focus, Plus, Printer } from 'lucide-react'
 
 import { AppShell } from '@/components/shell'
-import { Box, BoxRow, RowValue } from '@/components/box'
+import { Box, BoxRow } from '@/components/box'
+import { DueStatus } from '@/components/due-status'
 import { Button, IconButton } from '@/components/button'
 import {
   AssistantTurn,
@@ -541,8 +542,8 @@ function HomeworkTab({
   onAskAbout: () => void
 }) {
   const [openSet, setOpenSet] = useState<BookHomework | null>(null)
-  const active = items.filter((h) => h.due !== 'turned in')
-  const turnedIn = items.filter((h) => h.due === 'turned in')
+  const active = items.filter((h) => h.status !== 'turned-in')
+  const turnedIn = items.filter((h) => h.status === 'turned-in')
 
   if (openSet) {
     return (
@@ -568,7 +569,7 @@ function HomeworkTab({
             onClick={() => setOpenSet(h)}
             title={h.title}
             description={`${h.done} of ${h.total} questions`}
-            trailing={<RowValue className={cn(h.urgent && 'text-warning')}>{h.due}</RowValue>}
+            trailing={<DueStatus due={h.due} status={h.status} />}
           />
         ))}
       </Box>
@@ -579,9 +580,10 @@ function HomeworkTab({
             {turnedIn.map((h) => (
               <BoxRow
                 key={h.id}
+                onClick={() => setOpenSet(h)}
                 title={h.title}
                 description={`${h.done} of ${h.total} questions`}
-                trailing={<RowValue>turned in</RowValue>}
+                trailing={<DueStatus due={h.due} status={h.status} />}
               />
             ))}
           </Box>
