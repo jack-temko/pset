@@ -16,6 +16,7 @@ import {
   UserTurn,
 } from '@/components/transcript'
 import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
+import { Veil } from '@/components/veil'
 import {
   BOOK_HOMEWORK,
   PAGE_COUNT,
@@ -270,8 +271,8 @@ type SampleQuestion = {
   page: number
   statement: ReactNode
   hint: ReactNode
-  approach: ReactNode
-  solution: ReactNode
+  /** The worked walkthrough, solution included — one stage, not two. */
+  walkthrough: ReactNode
   figure?: string
 }
 
@@ -289,20 +290,16 @@ const QUESTIONS: SampleQuestion[] = [
       </>
     ),
     hint: <>Start from a dependence among the {'​'}<MathInline tex="v_k" /> and apply{' '}<MathInline tex="T" /> to it.</>,
-    approach: (
-      <>
-        Suppose <MathInline tex="a_1 v_1 + \dots + a_m v_m = 0" />. Linearity moves the whole
-        equation across <MathInline tex="T" />, where independence of the images forces every
-        coefficient to vanish.
-      </>
-    ),
-    solution: (
+    walkthrough: (
       <>
         <p>
-          Apply <MathInline tex="T" />:{' '}
-          <MathInline tex="0 = T(0) = a_1 Tv_1 + \dots + a_m Tv_m" />. Since the{' '}
-          <MathInline tex="Tv_k" /> are independent, each <MathInline tex="a_k = 0" /> — which is
-          exactly the statement that the <MathInline tex="v_k" /> are independent.
+          Suppose <MathInline tex="a_1 v_1 + \dots + a_m v_m = 0" />. Linearity moves the whole
+          equation across <MathInline tex="T" />:{' '}
+          <MathInline tex="0 = T(0) = a_1 Tv_1 + \dots + a_m Tv_m" />.
+        </p>
+        <p>
+          Since the <MathInline tex="Tv_k" /> are independent, each <MathInline tex="a_k = 0" /> —
+          which is exactly the statement that the <MathInline tex="v_k" /> are independent.
         </p>
       </>
     ),
@@ -320,17 +317,11 @@ const QUESTIONS: SampleQuestion[] = [
       </>
     ),
     hint: <>Pick any nonzero <MathInline tex="w \in V" /> — what does <MathInline tex="Tw" /> have to be?</>,
-    approach: (
-      <>
-        With <MathInline tex="\dim V = 1" />, a nonzero <MathInline tex="w" /> spans, so{' '}
-        <MathInline tex="Tw = \lambda w" /> for some scalar. Extend to every vector by writing it
-        as a multiple of <MathInline tex="w" />.
-      </>
-    ),
-    solution: (
+    walkthrough: (
       <>
         <p>
-          Choose <MathInline tex="w \neq 0" />; since <MathInline tex="V = \operatorname{span}(w)" />,{' '}
+          With <MathInline tex="\dim V = 1" />, a nonzero <MathInline tex="w" /> spans:{' '}
+          <MathInline tex="V = \operatorname{span}(w)" />, so{' '}
           <MathInline tex="Tw = \lambda w" /> for some <MathInline tex="\lambda" />. Any{' '}
           <MathInline tex="v = c\,w" /> then gives
         </p>
@@ -351,18 +342,13 @@ const QUESTIONS: SampleQuestion[] = [
       </>
     ),
     hint: <>Extend a basis of the null space to a basis of <MathInline tex="V" />.</>,
-    approach: (
-      <>
-        The extension's images span the range and stay independent — count both lists.
-      </>
-    ),
-    solution: (
+    walkthrough: (
       <p>
         Take <MathInline tex="u_1, \dots, u_k" /> a basis of{' '}
         <MathInline tex="\operatorname{null} T" />, extend by{' '}
         <MathInline tex="v_1, \dots, v_r" /> to a basis of <MathInline tex="V" />. The images{' '}
-        <MathInline tex="Tv_1, \dots, Tv_r" /> form a basis of the range, so{' '}
-        <MathInline tex="\dim V = k + r" />.
+        <MathInline tex="Tv_1, \dots, Tv_r" /> span the range and stay independent, so they form
+        a basis of it — and <MathInline tex="\dim V = k + r" />.
       </p>
     ),
   },
@@ -378,40 +364,51 @@ const QUESTIONS: SampleQuestion[] = [
       </>
     ),
     hint: <>One direction is immediate — which one, and why?</>,
-    approach: (
+    walkthrough: (
       <>
-        If <MathInline tex="ST = I" /> then <MathInline tex="T" /> kills nothing. Conversely an
-        injective <MathInline tex="T" /> inverts on its range; extend that inverse to all of{' '}
-        <MathInline tex="W" /> along a direct-sum decomposition.
+        <p>
+          If <MathInline tex="ST = I" /> then <MathInline tex="T" /> kills nothing, so it is
+          injective. Conversely, given injectivity <MathInline tex="T^{-1}" /> exists on{' '}
+          <MathInline tex="\operatorname{range} T" />; write{' '}
+          <MathInline tex="W = \operatorname{range} T \oplus U" /> and define{' '}
+          <MathInline tex="S" /> as the inverse on the first summand, <MathInline tex="0" /> on{' '}
+          <MathInline tex="U" />. Then <MathInline tex="STv = v" /> for every{' '}
+          <MathInline tex="v" />.
+        </p>
       </>
-    ),
-    solution: (
-      <p>
-        Given injectivity, <MathInline tex="T^{-1}" /> exists on{' '}
-        <MathInline tex="\operatorname{range} T" />; write{' '}
-        <MathInline tex="W = \operatorname{range} T \oplus U" /> and define{' '}
-        <MathInline tex="S" /> as the inverse on the first summand, <MathInline tex="0" /> on{' '}
-        <MathInline tex="U" />. Then <MathInline tex="STv = v" /> for every{' '}
-        <MathInline tex="v" />.
-      </p>
     ),
   },
 ]
 
-/** One revealed stage of the guide: a quiet label over the content. */
-function Stage({ label, children }: { label: string; children: ReactNode }) {
+/** A stage of the guide: the content is there from the start, behind
+ *  frosted glass. One click lifts the veil — no buttons to sequence, and
+ *  nothing spoiled by accident. */
+function Stage({
+  label,
+  revealed,
+  onReveal,
+  children,
+}: {
+  label: string
+  revealed: boolean
+  onReveal: () => void
+  children: ReactNode
+}) {
   return (
     <div className="space-y-1">
       <p className="text-xs text-muted-foreground uppercase">{label}</p>
-      <div className="space-y-3 text-base">{children}</div>
+      <Veil label={`Show ${label}`} revealed={revealed} onReveal={onReveal}>
+        <div className="space-y-3 text-base">{children}</div>
+      </Veil>
     </div>
   )
 }
 
-const STAGE_NAMES = ['hint', 'approach', 'solution'] as const
+const STAGE_NAMES = ['hint', 'walkthrough'] as const
 
-/** One question at a time: statement, sequential (skippable) reveals,
- *  "got it" marking done and advancing. Spec: design/workspace.md. */
+/** One question at a time. Both stages sit veiled below the statement —
+ *  the walkthrough carries the solution — and Complete is a checkbox:
+ *  checking advances, unchecking is the undo. Spec: design/workspace.md. */
 function Walkthrough({
   title,
   onBack,
@@ -424,20 +421,19 @@ function Walkthrough({
   onAskAbout: () => void
 }) {
   const [index, setIndex] = useState(0)
-  // Per-question progress, sample-local: how many stages are open, done?
-  const [revealed, setRevealed] = useState<number[]>(() => QUESTIONS.map(() => 0))
+  // Per-question progress, sample-local until the backend persists it.
+  const [revealed, setRevealed] = useState<Set<string>>(new Set())
   const [done, setDone] = useState<boolean[]>(() => QUESTIONS.map(() => false))
 
   const q = QUESTIONS[index]
-  const open = revealed[index]
   const isDone = done[index]
 
-  const reveal = (n: number) =>
-    setRevealed((r) => r.map((v, i) => (i === index ? Math.max(v, n) : v)))
+  const reveal = (name: string) => setRevealed((r) => new Set(r).add(`${index}:${name}`))
 
-  const gotIt = () => {
-    const next = done.map((d, i) => (i === index ? true : d))
+  const toggleDone = () => {
+    const next = done.map((d, i) => (i === index ? !d : d))
     setDone(next)
+    if (!next[index]) return // unchecking is the undo — stay put
     // Advance to the next unfinished question; the last one closes quietly.
     const ahead = QUESTIONS.findIndex((_, i) => !next[i])
     if (ahead === -1) onBack()
@@ -472,31 +468,16 @@ function Walkthrough({
           </div>
         )}
 
-        {STAGE_NAMES.map(
-          (name, i) =>
-            open > i && (
-              <Stage key={name} label={name}>
-                {q[name]}
-              </Stage>
-            ),
-        )}
-
-        {open < 3 && (
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => reveal(open + 1)}>
-              Reveal {STAGE_NAMES[open]}
-            </Button>
-            {open < 2 && (
-              <button
-                type="button"
-                onClick={() => reveal(3)}
-                className="text-xs text-muted-foreground underline underline-offset-2 transition-colors duration-150 ease-out hover:text-foreground motion-reduce:transition-none"
-              >
-                Skip to solution
-              </button>
-            )}
-          </div>
-        )}
+        {STAGE_NAMES.map((name) => (
+          <Stage
+            key={name}
+            label={name}
+            revealed={revealed.has(`${index}:${name}`)}
+            onReveal={() => reveal(name)}
+          >
+            {q[name]}
+          </Stage>
+        ))}
       </div>
 
       <div className="flex shrink-0 items-center justify-between border-t p-card">
@@ -522,9 +503,26 @@ function Walkthrough({
           >
             <ChevronRight />
           </IconButton>
-          <Button variant="primary" size="sm" onClick={gotIt} disabled={isDone}>
-            {isDone ? 'Done' : 'Got it'}
-          </Button>
+          {/* A checkbox, because done must be as easy to take back as to
+              claim. Checking advances; unchecking stays put. */}
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={isDone}
+            onClick={toggleDone}
+            className="flex h-control-sm cursor-pointer items-center gap-2 rounded-md px-2 text-sm font-medium transition-colors duration-150 ease-out hover:bg-muted/50 motion-reduce:transition-none"
+          >
+            <span
+              aria-hidden
+              className={cn(
+                'grid size-4 shrink-0 place-items-center rounded-sm border transition-colors duration-150 ease-out motion-reduce:transition-none',
+                isDone ? 'border-primary bg-primary text-primary-foreground' : 'border-input bg-card',
+              )}
+            >
+              {isDone && <Check className="size-3" />}
+            </span>
+            Complete
+          </button>
         </div>
       </div>
     </div>
@@ -567,15 +565,8 @@ function HomeworkTab({
         {active.map((h) => (
           <BoxRow
             key={h.id}
-            title={
-              <button
-                type="button"
-                onClick={() => setOpenSet(h)}
-                className="block w-full truncate text-left"
-              >
-                {h.title}
-              </button>
-            }
+            onClick={() => setOpenSet(h)}
+            title={h.title}
             description={`${h.done} of ${h.total} questions`}
             trailing={<RowValue className={cn(h.urgent && 'text-warning')}>{h.due}</RowValue>}
           />

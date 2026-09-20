@@ -87,12 +87,18 @@ built.
   flat page image.
 - **Scan jumps on demand**: a page chip in the question header; opening a
   question never moves the scan by itself.
-- **Reveals are sequential but skippable** — hint, then approach, then
-  solution, with a quiet skip-to-solution always present. The student is
-  an adult. Guide stages reuse the transcript's pieces (math, page chips).
-- **"Got it" marks done and advances** to the next unfinished question.
-  When the last one is marked: quiet close back to the list, the row
-  showing 8 of 8 with a Turn in affordance. Done is a fact, not a party.
+- **Two stages, both veiled**: *hint* and *walkthrough* — the walkthrough
+  carries the solution, so there is no separate approach step. Each sits
+  behind frosted glass (the `Veil`) from the start: the content is laid
+  out at its true size, blurred, with "Show hint" / "Show walkthrough"
+  over it. One click lifts it. No sequence, no skip link — both are
+  always available, and the student is an adult. Stages reuse the
+  transcript's pieces (math, page chips).
+- **Complete is a checkbox**, not a button: checking marks the question
+  done and advances to the next unfinished one; unchecking is the undo
+  and stays put. When the last one is checked: quiet close back to the
+  list, the row showing 8 of 8 with a Turn in affordance. Done is a
+  fact, not a party.
 - **"Ask about this"** on every question flips to the Ask tab with the
   problem as context — the canned guide's escape hatch.
 - **Failed question**: one line saying why, Try again, and "It's on

@@ -70,6 +70,7 @@ export function BoxRow({
   description,
   trailing,
   href,
+  onClick,
   selected,
   className,
 }: {
@@ -78,6 +79,8 @@ export function BoxRow({
   description?: ReactNode
   trailing?: ReactNode
   href?: string
+  /** Makes the whole row a button — same hover wash as a linked row. */
+  onClick?: () => void
   selected?: boolean
   className?: string
 }) {
@@ -103,7 +106,8 @@ export function BoxRow({
     selected && 'bg-primary-soft text-primary',
     // Half-strength muted: a hover wash only signals, it doesn't have to
     // carry shape, and full muted (1.43:1 on card) reads as selection.
-    href && 'transition-colors duration-150 ease-out hover:bg-muted/50 motion-reduce:transition-none',
+    (href || onClick) &&
+      'cursor-pointer transition-colors duration-150 ease-out hover:bg-muted/50 motion-reduce:transition-none',
     className,
   )
 
@@ -112,6 +116,13 @@ export function BoxRow({
       <Link to={href} className={classes} aria-current={selected ? 'page' : undefined}>
         {content}
       </Link>
+    )
+  }
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={cn(classes, 'w-full text-left')}>
+        {content}
+      </button>
     )
   }
   return <div className={classes}>{content}</div>

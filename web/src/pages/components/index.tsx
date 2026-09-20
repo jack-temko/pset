@@ -19,6 +19,7 @@ import {
   Steps,
   UserTurn,
 } from '@/components/transcript'
+import { Veil } from '@/components/veil'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { coverHueFromSha } from '@/lib/covers'
 import { BOOKS, DUE } from '@/lib/sample'
@@ -71,6 +72,35 @@ function DoorDemo() {
         onToggle={() => setOpen((o) => !o)}
       />
     </Box>
+  )
+}
+
+/** The Veil needs state to be worth looking at. */
+function VeilDemo() {
+  const [shown, setShown] = useState(false)
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground uppercase">walkthrough</p>
+      <Veil label="Show walkthrough" revealed={shown} onReveal={() => setShown(true)}>
+        <div className="space-y-3 text-base">
+          <p>
+            With <MathInline tex="\dim V = 1" /> a nonzero <MathInline tex="w" /> spans, so{' '}
+            <MathInline tex="Tw = \lambda w" /> for some scalar. Any{' '}
+            <MathInline tex="v = c\,w" /> then gives
+          </p>
+          <MathDisplay tex="Tv = T(c\,w) = c\,Tw = c\,\lambda w = \lambda v." />
+        </div>
+      </Veil>
+      {shown && (
+        <button
+          type="button"
+          onClick={() => setShown(false)}
+          className="text-xs text-muted-foreground underline underline-offset-2"
+        >
+          Reset the demo
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -292,6 +322,17 @@ export function Components() {
           <Shelf label="empty week">
             <div className="w-56">
               <StatTile label="Homework" chart={1} value="—" context="nothing yet this week" />
+            </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Veil"
+          note="Frosted glass over content that exists but shouldn't be read yet. Click anywhere to lift it."
+        >
+          <Shelf label="veiled">
+            <div className="w-panel">
+              <VeilDemo />
             </div>
           </Shelf>
         </Section>
