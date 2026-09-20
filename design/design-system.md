@@ -92,7 +92,7 @@ that is a design question — add a named token, never an arbitrary value.
 Semantic tokens own page rhythm: `page` (40px gutters), `section` (40px
 between sections), `card` (16px Box interior). The shell's fixed dimensions
 are tokens too: `topbar` 56, `rail` 256, `panel` 440, `control` 32 (`-sm`
-28, `-lg` 40), `row` 40, `mark` 30.
+28, `-lg` 40), `row` 40, `mark` 30, `dialog` 400 (`-wide` 560).
 
 Radius: `sm` 4, **`md` 6 — the default for controls and containers alike**,
 `lg` 12 for large floating surfaces, `full` for pills.
@@ -130,6 +130,13 @@ component.**
 **The one sanctioned inner scroll is horizontal**, for content that cannot
 reflow — a wide table, a code block, a diagram. It goes in its own
 container, and the page body never scrolls sideways.
+
+**A dialog is the one exception, and it is a screen, not a component.**
+It caps at 80vh, its header and footer are fixed, and its body scrolls —
+because the primary action has to stay reachable however far the content
+grows, and a dialog has nowhere else to put it. A dialog is also the one
+place a **scrim** exists: `foreground/25` with a 2px backdrop blur, and
+it is inert. A backdrop click never closes anything.
 
 A scrolling flex child must set `min-h-0`. Flex items default to
 `min-height: auto` and refuse to shrink below their content, so a pane
@@ -174,4 +181,6 @@ not silently disagree.
 | The mark is **30px**, the wordmark 16px | The baseline's 28px mark with an 18px name let the lockup dominate a 56px bar against 20px icons opposite. The name coming down was the actual fix; 30px is where the mark settled. |
 | Counters and chips sit at **14px** | The baseline's Box and ActionList previews set them at 12px, which contradicts the system's own type floor. The floor wins. |
 | The Counter's fill is translucent ink, not `muted` | It sits on `card-header`, the surface where `muted` is weakest even after the correction (1.24:1). Ink at 20% gives it 1.50:1 and inverts with the theme for free. |
+| The date field is the browser's native `<input type="date">` | It is the one control in the app we don't draw. A correct, keyboard-reachable, locale-aware calendar is a large component to build and an easy one to build slightly wrong, and the value it carries is a date, not a brand moment. |
+| Blur has **two** meanings, and they never share a layer | The Veil blurs content *you could read*, to say "not yet". A dialog's scrim blurs a *screen you are no longer on*, to say "not here". One is 6px on the content itself, the other 2px on a backdrop behind a card. |
 | `card-header` left at its baseline value | It is 1.08:1 against `card` and cannot improve without reading as a different surface — but it always carries a border, and that hairline is what separates the band. |

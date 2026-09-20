@@ -65,17 +65,30 @@ built.
 - **List → walkthrough**, both in the panel: the book's assignments as
   rows (Box + Door), opening one fills the panel with its walkthrough,
   back link at top.
-- Creation keeps the backend's shape: **paste the assignment text** in a
-  dialog (title, due date optional); the engine extracts, locates and
-  guides each question. The flow gets rewritten to match the UI but the
-  paste-text idea stays.
+- **Creation is two acts, not one** (2026-09-20 grill). Making a set and
+  filling it are different decisions, so they are different dialogs:
+  - **New homework** — title (required, because an unnamed set still
+    shows up in the list and on Home) and an optional due date, a
+    native `<input type="date">`. Nothing about questions. Creating
+    lands you in the set's empty walkthrough.
+  - **Add questions** — a stack of rows, one question each: a field
+    that grows as you type, a **"In this book" checkbox per row**, and
+    a remove button that is always visible and disabled on the only
+    row. Enter adds a row below and moves into it; Cmd/Ctrl+Enter
+    submits. Submit adds every non-empty row at once, drops the blanks
+    silently, and closes.
+- **Not every question is in the book.** A professor's own problem still
+  needs a walkthrough. An unchecked row skips the engine's locate stage:
+  it gets **no page chip and no scan jump**, and is otherwise identical
+  — same statement, same two veiled stages, same Complete.
 - **Progressive rows**: questions appear as they are located, each with a
-  quiet working state until its guide is ready.
-- Walkthrough per question: **hint → approach → full solution**, revealed
-  in order, plus a **"got it" mark**. Reveals and marks persist; progress
-  is questions marked done.
+  quiet working state until its guide is ready ("Finding it in the
+  book…", or "Writing the guide…" when there is nothing to find).
+- Walkthrough per question: two veiled stages and a Complete checkbox,
+  detailed below. Reveals and marks persist; progress is questions
+  marked done.
 - **Print** (questionScale/figureScale template) is an action in the
-  walkthrough's header.
+  walkthrough's header, beside the `+`.
 - A Home due-row click lands **straight in that walkthrough**, scan on
   the question's page.
 
@@ -104,14 +117,20 @@ built.
   problem as context — the canned guide's escape hatch.
 - **Failed question**: one line saying why, Try again, and "It's on
   page …" — a typed page relocates from human knowledge.
-- **Sets are editable: add and remove** questions (paste more text to
-  add; remove from the question's overflow). No reorder yet.
+- **Sets are editable: add, remove and reorder.** The controls sit inline
+  on the question you are looking at — move up, move down, remove, as
+  quiet icon buttons beside its page chip — because the walkthrough is
+  the only view of the set there is. The system has no menu component,
+  and this did not justify inventing one.
 - **Turn in is manual** (header overflow), undoable; turned-in sets drop
   to a collapsed group at the list's bottom and leave Home's due list.
-- **New homework is a dialog**: paste box, optional title (auto-named
-  when blank), optional due date; the list then fills progressively.
+- **Every "make one" is a `+`**, and nothing lives at the bottom of a
+  list but the Door: `+` on the Assignments box header opens New
+  homework, `+` in the walkthrough header opens Add questions. The same
+  gesture as importing a book on Home.
 
 ## Panel header
 
 One row: **Ask | Homework as UnderlineNav tabs** left, Focus toggle
-right. Nothing else — the walkthrough owns its own back link and Print.
+right. Nothing else — the walkthrough owns its own back link, `+` and
+Print.

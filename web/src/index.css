@@ -114,6 +114,10 @@
     --spacing-control-sm: 1.75rem;
     --spacing-control-lg: 2.5rem;
     --spacing-row: 2.5rem;
+    /* The two dialog widths, and there are only two: 400 for a form of a
+       couple of fields, 560 for a stack of rows you read back. */
+    --spacing-dialog: 25rem;
+    --spacing-dialog-wide: 35rem;
 
     /* Each step carries the system's weight and tracking for its style, so a
        call site sets size alone. The four display steps are serif-only

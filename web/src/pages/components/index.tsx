@@ -22,6 +22,9 @@ import {
   UserTurn,
 } from '@/components/transcript'
 import { Veil } from '@/components/veil'
+import { Checkbox } from '@/components/checkbox'
+import { Dialog } from '@/components/dialog'
+import { AutoTextarea, Field, Input } from '@/components/input'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { coverHueFromSha } from '@/lib/covers'
 import { BOOKS, DUE } from '@/lib/sample'
@@ -103,6 +106,47 @@ function VeilDemo() {
         </button>
       )}
     </div>
+  )
+}
+
+function CheckboxDemo() {
+  const [on, setOn] = useState(true)
+  return (
+    <Checkbox checked={on} onChange={() => setOn((v) => !v)}>
+      In this book
+    </Checkbox>
+  )
+}
+
+function DialogDemo({ width }: { width: 'default' | 'wide' }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <Button variant="outline" onClick={() => setOpen(true)}>
+        Open the {width === 'wide' ? '560' : '400'} dialog
+      </Button>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        width={width}
+        title={width === 'wide' ? 'Add questions' : 'New homework'}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setOpen(false)}>
+              {width === 'wide' ? 'Add 2 questions' : 'Create'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Esc and the X close it. The scrim does not — a dialog holding half a
+          pasted assignment must not vanish to a stray click.
+        </p>
+      </Dialog>
+    </>
   )
 }
 
@@ -369,6 +413,46 @@ export function Components() {
             <div className="w-panel">
               <VeilDemo />
             </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Dialog"
+          note="The one modal: a native <dialog>, two widths, an inert scrim. Esc and the X close it; the backdrop doesn't."
+        >
+          <Shelf label="400">
+            <DialogDemo width="default" />
+          </Shelf>
+          <Shelf label="560">
+            <DialogDemo width="wide" />
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Form controls"
+          note="A darker `input` border, because a field has to look like something you can type into. The date picker is the browser's."
+        >
+          <Shelf label="input">
+            <div className="w-80 space-y-4">
+              <Field label="Title">
+                <Input placeholder="Problem set 4" />
+              </Field>
+              <Field label="Due date" hint="Optional.">
+                <Input type="date" />
+              </Field>
+              <Field label="Question" hint="Grows as you type; never scrolls.">
+                <AutoTextarea placeholder="A reference like 3.B.4, or paste the question" />
+              </Field>
+            </div>
+          </Shelf>
+          <Shelf label="checkbox">
+            <CheckboxDemo />
+            <Checkbox checked={false} onChange={() => {}}>
+              Unchecked
+            </Checkbox>
+            <Checkbox checked disabled onChange={() => {}}>
+              Disabled
+            </Checkbox>
           </Shelf>
         </Section>
 

@@ -1,9 +1,21 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
-import { ArrowUp, Check, ChevronLeft, ChevronRight, Focus, Plus, Printer } from 'lucide-react'
+import {
+  ArrowUp,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Focus,
+  Plus,
+  Printer,
+  Trash2,
+} from 'lucide-react'
 
 import { AppShell } from '@/components/shell'
-import { Box, BoxRow } from '@/components/box'
+import { Box, BoxHeader, BoxRow } from '@/components/box'
+import { Checkbox } from '@/components/checkbox'
 import { HomeworkStatusLabel, dueText } from '@/components/homework-status'
 import { Button, IconButton } from '@/components/button'
 import {
@@ -18,6 +30,7 @@ import {
 } from '@/components/transcript'
 import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
 import { Veil } from '@/components/veil'
+import { AddQuestionsDialog, NewHomeworkDialog } from './dialogs'
 import {
   BOOK_HOMEWORK,
   PAGE_COUNT,
@@ -269,13 +282,20 @@ function AskTab({ onJump }: { onJump: (page: number) => void }) {
  *  pieces, per the spec. */
 type SampleQuestion = {
   label: string
-  page: number
+  /** Absent when the question isn't in this book — it loses the page chip
+   *  and the scan jump, and nothing else. */
+  page?: number
   statement: ReactNode
   hint: ReactNode
   /** The worked walkthrough, solution included — one stage, not two. */
   walkthrough: ReactNode
   figure?: string
+  /** A just-added question, still being located and written. */
+  pending?: boolean
 }
+
+/** Identity survives reorder, so reveals and completions key off it. */
+type Question = SampleQuestion & { id: number }
 
 const QUESTIONS: SampleQuestion[] = [
   {
@@ -407,57 +427,206 @@ function Stage({
 
 const STAGE_NAMES = ['hint', 'walkthrough'] as const
 
+let nextQuestionId = QUESTIONS.length
+
+/** A freshly added draft, as the walkthrough sees it before the engine has
+ *  located it and written its guide. The sample flips it to ready on a
+ *  timer; the backend will do it on an event. */
+function draftQuestion(text: string, inBook: boolean): Question {
+  return {
+    id: nextQuestionId++,
+    // The first line of what you typed stands in for a label until the
+    // engine names the question properly.
+    label: text.split('\n')[0].slice(0, 40),
+    page: inBook ? 57 : undefined,
+    pending: true,
+    statement: text,
+    hint: null,
+    walkthrough: null,
+  }
+}
+
 /** One question at a time. Both stages sit veiled below the statement —
- *  the walkthrough carries the solution — and Complete is a checkbox:
- *  checking advances, unchecking is the undo. Spec: design/workspace.md. */
+ *  the walkthrough carries the solution — and Complete is a checkbox that
+ *  does exactly one thing. Spec: design/workspace.md. */
 function Walkthrough({
   title,
+  seeded,
   onBack,
   onJump,
   onAskAbout,
 }: {
   title: string
+  /** A set you just made has no questions; the sample ones belong to the
+   *  sets that were already there. */
+  seeded: boolean
   onBack: () => void
   onJump: (page: number) => void
   onAskAbout: () => void
 }) {
+  const [questions, setQuestions] = useState<Question[]>(() =>
+    seeded ? QUESTIONS.map((q, i) => ({ ...q, id: i })) : [],
+  )
   const [index, setIndex] = useState(0)
   // Per-question progress, sample-local until the backend persists it.
+  // Keyed by question id, so reordering never moves a reveal or a tick.
   const [revealed, setRevealed] = useState<Set<string>>(new Set())
-  const [done, setDone] = useState<boolean[]>(() => QUESTIONS.map(() => false))
+  const [done, setDone] = useState<Set<number>>(new Set())
+  const [adding, setAdding] = useState(false)
 
-  const q = QUESTIONS[index]
-  const isDone = done[index]
+  const q = questions[index] as Question | undefined
+  const isDone = !!q && done.has(q.id)
 
-  const reveal = (name: string) => setRevealed((r) => new Set(r).add(`${index}:${name}`))
+  const reveal = (name: string) => setRevealed((r) => new Set(r).add(`${q?.id}:${name}`))
 
   // Marking a question complete does exactly that and nothing else. You
   // move on when you decide to, not when the app decides for you — and
   // unchecking is the undo.
-  const toggleDone = () =>
-    setDone((d) => d.map((v, i) => (i === index ? !v : v)))
+  const toggleDone = () => {
+    if (!q) return
+    setDone((d) => {
+      const next = new Set(d)
+      if (!next.delete(q.id)) next.add(q.id)
+      return next
+    })
+  }
+
+  const move = (by: number) =>
+    setQuestions((qs) => {
+      const to = index + by
+      if (to < 0 || to >= qs.length) return qs
+      const next = [...qs]
+      const [row] = next.splice(index, 1)
+      next.splice(to, 0, row)
+      // Follow the question you just moved, not the slot it left.
+      setIndex(to)
+      return next
+    })
+
+  const remove = () =>
+    setQuestions((qs) => {
+      const next = qs.filter((_, i) => i !== index)
+      setIndex(Math.min(index, Math.max(next.length - 1, 0)))
+      return next
+    })
+
+  const add = (drafts: { text: string; inBook: boolean }[]) => {
+    const fresh = drafts.map((d) => draftQuestion(d.text, d.inBook))
+    setQuestions((qs) => [...qs, ...fresh])
+    // Progressive: each lands pending and resolves in turn, the way the
+    // engine's locate → write phases will report them.
+    fresh.forEach((row, i) => {
+      window.setTimeout(
+        () =>
+          setQuestions((qs) =>
+            qs.map((existing) =>
+              existing.id === row.id
+                ? {
+                    ...existing,
+                    pending: false,
+                    hint: <>Work from the definition before reaching for a theorem.</>,
+                    walkthrough: (
+                      <p>
+                        The engine writes this once the question is located. Sample text stands in
+                        for it.
+                      </p>
+                    ),
+                  }
+                : existing,
+            ),
+          ),
+        800 * (i + 1),
+      )
+    })
+  }
+
+  const dialog = (
+    <AddQuestionsDialog open={adding} onClose={() => setAdding(false)} onAdd={add} />
+  )
+
+  const header = (
+    <div className="flex h-row shrink-0 items-center gap-2 border-b px-2">
+      <IconButton variant="ghost" size="sm" aria-label="Back to homework" onClick={onBack}>
+        <ChevronLeft />
+      </IconButton>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">{title}</span>
+      {questions.length > 0 && (
+        <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
+          {index + 1} of {questions.length}
+        </span>
+      )}
+      <IconButton
+        variant="ghost"
+        size="sm"
+        aria-label="Add questions"
+        onClick={() => setAdding(true)}
+      >
+        <Plus />
+      </IconButton>
+      <IconButton variant="ghost" size="sm" aria-label="Print this homework">
+        <Printer />
+      </IconButton>
+    </div>
+  )
+
+  if (!q) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        {header}
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-card text-center">
+          <p className="text-sm text-muted-foreground">
+            No questions yet. Paste a reference or the question itself, one per row.
+          </p>
+          <Button onClick={() => setAdding(true)}>
+            <Plus />
+            Add questions
+          </Button>
+        </div>
+        {dialog}
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex h-row shrink-0 items-center gap-2 border-b px-2">
-        <IconButton variant="ghost" size="sm" aria-label="Back to homework" onClick={onBack}>
-          <ChevronLeft />
-        </IconButton>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">{title}</span>
-        <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
-          {index + 1} of {QUESTIONS.length}
-        </span>
-        <IconButton variant="ghost" size="sm" aria-label="Print this homework">
-          <Printer />
-        </IconButton>
-      </div>
+      {header}
 
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-card">
         <div className="flex items-center gap-2">
-          <span className="text-lg font-semibold">{q.label}</span>
-          <PageRef page={q.page} onJump={onJump} />
+          <span className="min-w-0 flex-1 truncate text-lg font-semibold">{q.label}</span>
+          {/* A question that isn't in this book has nothing to jump to. */}
+          {q.page !== undefined && <PageRef page={q.page} onJump={onJump} />}
           {isDone && <Check aria-label="Done" className="size-4 text-success" />}
+          {/* Order and removal, inline and quiet — the set is editable from
+              the question you are looking at. */}
+          <IconButton
+            variant="ghost"
+            size="sm"
+            aria-label="Move this question up"
+            disabled={index === 0}
+            onClick={() => move(-1)}
+          >
+            <ChevronUp />
+          </IconButton>
+          <IconButton
+            variant="ghost"
+            size="sm"
+            aria-label="Move this question down"
+            disabled={index === questions.length - 1}
+            onClick={() => move(1)}
+          >
+            <ChevronDown />
+          </IconButton>
+          <IconButton
+            variant="ghost"
+            size="sm"
+            aria-label="Remove this question"
+            onClick={remove}
+          >
+            <Trash2 />
+          </IconButton>
         </div>
+
         <div className="space-y-3 text-base">{q.statement}</div>
         {q.figure && (
           <div className="grid h-32 place-items-center rounded-md border bg-card font-mono text-xs text-muted-foreground">
@@ -465,16 +634,22 @@ function Walkthrough({
           </div>
         )}
 
-        {STAGE_NAMES.map((name) => (
-          <Stage
-            key={name}
-            label={name}
-            revealed={revealed.has(`${index}:${name}`)}
-            onReveal={() => reveal(name)}
-          >
-            {q[name]}
-          </Stage>
-        ))}
+        {q.pending ? (
+          <p className="text-xs text-muted-foreground">
+            {q.page === undefined ? 'Writing the guide…' : 'Finding it in the book…'}
+          </p>
+        ) : (
+          STAGE_NAMES.map((name) => (
+            <Stage
+              key={name}
+              label={name}
+              revealed={revealed.has(`${q.id}:${name}`)}
+              onReveal={() => reveal(name)}
+            >
+              {q[name]}
+            </Stage>
+          ))
+        )}
       </div>
 
       <div className="flex shrink-0 items-center justify-between border-t p-card">
@@ -495,33 +670,20 @@ function Walkthrough({
             variant="ghost"
             size="sm"
             aria-label="Next question"
-            disabled={index === QUESTIONS.length - 1}
+            disabled={index === questions.length - 1}
             onClick={() => setIndex((i) => i + 1)}
           >
             <ChevronRight />
           </IconButton>
-          {/* A checkbox, because done must be as easy to take back as to
-              claim. Checking advances; unchecking stays put. */}
-          <button
-            type="button"
-            role="checkbox"
-            aria-checked={isDone}
-            onClick={toggleDone}
-            className="flex h-control-sm cursor-pointer items-center gap-2 rounded-md px-2 text-sm font-medium transition-colors duration-150 ease-out hover:bg-muted/50 motion-reduce:transition-none"
-          >
-            <span
-              aria-hidden
-              className={cn(
-                'grid size-4 shrink-0 place-items-center rounded-sm border transition-colors duration-150 ease-out motion-reduce:transition-none',
-                isDone ? 'border-primary bg-primary text-primary-foreground' : 'border-input bg-card',
-              )}
-            >
-              {isDone && <Check className="size-3" />}
-            </span>
+          {/* Done must be as easy to take back as to claim, so it is a
+              checkbox and it does not advance. */}
+          <Checkbox checked={isDone} onChange={toggleDone}>
             Complete
-          </button>
+          </Checkbox>
         </div>
       </div>
+
+      {dialog}
     </div>
   )
 }
@@ -537,14 +699,31 @@ function HomeworkTab({
   onJump: (page: number) => void
   onAskAbout: () => void
 }) {
+  const [sets, setSets] = useState<BookHomework[]>(items)
   const [openSet, setOpenSet] = useState<BookHomework | null>(null)
-  const active = items.filter((h) => h.status !== 'turned-in')
-  const turnedIn = items.filter((h) => h.status === 'turned-in')
+  const [creating, setCreating] = useState(false)
+  const active = sets.filter((h) => h.status !== 'turned-in')
+  const turnedIn = sets.filter((h) => h.status === 'turned-in')
+
+  // A new set is a container and nothing else: it exists the moment you
+  // name it, and you land in its empty walkthrough to fill it.
+  const create = (title: string, due: string) => {
+    const set: BookHomework = {
+      id: `hw-${Date.now()}`,
+      title,
+      due: due || 'no date',
+      done: 0,
+      total: 0,
+    }
+    setSets((s) => [set, ...s])
+    setOpenSet(set)
+  }
 
   if (openSet) {
     return (
       <Walkthrough
         title={openSet.title}
+        seeded={openSet.total > 0}
         onBack={() => setOpenSet(null)}
         onJump={onJump}
         onAskAbout={onAskAbout}
@@ -554,11 +733,21 @@ function HomeworkTab({
 
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-card">
-      <Button variant="outline" size="sm" className="w-full">
-        <Plus />
-        New homework
-      </Button>
       <Box>
+        {/* The one way to make homework, and it's a `+` — the same gesture
+            as importing a book on Home. Nothing lives at a list's bottom
+            but the Door. */}
+        <BoxHeader className="text-sm">
+          Assignments
+          <IconButton
+            variant="ghost"
+            size="sm"
+            aria-label="New homework"
+            onClick={() => setCreating(true)}
+          >
+            <Plus />
+          </IconButton>
+        </BoxHeader>
         {active.map((h) => (
           <BoxRow
             key={h.id}
@@ -585,6 +774,12 @@ function HomeworkTab({
           </Box>
         </>
       )}
+
+      <NewHomeworkDialog
+        open={creating}
+        onClose={() => setCreating(false)}
+        onCreate={create}
+      />
     </div>
   )
 }
