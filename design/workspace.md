@@ -77,6 +77,8 @@ built.
     row. Enter adds a row below and moves into it; Cmd/Ctrl+Enter
     submits. Submit adds every non-empty row at once, drops the blanks
     silently, and closes.
+  - Both leave the same way: **Cancel in the footer, or Esc**. No X in
+    the corner — one job, one control.
 - **Not every question is in the book.** A professor's own problem still
   needs a walkthrough. An unchecked row skips the engine's locate stage:
   it gets **no page chip and no scan jump**, and is otherwise identical

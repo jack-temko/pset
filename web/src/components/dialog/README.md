@@ -10,15 +10,21 @@ couple of fields, `wide` 560 for a stack of rows you read back. Both are
 tokens (`--spacing-dialog`, `--spacing-dialog-wide`), not arbitrary
 values.
 
-**Three parts, always in this order:** a header carrying the title and
-the X, the body, and a footer band on `card-header` with Cancel and the
-one primary action right-aligned. The primary counts what it will do
-where a count exists — "Add 4 questions", not "Add questions".
+**Three parts, always in this order:** a header carrying the title, the
+body, and a footer band on `card-header` with Cancel and the one primary
+action right-aligned. The primary counts what it will do where a count
+exists — "Add 4 questions", not "Add questions".
+
+**One way out, and it is Cancel.** There is no X in the corner: two
+controls doing the same job in two places is one too many, and the
+footer's Cancel sits where the decision is being made, beside the action
+it undoes. The footer is required for exactly that reason — a dialog
+without one would have no way out but Esc.
 
 **The scrim is a signal, not a control.** A backdrop click does not
 close: native `<dialog>` doesn't close on one, which is exactly what this
 system wants, because a dialog holding half a pasted assignment must not
-vanish to a stray click. You leave through Esc, the X, or Cancel.
+vanish to a stray click. You leave through Cancel or Esc.
 
 The scrim is `foreground/25` with a 2px backdrop blur.
 
@@ -29,7 +35,7 @@ has to stay reachable however many rows the body grows.
 
 **Don't:** nest a dialog in a dialog; put a scrolling region inside the
 body; use it for a menu or a popover (neither exists yet, and neither is
-this); open one without a title.
+this); open one without a title; add a second way to dismiss it.
 
 ## Changes from baseline
 
@@ -47,6 +53,8 @@ this); open one without a title.
 
 ## Open
 
+- The header is title-only, so it has no slot for an action. Nothing has
+  wanted one.
 - No `dismissible` variant yet: everything the app has is a form worth
   protecting. A confirm dense enough to want backdrop-click can add one.
 - Nothing here animates. If an entrance is ever wanted it must be an

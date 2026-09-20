@@ -142,7 +142,7 @@ function DialogDemo({ width }: { width: 'default' | 'wide' }) {
         }
       >
         <p className="text-sm text-muted-foreground">
-          Esc and the X close it. The scrim does not — a dialog holding half a
+          Cancel and Esc close it. The scrim does not — a dialog holding half a
           pasted assignment must not vanish to a stray click.
         </p>
       </Dialog>
@@ -418,7 +418,7 @@ export function Components() {
 
         <Section
           title="Dialog"
-          note="The one modal: a native <dialog>, two widths, an inert scrim. Esc and the X close it; the backdrop doesn't."
+          note="The one modal: a native <dialog>, two widths, an inert scrim. Cancel and Esc are the only ways out — no X in the corner."
         >
           <Shelf label="400">
             <DialogDemo width="default" />

@@ -1,7 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { X } from 'lucide-react'
 
-import { IconButton } from '@/components/button'
 import { cn } from '@/lib/utils'
 
 /**
@@ -11,8 +9,11 @@ import { cn } from '@/lib/utils'
  * does *not* close: the scrim is a signal, not a control, so a dialog
  * holding half a pasted assignment cannot vanish to a stray click.
  *
- * Three parts, always in this order: a header with the title and the X, a
+ * Three parts, always in this order: a header carrying the title alone, a
  * body, and a footer band carrying Cancel and the one primary action.
+ * There is exactly one way out and it is Cancel — no X in the corner
+ * doing the same job in a second place. The footer is required for that
+ * reason: a dialog without one would have no way out but Esc.
  * The body is the app's single sanctioned vertical inner scroll — a
  * dialog is its own screen, and the footer must stay reachable however
  * many rows the body grows.
@@ -33,7 +34,8 @@ export function Dialog({
   title: string
   /** 400 for a couple of fields, 560 for a stack of rows. No third size. */
   width?: 'default' | 'wide'
-  footer?: ReactNode
+  /** Required: it carries Cancel, which is the way out. */
+  footer: ReactNode
   className?: string
   children: ReactNode
 }) {
@@ -65,20 +67,15 @@ export function Dialog({
       {/* max-h on the element, flex inside it: the header and footer are
           shrink-0 and the body takes what's left. */}
       <div className="flex max-h-[80vh] flex-col">
-        <div className="flex min-h-row shrink-0 items-center justify-between gap-3 border-b px-card py-2">
+        <div className="flex min-h-row shrink-0 items-center border-b px-card py-2">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <IconButton variant="ghost" size="sm" aria-label="Close" onClick={onClose}>
-            <X />
-          </IconButton>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-card">{children}</div>
 
-        {footer && (
-          <div className="flex min-h-row shrink-0 items-center justify-end gap-2 border-t bg-card-header px-card py-2">
-            {footer}
-          </div>
-        )}
+        <div className="flex min-h-row shrink-0 items-center justify-end gap-2 border-t bg-card-header px-card py-2">
+          {footer}
+        </div>
       </div>
     </dialog>
   )

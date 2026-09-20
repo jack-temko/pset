@@ -138,6 +138,11 @@ grows, and a dialog has nowhere else to put it. A dialog is also the one
 place a **scrim** exists: `foreground/25` with a 2px backdrop blur, and
 it is inert. A backdrop click never closes anything.
 
+**One job, one control.** A dialog is left through Cancel in its footer,
+or Esc — never also through an X in the corner. Anywhere the app offers
+a way out, it offers exactly one, and it sits beside the action it
+undoes.
+
 A scrolling flex child must set `min-h-0`. Flex items default to
 `min-height: auto` and refuse to shrink below their content, so a pane
 without it silently pushes the layout taller instead of scrolling.
