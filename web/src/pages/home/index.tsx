@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookOpen, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 
 import { AppShell, PageShell } from '@/components/shell'
 import { BookTile } from '@/components/book-tile'
@@ -142,7 +142,6 @@ function Homework({ items, shown }: { items: Due[]; shown: number }) {
           <BoxRow
             key={d.id}
             href={`/homework/${d.id}`}
-            leading={<BookOpen />}
             title={d.title}
             description={`${d.book} · ${d.questions} questions`}
             trailing={<DueStatus due={d.due} status={d.status} />}
