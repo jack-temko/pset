@@ -23,6 +23,7 @@ import {
 } from '@/components/transcript'
 import { Veil } from '@/components/veil'
 import { Spinner } from '@/components/spinner'
+import { Skeleton } from '@/components/skeleton'
 import { SegmentedControl } from '@/components/segmented-control'
 import { Checkbox } from '@/components/checkbox'
 import { Dialog } from '@/components/dialog'
@@ -327,6 +328,28 @@ export function Components() {
               {BOOKS.filter((b) => b.state.kind === 'ready').slice(0, 3).map((b) => (
                 <BookTile key={b.sha256} book={b} />
               ))}
+            </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Skeleton"
+          note="The shape of what's coming, at its real size, so nothing moves when it lands. It doesn't pulse: the Spinner is the only loop."
+        >
+          <Shelf label="row">
+            <Box className="w-full">
+              <BoxRow
+                leading={<Skeleton className="size-4 rounded-full" />}
+                title="Database"
+                description={<Skeleton className="h-3 w-48" />}
+              />
+            </Box>
+          </Shelf>
+          <Shelf label="prose">
+            <div className="w-panel space-y-1 text-base">
+              <p><Skeleton className="h-3 w-full" /></p>
+              <p><Skeleton className="h-3 w-full" /></p>
+              <p><Skeleton className="h-3 w-2/3" /></p>
             </div>
           </Shelf>
         </Section>

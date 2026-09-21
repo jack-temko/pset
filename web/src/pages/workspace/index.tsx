@@ -35,6 +35,8 @@ import {
 } from '@/components/transcript'
 import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
 import { Veil } from '@/components/veil'
+import { Skeleton } from '@/components/skeleton'
+import { Spinner } from '@/components/spinner'
 import { AddQuestionsDialog, BookDialog, HomeworkDialog } from './dialogs'
 import {
   BOOK_HOMEWORK,
@@ -606,7 +608,7 @@ function FailedQuestion({
             if (pageNumber > 0) onRetry({ page: pageNumber })
           }}
         >
-          <Field label="It's on page" className="w-32" hint="As printed">
+          <Field label="It's on printed page" className="w-40">
             <Input
               inputMode="numeric"
               value={page}
@@ -650,6 +652,37 @@ function FailedQuestion({
 }
 
 const STAGE_NAMES = ['hint', 'walkthrough'] as const
+
+/**
+ * A question still being written: the two stages it will have, at their
+ * usual size, so the guide lands in space already made for it rather than
+ * pushing in. The spinner says the work is running; the skeletons say
+ * where it will go.
+ */
+function PendingStages({ offBook }: { offBook: boolean }) {
+  return (
+    <div className="space-y-5">
+      <p className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Spinner className="size-3" />
+        {offBook ? 'Writing the guide…' : 'Finding it in the book…'}
+      </p>
+      {STAGE_NAMES.map((name, i) => (
+        <div key={name} className="space-y-1">
+          <p className="text-xs text-muted-foreground uppercase">{name}</p>
+          <div className="space-y-1 text-base">
+            {/* A hint runs two lines, a walkthrough about five; the last
+                line of each stops short, as prose does. */}
+            {Array.from({ length: i === 0 ? 2 : 5 }, (_, j) => (
+              <p key={j}>
+                <Skeleton className={cn('h-3', j === (i === 0 ? 1 : 4) ? 'w-2/3' : 'w-full')} />
+              </p>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 let nextQuestionId = QUESTIONS.length
 
@@ -904,9 +937,7 @@ function Walkthrough({
         {q.failed ? (
           <FailedQuestion q={q} onRetry={retry} />
         ) : q.pending ? (
-          <p className="text-xs text-muted-foreground">
-            {q.offBook ? 'Writing the guide…' : 'Finding it in the book…'}
-          </p>
+          <PendingStages offBook={!!q.offBook} />
         ) : (
           STAGE_NAMES.map((name) => (
             <Stage

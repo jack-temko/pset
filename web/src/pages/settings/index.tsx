@@ -8,6 +8,7 @@ import { Button } from '@/components/button'
 import { Dialog } from '@/components/dialog'
 import { Field, Input } from '@/components/input'
 import { SegmentedControl } from '@/components/segmented-control'
+import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
 import { ABOUT, CONNECTIONS, HEALTH, RESET_COUNTS, type HealthCheck } from '@/lib/sample'
 import { applyTheme, getTheme, type Theme } from '@/lib/theme'
@@ -167,6 +168,8 @@ function StatusLine({ status }: { status: Status }) {
 
 // ---------------------------------------------------------------- health
 
+const HEALTH_NAMES = ['Data directory', 'Database', 'Poppler', 'Tesseract']
+
 /** The local system, checked on open. The endpoints aren't here: their
  *  status lives beside their fields, so each fact is said once. */
 function Health() {
@@ -191,11 +194,17 @@ function Health() {
   return (
     <Box>
       {checks === null ? (
-        <BoxRow
-          leading={<Spinner className="size-3" />}
-          title="Checking…"
-          className="text-muted-foreground"
-        />
+        // The four checks are always the same four, so draw four rows at
+        // their real height; the results then land without moving
+        // anything.
+        HEALTH_NAMES.map((name) => (
+          <BoxRow
+            key={name}
+            leading={<Skeleton className="size-4 rounded-full" />}
+            title={name}
+            description={<Skeleton className="h-3 w-48" />}
+          />
+        ))
       ) : (
         checks.map((c) => (
           <BoxRow

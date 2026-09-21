@@ -173,6 +173,12 @@ merely queued gets the word "Queued" and no motion at all: nothing is
 happening to it yet. Anything that isn't waiting must not borrow the
 meaning.
 
+**Nothing jumps when data arrives.** Anything that waits on a request
+draws a **Skeleton** first: `muted` blocks at the size and count of what's
+coming, inline in real line boxes so a skeleton row and the row that
+replaces it measure the same. Skeletons are still; they hold space, and
+the Spinner is left to say "waiting" where work is running.
+
 Anything that moves states `transition duration-150 ease-out` explicitly.
 A hover class without it doesn't animate, it snaps, and the difference is
 quiet enough to ship by accident. Pair it with
