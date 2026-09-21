@@ -95,10 +95,12 @@ function ConnectionBox({
     setStatus({ kind: 'ok', text: save ? `Saved · ${r.detail}` : r.detail })
   }
 
+  // A column, with the body taking the slack: side by side, both Boxes
+  // stretch to the taller one and their footers line up at the bottom.
   return (
-    <Box>
+    <Box className="flex flex-col">
       <BoxHeader>{title}</BoxHeader>
-      <BoxBody className="space-y-4">
+      <BoxBody className="flex-1 space-y-4">
         {fields.map((f) => (
           <Field
             key={f.key}
@@ -348,7 +350,7 @@ export function Settings() {
         <h1 className="font-heading text-3xl">Settings</h1>
 
         <Section title="Connections">
-          <div className="grid grid-cols-2 items-start gap-6">
+          <div className="grid grid-cols-2 gap-6">
             <ConnectionBox
               kind="chat"
               title="Chat"
