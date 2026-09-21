@@ -40,7 +40,7 @@ need to see which key you pasted.
   that field's hint (unreachable → endpoint, 401 → key, unknown model →
   model). Editing that field clears it.
 - The Box footer says what the last Test or Save found: a spinner while
-  it works, then "Connected · glm-4.6" in success ink, or "Not saved:
+  it works, then "Connected" (with the vector size for embeddings; the model is already in the field) in success ink, or "Not saved:
   the test failed".
 - **Nothing is dialled on open.** Status appears only when you ask for
   it.

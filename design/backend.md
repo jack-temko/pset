@@ -95,7 +95,8 @@ POST   /api/turns/{id}/stop
 GET    /api/due   GET /api/week   POST /api/heartbeat
 GET    /api/settings  PUT /api/settings  POST /api/settings/test
 GET    /api/health    POST /api/health/{check}/fix
-POST   /api/reset     GET /api/about     GET /api/events
+GET    /api/reset (dry run)  POST /api/reset
+GET    /api/about     GET /api/events
 ```
 
 **Browser routes stay as built:** `/books/{id}` and

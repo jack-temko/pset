@@ -1,0 +1,226 @@
+package jobs
+
+import (
+	"context"
+	"errors"
+	"io"
+	"log/slog"
+	"path/filepath"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/jackt/pset/internal/db"
+)
+
+func newQueue(t *testing.T) *Queue {
+	t.Helper()
+	d, err := db.Open(filepath.Join(t.TempDir(), "pset.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { d.Close() })
+	if err := db.Migrate(context.Background(), d, Migrations()); err != nil {
+		t.Fatal(err)
+	}
+	return New(d, slog.New(slog.NewTextHandler(io.Discard, nil)))
+}
+
+func run(t *testing.T, q *Queue) context.CancelFunc {
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { q.Run(ctx); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
+	return cancel
+}
+
+func waitState(t *testing.T, q *Queue, id string, want State) Job {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		j, err := q.Get(context.Background(), id)
+		if err == nil && j.State == want {
+			return j
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	j, _ := q.Get(context.Background(), id)
+	t.Fatalf("job %s: state %s, want %s", id, j.State, want)
+	return j
+}
+
+func TestLaneRunsInOrderOneAtATime(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("import", 1)
+	var mu sync.Mutex
+	var order []int
+	var live, peak atomic.Int32
+	q.Handle("imp", "import", func(ctx context.Context, j Job) error {
+		n := live.Add(1)
+		if n > peak.Load() {
+			peak.Store(n)
+		}
+		var p struct{ N int }
+		j.Decode(&p)
+		time.Sleep(10 * time.Millisecond)
+		mu.Lock()
+		order = append(order, p.N)
+		mu.Unlock()
+		live.Add(-1)
+		return nil
+	})
+	ctx := context.Background()
+	var last string
+	for i := range 4 {
+		last, _ = q.Enqueue(ctx, q.db, Spec{Kind: "imp", Payload: map[string]int{"N": i}})
+	}
+	run(t, q)
+	waitState(t, q, last, Done)
+	if peak.Load() != 1 {
+		t.Fatalf("peak concurrency %d", peak.Load())
+	}
+	for i, n := range order {
+		if n != i {
+			t.Fatalf("order %v", order)
+		}
+	}
+}
+
+func TestSameKeyNeverRunsTogether(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("turn", 8)
+	var live, peak atomic.Int32
+	q.Handle("t", "turn", func(ctx context.Context, j Job) error {
+		n := live.Add(1)
+		if n > peak.Load() {
+			peak.Store(n)
+		}
+		time.Sleep(20 * time.Millisecond)
+		live.Add(-1)
+		return nil
+	})
+	ctx := context.Background()
+	var ids []string
+	for range 3 {
+		id, _ := q.Enqueue(ctx, q.db, Spec{Kind: "t", Key: "book-a"})
+		ids = append(ids, id)
+	}
+	run(t, q)
+	for _, id := range ids {
+		waitState(t, q, id, Done)
+	}
+	if peak.Load() != 1 {
+		t.Fatalf("same key ran %d at once", peak.Load())
+	}
+}
+
+func TestStopRunningCancelsAndHandlerSeesIt(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 1)
+	started := make(chan struct{})
+	var sawStop atomic.Bool
+	q.Handle("k", "l", func(ctx context.Context, j Job) error {
+		close(started)
+		<-ctx.Done()
+		sawStop.Store(Stopped(ctx))
+		return ctx.Err()
+	})
+	id, _ := q.Enqueue(context.Background(), q.db, Spec{Kind: "k"})
+	run(t, q)
+	<-started
+	q.Stop(context.Background(), id)
+	waitState(t, q, id, Cancelled)
+	if !sawStop.Load() {
+		t.Fatal("handler did not see Stopped")
+	}
+}
+
+func TestStopQueuedAndRetry(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 1)
+	var runs atomic.Int32
+	q.Handle("k", "l", func(ctx context.Context, j Job) error { runs.Add(1); return nil })
+	ctx := context.Background()
+	id, _ := q.Enqueue(ctx, q.db, Spec{Kind: "k"})
+	q.Stop(ctx, id)
+	waitState(t, q, id, Cancelled)
+	if err := q.Retry(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	run(t, q)
+	waitState(t, q, id, Done)
+	if err := q.Retry(ctx, id); !errors.Is(err, ErrNotRetryable) {
+		t.Fatalf("retry done job: %v", err)
+	}
+}
+
+func TestFailureRecordsErrorAndPanicIsAFailure(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 2)
+	q.Handle("bad", "l", func(ctx context.Context, j Job) error { return errors.New("boom") })
+	q.Handle("panic", "l", func(ctx context.Context, j Job) error { panic("oops") })
+	ctx := context.Background()
+	a, _ := q.Enqueue(ctx, q.db, Spec{Kind: "bad"})
+	b, _ := q.Enqueue(ctx, q.db, Spec{Kind: "panic"})
+	run(t, q)
+	if j := waitState(t, q, a, Failed); j.Error != "boom" {
+		t.Fatalf("error = %q", j.Error)
+	}
+	waitState(t, q, b, Failed)
+}
+
+func TestShutdownRequeuesAndRestartResumes(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 1)
+	started := make(chan struct{}, 2)
+	var finish atomic.Bool
+	q.Handle("k", "l", func(ctx context.Context, j Job) error {
+		started <- struct{}{}
+		if finish.Load() {
+			return nil
+		}
+		<-ctx.Done()
+		return ctx.Err()
+	})
+	id, _ := q.Enqueue(context.Background(), q.db, Spec{Kind: "k"})
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { q.Run(ctx); close(done) }()
+	<-started
+	cancel()
+	<-done
+	if j, _ := q.Get(context.Background(), id); j.State != Queued {
+		t.Fatalf("after shutdown: %s", j.State)
+	}
+	finish.Store(true)
+	run(t, q)
+	if j := waitState(t, q, id, Done); j.Attempts != 2 {
+		t.Fatalf("attempts = %d", j.Attempts)
+	}
+}
+
+func TestPauseRequeuesUntilResume(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 1)
+	started := make(chan struct{}, 4)
+	var finish atomic.Bool
+	q.Handle("k", "l", func(ctx context.Context, j Job) error {
+		started <- struct{}{}
+		if finish.Load() {
+			return nil
+		}
+		<-ctx.Done()
+		return ctx.Err()
+	})
+	id, _ := q.Enqueue(context.Background(), q.db, Spec{Kind: "k"})
+	run(t, q)
+	<-started
+	q.Pause()
+	if j, _ := q.Get(context.Background(), id); j.State != Queued {
+		t.Fatalf("after pause: %s", j.State)
+	}
+	finish.Store(true)
+	q.Resume()
+	waitState(t, q, id, Done)
+}

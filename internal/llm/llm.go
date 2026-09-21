@@ -69,6 +69,25 @@ func New(apiBaseURL, apiKey, embedBaseURL, embedModel string) *Client {
 	}
 }
 
+// Config is a saved, tested connection pair, the one shape every feature
+// is handed. A side that was never saved is blank: blank means "not set up".
+type Config struct {
+	ChatEndpoint  string
+	APIKey        string
+	ChatModel     string
+	EmbedEndpoint string
+	EmbedModel    string
+}
+
+// ChatReady and EmbedReady report whether a side is set up.
+func (c Config) ChatReady() bool  { return c.ChatEndpoint != "" && c.ChatModel != "" }
+func (c Config) EmbedReady() bool { return c.EmbedEndpoint != "" && c.EmbedModel != "" }
+
+// Open builds a client for a Config.
+func Open(c Config) *Client {
+	return New(c.ChatEndpoint, c.APIKey, c.EmbedEndpoint, c.EmbedModel)
+}
+
 // ChatConfigured reports whether the chat endpoint has a base URL and key.
 func (c *Client) ChatConfigured() bool { return c.apiBaseURL != "" && c.apiKey != "" }
 

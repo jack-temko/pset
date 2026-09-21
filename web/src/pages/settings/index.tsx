@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CircleAlert, CircleCheck } from 'lucide-react'
 
@@ -10,7 +10,18 @@ import { Field, Input } from '@/components/input'
 import { SegmentedControl } from '@/components/segmented-control'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
-import { ABOUT, CONNECTIONS, HEALTH, RESET_COUNTS, type HealthCheck } from '@/lib/sample'
+import { ApiError } from '@/api/client'
+import {
+  useAbout,
+  useFixCheck,
+  useHealth,
+  useReset,
+  useResetCounts,
+  useSaveConnection,
+  useSettings,
+  useTestConnection,
+  type ConnectionInput,
+} from '@/api/settings'
 import { applyTheme, getTheme, type Theme } from '@/lib/theme'
 
 /**
@@ -20,31 +31,6 @@ import { applyTheme, getTheme, type Theme } from '@/lib/theme'
  *
  * Spec: design/settings.md.
  */
-
-// ---------------------------------------------------------------- probe
-
-type Probe = { ok: true; detail: string } | { ok: false; field: string; error: string }
-
-/** Stands in for the engine's TestConnection(override): it dials the values
- *  on screen, never the saved ones, and writes nothing. Each failure names
- *  the field that caused it, so the error lands under that field. */
-function probe(kind: 'chat' | 'embeddings', v: Record<string, string>): Promise<Probe> {
-  const result = (): Probe => {
-    if (!/^https?:\/\//.test(v.endpoint))
-      return { ok: false, field: 'endpoint', error: 'Not a URL. It should start with http:// or https://' }
-    if (kind === 'chat') {
-      if (!v.apiKey) return { ok: false, field: 'apiKey', error: 'No API key' }
-      if (!v.apiKey.startsWith('zk-'))
-        return { ok: false, field: 'apiKey', error: 'The endpoint refused this key (401)' }
-    }
-    if (!v.model) return { ok: false, field: 'model', error: 'No model named' }
-    return {
-      ok: true,
-      detail: kind === 'chat' ? `Connected · ${v.model}` : `Connected · ${v.model} · 768 dimensions`,
-    }
-  }
-  return new Promise((resolve) => setTimeout(() => resolve(result()), 700))
-}
 
 // ---------------------------------------------------------------- connections
 
@@ -83,17 +69,29 @@ function ConnectionBox({
   const dirty = fields.some((f) => values[f.key] !== saved[f.key])
   const working = status.kind === 'working'
 
+  const test = useTestConnection()
+  const saveConnection = useSaveConnection()
+
   const run = async (save: boolean) => {
     setError(null)
     setStatus({ kind: 'working', verb: save ? 'Saving' : 'Testing' })
-    const r = await probe(kind, values)
-    if (!r.ok) {
-      setError({ field: r.field, text: r.error })
-      setStatus({ kind: 'failed', text: save ? 'Not saved: the test failed' : 'Test failed' })
-      return
+    // Exactly one side per call: the values on screen, not the saved ones.
+    const body: ConnectionInput =
+      kind === 'chat'
+        ? { chat: { endpoint: values.endpoint, apiKey: values.apiKey, model: values.model } }
+        : { embeddings: { endpoint: values.endpoint, model: values.model } }
+    try {
+      const r = save ? await saveConnection.mutateAsync(body) : await test.mutateAsync(body)
+      if (save) setSaved(values)
+      setStatus({ kind: 'ok', text: save ? `Saved · ${r.detail}` : r.detail })
+    } catch (e) {
+      const err = e instanceof ApiError ? e : null
+      // A failure that names a field lands under it; one that doesn't
+      // (the server itself is down) says so in the footer.
+      if (err?.field) setError({ field: err.field, text: err.message })
+      const what = save ? 'Not saved: the test failed' : 'Test failed'
+      setStatus({ kind: 'failed', text: err?.field ? what : (err?.message ?? what) })
     }
-    if (save) setSaved(values)
-    setStatus({ kind: 'ok', text: save ? `Saved · ${r.detail}` : r.detail })
   }
 
   // A column, with the body taking the slack: side by side, both Boxes
@@ -141,6 +139,29 @@ function ConnectionBox({
   )
 }
 
+/** A connection Box before the settings arrive: the same fields at their
+ *  real height, so the values land without moving anything. */
+function ConnectionSkeleton({ title, fields }: { title: string; fields: FieldSpec[] }) {
+  return (
+    <Box className="flex flex-col">
+      <BoxHeader>{title}</BoxHeader>
+      <BoxBody className="flex-1 space-y-4">
+        {fields.map((f) => (
+          <Field key={f.key} label={f.label} hint={f.hint}>
+            <Skeleton className="block h-control w-full rounded-md" />
+          </Field>
+        ))}
+      </BoxBody>
+      <BoxFooter>
+        <span />
+        <Button variant="outline" size="sm" disabled>
+          Test
+        </Button>
+      </BoxFooter>
+    </Box>
+  )
+}
+
 /** What the last Test or Save found. Nothing until you ask: opening the
  *  page dials nothing. */
 function StatusLine({ status }: { status: Status }) {
@@ -173,23 +194,10 @@ const HEALTH_NAMES = ['Data directory', 'Database', 'Poppler', 'Tesseract']
 /** The local system, checked on open. The endpoints aren't here: their
  *  status lives beside their fields, so each fact is said once. */
 function Health() {
-  const [checks, setChecks] = useState<HealthCheck[] | null>(null)
-  const [fixing, setFixing] = useState<string | null>(null)
-
-  useEffect(() => {
-    const t = setTimeout(() => setChecks(HEALTH), 500)
-    return () => clearTimeout(t)
-  }, [])
-
-  const fix = (name: string) => {
-    setFixing(name)
-    setTimeout(() => {
-      setChecks((cs) =>
-        cs!.map((c) => (c.name === name ? { ...c, ok: true, detail: 'migrated schema v11 to v12' } : c)),
-      )
-      setFixing(null)
-    }, 700)
-  }
+  const { data } = useHealth()
+  const fix = useFixCheck()
+  const checks = data?.checks ?? null
+  const fixing = fix.isPending ? fix.variables : null
 
   return (
     <Box>
@@ -208,7 +216,7 @@ function Health() {
       ) : (
         checks.map((c) => (
           <BoxRow
-            key={c.name}
+            key={c.id}
             leading={
               c.ok ? (
                 <CircleCheck className="text-success" aria-label="OK" />
@@ -217,16 +225,22 @@ function Health() {
               )
             }
             title={c.name}
-            description={c.detail}
+            description={
+              fix.isError && fix.variables === c.id ? (
+                <span className="text-destructive">{fix.error.message}</span>
+              ) : (
+                c.detail
+              )
+            }
             trailing={
               !c.ok && c.fixable ? (
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={fixing === c.name}
-                  onClick={() => fix(c.name)}
+                  disabled={fixing === c.id}
+                  onClick={() => fix.mutate(c.id)}
                 >
-                  {fixing === c.name ? 'Fixing…' : 'Fix'}
+                  {fixing === c.id ? 'Fixing…' : 'Fix'}
                 </Button>
               ) : undefined
             }
@@ -278,6 +292,8 @@ function Appearance() {
 function Reset() {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const counts = useResetCounts(open)
+  const reset = useReset()
 
   return (
     <>
@@ -305,18 +321,22 @@ function Reset() {
         title="Reset everything?"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setOpen(false)}>
+            <Button variant="ghost" disabled={reset.isPending} onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                // The engine's Reset, extended to remove config.json too.
-                setOpen(false)
-                navigate('/')
-              }}
+              disabled={reset.isPending}
+              onClick={() =>
+                reset.mutate(undefined, {
+                  onSuccess: () => {
+                    setOpen(false)
+                    navigate('/')
+                  },
+                })
+              }
             >
-              Reset everything
+              {reset.isPending ? 'Resetting…' : 'Reset everything'}
             </Button>
           </>
         }
@@ -324,12 +344,16 @@ function Reset() {
         <div className="space-y-3 text-sm">
           <p>
             This deletes{' '}
-            <span className="font-medium tabular-nums">{RESET_COUNTS.books} books</span> and their{' '}
             <span className="font-medium tabular-nums">
-              {RESET_COUNTS.pages.toLocaleString()} pages
+              {counts.data ? plural(counts.data.books, 'book') : <Skeleton className="h-3 w-12" />}
+            </span>{' '}
+            and their{' '}
+            <span className="font-medium tabular-nums">
+              {counts.data ? plural(counts.data.pages, 'page') : <Skeleton className="h-3 w-16" />}
             </span>
             , every homework set and conversation, and your settings, including the API key.
           </p>
+          {reset.isError && <p className="text-destructive">{reset.error.message}</p>}
           <p className="text-muted-foreground">
             PSet will be as it was the first time you opened it. There's no undo.
           </p>
@@ -339,7 +363,62 @@ function Reset() {
   )
 }
 
+function plural(n: number, word: string) {
+  return `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`
+}
+
 // ---------------------------------------------------------------- page
+
+const CHAT_FIELDS: FieldSpec[] = [
+  { key: 'endpoint', label: 'Endpoint', mono: true },
+  { key: 'apiKey', label: 'API key', mono: true },
+  { key: 'model', label: 'Model', mono: true },
+]
+
+const EMBED_FIELDS: FieldSpec[] = [
+  {
+    key: 'endpoint',
+    label: 'Endpoint',
+    mono: true,
+    hint: 'Any OpenAI-compatible embeddings server. Books need it to be prepared.',
+  },
+  { key: 'model', label: 'Model', mono: true },
+]
+
+function Connections() {
+  const { data } = useSettings()
+  if (!data)
+    return (
+      <div className="grid grid-cols-2 gap-6">
+        <ConnectionSkeleton title="Chat" fields={CHAT_FIELDS} />
+        <ConnectionSkeleton title="Embeddings" fields={EMBED_FIELDS} />
+      </div>
+    )
+  return (
+    <div className="grid grid-cols-2 gap-6">
+      <ConnectionBox kind="chat" title="Chat" initial={{ ...data.chat }} fields={CHAT_FIELDS} />
+      <ConnectionBox
+        kind="embeddings"
+        title="Embeddings"
+        initial={{ ...data.embeddings }}
+        fields={EMBED_FIELDS}
+      />
+    </div>
+  )
+}
+
+function AboutLine() {
+  const { data } = useAbout()
+  return (
+    <p className="font-mono text-xs text-muted-foreground">
+      {data ? (
+        `pset ${data.version} · ${data.dataDir}`
+      ) : (
+        <Skeleton className="h-3 w-80" />
+      )}
+    </p>
+  )
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -359,32 +438,7 @@ export function Settings() {
         <PageTitle className="text-3xl">Settings</PageTitle>
 
         <Section title="Connections">
-          <div className="grid grid-cols-2 gap-6">
-            <ConnectionBox
-              kind="chat"
-              title="Chat"
-              initial={CONNECTIONS.chat}
-              fields={[
-                { key: 'endpoint', label: 'Endpoint', mono: true },
-                { key: 'apiKey', label: 'API key', mono: true },
-                { key: 'model', label: 'Model', mono: true },
-              ]}
-            />
-            <ConnectionBox
-              kind="embeddings"
-              title="Embeddings"
-              initial={CONNECTIONS.embeddings}
-              fields={[
-                {
-                  key: 'endpoint',
-                  label: 'Endpoint',
-                  mono: true,
-                  hint: 'Any OpenAI-compatible embeddings server. Books need it to be prepared.',
-                },
-                { key: 'model', label: 'Model', mono: true },
-              ]}
-            />
-          </div>
+          <Connections />
         </Section>
 
         <Section title="Health">
@@ -399,9 +453,7 @@ export function Settings() {
           <Reset />
         </Section>
 
-        <p className="font-mono text-xs text-muted-foreground">
-          pset {ABOUT.version} · {ABOUT.dataDir}
-        </p>
+        <AboutLine />
       </PageShell>
     </AppShell>
   )

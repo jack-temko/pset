@@ -8,3 +8,4 @@ web/e2e/artifacts/
 /*.png
 /.playwright-mcp/
 /node_modules/
+.dev/

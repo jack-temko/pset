@@ -1,0 +1,19 @@
+# jobs
+
+The durable queue. A job is a kind, a lane, a subject, an optional key and
+a JSON payload, in the `jobs` table. It publishes nothing: features do
+that from inside their handlers.
+
+- **Lanes** bound concurrency (`import` 1, `question` 2, `turn` many).
+  Jobs sharing a **key** never run together (one turn per book).
+- `Enqueue(ctx, execer, spec)` takes a `*sql.Tx`, so a row and the job that
+  fills it commit together. A 2s poll backs up the wake.
+- **States:** queued → running → done | failed | cancelled.
+  - `Stop` cancels a queued job at once, or cancels a running one's
+    context; it settles `cancelled`. `Stopped(ctx)` tells a handler it
+    was the user, not a shutdown.
+  - Shutdown and `Pause` put running jobs back to `queued`; the next
+    start resumes them (`attempts` counts runs).
+  - A panic is a failed job, not a dead server.
+- `Retry` requeues a failed or cancelled job with its payload unchanged.
+- Finished jobs older than a week are pruned at start.

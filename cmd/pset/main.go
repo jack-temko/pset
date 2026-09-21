@@ -1,3 +1,5 @@
+// Command pset serves the PSet web app and its API. This file is wiring
+// only: open the database, build the features, start the queue, serve.
 package main
 
 import (
@@ -5,17 +7,21 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
-	"github.com/jackt/pset/internal/api"
-	"github.com/jackt/pset/internal/engine"
+	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/events"
+	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/jobs"
+	"github.com/jackt/pset/internal/settings"
+	"github.com/jackt/pset/web"
 )
 
 // Version is overridden at build time via -ldflags.
@@ -23,110 +29,146 @@ var Version = "0.1.0-dev"
 
 func main() {
 	fs := flag.NewFlagSet("pset", flag.ExitOnError)
-	addr := fs.String("addr", "127.0.0.1:8420", "listen address for the web server")
-	dbPath := fs.String("db", "", "SQLite database path (default: $PSET_DB, then ~/.pset/pset.db)")
-	verbose := fs.Bool("verbose", false, "log a detailed developer trace to stderr")
-	showVersion := fs.Bool("version", false, "print the pset version and exit")
+	addr := fs.String("addr", "127.0.0.1:8420", "listen address")
+	dataDir := fs.String("data", "", "data directory (default: $PSET_DATA, then ~/.local/share/pset)")
+	verbose := fs.Bool("verbose", false, "log debug detail")
+	showVersion := fs.Bool("version", false, "print the version and exit")
 	fs.Parse(os.Args[1:])
 
 	if *showVersion {
 		fmt.Println("pset", Version)
 		return
 	}
-	if fs.NArg() > 0 {
-		fmt.Fprintf(os.Stderr, "pset: unexpected argument %q — pset serves the web interface and API\n", fs.Arg(0))
-		os.Exit(1)
+	level := slog.LevelInfo
+	if *verbose {
+		level = slog.LevelDebug
 	}
+	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+	httpx.Logger = log
 
-	eng, err := engine.New(engine.Config{
-		DBPath: *dbPath,
-		Logger: newLogger(*verbose),
-	})
+	dir, err := resolveDataDir(*dataDir)
 	if err != nil {
 		fail(err)
 	}
-
-	// Migrate up front so a broken database is an exit code, not a broken
-	// server.
-	if err := eng.Migrate(context.Background()); err != nil {
-		fail(err)
-	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	runner := engine.NewRunner(eng)
-	go runner.Run(ctx)
-
-	// Handlers hang off a context of their own so shutdown can end the
-	// long-lived ones. The event stream deliberately never returns while its
-	// client is listening, and Shutdown only waits for connections to go
-	// idle — it does not cancel requests — so without this every Ctrl+C sat
-	// out the full grace period and then reported a deadline.
-	handlerCtx, endHandlers := context.WithCancel(context.Background())
-	defer endHandlers()
-
-	srv := &http.Server{
-		Addr:              *addr,
-		Handler:           api.New(Version, eng).Handler(),
-		ReadHeaderTimeout: 10 * time.Second,
-		BaseContext:       func(net.Listener) context.Context { return handlerCtx },
-	}
-	ln, err := net.Listen("tcp", *addr)
-	if err != nil {
-		fail(fmt.Errorf("listen on %s: %w", *addr, err))
-	}
-
-	serveErr := make(chan error, 1)
-	go func() {
-		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			serveErr <- err
-		}
-		close(serveErr)
-	}()
-
-	fmt.Printf("PSet serving at http://%s\n", *addr)
-
-	select {
-	case err := <-serveErr:
-		if err != nil {
-			fail(err)
-		}
-		return
-	case <-ctx.Done():
-	}
-
-	// Shutdown pauses the running job at a page or stage boundary (its
-	// status returns to queued), then stops serving.
-	select {
-	case <-runner.Done():
-	case <-time.After(30 * time.Second):
-		fmt.Fprintln(os.Stderr, "pset: the job runner did not pause in time; exiting")
-	}
-	// Tell the streaming handlers to let go, then drain.
-	endHandlers()
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		// A client that will not let go is not a reason to exit non-zero:
-		// everything worth keeping is already on disk by here.
-		if errors.Is(err, context.DeadlineExceeded) {
-			fmt.Fprintln(os.Stderr, "pset: a connection did not close in time; exiting anyway")
-			srv.Close()
-		} else {
-			fail(err)
-		}
-	}
-	if err := runner.Err(); err != nil {
+	if err := serve(*addr, dir, log); err != nil {
 		fail(err)
 	}
 }
 
-func newLogger(verbose bool) *slog.Logger {
-	if !verbose {
-		return slog.New(slog.NewTextHandler(io.Discard, nil))
+func serve(addr, dir string, log *slog.Logger) error {
+	dbPath := filepath.Join(dir, "pset.db")
+	d, err := db.Open(dbPath)
+	if err != nil {
+		return err
 	}
-	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	defer d.Close()
+
+	// Every feature's migrations, in dependency order: a table's parent
+	// before the table.
+	migrations := concat(
+		jobs.Migrations(),
+		settings.Migrations(),
+	)
+	ctx := context.Background()
+	if err := db.Migrate(ctx, d, migrations); err != nil {
+		return err
+	}
+
+	bus := events.NewBus()
+	queue := jobs.New(d, log)
+
+	cfg := settings.New(settings.Config{
+		DB: d, DataDir: dir, DBPath: dbPath, Version: Version,
+		Migrations: migrations,
+		Dialer:     settings.LiveDialer{},
+		Queue:      queue,
+	})
+
+	mux := http.NewServeMux()
+	cfg.Routes(mux)
+	mux.HandleFunc("GET /api/events", bus.Handler)
+	mux.HandleFunc("/api/", httpx.NotFoundAPI)
+	mux.Handle("/", httpx.SPA(web.Dist))
+
+	runCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	queueDone := make(chan struct{})
+	go func() {
+		if err := queue.Run(runCtx); err != nil {
+			log.Error("queue stopped", "err", err)
+		}
+		close(queueDone)
+	}()
+
+	// Handlers hang off a context of their own so shutdown can end the
+	// event stream, which otherwise never returns while a tab is open.
+	handlerCtx, endHandlers := context.WithCancel(context.Background())
+	defer endHandlers()
+	srv := &http.Server{
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		BaseContext:       func(net.Listener) context.Context { return handlerCtx },
+	}
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("listen on %s: %w", addr, err)
+	}
+	serveErr := make(chan error, 1)
+	go func() { serveErr <- srv.Serve(ln) }()
+	fmt.Printf("PSet serving at http://%s (data in %s)\n", addr, dir)
+
+	select {
+	case err := <-serveErr:
+		if !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+	case <-runCtx.Done():
+	}
+
+	// Running jobs go back to queued and resume on the next start.
+	select {
+	case <-queueDone:
+	case <-time.After(30 * time.Second):
+		log.Warn("the queue did not stop in time")
+	}
+	endHandlers()
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); errors.Is(err, context.DeadlineExceeded) {
+		srv.Close()
+	}
+	return nil
+}
+
+func resolveDataDir(flagValue string) (string, error) {
+	dir := flagValue
+	if dir == "" {
+		dir = os.Getenv("PSET_DATA")
+	}
+	if dir == "" {
+		base := os.Getenv("XDG_DATA_HOME")
+		if base == "" {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return "", err
+			}
+			base = filepath.Join(home, ".local", "share")
+		}
+		dir = filepath.Join(base, "pset")
+	}
+	dir, err := filepath.Abs(dir)
+	if err != nil {
+		return "", err
+	}
+	return dir, os.MkdirAll(dir, 0o700)
+}
+
+func concat(lists ...[]db.Migration) []db.Migration {
+	var out []db.Migration
+	for _, l := range lists {
+		out = append(out, l...)
+	}
+	return out
 }
 
 func fail(err error) {

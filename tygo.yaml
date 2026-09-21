@@ -1,0 +1,12 @@
+# Go wire types -> TypeScript. Run with `make gen`; never edit the output.
+packages:
+  - path: github.com/jackt/pset/internal/httpx
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/httpx.ts
+    frontmatter: "// Generated from internal/httpx/wire.go by tygo. Do not edit."
+  - path: github.com/jackt/pset/internal/settings
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/settings.ts
+    frontmatter: "// Generated from internal/settings/wire.go by tygo. Do not edit."

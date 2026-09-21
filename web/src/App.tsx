@@ -1,11 +1,13 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
+import { useEventStream } from '@/api/events'
 import { Components } from '@/pages/components'
 import { Home } from '@/pages/home'
 import { Settings } from '@/pages/settings'
 import { Workspace } from '@/pages/workspace'
 
 export default function App() {
+  useEventStream()
   return (
     <BrowserRouter>
       <Routes>
