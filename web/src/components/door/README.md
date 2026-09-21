@@ -22,6 +22,18 @@ remainder.
 **Don't:** use it for navigation (it expands in place); put it anywhere
 but the bottom edge of what it truncates; pair it with an inner scrollbar.
 
+## DoorAction
+
+The Door's twin, for adding to the list it closes: **"+ New homework"**
+as the last row of the homework list. The same row and the same pill,
+with a leading icon, so a list ends the same way whether its last word
+is "show more" or "add one". Where a list has both, the Door comes
+first: you finish reading before you add. Inside a Box it takes the
+same `border-muted` hairline above it as the Door.
+
+**Don't:** use it for anything but adding to the list above it; put it
+anywhere but the last row.
+
 ## Changes from baseline
 
 - The baseline has no door; its Box previews end in a passive footer
@@ -35,3 +47,5 @@ but the bottom edge of what it truncates; pair it with an inner scrollbar.
 - Whether a very long opened list (dozens of homeworks, someday) needs the
   door to also collapse from the top, or pagination. Not until real data
   makes it real.
+- **DoorAction** is new. It replaced a `+` on an "Assignments" box
+  header, which repeated the panel tab's "Homework" in other words.

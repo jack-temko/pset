@@ -16,7 +16,8 @@ import {
 } from 'lucide-react'
 
 import { AppShell } from '@/components/shell'
-import { Box, BoxHeader, BoxRow } from '@/components/box'
+import { Box, BoxRow } from '@/components/box'
+import { DoorAction } from '@/components/door'
 import { Checkbox } from '@/components/checkbox'
 import { AutoTextarea, Field, Input } from '@/components/input'
 import { HomeworkStatusLabel, dueText } from '@/components/homework-status'
@@ -1106,21 +1107,10 @@ function HomeworkTab({
 
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-card">
+      {/* No header: the tab already says Homework, and a second label on
+          the box only said it again. The way to add one is the list's last
+          row, shaped like the Door. */}
       <Box>
-        {/* The one way to make homework, and it's a `+`: the same gesture
-            as importing a book on Home. Nothing lives at a list's bottom
-            but the Door. */}
-        <BoxHeader className="text-sm">
-          Assignments
-          <IconButton
-            variant="ghost"
-            size="sm"
-            aria-label="New homework"
-            onClick={() => setCreating(true)}
-          >
-            <Plus />
-          </IconButton>
-        </BoxHeader>
         {active.map((h) => (
           <BoxRow
             key={h.id}
@@ -1130,6 +1120,13 @@ function HomeworkTab({
             trailing={<HomeworkStatusLabel status={h.status} />}
           />
         ))}
+        <DoorAction
+          icon={<Plus aria-hidden />}
+          onClick={() => setCreating(true)}
+          className={cn(active.length > 0 && 'border-t border-border-muted')}
+        >
+          New homework
+        </DoorAction>
       </Box>
       {turnedIn.length > 0 && (
         <>

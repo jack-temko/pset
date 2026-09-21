@@ -174,10 +174,13 @@ built.
   It sits in the set's bar, away from Complete in the footer, so the two
   are never confused. Turned-in sets drop to their own group at the
   list's bottom and leave Home's due list; unchecking brings them back.
-- **Every "make one" is a `+`**, and nothing lives at the bottom of a
-  list but the Door: `+` on the Assignments box header opens New
-  homework, `+` in the walkthrough header opens Add questions. The same
-  gesture as importing a book on Home.
+- **A list's last row adds to it** (2026-09-21, replacing a `+` on an
+  "Assignments" header). The homework list has no header of its own: the
+  panel tab already says Homework, and the box saying it again was noise.
+  Its last row is **"+ New homework"**, a `DoorAction` shaped exactly like
+  the Door, so a list ends the same way whether its last word is "show
+  more" or "add one". Where the thing isn't a list in a Box, the `+`
+  stays: Add questions in the walkthrough header, import on Home's shelf.
 
 ## Panel header
 
