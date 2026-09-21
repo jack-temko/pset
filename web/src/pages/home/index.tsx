@@ -1,6 +1,16 @@
 import { useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+
+import {
+  useBooks,
+  useRemoveBook,
+  useRetryImport,
+  useStopImport,
+  useUploadBooks,
+  type Book,
+} from '@/api/library'
+import { useSettings } from '@/api/settings'
 
 import { AppShell, PageShell, PageTitle } from '@/components/shell'
 import { BookTile } from '@/components/book-tile'
@@ -12,22 +22,13 @@ import { HomeworkStatusLabel, dueText } from '@/components/homework-status'
 import { Door } from '@/components/door'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { coverHueFromSha } from '@/lib/covers'
-import {
-  BOOKS,
-  DUE,
-  DUE_SHOWN,
-  WEEK,
-  WEEK_BY_BOOK,
-  type Book,
-  type Due,
-  type Week,
-  type WeekBook,
-} from '@/lib/sample'
+import { Skeleton } from '@/components/skeleton'
+import { Spinner } from '@/components/spinner'
+import { DUE, DUE_SHOWN, WEEK, WEEK_BY_BOOK, type Due, type Week, type WeekBook } from '@/lib/sample'
 
-function greeting(hour: number): string {
-  if (hour < 12) return 'Good morning'
-  if (hour < 18) return 'Good afternoon'
-  return 'Good evening'
+function greeting(hour: number, name: string): string {
+  const time = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+  return name ? `${time}, ${name}` : time
 }
 
 /** A section's header row: the serif title (and an optional count) on the
@@ -167,12 +168,6 @@ function Homework({ items, shown }: { items: Due[]; shown: number }) {
  *  there is no other screen for the shelf to lead to. */
 const SHELF_ROW = 5
 
-/** Until Settings exists, this stands in for "is the embeddings endpoint
- *  configured". The engine refuses an import without one rather than
- *  failing forty minutes into OCR, so the shelf refuses it too, before
- *  you have picked a file. */
-const EMBEDDINGS_READY = true
-
 /**
  * The shelf. One `+` and nothing else: importing a book happens here,
  * where books live, and nowhere else in the app.
@@ -183,16 +178,45 @@ const EMBEDDINGS_READY = true
  * while there is work, so a shelf of ready books is just covers, with
  * nothing reserved beneath them.
  */
-function Shelf({ books }: { books: Book[] }) {
+function Shelf({ books }: { books: Book[] | undefined }) {
   const [open, setOpen] = useState(false)
+  const [refused, setRefused] = useState<string[]>([])
   const picker = useRef<HTMLInputElement>(null)
+  const navigate = useNavigate()
+  const settings = useSettings()
+  const upload = useUploadBooks()
+  const stop = useStopImport()
+  const retry = useRetryImport()
+  const remove = useRemoveBook()
+
+  // The engine refuses an import without embeddings rather than failing
+  // forty minutes into reading the pages, so the shelf refuses it too,
+  // before you've picked a file. Unknown until settings load: not blocked.
+  const embeddingsReady = settings.data?.ready.embeddings ?? true
+
+  const add = (files: File[]) => {
+    if (files.length === 0) return
+    setRefused([])
+    upload.mutate(files, {
+      onSuccess: ({ duplicates, errors }) => {
+        setRefused(errors.map((e) => e.message))
+        // A book you already have: you asked for it, so here it is. Only
+        // when it's the one file you picked, and only if it can be opened;
+        // one still on its way is already a row above the shelf.
+        const only = duplicates.length === 1 && files.length === 1 ? duplicates[0] : null
+        const dup = only ? books?.find((b) => b.id === only) : undefined
+        if (dup?.state.kind === 'ready') navigate(`/books/${dup.id}`)
+      },
+      onError: (e) => setRefused([e.message]),
+    })
+  }
 
   // Running first, then waiting in order, then what failed.
   const rank = { preparing: 0, queued: 1, failed: 2, ready: 3 } as const
-  const inFlight = books
+  const inFlight = (books ?? [])
     .filter((b) => b.state.kind !== 'ready')
     .sort((a, b) => rank[a.state.kind] - rank[b.state.kind])
-  const ready = books.filter((b) => b.state.kind === 'ready')
+  const ready = (books ?? []).filter((b) => b.state.kind === 'ready')
   const shown = open ? ready : ready.slice(0, SHELF_ROW)
 
   return (
@@ -204,23 +228,40 @@ function Shelf({ books }: { books: Book[] }) {
             variant="outline"
             size="sm"
             aria-label="Add a textbook"
-            disabled={!EMBEDDINGS_READY}
+            disabled={!embeddingsReady || upload.isPending}
             onClick={() => picker.current?.click()}
           >
-            <Plus />
+            {upload.isPending ? <Spinner className="size-3" label="Adding" /> : <Plus />}
           </IconButton>
         }
       />
 
       {/* The one blocking condition, said before you can hit it. */}
-      {!EMBEDDINGS_READY && (
+      {!embeddingsReady && (
         <Box tone="warning">
           <BoxBody className="text-sm">
-            pset needs an embeddings endpoint before it can prepare a book.{' '}
+            PSet needs an embeddings server before it can prepare a book.{' '}
             <Link to="/settings" className="text-primary underline underline-offset-2">
               Set one up in Settings
             </Link>
             .
+          </BoxBody>
+        </Box>
+      )}
+
+      {refused.length > 0 && (
+        <Box tone="destructive">
+          <BoxBody className="flex items-start justify-between gap-4 text-sm">
+            <span className="space-y-1">
+              {refused.map((m, i) => (
+                <span key={i} className="block">
+                  {m}
+                </span>
+              ))}
+            </span>
+            <Button variant="ghost" size="sm" onClick={() => setRefused([])}>
+              Dismiss
+            </Button>
           </BoxBody>
         </Box>
       )}
@@ -234,29 +275,39 @@ function Shelf({ books }: { books: Book[] }) {
         multiple
         className="hidden"
         onChange={(e) => {
-          // The engine stages and hashes each file, then queues it; the
-          // rows appear above the shelf. Wired with the backend pass.
+          add(Array.from(e.target.files ?? []))
           e.target.value = ''
         }}
       />
 
-      {/* Stop, Cancel, Try again and Dismiss are wired with the backend
-          pass: stop and cancel end the task, retry re-enqueues the staged
-          file, dismiss drops it and the row with it. */}
       {inFlight.length > 0 && (
         <Box>
           {inFlight.map((b) => (
-            <ImportRow key={b.sha256} book={b} />
+            <ImportRow
+              key={b.id}
+              book={b}
+              onStop={() => stop.mutate(b.id)}
+              onRetry={() => retry.mutate(b.id)}
+              onDismiss={() => remove.mutate(b.id)}
+            />
           ))}
         </Box>
       )}
 
-      {books.length === 0 ? (
+      {books === undefined ? (
+        // A row of covers at their real size, so the shelf doesn't grow
+        // when the books arrive.
+        <div className="grid grid-cols-5 items-start gap-6">
+          {Array.from({ length: SHELF_ROW }, (_, i) => (
+            <Skeleton key={i} className="block aspect-3/4 w-full rounded-md" />
+          ))}
+        </div>
+      ) : books.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <p className="font-heading text-2xl text-muted-foreground italic">
             Nothing on the shelf yet.
           </p>
-          <Button size="lg" disabled={!EMBEDDINGS_READY} onClick={() => picker.current?.click()}>
+          <Button size="lg" disabled={!embeddingsReady} onClick={() => picker.current?.click()}>
             <Plus />
             Add your first book
           </Button>
@@ -266,7 +317,7 @@ function Shelf({ books }: { books: Book[] }) {
           <>
             <div className="grid grid-cols-5 items-start gap-6">
               {shown.map((b) => (
-                <BookTile key={b.sha256} book={b} />
+                <BookTile key={b.id} book={b} />
               ))}
             </div>
             {ready.length > SHELF_ROW && (
@@ -285,15 +336,21 @@ function Shelf({ books }: { books: Book[] }) {
  * greeting says so.
  */
 export function Home() {
+  const { data: books } = useBooks()
+  const { data: settings } = useSettings()
+  // A first run is the greeting and the shelf, nothing else: empty
+  // sections read as broken, and a row of zeroes is noise.
+  const firstRun = books !== undefined && books.length === 0
+
   return (
     <AppShell>
       <PageShell>
         <PageTitle short="Home" className="text-4xl">
-          {greeting(new Date().getHours())}.
+          {greeting(new Date().getHours(), settings?.profile.name ?? '')}.
         </PageTitle>
-        <ThisWeek week={WEEK} byBook={WEEK_BY_BOOK} />
-        <Homework items={DUE} shown={DUE_SHOWN} />
-        <Shelf books={BOOKS} />
+        {!firstRun && <ThisWeek week={WEEK} byBook={WEEK_BY_BOOK} />}
+        {!firstRun && <Homework items={DUE} shown={DUE_SHOWN} />}
+        <Shelf books={books} />
       </PageShell>
     </AppShell>
   )

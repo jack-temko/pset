@@ -7,101 +7,84 @@
 
 import type { HomeworkStatus } from '@/components/homework-status'
 
-/** The engine's four phases, in the words it already uses. */
-export const IMPORT_PHASES = {
-  examine: 'Examine the pages',
-  read: 'Read the pages',
-  index: 'Index the sections',
-  search: 'Build search',
-} as const
+import type { Book } from '@/api/library'
 
-export type ImportPhase = keyof typeof IMPORT_PHASES
+export type { Book }
 
-export type BookState =
-  | { kind: 'ready' }
-  /** Staged and waiting its turn: the runner prepares one book at a time. */
-  | { kind: 'queued' }
-  /** `done`/`total` only where the phase can count; reading pages can, examining
-   *  and building search cannot. */
-  | { kind: 'preparing'; phase: ImportPhase; done?: number; total?: number }
-  | { kind: 'failed'; reason: string }
-
-export type Book = {
-  sha256: string
-  title: string
-  author: string
-  state: BookState
+/** A sample book with everything the list doesn't care about filled in. */
+export function sampleBook(b: Pick<Book, 'sha256' | 'title' | 'author' | 'state'>): Book {
+  return { id: b.sha256, pageCount: 312, pageOffset: 16, aspect: 11 / 8.5, addedAt: '2026-09-03T12:00:00Z', ...b }
 }
 
 export const BOOKS: Book[] = [
-  {
+  sampleBook({
     sha256: 'd8f1a9c2',
     title: 'Linear Algebra Done Right',
     author: 'Sheldon Axler',
     state: { kind: 'ready' },
-  },
-  {
+  }),
+  sampleBook({
     sha256: '4f3b81d0',
     title: 'Nonlinear Dynamics and Chaos',
     author: 'Steven Strogatz',
     state: { kind: 'ready' },
-  },
-  {
+  }),
+  sampleBook({
     sha256: '7a07f452',
     title: 'Introduction to Electrodynamics',
     author: 'David Griffiths',
     state: { kind: 'ready' },
-  },
-  {
+  }),
+  sampleBook({
     sha256: '932e14aa',
     title: 'Principles of Mathematical Analysis',
     author: 'Walter Rudin',
     state: { kind: 'ready' },
-  },
-  {
+  }),
+  sampleBook({
     sha256: 'b89d3b72',
     title: 'Introduction to the Theory of Computation',
     author: 'Michael Sipser',
     state: { kind: 'preparing', phase: 'read', done: 140, total: 312 },
-  },
-  {
+  }),
+  sampleBook({
     sha256: '7ce04a15',
     // Until the PDF's metadata is read, the title is the tidied filename,
     // exactly the fallback the engine uses.
     title: 'Griffiths Introduction To Electrodynamics',
     author: '',
     state: { kind: 'queued' },
-  },
-  {
+  }),
+  sampleBook({
     sha256: 'c51c6ef3',
     title: 'Structure and Interpretation of Computer Programs',
     author: 'Abelson and Sussman',
     state: { kind: 'ready' },
-  },
-  {
+  }),
+  sampleBook({
     sha256: '12a4d90b',
     title: 'The Feynman Lectures on Physics',
     author: 'Richard Feynman',
     state: { kind: 'ready' },
-  },
-  {
+  }),
+  sampleBook({
     sha256: '2571c3e8',
     title: 'Introduction to Algorithms',
     author: 'Cormen and Leiserson',
     state: { kind: 'ready' },
-  },
-  {
+  }),
+  sampleBook({
     sha256: '3a80b5d4',
     title: 'Organic Chemistry',
     author: 'Clayden and Greeves',
     state: { kind: 'failed', reason: "This PDF can't be read. pset couldn't open it." },
-  },
-  {
+  }),
+  sampleBook({
     sha256: '61f2704c',
     title: 'A First Course in Probability',
     author: 'Sheldon Ross',
     state: { kind: 'ready' },
-  },
+  }),
 ]
 
 export type Due = {
@@ -198,9 +181,6 @@ export const DUE: Due[] = [
 /** How many of the due list Home shows before its door. */
 export const DUE_SHOWN = 3
 
-export function bookBySha(sha: string): Book | undefined {
-  return BOOKS.find((b) => b.sha256 === sha)
-}
 
 /** A book's contents: chapters with sections, each pinned to a page. A book
  *  whose TOC couldn't be read has none, and then no rail. */

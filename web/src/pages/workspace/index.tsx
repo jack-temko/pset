@@ -44,14 +44,16 @@ import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
 import { AddQuestionsDialog, BookDialog, HomeworkDialog } from './dialogs'
 import {
-  BOOK_HOMEWORK,
-  PAGE_COUNT,
-  PAGE_OFFSET,
-  TOC,
-  bookBySha,
-  type BookHomework,
-  type TocChapter,
-} from '@/lib/sample'
+  pageImageURL,
+  useBook,
+  useContents,
+  useRemoveBook,
+  useUpdateBook,
+  type Book,
+  type ContentsChapter,
+} from '@/api/library'
+import { ApiError } from '@/api/client'
+import { BOOK_HOMEWORK, type BookHomework } from '@/lib/sample'
 import { PageOffset, pdfOf, printedLabel, usePageOffset } from '@/lib/pages'
 import { cn } from '@/lib/utils'
 
@@ -67,16 +69,16 @@ type Tab = 'ask' | 'homework'
 
 /** The panel remembers which face it showed, per book. A blocked
  *  localStorage just means it forgets. */
-function readTab(sha: string): Tab {
+function readTab(bookId: string): Tab {
   try {
-    return localStorage.getItem(`pset-panel-tab:${sha}`) === 'homework' ? 'homework' : 'ask'
+    return localStorage.getItem(`pset-panel-tab:${bookId}`) === 'homework' ? 'homework' : 'ask'
   } catch {
     return 'ask'
   }
 }
-function writeTab(sha: string, tab: Tab) {
+function writeTab(bookId: string, tab: Tab) {
   try {
-    localStorage.setItem(`pset-panel-tab:${sha}`, tab)
+    localStorage.setItem(`pset-panel-tab:${bookId}`, tab)
   } catch {
     /* forgetting is fine */
   }
@@ -85,19 +87,21 @@ function writeTab(sha: string, tab: Tab) {
 // ---------------------------------------------------------------- rail
 
 /** The book's contents as a tree of quiet rows; the reader's position
- *  highlights the section it is inside. A book with no TOC has no rail. */
+ *  highlights the section it is inside. A book with no contents has no
+ *  rail. Pages here are PDF pages, as the engine sends them; each shows
+ *  its printed number, with the PDF page on hover. */
 function Rail({
   toc,
   currentPage,
   onJump,
 }: {
-  toc: TocChapter[]
+  toc: ContentsChapter[]
   currentPage: number
-  onJump: (page: number) => void
+  onJump: (pdfPage: number) => void
 }) {
   const offset = usePageOffset()
   // The current section is the last one that starts at or before the page
-  // the scan is showing. Both are printed numbers.
+  // the scan is showing.
   let currentId: string | undefined
   for (const c of toc)
     for (const s of c.sections) if (s.page <= currentPage) currentId = s.id
@@ -128,14 +132,36 @@ function Rail({
                 )}
               >
                 <span className="min-w-0 flex-1 truncate">{s.title}</span>
-                <Tooltip label={`PDF page ${pdfOf(s.page, offset)}`} side="left">
-                  <span className="shrink-0 font-mono text-xs tabular-nums">{s.page}</span>
+                <Tooltip label={`PDF page ${s.page}`} side="left">
+                  <span className="shrink-0 font-mono text-xs tabular-nums">
+                    {printedLabel(s.page, offset)}
+                  </span>
                 </Tooltip>
               </button>
             ))}
           </div>
         ))}
       </nav>
+    </aside>
+  )
+}
+
+/** The rail before the contents arrive: rows at their real height. */
+function RailSkeleton() {
+  return (
+    <aside className="w-rail shrink-0 space-y-4 overflow-hidden border-r bg-rail py-4" aria-hidden>
+      {[3, 4, 2].map((n, i) => (
+        <div key={i}>
+          <div className="px-4 py-1 text-sm">
+            <Skeleton className="h-3 w-40" />
+          </div>
+          {Array.from({ length: n }, (_, j) => (
+            <div key={j} className="py-1 pr-4 pl-8 text-sm">
+              <Skeleton className="h-3 w-32" />
+            </div>
+          ))}
+        </div>
+      ))}
     </aside>
   )
 }
@@ -148,9 +174,10 @@ const ZOOM_MIN = 0.5
 const ZOOM_MAX = 3
 
 /**
- * Pages stack in one scrolling pane, edge-to-edge paper. Until the backend
- * serves rendered pages, each is a placeholder at print proportions,
- * labelled with its printed number. The only chrome is the floating pill:
+ * Pages stack in one scrolling pane, edge-to-edge paper. Each is the
+ * engine's render of that page, in a box at the page's own proportions so
+ * nothing moves when it arrives; its printed number shows until it does.
+ * The only chrome is the floating pill:
  * the printed page (the PDF page on hover) and the zoom, fading when idle.
  *
  * Pinch on a trackpad zooms around the pointer; past the pane's width a
@@ -158,12 +185,17 @@ const ZOOM_MAX = 3
  * percentage snaps back to fit.
  */
 function Scan({
+  bookId,
+  aspect,
   pageCount,
   currentPage,
   onPageChange,
   scrollRef,
   pageRefs,
 }: {
+  bookId: string
+  /** Page height over width. */
+  aspect: number
   pageCount: number
   /** A PDF index: the scan is the one place that counts in those. */
   currentPage: number
@@ -314,12 +346,22 @@ function Scan({
                 if (node) pageRefs.current.set(n, node)
                 else pageRefs.current.delete(n)
               }}
-              className="grid place-items-center rounded-sm border bg-card"
-              style={{ aspectRatio: '8.5 / 11' }}
+              className="relative grid place-items-center overflow-hidden rounded-sm border bg-card"
+              style={{ aspectRatio: `1 / ${aspect || 11 / 8.5}` }}
             >
               <span className="font-mono text-xs text-muted-foreground tabular-nums">
                 {printedLabel(n, offset)}
               </span>
+              {width > 0 && (
+                <img
+                  src={pageImageURL(bookId, n, width)}
+                  alt={`Page ${printedLabel(n, offset)}`}
+                  loading="lazy"
+                  decoding="async"
+                  draggable={false}
+                  className="absolute inset-0 size-full"
+                />
+              )}
             </div>
           ))}
         </div>
@@ -1173,24 +1215,24 @@ function HomeworkTab({
 }
 
 function Panel({
-  sha,
+  bookId,
   homework,
   focus,
   onFocusToggle,
   onJump,
 }: {
-  sha: string
+  bookId: string
   /** A homework set named in the URL opens the Homework tab on it. */
   homework?: string
   focus: boolean
   onFocusToggle: () => void
   onJump: (page: number) => void
 }) {
-  const [tab, setTab] = useState<Tab>(() => (homework ? 'homework' : readTab(sha)))
+  const [tab, setTab] = useState<Tab>(() => (homework ? 'homework' : readTab(bookId)))
   const [about, setAbout] = useState<string | null>(null)
   const pick = (t: Tab) => {
     setTab(t)
-    writeTab(sha, t)
+    writeTab(bookId, t)
   }
 
   return (
@@ -1239,38 +1281,48 @@ function Panel({
 
 // ------------------------------------------------------------ workspace
 
+/** The workspace frame with nothing in it yet, or a sentence instead. */
+function WorkspaceMessage({ children }: { children?: ReactNode }) {
+  return (
+    <AppShell scroll="fill">
+      <div className="grid h-full place-items-center bg-muted/40">
+        {children && <p className="text-base text-muted-foreground">{children}</p>}
+      </div>
+    </AppShell>
+  )
+}
+
 export function Workspace() {
-  const { sha, homework } = useParams<{ sha: string; homework?: string }>()
+  const { id = '', homework } = useParams<{ id: string; homework?: string }>()
+  const bookQuery = useBook(id)
+  if (bookQuery.error instanceof ApiError && bookQuery.error.code === 'not_found')
+    return <WorkspaceMessage>There is no book here.</WorkspaceMessage>
+  if (bookQuery.error) return <WorkspaceMessage>{bookQuery.error.message}</WorkspaceMessage>
+  if (!bookQuery.data) return <WorkspaceMessage />
+  if (bookQuery.data.state.kind !== 'ready')
+    return <WorkspaceMessage>This book is still being prepared. It opens once it's on the shelf.</WorkspaceMessage>
+  return <BookWorkspace key={id} book={bookQuery.data} homework={homework} />
+}
+
+function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   const navigate = useNavigate()
-  const found = bookBySha(sha ?? '')
+  const contents = useContents(book.id)
+  const update = useUpdateBook(book.id)
+  const remove = useRemoveBook()
 
   const [focus, setFocus] = useState(false)
   // A PDF index: the scan is the one place that counts in those.
   const [currentPage, setCurrentPage] = useState(1)
   const [editingBook, setEditingBook] = useState(false)
-  // The book dialog's edits, sample-local until the backend stores them.
-  const [edits, setEdits] = useState<{ title?: string; author?: string; offset?: number }>({})
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const pageRefs = useRef(new Map<number, HTMLDivElement>())
 
-  if (!found) {
-    return (
-      <AppShell>
-        <div className="grid h-full place-items-center">
-          <p className="text-base text-muted-foreground">There is no book here.</p>
-        </div>
-      </AppShell>
-    )
-  }
-
-  const book = { ...found, ...edits }
-  const offset = edits.offset ?? PAGE_OFFSET
-
-  // Everything outside the scan speaks printed pages; the scan is indexed
-  // by PDF page, so a jump converts once, here.
-  const jump = (printed: number) => {
-    pageRefs.current.get(pdfOf(printed, offset))?.scrollIntoView()
-  }
+  const offset = book.pageOffset
+  const jumpPdf = (pdf: number) => pageRefs.current.get(pdf)?.scrollIntoView()
+  // Everything outside the scan and the rail speaks printed pages; the
+  // scan is indexed by PDF page, so a jump converts once, here.
+  const jump = (printed: number) => jumpPdf(pdfOf(printed, offset))
+  const chapters = contents.data?.chapters
 
   return (
     <PageOffset value={offset}>
@@ -1293,18 +1345,23 @@ export function Workspace() {
         }
       >
         <div className="flex h-full">
-          {!focus && (
-            <Rail toc={TOC} currentPage={currentPage - offset} onJump={jump} />
-          )}
+          {!focus &&
+            (chapters === undefined ? (
+              <RailSkeleton />
+            ) : (
+              chapters.length > 0 && <Rail toc={chapters} currentPage={currentPage} onJump={jumpPdf} />
+            ))}
           <Scan
-            pageCount={PAGE_COUNT}
+            bookId={book.id}
+            aspect={book.aspect}
+            pageCount={book.pageCount}
             currentPage={currentPage}
             onPageChange={setCurrentPage}
             scrollRef={scrollRef}
             pageRefs={pageRefs}
           />
           <Panel
-            sha={book.sha256}
+            bookId={book.id}
             homework={homework}
             focus={focus}
             onFocusToggle={() => setFocus((f) => !f)}
@@ -1319,13 +1376,13 @@ export function Workspace() {
           title: book.title,
           author: book.author,
           offset,
-          pages: PAGE_COUNT,
-          imported: 'Sep 3',
+          pages: book.pageCount,
+          imported: new Date(book.addedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
           homework: BOOK_HOMEWORK.length,
         }}
         onClose={() => setEditingBook(false)}
-        onSave={(next) => setEdits(next)}
-        onRemove={() => navigate('/')}
+        onSave={(next) => update.mutate({ title: next.title, author: next.author, pageOffset: next.offset })}
+        onRemove={() => remove.mutate(book.id, { onSuccess: () => navigate('/') })}
       />
     </PageOffset>
   )

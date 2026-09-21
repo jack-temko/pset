@@ -27,9 +27,17 @@ export interface Ready {
   embeddings: boolean;
 }
 /**
+ * Profile is who's studying. The name greets them on Home and is how the
+ * tutor addresses them; empty means neither uses one.
+ */
+export interface Profile {
+  name: string;
+}
+/**
  * Settings is GET /api/settings. A side never saved shows its defaults.
  */
 export interface Settings {
+  profile: Profile;
   chat: ChatConnection;
   embeddings: EmbedConnection;
   ready: Ready;

@@ -6,6 +6,7 @@ import type {
   ConnectionInput,
   Health,
   HealthCheck,
+  Profile,
   ResetCounts,
   SaveResult,
   Settings,
@@ -23,6 +24,15 @@ export const settingsKeys = {
 
 export const useSettings = () =>
   useQuery({ queryKey: settingsKeys.settings, queryFn: () => get<Settings>('/api/settings') })
+
+/** Who's studying: nothing to test, so it writes straight away. */
+export function useSaveProfile() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (p: Profile) => put<Profile>('/api/settings/profile', p),
+    onSuccess: (p) => qc.setQueryData<Settings>(settingsKeys.settings, (s) => s && { ...s, profile: p }),
+  })
+}
 
 /** Dials what's on screen and writes nothing. */
 export const useTestConnection = () =>

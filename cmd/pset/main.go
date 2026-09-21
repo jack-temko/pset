@@ -20,6 +20,7 @@ import (
 	"github.com/jackt/pset/internal/events"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/jobs"
+	"github.com/jackt/pset/internal/library"
 	"github.com/jackt/pset/internal/settings"
 	"github.com/jackt/pset/web"
 )
@@ -68,6 +69,7 @@ func serve(addr, dir string, log *slog.Logger) error {
 	migrations := concat(
 		jobs.Migrations(),
 		settings.Migrations(),
+		library.Migrations(),
 	)
 	ctx := context.Background()
 	if err := db.Migrate(ctx, d, migrations); err != nil {
@@ -76,6 +78,7 @@ func serve(addr, dir string, log *slog.Logger) error {
 
 	bus := events.NewBus()
 	queue := jobs.New(d, log)
+	queue.Lane(library.LaneImport, 1)
 
 	cfg := settings.New(settings.Config{
 		DB: d, DataDir: dir, DBPath: dbPath, Version: Version,
@@ -83,9 +86,14 @@ func serve(addr, dir string, log *slog.Logger) error {
 		Dialer:     settings.LiveDialer{},
 		Queue:      queue,
 	})
+	books := library.New(library.Config{
+		DB: d, DataDir: dir, Events: bus, Queue: queue, Models: cfg,
+	})
+	cfg.SetLibrary(books)
 
 	mux := http.NewServeMux()
 	cfg.Routes(mux)
+	books.Routes(mux)
 	mux.HandleFunc("GET /api/events", bus.Handler)
 	mux.HandleFunc("/api/", httpx.NotFoundAPI)
 	mux.Handle("/", httpx.SPA(web.Dist))

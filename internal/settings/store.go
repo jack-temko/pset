@@ -21,8 +21,9 @@ CREATE TABLE settings (
 }
 
 const (
-	keyChat  = "chat"
-	keyEmbed = "embeddings"
+	keyChat    = "chat"
+	keyEmbed   = "embeddings"
+	keyProfile = "profile"
 )
 
 // load reads a side into v, reporting whether it was ever saved.

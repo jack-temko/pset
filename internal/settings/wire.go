@@ -20,8 +20,15 @@ type Ready struct {
 	Embeddings bool `json:"embeddings"`
 }
 
+// Profile is who's studying. The name greets them on Home and is how the
+// tutor addresses them; empty means neither uses one.
+type Profile struct {
+	Name string `json:"name"`
+}
+
 // Settings is GET /api/settings. A side never saved shows its defaults.
 type Settings struct {
+	Profile    Profile         `json:"profile"`
 	Chat       ChatConnection  `json:"chat"`
 	Embeddings EmbedConnection `json:"embeddings"`
 	Ready      Ready           `json:"ready"`

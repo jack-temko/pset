@@ -3,7 +3,7 @@ import { BookStatus } from '@/components/book-status'
 import { CoverSwatch } from '@/components/book-cover'
 import { Button } from '@/components/button'
 import { coverHueFromSha } from '@/lib/covers'
-import type { Book } from '@/lib/sample'
+import type { Book } from '@/api/library'
 
 /**
  * A book that is on its way to the shelf: its cloth colour, its title,
@@ -43,7 +43,7 @@ export function ImportRow({
         </Button>
       </span>
     ) : state.kind === 'queued' ? (
-      <Button variant="ghost" size="sm" onClick={onDismiss}>
+      <Button variant="ghost" size="sm" onClick={onStop}>
         Cancel
       </Button>
     ) : state.kind === 'preparing' ? (

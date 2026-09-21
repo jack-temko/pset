@@ -18,6 +18,7 @@ import {
   useReset,
   useResetCounts,
   useSaveConnection,
+  useSaveProfile,
   useSettings,
   useTestConnection,
   type ConnectionInput,
@@ -184,6 +185,65 @@ function StatusLine({ status }: { status: Status }) {
       {status.kind === 'ok' ? <CircleCheck className="size-4" /> : <CircleAlert className="size-4" />}
       {status.text}
     </span>
+  )
+}
+
+// ---------------------------------------------------------------- you
+
+/** The name PSet greets you by, and the tutor calls you. Same shape as a
+ *  connection Box: Save appears once there's something to save. */
+function You() {
+  const { data } = useSettings()
+  const saveProfile = useSaveProfile()
+  const [value, setValue] = useState<string | null>(null)
+  const saved = data?.profile.name ?? ''
+  const current = value ?? saved
+  const dirty = data !== undefined && current.trim() !== saved
+
+  return (
+    <Box>
+      <BoxBody>
+        <Field
+          label="Your name"
+          hint="Home greets you by it, and so does the tutor. Leave it empty to go without."
+          error={saveProfile.error instanceof ApiError ? saveProfile.error.message : undefined}
+        >
+          {data ? (
+            <Input
+              value={current}
+              maxLength={60}
+              autoComplete="given-name"
+              onChange={(e) => {
+                setValue(e.target.value)
+                saveProfile.reset()
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && dirty) saveProfile.mutate({ name: current })
+              }}
+            />
+          ) : (
+            <Skeleton className="block h-control w-full rounded-md" />
+          )}
+        </Field>
+      </BoxBody>
+      {(dirty || saveProfile.isSuccess) && (
+        <BoxFooter>
+          {saveProfile.isSuccess && !dirty ? (
+            <span className="flex items-center gap-2 text-success">
+              <CircleCheck className="size-4" />
+              Saved
+            </span>
+          ) : (
+            <span />
+          )}
+          {dirty && (
+            <Button size="sm" disabled={saveProfile.isPending} onClick={() => saveProfile.mutate({ name: current })}>
+              Save
+            </Button>
+          )}
+        </BoxFooter>
+      )}
+    </Box>
   )
 }
 
@@ -436,6 +496,10 @@ export function Settings() {
     <AppShell>
       <PageShell>
         <PageTitle className="text-3xl">Settings</PageTitle>
+
+        <Section title="You">
+          <You />
+        </Section>
 
         <Section title="Connections">
           <Connections />

@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/jackt/pset/internal/db"
@@ -265,5 +266,26 @@ func TestAbout(t *testing.T) {
 	s.do(t, "GET", "/api/about", nil, &a)
 	if a.Version != "1.2.3" || a.DataDir != s.dir {
 		t.Fatalf("%+v", a)
+	}
+}
+
+func TestProfileNameIsTidiedAndSurvivesUntilReset(t *testing.T) {
+	s := newServer(t)
+	var p Profile
+	if code := s.do(t, "PUT", "/api/settings/profile", Profile{Name: "  Jack   T  "}, &p); code != 200 || p.Name != "Jack T" {
+		t.Fatalf("%d %+v", code, p)
+	}
+	var got Settings
+	s.do(t, "GET", "/api/settings", nil, &got)
+	if got.Profile.Name != "Jack T" || s.svc.Name(context.Background()) != "Jack T" {
+		t.Fatalf("%+v", got.Profile)
+	}
+	var e httpx.Error
+	if code := s.do(t, "PUT", "/api/settings/profile", Profile{Name: strings.Repeat("x", 61)}, &e); code != 422 || e.Field != "name" {
+		t.Fatalf("long name: %d %+v", code, e)
+	}
+	s.do(t, "POST", "/api/reset", nil, nil)
+	if s.svc.Name(context.Background()) != "" {
+		t.Fatal("name survived reset")
 	}
 }

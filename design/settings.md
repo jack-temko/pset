@@ -12,10 +12,17 @@ Doctor runs six checks, and can fix two of them (data dir, schema).
 
 ## Shape
 
-One page, stacked, in this order: **Connections · Health · Appearance ·
-Reset**, then one mono line: `pset 0.9.0 · /path/to/data`. No
+One page, stacked, in this order: **You · Connections · Health ·
+Appearance · Reset**, then one mono line: `pset 0.9.0 · /path/to/data`. No
 navigation: four fields and four checks don't need any. The top bar's
 middle is empty; the h1 says where you are.
+
+## You
+
+One field, **your name** (added 2026-09-21). Home's greeting uses it
+("Good evening, Jack.") and the tutor addresses you by it. Empty means
+neither does. Save appears once it changes, like a connection's, but
+there's nothing to test, so it writes straight away.
 
 ## Connections
 

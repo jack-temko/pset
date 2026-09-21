@@ -37,7 +37,7 @@ import { Dialog } from '@/components/dialog'
 import { AutoTextarea, Field, Input } from '@/components/input'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { coverHueFromSha } from '@/lib/covers'
-import { BOOKS, DUE } from '@/lib/sample'
+import { BOOKS, DUE, sampleBook } from '@/lib/sample'
 import { BookTile } from '@/components/book-tile'
 
 
@@ -410,16 +410,16 @@ export function Components() {
           <Shelf label="rows">
             <Box className="w-full">
               <ImportRow
-                book={{ sha256: 'b89d3b72', title: 'Introduction to the Theory of Computation', author: '', state: { kind: 'preparing', phase: 'read', done: 140, total: 312 } }}
+                book={sampleBook({ sha256: 'b89d3b72', title: 'Introduction to the Theory of Computation', author: '', state: { kind: 'preparing', phase: 'read', done: 140, total: 312 } })}
               />
               <ImportRow
-                book={{ sha256: 'a41c09e2', title: 'Calculus', author: '', state: { kind: 'preparing', phase: 'search' } }}
+                book={sampleBook({ sha256: 'a41c09e2', title: 'Calculus', author: '', state: { kind: 'preparing', phase: 'search' } })}
               />
               <ImportRow
-                book={{ sha256: '7ce04a15', title: 'Griffiths Introduction To Electrodynamics', author: '', state: { kind: 'queued' } }}
+                book={sampleBook({ sha256: '7ce04a15', title: 'Griffiths Introduction To Electrodynamics', author: '', state: { kind: 'queued' } })}
               />
               <ImportRow
-                book={{ sha256: '3a80b5d4', title: 'Organic Chemistry', author: '', state: { kind: 'failed', reason: "This PDF can't be read. pset couldn't open it." } }}
+                book={sampleBook({ sha256: '3a80b5d4', title: 'Organic Chemistry', author: '', state: { kind: 'failed', reason: "This PDF can't be read. PSet couldn't open it." } })}
               />
             </Box>
           </Shelf>

@@ -10,3 +10,8 @@ packages:
     enum_style: union
     output_path: web/src/api/gen/settings.ts
     frontmatter: "// Generated from internal/settings/wire.go by tygo. Do not edit."
+  - path: github.com/jackt/pset/internal/library
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/library.ts
+    frontmatter: "// Generated from internal/library/wire.go by tygo. Do not edit."

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 import { BookCover } from '@/components/book-cover'
 import { coverHueFromSha } from '@/lib/covers'
-import type { Book } from '@/lib/sample'
+import type { Book } from '@/api/library'
 
 /**
  * A book on a shelf: the cover is the card, and it is always a link.
@@ -14,7 +14,7 @@ import type { Book } from '@/lib/sample'
  */
 export function BookTile({ book }: { book: Book }) {
   return (
-    <Link to={`/books/${book.sha256}`} className="group block rounded-md">
+    <Link to={`/books/${book.id}`} className="group block rounded-md">
       <BookCover
         title={book.title}
         author={book.author}

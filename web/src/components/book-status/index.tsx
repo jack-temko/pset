@@ -1,5 +1,5 @@
 import { Spinner } from '@/components/spinner'
-import { IMPORT_PHASES, type BookState } from '@/lib/sample'
+import { IMPORT_PHASES, type BookState } from '@/api/library'
 import { cn } from '@/lib/utils'
 
 /**
@@ -31,7 +31,7 @@ export function BookStatus({ state, className }: { state: BookState; className?:
     return <span className={className}>Queued</span>
   }
 
-  const name = IMPORT_PHASES[state.phase]
+  const name = state.phase ? IMPORT_PHASES[state.phase] : 'Preparing'
   const counted = state.total !== undefined && state.done !== undefined
   const pct = counted ? Math.round((state.done! / Math.max(state.total!, 1)) * 100) : 0
 

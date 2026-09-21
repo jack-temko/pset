@@ -64,6 +64,10 @@ type Service struct{ c Config }
 
 func New(c Config) *Service { return &Service{c} }
 
+// SetLibrary connects Reset's dry run once the library exists: the
+// library is built after settings, because it reads its connections here.
+func (s *Service) SetLibrary(l Library) { s.c.Library = l }
+
 // Get returns what the form shows: saved values, or defaults.
 func (s *Service) Get(ctx context.Context) (Settings, error) {
 	out := Settings{Chat: DefaultChat, Embeddings: DefaultEmbed}
@@ -74,7 +78,30 @@ func (s *Service) Get(ctx context.Context) (Settings, error) {
 	if out.Ready.Embeddings, err = load(ctx, s.c.DB, keyEmbed, &out.Embeddings); err != nil {
 		return Settings{}, err
 	}
+	if _, err = load(ctx, s.c.DB, keyProfile, &out.Profile); err != nil {
+		return Settings{}, err
+	}
 	return out, nil
+}
+
+// maxName keeps a name a name.
+const maxName = 60
+
+// SaveProfile stores who's studying. There is nothing to test, so it
+// writes straight away.
+func (s *Service) SaveProfile(ctx context.Context, p Profile) (Profile, error) {
+	p.Name = strings.Join(strings.Fields(p.Name), " ")
+	if len([]rune(p.Name)) > maxName {
+		return Profile{}, httpx.Invalid("name", "Keep it under %d characters.", maxName)
+	}
+	return p, save(ctx, s.c.DB, keyProfile, p)
+}
+
+// Name is what the tutor calls the student; empty when they haven't said.
+func (s *Service) Name(ctx context.Context) string {
+	var p Profile
+	load(ctx, s.c.DB, keyProfile, &p)
+	return p.Name
 }
 
 // LLM is the saved connections, for the features that call models. A side

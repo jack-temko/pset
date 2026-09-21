@@ -28,6 +28,17 @@ func (s *Service) Routes(mux *http.ServeMux) {
 		}
 		return httpx.OK(w, v)
 	}))
+	mux.HandleFunc("PUT /api/settings/profile", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
+		var p Profile
+		if err := httpx.Decode(r, &p); err != nil {
+			return err
+		}
+		v, err := s.SaveProfile(r.Context(), p)
+		if err != nil {
+			return err
+		}
+		return httpx.OK(w, v)
+	}))
 	mux.HandleFunc("POST /api/settings/test", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
 		var in ConnectionInput
 		if err := httpx.Decode(r, &in); err != nil {
