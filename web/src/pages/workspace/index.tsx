@@ -479,7 +479,6 @@ function FailedQuestion({
           <Field label="It's on page" className="w-32">
             <Input
               inputMode="numeric"
-              placeholder="57"
               value={page}
               onChange={(e) => setPage(e.target.value)}
               className="font-mono"
@@ -496,9 +495,13 @@ function FailedQuestion({
         <p className="text-xs text-muted-foreground">
           Paste the question, and the guide is written from your text alone.
         </p>
+        {/* A real text box: a whole question gets pasted here, so it
+            starts four lines tall and grows from there. */}
         <AutoTextarea
+          rows={4}
           value={text}
           placeholder="Paste the question"
+          className="py-2"
           onChange={(e) => setText(e.target.value)}
         />
         <Button
