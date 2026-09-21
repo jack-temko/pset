@@ -11,6 +11,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/books/:sha" element={<Workspace />} />
+        {/* Home's due list lands straight in a set's walkthrough. */}
+        <Route path="/books/:sha/homework/:homework" element={<Workspace />} />
         <Route path="/settings" element={<Settings />} />
         {/* Not in the nav: the page you open to see what a change did. */}
         <Route path="/components" element={<Components />} />

@@ -108,6 +108,8 @@ export type Due = {
   id: string
   title: string
   book: string
+  /** The row opens the set inside its book, so it needs the book. */
+  bookSha: string
   questions: number
   /** Always words, already relative to today: "tomorrow", "Friday",
    *  "next Friday", "in two weeks". Never a raw date. */
@@ -121,6 +123,7 @@ export const DUE: Due[] = [
     id: '1',
     title: 'Problem set 4',
     book: 'Linear Algebra Done Right',
+    bookSha: 'd8f1a9c2',
     questions: 4,
     due: 'today',
     status: 'soon',
@@ -129,6 +132,7 @@ export const DUE: Due[] = [
     id: '2',
     title: 'Chapter 3 exercises',
     book: 'Nonlinear Dynamics and Chaos',
+    bookSha: '4f3b81d0',
     questions: 5,
     due: 'tomorrow',
     status: 'soon',
@@ -137,6 +141,7 @@ export const DUE: Due[] = [
     id: '3',
     title: 'Lab report 2',
     book: 'Introduction to Electrodynamics',
+    bookSha: '7a07f452',
     questions: 3,
     due: 'Friday',
   },
@@ -144,6 +149,7 @@ export const DUE: Due[] = [
     id: '4',
     title: 'Problem set 5',
     book: 'Principles of Mathematical Analysis',
+    bookSha: '932e14aa',
     questions: 6,
     due: 'Friday',
   },
@@ -151,6 +157,7 @@ export const DUE: Due[] = [
     id: '5',
     title: 'Recurrence practice',
     book: 'Introduction to Algorithms',
+    bookSha: '2571c3e8',
     questions: 10,
     due: 'Saturday',
   },
@@ -158,6 +165,7 @@ export const DUE: Due[] = [
     id: '6',
     title: 'Streams and laziness',
     book: 'Structure and Interpretation of Computer Programs',
+    bookSha: 'c51c6ef3',
     questions: 4,
     due: 'Sunday',
   },
@@ -165,6 +173,7 @@ export const DUE: Due[] = [
     id: '7',
     title: 'Chapter 12 review',
     book: 'The Feynman Lectures on Physics',
+    bookSha: '12a4d90b',
     questions: 7,
     due: 'next Monday',
   },
@@ -172,6 +181,7 @@ export const DUE: Due[] = [
     id: '8',
     title: 'Combinatorics warm-up',
     book: 'A First Course in Probability',
+    bookSha: '61f2704c',
     questions: 9,
     due: 'next Tuesday',
   },
@@ -179,6 +189,7 @@ export const DUE: Due[] = [
     id: '9',
     title: 'Problem set 6',
     book: 'Linear Algebra Done Right',
+    bookSha: 'd8f1a9c2',
     questions: 8,
     due: 'in two weeks',
   },

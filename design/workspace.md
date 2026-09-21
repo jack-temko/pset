@@ -89,10 +89,15 @@ built.
 - Walkthrough per question: two veiled stages and a Complete checkbox,
   detailed below. Reveals and marks persist; progress is questions
   marked done.
-- **Print** (questionScale/figureScale template) is an action in the
-  walkthrough's header, beside the `+`.
-- A Home due-row click lands **straight in that walkthrough**, scan on
-  the question's page.
+- **Print produces a worksheet** (2026-09-21): each question's statement
+  and figure, then blank space to work in — no hints, no walkthroughs,
+  nothing spoiled on paper. The engine renders it as a PDF (`hwpdf.go`,
+  questionScale/figureScale) and it **opens in a new tab**; printing and
+  saving happen there.
+- **A Home due-row lands straight in that walkthrough** at
+  `/books/{sha}/homework/{id}`, on the **first question not yet
+  complete** — where you'd pick up. The scan doesn't move; it only ever
+  jumps on demand.
 
 ### Walkthrough (2026-09-18 grill)
 
@@ -113,19 +118,26 @@ built.
   thing: marks the question done. It never advances — you move on when
   you decide to, not when the app decides for you — and unchecking is
   the undo. Progress is the count of checked questions, shown in the
-  list row; a finished set carries a Turn in affordance there. Done is
-  a fact, not a party.
+  list row. Done is a fact, not a party.
 - **"Ask about this"** on every question flips to the Ask tab with the
   problem as context — the canned guide's escape hatch.
-- **Failed question**: one line saying why, Try again, and "It's on
-  page …" — a typed page relocates from human knowledge.
+- **Failed question** (2026-09-21): one destructive line saying why, and
+  **both ways out at once**, in place of the stages:
+  - **"It's on page ___" + Try again** — you know where it is; the
+    search didn't. Only for in-book questions.
+  - **"Not in this book?"** — paste the question, and it becomes an
+    off-book question whose guide is written from your text alone.
+  A bare reference that failed ("3.C.14") shows once, as the label.
 - **Sets are editable: add, remove and reorder.** The controls sit inline
   on the question you are looking at — move up, move down, remove, as
   quiet icon buttons beside its page chip — because the walkthrough is
   the only view of the set there is. The system has no menu component,
   and this did not justify inventing one.
-- **Turn in is manual** (header overflow), undoable; turned-in sets drop
-  to a collapsed group at the list's bottom and leave Home's due list.
+- **Turned in is a checkbox in the walkthrough header** (2026-09-21) —
+  the set-level twin of Complete, and like it a fact you can take back.
+  It sits in the set's bar, away from Complete in the footer, so the two
+  are never confused. Turned-in sets drop to their own group at the
+  list's bottom and leave Home's due list; unchecking brings them back.
 - **Every "make one" is a `+`**, and nothing lives at the bottom of a
   list but the Door: `+` on the Assignments box header opens New
   homework, `+` in the walkthrough header opens Add questions. The same
@@ -134,5 +146,13 @@ built.
 ## Panel header
 
 One row: **Ask | Homework as UnderlineNav tabs** left, Focus toggle
-right. Nothing else — the walkthrough owns its own back link, `+` and
-Print.
+right. Nothing else — the walkthrough owns its own back link, `+`,
+Print and Turned in.
+
+## No global activity
+
+**There is no activity indicator and no activity sheet** (2026-09-21).
+Work shows where it lives: an import on the shelf, a question in its
+walkthrough. You started it there, so that's where you look. A book that
+finishes preparing while you're inside another one is simply on the
+shelf when you go back.

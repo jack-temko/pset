@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  CircleAlert,
   Focus,
   Plus,
   Printer,
@@ -16,6 +17,7 @@ import {
 import { AppShell } from '@/components/shell'
 import { Box, BoxHeader, BoxRow } from '@/components/box'
 import { Checkbox } from '@/components/checkbox'
+import { AutoTextarea, Field, Input } from '@/components/input'
 import { HomeworkStatusLabel, dueText } from '@/components/homework-status'
 import { Button, IconButton } from '@/components/button'
 import {
@@ -292,6 +294,10 @@ type SampleQuestion = {
   figure?: string
   /** A just-added question, still being located and written. */
   pending?: boolean
+  /** Added with "In this book" unchecked: the engine never looks for it. */
+  offBook?: boolean
+  /** Why the engine couldn't write a guide. Replaces the stages. */
+  failed?: string
 }
 
 /** Identity survives reorder, so reveals and completions key off it. */
@@ -399,6 +405,14 @@ const QUESTIONS: SampleQuestion[] = [
       </>
     ),
   },
+  {
+    label: '3.C.14',
+    // As typed: a failed question has only what you gave it.
+    statement: '3.C.14',
+    failed: "Couldn't find 3.C.14 in the book — no exercise with that number turned up.",
+    hint: null,
+    walkthrough: null,
+  }
 ]
 
 /** A stage of the guide: the content is there from the start, behind
@@ -425,6 +439,82 @@ function Stage({
   )
 }
 
+/**
+ * A question the engine couldn't write a guide for. It says why in one
+ * line, then offers both ways out at once: tell it the page (you know
+ * where it is; the search didn't), or paste the question and let the
+ * guide be written from your text alone, off the book.
+ */
+function FailedQuestion({
+  q,
+  onRetry,
+}: {
+  q: Question
+  onRetry: (patch: Partial<Question>) => void
+}) {
+  const [page, setPage] = useState('')
+  const [text, setText] = useState('')
+
+  return (
+    <div className="space-y-5">
+      <p className="flex items-start gap-2 text-sm text-destructive">
+        <span className="flex h-5 shrink-0 items-center">
+          <CircleAlert className="size-4" />
+        </span>
+        {q.failed}
+      </p>
+
+      {/* Only an in-book question has a page to find. */}
+      {!q.offBook && (
+        <form
+          className="flex items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            const n = Number(page)
+            if (n > 0) onRetry({ page: n })
+          }}
+        >
+          <Field label="It's on page" className="w-32">
+            <Input
+              type="number"
+              min={1}
+              inputMode="numeric"
+              value={page}
+              onChange={(e) => setPage(e.target.value)}
+              className="font-mono"
+            />
+          </Field>
+          <Button type="submit" variant="outline" disabled={!(Number(page) > 0)}>
+            Try again
+          </Button>
+        </form>
+      )}
+
+      <div className={cn('space-y-2', !q.offBook && 'border-t pt-5')}>
+        <p className="text-sm font-medium">{q.offBook ? 'Try again' : 'Not in this book?'}</p>
+        <p className="text-xs text-muted-foreground">
+          Paste the question, and the guide is written from your text alone.
+        </p>
+        <AutoTextarea
+          value={text}
+          placeholder="Paste the question"
+          onChange={(e) => setText(e.target.value)}
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!text.trim()}
+          onClick={() =>
+            onRetry({ statement: text.trim(), offBook: true, page: undefined })
+          }
+        >
+          Use this text
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 const STAGE_NAMES = ['hint', 'walkthrough'] as const
 
 let nextQuestionId = QUESTIONS.length
@@ -439,6 +529,7 @@ function draftQuestion(text: string, inBook: boolean): Question {
     // engine names the question properly.
     label: text.split('\n')[0].slice(0, 40),
     page: inBook ? 57 : undefined,
+    offBook: !inBook,
     pending: true,
     statement: text,
     hint: null,
@@ -450,28 +541,34 @@ function draftQuestion(text: string, inBook: boolean): Question {
  *  the walkthrough carries the solution — and Complete is a checkbox that
  *  does exactly one thing. Spec: design/workspace.md. */
 function Walkthrough({
-  title,
-  seeded,
+  set,
+  onToggleTurnedIn,
   onBack,
   onJump,
   onAskAbout,
 }: {
-  title: string
-  /** A set you just made has no questions; the sample ones belong to the
-   *  sets that were already there. */
-  seeded: boolean
+  set: BookHomework
+  onToggleTurnedIn: () => void
   onBack: () => void
   onJump: (page: number) => void
   onAskAbout: () => void
 }) {
+  // A set you just made has no questions; the sample ones belong to the
+  // sets that were already there.
   const [questions, setQuestions] = useState<Question[]>(() =>
-    seeded ? QUESTIONS.map((q, i) => ({ ...q, id: i })) : [],
+    set.total > 0 ? QUESTIONS.map((q, i) => ({ ...q, id: i })) : [],
   )
-  const [index, setIndex] = useState(0)
   // Per-question progress, sample-local until the backend persists it.
   // Keyed by question id, so reordering never moves a reveal or a tick.
   const [revealed, setRevealed] = useState<Set<string>>(new Set())
-  const [done, setDone] = useState<Set<number>>(new Set())
+  const [done, setDone] = useState<Set<number>>(
+    () => new Set(questions.slice(0, set.done).map((q) => q.id)),
+  )
+  // Open where you'd pick up: the first question not yet complete.
+  const [index, setIndex] = useState(() => {
+    const i = questions.findIndex((q) => !done.has(q.id))
+    return i === -1 ? 0 : i
+  })
   const [adding, setAdding] = useState(false)
 
   const q = questions[index] as Question | undefined
@@ -510,34 +607,49 @@ function Walkthrough({
       return next
     })
 
+  /** The sample's stand-in for the engine finishing a question: after a
+   *  beat it becomes ready, with a placeholder guide. */
+  const resolveLater = (id: number, delay: number, patch: Partial<Question> = {}) =>
+    window.setTimeout(
+      () =>
+        setQuestions((qs) =>
+          qs.map((existing) =>
+            existing.id === id
+              ? {
+                  ...existing,
+                  ...patch,
+                  pending: false,
+                  failed: undefined,
+                  hint: <>Work from the definition before reaching for a theorem.</>,
+                  walkthrough: (
+                    <p>
+                      The engine writes this once the question is located. Sample text stands in
+                      for it.
+                    </p>
+                  ),
+                }
+              : existing,
+          ),
+        ),
+      delay,
+    )
+
   const add = (drafts: { text: string; inBook: boolean }[]) => {
     const fresh = drafts.map((d) => draftQuestion(d.text, d.inBook))
     setQuestions((qs) => [...qs, ...fresh])
     // Progressive: each lands pending and resolves in turn, the way the
     // engine's locate → write phases will report them.
-    fresh.forEach((row, i) => {
-      window.setTimeout(
-        () =>
-          setQuestions((qs) =>
-            qs.map((existing) =>
-              existing.id === row.id
-                ? {
-                    ...existing,
-                    pending: false,
-                    hint: <>Work from the definition before reaching for a theorem.</>,
-                    walkthrough: (
-                      <p>
-                        The engine writes this once the question is located. Sample text stands in
-                        for it.
-                      </p>
-                    ),
-                  }
-                : existing,
-            ),
-          ),
-        800 * (i + 1),
-      )
-    })
+    fresh.forEach((row, i) => resolveLater(row.id, 800 * (i + 1)))
+  }
+
+  /** Both ways out of a failed question put it back in the queue: with a
+   *  page you know it's on, or as your own text, off the book. */
+  const retry = (patch: Partial<Question>) => {
+    if (!q) return
+    setQuestions((qs) =>
+      qs.map((x) => (x.id === q.id ? { ...x, ...patch, pending: true, failed: undefined } : x)),
+    )
+    resolveLater(q.id, 900, patch)
   }
 
   const dialog = (
@@ -549,7 +661,7 @@ function Walkthrough({
       <IconButton variant="ghost" size="sm" aria-label="Back to homework" onClick={onBack}>
         <ChevronLeft />
       </IconButton>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">{title}</span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">{set.title}</span>
       {questions.length > 0 && (
         <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
           {index + 1} of {questions.length}
@@ -563,9 +675,20 @@ function Walkthrough({
       >
         <Plus />
       </IconButton>
-      <IconButton variant="ghost" size="sm" aria-label="Print this homework">
+      {/* A worksheet: statements and figures with room to work, nothing
+          revealed. The engine renders it as a PDF (hwpdf.go) and it opens
+          in a new tab — wired with the backend pass. */}
+      <IconButton variant="ghost" size="sm" aria-label="Print a worksheet">
         <Printer />
       </IconButton>
+      {/* The set-level twin of Complete: a fact you can take back. */}
+      <Checkbox
+        checked={set.status === 'turned-in'}
+        onChange={onToggleTurnedIn}
+        className="shrink-0"
+      >
+        Turned in
+      </Checkbox>
     </div>
   )
 
@@ -627,16 +750,20 @@ function Walkthrough({
           </IconButton>
         </div>
 
-        <div className="space-y-3 text-base">{q.statement}</div>
+        {/* A bare reference ("3.C.14") is already the label; saying it
+            twice isn't a statement. */}
+        {q.statement !== q.label && <div className="space-y-3 text-base">{q.statement}</div>}
         {q.figure && (
           <div className="grid h-32 place-items-center rounded-md border bg-card font-mono text-xs text-muted-foreground">
             {q.figure}
           </div>
         )}
 
-        {q.pending ? (
+        {q.failed ? (
+          <FailedQuestion q={q} onRetry={retry} />
+        ) : q.pending ? (
           <p className="text-xs text-muted-foreground">
-            {q.page === undefined ? 'Writing the guide…' : 'Finding it in the book…'}
+            {q.offBook ? 'Writing the guide…' : 'Finding it in the book…'}
           </p>
         ) : (
           STAGE_NAMES.map((name) => (
@@ -692,15 +819,22 @@ function Walkthrough({
  *  label. Opening a set fills the panel with its walkthrough. */
 function HomeworkTab({
   items,
+  initialSet,
   onJump,
   onAskAbout,
 }: {
   items: BookHomework[]
+  /** From the URL: Home's due list opens a set directly. */
+  initialSet?: string
   onJump: (page: number) => void
   onAskAbout: () => void
 }) {
   const [sets, setSets] = useState<BookHomework[]>(items)
-  const [openSet, setOpenSet] = useState<BookHomework | null>(null)
+  // An id, not a copy: the open set's status changes under it.
+  const [openId, setOpenId] = useState<string | null>(
+    () => items.find((h) => h.id === initialSet)?.id ?? null,
+  )
+  const openSet = sets.find((h) => h.id === openId) ?? null
   const [creating, setCreating] = useState(false)
   const active = sets.filter((h) => h.status !== 'turned-in')
   const turnedIn = sets.filter((h) => h.status === 'turned-in')
@@ -716,15 +850,26 @@ function HomeworkTab({
       total: 0,
     }
     setSets((s) => [set, ...s])
-    setOpenSet(set)
+    setOpenId(set.id)
   }
 
   if (openSet) {
     return (
       <Walkthrough
-        title={openSet.title}
-        seeded={openSet.total > 0}
-        onBack={() => setOpenSet(null)}
+        key={openSet.id}
+        set={openSet}
+        onToggleTurnedIn={() =>
+          // Turning back in un-does it; due-ness is the backend's to
+          // recompute from the date, so the sample simply clears it.
+          setSets((ss) =>
+            ss.map((h) =>
+              h.id === openSet.id
+                ? { ...h, status: h.status === 'turned-in' ? undefined : 'turned-in' }
+                : h,
+            ),
+          )
+        }
+        onBack={() => setOpenId(null)}
         onJump={onJump}
         onAskAbout={onAskAbout}
       />
@@ -751,7 +896,7 @@ function HomeworkTab({
         {active.map((h) => (
           <BoxRow
             key={h.id}
-            onClick={() => setOpenSet(h)}
+            onClick={() => setOpenId(h.id)}
             title={h.title}
             description={`${h.done} of ${h.total} questions · ${dueText(h.due, h.status)}`}
             trailing={<HomeworkStatusLabel status={h.status} />}
@@ -765,7 +910,7 @@ function HomeworkTab({
             {turnedIn.map((h) => (
               <BoxRow
                 key={h.id}
-                onClick={() => setOpenSet(h)}
+                onClick={() => setOpenId(h.id)}
                 title={h.title}
                 description={`${h.done} of ${h.total} questions · ${dueText(h.due, h.status)}`}
                 trailing={<HomeworkStatusLabel status={h.status} />}
@@ -786,16 +931,19 @@ function HomeworkTab({
 
 function Panel({
   sha,
+  homework,
   focus,
   onFocusToggle,
   onJump,
 }: {
   sha: string
+  /** A homework set named in the URL opens the Homework tab on it. */
+  homework?: string
   focus: boolean
   onFocusToggle: () => void
   onJump: (page: number) => void
 }) {
-  const [tab, setTab] = useState<Tab>(() => readTab(sha))
+  const [tab, setTab] = useState<Tab>(() => (homework ? 'homework' : readTab(sha)))
   const pick = (t: Tab) => {
     setTab(t)
     writeTab(sha, t)
@@ -831,7 +979,12 @@ function Panel({
       {tab === 'ask' ? (
         <AskTab onJump={onJump} />
       ) : (
-        <HomeworkTab items={BOOK_HOMEWORK} onJump={onJump} onAskAbout={() => pick('ask')} />
+        <HomeworkTab
+          items={BOOK_HOMEWORK}
+          initialSet={homework}
+          onJump={onJump}
+          onAskAbout={() => pick('ask')}
+        />
       )}
     </aside>
   )
@@ -840,7 +993,7 @@ function Panel({
 // ------------------------------------------------------------ workspace
 
 export function Workspace() {
-  const { sha } = useParams<{ sha: string }>()
+  const { sha, homework } = useParams<{ sha: string; homework?: string }>()
   const book = bookBySha(sha ?? '')
 
   const [focus, setFocus] = useState(false)
@@ -875,6 +1028,7 @@ export function Workspace() {
         />
         <Panel
           sha={book.sha256}
+          homework={homework}
           focus={focus}
           onFocusToggle={() => setFocus((f) => !f)}
           onJump={jump}

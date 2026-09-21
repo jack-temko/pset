@@ -144,7 +144,7 @@ function Homework({ items, shown }: { items: Due[]; shown: number }) {
         {visible.map((d) => (
           <BoxRow
             key={d.id}
-            href={`/homework/${d.id}`}
+            href={`/books/${d.bookSha}/homework/${d.id}`}
             title={d.title}
             description={`${d.book} · ${d.questions} questions · ${dueText(d.due, d.status)}`}
             trailing={<HomeworkStatusLabel status={d.status} />}
