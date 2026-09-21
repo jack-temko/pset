@@ -454,6 +454,9 @@ function FailedQuestion({
 }) {
   const [page, setPage] = useState('')
   const [text, setText] = useState('')
+  // A plain text field, not a number spinner: people type "57", "p. 57"
+  // or "page 57", and all of them mean the first number in it.
+  const pageNumber = Number(page.match(/\d+/)?.[0] ?? 0)
 
   return (
     <div className="space-y-5">
@@ -470,21 +473,19 @@ function FailedQuestion({
           className="flex items-end gap-2"
           onSubmit={(e) => {
             e.preventDefault()
-            const n = Number(page)
-            if (n > 0) onRetry({ page: n })
+            if (pageNumber > 0) onRetry({ page: pageNumber })
           }}
         >
           <Field label="It's on page" className="w-32">
             <Input
-              type="number"
-              min={1}
               inputMode="numeric"
+              placeholder="57"
               value={page}
               onChange={(e) => setPage(e.target.value)}
               className="font-mono"
             />
           </Field>
-          <Button type="submit" variant="outline" disabled={!(Number(page) > 0)}>
+          <Button type="submit" variant="outline" disabled={!(pageNumber > 0)}>
             Try again
           </Button>
         </form>
