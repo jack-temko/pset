@@ -1,0 +1,176 @@
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
+import { createPortal } from 'react-dom'
+import { Check, Ellipsis } from 'lucide-react'
+
+import { IconButton } from '@/components/button'
+import { cn } from '@/lib/utils'
+
+const Close = createContext<() => void>(() => {})
+
+/**
+ * An overflow menu: the actions a bar has room to name but not to show.
+ * A "⋯" trigger opens a floating card of rows under it, right-aligned to
+ * the trigger.
+ *
+ * It closes on Esc, on a click anywhere else, and after any item runs.
+ * Arrow keys move between items, and focus goes back to the trigger when
+ * it closes. It portals to the body with fixed positioning, like the
+ * Tooltip, so no scrolling pane can clip it.
+ */
+export function Menu({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  const [at, setAt] = useState<{ top: number; right: number } | null>(null)
+  const trigger = useRef<HTMLButtonElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
+
+  const close = () => {
+    setOpen(false)
+    trigger.current?.focus()
+  }
+
+  useLayoutEffect(() => {
+    if (!open || !trigger.current) return
+    const r = trigger.current.getBoundingClientRect()
+    setAt({ top: r.bottom + 4, right: window.innerWidth - r.right })
+  }, [open])
+
+  // Once the panel exists (it waits for its position), focus the first
+  // item; close on any press outside, and on Esc wherever focus is.
+  useEffect(() => {
+    if (!open || !at) return
+    panel.current?.querySelector<HTMLElement>('[role^="menuitem"]')?.focus()
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node
+      if (!panel.current?.contains(t) && !trigger.current?.contains(t)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      setOpen(false)
+      trigger.current?.focus()
+    }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open, at])
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const items = [...(panel.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ?? [])]
+    const i = items.indexOf(document.activeElement as HTMLElement)
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      const step = e.key === 'ArrowDown' ? 1 : -1
+      items[(i + step + items.length) % items.length]?.focus()
+    } else if (e.key === 'Tab') {
+      setOpen(false)
+    }
+  }
+
+  return (
+    <>
+      <IconButton
+        ref={trigger}
+        variant="ghost"
+        size="sm"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className={cn(open && 'bg-muted/50 text-foreground')}
+      >
+        <Ellipsis />
+      </IconButton>
+      {open &&
+        at &&
+        createPortal(
+          <div
+            ref={panel}
+            role="menu"
+            aria-label={label}
+            onKeyDown={onKeyDown}
+            style={{ top: at.top, right: at.right }}
+            className="fixed z-50 min-w-48 rounded-md border bg-card py-1 shadow-floating"
+          >
+            <Close value={close}>{children}</Close>
+          </div>,
+          document.body,
+        )}
+    </>
+  )
+}
+
+const item =
+  'flex h-control w-full cursor-pointer items-center gap-2 px-3 text-left text-sm text-foreground transition-colors duration-150 ease-out outline-none hover:bg-muted/50 focus-visible:bg-muted/50 motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground'
+
+/** One action. Runs, then closes the menu. */
+export function MenuItem({
+  icon,
+  onSelect,
+  children,
+}: {
+  icon?: ReactNode
+  onSelect: () => void
+  children: ReactNode
+}) {
+  const close = useContext(Close)
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      tabIndex={-1}
+      className={item}
+      onClick={() => {
+        close()
+        onSelect()
+      }}
+    >
+      {icon ?? <span className="size-4" />}
+      {children}
+    </button>
+  )
+}
+
+/** A fact you can take back, like Turned in: a check when it's true, in
+ *  the icon column so the labels stay aligned. */
+export function MenuCheckItem({
+  checked,
+  onChange,
+  children,
+}: {
+  checked: boolean
+  onChange: () => void
+  children: ReactNode
+}) {
+  const close = useContext(Close)
+  return (
+    <button
+      type="button"
+      role="menuitemcheckbox"
+      aria-checked={checked}
+      tabIndex={-1}
+      className={item}
+      onClick={() => {
+        close()
+        onChange()
+      }}
+    >
+      {checked ? <Check className="text-primary!" /> : <span className="size-4" />}
+      {children}
+    </button>
+  )
+}
+
+export function MenuDivider() {
+  return <div role="separator" className="my-1 h-px bg-border-muted" />
+}

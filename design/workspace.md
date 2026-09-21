@@ -123,6 +123,11 @@ built.
   nothing spoiled on paper. The engine renders it as a PDF (`hwpdf.go`,
   questionScale/figureScale) and it **opens in a new tab**; printing and
   saving happen there.
+- **The walkthrough header** (2026-09-21) keeps what you read: back, the
+  set's title, "3 of 8", and a **"⋯" menu** for what you do to the set:
+  Add questions, Edit homework, Print worksheet, then Turned in as a
+  checkable item below a divider. While a set is turned in, a success
+  Label says so in the bar.
 - **A Home due-row lands straight in that walkthrough** at
   `/books/{sha}/homework/{id}`, on the **first question not yet
   complete**, where you'd pick up. The scan doesn't move; it only ever
@@ -153,10 +158,9 @@ built.
   rides above the composer as a removable chip, **"About 3.A.4 ×"**, so
   the box stays empty for your own words; the sent turn keeps the chip,
   so the transcript records what you asked about.
-- **Editing a set** (2026-09-21): a pencil beside its title in the
-  walkthrough header, the same pencil as the book's. It opens New
-  homework again as **Edit homework**, with **Delete** at the footer's
-  left, confirmed in place.
+- **Editing a set** (2026-09-21): Edit homework in the header's menu
+  opens New homework again as **Edit homework**, with **Delete** at the
+  footer's left, confirmed in place.
 - **Failed question** (2026-09-21): one destructive line saying why, and
   **both ways out at once**, in place of the stages:
   - **"It's on page ___" + Try again**: you know where it is; the
@@ -169,10 +173,10 @@ built.
   quiet icon buttons beside its page chip) because the walkthrough is
   the only view of the set there is. The system has no menu component,
   and this did not justify inventing one.
-- **Turned in is a checkbox in the walkthrough header** (2026-09-21):
+- **Turned in is a checkable item in the header's menu** (2026-09-21):
   the set-level twin of Complete, and like it a fact you can take back.
-  It sits in the set's bar, away from Complete in the footer, so the two
-  are never confused. Turned-in sets drop to their own group at the
+  It lives with the set's actions, away from Complete in the footer, so
+  the two are never confused. Turned-in sets drop to their own group at the
   list's bottom and leave Home's due list; unchecking brings them back.
 - **A list's last row adds to it** (2026-09-21, replacing a `+` on an
   "Assignments" header). The homework list has no header of its own: the
@@ -180,13 +184,14 @@ built.
   Its last row is **"+ New homework"**, a `DoorAction` shaped exactly like
   the Door, so a list ends the same way whether its last word is "show
   more" or "add one". Where the thing isn't a list in a Box, the `+`
-  stays: Add questions in the walkthrough header, import on Home's shelf.
+  stays: import on Home's shelf. (Add questions lives in the walkthrough
+  header's menu.)
 
 ## Panel header
 
 One row: **Ask | Homework as UnderlineNav tabs** left, Focus toggle
-right. Nothing else: the walkthrough owns its own back link, `+`,
-Print and Turned in.
+right. Nothing else: the walkthrough owns its own back link and its
+menu.
 
 ## No global activity
 

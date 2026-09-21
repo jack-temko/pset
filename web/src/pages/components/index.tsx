@@ -24,6 +24,7 @@ import {
 import { Veil } from '@/components/veil'
 import { Spinner } from '@/components/spinner'
 import { Skeleton } from '@/components/skeleton'
+import { Menu, MenuCheckItem, MenuDivider, MenuItem } from '@/components/menu'
 import { SegmentedControl } from '@/components/segmented-control'
 import { Checkbox } from '@/components/checkbox'
 import { Dialog } from '@/components/dialog'
@@ -125,6 +126,22 @@ function SegmentedDemo() {
         { value: 'system', label: 'System' },
       ]}
     />
+  )
+}
+
+function MenuDemo() {
+  const [on, setOn] = useState(false)
+  return (
+    <Menu label="Homework actions">
+      <MenuItem icon={<Plus />} onSelect={() => {}}>
+        Add questions
+      </MenuItem>
+      <MenuItem onSelect={() => {}}>Edit homework</MenuItem>
+      <MenuDivider />
+      <MenuCheckItem checked={on} onChange={() => setOn((v) => !v)}>
+        Turned in
+      </MenuCheckItem>
+    </Menu>
   )
 }
 
@@ -329,6 +346,15 @@ export function Components() {
                 <BookTile key={b.sha256} book={b} />
               ))}
             </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Menu"
+          note="The actions a bar has room to name but not to show. Closes on Esc, outside, or after an item runs; arrows move between items."
+        >
+          <Shelf label="overflow">
+            <MenuDemo />
           </Shelf>
         </Section>
 

@@ -36,6 +36,8 @@ import {
 } from '@/components/transcript'
 import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
 import { Veil } from '@/components/veil'
+import { Label } from '@/components/label'
+import { Menu, MenuCheckItem, MenuDivider, MenuItem } from '@/components/menu'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
 import { AddQuestionsDialog, BookDialog, HomeworkDialog } from './dialogs'
@@ -852,45 +854,39 @@ function Walkthrough({
     <AddQuestionsDialog open={adding} onClose={() => setAdding(false)} onAdd={add} />
   )
 
+  // The bar keeps what you read (where you are, which set, how far in)
+  // and the menu holds what you do to the set. Turned in stays a fact you
+  // can take back, as a checkable item.
   const header = (
     <div className="flex h-row shrink-0 items-center gap-2 border-b px-2">
       <IconButton variant="ghost" size="sm" aria-label="Back to homework" onClick={onBack}>
         <ChevronLeft />
       </IconButton>
-      <span className="flex min-w-0 flex-1 items-center gap-1">
-        <span className="min-w-0 truncate text-sm font-medium">{set.title}</span>
-        {/* The same pencil as the book's: "edit this" looks one way. */}
-        <IconButton variant="ghost" size="sm" aria-label="Edit this homework" onClick={onEdit}>
-          <Pencil />
-        </IconButton>
-      </span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">{set.title}</span>
+      {set.status === 'turned-in' && <Label tone="success">Turned in</Label>}
       {questions.length > 0 && (
         <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
           {index + 1} of {questions.length}
         </span>
       )}
-      <IconButton
-        variant="ghost"
-        size="sm"
-        aria-label="Add questions"
-        onClick={() => setAdding(true)}
-      >
-        <Plus />
-      </IconButton>
-      {/* A worksheet: statements and figures with room to work, nothing
-          revealed. The engine renders it as a PDF (hwpdf.go) and it opens
-          in a new tab, wired with the backend pass. */}
-      <IconButton variant="ghost" size="sm" aria-label="Print a worksheet">
-        <Printer />
-      </IconButton>
-      {/* The set-level twin of Complete: a fact you can take back. */}
-      <Checkbox
-        checked={set.status === 'turned-in'}
-        onChange={onToggleTurnedIn}
-        className="shrink-0"
-      >
-        Turned in
-      </Checkbox>
+      <Menu label="Homework actions">
+        <MenuItem icon={<Plus />} onSelect={() => setAdding(true)}>
+          Add questions
+        </MenuItem>
+        <MenuItem icon={<Pencil />} onSelect={onEdit}>
+          Edit homework
+        </MenuItem>
+        {/* A worksheet: statements and figures with room to work, nothing
+            revealed. The engine renders it as a PDF (hwpdf.go) and it
+            opens in a new tab, wired with the backend pass. */}
+        <MenuItem icon={<Printer />} onSelect={() => {}}>
+          Print worksheet
+        </MenuItem>
+        <MenuDivider />
+        <MenuCheckItem checked={set.status === 'turned-in'} onChange={onToggleTurnedIn}>
+          Turned in
+        </MenuCheckItem>
+      </Menu>
     </div>
   )
 
@@ -1256,7 +1252,7 @@ export function Workspace() {
         scroll="fill"
         middle={
           // The top bar's one action: editing the thing it names.
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-3">
             <span>{book.title}</span>
             <IconButton
               variant="ghost"
