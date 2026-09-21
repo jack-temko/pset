@@ -173,9 +173,16 @@ function Scan({
   const [paneWidth, setPaneWidth] = useState(0)
   const [dragging, setDragging] = useState(false)
   const drag = useRef<{ x: number; y: number } | null>(null)
-  // Where the fingers were, and the zoom it was measured at, so the point
-  // under them stays put once the new size has been laid out.
-  const anchor = useRef<{ px: number; py: number; from: number } | null>(null)
+  // The spot on the page under the pointer, as a fraction of that page, and
+  // where the pointer was. After the new size is laid out, the scroll is
+  // corrected until that same spot is back under the pointer.
+  const anchor = useRef<{
+    node: HTMLDivElement
+    fx: number
+    fy: number
+    x: number
+    y: number
+  } | null>(null)
 
   const wake = () => {
     setPillAwake(true)
@@ -202,26 +209,45 @@ function Scan({
       if (!e.ctrlKey) return
       e.preventDefault()
       wake()
-      const r = el.getBoundingClientRect()
-      setZoom((z) => {
-        if (!anchor.current)
-          anchor.current = { px: e.clientX - r.left, py: e.clientY - r.top, from: z }
-        return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z * Math.exp(-e.deltaY * 0.01)))
-      })
+      // Measured once per burst: the first event of a pinch fixes the spot,
+      // and every later event in the same frame zooms around it.
+      if (!anchor.current) {
+        let best: HTMLDivElement | null = null
+        let bestDist = Infinity
+        for (const node of pageRefs.current.values()) {
+          const r = node.getBoundingClientRect()
+          const d = e.clientY < r.top ? r.top - e.clientY : e.clientY > r.bottom ? e.clientY - r.bottom : 0
+          if (d < bestDist) (bestDist = d), (best = node)
+          if (d === 0) break
+        }
+        if (best) {
+          const r = best.getBoundingClientRect()
+          anchor.current = {
+            node: best,
+            fx: (e.clientX - r.left) / r.width,
+            fy: (e.clientY - r.top) / r.height,
+            x: e.clientX,
+            y: e.clientY,
+          }
+        }
+      }
+      setZoom((z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z * Math.exp(-e.deltaY * 0.01))))
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
   }, [scrollRef])
 
-  // After layout, before paint: scale the scroll position by the zoom
-  // change around the anchor, so the page doesn't jump.
+  // After layout, before paint: find where the anchored spot ended up and
+  // scroll by exactly the difference, so it sits under the pointer again.
+  // Measuring the page itself, rather than scaling the scroll, stays exact
+  // even though the gaps between pages don't scale and the column recentres.
   useLayoutEffect(() => {
     const el = scrollRef.current
     const a = anchor.current
     if (!el || !a) return
-    const k = zoom / a.from
-    el.scrollLeft = (el.scrollLeft + a.px) * k - a.px
-    el.scrollTop = (el.scrollTop + a.py) * k - a.py
+    const r = a.node.getBoundingClientRect()
+    el.scrollLeft += r.left + a.fx * r.width - a.x
+    el.scrollTop += r.top + a.fy * r.height - a.y
     anchor.current = null
   }, [zoom, scrollRef])
 

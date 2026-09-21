@@ -35,7 +35,7 @@ can correct it.
 - Chrome is one **floating pill**, bottom-center: page indicator · zoom.
   Appears on hover/scroll, fades when idle. The scan is otherwise
   edge-to-edge paper.
-- **Pinch on a trackpad zooms**, around the point under your fingers,
+- **Pinch on a trackpad zooms into the spot under the pointer**, which stays put,
   from 50% to 300% of fit-width. **Past the pane's width, click-drag
   pans**, and only then is the cursor a hand. **Clicking the percentage
   snaps back to fit.** A zoomed page scrolls sideways in its pane: content
