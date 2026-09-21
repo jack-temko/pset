@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 
 import { AppShell, PageShell } from '@/components/shell'
 import { BookTile } from '@/components/book-tile'
+import { ImportRow } from '@/components/import-row'
 import { IconButton } from '@/components/button'
 import { Box, BoxBody, BoxRow, Counter } from '@/components/box'
 import { Button } from '@/components/button'
@@ -176,19 +177,23 @@ const EMBEDDINGS_READY = true
  * The shelf. One `+` and nothing else: importing a book happens here,
  * where books live, and nowhere else in the app.
  *
- * Books being prepared sit first and are never hidden by the Door — work
- * you started must not disappear behind "Show all 12". The Door counts
- * finished books only.
+ * The shelf only ever holds books you can open. Anything on its way there
+ * — queued, preparing, or failed — is a row in a Box above it, with room
+ * for the engine's whole sentence and real buttons. The Box exists only
+ * while there is work, so a shelf of ready books is just covers, with
+ * nothing reserved beneath them.
  */
 function Shelf({ books }: { books: Book[] }) {
   const [open, setOpen] = useState(false)
   const picker = useRef<HTMLInputElement>(null)
 
-  // In flight is anything that isn't a book yet, plus anything that failed
-  // trying to become one. Both are pinned above the fold.
-  const inFlight = books.filter((b) => b.state.kind !== 'ready')
+  // Running first, then waiting in order, then what failed.
+  const rank = { preparing: 0, queued: 1, failed: 2, ready: 3 } as const
+  const inFlight = books
+    .filter((b) => b.state.kind !== 'ready')
+    .sort((a, b) => rank[a.state.kind] - rank[b.state.kind])
   const ready = books.filter((b) => b.state.kind === 'ready')
-  const shown = open ? ready : ready.slice(0, Math.max(SHELF_ROW - inFlight.length, 0))
+  const shown = open ? ready : ready.slice(0, SHELF_ROW)
 
   return (
     <section className="space-y-5">
@@ -230,10 +235,21 @@ function Shelf({ books }: { books: Book[] }) {
         className="hidden"
         onChange={(e) => {
           // The engine stages and hashes each file, then queues it; the
-          // tiles appear here. Wired with the backend pass.
+          // rows appear above the shelf. Wired with the backend pass.
           e.target.value = ''
         }}
       />
+
+      {/* Stop, Cancel, Try again and Dismiss are wired with the backend
+          pass: stop and cancel end the task, retry re-enqueues the staged
+          file, dismiss drops it and the row with it. */}
+      {inFlight.length > 0 && (
+        <Box>
+          {inFlight.map((b) => (
+            <ImportRow key={b.sha256} book={b} />
+          ))}
+        </Box>
+      )}
 
       {books.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-16 text-center">
@@ -246,26 +262,18 @@ function Shelf({ books }: { books: Book[] }) {
           </Button>
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-5 items-start gap-6">
-            {inFlight.map((b) => (
-              <BookTile
-                key={b.sha256}
-                book={b}
-                // Retrying re-enqueues the staged file; cancelling drops it
-                // and the tile with it. Wired with the backend pass.
-                onRetry={() => {}}
-                onCancel={() => {}}
-              />
-            ))}
-            {shown.map((b) => (
-              <BookTile key={b.sha256} book={b} />
-            ))}
-          </div>
-          {ready.length > shown.length || open ? (
-            <Door open={open} total={ready.length} onToggle={() => setOpen((o) => !o)} />
-          ) : null}
-        </>
+        ready.length > 0 && (
+          <>
+            <div className="grid grid-cols-5 items-start gap-6">
+              {shown.map((b) => (
+                <BookTile key={b.sha256} book={b} />
+              ))}
+            </div>
+            {ready.length > SHELF_ROW && (
+              <Door open={open} total={ready.length} onToggle={() => setOpen((o) => !o)} />
+            )}
+          </>
+        )
       )}
     </section>
   )

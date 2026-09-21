@@ -24,6 +24,13 @@ and should not be scaled far past it.
 **Don't:** put an image behind it, tint it by subject, or scale the plate
 type.
 
+## CoverSwatch
+
+The same cloth at row size — a 32×40 board with no type on it — for
+places where the book is already named beside it: an import row, a list.
+The plate would only repeat the title at an unreadable size; the colour
+is what identifies.
+
 ## Changes from baseline
 
 - **Plate type sits at the 14px floor** — the author line, the stamp. This

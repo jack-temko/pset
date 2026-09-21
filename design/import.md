@@ -25,34 +25,36 @@ book pays for OCR; a digital one doesn't.
 
 ## While it runs
 
-A preparing book is **a tile on the shelf from the first frame**, in its
-final place. The sha is known as soon as the file is staged, so it has
-its cloth colour immediately; the title is the tidied filename until the
-PDF's metadata replaces it. It never moves and never changes shape — it
-only finishes.
+**The shelf only ever holds books you can open.** A book on its way
+there — queued, preparing, or failed — is a row in **one Box above the
+shelf** (2026-09-21, replacing a caption under a dimmed cover). The Box
+exists only while there is work, so a shelf of ready books is nothing but
+covers, with no space reserved beneath them.
 
-- **In-flight tiles sit first and are never hidden by the Door.** Work
-  you started must not disappear behind "Show all 12". The Door counts
-  finished books only.
-- **A tile that can count, counts**: the phase name and its numbers
-  ("Read the pages · 140 of 312") over a determinate bar.
-- **A tile that can't, spins**: examining and building search either
-  finish or don't, so they get the phase name and a `Spinner`.
-- **Queued says "Queued", with no spinner.** Nothing is happening to
-  that book yet, and a turning shape would claim otherwise for the next
-  forty minutes.
-- **Stop** is on a running or queued tile. Stopping leaves the failed
-  tile, which you can retry or dismiss — one shape, not two.
-- **You cannot open a book that isn't ready.** It is visible everywhere
-  and usable nowhere. No half-working workspace to design, and no
-  feature that is present but doesn't answer.
+Each row is an `ImportRow`: the book's cloth colour as a swatch, its
+title (the tidied filename until the PDF's metadata replaces it), one
+line of status, and the controls for that state.
 
-## When it ends badly
+| state | line | controls |
+|---|---|---|
+| queued | Queued — no spinner, nothing is happening yet | Cancel |
+| preparing, can count | "Read the pages · 140 of 312" and a bar | Stop |
+| preparing, can't count | the phase name and a `Spinner` | Stop |
+| failed | the engine's own sentence, in destructive ink | **Try again** · Dismiss |
 
-The tile **turns to destructive ink**: the engine's own sentence, a
-**Try again**, and a **Dismiss**. It stays where you left it — a failure
-you didn't watch happen must still be there when you come back — and it
-never interrupts with a dialog.
+- Rows run preparing first, then queued in order, then failed.
+- **Stopping leaves a failed row**, so Try again is the undo — one shape
+  for "not going to finish", not two.
+- A failure stays until you dismiss it: one you didn't watch happen must
+  still be there when you come back. It never interrupts with a dialog.
+- **You cannot open a book that isn't ready** — it isn't on the shelf.
+- The Door counts ready books only, and the rows are never behind it.
+
+**Rejected treatments**, compared side by side against real tokens: a
+card over the bottom of the cover (covered the book, cramped the
+controls), a badge with a popover (needed a new Popover primitive and
+put everything a click away), and a one-line summary that opens down
+(split status from the dimmed covers and put Stop two clicks deep).
 
 ## The two refusals
 

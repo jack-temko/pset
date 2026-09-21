@@ -59,3 +59,18 @@ export function BookCover({
     </div>
   )
 }
+
+/**
+ * The same cloth at row size: a 32×40 board with no type on it. Where a
+ * book is named beside it (an import row, a list), the plate would only
+ * repeat the title at an unreadable size — the colour is what identifies.
+ */
+export function CoverSwatch({ hue, className }: { hue: CoverHue; className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn('block h-10 w-8 shrink-0 rounded-sm border border-black/15', className)}
+      style={{ background: `linear-gradient(160deg, var(--cover-${hue}), var(--cover-${hue}-to))` }}
+    />
+  )
+}

@@ -6,7 +6,7 @@ import { BookCover } from '@/components/book-cover'
 import { BrandLockup, Mark } from '@/components/brand'
 import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@/components/box'
 import { Button, IconButton } from '@/components/button'
-import { BookStatus } from '@/components/book-status'
+import { ImportRow } from '@/components/import-row'
 import { Door } from '@/components/door'
 import { HomeworkStatusLabel } from '@/components/homework-status'
 import { Label } from '@/components/label'
@@ -307,7 +307,7 @@ export function Components() {
           </Shelf>
           <Shelf label="book tile">
             <div className="grid w-full grid-cols-6 gap-4">
-              {[BOOKS[0], BOOKS[4], BOOKS[8]].map((b) => (
+              {BOOKS.filter((b) => b.state.kind === 'ready').slice(0, 3).map((b) => (
                 <BookTile key={b.sha256} book={b} />
               ))}
             </div>
@@ -326,40 +326,24 @@ export function Components() {
         </Section>
 
         <Section
-          title="BookStatus"
-          note="The engine's own phase names. A phase that can count fills a bar; one that can't spins. Ready renders nothing at all."
+          title="ImportRow"
+          note="A book on its way to the shelf. The engine's own phase names; a phase that can count fills a bar, one that can't spins. The row owns the controls for exactly its state."
         >
-          <Shelf label="queued">
-            <div className="w-64">
-              <BookStatus state={{ kind: 'queued' }} onDismiss={() => {}} />
-            </div>
-          </Shelf>
-          <Shelf label="counted">
-            <div className="w-64">
-              <BookStatus
-                state={{ kind: 'preparing', phase: 'read', done: 140, total: 312 }}
-                onDismiss={() => {}}
+          <Shelf label="rows">
+            <Box className="w-full">
+              <ImportRow
+                book={{ sha256: 'b89d3b72', title: 'Introduction to the Theory of Computation', author: '', state: { kind: 'preparing', phase: 'read', done: 140, total: 312 } }}
               />
-            </div>
-          </Shelf>
-          <Shelf label="uncounted">
-            <div className="w-64">
-              <BookStatus state={{ kind: 'preparing', phase: 'search' }} onDismiss={() => {}} />
-            </div>
-          </Shelf>
-          <Shelf label="failed">
-            <div className="w-64">
-              <BookStatus
-                state={{ kind: 'failed', reason: "This PDF can't be read — pset couldn't open it." }}
-                onRetry={() => {}}
-                onDismiss={() => {}}
+              <ImportRow
+                book={{ sha256: 'a41c09e2', title: 'Calculus', author: '', state: { kind: 'preparing', phase: 'search' } }}
               />
-            </div>
-          </Shelf>
-          <Shelf label="ready">
-            <p className="text-xs text-muted-foreground">
-              Renders nothing at all — this row is deliberately empty.
-            </p>
+              <ImportRow
+                book={{ sha256: '7ce04a15', title: 'Griffiths Introduction To Electrodynamics', author: '', state: { kind: 'queued' } }}
+              />
+              <ImportRow
+                book={{ sha256: '3a80b5d4', title: 'Organic Chemistry', author: '', state: { kind: 'failed', reason: "This PDF can't be read — pset couldn't open it." } }}
+              />
+            </Box>
           </Shelf>
         </Section>
 
