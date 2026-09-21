@@ -7,7 +7,7 @@ It is a checkbox and not a switch on purpose. A switch reads as a mode
 you enter; a checkbox reads as a fact you record, and both of these are
 facts. The system has no switch and does not need one.
 
-- The whole control is the target — the box, the label, and the space
+- The whole control is the target: the box, the label, and the space
   between. A 16px box alone is not a target.
 - Checked is `primary` fill with the check in `primary-foreground`;
   unchecked is `border-input` on `card`, the same border every field

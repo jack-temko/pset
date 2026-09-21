@@ -1,12 +1,12 @@
 # Veil
 
-Content that exists but shouldn't be read yet — a hint before it's
+Content that exists but shouldn't be read yet: a hint before it's
 wanted, a worked solution before the attempt.
 
 The content is **always there and always laid out at its true size**, so
 nothing shifts when it lifts. It is simply pushed back: `blur-[6px]` at
-`opacity-45`, which leaves the shape of the answer legible — how long it
-runs, whether there's a display equation in it — while the words are
+`opacity-45`, which leaves the shape of the answer legible (how long it
+runs, whether there's a display equation in it) while the words are
 not. Centered over it sits the invitation as a 28px pill on `card` with
 `shadow-floating`, so it reads as a control rather than a caption.
 
@@ -15,14 +15,14 @@ not. Centered over it sits the invitation as a 28px pill on `card` with
 | State | Content |
 |---|---|
 | at rest | `blur-[6px]`, `opacity-45` |
-| hover | `blur-[4px]`, `opacity-60` — it eases closer, not open |
+| hover | `blur-[4px]`, `opacity-60`: it eases closer, not open |
 | revealed | sharp, full, resolved over 150ms |
 
 Hover is a promise, not a peek: it never becomes readable, it just comes
-toward you. Revealing lets the content resolve rather than snap — the
+toward you. Revealing lets the content resolve rather than snap: the
 pill goes at once and the words come into focus behind it.
 
-- **`label`** is both the invitation and the accessible name — "Show
+- **`label`** is both the invitation and the accessible name: "Show
   hint", "Show walkthrough". Default: "Click to reveal".
 - **`revealed` / `onReveal`** are the caller's; the Veil keeps no state,
   so persistence belongs wherever progress already lives.
@@ -41,7 +41,7 @@ inside the veiled content.
   button, so the shape of the answer is visible while its content is
   not.
 - Three takes, each rejected by eye against real tokens:
-  1. A sweeping shimmer over blurred content — read as a loading
+  1. A sweeping shimmer over blurred content: read as a loading
      skeleton, the one meaning a veil must not have, and looping motion
      broke "motion is functional".
   2. Frosted glass: `backdrop-blur-md` on a `card/40` pane inside a

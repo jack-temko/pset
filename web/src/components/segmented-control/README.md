@@ -8,7 +8,7 @@ System), where a dropdown would hide two of three answers for no reason.
   `label` for the group's accessible name.
 - 32px tall like every control; options are `text-sm` at 4px radius
   inside the 6px track, so the corners nest.
-- The chosen option's hairline shadow is the one elevation cue — it sits
+- The chosen option's hairline shadow is the one elevation cue: it sits
   on `muted`, where a border would read as a second track.
 
 **Don't:** use it for more than four options, or for options with long

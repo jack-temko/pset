@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 
 /**
  * Primer's tab row: quiet labels with a 2px primary underline on the
- * current one. The nav draws no border of its own — it sits on whatever
+ * current one. The nav draws no border of its own: it sits on whatever
  * hairline its container already has, so the underline lands on it.
  */
 export function UnderlineNav({ className, ...props }: ComponentProps<'nav'>) {

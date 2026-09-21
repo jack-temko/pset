@@ -4,8 +4,8 @@
 Decisions from the 2026-09-21 grill; each is settled, not open.
 
 **What the engine already has** (`internal/engine/config.go`,
-`doctor.go`, `reset.go`): `Settings` is four fields — chat endpoint, API
-key, embeddings endpoint, embeddings model — in a `config.json` at mode
+`doctor.go`, `reset.go`): `Settings` is four fields (chat endpoint, API
+key, embeddings endpoint, embeddings model) in a `config.json` at mode
 0600. `TestConnection(override)` dials values without saving them.
 Doctor runs six checks, and can fix two of them (data dir, schema).
 `Reset` counts before it deletes.
@@ -13,7 +13,7 @@ Doctor runs six checks, and can fix two of them (data dir, schema).
 ## Shape
 
 One page, stacked, in this order: **Connections · Health · Appearance ·
-Reset**, then one mono line — `pset 0.9.0 · /path/to/data`. No
+Reset**, then one mono line: `pset 0.9.0 · /path/to/data`. No
 navigation: four fields and four checks don't need any. The top bar's
 middle is empty; the h1 says where you are.
 
@@ -21,11 +21,11 @@ middle is empty; the h1 says where you are.
 
 Two Boxes side by side, because they fail and get fixed independently:
 
-- **Chat** — endpoint, API key, **model** (new: the engine hard-codes it
+- **Chat**: endpoint, API key, **model** (new: the engine hard-codes it
   today).
-- **Embeddings** — endpoint, model.
+- **Embeddings**: endpoint, model.
 
-Every value is mono. **The API key is plain text** — a local app, and you
+Every value is mono. **The API key is plain text**: a local app, and you
 need to see which key you pasted.
 
 **Test and Save are two different acts:**
@@ -34,13 +34,13 @@ need to see which key you pasted.
   nothing, so you can try a different key without losing the one that
   works.
 - **Save** appears only once something in the Box has changed. It
-  **tests first and writes only if the test passes** — what's on disk
+  **tests first and writes only if the test passes**: what's on disk
   always works. A failed Save writes nothing.
 - A failure names **the field that caused it**, and the error replaces
   that field's hint (unreachable → endpoint, 401 → key, unknown model →
   model). Editing that field clears it.
 - The Box footer says what the last Test or Save found: a spinner while
-  it works, then "Connected · glm-4.6" in success ink, or "Not saved —
+  it works, then "Connected · glm-4.6" in success ink, or "Not saved:
   the test failed".
 - **Nothing is dialled on open.** Status appears only when you ask for
   it.
@@ -48,7 +48,7 @@ need to see which key you pasted.
 ## Health
 
 The **local system only**, checked on open: data directory, database,
-poppler, tesseract. The endpoint checks aren't here — their status lives
+poppler, tesseract. The endpoint checks aren't here: their status lives
 beside their fields, so each fact is said once.
 
 A check that fails and can be fixed (data dir, database) gets a **Fix**
@@ -66,7 +66,7 @@ can't hold three states.
 
 A destructive-tone Box at the bottom, with an outline button in red ink.
 **It is a fresh install:** every book, page, homework set and
-conversation, **and the settings — API key included**. The confirm
+conversation, **and the settings, API key included**. The confirm
 dialog gives the counts from the engine's dry run, says there is no
 undo, and lands you on an empty Home.
 

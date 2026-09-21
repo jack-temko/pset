@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
  * borrow it.
  *
  * It appears where work is genuinely running and genuinely cannot be
- * counted — examining a PDF, building a search index. Work that *can* be
+ * counted: examining a PDF, building a search index. Work that *can* be
  * counted gets a determinate bar instead, because a number a student can
  * watch is worth more than a shape that turns.
  */

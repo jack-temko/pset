@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useParams } from 'react-router-dom'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowUp,
   Check,
@@ -9,6 +9,7 @@ import {
   ChevronUp,
   CircleAlert,
   Focus,
+  Pencil,
   Plus,
   Printer,
   Trash2,
@@ -20,7 +21,9 @@ import { Checkbox } from '@/components/checkbox'
 import { AutoTextarea, Field, Input } from '@/components/input'
 import { HomeworkStatusLabel, dueText } from '@/components/homework-status'
 import { Button, IconButton } from '@/components/button'
+import { Tooltip } from '@/components/tooltip'
 import {
+  AboutChip,
   AssistantTurn,
   ConversationStart,
   DayDivider,
@@ -32,20 +35,22 @@ import {
 } from '@/components/transcript'
 import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
 import { Veil } from '@/components/veil'
-import { AddQuestionsDialog, NewHomeworkDialog } from './dialogs'
+import { AddQuestionsDialog, BookDialog, HomeworkDialog } from './dialogs'
 import {
   BOOK_HOMEWORK,
   PAGE_COUNT,
+  PAGE_OFFSET,
   TOC,
   bookBySha,
   type BookHomework,
   type TocChapter,
 } from '@/lib/sample'
+import { PageOffset, pdfOf, printedLabel, usePageOffset } from '@/lib/pages'
 import { cn } from '@/lib/utils'
 
 /**
  * The book workspace: the app's one filled screen. Contents rail, page
- * scan, Ask | Homework panel — each pane scrolls itself, the frame never
+ * scan, Ask | Homework panel: each pane scrolls itself, the frame never
  * moves. Focus collapses the rail and hands its width to the panel.
  *
  * Spec: design/workspace.md.
@@ -83,8 +88,9 @@ function Rail({
   currentPage: number
   onJump: (page: number) => void
 }) {
+  const offset = usePageOffset()
   // The current section is the last one that starts at or before the page
-  // the scan is showing.
+  // the scan is showing. Both are printed numbers.
   let currentId: string | undefined
   for (const c of toc)
     for (const s of c.sections) if (s.page <= currentPage) currentId = s.id
@@ -115,7 +121,9 @@ function Rail({
                 )}
               >
                 <span className="min-w-0 flex-1 truncate">{s.title}</span>
-                <span className="shrink-0 font-mono text-xs tabular-nums">{s.page}</span>
+                <Tooltip label={`PDF page ${pdfOf(s.page, offset)}`} side="left">
+                  <span className="shrink-0 font-mono text-xs tabular-nums">{s.page}</span>
+                </Tooltip>
               </button>
             ))}
           </div>
@@ -127,10 +135,20 @@ function Rail({
 
 // ---------------------------------------------------------------- scan
 
+/** Zoom is relative to fitting the pane's width: 1 is fit, and the
+ *  percentage in the pill says so. */
+const ZOOM_MIN = 0.5
+const ZOOM_MAX = 3
+
 /**
  * Pages stack in one scrolling pane, edge-to-edge paper. Until the backend
- * serves rendered pages, each is a placeholder at print proportions. The
- * only chrome is the floating pill: page · zoom, fading when idle.
+ * serves rendered pages, each is a placeholder at print proportions,
+ * labelled with its printed number. The only chrome is the floating pill:
+ * the printed page (the PDF page on hover) and the zoom, fading when idle.
+ *
+ * Pinch on a trackpad zooms around the pointer; past the pane's width a
+ * click-drag pans, and only then is the cursor a hand. Clicking the
+ * percentage snaps back to fit.
  */
 function Scan({
   pageCount,
@@ -140,13 +158,22 @@ function Scan({
   pageRefs,
 }: {
   pageCount: number
+  /** A PDF index: the scan is the one place that counts in those. */
   currentPage: number
   onPageChange: (p: number) => void
   scrollRef: React.RefObject<HTMLDivElement | null>
   pageRefs: React.RefObject<Map<number, HTMLDivElement>>
 }) {
+  const offset = usePageOffset()
   const [pillAwake, setPillAwake] = useState(false)
   const sleepTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const [zoom, setZoom] = useState(1)
+  const [paneWidth, setPaneWidth] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const drag = useRef<{ x: number; y: number } | null>(null)
+  // Where the fingers were, and the zoom it was measured at, so the point
+  // under them stays put once the new size has been laid out.
+  const anchor = useRef<{ px: number; py: number; from: number } | null>(null)
 
   const wake = () => {
     setPillAwake(true)
@@ -154,6 +181,52 @@ function Scan({
     sleepTimer.current = setTimeout(() => setPillAwake(false), 1200)
   }
   useEffect(() => () => clearTimeout(sleepTimer.current), [])
+
+  // The fit width follows the pane, which Focus mode resizes.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setPaneWidth(el.clientWidth))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [scrollRef])
+
+  // A trackpad pinch arrives as a ctrl+wheel. It has to be a non-passive
+  // listener to stop the browser zooming the whole app instead.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return
+      e.preventDefault()
+      wake()
+      const r = el.getBoundingClientRect()
+      setZoom((z) => {
+        if (!anchor.current)
+          anchor.current = { px: e.clientX - r.left, py: e.clientY - r.top, from: z }
+        return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z * Math.exp(-e.deltaY * 0.01)))
+      })
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [scrollRef])
+
+  // After layout, before paint: scale the scroll position by the zoom
+  // change around the anchor, so the page doesn't jump.
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    const a = anchor.current
+    if (!el || !a) return
+    const k = zoom / a.from
+    el.scrollLeft = (el.scrollLeft + a.px) * k - a.px
+    el.scrollTop = (el.scrollTop + a.py) * k - a.py
+    anchor.current = null
+  }, [zoom, scrollRef])
+
+  const fitWidth = Math.min(768, Math.max(paneWidth - 48, 0))
+  const width = fitWidth * zoom
+  // Panning only means something once the pages are wider than the pane.
+  const canPan = width + 48 > paneWidth + 1
 
   const onScroll = () => {
     wake()
@@ -170,8 +243,37 @@ function Scan({
 
   return (
     <div className="relative min-w-0 flex-1">
-      <div ref={scrollRef} onScroll={onScroll} className="h-full overflow-y-auto bg-muted/40">
-        <div className="mx-auto max-w-layout-reading space-y-6 px-6 py-6">
+      <div
+        ref={scrollRef}
+        onScroll={onScroll}
+        onPointerDown={(e) => {
+          if (!canPan || e.button !== 0) return
+          drag.current = { x: e.clientX, y: e.clientY }
+          setDragging(true)
+          e.currentTarget.setPointerCapture(e.pointerId)
+        }}
+        onPointerMove={(e) => {
+          if (!drag.current) return
+          const el = e.currentTarget
+          el.scrollLeft -= e.clientX - drag.current.x
+          el.scrollTop -= e.clientY - drag.current.y
+          drag.current = { x: e.clientX, y: e.clientY }
+        }}
+        onPointerUp={() => {
+          drag.current = null
+          setDragging(false)
+        }}
+        className={cn(
+          // Both axes: a zoomed page is content that can't reflow, the one
+          // case the system allows a sideways scroll for.
+          'h-full overflow-auto bg-muted/40 select-none',
+          canPan && (dragging ? 'cursor-grabbing' : 'cursor-grab'),
+        )}
+      >
+        <div
+          className="mx-auto space-y-6 px-6 py-6"
+          style={{ width: width ? width + 48 : undefined }}
+        >
           {Array.from({ length: pageCount }, (_, i) => i + 1).map((n) => (
             <div
               key={n}
@@ -182,7 +284,9 @@ function Scan({
               className="grid place-items-center rounded-sm border bg-card"
               style={{ aspectRatio: '8.5 / 11' }}
             >
-              <span className="font-mono text-xs text-muted-foreground tabular-nums">{n}</span>
+              <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                {printedLabel(n, offset)}
+              </span>
             </div>
           ))}
         </div>
@@ -195,11 +299,21 @@ function Scan({
           pillAwake ? 'opacity-100' : 'opacity-0',
         )}
       >
-        <span>
-          p. {currentPage} of {pageCount}
-        </span>
+        <Tooltip label={`PDF page ${currentPage} of ${pageCount}`}>
+          <span tabIndex={0} className="rounded-sm">
+            p. {printedLabel(currentPage, offset)}
+          </span>
+        </Tooltip>
         <span aria-hidden>·</span>
-        <span>100%</span>
+        <Tooltip label="Fit to width">
+          <button
+            type="button"
+            onClick={() => setZoom(1)}
+            className="cursor-pointer rounded-sm transition-colors duration-150 ease-out hover:text-foreground motion-reduce:transition-none"
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+        </Tooltip>
       </div>
     </div>
   )
@@ -207,7 +321,7 @@ function Scan({
 
 // ---------------------------------------------------------------- panel
 
-/** Sample history until the loop backend exists — it exercises every
+/** Sample history until the loop backend exists: it exercises every
  *  transcript piece the spec names. */
 function SampleConversation({ onJump }: { onJump: (page: number) => void }) {
   return (
@@ -253,14 +367,30 @@ function SampleConversation({ onJump }: { onJump: (page: number) => void }) {
 }
 
 /** Ask: the transcript over the composer. An empty conversation is a
- *  prompt line and one sentence of capability — no generated suggestions. */
-function AskTab({ onJump }: { onJump: (page: number) => void }) {
+ *  prompt line and one sentence of capability: no generated suggestions. */
+function AskTab({
+  about,
+  onClearAbout,
+  onJump,
+}: {
+  /** The homework question "Ask about this" brought along, if any. */
+  about: string | null
+  onClearAbout: () => void
+  onJump: (page: number) => void
+}) {
   return (
     <>
       <div className="min-h-0 flex-1 overflow-y-auto p-card">
         <SampleConversation onJump={onJump} />
       </div>
       <div className="shrink-0 border-t p-card">
+        {/* The question rides above the composer as a chip, so the box
+            stays empty for your own words. */}
+        {about && (
+          <div className="mb-2">
+            <AboutChip label={about} onRemove={onClearAbout} />
+          </div>
+        )}
         <form
           className="flex items-end gap-2"
           onSubmit={(e) => e.preventDefault()}
@@ -284,12 +414,12 @@ function AskTab({ onJump }: { onJump: (page: number) => void }) {
  *  pieces, per the spec. */
 type SampleQuestion = {
   label: string
-  /** Absent when the question isn't in this book — it loses the page chip
+  /** Absent when the question isn't in this book: it loses the page chip
    *  and the scan jump, and nothing else. */
   page?: number
   statement: ReactNode
   hint: ReactNode
-  /** The worked walkthrough, solution included — one stage, not two. */
+  /** The worked walkthrough, solution included: one stage, not two. */
   walkthrough: ReactNode
   figure?: string
   /** A just-added question, still being located and written. */
@@ -325,7 +455,7 @@ const QUESTIONS: SampleQuestion[] = [
           <MathInline tex="0 = T(0) = a_1 Tv_1 + \dots + a_m Tv_m" />.
         </p>
         <p>
-          Since the <MathInline tex="Tv_k" /> are independent, each <MathInline tex="a_k = 0" /> —
+          Since the <MathInline tex="Tv_k" /> are independent, each <MathInline tex="a_k = 0" />,
           which is exactly the statement that the <MathInline tex="v_k" /> are independent.
         </p>
       </>
@@ -343,7 +473,7 @@ const QUESTIONS: SampleQuestion[] = [
         all <MathInline tex="v \in V" />.
       </>
     ),
-    hint: <>Pick any nonzero <MathInline tex="w \in V" /> — what does <MathInline tex="Tw" /> have to be?</>,
+    hint: <>Pick any nonzero <MathInline tex="w \in V" />. What does <MathInline tex="Tw" /> have to be?</>,
     walkthrough: (
       <>
         <p>
@@ -375,7 +505,7 @@ const QUESTIONS: SampleQuestion[] = [
         <MathInline tex="\operatorname{null} T" />, extend by{' '}
         <MathInline tex="v_1, \dots, v_r" /> to a basis of <MathInline tex="V" />. The images{' '}
         <MathInline tex="Tv_1, \dots, Tv_r" /> span the range and stay independent, so they form
-        a basis of it — and <MathInline tex="\dim V = k + r" />.
+        a basis of it, and <MathInline tex="\dim V = k + r" />.
       </p>
     ),
   },
@@ -390,7 +520,7 @@ const QUESTIONS: SampleQuestion[] = [
         that <MathInline tex="ST" /> is the identity on <MathInline tex="V" />.
       </>
     ),
-    hint: <>One direction is immediate — which one, and why?</>,
+    hint: <>One direction is immediate. Which one, and why?</>,
     walkthrough: (
       <>
         <p>
@@ -409,14 +539,14 @@ const QUESTIONS: SampleQuestion[] = [
     label: '3.C.14',
     // As typed: a failed question has only what you gave it.
     statement: '3.C.14',
-    failed: "Couldn't find 3.C.14 in the book — no exercise with that number turned up.",
+    failed: "Couldn't find 3.C.14 in the book. No exercise with that number turned up.",
     hint: null,
     walkthrough: null,
   }
 ]
 
 /** A stage of the guide: the content is there from the start, behind
- *  frosted glass. One click lifts the veil — no buttons to sequence, and
+ *  frosted glass. One click lifts the veil: no buttons to sequence, and
  *  nothing spoiled by accident. */
 function Stage({
   label,
@@ -476,7 +606,7 @@ function FailedQuestion({
             if (pageNumber > 0) onRetry({ page: pageNumber })
           }}
         >
-          <Field label="It's on page" className="w-32">
+          <Field label="It's on page" className="w-32" hint="As printed">
             <Input
               inputMode="numeric"
               value={page}
@@ -541,21 +671,23 @@ function draftQuestion(text: string, inBook: boolean): Question {
   }
 }
 
-/** One question at a time. Both stages sit veiled below the statement —
- *  the walkthrough carries the solution — and Complete is a checkbox that
+/** One question at a time. Both stages sit veiled below the statement:
+ *  the walkthrough carries the solution, and Complete is a checkbox that
  *  does exactly one thing. Spec: design/workspace.md. */
 function Walkthrough({
   set,
   onToggleTurnedIn,
+  onEdit,
   onBack,
   onJump,
   onAskAbout,
 }: {
   set: BookHomework
   onToggleTurnedIn: () => void
+  onEdit: () => void
   onBack: () => void
   onJump: (page: number) => void
-  onAskAbout: () => void
+  onAskAbout: (label: string) => void
 }) {
   // A set you just made has no questions; the sample ones belong to the
   // sets that were already there.
@@ -581,7 +713,7 @@ function Walkthrough({
   const reveal = (name: string) => setRevealed((r) => new Set(r).add(`${q?.id}:${name}`))
 
   // Marking a question complete does exactly that and nothing else. You
-  // move on when you decide to, not when the app decides for you — and
+  // move on when you decide to, not when the app decides for you, and
   // unchecking is the undo.
   const toggleDone = () => {
     if (!q) return
@@ -665,7 +797,13 @@ function Walkthrough({
       <IconButton variant="ghost" size="sm" aria-label="Back to homework" onClick={onBack}>
         <ChevronLeft />
       </IconButton>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">{set.title}</span>
+      <span className="flex min-w-0 flex-1 items-center gap-1">
+        <span className="min-w-0 truncate text-sm font-medium">{set.title}</span>
+        {/* The same pencil as the book's: "edit this" looks one way. */}
+        <IconButton variant="ghost" size="sm" aria-label="Edit this homework" onClick={onEdit}>
+          <Pencil />
+        </IconButton>
+      </span>
       {questions.length > 0 && (
         <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
           {index + 1} of {questions.length}
@@ -681,7 +819,7 @@ function Walkthrough({
       </IconButton>
       {/* A worksheet: statements and figures with room to work, nothing
           revealed. The engine renders it as a PDF (hwpdf.go) and it opens
-          in a new tab — wired with the backend pass. */}
+          in a new tab, wired with the backend pass. */}
       <IconButton variant="ghost" size="sm" aria-label="Print a worksheet">
         <Printer />
       </IconButton>
@@ -724,7 +862,7 @@ function Walkthrough({
           {/* A question that isn't in this book has nothing to jump to. */}
           {q.page !== undefined && <PageRef page={q.page} onJump={onJump} />}
           {isDone && <Check aria-label="Done" className="size-4 text-success" />}
-          {/* Order and removal, inline and quiet — the set is editable from
+          {/* Order and removal, inline and quiet: the set is editable from
               the question you are looking at. */}
           <IconButton
             variant="ghost"
@@ -784,7 +922,7 @@ function Walkthrough({
       </div>
 
       <div className="flex shrink-0 items-center justify-between border-t p-card">
-        <Button variant="ghost" size="sm" onClick={onAskAbout}>
+        <Button variant="ghost" size="sm" onClick={() => onAskAbout(q.label)}>
           Ask about this
         </Button>
         <div className="flex items-center gap-2">
@@ -831,7 +969,7 @@ function HomeworkTab({
   /** From the URL: Home's due list opens a set directly. */
   initialSet?: string
   onJump: (page: number) => void
-  onAskAbout: () => void
+  onAskAbout: (label: string) => void
 }) {
   const [sets, setSets] = useState<BookHomework[]>(items)
   // An id, not a copy: the open set's status changes under it.
@@ -840,6 +978,7 @@ function HomeworkTab({
   )
   const openSet = sets.find((h) => h.id === openId) ?? null
   const [creating, setCreating] = useState(false)
+  const [editing, setEditing] = useState(false)
   const active = sets.filter((h) => h.status !== 'turned-in')
   const turnedIn = sets.filter((h) => h.status === 'turned-in')
 
@@ -857,8 +996,32 @@ function HomeworkTab({
     setOpenId(set.id)
   }
 
+  const editDialogFor = (openSet: BookHomework) => (
+    <HomeworkDialog
+      open={editing}
+      // The sample's due is already words ("today"); only a real date can
+      // seed the date field.
+      editing={{
+        title: openSet.title,
+        due: /^\d{4}-\d{2}-\d{2}$/.test(openSet.due) ? openSet.due : '',
+        questions: openSet.total,
+      }}
+      onClose={() => setEditing(false)}
+      onSave={(title, due) =>
+        setSets((ss) =>
+          ss.map((h) => (h.id === openSet.id ? { ...h, title, due: due || h.due } : h)),
+        )
+      }
+      onDelete={() => {
+        setSets((ss) => ss.filter((h) => h.id !== openSet.id))
+        setOpenId(null)
+      }}
+    />
+  )
+
   if (openSet) {
     return (
+      <>
       <Walkthrough
         key={openSet.id}
         set={openSet}
@@ -873,17 +1036,21 @@ function HomeworkTab({
             ),
           )
         }
+        onEdit={() => setEditing(true)}
         onBack={() => setOpenId(null)}
         onJump={onJump}
         onAskAbout={onAskAbout}
       />
+      {editDialogFor(openSet)}
+      </>
     )
   }
+
 
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-card">
       <Box>
-        {/* The one way to make homework, and it's a `+` — the same gesture
+        {/* The one way to make homework, and it's a `+`: the same gesture
             as importing a book on Home. Nothing lives at a list's bottom
             but the Door. */}
         <BoxHeader className="text-sm">
@@ -924,11 +1091,7 @@ function HomeworkTab({
         </>
       )}
 
-      <NewHomeworkDialog
-        open={creating}
-        onClose={() => setCreating(false)}
-        onCreate={create}
-      />
+      <HomeworkDialog open={creating} onClose={() => setCreating(false)} onSave={create} />
     </div>
   )
 }
@@ -948,6 +1111,7 @@ function Panel({
   onJump: (page: number) => void
 }) {
   const [tab, setTab] = useState<Tab>(() => (homework ? 'homework' : readTab(sha)))
+  const [about, setAbout] = useState<string | null>(null)
   const pick = (t: Tab) => {
     setTab(t)
     writeTab(sha, t)
@@ -981,13 +1145,16 @@ function Panel({
         </IconButton>
       </div>
       {tab === 'ask' ? (
-        <AskTab onJump={onJump} />
+        <AskTab about={about} onClearAbout={() => setAbout(null)} onJump={onJump} />
       ) : (
         <HomeworkTab
           items={BOOK_HOMEWORK}
           initialSet={homework}
           onJump={onJump}
-          onAskAbout={() => pick('ask')}
+          onAskAbout={(label) => {
+            setAbout(label)
+            pick('ask')
+          }}
         />
       )}
     </aside>
@@ -998,14 +1165,19 @@ function Panel({
 
 export function Workspace() {
   const { sha, homework } = useParams<{ sha: string; homework?: string }>()
-  const book = bookBySha(sha ?? '')
+  const navigate = useNavigate()
+  const found = bookBySha(sha ?? '')
 
   const [focus, setFocus] = useState(false)
+  // A PDF index: the scan is the one place that counts in those.
   const [currentPage, setCurrentPage] = useState(1)
+  const [editingBook, setEditingBook] = useState(false)
+  // The book dialog's edits, sample-local until the backend stores them.
+  const [edits, setEdits] = useState<{ title?: string; author?: string; offset?: number }>({})
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const pageRefs = useRef(new Map<number, HTMLDivElement>())
 
-  if (!book) {
+  if (!found) {
     return (
       <AppShell>
         <div className="grid h-full place-items-center">
@@ -1015,29 +1187,70 @@ export function Workspace() {
     )
   }
 
-  const jump = (page: number) => {
-    pageRefs.current.get(page)?.scrollIntoView()
+  const book = { ...found, ...edits }
+  const offset = edits.offset ?? PAGE_OFFSET
+
+  // Everything outside the scan speaks printed pages; the scan is indexed
+  // by PDF page, so a jump converts once, here.
+  const jump = (printed: number) => {
+    pageRefs.current.get(pdfOf(printed, offset))?.scrollIntoView()
   }
 
   return (
-    <AppShell scroll="fill" middle={<span>{book.title}</span>}>
-      <div className="flex h-full">
-        {!focus && <Rail toc={TOC} currentPage={currentPage} onJump={jump} />}
-        <Scan
-          pageCount={PAGE_COUNT}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          scrollRef={scrollRef}
-          pageRefs={pageRefs}
-        />
-        <Panel
-          sha={book.sha256}
-          homework={homework}
-          focus={focus}
-          onFocusToggle={() => setFocus((f) => !f)}
-          onJump={jump}
-        />
-      </div>
-    </AppShell>
+    <PageOffset value={offset}>
+      <AppShell
+        scroll="fill"
+        middle={
+          // The top bar's one action: editing the thing it names.
+          <span className="flex items-center gap-1">
+            <span>{book.title}</span>
+            <IconButton
+              variant="ghost"
+              size="sm"
+              aria-label="Edit this book"
+              onClick={() => setEditingBook(true)}
+              className="text-muted-foreground"
+            >
+              <Pencil />
+            </IconButton>
+          </span>
+        }
+      >
+        <div className="flex h-full">
+          {!focus && (
+            <Rail toc={TOC} currentPage={currentPage - offset} onJump={jump} />
+          )}
+          <Scan
+            pageCount={PAGE_COUNT}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            scrollRef={scrollRef}
+            pageRefs={pageRefs}
+          />
+          <Panel
+            sha={book.sha256}
+            homework={homework}
+            focus={focus}
+            onFocusToggle={() => setFocus((f) => !f)}
+            onJump={jump}
+          />
+        </div>
+      </AppShell>
+
+      <BookDialog
+        open={editingBook}
+        book={{
+          title: book.title,
+          author: book.author,
+          offset,
+          pages: PAGE_COUNT,
+          imported: 'Sep 3',
+          homework: BOOK_HOMEWORK.length,
+        }}
+        onClose={() => setEditingBook(false)}
+        onSave={(next) => setEdits(next)}
+        onRemove={() => navigate('/')}
+      />
+    </PageOffset>
   )
 }

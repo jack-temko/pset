@@ -35,7 +35,7 @@ import { BookTile } from '@/components/book-tile'
 /**
  * Every component and every variant, on one page, in the app itself.
  *
- * Not in the nav and not part of the product's three screens — it is the
+ * Not in the nav and not part of the product's three screens: it is the
  * page you open to see what a change did. Add a component here the moment
  * you build one; anything missing from this page is unreviewed.
  */
@@ -160,7 +160,7 @@ function DialogDemo({ width }: { width: 'default' | 'wide' }) {
         }
       >
         <p className="text-sm text-muted-foreground">
-          Cancel and Esc close it. The scrim does not — a dialog holding half a
+          Cancel and Esc close it. The scrim does not: a dialog holding half a
           pasted assignment must not vanish to a stray click.
         </p>
       </Dialog>
@@ -223,7 +223,7 @@ export function Components() {
 
         <Section
           title="Box"
-          note="The one container: header band, rows, body, footer. Hairline border, no shadow — never nested."
+          note="The one container: header band, rows, body, footer. Hairline border, no shadow, never nested."
         >
           <Shelf label="header + rows">
             <div className="w-full max-w-xl">
@@ -285,7 +285,7 @@ export function Components() {
                 <BoxBody>Not ready · reading the pages, 62%.</BoxBody>
               </Box>
               <Box tone="destructive">
-                <BoxBody>Couldn&apos;t prepare this book — the PDF has no extractable text.</BoxBody>
+                <BoxBody>Couldn&apos;t prepare this book. The PDF has no extractable text.</BoxBody>
               </Box>
             </div>
           </Shelf>
@@ -293,7 +293,7 @@ export function Components() {
 
         <Section
           title="Door"
-          note="The way through truncated content — opens in place, everywhere the same. Nothing scrolls by itself."
+          note="The way through truncated content. It opens in place, the same everywhere. Nothing scrolls by itself."
         >
           <Shelf label="in a Box">
             <div className="w-full max-w-xl">
@@ -304,7 +304,7 @@ export function Components() {
 
         <Section
           title="BookCover"
-          note="Six hues, derived from the sha — never chosen. Sized by its container at a 3:4 ratio."
+          note="Six hues, derived from the sha and never chosen. Sized by its container at a 3:4 ratio."
         >
           <Shelf label="hues">
             <div className="grid w-full grid-cols-6 gap-4">
@@ -358,7 +358,7 @@ export function Components() {
                 book={{ sha256: '7ce04a15', title: 'Griffiths Introduction To Electrodynamics', author: '', state: { kind: 'queued' } }}
               />
               <ImportRow
-                book={{ sha256: '3a80b5d4', title: 'Organic Chemistry', author: '', state: { kind: 'failed', reason: "This PDF can't be read — pset couldn't open it." } }}
+                book={{ sha256: '3a80b5d4', title: 'Organic Chemistry', author: '', state: { kind: 'failed', reason: "This PDF can't be read. pset couldn't open it." } }}
               />
             </Box>
           </Shelf>
@@ -397,14 +397,14 @@ export function Components() {
           </Shelf>
           <Shelf label="empty week">
             <div className="w-56">
-              <StatTile label="Homework" chart={1} value="—" context="nothing yet this week" />
+              <StatTile label="Homework" chart={1} value="0" context="nothing yet this week" />
             </div>
           </Shelf>
         </Section>
 
         <Section
           title="Label"
-          note="Outlined by default — border and text share one ink. A status label always carries a word."
+          note="Outlined by default: border and text share one ink. A status label always carries a word."
         >
           <Shelf label="tone">
             <Label>Scanned</Label>
@@ -448,7 +448,7 @@ export function Components() {
 
         <Section
           title="Dialog"
-          note="The one modal: a native <dialog>, two widths, an inert scrim. Cancel and Esc are the only ways out — no X in the corner."
+          note="The one modal: a native <dialog>, two widths, an inert scrim. Cancel and Esc are the only ways out. No X in the corner."
         >
           <Shelf label="400">
             <DialogDemo width="default" />
@@ -503,7 +503,7 @@ export function Components() {
               <AssistantTurn>
                 <p>
                   Because powers of <MathInline tex="T" /> cannot stay independent forever{' '}
-                  <PageRef page={142} /> — the space has dimension <MathInline tex="n^2" />.
+                  <PageRef page={142} />: the space has dimension <MathInline tex="n^2" />.
                 </p>
                 <MathDisplay tex="I,\;T,\;T^2,\;\dots,\;T^{n^2}" />
               </AssistantTurn>
@@ -533,7 +533,7 @@ export function Components() {
           </Shelf>
         </Section>
 
-        <Section title="Type" note="Nine steps. 14px is the floor — nothing in the product is smaller.">
+        <Section title="Type" note="Nine steps. 14px is the floor. Nothing in the product is smaller.">
           <Shelf label="display">
             <div className="space-y-2">
               <p className="font-heading text-4xl">Good evening, Jack.</p>
@@ -552,7 +552,7 @@ export function Components() {
                 A vector space is a set V along with an addition on V and a scalar multiplication on
                 V such that the following properties hold.
               </p>
-              <p className="text-base">Default UI copy — descriptions, list rows, settings labels.</p>
+              <p className="text-base">Default UI copy: descriptions, list rows, settings labels.</p>
               <p className="text-sm">Dense · buttons, rail rows, tabs, table cells.</p>
               <p className="text-xs text-muted-foreground">12 pages · prepared yesterday</p>
             </div>

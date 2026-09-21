@@ -3,7 +3,7 @@ import { Check, Clock, TriangleAlert } from 'lucide-react'
 import { Label } from '@/components/label'
 
 /** What a homework's state is worth saying out loud. Most homework has
- *  none — a set due next week is simply due next week. */
+ *  none: a set due next week is simply due next week. */
 export type HomeworkStatus = 'soon' | 'overdue' | 'turned-in'
 
 /**
@@ -11,7 +11,7 @@ export type HomeworkStatus = 'soon' | 'overdue' | 'turned-in'
  *
  * The deadline itself is not here: it belongs in the row's meta line
  * ("· due Friday"), where it reads as one more fact about the homework.
- * This is the flag you scan for, and it earns its colour by being rare —
+ * This is the flag you scan for, and it earns its colour by being rare:
  * most rows in a list render nothing from this component.
  */
 export function HomeworkStatusLabel({ status }: { status?: HomeworkStatus }) {
@@ -47,7 +47,7 @@ export function HomeworkStatusLabel({ status }: { status?: HomeworkStatus }) {
  * says when it was turned in; everything else says when it is due.
  *
  * The date arrives already relative and human ("today", "Friday", "in
- * two weeks") — whatever produced the list knows the user's clock, and
+ * two weeks"): whatever produced the list knows the user's clock, and
  * this does not.
  */
 export function dueText(due: string, status?: HomeworkStatus): string {

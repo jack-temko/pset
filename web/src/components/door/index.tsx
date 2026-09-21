@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 
 /**
  * The way through truncated content, everywhere: a full-width quiet row at
- * the bottom of the thing it extends — the last row of a Box, or the row
+ * the bottom of the thing it extends: the last row of a Box, or the row
  * under a grid. "Show all N" opens in place; "Show fewer" closes.
  *
  * Nothing in a document page scrolls by itself, so every long list ends in
@@ -17,7 +17,7 @@ export function Door({
   className,
 }: {
   open: boolean
-  /** How many there are in all — the door names what it opens onto. */
+  /** How many there are in all: the door names what it opens onto. */
   total: number
   onToggle: () => void
   className?: string
@@ -25,7 +25,7 @@ export function Door({
   const Chevron = open ? ChevronUp : ChevronDown
   return (
     <div className={cn('flex h-row items-center justify-center', className)}>
-      {/* The button IS the pill — wash and click target are the same shape.
+      {/* The button IS the pill: wash and click target are the same shape.
           A bar the width of a whole grid darkening at once reads as a giant
           button, and a target wider than what highlights lies about it. */}
       <button

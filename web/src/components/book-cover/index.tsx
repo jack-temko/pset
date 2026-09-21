@@ -4,7 +4,7 @@ import type { CoverHue } from '@/lib/covers'
 import { cn } from '@/lib/utils'
 
 /**
- * A book, drawn in CSS. There is no cover art anywhere in the product —
+ * A book, drawn in CSS. There is no cover art anywhere in the product:
  * every book is a clothbound board in one of six hues, and the hue is
  * derived from the book's sha, never chosen.
  *
@@ -63,7 +63,7 @@ export function BookCover({
 /**
  * The same cloth at row size: a 32×40 board with no type on it. Where a
  * book is named beside it (an import row, a list), the plate would only
- * repeat the title at an unreadable size — the colour is what identifies.
+ * repeat the title at an unreadable size: the colour is what identifies.
  */
 export function CoverSwatch({ hue, className }: { hue: CoverHue; className?: string }) {
   return (

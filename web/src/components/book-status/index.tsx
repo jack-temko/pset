@@ -3,13 +3,13 @@ import { IMPORT_PHASES, type BookState } from '@/lib/sample'
 import { cn } from '@/lib/utils'
 
 /**
- * What is happening to a book that isn't ready yet, as one line — or
+ * What is happening to a book that isn't ready yet, as one line, or
  * nothing at all.
  *
  * Ready is the normal state and says nothing. Everything this draws is
  * therefore worth reading.
  *
- * The engine names its own phases ("Read the pages"), and so does this —
+ * The engine names its own phases ("Read the pages"), and so does this:
  * a student should see the same words the log does. Where the phase can
  * count, it counts and fills a bar; where it can't, it spins. A number
  * you can watch is worth more than a shape that turns, so the spinner is
@@ -24,8 +24,8 @@ export function BookStatus({ state, className }: { state: BookState; className?:
     return <span className={cn('text-destructive', className)}>{state.reason}</span>
   }
 
-  // Queued gets no spinner. Nothing is happening to this book yet — the
-  // runner prepares one at a time — and a turning shape would say
+  // Queued gets no spinner. Nothing is happening to this book yet (the
+  // runner prepares one at a time) and a turning shape would say
   // otherwise for the next forty minutes.
   if (state.kind === 'queued') {
     return <span className={className}>Queued</span>

@@ -5,16 +5,16 @@ import { cn } from '@/lib/utils'
 /**
  * The system's one modal. A native `<dialog>` opened with `showModal()`,
  * which is where Esc, the focus trap and the inertness of everything
- * behind come from for free — and, importantly, where a backdrop click
+ * behind come from for free, and, importantly, where a backdrop click
  * does *not* close: the scrim is a signal, not a control, so a dialog
  * holding half a pasted assignment cannot vanish to a stray click.
  *
  * Three parts, always in this order: a header carrying the title alone, a
  * body, and a footer band carrying Cancel and the one primary action.
- * There is exactly one way out and it is Cancel — no X in the corner
+ * There is exactly one way out and it is Cancel: no X in the corner
  * doing the same job in a second place. The footer is required for that
  * reason: a dialog without one would have no way out but Esc.
- * The body is the app's single sanctioned vertical inner scroll — a
+ * The body is the app's single sanctioned vertical inner scroll: a
  * dialog is its own screen, and the footer must stay reachable however
  * many rows the body grows.
  *

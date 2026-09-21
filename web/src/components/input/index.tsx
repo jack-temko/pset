@@ -8,7 +8,7 @@ const field =
   'w-full rounded-md border border-input bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground disabled:opacity-50'
 
 /** A single-line control, including `type="date"`. The date picker is the
- *  browser's — the one control in the app we don't draw — because a
+ *  browser's (the one control in the app we don't draw) because a
  *  correct, keyboard-reachable calendar is not worth rebuilding. */
 export function Input({ className, ...props }: ComponentProps<'input'>) {
   return <input className={cn(field, 'h-control', className)} {...props} />
@@ -40,7 +40,7 @@ export function AutoTextarea({ className, value, ...props }: ComponentProps<'tex
   )
 }
 
-/** A label above a control, with an optional quiet hint under it — or,
+/** A label above a control, with an optional quiet hint under it, or,
  *  when something is wrong with the value, the error in its place. The
  *  label is a real `<label>`, so its text is part of the target. */
 export function Field({

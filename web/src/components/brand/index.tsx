@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 
 /**
  * The `{P}` mark: Newsreader's P inside set-builder braces, on a primary
- * tile. Fixed colors by design — it is never recolored for a theme, so the
+ * tile. Fixed colors by design: it is never recolored for a theme, so the
  * hexes here are the mark's own, not tokens.
  */
 export function Mark({ className }: { className?: string }) {

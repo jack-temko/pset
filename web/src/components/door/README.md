@@ -1,22 +1,22 @@
 # Door
 
-The way through truncated content — the same everywhere, because nothing
+The way through truncated content, the same everywhere, because nothing
 in a document page scrolls by itself. A full-width quiet row at the bottom
 of the thing it extends: "Show all 9 ▾" opens in place, "Show fewer ▴"
 closes.
 
-- **In a Box** — the last row, above a `border-muted` hairline (the caller
+- **In a Box**: the last row, above a `border-muted` hairline (the caller
   adds the border, since the door doesn't know where it sits).
-- **Under a grid** — the row after the shelf's covers, no border.
+- **Under a grid**: the row after the shelf's covers, no border.
 
 The row is `h-row` (40px) of quiet space; the button inside it is a 28px
-pill — `text-xs` in `muted-foreground`, the hover wash (`muted/50`, 150ms)
+pill: `text-xs` in `muted-foreground`, the hover wash (`muted/50`, 150ms)
 with the text stepping up to `foreground`. Wash and click target are the
 same shape: a full-width target that highlights only its middle lies about
 where it is. Announces itself with `aria-expanded`.
 
 **What the consumer provides:** `open`, `total`, `onToggle`. The door
-names what it opens onto — the count is the whole list, not the hidden
+names what it opens onto: the count is the whole list, not the hidden
 remainder.
 
 **Don't:** use it for navigation (it expands in place); put it anywhere

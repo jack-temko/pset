@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 /**
  * One choice out of a few, all visible at once: a `muted` track holding
  * the options, with the chosen one lifted onto `card`. For a handful of
- * short, mutually exclusive values — the theme's Paper / Night / System —
+ * short, mutually exclusive values: the theme's Paper / Night / System,
  * where a dropdown would hide the alternatives for no reason.
  *
  * It is a radiogroup: arrow keys aren't wired, but every option is its

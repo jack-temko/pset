@@ -8,7 +8,7 @@ buttons trailing.
 | state | line | controls |
 |---|---|---|
 | queued | Queued | Cancel |
-| preparing | the phase, its count and a bar — or a spinner | Stop |
+| preparing | the phase, its count and a bar, or a spinner | Stop |
 | failed | the engine's own sentence | **Try again** · Dismiss |
 
 - **Stopping leaves a failed row** rather than removing it, so Try again

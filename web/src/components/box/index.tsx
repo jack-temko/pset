@@ -15,7 +15,7 @@ const tones: Record<Tone, string> = {
  * The one container: a bordered card surface with an optional header band,
  * rows or a body, and an optional footer.
  *
- * A Box never sets its own margin — the parent's stack does — and its
+ * A Box never sets its own margin (the parent's stack does) and its
  * children are Box parts only. A Box that carries a state takes the status
  * ink as its frame and the status tint as its ground.
  */
@@ -79,7 +79,7 @@ export function BoxRow({
   description?: ReactNode
   trailing?: ReactNode
   href?: string
-  /** Makes the whole row a button — same hover wash as a linked row. */
+  /** Makes the whole row a button: same hover wash as a linked row. */
   onClick?: () => void
   selected?: boolean
   className?: string
@@ -134,7 +134,7 @@ export function BoxRow({
  * The fill is translucent ink rather than `muted`: muted is 1.07:1 against
  * the header band it usually sits on (1.06–1.16:1 against every surface in
  * the palette), so the pill simply wasn't visible. Ink at 20% darkens
- * whatever ground it lands on — 1.50:1 light, 1.74:1 dark — and inverts
+ * whatever ground it lands on (1.50:1 light, 1.74:1 dark) and inverts
  * with the theme for free.
  */
 export function Counter({ className, ...props }: ComponentProps<'span'>) {

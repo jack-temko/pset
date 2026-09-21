@@ -121,40 +121,40 @@
 
     /* Each step carries the system's weight and tracking for its style, so a
        call site sets size alone. The four display steps are serif-only
-       (font-heading); text-lg is the one shared step — card-title is sans 600,
-       the lead is serif 400 italic — so it stays weightless on purpose. */
+       (font-heading); text-lg is the one shared step (card-title is sans 600,
+       the lead is serif 400 italic) so it stays weightless on purpose. */
     --text-*: initial;
-    /* 14px — THE FLOOR. Labels, badges, timestamps, hints. */
+    /* 14px: THE FLOOR. Labels, badges, timestamps, hints. */
     --text-xs: 0.875rem;
     --text-xs--line-height: calc(1.25 / 0.875);
     --text-xs--font-weight: 500;
-    /* 15px — buttons, rail rows, tabs, table cells. */
+    /* 15px: buttons, rail rows, tabs, table cells. */
     --text-sm: 0.9375rem;
     --text-sm--line-height: calc(1.375 / 0.9375);
-    /* 16px — default UI copy. */
+    /* 16px: default UI copy. */
     --text-base: 1rem;
     --text-base--line-height: calc(1.5 / 1);
-    /* 17px/28px — long-form text a student reads. */
+    /* 17px/28px: long-form text a student reads. */
     --text-reading: 1.0625rem;
     --text-reading--line-height: calc(1.75 / 1.0625);
-    /* 18px — card titles (sans 600) and leads (serif italic). */
+    /* 18px: card titles (sans 600) and leads (serif italic). */
     --text-lg: 1.125rem;
     --text-lg--line-height: calc(1.75 / 1.125);
-    /* 20px — section heads. */
+    /* 20px: section heads. */
     --text-xl: 1.25rem;
     --text-xl--line-height: calc(1.75 / 1.25);
     --text-xl--font-weight: 500;
-    /* 24px — panel titles, dialog titles. */
+    /* 24px: panel titles, dialog titles. */
     --text-2xl: 1.5rem;
     --text-2xl--line-height: calc(2 / 1.5);
     --text-2xl--font-weight: 500;
     --text-2xl--letter-spacing: -0.01em;
-    /* 30px — the one h1 on a page-shell page. */
+    /* 30px: the one h1 on a page-shell page. */
     --text-3xl: 1.875rem;
     --text-3xl--line-height: calc(2.25 / 1.875);
     --text-3xl--font-weight: 500;
     --text-3xl--letter-spacing: -0.02em;
-    /* 36px — the dashboard greeting and empty-state heroes. */
+    /* 36px: the dashboard greeting and empty-state heroes. */
     --text-4xl: 2.25rem;
     --text-4xl--line-height: calc(2.5 / 2.25);
     --text-4xl--font-weight: 500;
@@ -173,7 +173,7 @@
     --primary-foreground: oklch(0.985 0.005 95);
     --primary-soft: oklch(0.955 0.02 263);
     /* Darkened from the v2 value of 0.945, which measured 1.06–1.16:1 against
-       every surface in the palette — ghost hover, skeletons, roundels and
+       every surface in the palette: ghost hover, skeletons, roundels and
        progress tracks were all but invisible. 0.88 is as far as it goes:
        muted-foreground on it is 4.56:1, and the next step down fails 4.5. */
     --secondary: oklch(0.88 0.007 95);
@@ -240,7 +240,7 @@
     --shadow-lift-value: 0 12px 20px -12px rgb(0 0 0 / 0.8);
 }
 
-/* The book cloth hues. Same in both themes — a book is an object. */
+/* The book cloth hues. Same in both themes: a book is an object. */
 :root {
     --cover-indigo: oklch(0.44 0.15 265);
     --cover-indigo-to: oklch(0.32 0.13 265);
@@ -308,7 +308,7 @@
 
 /* Desktop-only: below layout-gate (1024px) the app hides and the static gate
    in index.html shows instead. Whether the gate is shown is decided by an
-   inline style in index.html — before first paint, so it never flashes. What
+   inline style in index.html, before first paint, so it never flashes. What
    it looks like is here. */
 #pset-gate {
     min-height: 100dvh;

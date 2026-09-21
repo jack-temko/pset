@@ -1,20 +1,25 @@
 import { useState, type ReactNode } from 'react'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
-import { Check, CircleAlert, Copy } from 'lucide-react'
+import { Check, CircleAlert, Copy, X } from 'lucide-react'
 
 import { Button } from '@/components/button'
+import { Tooltip } from '@/components/tooltip'
+import { pdfOf, usePageOffset } from '@/lib/pages'
 
 /**
  * The Ask transcript's pieces. Asymmetric by design: you speak in a
- * compact soft block, the book answers in full-width quiet text — chat
+ * compact soft block, the book answers in full-width quiet text: chat
  * where you ask, page where it answers. Spec: design/workspace.md.
  */
 
 /** The question: a compact `primary-soft` block on the right. */
-export function UserTurn({ children }: { children: ReactNode }) {
+export function UserTurn({ about, children }: { about?: string; children: ReactNode }) {
   return (
-    <div className="flex justify-end">
+    <div className="flex flex-col items-end gap-1">
+      {/* The transcript records what a question was about, not just the
+          words: "this one" means nothing a week later. */}
+      {about && <AboutChip label={about} />}
       <div className="max-w-5/6 rounded-md bg-primary-soft px-3 py-2 text-sm text-primary">
         {children}
       </div>
@@ -22,7 +27,32 @@ export function UserTurn({ children }: { children: ReactNode }) {
   )
 }
 
-/** The step feed: one quiet line per tool call — verb, object, count.
+/**
+ * The homework question a turn is about, carried by "Ask about this".
+ * Above the composer it has an ×, the one way to drop it; on a sent
+ * turn it's a record and has none.
+ */
+export function AboutChip({ label, onRemove }: { label: string; onRemove?: () => void }) {
+  return (
+    <span className="inline-flex h-control-sm items-center gap-1 rounded-md border border-primary/30 bg-primary-soft pr-1 pl-2 text-xs text-primary">
+      About <span className="font-mono">{label}</span>
+      {onRemove ? (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Stop asking about ${label}`}
+          className="grid size-5 cursor-pointer place-items-center rounded-sm transition-colors duration-150 ease-out hover:bg-primary/15 motion-reduce:transition-none"
+        >
+          <X className="size-3" />
+        </button>
+      ) : (
+        <span className="w-1" />
+      )}
+    </span>
+  )
+}
+
+/** The step feed: one quiet line per tool call, giving verb, object, count.
  *  The line is the whole story; nothing expands. */
 export function Steps({ steps }: { steps: string[] }) {
   return (
@@ -66,14 +96,18 @@ export function AssistantTurn({ children }: { children: ReactNode }) {
 /** An inline citation: a small mono chip that reads as an object in the
  *  prose. Click scrolls the scan to the page and flashes its edge. */
 export function PageRef({ page, onJump }: { page: number; onJump?: (page: number) => void }) {
+  // The chip says the printed page; the PDF page is one hover away.
+  const offset = usePageOffset()
   return (
-    <button
-      type="button"
-      onClick={() => onJump?.(page)}
-      className="mx-px inline-flex translate-y-px items-center rounded-sm bg-primary-soft px-1 font-mono text-xs text-primary transition-colors duration-150 ease-out hover:bg-primary hover:text-primary-foreground motion-reduce:transition-none"
-    >
-      p.&thinsp;{page}
-    </button>
+    <Tooltip label={`PDF page ${pdfOf(page, offset)}`}>
+      <button
+        type="button"
+        onClick={() => onJump?.(page)}
+        className="mx-px inline-flex translate-y-px items-center rounded-sm bg-primary-soft px-1 font-mono text-xs text-primary transition-colors duration-150 ease-out hover:bg-primary hover:text-primary-foreground motion-reduce:transition-none"
+      >
+        p.&thinsp;{page}
+      </button>
+    </Tooltip>
   )
 }
 

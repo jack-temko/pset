@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-import { AppShell, PageShell } from '@/components/shell'
+import { AppShell, PageShell, PageTitle } from '@/components/shell'
 import { BookTile } from '@/components/book-tile'
 import { ImportRow } from '@/components/import-row'
 import { IconButton } from '@/components/button'
@@ -44,7 +44,7 @@ function SectionHeader({ title, count, action }: { title: string; count?: number
   )
 }
 
-/** The week's time as one full-width bar, split by book — the shelf,
+/** The week's time as one full-width bar, split by book: the shelf,
  *  flattened. Each split takes its book's cover hue and is named below. */
 function WeekByBook({ books }: { books: WeekBook[] }) {
   const total = books.reduce((sum, b) => sum + b.minutes, 0)
@@ -85,7 +85,7 @@ function WeekByBook({ books }: { books: WeekBook[] }) {
 }
 
 /** This week's numbers: time on each activity, then questions worked, with
- *  the by-book bar below. Reports, never nags — no targets, no deltas, no
+ *  the by-book bar below. Reports, never nags: no targets, no deltas, no
  *  streaks. First on the page, so the week is visible without scrolling. */
 function ThisWeek({ week, byBook }: { week: Week; byBook: WeekBook[] }) {
   const total = week.homework + week.reading + week.asking
@@ -115,7 +115,7 @@ function ThisWeek({ week, byBook }: { week: Week; byBook: WeekBook[] }) {
         />
         <StatTile
           label="Questions worked"
-          value={week.questions > 0 ? week.questions : '—'}
+          value={week.questions}
           context={
             week.questions > 0
               ? `across ${week.problemSets} problem set${week.problemSets === 1 ? '' : 's'}`
@@ -128,7 +128,7 @@ function ThisWeek({ week, byBook }: { week: Week; byBook: WeekBook[] }) {
   )
 }
 
-/** What is due across every book — the only thing on the page with a
+/** What is due across every book: the only thing on the page with a
  *  deadline. The section header owns the title, count and action; the Box
  *  holds only rows and its door. */
 function Homework({ items, shown }: { items: Due[]; shown: number }) {
@@ -137,7 +137,7 @@ function Homework({ items, shown }: { items: Due[]; shown: number }) {
 
   return (
     <section className="space-y-5">
-      {/* No New homework here — homework is always tied to a book, so the
+      {/* No New homework here: homework is always tied to a book, so the
           one place to create it is the book's Homework tab. */}
       <SectionHeader title="Homework" count={items.length} />
       <Box>
@@ -163,13 +163,13 @@ function Homework({ items, shown }: { items: Due[]; shown: number }) {
   )
 }
 
-/** One row of covers by default — the door shows the rest in place, since
+/** One row of covers by default: the door shows the rest in place, since
  *  there is no other screen for the shelf to lead to. */
 const SHELF_ROW = 5
 
 /** Until Settings exists, this stands in for "is the embeddings endpoint
  *  configured". The engine refuses an import without one rather than
- *  failing forty minutes into OCR, so the shelf refuses it too — before
+ *  failing forty minutes into OCR, so the shelf refuses it too, before
  *  you have picked a file. */
 const EMBEDDINGS_READY = true
 
@@ -178,7 +178,7 @@ const EMBEDDINGS_READY = true
  * where books live, and nowhere else in the app.
  *
  * The shelf only ever holds books you can open. Anything on its way there
- * — queued, preparing, or failed — is a row in a Box above it, with room
+ * (queued, preparing, or failed) is a row in a Box above it, with room
  * for the engine's whole sentence and real buttons. The Box exists only
  * while there is work, so a shelf of ready books is just covers, with
  * nothing reserved beneath them.
@@ -225,7 +225,7 @@ function Shelf({ books }: { books: Book[] }) {
         </Box>
       )}
 
-      {/* A local file, handed straight to the engine — no upload dialog,
+      {/* A local file, handed straight to the engine: no upload dialog,
           no drop zone. One control, one gesture. */}
       <input
         ref={picker}
@@ -288,7 +288,9 @@ export function Home() {
   return (
     <AppShell>
       <PageShell>
-        <h1 className="font-heading text-4xl">{greeting(new Date().getHours())}.</h1>
+        <PageTitle short="Home" className="text-4xl">
+          {greeting(new Date().getHours())}.
+        </PageTitle>
         <ThisWeek week={WEEK} byBook={WEEK_BY_BOOK} />
         <Homework items={DUE} shown={DUE_SHOWN} />
         <Shelf books={BOOKS} />

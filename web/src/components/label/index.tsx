@@ -11,8 +11,8 @@ import { cn } from '@/lib/utils'
  * the status tint as ground, for the one state in a list that must jump
  * out.
  *
- * A status Label always carries a word — colour alone never means
- * anything — and an icon where the row is scanned rather than read.
+ * A status Label always carries a word (colour alone never means
+ * anything) and an icon where the row is scanned rather than read.
  */
 const labelVariants = cva(
   'inline-flex h-6 shrink-0 items-center gap-1 rounded-full border px-2 text-xs font-medium whitespace-nowrap [&_svg]:size-3 [&_svg]:shrink-0',

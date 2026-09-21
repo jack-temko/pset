@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 
 /**
  * A labelled checkbox, for a state that must be as easy to take back as
- * to claim — a question marked Complete, a question that came from this
+ * to claim: a question marked Complete, a question that came from this
  * book. It is a checkbox and not a switch precisely because it reads as a
  * fact recorded rather than a mode entered.
  *

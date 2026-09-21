@@ -16,10 +16,10 @@ const dotBg: Record<Chart, string> = {
 /**
  * A dashboard number: a label, a big mono value, one quiet line of context.
  *
- * The context line says what the number is — "so far this week", "across 3
+ * The context line says what the number is: "so far this week", "across 3
  * problem sets". It never sets a target, shows a delta, or counts a streak:
  * the dashboard reports, it does not nag. A week with nothing in it shows
- * "—" and "nothing yet this week".
+ * "0m" or "0" and "nothing yet this week".
  *
  * `chart` puts the activity's dot beside the label.
  */
@@ -31,7 +31,7 @@ export function StatTile({
   className,
 }: {
   label: string
-  /** Already formatted. Unit letters go in `<small>` — see DurationValue. */
+  /** Already formatted. Unit letters go in `<small>`: see DurationValue. */
   value: ReactNode
   context: string
   chart?: Chart
@@ -52,11 +52,16 @@ export function StatTile({
 }
 
 /**
- * Minutes as a stat value: "4h 23m", "40m", or "—" for an empty week.
+ * Minutes as a stat value: "4h 23m", "40m", or "0m" for an empty week.
  * The unit letters drop to `text-xs` in muted ink so the figures carry.
  */
 export function DurationValue({ minutes }: { minutes: number }) {
-  if (minutes <= 0) return <>—</>
+  if (minutes <= 0)
+    return (
+      <>
+        0<small>m</small>
+      </>
+    )
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
   return (

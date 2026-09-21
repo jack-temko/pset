@@ -2,7 +2,7 @@ export type Theme = 'light' | 'dark' | 'system'
 
 const KEY = 'pset-theme'
 
-/** Storage can throw outright — a private window, blocked site data, or a
+/** Storage can throw outright: a private window, blocked site data, or a
  *  sandboxed frame with an opaque origin. The theme is a preference, so
  *  losing it is never worth an exception. */
 function read(): string | null {

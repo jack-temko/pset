@@ -8,7 +8,7 @@ import type { Book } from '@/lib/sample'
  * A book on a shelf: the cover is the card, and it is always a link.
  *
  * The shelf only ever holds books you can open. A book on its way there
- * lives in an `ImportRow` above the shelf instead — so a tile never needs
+ * lives in an `ImportRow` above the shelf instead, so a tile never needs
  * a caption, never reserves space for one, and a shelf of ready books is
  * nothing but covers.
  */

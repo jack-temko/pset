@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CircleAlert, CircleCheck } from 'lucide-react'
 
-import { AppShell, PageShell } from '@/components/shell'
+import { AppShell, PageShell, PageTitle } from '@/components/shell'
 import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow } from '@/components/box'
 import { Button } from '@/components/button'
 import { Dialog } from '@/components/dialog'
@@ -30,7 +30,7 @@ type Probe = { ok: true; detail: string } | { ok: false; field: string; error: s
 function probe(kind: 'chat' | 'embeddings', v: Record<string, string>): Promise<Probe> {
   const result = (): Probe => {
     if (!/^https?:\/\//.test(v.endpoint))
-      return { ok: false, field: 'endpoint', error: 'Not a URL — it should start with http:// or https://' }
+      return { ok: false, field: 'endpoint', error: 'Not a URL. It should start with http:// or https://' }
     if (kind === 'chat') {
       if (!v.apiKey) return { ok: false, field: 'apiKey', error: 'No API key' }
       if (!v.apiKey.startsWith('zk-'))
@@ -58,7 +58,7 @@ type Status =
 /**
  * One endpoint's fields, with Test and Save.
  *
- * Test dials what's on screen and writes nothing — try a different key
+ * Test dials what's on screen and writes nothing: try a different key
  * without losing the one that works. Save tests first and writes only if
  * the test passes, so what's on disk always works. Test is always there;
  * Save appears only when there is something to save.
@@ -88,7 +88,7 @@ function ConnectionBox({
     const r = await probe(kind, values)
     if (!r.ok) {
       setError({ field: r.field, text: r.error })
-      setStatus({ kind: 'failed', text: save ? 'Not saved — the test failed' : 'Test failed' })
+      setStatus({ kind: 'failed', text: save ? 'Not saved: the test failed' : 'Test failed' })
       return
     }
     if (save) setSaved(values)
@@ -319,7 +319,7 @@ function Reset() {
             <span className="font-medium tabular-nums">
               {RESET_COUNTS.pages.toLocaleString()} pages
             </span>
-            , every homework set and conversation, and your settings — including the API key.
+            , every homework set and conversation, and your settings, including the API key.
           </p>
           <p className="text-muted-foreground">
             PSet will be as it was the first time you opened it. There's no undo.
@@ -343,11 +343,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export function Settings() {
   return (
-    // No middle: the h1 already says where you are, and the bar never
-    // repeats it.
+    // No middle of its own: the bar picks up "Settings" once the h1 has
+    // scrolled away, and never repeats it while it's on screen.
     <AppShell>
       <PageShell>
-        <h1 className="font-heading text-3xl">Settings</h1>
+        <PageTitle className="text-3xl">Settings</PageTitle>
 
         <Section title="Connections">
           <div className="grid grid-cols-2 gap-6">

@@ -2,7 +2,7 @@
  * Sample data, used until each page's backend lands. One source, so the
  * dashboard and the components page can never show different books.
  *
- * Delete this file when the API is wired — nothing here should outlive it.
+ * Delete this file when the API is wired. Nothing here should outlive it.
  */
 
 import type { HomeworkStatus } from '@/components/homework-status'
@@ -19,7 +19,7 @@ export type ImportPhase = keyof typeof IMPORT_PHASES
 
 export type BookState =
   | { kind: 'ready' }
-  /** Staged and waiting its turn — the runner prepares one book at a time. */
+  /** Staged and waiting its turn: the runner prepares one book at a time. */
   | { kind: 'queued' }
   /** `done`/`total` only where the phase can count; reading pages can, examining
    *  and building search cannot. */
@@ -66,7 +66,7 @@ export const BOOKS: Book[] = [
   },
   {
     sha256: '7ce04a15',
-    // Until the PDF's metadata is read, the title is the tidied filename —
+    // Until the PDF's metadata is read, the title is the tidied filename,
     // exactly the fallback the engine uses.
     title: 'Griffiths Introduction To Electrodynamics',
     author: '',
@@ -94,7 +94,7 @@ export const BOOKS: Book[] = [
     sha256: '3a80b5d4',
     title: 'Organic Chemistry',
     author: 'Clayden and Greeves',
-    state: { kind: 'failed', reason: "This PDF can't be read — pset couldn't open it." },
+    state: { kind: 'failed', reason: "This PDF can't be read. pset couldn't open it." },
   },
   {
     sha256: '61f2704c',
@@ -203,11 +203,16 @@ export function bookBySha(sha: string): Book | undefined {
 }
 
 /** A book's contents: chapters with sections, each pinned to a page. A book
- *  whose TOC couldn't be read has none — and then no rail. */
+ *  whose TOC couldn't be read has none, and then no rail. */
 export type TocSection = { id: string; title: string; page: number }
 export type TocChapter = { id: string; title: string; page: number; sections: TocSection[] }
 
+/** PDF pages in the sample book. */
 export const PAGE_COUNT = 312
+
+/** PDF page = printed page + this. The sample book has sixteen pages of
+ *  front matter (i–xvi) before printed page 1. */
+export const PAGE_OFFSET = 16
 
 export const TOC: TocChapter[] = [
   {
@@ -289,7 +294,7 @@ export const WEEK: Week = {
 }
 
 /** The week's time split by book, for the bar under the stat tiles. The
- *  colour comes from the book's cover hue — the bar is the shelf, flattened. */
+ *  colour comes from the book's cover hue: the bar is the shelf, flattened. */
 export type WeekBook = { sha256: string; title: string; minutes: number }
 
 export const WEEK_BY_BOOK: WeekBook[] = [
@@ -312,7 +317,7 @@ export const CONNECTIONS: Connections = {
   embeddings: { endpoint: 'http://localhost:11434/v1', model: 'nomic-embed-text' },
 }
 
-/** The doctor's local checks — the two endpoint checks live beside their
+/** The doctor's local checks: the two endpoint checks live beside their
  *  fields in Settings instead. `fixable` is the doctor's --fix. */
 export type HealthCheck = {
   name: string
@@ -325,7 +330,7 @@ export const HEALTH: HealthCheck[] = [
   { name: 'Data directory', ok: true, detail: '/home/jack/.local/share/pset is writable' },
   { name: 'Database', ok: false, detail: 'schema v11, expected v12', fixable: true },
   { name: 'Poppler', ok: true, detail: 'pdftoppm 24.02.0' },
-  { name: 'Tesseract', ok: false, detail: 'not installed — sudo apt install tesseract-ocr' },
+  { name: 'Tesseract', ok: false, detail: 'not installed. Install it with sudo apt install tesseract-ocr' },
 ]
 
 /** What Reset would remove, from the engine's dry run. */

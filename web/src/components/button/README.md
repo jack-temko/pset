@@ -7,16 +7,16 @@ default.
 |---|---|
 | `primary` | The single primary action of a screen region. |
 | `outline` | A secondary action beside a primary one; Retry in error states. |
-| `secondary` | A quiet alternative — Start over, Import another. |
+| `secondary` | A quiet alternative: Start over, Import another. |
 | `ghost` | Toolbar and icon actions that must not draw the eye. |
-| `destructive` | Removals only — `destructive` ink on `destructive-soft`, never a solid red. Always confirmed. |
+| `destructive` | Removals only: `destructive` ink on `destructive-soft`, never a solid red. Always confirmed. |
 
 Sizes are Primer's: `sm` 28px at `text-xs`, default 32px at `text-sm`, `lg`
 40px at `text-base`. All `radius-md`. Every variant carries a 1px
 transparent border so outline and filled buttons share a box.
 
 `IconButton` is a square of the same height with a **mandatory**
-`aria-label` — it is the only name the control has.
+`aria-label`: it is the only name the control has.
 
 **What the caller provides:** a sentence-case, verb-first label ("Import a
 PDF"), an optional leading `lucide-react` icon, `onClick`.
@@ -36,10 +36,10 @@ PDF"), an optional leading `lucide-react` icon, `onClick`.
   mixing 8% `foreground` in, `secondary` by 5%, rather than adding
   hover-specific tokens to the palette.
 - A link that should look like a button applies `buttonVariants(...)` to
-  the `Link` — there is no `asChild` yet, because one call site needed it
+  the `Link`: there is no `asChild` yet, because one call site needed it
   and a polymorphic wrapper wasn't worth it.
 
 ## Open
 
 - `ButtonGroup` (related buttons joined at `spacing-2`, primary last) is
-  specified in the baseline but not built — nothing needs it yet.
+  specified in the baseline but not built: nothing needs it yet.

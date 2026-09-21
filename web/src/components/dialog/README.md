@@ -1,7 +1,7 @@
 # Dialog
 
 The system's one modal, and its first. A native `<dialog>` opened with
-`showModal()` — which is where Esc, the focus trap and the inertness of
+`showModal()`, which is where Esc, the focus trap and the inertness of
 everything behind it come from, without a library and without a bug of
 our own.
 
@@ -13,12 +13,12 @@ values.
 **Three parts, always in this order:** a header carrying the title, the
 body, and a footer band on `card-header` with Cancel and the one primary
 action right-aligned. The primary counts what it will do where a count
-exists — "Add 4 questions", not "Add questions".
+exists: "Add 4 questions", not "Add questions".
 
 **One way out, and it is Cancel.** There is no X in the corner: two
 controls doing the same job in two places is one too many, and the
 footer's Cancel sits where the decision is being made, beside the action
-it undoes. The footer is required for exactly that reason — a dialog
+it undoes. The footer is required for exactly that reason: a dialog
 without one would have no way out but Esc.
 
 **The scrim is a signal, not a control.** A backdrop click does not

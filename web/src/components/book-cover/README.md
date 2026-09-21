@@ -13,7 +13,7 @@ heading face clamped to three lines, a short rule and a small PSet stamp.
 **The hue is derived, never chosen.** `coverHueFromSha` takes the first
 byte of the sha256 modulo six. The same book is always the same colour, and
 a seventh hue would break the shelf. The colours are the `--cover-*`
-tokens — identical in both themes, because a book is an object rather than
+tokens: identical in both themes, because a book is an object rather than
 a surface.
 
 **What the caller provides:** `title`, `author`, the derived `hue`, and
@@ -26,14 +26,14 @@ type.
 
 ## CoverSwatch
 
-The same cloth at row size — a 32×40 board with no type on it — for
+The same cloth at row size (a 32×40 board with no type on it) for
 places where the book is already named beside it: an import row, a list.
 The plate would only repeat the title at an unreadable size; the colour
 is what identifies.
 
 ## Changes from baseline
 
-- **Plate type sits at the 14px floor** — the author line, the stamp. This
+- **Plate type sits at the 14px floor**: the author line, the stamp. This
   is the baseline's own correction to v1 (which used 8–10px here), carried
   through.
 - **Colours come from `--cover-*` tokens**, not from literals in
@@ -47,7 +47,7 @@ is what identifies.
   "PSET". The two disagree; this follows the more specific one, on the
   grounds that a letterspaced maker's mark is a typographic device rather
   than the name in prose. Worth settling.
-- The shelf tile around the cover — the readiness line, the hover lift, the
-  dimming of a book that isn't ready — lives in the page for now
+- The shelf tile around the cover (the readiness line, the hover lift, the
+  dimming of a book that isn't ready) lives in the page for now
   (`pages/home`). It moves here, or into its own component, when a second
   screen needs a shelf.

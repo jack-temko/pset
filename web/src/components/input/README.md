@@ -2,7 +2,7 @@
 
 The text controls: `Input`, `AutoTextarea`, `Field`.
 
-The control border is `input`, deliberately darker than `border` — a
+The control border is `input`, deliberately darker than `border`: a
 field has to look like something you can type into, and the hairline
 that does elevation everywhere else is too quiet for that job.
 
@@ -13,14 +13,14 @@ locale-aware calendar is not worth rebuilding to match a palette.
 
 **`AutoTextarea`** starts one line tall and grows to fit its content, so
 a reference like "3.B.4" takes one line and a pasted statement takes
-four. It never scrolls — its height follows the text. Growth is a height
+four. It never scrolls: its height follows the text. Growth is a height
 assignment in an effect, not a transition: a field resizing under the
 caret is not a state change to make legible.
 
 **`Field`** is a real `<label>` wrapping a caption, the control, and an
 optional hint, so the label text is part of the target. An `error`
-replaces the hint in `destructive` ink — one line under a field, never
-two — so a failed Save points at the field that caused it.
+replaces the hint in `destructive` ink, one line under a field, never
+two, so a failed Save points at the field that caused it.
 
 **Don't:** put a placeholder where a label belongs; use `AutoTextarea`
 for prose long enough to want its own scroll region.

@@ -25,8 +25,8 @@ the shelf.
   on the tile; Home already lists what's due above the shelf, so repeating
   it on the covers is unresolved rather than implemented.
 
-- **No not-ready tile.** It had one — a dimmed cover with its status
-  and controls underneath — and it was rejected on sight. The captions
+- **No not-ready tile.** It had one (a dimmed cover with its status
+  and controls underneath) and it was rejected on sight. The captions
   had to be reserved or the row jumped, and reserved space made a shelf
   of ready books look gappy for the sake of a state it usually isn't in.
   Three other treatments were compared against it (a card over the
@@ -39,7 +39,7 @@ the shelf.
 - The lift's `transition` was dropped once while promoting this out of
   `pages/home`, and the cover snapped instead of rising. Tailwind v4 moves
   the translate to the standalone `translate` property, so a computed
-  `transform` reads `none` either way — check `translate` when verifying
+  `transform` reads `none` either way; check `translate` when verifying
   this.
 - Promoted here from `pages/home` the moment the components page needed it
   too. If a third surface wants a shelf, the grid around the tiles should

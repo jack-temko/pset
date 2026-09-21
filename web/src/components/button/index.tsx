@@ -38,7 +38,7 @@ export function Button({
   return <button className={cn(buttonVariants({ variant, size }), className)} {...props} />
 }
 
-/** A square of the same height. The label is not optional — it is the only
+/** A square of the same height. The label is not optional: it is the only
  *  name the control has. */
 export function IconButton({
   className,

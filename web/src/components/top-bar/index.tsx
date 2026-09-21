@@ -8,12 +8,12 @@ import { cn } from '@/lib/utils'
 
 /**
  * The one piece of chrome on every screen: 56px on `background` with a
- * hairline beneath, in three zones — brand, where-you-are, status.
+ * hairline beneath, in three zones: brand, where-you-are, status.
  *
  * The middle is the caller's: the book on the workspace, and nothing on a
  * document page (Home, Settings), whose h1 already says where you are. It
  * never repeats a page's h1, and no actions live
- * up here — the page or panel owns those. The right zone is Settings alone
+ * up here: the page or panel owns those. The right zone is Settings alone
  * (plus the dev-only components toggle): the theme lives in Settings, not
  * here, because one preference doesn't earn permanent chrome.
  */

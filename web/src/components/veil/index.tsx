@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 /**
- * Content that exists but shouldn't be read yet — a hint before it's
+ * Content that exists but shouldn't be read yet: a hint before it's
  * wanted, a worked solution before the attempt.
  *
  * The content is always there and always laid out at its true size: it
