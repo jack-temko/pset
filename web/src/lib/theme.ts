@@ -42,3 +42,11 @@ export function applyTheme(theme: Theme) {
 export function isDark(): boolean {
   return document.documentElement.classList.contains('dark')
 }
+
+/** "System" is a promise to keep following the OS, not a one-time read at
+ *  load. Called once at startup; an explicit choice ignores the change. */
+export function followSystem() {
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (getTheme() === 'system') applyTheme('system')
+  })
+}

@@ -40,16 +40,20 @@ export function AutoTextarea({ className, value, ...props }: ComponentProps<'tex
   )
 }
 
-/** A label above a control, with an optional quiet hint under it. The
+/** A label above a control, with an optional quiet hint under it — or,
+ *  when something is wrong with the value, the error in its place. The
  *  label is a real `<label>`, so its text is part of the target. */
 export function Field({
   label,
   hint,
+  error,
   className,
   children,
 }: {
   label: string
   hint?: ReactNode
+  /** Replaces the hint while set: one line under a field, never two. */
+  error?: ReactNode
   className?: string
   children: ReactNode
 }) {
@@ -57,7 +61,11 @@ export function Field({
     <label className={cn('block space-y-1', className)}>
       <span className="block text-xs text-muted-foreground">{label}</span>
       {children}
-      {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
+      {error ? (
+        <span className="block text-xs text-destructive">{error}</span>
+      ) : (
+        hint && <span className="block text-xs text-muted-foreground">{hint}</span>
+      )}
     </label>
   )
 }

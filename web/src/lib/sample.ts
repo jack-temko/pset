@@ -287,3 +287,37 @@ export const WEEK_BY_BOOK: WeekBook[] = [
   { sha256: '7a07f452', title: 'Introduction to Electrodynamics', minutes: 54 },
   { sha256: '61f2704c', title: 'A First Course in Probability', minutes: 28 },
 ]
+
+// ---------------------------------------------------------------- settings
+
+/** The engine's `Settings`, plus the chat model it doesn't store yet. */
+export type Connections = {
+  chat: { endpoint: string; apiKey: string; model: string }
+  embeddings: { endpoint: string; model: string }
+}
+
+export const CONNECTIONS: Connections = {
+  chat: { endpoint: 'https://api.z.ai/api/paas/v4', apiKey: 'zk-4f9a2c71e0b3d8k3Xq', model: 'glm-4.6' },
+  embeddings: { endpoint: 'http://localhost:11434/v1', model: 'nomic-embed-text' },
+}
+
+/** The doctor's local checks — the two endpoint checks live beside their
+ *  fields in Settings instead. `fixable` is the doctor's --fix. */
+export type HealthCheck = {
+  name: string
+  ok: boolean
+  detail: string
+  fixable?: boolean
+}
+
+export const HEALTH: HealthCheck[] = [
+  { name: 'Data directory', ok: true, detail: '/home/jack/.local/share/pset is writable' },
+  { name: 'Database', ok: false, detail: 'schema v11, expected v12', fixable: true },
+  { name: 'Poppler', ok: true, detail: 'pdftoppm 24.02.0' },
+  { name: 'Tesseract', ok: false, detail: 'not installed — sudo apt install tesseract-ocr' },
+]
+
+/** What Reset would remove, from the engine's dry run. */
+export const RESET_COUNTS = { books: 10, pages: 4212 }
+
+export const ABOUT = { version: '0.9.0', dataDir: '/home/jack/.local/share/pset' }

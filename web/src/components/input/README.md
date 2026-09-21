@@ -18,7 +18,9 @@ assignment in an effect, not a transition: a field resizing under the
 caret is not a state change to make legible.
 
 **`Field`** is a real `<label>` wrapping a caption, the control, and an
-optional hint, so the label text is part of the target.
+optional hint, so the label text is part of the target. An `error`
+replaces the hint in `destructive` ink — one line under a field, never
+two — so a failed Save points at the field that caused it.
 
 **Don't:** put a placeholder where a label belongs; use `AutoTextarea`
 for prose long enough to want its own scroll region.

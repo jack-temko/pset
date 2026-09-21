@@ -23,6 +23,7 @@ import {
 } from '@/components/transcript'
 import { Veil } from '@/components/veil'
 import { Spinner } from '@/components/spinner'
+import { SegmentedControl } from '@/components/segmented-control'
 import { Checkbox } from '@/components/checkbox'
 import { Dialog } from '@/components/dialog'
 import { AutoTextarea, Field, Input } from '@/components/input'
@@ -107,6 +108,22 @@ function VeilDemo() {
         </button>
       )}
     </div>
+  )
+}
+
+function SegmentedDemo() {
+  const [v, setV] = useState<'light' | 'dark' | 'system'>('system')
+  return (
+    <SegmentedControl
+      label="Theme"
+      value={v}
+      onChange={setV}
+      options={[
+        { value: 'light', label: 'Paper' },
+        { value: 'dark', label: 'Night' },
+        { value: 'system', label: 'System' },
+      ]}
+    />
   )
 }
 
@@ -453,10 +470,16 @@ export function Components() {
               <Field label="Due date" hint="Optional.">
                 <Input type="date" />
               </Field>
+              <Field label="API key" error="The endpoint refused this key (401)">
+                <Input defaultValue="sk-wrong" className="font-mono" />
+              </Field>
               <Field label="Question" hint="Grows as you type; never scrolls.">
                 <AutoTextarea placeholder="A reference like 3.B.4, or paste the question" />
               </Field>
             </div>
+          </Shelf>
+          <Shelf label="segmented">
+            <SegmentedDemo />
           </Shelf>
           <Shelf label="checkbox">
             <CheckboxDemo />
