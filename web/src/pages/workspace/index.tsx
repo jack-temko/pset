@@ -883,8 +883,10 @@ function Walkthrough({
           Print worksheet
         </MenuItem>
         <MenuDivider />
+        {/* An act until it's done, then a fact: "Turn in", then
+            "Turned in" with its check. Choosing it again takes it back. */}
         <MenuCheckItem checked={set.status === 'turned-in'} onChange={onToggleTurnedIn}>
-          Turned in
+          {set.status === 'turned-in' ? 'Turned in' : 'Turn in'}
         </MenuCheckItem>
       </Menu>
     </div>

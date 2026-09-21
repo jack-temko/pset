@@ -342,3 +342,26 @@
     letter-spacing: 0.22em;
     color: var(--primary);
 }
+
+/* The skeleton's shimmer: a soft band of lighter ink sweeping across the
+   muted block, the one other loop besides the Spinner, and like it it only
+   ever means "waiting". The band is muted mixed toward the card, so it
+   follows the theme. Reduced motion leaves the block still. */
+@keyframes shimmer {
+    from { background-position: 100% 0; }
+    to { background-position: -100% 0; }
+}
+@utility skeleton {
+    background-color: var(--muted);
+    background-image: linear-gradient(
+        90deg,
+        transparent 30%,
+        color-mix(in oklch, var(--muted), var(--card) 55%) 50%,
+        transparent 70%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+    @media (prefers-reduced-motion: reduce) {
+        animation: none;
+    }
+}

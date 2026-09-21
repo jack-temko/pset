@@ -165,19 +165,18 @@ others:
 
 Everything else is a colour or opacity change.
 
-**One thing loops, and only one: the `Spinner`.** A repeating animation
-means "waiting", so it appears where work is genuinely running and
-genuinely cannot be counted: examining a PDF, building a search index.
+**Two things loop, and both mean "waiting".** The **Spinner** turns where
+work is genuinely running and can't be counted: examining a PDF, building
+a search index. The **Skeleton shimmers** where content is on its way.
 Work that can be counted gets a determinate bar instead, and something
 merely queued gets the word "Queued" and no motion at all: nothing is
 happening to it yet. Anything that isn't waiting must not borrow the
-meaning.
+meaning, which is why the Veil never shimmers.
 
 **Nothing jumps when data arrives.** Anything that waits on a request
-draws a **Skeleton** first: `muted` blocks at the size and count of what's
-coming, inline in real line boxes so a skeleton row and the row that
-replaces it measure the same. Skeletons are still; they hold space, and
-the Spinner is left to say "waiting" where work is running.
+draws a **Skeleton** first: shimmering `muted` blocks at the size and
+count of what's coming, inline in real line boxes so a skeleton row and
+the row that replaces it measure the same.
 
 Anything that moves states `transition duration-150 ease-out` explicitly.
 A hover class without it doesn't animate, it snaps, and the difference is

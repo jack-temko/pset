@@ -125,8 +125,8 @@ built.
   saving happen there.
 - **The walkthrough header** (2026-09-21) keeps what you read: back, the
   set's title, "3 of 8", and a **"⋯" menu** for what you do to the set:
-  Add questions, Edit homework, Print worksheet, then Turned in as a
-  checkable item below a divider. While a set is turned in, a success
+  Add questions, Edit homework, Print worksheet, then **Turn in** below a
+  divider, which reads **Turned in** with a check once done. While a set is turned in, a success
   Label says so in the bar.
 - **A Home due-row lands straight in that walkthrough** at
   `/books/{sha}/homework/{id}`, on the **first question not yet
