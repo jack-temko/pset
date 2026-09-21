@@ -31,8 +31,10 @@ import {
   MathDisplay,
   MathInline,
   PageRef,
+  Statement,
   Steps,
   UserTurn,
+  WorkedSteps,
 } from '@/components/transcript'
 import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
 import { Veil } from '@/components/veil'
@@ -388,10 +390,32 @@ function SampleConversation({ onJump }: { onJump: (page: number) => void }) {
         </p>
         <MathDisplay tex="I,\;T,\;T^2,\;\dots,\;T^{n^2}" />
         <p>
-          has <MathInline tex="n^2+1" /> entries and must be dependent. The first dependence
-          gives a monic polynomial with <MathInline tex="p(T)=0" />; uniqueness of the smallest
-          one follows from the division algorithm <PageRef page={144} onJump={onJump} />.
+          has <MathInline tex="n^2+1" /> entries and must be dependent. Here is the book's
+          statement of what that buys you:
         </p>
+        <Statement
+          kind="Theorem"
+          number="5.22"
+          name="existence, uniqueness, and degree of minimal polynomial"
+          page={143}
+          onJump={onJump}
+        >
+          <p>
+            Suppose <MathInline tex="V" /> is finite-dimensional and{' '}
+            <MathInline tex="T \in \mathcal{L}(V)" />. Then there is a unique monic polynomial{' '}
+            <MathInline tex="p" /> of smallest degree such that <MathInline tex="p(T) = 0" />, and{' '}
+            <MathInline tex="\deg p \le \dim V" />.
+          </p>
+        </Statement>
+        <p>Uniqueness is the short part, worked through:</p>
+        <WorkedSteps
+          steps={[
+            { math: 'p(T) = q(T) = 0', why: 'Suppose p and q are both monic of the smallest degree, m, and both work.' },
+            { math: '(p - q)(T) = p(T) - q(T) = 0' },
+            { math: '\\deg(p - q) < m', why: 'Both are monic of degree m, so the leading terms cancel.' },
+            { math: 'p - q = 0', why: 'A nonzero one would be a smaller polynomial that works, after scaling to monic.' },
+          ]}
+        />
       </AssistantTurn>
     </div>
   )

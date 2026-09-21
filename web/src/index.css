@@ -231,8 +231,13 @@
     --border-muted: oklch(0.25 0.01 90);
     --input: oklch(0.52 0.012 90);
     --ring: oklch(0.62 0.12 263);
-    --chart-1: oklch(0.7 0.125 263);
-    --chart-2: oklch(0.72 0.1 195);
+    /* chart-1 and chart-2 re-stepped for the answer plots, validated
+       against the Night card (#1b1915): both inside the dark lightness band
+       (0.48 to 0.67), chroma above 0.1, normal-vision dE 18.7, deutan 17.6,
+       both over 3:1. At 0.7 and 0.72 they sat above the band and read as
+       one colour. */
+    --chart-1: oklch(0.56 0.16 263);
+    --chart-2: oklch(0.66 0.12 195);
     --chart-3: oklch(0.8 0.13 80);
     --chart-4: oklch(0.72 0.17 15);
     --chart-5: oklch(0.7 0.16 300);

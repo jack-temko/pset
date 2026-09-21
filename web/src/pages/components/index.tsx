@@ -17,9 +17,15 @@ import {
   FailedTurn,
   MathDisplay,
   MathInline,
+  AnswerTable,
+  CodeBlock,
   PageRef,
+  Plot,
+  Statement,
   Steps,
+  StoppedNote,
   UserTurn,
+  WorkedSteps,
 } from '@/components/transcript'
 import { Veil } from '@/components/veil'
 import { Spinner } from '@/components/spinner'
@@ -33,6 +39,12 @@ import { DurationValue, StatTile } from '@/components/stat-tile'
 import { coverHueFromSha } from '@/lib/covers'
 import { BOOKS, DUE } from '@/lib/sample'
 import { BookTile } from '@/components/book-tile'
+
+
+/** Sample series for the Plot demo: logistic growth levelling at 100
+ *  against the exponential it starts out as. */
+const EXP: [number, number][] = [[0.0, 10.0], [0.5, 12.84], [1.0, 16.49], [1.5, 21.17], [2.0, 27.18], [2.5, 34.9], [3.0, 44.82], [3.5, 57.55], [4.0, 73.89], [4.5, 94.88]]
+const LOGISTIC: [number, number][] = [[0.0, 10.0], [0.5, 12.49], [1.0, 15.48], [1.5, 19.04], [2.0, 23.2], [2.5, 27.94], [3.0, 33.24], [3.5, 39.0], [4.0, 45.09], [4.5, 51.32], [5.0, 57.51], [5.5, 63.48], [6.0, 69.06], [6.5, 74.13], [7.0, 78.63], [7.5, 82.53], [8.0, 85.85]]
 
 /**
  * Every component and every variant, on one page, in the app itself.
@@ -568,6 +580,79 @@ export function Components() {
             <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
               <ConversationStart />
               <DayDivider label="Yesterday" />
+            </div>
+          </Shelf>
+          <Shelf label="running">
+            <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
+              <Steps running steps={['Searched ‘eigenvalue’ · 6 pages', 'Reading p. 132–134…']} />
+            </div>
+          </Shelf>
+          <Shelf label="stopped">
+            <div className="w-panel space-y-3 rounded-md border bg-rail p-card text-base">
+              <p>An eigenvalue is a scalar λ for which some nonzero vector</p>
+              <StoppedNote />
+            </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Answer cards"
+          note="A short list on purpose: what the book says, how to do it, what it looks like. Tables and code are plain blocks. Everything else is prose."
+        >
+          <Shelf label="statement">
+            <div className="w-panel">
+              <Statement kind="Definition" number="2.17" name="linearly independent" page={32}>
+                <p>
+                  A list <MathInline tex="v_1, \dots, v_m" /> in <MathInline tex="V" /> is linearly
+                  independent if the only choice of <MathInline tex="a_1, \dots, a_m" /> that makes{' '}
+                  <MathInline tex="a_1 v_1 + \dots + a_m v_m = 0" /> is{' '}
+                  <MathInline tex="a_1 = \dots = a_m = 0" />.
+                </p>
+              </Statement>
+            </div>
+          </Shelf>
+          <Shelf label="worked steps">
+            <div className="w-panel">
+              <WorkedSteps
+                steps={[
+                  { math: '\\int_0^1 x e^{x}\\,dx', why: 'Integrate by parts with u = x, dv = eˣ dx.' },
+                  { math: '= \\big[x e^{x}\\big]_0^1 - \\int_0^1 e^{x}\\,dx' },
+                  { math: '= e - (e - 1)' },
+                  { math: '= 1' },
+                ]}
+              />
+            </div>
+          </Shelf>
+          <Shelf label="plot">
+            <div className="w-panel">
+              <Plot
+                title="Logistic growth against pure exponential"
+                x={{ label: 't' }}
+                y={{ label: 'population' }}
+                series={[
+                  { label: 'Exponential', points: EXP },
+                  { label: 'Logistic', points: LOGISTIC },
+                ]}
+              />
+            </div>
+          </Shelf>
+          <Shelf label="table">
+            <div className="w-panel">
+              <AnswerTable
+                columns={['', 'Injective', 'Surjective']}
+                rows={[
+                  ['Means', 'null T = {0}', 'range T = W'],
+                  ['Needs', 'dim V ≤ dim W', 'dim V ≥ dim W'],
+                ]}
+              />
+            </div>
+          </Shelf>
+          <Shelf label="code">
+            <div className="w-panel">
+              <CodeBlock
+                language="scheme"
+                code={`(define (fib n)\n  (if (< n 2)\n      n\n      (+ (fib (- n 1)) (fib (- n 2)))))`}
+              />
             </div>
           </Shelf>
         </Section>

@@ -4,6 +4,7 @@ import 'katex/dist/katex.min.css'
 import { Check, CircleAlert, Copy, X } from 'lucide-react'
 
 import { Button } from '@/components/button'
+import { Spinner } from '@/components/spinner'
 import { Tooltip } from '@/components/tooltip'
 import { pdfOf, usePageOffset } from '@/lib/pages'
 
@@ -52,18 +53,35 @@ export function AboutChip({ label, onRemove }: { label: string; onRemove?: () =>
   )
 }
 
-/** The step feed: one quiet line per tool call, giving verb, object, count.
- *  The line is the whole story; nothing expands. */
-export function Steps({ steps }: { steps: string[] }) {
+/**
+ * The step feed: one quiet line per tool call, giving verb, object, count.
+ * The line is the whole story; nothing expands.
+ *
+ * With `running`, the last line is the call in flight: present tense and a
+ * Spinner at its start ("Searching 'eigenvalue'…"). When it finishes, the
+ * caller replaces it with the past-tense line and its count, and the
+ * spinner is gone. It's the one sign of work in the transcript.
+ */
+export function Steps({ steps, running }: { steps: string[]; running?: boolean }) {
   return (
     <div className="space-y-1">
-      {steps.map((s, i) => (
-        <p key={i} className="text-xs font-normal text-muted-foreground">
-          {s}
-        </p>
-      ))}
+      {steps.map((s, i) => {
+        const live = running && i === steps.length - 1
+        return (
+          <p key={i} className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
+            {live && <Spinner className="size-3" label="Working" />}
+            {s}
+          </p>
+        )
+      })}
     </div>
   )
+}
+
+/** What's left of an answer you stopped: the partial text above it, then
+ *  this quiet line. Nothing to click; asking again is the retry. */
+export function StoppedNote() {
+  return <p className="text-xs text-muted-foreground">Stopped</p>
 }
 
 /** The answer: full-width on the panel ground, with Copy on hover. */
@@ -103,7 +121,7 @@ export function PageRef({ page, onJump }: { page: number; onJump?: (page: number
       <button
         type="button"
         onClick={() => onJump?.(page)}
-        className="mx-px inline-flex translate-y-px items-center rounded-sm bg-primary-soft px-1 font-mono text-xs text-primary transition-colors duration-150 ease-out hover:bg-primary hover:text-primary-foreground motion-reduce:transition-none"
+        className="mx-px inline-flex shrink-0 translate-y-px items-center rounded-sm bg-primary-soft px-1 font-mono text-xs whitespace-nowrap text-primary transition-colors duration-150 ease-out hover:bg-primary hover:text-primary-foreground motion-reduce:transition-none"
       >
         p.&thinsp;{page}
       </button>
@@ -193,3 +211,5 @@ export function FailedTurn({ reason, onRetry }: { reason: string; onRetry?: () =
     </div>
   )
 }
+
+export { AnswerTable, CodeBlock, Plot, Statement, WorkedSteps } from './cards'

@@ -27,6 +27,29 @@ chat where you ask, page where it answers. No bubbles.
 **Don't:** give steps chevrons or results; render citations as bare
 links or cards; put actions on user turns; auto-clear anything.
 
+## Answer cards (`cards.tsx`)
+
+A short list on purpose, for the three things prose does badly:
+
+- **`Statement`**: a definition or theorem as the book numbers it, with
+  its name and a page chip, in a Box-like frame with a header band.
+- **`WorkedSteps`**: a numbered derivation, all shown, one line of math
+  per step with an optional why. No scroll wrapper: an overflow
+  container clipped tall glyphs and showed a scrollbar, so KaTeX breaks
+  long lines at `=` and `+` instead.
+- **`Plot`**: one or two functions, chart-1 then chart-2, one y-axis,
+  ticks that always contain the data, a legend and no labels on the lines
+  (they collided with the legend in a 400px panel), a hover crosshair
+  with each series' nearest value inside its own range, and an sr-only
+  table.
+
+And two plain blocks: **`AnswerTable`** and **`CodeBlock`**, each
+sideways-scrolling in its own frame when wide.
+
+`Steps` takes `running` for the call in flight (a Spinner at the start of
+the last line), and **`StoppedNote`** is the quiet line after a stopped
+answer.
+
 ## Changes from baseline
 
 - The baseline has no transcript components: the old app's chat was part

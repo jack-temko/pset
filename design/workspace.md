@@ -85,6 +85,27 @@ built.
 - **Endless history with day dividers** (quiet centered hairline:
   "Yesterday", "Sep 12"); the very top of the transcript carries
   "Start of conversation · Clear" with a confirm.
+- **While it works** (2026-09-21): the step in flight is the feed's last
+  line, in the present tense with a Spinner at its start ("Searching
+  'eigenvalue'…"); finished, it turns past tense with its count and the
+  spinner goes. The answer streams in with **no caret**: Stop in the
+  composer already says it's running. **Stopped** leaves the partial
+  answer and a quiet "Stopped" line, with nothing to click; asking again
+  is the retry.
+- **Answer cards, a short list on purpose** (2026-09-21), for the three
+  things prose does badly:
+  - **Statement**: a definition or theorem as the book numbers it
+    ("Theorem 5.22"), its name, and a page chip, in a Box-like frame.
+  - **Worked steps**: a numbered derivation, all shown (the walkthrough
+    is where things hide), one line of math per step with a short why.
+  - **Plot**: one or two functions on one y-axis, chart-1 then chart-2,
+    a legend and no labels on the lines, a hover crosshair with every
+    value, and a table behind it for screen readers.
+
+  Plus two plain blocks, a **table** and a **code block**, both
+  sideways-scrolling inside their own frame when wide. No page-excerpt
+  card: page chips already jump the scan to the real page. Everything
+  else is prose with math and chips.
 - Empty conversation: a prompt line plus one short sentence of what the
   agent can do. No generated suggestions.
 - One running conversation per book (locked earlier).
