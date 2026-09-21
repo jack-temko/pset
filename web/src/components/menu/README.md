@@ -5,8 +5,11 @@ ghost "⋯" `IconButton` opens a floating card of rows beneath it,
 right-aligned to the trigger.
 
 - **The card** is `card` with a hairline border and `shadow-floating`,
-  radius-md, 4px of padding top and bottom. It genuinely floats, so it
-  gets the shadow.
+  radius-md. It genuinely floats, so it gets the shadow. **It has no
+  padding and the divider no margin:** every pixel belongs to a row, so a
+  hover wash runs right to the card's edge and the divider. (With 4px of
+  padding the wash stopped short of the boundary, and those strips were
+  dead to the pointer.)
 - **`MenuItem`**: a 32px row, a muted 16px icon, the label in `text-sm`.
   It runs, then the menu closes.
 - **`MenuCheckItem`**: a fact you can take back, like Turned in. A

@@ -100,7 +100,10 @@ export function Menu({ label, children }: { label: string; children: ReactNode }
             aria-label={label}
             onKeyDown={onKeyDown}
             style={{ top: at.top, right: at.right }}
-            className="fixed z-50 min-w-48 rounded-md border bg-card py-1 shadow-floating"
+            // No padding and no divider margin: every pixel of the card belongs to
+            // a row, so a hover wash reaches the edge and the divider exactly.
+            // overflow-hidden clips the first and last wash to the radius.
+            className="fixed z-50 min-w-48 overflow-hidden rounded-md border bg-card shadow-floating"
           >
             <Close value={close}>{children}</Close>
           </div>,
@@ -172,5 +175,5 @@ export function MenuCheckItem({
 }
 
 export function MenuDivider() {
-  return <div role="separator" className="my-1 h-px bg-border-muted" />
+  return <div role="separator" className="h-px bg-border-muted" />
 }
