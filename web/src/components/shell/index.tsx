@@ -7,11 +7,17 @@ import {
   type ReactNode,
 } from 'react'
 
+import { CircleAlert } from 'lucide-react'
+
+import { useLiveStream } from '@/api/events'
 import { TopBar } from '@/components/top-bar'
 import { cn } from '@/lib/utils'
 
 /**
  * Every screen: the top bar as fixed chrome, then the screen below it.
+ *
+ * Between the two sits the lost-touch strip, there only while the live
+ * stream is down, so a dead server never looks like a healthy app.
  *
  * The window itself never scrolls. The shell is exactly the viewport, the
  * bar takes its 56px, and what's left is the scroll region, so a scrollbar
@@ -29,6 +35,23 @@ import { cn } from '@/lib/utils'
 /** A page's h1 tells the shell whether it has scrolled out of sight, and
  *  what to call the page when it has. */
 const TitleSlot = createContext<(title: string | null) => void>(() => {})
+
+/** Shown while the live stream is down, on every screen. It says only
+ *  what's true: touch was lost and the app is reconnecting. Recovery is
+ *  the stream's own doing; there is nothing to click. */
+function LostTouch() {
+  const live = useLiveStream()
+  if (live) return null
+  return (
+    <div
+      role="status"
+      className="flex shrink-0 items-center justify-center gap-2 border-b border-warning bg-warning-soft px-4 py-1 text-sm text-warning"
+    >
+      <CircleAlert className="size-4 shrink-0" aria-hidden="true" />
+      <span>Lost touch with pset. Reconnecting…</span>
+    </div>
+  )
+}
 
 export function AppShell({
   middle,
@@ -60,6 +83,7 @@ export function AppShell({
           )
         }
       />
+      <LostTouch />
       <TitleSlot value={setScrolledTitle}>
         <div
           className={

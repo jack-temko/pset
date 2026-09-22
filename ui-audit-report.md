@@ -113,6 +113,42 @@ colors in both themes.
 
 ### Round 1 outcome
 
-All findings above scheduled for fixing (owners: workspace/homework fixer,
-events/copy fixer, home/settings fixer). Re-render + verification audit
-follows; then Round 2 re-audit of the whole app.
+All findings above were fixed by three file-partitioned fixers and verified
+live against the fixed build. Gates: `tsc -b` clean, vitest 12/12,
+`npm run build` + class gate clean (one fractional `py-1.5` slipped into the
+title-prompt strip and was corrected to `py-1`), `go build`/`go vet` clean,
+scoped Go tests pass.
+
+Verification highlights (shots 28-33, `audit-round-1/`):
+
+- **P0**: adding a question now reaches the designed failed card live, no
+  reload (~8s). Root cause was an event/snapshot race: the Add-questions POST
+  response wrote a stale `pending` snapshot over the already-arrived `failed`
+  event. Fix: monotonic state application in `applyQuestion` (forced writes
+  only for Try again) + a 5s poll while any question is outstanding + honest
+  "Waiting for its turn…" wording when nothing is ahead. Shot 29.
+- **Lost-touch banner**: appears ~1s after the server dies ("Lost touch with
+  pset. Reconnecting…", amber strip under the top bar, every page) and clears
+  on recovery. Shots 30; live kill/restart probe.
+- **Ask failure** now uses the homework failure card pattern (title, canonical
+  sentence, Open Settings, Try again); canonical sentence unified in Go
+  (`ask` package const). Shot 31.
+- **Fresh install**: empty-state primary is a live "Set up in Settings" button
+  (deep-links to `#connections`); banner copy matches the actual gesture.
+  Shot 28, click-through verified.
+- **Chapter jump**: clicked chapter is the only `aria-current` row. **Zoom**
+  is a real menu (Fit to width ✓ / 150% / 200%) and the page pill wakes on
+  mount. Shot 32. **Title prompt** shows once on filename-titled books.
+  Shot 33. **Empty homework tab** has its sentence. **Import refusal** names
+  the file ("not-a-pdf.txt isn't a PDF. PSet can only shelve PDF files.").
+  **Settings**: Save always present (disabled when clean) + Test/Save hint on
+  both cards, API key masked with Show/Hide, health rows carry purpose
+  clauses.
+- Accepted deviations, noted for re-audit: zoom menu omits a separate "100%"
+  row (identical to fit width in this zoom model); the title prompt uses a
+  filename-looking heuristic because the wire doesn't carry the original
+  filename; week tiles are derived client-side from the per-book minutes
+  (exact reconciliation would need a Go wire change); no fake sent-bubble for
+  failed asks (the turn never existed server-side).
+
+Round 2 re-audit of the whole app follows.

@@ -107,7 +107,7 @@ func (r *run) loop(ctx context.Context) error {
 		return err
 	}
 	if !cfg.ChatReady() {
-		return &failure{msg: "There's no chat model set up yet. Add one in Settings, under Connections, then ask again."}
+		return &failure{msg: noChatModel}
 	}
 	r.llm, r.model = llm.Open(cfg), cfg.ChatModel
 	r.parser = cards.NewParser(ctx, cards.Options{Offset: r.book.PageOffset, Repair: r.repair}, cards.Handler{

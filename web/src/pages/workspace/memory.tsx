@@ -146,6 +146,9 @@ export function MemoryDialog({
             submit()
           }}
         >
+          {/* Names the form, so its Book|Preference pills don't read as a
+              second copy of the filter tabs below. */}
+          <p className="text-xs text-muted-foreground">Add a memory</p>
           <SegmentedControl label="Kind" options={KINDS} value={kind} onChange={setKind} />
           <div className="flex items-start gap-2">
             <Field

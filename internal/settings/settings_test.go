@@ -191,6 +191,24 @@ func TestFieldErrors(t *testing.T) {
 	}
 }
 
+// A 401 with no key typed isn't a refused key; the copy must not accuse
+// one.
+func TestEmptyKeyGetsItsOwnWords(t *testing.T) {
+	s := newServer(t)
+	s.dial.chatErr = &llm.LLMError{Status: 401, Body: "unauthorized"}
+	keyless := goodChat
+	keyless.APIKey = ""
+	var e httpx.Error
+	s.do(t, "POST", "/api/settings/test", ConnectionInput{Chat: &keyless}, &e)
+	if e.Code != httpx.CodeBadKey || e.Field != "apiKey" || e.Message != "This endpoint wants an API key and none is set (401)." {
+		t.Fatalf("empty key: %+v (%s)", e, e.Message)
+	}
+	s.do(t, "POST", "/api/settings/test", ConnectionInput{Chat: &goodChat}, &e)
+	if e.Code != httpx.CodeBadKey || e.Field != "apiKey" || e.Message != "The endpoint refused this key (401)" {
+		t.Fatalf("typed key: %+v (%s)", e, e.Message)
+	}
+}
+
 func TestHealthAndFix(t *testing.T) {
 	s := newServer(t)
 	var h Health

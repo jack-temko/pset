@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CircleAlert, CircleCheck } from 'lucide-react'
 
@@ -10,6 +10,7 @@ import { Field, Input } from '@/components/input'
 import { SegmentedControl } from '@/components/segmented-control'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
+import { cn } from '@/lib/utils'
 import { ApiError } from '@/api/client'
 import {
   useAbout,
@@ -35,7 +36,7 @@ import { applyTheme, getTheme, type Theme } from '@/lib/theme'
 
 // ---------------------------------------------------------------- connections
 
-type FieldSpec = { key: string; label: string; hint?: string; mono?: boolean }
+type FieldSpec = { key: string; label: string; hint?: string; mono?: boolean; secret?: boolean }
 
 type Status =
   | { kind: 'idle' }
@@ -43,13 +44,15 @@ type Status =
   | { kind: 'ok'; text: string }
   | { kind: 'failed'; text: string }
 
+const TEST_SAVE_HINT = 'Test tries these values without saving. Save tests first, then keeps them.'
+
 /**
  * One endpoint's fields, with Test and Save.
  *
  * Test dials what's on screen and writes nothing: try a different key
  * without losing the one that works. Save tests first and writes only if
- * the test passes, so what's on disk always works. Test is always there;
- * Save appears only when there is something to save.
+ * the test passes, so what's on disk always works. Both are always there;
+ * Save sits disabled until there is something to save.
  */
 function ConnectionBox({
   kind,
@@ -70,6 +73,8 @@ function ConnectionBox({
   const [values, setValues] = useState(initial)
   const [error, setError] = useState<{ field: string; text: string } | null>(null)
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
+  const [revealed, setRevealed] = useState(false)
+  const rows = useRef<Record<string, HTMLDivElement | null>>({})
 
   const [savedOnce, setSavedOnce] = useState(ready)
   const dirty = fields.some((f) => values[f.key] !== saved[f.key]) || !savedOnce
@@ -103,6 +108,12 @@ function ConnectionBox({
     }
   }
 
+  // The reason lands under its field, a card's height above the footer's
+  // verdict: bring the field back into view.
+  useEffect(() => {
+    if (error) rows.current[error.field]?.scrollIntoView({ block: 'nearest' })
+  }, [error])
+
   // A column, with the body taking the slack: side by side, both Boxes
   // stretch to the taller one and their footers line up at the bottom.
   return (
@@ -110,39 +121,54 @@ function ConnectionBox({
       <BoxHeader>{title}</BoxHeader>
       <BoxBody className="flex-1 space-y-4">
         {fields.map((f) => (
-          <Field
-            key={f.key}
-            label={f.label}
-            hint={f.hint}
-            error={error?.field === f.key ? error.text : undefined}
-          >
-            <Input
-              value={values[f.key]}
-              spellCheck={false}
-              className={f.mono ? 'font-mono' : undefined}
-              aria-invalid={error?.field === f.key || undefined}
-              onChange={(e) => {
-                setValues((v) => ({ ...v, [f.key]: e.target.value }))
-                // Editing the field that failed is the fix in progress.
-                if (error?.field === f.key) setError(null)
-                if (status.kind !== 'working') setStatus({ kind: 'idle' })
-              }}
-            />
-          </Field>
+          <div key={f.key} ref={(el) => { rows.current[f.key] = el }}>
+            <Field
+              label={f.label}
+              hint={f.hint}
+              error={error?.field === f.key ? error.text : undefined}
+            >
+              <span className="flex items-center gap-2">
+                <Input
+                  type={f.secret && !revealed ? 'password' : undefined}
+                  value={values[f.key]}
+                  spellCheck={false}
+                  className={cn(f.mono && 'font-mono', f.secret && 'min-w-0 flex-1')}
+                  aria-invalid={error?.field === f.key || undefined}
+                  onChange={(e) => {
+                    setValues((v) => ({ ...v, [f.key]: e.target.value }))
+                    // Editing the field that failed is the fix in progress.
+                    if (error?.field === f.key) setError(null)
+                    if (status.kind !== 'working') setStatus({ kind: 'idle' })
+                  }}
+                />
+                {f.secret && (
+                  <Button variant="ghost" size="sm" type="button" onClick={() => setRevealed((r) => !r)}>
+                    {revealed ? 'Hide' : 'Show'}
+                  </Button>
+                )}
+              </span>
+            </Field>
+          </div>
         ))}
       </BoxBody>
-      <BoxFooter>
-        <StatusLine status={status} />
-        <span className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={working} onClick={() => run(false)}>
-            Test
-          </Button>
-          {dirty && (
-            <Button size="sm" disabled={working} onClick={() => run(true)}>
+      <BoxFooter className="flex-col items-stretch gap-1">
+        <span className="flex items-center justify-between gap-3">
+          <StatusLine status={status} />
+          <span className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={working} onClick={() => run(false)}>
+              Test
+            </Button>
+            <Button
+              size="sm"
+              disabled={working || !dirty}
+              title={dirty ? undefined : 'Nothing to save yet'}
+              onClick={() => run(true)}
+            >
               Save
             </Button>
-          )}
+          </span>
         </span>
+        <p>{TEST_SAVE_HINT}</p>
       </BoxFooter>
     </Box>
   )
@@ -161,11 +187,14 @@ function ConnectionSkeleton({ title, fields }: { title: string; fields: FieldSpe
           </Field>
         ))}
       </BoxBody>
-      <BoxFooter>
-        <span />
-        <Button variant="outline" size="sm" disabled>
-          Test
-        </Button>
+      <BoxFooter className="flex-col items-stretch gap-1">
+        <span className="flex items-center justify-between gap-3">
+          <span />
+          <Button variant="outline" size="sm" disabled>
+            Test
+          </Button>
+        </span>
+        <p>{TEST_SAVE_HINT}</p>
       </BoxFooter>
     </Box>
   )
@@ -259,6 +288,13 @@ function You() {
 
 const HEALTH_NAMES = ['Data directory', 'Database', 'Poppler', 'Tesseract']
 
+/** The checks' details name plumbing ("pdftoppm 24.02.0"); the purpose is
+ *  ours to say, keyed by check id. */
+const HEALTH_PURPOSE: Record<string, string> = {
+  poppler: 'renders PDF pages',
+  tesseract: 'reads scanned pages',
+}
+
 /** The local system, checked on open. The endpoints aren't here: their
  *  status lives beside their fields, so each fact is said once. */
 function Health() {
@@ -297,7 +333,9 @@ function Health() {
               fix.isError && fix.variables === c.id ? (
                 <span className="text-destructive">{fix.error.message}</span>
               ) : (
-                c.detail
+                HEALTH_PURPOSE[c.id]
+                  ? `${c.detail} · ${HEALTH_PURPOSE[c.id]}`
+                  : c.detail
               )
             }
             trailing={
@@ -439,7 +477,7 @@ function plural(n: number, word: string) {
 
 const CHAT_FIELDS: FieldSpec[] = [
   { key: 'endpoint', label: 'Endpoint', mono: true },
-  { key: 'apiKey', label: 'API key', mono: true },
+  { key: 'apiKey', label: 'API key', mono: true, secret: true },
   { key: 'model', label: 'Model', mono: true },
 ]
 

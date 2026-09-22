@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 
 import { queryClient } from './query'
@@ -31,10 +31,38 @@ function dispatch(raw: string) {
   for (const fn of handlers.get(msg.type) ?? []) fn(msg.data, queryClient)
 }
 
+// The stream's reachability, so the shell can own a lost-touch banner.
+// EventSource reconnects on its own; it errors the moment the connection
+// falls and opens again when a retry lands.
+let live = true
+const watchers = new Set<() => void>()
+
+function setLive(up: boolean) {
+  if (live === up) return
+  live = up
+  for (const w of watchers) w()
+}
+
+/** True while `/api/events` is connected; false from the first failed
+ *  reconnect until the stream opens again. */
+export function useLiveStream() {
+  return useSyncExternalStore(
+    (onChange) => {
+      watchers.add(onChange)
+      return () => {
+        watchers.delete(onChange)
+      }
+    },
+    () => live,
+  )
+}
+
 /** Opens the stream for the life of the app. Mounted once, in App. */
 export function useEventStream() {
   useEffect(() => {
     const es = new EventSource('/api/events')
+    es.onopen = () => setLive(true)
+    es.onerror = () => setLive(false)
     es.onmessage = (e) => dispatch(e.data)
     return () => es.close()
   }, [])

@@ -15,6 +15,7 @@ import {
   Printer,
   Square,
   Trash2,
+  X,
 } from 'lucide-react'
 
 import { AppShell } from '@/components/shell'
@@ -56,6 +57,7 @@ import {
 import { ApiError } from '@/api/client'
 import {
   figureURL,
+  outstanding,
   useAddQuestions,
   useBookHomework,
   useCreateHomework,
@@ -108,60 +110,81 @@ function writeTab(bookId: string, tab: Tab) {
 // ---------------------------------------------------------------- rail
 
 /** The book's contents as a tree of quiet rows; the reader's position
- *  highlights the section it is inside. A book with no contents has no
- *  rail. Pages here are PDF pages, as the engine sends them; each shows
- *  its printed number, with the PDF page on hover. */
+ *  highlights the section or chapter it is inside. A jump puts the
+ *  destination there at once, until the next scroll moves the page. A
+ *  book with no contents has no rail. Pages here are PDF pages, as the
+ *  engine sends them; each shows its printed number, with the PDF page
+ *  on hover. */
 function Rail({
   toc,
-  currentPage,
+  page,
   onJump,
 }: {
   toc: ContentsChapter[]
-  currentPage: number
+  /** The page the rail highlights: the reader's page, or a jump's
+   *  destination until the next scroll moves the page. */
+  page: number
   onJump: (pdfPage: number) => void
 }) {
   const offset = usePageOffset()
-  // The current section is the last one that starts at or before the page
-  // the scan is showing.
-  let currentId: string | undefined
-  for (const c of toc)
-    for (const s of c.sections) if (s.page <= currentPage) currentId = s.id
+  // The current heading is the last one, chapter or section, that starts
+  // at or before the page the scan is showing.
+  const currentId = (() => {
+    let id: string | undefined
+    for (const c of toc) {
+      if (c.page <= page) id = c.id
+      for (const s of c.sections) if (s.page <= page) id = s.id
+    }
+    return id
+  })()
 
   return (
     <aside className="w-rail shrink-0 overflow-y-auto border-r bg-rail py-4">
       <nav aria-label="Contents" className="space-y-4">
-        {toc.map((c) => (
-          <div key={c.id}>
-            <button
-              type="button"
-              onClick={() => onJump(c.page)}
-              className="flex w-full items-center px-4 py-1 text-left text-sm font-medium transition-colors duration-150 ease-out hover:bg-muted/50 motion-reduce:transition-none"
-            >
-              <span className="min-w-0 flex-1 truncate">{c.title}</span>
-            </button>
-            {c.sections.map((s) => (
+        {toc.map((c) => {
+          const current = c.id === currentId
+          return (
+            <div key={c.id}>
               <button
-                key={s.id}
                 type="button"
-                onClick={() => onJump(s.page)}
-                aria-current={s.id === currentId ? 'true' : undefined}
+                onClick={() => onJump(c.page)}
+                aria-current={current || undefined}
                 className={cn(
-                  'flex w-full items-center gap-2 py-1 pr-4 pl-8 text-left text-sm transition-colors duration-150 ease-out motion-reduce:transition-none',
-                  s.id === currentId
+                  'flex w-full items-center px-4 py-1 text-left text-sm font-medium transition-colors duration-150 ease-out motion-reduce:transition-none',
+                  current
                     ? 'bg-primary-soft text-primary'
-                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                    : 'text-foreground hover:bg-muted/50',
                 )}
               >
-                <span className="min-w-0 flex-1 truncate">{s.title}</span>
-                <Tooltip label={`PDF page ${s.page}`} side="left">
-                  <span className="shrink-0 font-mono text-xs tabular-nums">
-                    {printedLabel(s.page, offset)}
-                  </span>
-                </Tooltip>
+                <span className="min-w-0 flex-1 truncate">{c.title}</span>
               </button>
-            ))}
-          </div>
-        ))}
+              {c.sections.map((s) => {
+                const current = s.id === currentId
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => onJump(s.page)}
+                    aria-current={current || undefined}
+                    className={cn(
+                      'flex w-full items-center gap-2 py-1 pr-4 pl-8 text-left text-sm transition-colors duration-150 ease-out motion-reduce:transition-none',
+                      current
+                        ? 'bg-primary-soft text-primary'
+                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                    )}
+                  >
+                    <span className="min-w-0 flex-1 truncate">{s.title}</span>
+                    <Tooltip label={`PDF page ${s.page}`} side="left">
+                      <span className="shrink-0 font-mono text-xs tabular-nums">
+                        {printedLabel(s.page, offset)}
+                      </span>
+                    </Tooltip>
+                  </button>
+                )
+              })}
+            </div>
+          )
+        })}
       </nav>
     </aside>
   )
@@ -199,11 +222,12 @@ const ZOOM_MAX = 3
  * engine's render of that page, in a box at the page's own proportions so
  * nothing moves when it arrives; its printed number shows until it does.
  * The only chrome is the floating pill:
- * the printed page (the PDF page on hover) and the zoom, fading when idle.
+ * the printed page (the PDF page on hover) and the zoom, awake on arrival
+ * and fading when idle.
  *
  * Pinch on a trackpad zooms around the pointer; past the pane's width a
- * click-drag pans, and only then is the cursor a hand. Clicking the
- * percentage snaps back to fit.
+ * click-drag pans, and only then is the cursor a hand. The percentage
+ * opens the zoom menu.
  */
 function Scan({
   bookId,
@@ -225,7 +249,9 @@ function Scan({
   pageRefs: React.RefObject<Map<number, HTMLDivElement>>
 }) {
   const offset = usePageOffset()
-  const [pillAwake, setPillAwake] = useState(false)
+  // Awake on arrival, asleep shortly after; scroll, hover or focus wake
+  // it again.
+  const [pillAwake, setPillAwake] = useState(true)
   const sleepTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [zoom, setZoom] = useState(1)
   const [paneWidth, setPaneWidth] = useState(0)
@@ -247,7 +273,12 @@ function Scan({
     clearTimeout(sleepTimer.current)
     sleepTimer.current = setTimeout(() => setPillAwake(false), 1200)
   }
-  useEffect(() => () => clearTimeout(sleepTimer.current), [])
+  // The first sleep: the pill says where you are on arrival, then lets
+  // the paper have the frame back.
+  useEffect(() => {
+    sleepTimer.current = setTimeout(() => setPillAwake(false), 1200)
+    return () => clearTimeout(sleepTimer.current)
+  }, [])
 
   // The fit width follows the pane, which Focus mode resizes.
   useEffect(() => {
@@ -357,7 +388,9 @@ function Scan({
         )}
       >
         <div
-          className="mx-auto space-y-6 px-6 py-6"
+          // Night dims the paper a little, so a full-white page doesn't
+          // glare; scans themselves are never filtered.
+          className="mx-auto space-y-6 px-6 py-6 dark:brightness-90"
           style={{ width: width ? width + 48 : undefined }}
         >
           {Array.from({ length: pageCount }, (_, i) => i + 1).map((n) => (
@@ -391,7 +424,7 @@ function Scan({
       <div
         onMouseEnter={wake}
         className={cn(
-          'absolute bottom-6 left-1/2 flex h-control-sm -translate-x-1/2 items-center gap-2 rounded-full border bg-card px-4 font-mono text-xs text-muted-foreground shadow-floating tabular-nums transition-opacity duration-150 ease-out motion-reduce:transition-none',
+          'absolute bottom-6 left-1/2 flex h-control-sm -translate-x-1/2 items-center gap-2 rounded-full border bg-card px-4 font-mono text-xs text-muted-foreground shadow-floating tabular-nums transition-opacity duration-150 ease-out focus-within:opacity-100 motion-reduce:transition-none',
           pillAwake ? 'opacity-100' : 'opacity-0',
         )}
       >
@@ -401,21 +434,126 @@ function Scan({
           </span>
         </Tooltip>
         <span aria-hidden>·</span>
-        <Tooltip label="Fit to width">
-          <button
-            type="button"
-            onClick={() => setZoom(1)}
-            className="cursor-pointer rounded-sm transition-colors duration-150 ease-out hover:text-foreground motion-reduce:transition-none"
-          >
-            {Math.round(zoom * 100)}%
-          </button>
-        </Tooltip>
+        <ZoomMenu
+          zoom={zoom}
+          onPick={(z) => {
+            setZoom(z)
+            wake()
+          }}
+        />
       </div>
     </div>
   )
 }
 
+/** The pill's zoom control: the percentage opens a menu of the stops
+ *  worth naming. A pinch or ctrl-wheel still moves freely between them. */
+function ZoomMenu({ zoom, onPick }: { zoom: number; onPick: (z: number) => void }) {
+  const [open, setOpen] = useState(false)
+  const root = useRef<HTMLDivElement>(null)
+  const trigger = useRef<HTMLButtonElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    panel.current?.querySelector<HTMLElement>('[role^="menuitem"]')?.focus()
+    const onDown = (e: PointerEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      setOpen(false)
+      trigger.current?.focus()
+    }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const at = (z: number) => Math.abs(zoom - z) < 0.01
+  const item =
+    'flex h-control w-full cursor-pointer items-center gap-2 px-3 text-left text-sm text-foreground transition-colors duration-150 ease-out outline-none hover:bg-muted/50 focus-visible:bg-muted/50 motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0'
+
+  return (
+    <div ref={root} className="relative">
+      <Tooltip label="Zoom">
+        <button
+          ref={trigger}
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+          className="cursor-pointer rounded-sm transition-colors duration-150 ease-out hover:text-foreground motion-reduce:transition-none"
+        >
+          {Math.round(zoom * 100)}%
+        </button>
+      </Tooltip>
+      {open && (
+        // Opens upward: the pill sits at the pane's bottom edge.
+        <div
+          ref={panel}
+          role="menu"
+          aria-label="Zoom"
+          className="absolute bottom-full left-1/2 z-50 mb-2 flex -translate-x-1/2 flex-col overflow-hidden rounded-md border bg-card shadow-floating"
+        >
+          {(
+            [
+              { label: 'Fit to width', value: 1 },
+              { label: '150%', value: 1.5 },
+              { label: '200%', value: 2 },
+            ] as const
+          ).map((s) => (
+            <button
+              key={s.label}
+              type="button"
+              role="menuitemradio"
+              aria-checked={at(s.value)}
+              className={cn(item, '[&_svg]:text-muted-foreground')}
+              onClick={() => {
+                setOpen(false)
+                onPick(s.value)
+                trigger.current?.focus()
+              }}
+            >
+              {at(s.value) ? <Check className="text-primary!" /> : <span className="size-4" />}
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------- panel
+
+/**
+ * A question that didn't send, as the homework failure card's sibling: a
+ * title naming what failed, the server's sentence, and the ways out. No
+ * chat model: Open Settings, then Try again. Anything else: Try again.
+ */
+function AskError({ error, onRetry }: { error: Error; onRetry: () => void }) {
+  const navigate = useNavigate()
+  const setup = error instanceof ApiError && error.code === 'not_configured'
+  return (
+    <div className="mb-3 space-y-1">
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <CircleAlert className="size-4 shrink-0 text-destructive" />
+        {setup ? 'The chat model needs setting up' : "The question didn't send"}
+      </p>
+      <p className="text-sm text-muted-foreground">{error.message}</p>
+      <div className="flex items-center gap-2 pt-1">
+        {setup && <Button onClick={() => navigate('/settings#connections')}>Open Settings</Button>}
+        <Button variant={setup ? 'ghost' : 'primary'} onClick={onRetry}>
+          Try again
+        </Button>
+      </div>
+    </div>
+  )
+}
 
 /** A day as a divider says it: "Today", "Yesterday", "Sep 12". */
 function dayLabel(iso: string, now = new Date()): string {
@@ -559,7 +697,7 @@ function AskTab({
             <AboutChip label={about.label} onRemove={onClearAbout} />
           </div>
         )}
-        {ask.isError && <p className="mb-2 text-xs text-destructive">{ask.error.message}</p>}
+        {ask.isError && <AskError error={ask.error} onRetry={() => send(text, about)} />}
         <form
           className="flex items-end gap-2"
           onSubmit={(e) => {
@@ -572,7 +710,10 @@ function AskTab({
             rows={1}
             value={text}
             placeholder="Ask about this book…"
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value)
+              if (ask.isError) ask.reset()
+            }}
             onKeyDown={(e) => {
               // Enter sends; Shift+Enter is a new line.
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -908,6 +1049,9 @@ function Walkthrough({
   }
   const working = workingLine(q)
   const queued = q.state === 'pending'
+  // The line under a queued question is only about waiting behind others
+  // when others really are still in line ahead of it.
+  const ahead = questions.some((x) => x.position < q.position && outstanding(x))
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -976,7 +1120,9 @@ function Walkthrough({
             {/* Queued is a word and no motion: nothing is happening to it
                 yet. Working gets the spinner and the shimmer. */}
             {queued ? (
-              <p className="text-xs text-muted-foreground">Queued: it starts when the questions ahead of it are done.</p>
+              <p className="text-xs text-muted-foreground">
+                {ahead ? 'Queued: it starts when the questions ahead of it are done.' : 'Waiting for its turn…'}
+              </p>
             ) : (
               working && (
                 <p className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -1100,7 +1246,19 @@ function HomeworkTab({
   }
 
   return (
-    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-card">
+    <div
+      className={cn(
+        'min-h-0 flex-1 space-y-4 overflow-y-auto p-card',
+        // An empty tab centers its one sentence and the way out.
+        sets?.length === 0 && 'flex flex-col justify-center',
+      )}
+    >
+      {sets?.length === 0 && (
+        <p className="text-center text-sm text-muted-foreground">
+          No homework here yet. New homework makes a set, then you add the questions you want walked
+          through.
+        </p>
+      )}
       {/* No header: the tab already says Homework, and a second label on
           the box only said it again. The way to add one is the list's last
           row, shaped like the Door. */}
@@ -1246,16 +1404,50 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   const [focus, setFocus] = useState(false)
   // A PDF index: the scan is the one place that counts in those.
   const [currentPage, setCurrentPage] = useState(1)
+  // The page a jump landed on holds the rail's highlight until a scroll
+  // that moves the page says otherwise.
+  const [pinnedPage, setPinnedPage] = useState<number | null>(null)
   const [editingBook, setEditingBook] = useState(false)
   const [memoryOpen, setMemoryOpen] = useState(false)
+  const [titlePrompt, setTitlePrompt] = useState(() => {
+    // The file's own name isn't kept past import, only the title it
+    // became: a title that still looks like a filename stem, lowercase
+    // with no author, is a placeholder that was never replaced. Asked
+    // once per book; a blocked localStorage just never asks.
+    try {
+      return (
+        localStorage.getItem(`pset:title-prompt:${book.id}`) !== '1' &&
+        /^[a-z0-9][a-z0-9 ]*$/.test(book.title) &&
+        !book.author
+      )
+    } catch {
+      return false
+    }
+  })
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const pageRefs = useRef(new Map<number, HTMLDivElement>())
 
+  const dismissTitlePrompt = () => {
+    try {
+      localStorage.setItem(`pset:title-prompt:${book.id}`, '1')
+    } catch {
+      /* forgetting is fine */
+    }
+    setTitlePrompt(false)
+  }
+
   const offset = book.pageOffset
-  const jumpPdf = (pdf: number) => pageRefs.current.get(pdf)?.scrollIntoView()
+  const jumpPdf = (pdf: number) => {
+    setPinnedPage(pdf)
+    pageRefs.current.get(pdf)?.scrollIntoView()
+  }
   // Everything outside the scan and the rail speaks printed pages; the
   // scan is indexed by PDF page, so a jump converts once, here.
   const jump = (printed: number) => jumpPdf(pdfOf(printed, offset))
+  const settlePage = (p: number) => {
+    setCurrentPage(p)
+    if (p !== pinnedPage) setPinnedPage(null)
+  }
   const chapters = contents.data?.chapters
   const homeworkCount = useBookHomework(book.id).data?.length ?? 0
   // Time counts toward what you last touched: the panel's tab, or the
@@ -1299,19 +1491,38 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           </span>
         }
       >
-        <div className="flex h-full" onPointerDownCapture={() => (activity.current = 'reading')}>
+        <div className="flex h-full min-h-0 flex-col">
+          {titlePrompt && (
+            <div className="flex shrink-0 items-center justify-center gap-2 border-b bg-card px-4 py-1 text-sm">
+              <span className="text-muted-foreground">This book is named after its file.</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  dismissTitlePrompt()
+                  setEditingBook(true)
+                }}
+              >
+                Edit the title
+              </Button>
+              <IconButton variant="ghost" size="sm" aria-label="Dismiss" onClick={dismissTitlePrompt}>
+                <X />
+              </IconButton>
+            </div>
+          )}
+          <div className="flex min-h-0 flex-1" onPointerDownCapture={() => (activity.current = 'reading')}>
           {!focus &&
             (chapters === undefined ? (
               <RailSkeleton />
             ) : (
-              chapters.length > 0 && <Rail toc={chapters} currentPage={currentPage} onJump={jumpPdf} />
+              chapters.length > 0 && <Rail toc={chapters} page={pinnedPage ?? currentPage} onJump={jumpPdf} />
             ))}
           <Scan
             bookId={book.id}
             aspect={book.aspect}
             pageCount={book.pageCount}
             currentPage={currentPage}
-            onPageChange={setCurrentPage}
+            onPageChange={settlePage}
             scrollRef={scrollRef}
             pageRefs={pageRefs}
           />
@@ -1324,6 +1535,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
             onFocusToggle={() => setFocus((f) => !f)}
             onJump={jump}
           />
+          </div>
         </div>
       </AppShell>
 

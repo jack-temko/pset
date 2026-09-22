@@ -33,11 +33,19 @@ export const useBookHomework = (bookId: string) =>
     queryFn: () => get<List>(`/api/books/${bookId}/homework`).then((r) => r.homework),
   })
 
+/** A question the engine still owes work on: queued, being found, or
+ *  being written. */
+export const outstanding = (q: Question) =>
+  q.state === 'pending' || q.state === 'locating' || q.state === 'writing'
+
 export const useHomeworkSet = (id: string | null) =>
   useQuery({
     queryKey: homeworkKeys.set(id ?? ''),
     queryFn: () => get<Detail>(`/api/homework/${id}`),
     enabled: !!id,
+    // Events carry every change, but a missed one mustn't strand a question
+    // on Queued forever: while any is outstanding, poll as a backstop.
+    refetchInterval: (query) => (query.state.data?.questions.some(outstanding) ? 5000 : false),
   })
 
 export const useDue = () =>
@@ -62,12 +70,30 @@ function dropSummary(qc: QueryClient, id: string, bookId: string) {
   qc.invalidateQueries({ queryKey: homeworkKeys.due })
 }
 
-function putQuestion(qc: QueryClient, q: Question) {
-  qc.setQueryData<Detail>(homeworkKeys.set(q.homeworkId), (d) => {
-    if (!d) return d
-    const rest = d.questions.filter((x) => x.id !== q.id)
-    return { ...d, questions: [...rest, q].sort((a, b) => a.position - b.position) }
-  })
+// A question only moves forward through its states. The stream is ordered,
+// but a mutation's response is a snapshot that can land after a newer event
+// already applied (the question failed within a second, say): the older
+// snapshot must lose, or it resurrects a state nothing will ever revisit.
+const stateRank: Record<Question['state'], number> = {
+  pending: 0,
+  locating: 1,
+  writing: 2,
+  ready: 3,
+  failed: 3,
+}
+
+/** One question's newest state into a set's cached questions, keeping
+ *  position order. Returns the same Detail when the write would move the
+ *  question backward; `force` overrides, for the acts a student restarts. */
+export function applyQuestion(d: Detail, q: Question, force = false): Detail {
+  const old = d.questions.find((x) => x.id === q.id)
+  if (!force && old && stateRank[q.state] < stateRank[old.state]) return d
+  const rest = d.questions.filter((x) => x.id !== q.id)
+  return { ...d, questions: [...rest, q].sort((a, b) => a.position - b.position) }
+}
+
+function putQuestion(qc: QueryClient, q: Question, force = false) {
+  qc.setQueryData<Detail>(homeworkKeys.set(q.homeworkId), (d) => (d ? applyQuestion(d, q, force) : d))
 }
 
 function dropQuestion(qc: QueryClient, id: string, homeworkId: string) {
@@ -179,7 +205,8 @@ export function useRetryQuestion() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, retry }: { id: string; retry: Retry }) => post<Question>(`/api/questions/${id}/retry`, retry),
-    onSuccess: (q) => putQuestion(qc, q),
+    // Restarting is the student's own act: pending applies even over failed.
+    onSuccess: (q) => putQuestion(qc, q, true),
   })
 }
 

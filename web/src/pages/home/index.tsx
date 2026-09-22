@@ -15,9 +15,9 @@ import { useSettings } from '@/api/settings'
 import { AppShell, PageShell, PageTitle } from '@/components/shell'
 import { BookTile } from '@/components/book-tile'
 import { ImportRow } from '@/components/import-row'
-import { IconButton } from '@/components/button'
 import { Box, BoxBody, BoxRow, Counter } from '@/components/box'
-import { Button } from '@/components/button'
+import { Button, IconButton, buttonVariants } from '@/components/button'
+import { CoverSwatch } from '@/components/book-cover'
 import { HomeworkStatusLabel } from '@/components/homework-status'
 import { Door } from '@/components/door'
 import { DurationValue, StatTile } from '@/components/stat-tile'
@@ -70,11 +70,9 @@ function WeekByBook({ books }: { books: WeekBook[] }) {
       <div className="flex flex-wrap gap-x-6 gap-y-1">
         {books.map((b) => (
           <span key={b.sha256} className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span
-              aria-hidden
-              className="size-2 shrink-0 rounded-full"
-              style={{ background: `var(--cover-${coverHueFromSha(b.sha256)})` }}
-            />
+            {/* A spine, not a dot: the activity tiles own the dots, and this
+                swatch ties the entry to its cover on the shelf below. */}
+            <CoverSwatch hue={coverHueFromSha(b.sha256)} className="h-3 w-2" />
             {b.title}
             <span className="font-mono font-normal tabular-nums">
               {Math.floor(b.minutes / 60) > 0 && `${Math.floor(b.minutes / 60)}h `}
@@ -94,10 +92,32 @@ function WeekByBook({ books }: { books: WeekBook[] }) {
  *  colour comes from the book's cover hue: the bar is the shelf, flattened. */
 type WeekBook = { sha256: string; title: string; minutes: number }
 
+/** One rounding, from one array: the tiles are cut from the same per-book
+ *  minutes the bar shows (weighted by the per-activity totals, spare minutes
+ *  to the largest fractions), so both views always sum the same. */
+function splitByBookTotal(
+  total: number,
+  w: { homework: number; reading: number; asking: number },
+): { homework: number; reading: number; asking: number } {
+  const weight = w.homework + w.reading + w.asking
+  if (total === 0 || weight === 0) return w
+  const exact = [w.homework, w.reading, w.asking].map((m) => (m * total) / weight)
+  const out = exact.map((v) => Math.floor(v))
+  const left = total - out.reduce((a, b) => a + b, 0)
+  exact
+    .map((v, i) => ({ fraction: v - Math.floor(v), i }))
+    .sort((a, b) => b.fraction - a.fraction)
+    .slice(0, left)
+    .forEach(({ i }) => (out[i] += 1))
+  return { homework: out[0], reading: out[1], asking: out[2] }
+}
+
 function ThisWeek({ week: loaded, byBook }: { week: Week | undefined; byBook: WeekBook[] }) {
   // Until the numbers arrive, the tiles hold their size with skeletons.
   const week = loaded ?? { homework: 0, reading: 0, asking: 0, questions: 0, problemSets: 0, byBook: [] }
-  const total = week.homework + week.reading + week.asking
+  const onShelf = byBook.reduce((sum, b) => sum + b.minutes, 0)
+  const { homework, reading, asking } = splitByBookTotal(onShelf, week)
+  const total = homework + reading + asking
   const empty = total === 0 && week.questions === 0
   const wait = (v: React.ReactNode) => (loaded ? v : <Skeleton className="h-6 w-16" />)
 
@@ -108,19 +128,19 @@ function ThisWeek({ week: loaded, byBook }: { week: Week | undefined; byBook: We
         <StatTile
           label="Homework"
           chart={1}
-          value={wait(<DurationValue minutes={week.homework} />)}
+          value={wait(<DurationValue minutes={homework} />)}
           context={empty ? 'nothing yet this week' : 'so far this week'}
         />
         <StatTile
           label="Reading"
           chart={2}
-          value={wait(<DurationValue minutes={week.reading} />)}
+          value={wait(<DurationValue minutes={reading} />)}
           context={empty ? 'nothing yet this week' : 'so far this week'}
         />
         <StatTile
           label="Asking"
           chart={3}
-          value={wait(<DurationValue minutes={week.asking} />)}
+          value={wait(<DurationValue minutes={asking} />)}
           context={empty ? 'nothing yet this week' : 'so far this week'}
         />
         <StatTile
@@ -264,13 +284,14 @@ function Shelf({ books }: { books: Book[] | undefined }) {
         }
       />
 
-      {/* The one blocking condition, said before you can hit it. */}
+      {/* The one blocking condition, said before you can hit it, with the
+          gesture that unblocks it: a Save in Settings. */}
       {!embeddingsReady && (
         <Box tone="warning">
           <BoxBody className="text-sm">
-            PSet needs an embeddings server before it can prepare a book.{' '}
-            <Link to="/settings" className="text-primary underline underline-offset-2">
-              Set one up in Settings
+            PSet needs a saved embeddings server before it can prepare a book.{' '}
+            <Link to="/settings#connections" className="text-primary underline underline-offset-2">
+              Save one in Settings
             </Link>
             .
           </BoxBody>
@@ -335,10 +356,19 @@ function Shelf({ books }: { books: Book[] | undefined }) {
           <p className="font-heading text-2xl text-muted-foreground italic">
             Nothing on the shelf yet.
           </p>
-          <Button size="lg" disabled={!embeddingsReady} onClick={() => picker.current?.click()}>
-            <Plus />
-            Add your first book
-          </Button>
+          {/* Blocked, the primary CTA is the way out, not a dead button:
+              the shelf opens once a server is saved. The header's + stays
+              quietly disabled until then. */}
+          {embeddingsReady ? (
+            <Button size="lg" onClick={() => picker.current?.click()}>
+              <Plus />
+              Add your first book
+            </Button>
+          ) : (
+            <Link to="/settings#connections" className={buttonVariants({ size: 'lg' })}>
+              Set up in Settings
+            </Link>
+          )}
         </div>
       ) : (
         ready.length > 0 && (
