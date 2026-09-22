@@ -684,7 +684,7 @@ const STAGE_NAMES = ['hint', 'walkthrough'] as const
 /** A stage still being written: skeleton lines at a stage's usual size,
  *  so the guide lands in space already made for it. A hint runs two
  *  lines, a walkthrough about five; the last stops short, as prose does. */
-function StageSkeleton({ name }: { name: (typeof STAGE_NAMES)[number] }) {
+function StageSkeleton({ name, still }: { name: (typeof STAGE_NAMES)[number]; still?: boolean }) {
   const lines = name === 'hint' ? 2 : 5
   return (
     <div className="space-y-1">
@@ -692,7 +692,7 @@ function StageSkeleton({ name }: { name: (typeof STAGE_NAMES)[number] }) {
       <div className="space-y-1 text-base">
         {Array.from({ length: lines }, (_, j) => (
           <p key={j}>
-            <Skeleton className={cn('h-3', j === lines - 1 ? 'w-2/3' : 'w-full')} />
+            <Skeleton still={still} className={cn('h-3', j === lines - 1 ? 'w-2/3' : 'w-full')} />
           </p>
         ))}
       </div>
@@ -704,7 +704,6 @@ function StageSkeleton({ name }: { name: (typeof STAGE_NAMES)[number] }) {
  *  then whatever the guide's writer is doing (thinking, searching the
  *  book, computing), then writing. */
 function workingLine(q: Question): string | null {
-  if (q.state === 'pending') return q.inBook ? 'Finding it in the book…' : 'Waiting its turn…'
   if (q.state === 'locating') return 'Finding it in the book…'
   if (q.state === 'writing') return q.activity || 'Getting started…'
   return null
@@ -841,6 +840,7 @@ function Walkthrough({
     setIndex(at + by)
   }
   const working = workingLine(q)
+  const queued = q.state === 'pending'
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -890,8 +890,8 @@ function Walkthrough({
           q.inBook &&
           (q.state === 'pending' || q.state === 'locating') && (
             <p className="space-y-1 text-base">
-              <Skeleton className="h-3 w-full" />
-              <Skeleton className="h-3 w-2/3" />
+              <Skeleton still={queued} className="h-3 w-full" />
+              <Skeleton still={queued} className="h-3 w-2/3" />
             </p>
           )
         )}
@@ -906,17 +906,23 @@ function Walkthrough({
           <FailedQuestion key={q.id} q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} />
         ) : (
           <>
-            {working && (
-              <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Spinner className="size-3" />
-                {working}
-              </p>
+            {/* Queued is a word and no motion: nothing is happening to it
+                yet. Working gets the spinner and the shimmer. */}
+            {queued ? (
+              <p className="text-xs text-muted-foreground">Queued: it starts when the questions ahead of it are done.</p>
+            ) : (
+              working && (
+                <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Spinner className="size-3" />
+                  {working}
+                </p>
+              )
             )}
             {STAGE_NAMES.map((name) => {
               const segs = name === 'hint' ? q.hint : q.walkthrough
               // Each stage fills in as it's written: the hint can be
               // there while the walkthrough is still a skeleton.
-              if (segs.length === 0) return <StageSkeleton key={name} name={name} />
+              if (segs.length === 0) return <StageSkeleton key={name} name={name} still={queued} />
               return (
                 <Stage
                   key={name}

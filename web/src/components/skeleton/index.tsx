@@ -13,8 +13,14 @@ import { cn } from '@/lib/utils'
  * Inline by default, so a text-sized skeleton sits inside a line box and
  * the row keeps its real line height. Pass `block` sizes for figures.
  */
-export function Skeleton({ className }: { className?: string }) {
+export function Skeleton({ className, still }: { className?: string; still?: boolean }) {
   return (
-    <span aria-hidden className={cn('skeleton inline-block rounded-sm align-middle', className)} />
+    <span
+      aria-hidden
+      className={cn('skeleton inline-block rounded-sm align-middle', className)}
+      // Still: the space is held, but nothing is on its way yet (a queued
+      // question), so it doesn't borrow the shimmer's "waiting" meaning.
+      style={still ? { animation: 'none', backgroundImage: 'none' } : undefined}
+    />
   )
 }
