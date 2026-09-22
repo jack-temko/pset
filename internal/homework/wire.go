@@ -49,6 +49,23 @@ const (
 	StateFailed  State = "failed"
 )
 
+// Failure is what kind of failure a failed question had.
+type Failure string
+
+const (
+	// FailureNotFound: locate couldn't find it. Give the page, or paste it.
+	FailureNotFound Failure = "not_found"
+	// FailureGeneration: the guide didn't finish (cut off, missing a part).
+	// Try again.
+	FailureGeneration Failure = "generation"
+	// FailureUnavailable: the provider didn't answer or was busy. Try
+	// again later.
+	FailureUnavailable Failure = "unavailable"
+	// FailureSetup: there's no chat model, or the provider refused it.
+	// Fix it in Settings.
+	FailureSetup Failure = "setup"
+)
+
 // Figure is a figure the question refers to, cropped from its page and
 // served at /api/questions/{id}/figures/{index}.
 type Figure struct {
@@ -72,7 +89,10 @@ type Question struct {
 	Hint        []cards.Segment `json:"hint"`
 	Walkthrough []cards.Segment `json:"walkthrough"`
 	State       State           `json:"state"`
-	Reason      string          `json:"reason,omitempty"`
+	// Failure is what kind of failure a failed question had, which picks
+	// its ways out; Reason says what happened, in a sentence.
+	Failure Failure `json:"failure,omitempty"`
+	Reason  string  `json:"reason,omitempty"`
 	// Activity is what the guide's writer is doing right now, while it
 	// writes: "Thinking…", a tool call ("Computing…"), or "Writing the
 	// guide…". Empty otherwise.

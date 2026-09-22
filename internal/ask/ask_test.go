@@ -240,7 +240,8 @@ func TestModelOutageFailsReadablyAndClearEmpties(t *testing.T) {
 	var turn Turn
 	e.do(t, "POST", "/api/books/b1/turns", Question{Question: "Hi"}, &turn)
 	got := e.wait(t, turn.ID, TurnFailed)
-	if !strings.HasPrefix(got.Reason, "The chat model stopped answering") {
+	// A 400 is the settings' fault, and says so with its status.
+	if !strings.Contains(got.Reason, "turned the request down (HTTP 400)") || !strings.Contains(got.Reason, "Settings") {
 		t.Fatalf("reason %q", got.Reason)
 	}
 	var er httpx.Error

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CircleAlert, CircleCheck } from 'lucide-react'
 
@@ -489,9 +489,9 @@ function AboutLine() {
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-5">
+    <section id={id} className="space-y-5">
       <h2 className="font-heading text-xl">{title}</h2>
       {children}
     </section>
@@ -499,6 +499,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export function Settings() {
+  // /settings#connections, from a failure that needs the chat model fixed.
+  useEffect(() => {
+    const id = window.location.hash.slice(1)
+    if (id) document.getElementById(id)?.scrollIntoView()
+  }, [])
   return (
     // No middle of its own: the bar picks up "Settings" once the h1 has
     // scrolled away, and never repeats it while it's on screen.
@@ -510,7 +515,7 @@ export function Settings() {
           <You />
         </Section>
 
-        <Section title="Connections">
+        <Section id="connections" title="Connections">
           <Connections />
         </Section>
 

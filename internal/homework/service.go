@@ -438,7 +438,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 	if q.State != StateFailed {
 		return Question{}, httpx.Errorf(httpx.CodeInvalid, "Only a question that failed can be tried again.")
 	}
-	set := `state = 'pending', reason = '', hint = '[]', walkthrough = '[]', memory = '[]', updated_at = ?`
+	set := `state = 'pending', reason = '', failure = '', hint = '[]', walkthrough = '[]', memory = '[]', updated_at = ?`
 	args := []any{db.Now()}
 	switch {
 	case r.Text != nil && strings.TrimSpace(*r.Text) != "":

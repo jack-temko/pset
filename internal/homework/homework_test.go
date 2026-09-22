@@ -342,7 +342,7 @@ func TestNotFoundThenPinnedPageThenPastedText(t *testing.T) {
 	h := e.newSet(t)
 	qs := e.add(t, h.ID, Draft{Text: "3.99", InBook: true})
 	q := e.wait(t, qs[0].ID, StateFailed)
-	if !strings.HasPrefix(q.Reason, "Couldn't find 3.99 in this book.") {
+	if q.Failure != FailureNotFound || !strings.Contains(q.Reason, "problem 3.99") {
 		t.Fatalf("reason %q", q.Reason)
 	}
 	var er httpx.Error
@@ -353,7 +353,7 @@ func TestNotFoundThenPinnedPageThenPastedText(t *testing.T) {
 	page := 3
 	e.do(t, "POST", "/api/questions/"+q.ID+"/retry", Retry{Page: &page}, nil)
 	q = e.wait(t, q.ID, StateFailed)
-	if !strings.Contains(q.Reason, "isn't on p. 1 either") {
+	if q.Failure != FailureNotFound || !strings.Contains(q.Reason, "isn't on p. 1 either") {
 		t.Fatalf("pinned reason %q", q.Reason)
 	}
 	text := "Find the voltage across R2 when I = 3 A."
@@ -382,7 +382,7 @@ func TestIncompleteGuideFailsAfterOneMoreTry(t *testing.T) {
 	})
 	h := e.newSet(t)
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "Why?", InBook: false})[0].ID, StateFailed)
-	if q.Reason != "The guide came back incomplete. Try again." || calls != 2 {
+	if q.Failure != FailureGeneration || !strings.Contains(q.Reason, "missing a part") || calls != 2 {
 		t.Fatalf("%q after %d calls", q.Reason, calls)
 	}
 }
@@ -392,7 +392,7 @@ func TestNoChatModelFailsReadably(t *testing.T) {
 	e.cfg.cfg.ChatEndpoint = ""
 	h := e.newSet(t)
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "Why?", InBook: false})[0].ID, StateFailed)
-	if q.Reason != "Set up a chat model in Settings, then try again." {
+	if q.Failure != FailureSetup || !strings.Contains(q.Reason, "no chat model") {
 		t.Fatalf("%q", q.Reason)
 	}
 }
@@ -594,6 +594,10 @@ func TestAFoundQuestionIsWrittenAgainWithoutLookingAgain(t *testing.T) {
 	})
 	h := e.newSet(t)
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateFailed)
+	// A 500 is the provider being down, not the problem or the settings.
+	if q.Failure != FailureUnavailable || !strings.Contains(q.Reason, "Nothing is wrong with problem 3.36") {
+		t.Fatalf("%s: %q", q.Failure, q.Reason)
+	}
 	if q.Page == nil || locates != 1 {
 		t.Fatalf("page %v after %d locates", q.Page, locates)
 	}
@@ -604,6 +608,9 @@ func TestAFoundQuestionIsWrittenAgainWithoutLookingAgain(t *testing.T) {
 		t.Fatalf("retry %d", code)
 	}
 	q = e.wait(t, q.ID, StateReady)
+	if q.Failure != "" || q.Reason != "" {
+		t.Fatalf("a ready question still carries %s %q", q.Failure, q.Reason)
+	}
 	if locates != 1 || q.Page == nil || *q.Page != 3 {
 		t.Fatalf("looked again: %d locates, page %v", locates, q.Page)
 	}

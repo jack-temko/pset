@@ -183,16 +183,25 @@ built.
 - **Editing a set** (2026-09-21): Edit homework in the header's menu
   opens New homework again as **Edit homework**, with **Delete** at the
   footer's left, confirmed in place.
-- **Failed question** (2026-09-21): one destructive line saying why, and
-  the ways out that fit the failure, in place of the stages. **Found, then
-  the guide failed** (the model dropped, say): one **Try again**, which
-  writes it again without looking for it. **Not found**: both ways out at
-  once:
-  - **"It's on page ___" + Try again**: you know where it is; the
-    search didn't. Only for in-book questions.
-  - **"Not in this book?"**: paste the question, and it becomes an
-    off-book question whose guide is written from your text alone.
-  A bare reference that failed ("3.C.14") shows once, as the label.
+- **Failed question** (2026-09-22): a recoverable state about that
+  question, not an error dump. A **title naming what failed**, a
+  sentence saying what happened (no internals, no "check Settings"
+  without saying where), and the ways out that fit the kind, which the
+  engine records as `failure`:
+  - **generation**, "Couldn't write the guide" (cut off, missing a part):
+    **Try again**, which writes it again without looking for it. Below,
+    "Having trouble with this problem?" offers pasting it, for a
+    statement read wrong.
+  - **unavailable**, "The chat model isn't responding" (no answer, busy,
+    5xx): **Try again**, and "nothing is wrong with problem 4.44".
+  - **setup**, "The chat model needs setting up" (none set up, or the
+    provider refused: a bad key, an unknown model, with its HTTP status):
+    **Open Settings** at Connections, then Try again.
+  - **not_found**, "Couldn't find 4.44 in this book": a **Printed page**
+    field and **Look there**, then "Not from this book?" to paste it and
+    have the guide written from your text alone.
+  Every action is enabled; one with nothing to go on says what it needs
+  ("Type the page number first.").
 - **Sets are editable: add, remove and reorder.** The controls sit inline
   on the question you are looking at (move up, move down, remove, as
   quiet icon buttons beside its page chip) because the walkthrough is

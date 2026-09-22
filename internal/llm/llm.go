@@ -604,3 +604,44 @@ func (c *Client) doWithRetry(ctx context.Context, url string, body any) (*http.R
 		return nil, readErrorBody(resp.StatusCode, data)
 	}
 }
+
+// Trouble is what a failed call means for the person waiting on it.
+type Trouble string
+
+const (
+	// TroubleCut: the reply stopped partway. Asking again usually works.
+	TroubleCut Trouble = "cut"
+	// TroubleBusy: the provider didn't answer, is overloaded, or the
+	// network failed. Nothing to fix; try again later.
+	TroubleBusy Trouble = "busy"
+	// TroubleRejected: the provider refused the request (a bad key, an
+	// unknown model): something in the connection's settings is wrong.
+	TroubleRejected Trouble = "rejected"
+)
+
+// Classify names a model call's failure, with the HTTP status when the
+// provider gave one.
+func Classify(err error) (Trouble, int) {
+	if errors.Is(err, ErrStreamCut) {
+		return TroubleCut, 0
+	}
+	var e *LLMError
+	if errors.As(err, &e) {
+		if e.Status == http.StatusTooManyRequests || e.Status >= 500 {
+			return TroubleBusy, e.Status
+		}
+		return TroubleRejected, e.Status
+	}
+	return TroubleBusy, 0
+}
+
+// Refusal says in words why a provider refused a request, by its status.
+func Refusal(status int) string {
+	switch status {
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return fmt.Sprintf("Your chat model provider turned the request down (HTTP %d): the API key may be wrong or expired.", status)
+	case http.StatusNotFound:
+		return "Your chat model provider doesn't recognise the endpoint or the model name (HTTP 404)."
+	}
+	return fmt.Sprintf("Your chat model provider turned the request down (HTTP %d).", status)
+}

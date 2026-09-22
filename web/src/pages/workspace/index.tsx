@@ -66,6 +66,7 @@ import {
   useUpdateHomework,
   useUpdateQuestion,
   worksheetURL,
+  type Failure,
   type Question,
   type Retry,
   type Summary,
@@ -621,83 +622,126 @@ function Stage({
 }
 
 /**
- * A question the engine couldn't write a guide for. It says why in one
- * line, then offers both ways out at once: tell it the page (you know
- * where it is; the search didn't), or paste the question and let the
- * guide be written from your text alone, off the book.
+ * A question the engine couldn't write a guide for, as a recoverable
+ * state about that question: a title naming what failed, a sentence
+ * saying what happened, and the ways out that fit the kind. Not found:
+ * give the page. The guide didn't finish, or the provider didn't answer:
+ * Try again. The connection is wrong: Open Settings. Below, where it can
+ * help, pasting the problem as a fallback. Every action is enabled; one
+ * with nothing to go on says what it needs.
  */
 function FailedQuestion({ q, onRetry }: { q: Question; onRetry: (r: Retry) => void }) {
   const offset = usePageOffset()
+  const navigate = useNavigate()
   const [page, setPage] = useState('')
   const [text, setText] = useState('')
+  const [pageError, setPageError] = useState('')
+  const [textError, setTextError] = useState('')
   // A plain text field, not a number spinner: people type "57", "p. 57"
   // or "page 57", and all of them mean the first number in it.
   const pageNumber = Number(page.match(/\d+/)?.[0] ?? 0)
-  const reason = (
-    <p className="flex items-start gap-2 text-sm text-destructive">
-      <span className="flex h-5 shrink-0 items-center">
-        <CircleAlert className="size-4" />
-      </span>
-      {q.reason}
-    </p>
+  // Failed before failures had kinds: found (or never looked for) means
+  // the guide failed, otherwise it wasn't found.
+  const kind: Failure = q.failure || (q.page !== undefined || !q.inBook ? 'generation' : 'not_found')
+  const name = /^\d/.test(q.label) ? q.label : 'this question'
+
+  const title = {
+    generation: "Couldn't write the guide",
+    unavailable: "The chat model isn't responding",
+    setup: 'The chat model needs setting up',
+    not_found: `Couldn't find ${name} in this book`,
+  }[kind]
+
+  const retryButton = (variant: 'primary' | 'ghost') => (
+    <Button variant={variant} onClick={() => onRetry({})}>
+      Try again
+    </Button>
   )
 
-  // Found (or never looked for) and then the guide failed: where it is
-  // isn't the question, so the one way out is to write it again.
-  if (q.page !== undefined || !q.inBook) {
-    return (
-      <div className="space-y-3">
-        {reason}
-        <Button variant="outline" onClick={() => onRetry({})}>
-          Try again
-        </Button>
-      </div>
-    )
-  }
+  // Pasting helps when the book is the trouble (not found, or found and
+  // read wrong); it can't help a model that isn't answering.
+  const fallback =
+    kind === 'not_found'
+      ? { title: 'Not from this book?', body: 'Paste the problem, and the guide is written from your text alone.' }
+      : kind === 'generation' && q.inBook
+        ? {
+            title: 'Having trouble with this problem?',
+            body: 'If the problem above looks wrong, paste it, and the guide is written from your text instead.',
+          }
+        : null
 
   return (
     <div className="space-y-5">
-      {reason}
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <p className="flex items-center gap-2 text-base font-semibold">
+            <CircleAlert className="size-4 shrink-0 text-destructive" />
+            {title}
+          </p>
+          <p className="text-sm text-muted-foreground">{q.reason}</p>
+        </div>
 
-      {/* Not found: say where it is, or paste it. */}
-      <form
-        className="flex items-end gap-2"
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (pageNumber > 0) onRetry({ page: pdfOf(pageNumber, offset) })
-        }}
-      >
-        <Field label="It's on printed page" className="w-40">
-          <Input
-            inputMode="numeric"
-            value={page}
-            onChange={(e) => setPage(e.target.value)}
-            className="font-mono"
-          />
-        </Field>
-        <Button type="submit" variant="outline" disabled={!(pageNumber > 0)}>
-          Try again
-        </Button>
-      </form>
-
-      <div className="space-y-2 border-t pt-5">
-        <p className="text-sm font-medium">Not in this book?</p>
-        <p className="text-xs text-muted-foreground">
-          Paste the question, and the guide is written from your text alone.
-        </p>
-        {/* A real text box: a whole question gets pasted here, so it
-            starts four lines tall and grows from there. */}
-        <AutoTextarea
-          rows={4}
-          value={text}
-          placeholder="Paste the question"
-          className="py-2"
-          onChange={(e) => setText(e.target.value)}
-        />
-        <Button variant="outline" size="sm" disabled={!text.trim()} onClick={() => onRetry({ text: text.trim() })}>
-          Use this text
-        </Button>
+        {kind === 'not_found' ? (
+          <form
+            className="flex items-start gap-2"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (pageNumber > 0) onRetry({ page: pdfOf(pageNumber, offset) })
+              else setPageError('Type the page number first.')
+            }}
+          >
+            <Field label="Printed page" error={pageError || undefined} className="w-40">
+              <Input
+                inputMode="numeric"
+                value={page}
+                onChange={(e) => {
+                  setPage(e.target.value)
+                  setPageError('')
+                }}
+                className="font-mono"
+              />
+            </Field>
+            {/* Level with the input, under the field's label. */}
+            <Button type="submit" className="mt-6">
+              Look there
+            </Button>
+          </form>
+        ) : kind === 'setup' ? (
+          <div className="flex items-center gap-2">
+            <Button onClick={() => navigate('/settings#connections')}>Open Settings</Button>
+            {retryButton('ghost')}
+          </div>
+        ) : (
+          retryButton('primary')
+        )}
       </div>
+
+      {fallback && (
+        <div className="space-y-2 border-t pt-5">
+          <p className="text-sm font-medium">{fallback.title}</p>
+          <p className="text-xs text-muted-foreground">{fallback.body}</p>
+          {/* A real text box: a whole question gets pasted here, so it
+              starts four lines tall and grows from there. */}
+          <AutoTextarea
+            rows={4}
+            value={text}
+            placeholder="Paste the problem"
+            className="py-2"
+            onChange={(e) => {
+              setText(e.target.value)
+              setTextError('')
+            }}
+          />
+          {textError && <p className="text-xs text-destructive">{textError}</p>}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => (text.trim() ? onRetry({ text: text.trim() }) : setTextError('Paste the problem first.'))}
+          >
+            Use this text
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

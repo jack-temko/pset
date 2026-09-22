@@ -25,8 +25,9 @@ type questionPayload struct {
 // failure is a question failure in words for the student: it becomes the
 // failed question's one line, as written.
 type failure struct {
-	msg string
-	err error
+	kind Failure
+	msg  string
+	err  error
 }
 
 func (f *failure) Error() string {
@@ -38,16 +39,32 @@ func (f *failure) Error() string {
 
 func (f *failure) Unwrap() error { return f.err }
 
-func fail(err error, format string, args ...any) error {
-	return &failure{msg: fmt.Sprintf(format, args...), err: err}
+func fail(kind Failure, err error, format string, args ...any) error {
+	return &failure{kind: kind, msg: fmt.Sprintf(format, args...), err: err}
 }
 
-// modelDown is what any failed model call means to the student.
-func modelDown(err error) error {
-	if errors.Is(err, llm.ErrStreamCut) {
-		return fail(err, "The chat model's connection kept dropping partway through. Try again.")
+// modelDown is what a failed model call means to the student, about the
+// question it was for: the page names the kind, this says what happened.
+func modelDown(err error, q row) error {
+	trouble, status := llm.Classify(err)
+	switch trouble {
+	case llm.TroubleCut:
+		return fail(FailureGeneration, err, "The walkthrough for %s stopped partway: the connection to the chat model dropped. Trying again usually works.", problemName(q))
+	case llm.TroubleRejected:
+		return fail(FailureSetup, err, "%s Check the chat connection in Settings, then try again.", llm.Refusal(status))
 	}
-	return fail(err, "The chat model stopped answering. Check it in Settings, then try again.")
+	return fail(FailureUnavailable, err, "Your chat model provider didn't answer, or is busy right now. Nothing is wrong with %s: try again in a minute.", problemName(q))
+}
+
+// problemName is a question as a sentence names it: "problem 4.44", or
+// "this question" when it has no number.
+func problemName(q row) string {
+	for _, l := range []string{q.Label, q.Text} {
+		if label, ok := questionLabel(l); ok {
+			return "problem " + label
+		}
+	}
+	return "this question"
 }
 
 // runQuestion is the question job: locate it (if it's in the book), then
@@ -76,14 +93,21 @@ func (s *Service) runQuestion(ctx context.Context, j jobs.Job) error {
 		s.setState(settle, q.ID, StatePending, "")
 		return err
 	}
-	reason := "Something went wrong writing this guide. The details are in the log."
-	var f *failure
-	if errors.As(err, &f) {
-		reason = f.msg
-	}
+	f := &failure{kind: FailureGeneration, msg: fmt.Sprintf("Something went wrong writing the walkthrough for %s. Trying again usually works.", problemName(q))}
+	errors.As(err, &f)
 	slog.Warn("question failed", "question", q.ID, "err", err)
-	s.setState(settle, q.ID, StateFailed, reason)
+	s.setFailed(settle, q.ID, f.kind, f.msg)
 	return err
+}
+
+// setFailed marks a question failed: what kind, and in words.
+func (s *Service) setFailed(ctx context.Context, id string, kind Failure, reason string) {
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET state = 'failed', failure = ?, reason = ?, activity = '', updated_at = ? WHERE id = ?`,
+		kind, reason, db.Now(), id); err != nil {
+		slog.Error("question: set failed", "question", id, "err", err)
+		return
+	}
+	s.publishQuestion(ctx, id)
 }
 
 func (s *Service) setState(ctx context.Context, id string, st State, reason string) {
@@ -105,7 +129,7 @@ func (s *Service) work(ctx context.Context, q row) error {
 		return err
 	}
 	if !cfg.ChatReady() {
-		return fail(nil, "Set up a chat model in Settings, then try again.")
+		return fail(FailureSetup, nil, "There's no chat model set up yet. Add one in Settings, under Connections, then try again.")
 	}
 	m := model{client: llm.Open(cfg), name: cfg.ChatModel}
 	// A run starts its memory lines over: a requeued one left some.
@@ -240,7 +264,7 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			return modelDown(err)
+			return modelDown(err, q)
 		}
 		hint, walk := parser.Section(stageHint), parser.Section(stageWalkthrough)
 		if len(hint) == 0 || len(walk) == 0 {
@@ -255,7 +279,7 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 		s.publishQuestion(ctx, q.ID)
 		return nil
 	}
-	return fail(nil, "The guide came back incomplete. Try again.")
+	return fail(FailureGeneration, nil, "The walkthrough for %s came back missing a part. Trying again usually works.", problemName(q))
 }
 
 // guideRounds bounds the writer's tool rounds: enough to look up the
@@ -409,14 +433,14 @@ type location struct {
 // candidate; otherwise the exact tiers and search first, a wider search
 // second, then a sweep of the chapter's pages as images.
 func (s *Service) locate(ctx context.Context, m model, book Book, q row) (location, error) {
-	notFound := fail(nil, "Couldn't find %s in this book. Tell it the page, or paste the question.", quoteLabel(q.Label))
+	notFound := fail(FailureNotFound, nil, "Searched the book for %s and didn't see it. If you know the printed page, give it here; if it isn't from this book, paste it below.", problemName(q))
 	if q.Pinned != nil {
 		loc, ok, err := s.locateOnce(ctx, m, book, q, []int{*q.Pinned})
 		if err != nil {
 			return location{}, err
 		}
 		if !ok {
-			return location{}, fail(nil, "It isn't on %s either. Check the page, or paste the question.", printedName(*q.Pinned, book.PageOffset))
+			return location{}, fail(FailureNotFound, nil, "It isn't on %s either. Check the page number, or paste the problem below.", printedName(*q.Pinned, book.PageOffset))
 		}
 		return loc, nil
 	}
@@ -486,13 +510,6 @@ func (s *Service) locate(ctx context.Context, m model, book Book, q row) (locati
 		}
 	}
 	return location{}, notFound
-}
-
-func quoteLabel(label string) string {
-	if label == "" {
-		return "this question"
-	}
-	return label
 }
 
 // Candidate pool sizes: the first round is small and sharp, the second
@@ -578,7 +595,7 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 		if ctx.Err() != nil {
 			return location{}, false, ctx.Err()
 		}
-		return location{}, false, modelDown(err)
+		return location{}, false, modelDown(err, q)
 	}
 	var pin struct {
 		Image     int       `json:"image"`

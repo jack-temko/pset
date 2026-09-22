@@ -107,7 +107,7 @@ func (r *run) loop(ctx context.Context) error {
 		return err
 	}
 	if !cfg.ChatReady() {
-		return &failure{msg: "Set up a chat model in Settings, then ask again."}
+		return &failure{msg: "There's no chat model set up yet. Add one in Settings, under Connections, then ask again."}
 	}
 	r.llm, r.model = llm.Open(cfg), cfg.ChatModel
 	r.parser = cards.NewParser(ctx, cards.Options{Offset: r.book.PageOffset, Repair: r.repair}, cards.Handler{
@@ -145,10 +145,13 @@ func (r *run) loop(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		if errors.Is(err, llm.ErrStreamCut) {
-			return &failure{msg: "The chat model's connection kept dropping partway through. Try again.", err: err}
+		switch trouble, status := llm.Classify(err); trouble {
+		case llm.TroubleCut:
+			return &failure{msg: "The answer stopped partway: the connection to the chat model dropped. Asking again usually works.", err: err}
+		case llm.TroubleRejected:
+			return &failure{msg: llm.Refusal(status) + " Check the chat connection in Settings, then ask again.", err: err}
 		}
-		return &failure{msg: "The chat model stopped answering. Check it in Settings, then try again.", err: err}
+		return &failure{msg: "Your chat model provider didn't answer, or is busy right now. Ask again in a minute.", err: err}
 	}
 	return nil
 }
