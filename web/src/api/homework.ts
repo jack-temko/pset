@@ -205,8 +205,21 @@ export function useRetryQuestion() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, retry }: { id: string; retry: Retry }) => post<Question>(`/api/questions/${id}/retry`, retry),
-    // Restarting is the student's own act: pending applies even over failed.
-    onSuccess: (q) => putQuestion(qc, q, true),
+    // Restarting is the student's own act: pending is forced over failed
+    // before the request goes, so the run's own events (even an instant
+    // second failure) apply forward from it, and the response's snapshot
+    // loses to any of them that landed first.
+    onMutate: ({ id }) => {
+      for (const [, d] of qc.getQueriesData<Detail>({ queryKey: ['homework', 'set'] })) {
+        const old = d?.questions.find((x) => x.id === id)
+        if (old) {
+          putQuestion(qc, { ...old, state: 'pending' }, true)
+          return { old }
+        }
+      }
+    },
+    onError: (_e, _v, ctx) => ctx?.old && putQuestion(qc, ctx.old, true),
+    onSuccess: (q) => putQuestion(qc, q),
   })
 }
 

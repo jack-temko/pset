@@ -60,10 +60,30 @@ export function useLiveStream() {
 /** Opens the stream for the life of the app. Mounted once, in App. */
 export function useEventStream() {
   useEffect(() => {
-    const es = new EventSource('/api/events')
-    es.onopen = () => setLive(true)
-    es.onerror = () => setLive(false)
-    es.onmessage = (e) => dispatch(e.data)
-    return () => es.close()
+    let es: EventSource
+    let retry: ReturnType<typeof setTimeout> | undefined
+    let wait = 1000
+    const open = () => {
+      es = new EventSource('/api/events')
+      es.onopen = () => {
+        wait = 1000
+        setLive(true)
+      }
+      es.onerror = () => {
+        setLive(false)
+        // A refusal (a proxy's 502 while the server restarts) closes the
+        // stream for good; EventSource only retries dropped connections.
+        // Reopen it ourselves, backing off, so the banner stays honest.
+        if (es.readyState !== EventSource.CLOSED) return
+        retry = setTimeout(open, wait)
+        wait = Math.min(wait * 2, 30000)
+      }
+      es.onmessage = (e) => dispatch(e.data)
+    }
+    open()
+    return () => {
+      clearTimeout(retry)
+      es.close()
+    }
   }, [])
 }

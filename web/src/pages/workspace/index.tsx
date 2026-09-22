@@ -1475,16 +1475,22 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   }
 
   const offset = book.pageOffset
+  // The jump's own scroll lands a frame later and mustn't unpin it: near
+  // the end of the book, or with short pages, the page it settles on
+  // isn't the destination.
+  const jumping = useRef(false)
   const jumpPdf = (pdf: number) => {
     setPinnedPage(pdf)
+    jumping.current = true
     pageRefs.current.get(pdf)?.scrollIntoView()
+    requestAnimationFrame(() => requestAnimationFrame(() => (jumping.current = false)))
   }
   // Everything outside the scan and the rail speaks printed pages; the
   // scan is indexed by PDF page, so a jump converts once, here.
   const jump = (printed: number) => jumpPdf(pdfOf(printed, offset))
   const settlePage = (p: number) => {
     setCurrentPage(p)
-    if (p !== pinnedPage) setPinnedPage(null)
+    if (p !== pinnedPage && !jumping.current) setPinnedPage(null)
   }
   const chapters = contents.data?.chapters
   const homeworkCount = useBookHomework(book.id).data?.length ?? 0
