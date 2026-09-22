@@ -56,18 +56,23 @@ function ConnectionBox({
   title,
   fields,
   initial,
+  ready,
 }: {
   kind: 'chat' | 'embeddings'
   title: string
   fields: FieldSpec[]
   initial: Record<string, string>
+  /** Saved (and so tested) before. A side never saved shows defaults that
+   *  still need a Save, even untouched. */
+  ready: boolean
 }) {
   const [saved, setSaved] = useState(initial)
   const [values, setValues] = useState(initial)
   const [error, setError] = useState<{ field: string; text: string } | null>(null)
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
 
-  const dirty = fields.some((f) => values[f.key] !== saved[f.key])
+  const [savedOnce, setSavedOnce] = useState(ready)
+  const dirty = fields.some((f) => values[f.key] !== saved[f.key]) || !savedOnce
   const working = status.kind === 'working'
 
   const test = useTestConnection()
@@ -83,7 +88,10 @@ function ConnectionBox({
         : { embeddings: { endpoint: values.endpoint, model: values.model } }
     try {
       const r = save ? await saveConnection.mutateAsync(body) : await test.mutateAsync(body)
-      if (save) setSaved(values)
+      if (save) {
+        setSaved(values)
+        setSavedOnce(true)
+      }
       setStatus({ kind: 'ok', text: save ? `Saved · ${r.detail}` : r.detail })
     } catch (e) {
       const err = e instanceof ApiError ? e : null
@@ -456,11 +464,12 @@ function Connections() {
     )
   return (
     <div className="grid grid-cols-2 gap-6">
-      <ConnectionBox kind="chat" title="Chat" initial={{ ...data.chat }} fields={CHAT_FIELDS} />
+      <ConnectionBox kind="chat" title="Chat" initial={{ ...data.chat }} ready={data.ready.chat} fields={CHAT_FIELDS} />
       <ConnectionBox
         kind="embeddings"
         title="Embeddings"
         initial={{ ...data.embeddings }}
+        ready={data.ready.embeddings}
         fields={EMBED_FIELDS}
       />
     </div>

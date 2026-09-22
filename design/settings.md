@@ -40,7 +40,9 @@ need to see which key you pasted.
 - **Test** is always there. It dials the values on screen and writes
   nothing, so you can try a different key without losing the one that
   works.
-- **Save** appears only once something in the Box has changed. It
+- **Save** appears only once something in the Box has changed, or
+  while that side has never been saved: the defaults a fresh install
+  shows aren't saved until you Save them (2026-09-22). It
   **tests first and writes only if the test passes**: what's on disk
   always works. A failed Save writes nothing.
 - A failure names **the field that caused it**, and the error replaces
