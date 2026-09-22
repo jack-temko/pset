@@ -12,6 +12,7 @@ import {
   Pencil,
   Plus,
   Printer,
+  Square,
   Trash2,
 } from 'lucide-react'
 
@@ -28,13 +29,11 @@ import {
   AssistantTurn,
   ConversationStart,
   DayDivider,
-  MathDisplay,
-  MathInline,
+  FailedTurn,
+  StoppedNote,
   PageRef,
-  Statement,
   Steps,
   UserTurn,
-  WorkedSteps,
 } from '@/components/transcript'
 import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
 import { Veil } from '@/components/veil'
@@ -69,7 +68,8 @@ import {
   type Retry,
   type Summary,
 } from '@/api/homework'
-import { Prose, Segments } from '@/components/segments'
+import { CardSkeleton, Prose, Segments } from '@/components/segments'
+import { useAsk, useClearTurns, useStopTurn, useTurns, type About, type LiveTurn } from '@/api/ask'
 import { dueLine, dueStatus } from '@/lib/due'
 import { PageOffset, pdfOf, printedLabel, usePageOffset } from '@/lib/pages'
 import { cn } from '@/lib/utils'
@@ -413,110 +413,173 @@ function Scan({
 
 // ---------------------------------------------------------------- panel
 
-/** Sample history until the loop backend exists: it exercises every
- *  transcript piece the spec names. */
-function SampleConversation({ onJump }: { onJump: (page: number) => void }) {
+/** A day as a divider says it: "Today", "Yesterday", "Sep 12". */
+function dayLabel(iso: string, now = new Date()): string {
+  const d = new Date(iso)
+  const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+  const diff = Math.round((day(now) - day(d)) / 86_400_000)
+  if (diff === 0) return 'Today'
+  if (diff === 1) return 'Yesterday'
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+/** One turn: the question on the right, the step feed, the answer. */
+function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) => void; onRetry: () => void }) {
+  const running = t.state === 'running'
+  const lastRunning = t.steps.length > 0 && t.steps[t.steps.length - 1].running
   return (
-    <div className="space-y-5">
-      <ConversationStart />
-      <DayDivider label="Yesterday" />
-      <UserTurn>Where does the book define linear independence?</UserTurn>
-      <Steps steps={['Searched ‘linear independence’ · 4 pages', 'Read p. 27–33']} />
-      <AssistantTurn>
-        <p>
-          In section 2.A <PageRef page={32} onJump={onJump} />: a list{' '}
-          <MathInline tex="v_1,\dots,v_m" /> is linearly independent when the only way to write{' '}
-          <MathInline tex="0" /> as a combination of the list is to take every coefficient to be{' '}
-          <MathInline tex="0" />. The lead-up on <PageRef page={28} onJump={onJump} /> builds the
-          span first, so independence arrives as “no vector is wasted.”
+    <>
+      <UserTurn about={t.about || undefined}>{t.question}</UserTurn>
+      {t.steps.length > 0 && <Steps steps={t.steps.map((s) => s.label)} running={running && lastRunning} />}
+      {(t.answer.length > 0 || t.pending) && (
+        <AssistantTurn>
+          <Segments segments={t.answer} onJump={onJump} />
+          {t.pending && <CardSkeleton kind={t.pending.kind} repairing={t.pending.repairing} />}
+        </AssistantTurn>
+      )}
+      {running && t.steps.length === 0 && t.answer.length === 0 && (
+        // Before the first step or word: the answer is on its way.
+        <p className="space-y-1 text-base" aria-busy="true">
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-2/3" />
         </p>
-      </AssistantTurn>
-      <DayDivider label="Today" />
-      <UserTurn>Why does every operator have a minimal polynomial?</UserTurn>
-      <Steps
-        steps={[
-          'Searched ‘minimal polynomial’ · 6 pages',
-          'Read p. 142–145',
-          'Solved · 3 steps',
-        ]}
-      />
-      <AssistantTurn>
-        <p>
-          Because powers of <MathInline tex="T" /> cannot stay independent forever. On{' '}
-          <PageRef page={142} onJump={onJump} /> the argument is a dimension count: the operator
-          space <MathInline tex="\mathcal{L}(V)" /> has dimension <MathInline tex="n^2" />, so
-          the list
-        </p>
-        <MathDisplay tex="I,\;T,\;T^2,\;\dots,\;T^{n^2}" />
-        <p>
-          has <MathInline tex="n^2+1" /> entries and must be dependent. Here is the book's
-          statement of what that buys you:
-        </p>
-        <Statement
-          kind="Theorem"
-          number="5.22"
-          name="existence, uniqueness, and degree of minimal polynomial"
-          page={143}
-          onJump={onJump}
-        >
-          <p>
-            Suppose <MathInline tex="V" /> is finite-dimensional and{' '}
-            <MathInline tex="T \in \mathcal{L}(V)" />. Then there is a unique monic polynomial{' '}
-            <MathInline tex="p" /> of smallest degree such that <MathInline tex="p(T) = 0" />, and{' '}
-            <MathInline tex="\deg p \le \dim V" />.
-          </p>
-        </Statement>
-        <p>Uniqueness is the short part, worked through:</p>
-        <WorkedSteps
-          steps={[
-            { math: 'p(T) = q(T) = 0', why: 'Suppose p and q are both monic of the smallest degree, m, and both work.' },
-            { math: '(p - q)(T) = p(T) - q(T) = 0' },
-            { math: '\\deg(p - q) < m', why: 'Both are monic of degree m, so the leading terms cancel.' },
-            { math: 'p - q = 0', why: 'A nonzero one would be a smaller polynomial that works, after scaling to monic.' },
-          ]}
-        />
-      </AssistantTurn>
-    </div>
+      )}
+      {t.state === 'stopped' && <StoppedNote />}
+      {t.state === 'failed' && <FailedTurn reason={t.reason ?? ''} onRetry={onRetry} />}
+    </>
   )
 }
 
 /** Ask: the transcript over the composer. An empty conversation is a
  *  prompt line and one sentence of capability: no generated suggestions. */
 function AskTab({
+  bookId,
+  bookTitle,
   about,
   onClearAbout,
   onJump,
 }: {
+  bookId: string
+  bookTitle: string
   /** The homework question "Ask about this" brought along, if any. */
-  about: string | null
+  about: About | null
   onClearAbout: () => void
   onJump: (page: number) => void
 }) {
+  const turns = useTurns(bookId)
+  const ask = useAsk(bookId)
+  const stop = useStopTurn()
+  const clear = useClearTurns(bookId)
+  const [text, setText] = useState('')
+  const scroller = useRef<HTMLDivElement | null>(null)
+  const pinned = useRef(true)
+  const list = turns.data
+  const running = list?.find((t) => t.state === 'running')
+
+  // Follow the answer as it streams, unless you've scrolled up to read.
+  useLayoutEffect(() => {
+    const el = scroller.current
+    if (el && pinned.current) el.scrollTop = el.scrollHeight
+  }, [list])
+
+  const send = (question: string, withAbout: About | null) => {
+    if (!question.trim() || running) return
+    pinned.current = true
+    ask.mutate(
+      { question, about: withAbout ?? undefined },
+      {
+        onSuccess: () => {
+          setText('')
+          onClearAbout()
+        },
+      },
+    )
+  }
+
   return (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto p-card">
-        <SampleConversation onJump={onJump} />
+      <div
+        ref={scroller}
+        onScroll={(e) => {
+          const el = e.currentTarget
+          pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48
+        }}
+        className="min-h-0 flex-1 overflow-y-auto p-card"
+      >
+        {list === undefined ? (
+          <div className="space-y-5" aria-hidden>
+            <div className="ml-auto w-2/3 space-y-1 rounded-md bg-primary-soft p-3">
+              <Skeleton className="h-3 w-full" />
+            </div>
+            <p className="space-y-1">
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-1/2" />
+            </p>
+          </div>
+        ) : list.length === 0 ? (
+          <div className="flex h-full flex-col justify-end gap-1 pb-2">
+            <p className="font-heading text-lg">Ask anything about {bookTitle}.</p>
+            <p className="text-sm text-muted-foreground">
+              It searches and reads the book, looks at figures, and checks its arithmetic, then answers with the pages it used.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <ConversationStart onClear={() => clear.mutate()} />
+            {list.map((t, i) => {
+              const day = dayLabel(t.createdAt)
+              const newDay = i === 0 || dayLabel(list[i - 1].createdAt) !== day
+              return (
+                <div key={t.id} className="space-y-5">
+                  {newDay && <DayDivider label={day} />}
+                  <TurnView t={t} onJump={onJump} onRetry={() => send(t.question, null)} />
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
       <div className="shrink-0 border-t p-card">
         {/* The question rides above the composer as a chip, so the box
             stays empty for your own words. */}
         {about && (
           <div className="mb-2">
-            <AboutChip label={about} onRemove={onClearAbout} />
+            <AboutChip label={about.label} onRemove={onClearAbout} />
           </div>
         )}
+        {ask.isError && <p className="mb-2 text-xs text-destructive">{ask.error.message}</p>}
         <form
           className="flex items-end gap-2"
-          onSubmit={(e) => e.preventDefault()}
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (running) stop.mutate(running.id)
+            else send(text, about)
+          }}
         >
-          <textarea
+          <AutoTextarea
             rows={1}
+            value={text}
             placeholder="Ask about this book…"
-            className="min-h-control flex-1 resize-none rounded-md border border-input bg-card px-3 py-1 text-base placeholder:text-muted-foreground"
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter sends; Shift+Enter is a new line.
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                send(text, about)
+              }
+            }}
+            className="flex-1"
           />
-          <IconButton type="submit" variant="primary" aria-label="Send">
-            <ArrowUp />
-          </IconButton>
+          {running ? (
+            <IconButton type="submit" variant="outline" aria-label="Stop">
+              <Square />
+            </IconButton>
+          ) : (
+            <IconButton type="submit" variant="primary" aria-label="Send" disabled={!text.trim() || ask.isPending}>
+              <ArrowUp />
+            </IconButton>
+          )}
         </form>
       </div>
     </>
@@ -657,7 +720,7 @@ function Walkthrough({
   onEdit: () => void
   onBack: () => void
   onJump: (page: number) => void
-  onAskAbout: (label: string) => void
+  onAskAbout: (about: About) => void
 }) {
   const pageOffset = usePageOffset()
   const detail = useHomeworkSet(setId)
@@ -866,7 +929,7 @@ function Walkthrough({
       </div>
 
       <div className="flex shrink-0 items-center justify-between border-t p-card">
-        <Button variant="ghost" size="sm" onClick={() => onAskAbout(q.label)}>
+        <Button variant="ghost" size="sm" onClick={() => onAskAbout({ label: q.label, text: q.statement || q.text })}>
           Ask about this
         </Button>
         <div className="flex items-center gap-2">
@@ -920,7 +983,7 @@ function HomeworkTab({
   /** From the URL: Home's due list opens a set directly. */
   initialSet?: string
   onJump: (page: number) => void
-  onAskAbout: (label: string) => void
+  onAskAbout: (about: About) => void
 }) {
   const list = useBookHomework(bookId)
   const create = useCreateHomework(bookId)
@@ -1001,12 +1064,14 @@ function HomeworkTab({
 
 function Panel({
   bookId,
+  bookTitle,
   homework,
   focus,
   onFocusToggle,
   onJump,
 }: {
   bookId: string
+  bookTitle: string
   /** A homework set named in the URL opens the Homework tab on it. */
   homework?: string
   focus: boolean
@@ -1014,7 +1079,7 @@ function Panel({
   onJump: (page: number) => void
 }) {
   const [tab, setTab] = useState<Tab>(() => (homework ? 'homework' : readTab(bookId)))
-  const [about, setAbout] = useState<string | null>(null)
+  const [about, setAbout] = useState<About | null>(null)
   const pick = (t: Tab) => {
     setTab(t)
     writeTab(bookId, t)
@@ -1048,14 +1113,14 @@ function Panel({
         </IconButton>
       </div>
       {tab === 'ask' ? (
-        <AskTab about={about} onClearAbout={() => setAbout(null)} onJump={onJump} />
+        <AskTab bookId={bookId} bookTitle={bookTitle} about={about} onClearAbout={() => setAbout(null)} onJump={onJump} />
       ) : (
         <HomeworkTab
           bookId={bookId}
           initialSet={homework}
           onJump={onJump}
-          onAskAbout={(label) => {
-            setAbout(label)
+          onAskAbout={(a) => {
+            setAbout(a)
             pick('ask')
           }}
         />
@@ -1148,6 +1213,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           />
           <Panel
             bookId={book.id}
+            bookTitle={book.title}
             homework={homework}
             focus={focus}
             onFocusToggle={() => setFocus((f) => !f)}

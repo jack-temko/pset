@@ -5,6 +5,7 @@ import remarkMath from 'remark-math'
 
 import type { CodeCard, PlotCard, Segment, StatementCard, StepsCard, TableCard } from '@/api/gen/cards'
 import { AnswerTable, CodeBlock, PageRef, Plot, Statement, WorkedSteps } from '@/components/transcript'
+import { Skeleton } from '@/components/skeleton'
 import { usePageOffset } from '@/lib/pages'
 
 /**
@@ -99,5 +100,41 @@ export function Segments({ segments, onJump }: { segments: Segment[]; onJump?: J
         ),
       )}
     </>
+  )
+}
+
+const CARD_NAMES: Record<string, string> = {
+  statement: 'statement',
+  steps: 'worked steps',
+  plot: 'plot',
+  table: 'table',
+  code: 'code',
+}
+
+/**
+ * A card being written: its skeleton in roughly the card's own shape, with
+ * a label saying what's coming ("Writing a plot"), and "Tidying" while a
+ * malformed one is repaired. The card replaces it in place.
+ */
+export function CardSkeleton({ kind, repairing }: { kind: string; repairing: boolean }) {
+  const name = CARD_NAMES[kind] ?? 'card'
+  const rows = kind === 'steps' ? 3 : kind === 'table' ? 4 : kind === 'code' ? 5 : 2
+  return (
+    <div className="overflow-hidden rounded-md border bg-card" aria-busy="true">
+      <div className="border-b bg-card-header px-card py-2 text-xs text-muted-foreground">
+        {repairing ? `Tidying the ${name}` : `Writing ${/^[aeiou]/.test(name) ? 'an' : 'a'} ${name}`}
+      </div>
+      {kind === 'plot' ? (
+        <Skeleton className="m-card block h-48 w-auto rounded-sm" />
+      ) : (
+        <div className="space-y-2 p-card text-base">
+          {Array.from({ length: rows }, (_, i) => (
+            <p key={i}>
+              <Skeleton className={i === rows - 1 ? 'h-3 w-2/3' : 'h-3 w-full'} />
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }

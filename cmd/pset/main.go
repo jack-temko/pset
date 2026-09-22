@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackt/pset/internal/ask"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/events"
 	"github.com/jackt/pset/internal/homework"
@@ -73,6 +74,7 @@ func serve(addr, dir string, log *slog.Logger) error {
 		settings.Migrations(),
 		library.Migrations(),
 		homework.Migrations(),
+		ask.Migrations(),
 	)
 	ctx := context.Background()
 	if err := db.Migrate(ctx, d, migrations); err != nil {
@@ -86,6 +88,8 @@ func serve(addr, dir string, log *slog.Logger) error {
 	queue := jobs.New(d, log)
 	queue.Lane(library.LaneImport, 1)
 	queue.Lane(homework.LaneQuestion, 2)
+	// Many books may be answering at once; each book one question at a time.
+	queue.Lane(ask.LaneTurn, 8)
 
 	cfg := settings.New(settings.Config{
 		DB: d, DataDir: dir, DBPath: dbPath, Version: Version,
@@ -101,10 +105,15 @@ func serve(addr, dir string, log *slog.Logger) error {
 		DB: d, Events: bus, Queue: queue, Library: homeworkLibrary{books}, Settings: cfg,
 	})
 
+	tutor := ask.New(ask.Config{
+		DB: d, Events: bus, Queue: queue, Library: askLibrary{books}, Settings: cfg,
+	})
+
 	mux := http.NewServeMux()
 	cfg.Routes(mux)
 	books.Routes(mux)
 	sets.Routes(mux)
+	tutor.Routes(mux)
 	mux.HandleFunc("GET /api/events", bus.Handler)
 	mux.HandleFunc("/api/", httpx.NotFoundAPI)
 	mux.Handle("/", httpx.SPA(web.Dist))
@@ -189,6 +198,13 @@ type homeworkLibrary struct{ *library.Service }
 func (l homeworkLibrary) Book(ctx context.Context, id string) (homework.Book, error) {
 	b, err := l.Get(ctx, id)
 	return homework.Book{ID: b.ID, Title: b.Title, PageCount: b.PageCount, PageOffset: b.PageOffset}, err
+}
+
+type askLibrary struct{ *library.Service }
+
+func (l askLibrary) Book(ctx context.Context, id string) (ask.Book, error) {
+	b, err := l.Get(ctx, id)
+	return ask.Book{ID: b.ID, Title: b.Title, PageCount: b.PageCount, PageOffset: b.PageOffset}, err
 }
 
 func concat(lists ...[]db.Migration) []db.Migration {

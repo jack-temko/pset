@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jackt/pset/internal/llm"
 )
@@ -28,6 +29,9 @@ type Reply struct {
 	Text      string
 	ToolCalls []llm.ToolCall
 	Status    int // non-zero answers with this status and Text as the body
+	// Pause is how long to wait between streamed chunks, to test a
+	// stop mid-answer.
+	Pause time.Duration
 }
 
 // Request is what the server received, for assertions.
@@ -195,6 +199,13 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	for _, chunk := range chunks(reply.Text, 7) {
+		if reply.Pause > 0 {
+			select {
+			case <-r.Context().Done():
+				return
+			case <-time.After(reply.Pause):
+			}
+		}
 		send(map[string]any{"content": chunk})
 	}
 	if len(reply.ToolCalls) > 0 {

@@ -32,3 +32,13 @@ packages:
     frontmatter: |
       // Generated from internal/homework/wire.go by tygo. Do not edit.
       import type { Segment } from './cards'
+  - path: github.com/jackt/pset/internal/ask
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/ask.ts
+    type_mappings:
+      cards.Segment: "Segment"
+      cards.Kind: "Kind"
+    frontmatter: |
+      // Generated from internal/ask/wire.go by tygo. Do not edit.
+      import type { Kind, Segment } from './cards'
