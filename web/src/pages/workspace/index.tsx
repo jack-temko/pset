@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowUp,
+  Brain,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -42,6 +43,7 @@ import { Menu, MenuCheckItem, MenuDivider, MenuItem } from '@/components/menu'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
 import { AddQuestionsDialog, BookDialog, HomeworkDialog } from './dialogs'
+import { MemoryDialog, MemoryLines, MemoryUndo } from './memory'
 import {
   pageImageURL,
   useBook,
@@ -431,7 +433,14 @@ function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) 
   return (
     <>
       <UserTurn about={t.about || undefined}>{t.question}</UserTurn>
-      {t.steps.length > 0 && <Steps steps={t.steps.map((s) => s.label)} running={running && lastRunning} />}
+      {t.steps.length > 0 && (
+        <Steps
+          steps={t.steps.map((s) =>
+            s.memoryId ? { label: s.label, action: <MemoryUndo bookId={t.bookId} memoryId={s.memoryId} /> } : s.label,
+          )}
+          running={running && lastRunning}
+        />
+      )}
       {(t.answer.length > 0 || t.pending) && (
         <AssistantTurn>
           <Segments segments={t.answer} onJump={onJump} />
@@ -704,7 +713,7 @@ function StageSkeleton({ name, still }: { name: (typeof STAGE_NAMES)[number]; st
  *  then whatever the guide's writer is doing (thinking, searching the
  *  book, computing), then writing. */
 function workingLine(q: Question): string | null {
-  if (q.state === 'locating') return 'Finding it in the book…'
+  if (q.state === 'locating') return q.activity || 'Finding it in the book…'
   if (q.state === 'writing') return q.activity || 'Getting started…'
   return null
 }
@@ -934,6 +943,7 @@ function Walkthrough({
                 </Stage>
               )
             })}
+            {set && <MemoryLines bookId={set.bookId} lines={q.memory} />}
           </>
         )}
       </div>
@@ -1179,6 +1189,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   // A PDF index: the scan is the one place that counts in those.
   const [currentPage, setCurrentPage] = useState(1)
   const [editingBook, setEditingBook] = useState(false)
+  const [memoryOpen, setMemoryOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const pageRefs = useRef(new Map<number, HTMLDivElement>())
 
@@ -1199,18 +1210,34 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
       <AppShell
         scroll="fill"
         middle={
-          // The top bar's one action: editing the thing it names.
+          // The top bar's actions are about the thing it names: the book
+          // itself, and what the tutor knows about it.
           <span className="flex items-center gap-3">
             <span>{book.title}</span>
-            <IconButton
-              variant="ghost"
-              size="sm"
-              aria-label="Edit this book"
-              onClick={() => setEditingBook(true)}
-              className="text-muted-foreground"
-            >
-              <Pencil />
-            </IconButton>
+            <span className="flex items-center gap-1">
+              <Tooltip label="Edit this book">
+                <IconButton
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Edit this book"
+                  onClick={() => setEditingBook(true)}
+                  className="text-muted-foreground"
+                >
+                  <Pencil />
+                </IconButton>
+              </Tooltip>
+              <Tooltip label="What the tutor remembers">
+                <IconButton
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Memory"
+                  onClick={() => setMemoryOpen(true)}
+                  className="text-muted-foreground"
+                >
+                  <Brain />
+                </IconButton>
+              </Tooltip>
+            </span>
           </span>
         }
       >
@@ -1241,6 +1268,8 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           />
         </div>
       </AppShell>
+
+      <MemoryDialog open={memoryOpen} bookId={book.id} onClose={() => setMemoryOpen(false)} onJump={jump} />
 
       <BookDialog
         open={editingBook}

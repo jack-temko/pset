@@ -50,6 +50,9 @@ this); open one without a title; add a second way to dismiss it.
   approach because Esc, focus containment and background inertness are
   three chances to get it subtly wrong, and the platform already has
   them right.
+- **A dialog that saves as you go has one button, Done** (the Memory
+  dialog, where each add and delete is immediate). Cancel would promise
+  an undo there isn't, so Done is the way out and the primary at once.
 
 ## Open
 

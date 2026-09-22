@@ -48,8 +48,9 @@ dialog: title and author, editable (they start as the PDF's metadata);
 "Printed page 1 is PDF page ___", the offset, correctable; the page count
 and import date. **Remove book** sits at the footer's left. Confirming
 turns the dialog itself into the question (dialogs never nest), naming
-what goes with the book: its homework and its conversation. This is the
-top bar's one action, and it edits the thing the bar names.
+what goes with the book: its homework and its conversation. Beside it,
+**Memory** opens what the tutor remembers about the book
+(design/memory.md). Both act on the thing the bar names.
 
 ## Contents rail
 

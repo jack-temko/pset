@@ -13,9 +13,10 @@ import (
 
 // labelShape matches a question that is just a label, with an optional
 // kind word and a trailing parenthetical note: "3.36", "Problem 3.36.",
-// "Exercise 2.A.4", "3.24 (use matlab)". Prose after it fails the match.
+// "Exercise 2.A.4", "1.2.3" (chapter, section, problem), "3.24 (use
+// matlab)". Prose after it fails the match.
 var labelShape = regexp.MustCompile(
-	`(?i)^\s*(?:problem\s+|prob\.?\s*|exercise\s+|ex\.?\s*|question\s+|q\.?\s*)?(\d{1,2}(?:\.[A-Z])?\.\d{1,3}[a-z]?)\.?\s*(?:\([^()]*\))?\s*$`)
+	`(?i)^\s*(?:problem\s+|prob\.?\s*|exercise\s+|ex\.?\s*|question\s+|q\.?\s*)?(\d{1,2}(?:\.(?:[A-Z]|\d{1,2}))?\.\d{1,3}[a-z]?)\.?\s*(?:\([^()]*\))?\s*$`)
 
 // questionLabel reports the label a question is nothing but.
 func questionLabel(text string) (string, bool) {

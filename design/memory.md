@@ -41,6 +41,9 @@ replaced or dropped by the tutor**. The server treats a sentence that
 matches an existing one (case, spacing and punctuation aside) as already
 remembered.
 
+A `remember` with no kind (small models drop it) is about the book, or a
+preference when the student asked for it and there's no page.
+
 **Yours, through Ask.** "Remember I use Octave" saves as yours
 (`from_student`). "Forget that" removes one: Ask alone has a `forget`
 tool, used only when the student asks in that turn. The walkthrough
@@ -54,8 +57,8 @@ time within a round. The block is capped at 60 memories or 4,000
 characters: yours always go in, then the rest newest first.
 
 **Locate records problem ranges, by code.** When it finds problem 3.36
-on a page, PSet keeps one memory per chapter ("Chapter 3's problems are
-on p. 148-156") with the problems it has seen behind it. The next locate
+on a page, PSet keeps one memory per chapter ("Chapter 3 has problems on
+p. 148-156") with the problems it has seen behind it. The next locate
 in that chapter shows the pages between the nearest problems seen before
 and after the new one, nearest the estimate first, ahead of search, and
 sweeps them before the chapter's end. Delete the memory and the points go
@@ -64,7 +67,7 @@ with it.
 ## What you see
 
 - **A save is a step.** In Ask it is a line in the step feed:
-  "Remembered · Theorem 1.5 (Cauchy-Schwarz), p. 22" with **Undo**,
+  "Remembered · Theorem 1.5 (Cauchy-Schwarz) · p. 22" with **Undo**,
   which deletes it. Once gone the line says "Undone".
 - **A walkthrough lists its memory work under its stages**, the same
   lines: what it remembered, with Undo, and "Found from memory" when a
@@ -72,9 +75,11 @@ with it.
   through citations; there is no "recalled 9 memories" line.
 - **The memory menu**: a second icon beside the book's pencil in the
   top bar opens the Memory dialog (wide). Add a memory at the top (kind,
-  sentence, optional printed page), filter by kind, and every row shows
-  its sentence, its page (jumps there), who saved it and when, and
-  Delete. Deletes are immediate; the dialog's one button is Done.
+  sentence, optional printed page; one already there says so), filter by
+  kind with tabs (not a second segmented control, which would read as
+  the kind picker), and every row shows its sentence, its page (jumps
+  there), who saved it and when, and Delete. Deletes are immediate; the
+  dialog's one button is Done.
 
 ## Backend
 

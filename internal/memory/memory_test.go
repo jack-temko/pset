@@ -151,7 +151,7 @@ func TestSawProblemKeepsOneRangePerChapter(t *testing.T) {
 			ch3 = m
 		}
 	}
-	if ch3.Text != "Chapter 3's problems are on p. 150–154." || ch3.Source != SourcePSet || *ch3.Page != 160 {
+	if ch3.Text != "Chapter 3 has problems on p. 150–154." || ch3.Source != SourcePSet || *ch3.Page != 160 {
 		t.Fatalf("%+v", ch3)
 	}
 	// Seeing the same problem on the same page again changes nothing.
@@ -171,7 +171,7 @@ func TestSawProblemKeepsOneRangePerChapter(t *testing.T) {
 	}
 	// The tutor saying the same sentence doesn't collide with PSet's.
 	s.SawProblem(ctx, "b1", 10, 4, "4.9", 202)
-	if _, out, _ := s.Save(ctx, "b1", Save{Kind: KindBook, Text: "Chapter 4's problems are on p. 190–192.", Source: SourceTutor}); out != OutcomeSaved {
+	if _, out, _ := s.Save(ctx, "b1", Save{Kind: KindBook, Text: "Chapter 4 has problems on p. 190–192.", Source: SourceTutor}); out != OutcomeSaved {
 		t.Errorf("tutor's twin: %v", out)
 	}
 }

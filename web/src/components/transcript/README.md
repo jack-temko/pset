@@ -50,6 +50,11 @@ sideways-scrolling in its own frame when wide.
 the last line), and **`StoppedNote`** is the quiet line after a stopped
 answer.
 
+A step line can carry **one action** after a middle dot, drawn with
+**`StepAction`**: text in the line's own size, primary ink, underlined on
+hover. It exists for the remember step's **Undo** ("Remembered ·
+Theorem 1.5 · p. 22 · Undo"), and a line never gets two.
+
 ## Changes from baseline
 
 - The baseline has no transcript components: the old app's chat was part

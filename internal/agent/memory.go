@@ -135,6 +135,14 @@ func (l *Loop) remember(ctx context.Context, raw string) string {
 	}
 	l.step("Remembering…", true)
 	n := NewNote{Kind: args.Kind, Text: args.Text, Replaces: args.Replaces, FromStudent: args.FromStudent && l.Student}
+	if n.Kind == "" {
+		// Small models drop the kind: a page or the book's own voice makes
+		// it about the book, the student asking with no page a preference.
+		n.Kind = "book"
+		if n.FromStudent && args.Page == 0 {
+			n.Kind = "preference"
+		}
+	}
 	if args.Page != 0 {
 		pdf := args.Page + l.Book.PageOffset
 		if pdf < 1 || pdf > l.Book.PageCount {

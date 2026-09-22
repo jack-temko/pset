@@ -13,7 +13,7 @@ What the tutor knows about a book from working in it. Spec:
 - **`ForPrompt`** is what fits in a system prompt: every one of yours, then
   the rest newest first, to 60 memories or 4,000 characters.
 - **`SawProblem` / `ProblemsSeen`** keep one `pset` memory per chapter,
-  "Chapter 3's problems are on p. 148–156", with the problems locate found
+  "Chapter 3 has problems on p. 148–156", with the problems locate found
   behind it. Deleting it deletes them.
 - Knows nothing of the model or of homework: `cmd/pset` adapts it to
   `agent.Memory` and `homework.Memory`.

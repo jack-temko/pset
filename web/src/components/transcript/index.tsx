@@ -62,19 +62,46 @@ export function AboutChip({ label, onRemove }: { label: string; onRemove?: () =>
  * caller replaces it with the past-tense line and its count, and the
  * spinner is gone. It's the one sign of work in the transcript.
  */
-export function Steps({ steps, running }: { steps: string[]; running?: boolean }) {
+export function Steps({ steps, running }: { steps: StepLine[]; running?: boolean }) {
   return (
     <div className="space-y-1">
       {steps.map((s, i) => {
         const live = running && i === steps.length - 1
+        const line = typeof s === 'string' ? { label: s } : s
         return (
           <p key={i} className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
             {live && <Spinner className="size-3" label="Working" />}
-            {s}
+            <span className="min-w-0">
+              {line.label}
+              {line.action && (
+                <>
+                  <span aria-hidden> · </span>
+                  {line.action}
+                </>
+              )}
+            </span>
           </p>
         )
       })}
     </div>
+  )
+}
+
+/** A step line, and what you can do about it: a remember step carries
+ *  its Undo. */
+export type StepLine = string | { label: string; action?: ReactNode }
+
+/** The one action a step line has: quiet text in the line's own size,
+ *  primary ink so it reads as something to press. */
+export function StepAction({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="cursor-pointer rounded-sm font-medium text-primary underline-offset-2 hover:underline"
+    >
+      {children}
+    </button>
   )
 }
 

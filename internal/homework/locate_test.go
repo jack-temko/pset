@@ -10,6 +10,8 @@ func TestQuestionLabel(t *testing.T) {
 		"3.36":                              "3.36",
 		"Problem 3.36.":                     "3.36",
 		"Exercise 2.A.4":                    "2.A.4",
+		"Problem 1.2.3":                     "1.2.3",
+		"10.4.12b":                          "10.4.12b",
 		"3.24 (use matlab)":                 "3.24",
 		"q 1.2b":                            "1.2b",
 		"Prove that 3.36 holds":             "",

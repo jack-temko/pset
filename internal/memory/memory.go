@@ -368,10 +368,8 @@ func (s *Service) SawProblem(ctx context.Context, bookID string, offset, chapter
 	for _, p := range seen {
 		lo, hi = min(lo, p.Page), max(hi, p.Page)
 	}
-	text := fmt.Sprintf("Chapter %d's problems are on %s.", chapter, printedRange(lo, hi, offset))
-	if lo == hi {
-		text = fmt.Sprintf("Chapter %d's problems include one on %s.", chapter, printedRange(lo, hi, offset))
-	}
+	// What's been seen, not a claim about the whole chapter.
+	text := fmt.Sprintf("Chapter %d has problems on %s.", chapter, printedRange(lo, hi, offset))
 	detail, _ := json.Marshal(seen)
 	now := db.Now()
 	// The range is PSet's, so a matching sentence of the tutor's doesn't
