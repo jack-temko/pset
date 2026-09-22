@@ -575,3 +575,36 @@ func TestMemoryFindsTheNextProblemAndKeepsTheWritersNotes(t *testing.T) {
 		t.Fatalf("memory lines %+v", q.Memory)
 	}
 }
+
+func TestAFoundQuestionIsWrittenAgainWithoutLookingAgain(t *testing.T) {
+	e := newEnv(t)
+	var mu sync.Mutex
+	locates, broken := 0, true
+	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
+		mu.Lock()
+		defer mu.Unlock()
+		sys := req.Messages[0].Content.Text()
+		if strings.Contains(sys, "You find one homework problem") {
+			locates++
+		}
+		if strings.Contains(sys, "You write the guide") && broken {
+			return llmtest.Reply{Status: 500, Text: `{"error":"down"}`}
+		}
+		return fakeModel(req)
+	})
+	h := e.newSet(t)
+	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateFailed)
+	if q.Page == nil || locates != 1 {
+		t.Fatalf("page %v after %d locates", q.Page, locates)
+	}
+	mu.Lock()
+	broken = false
+	mu.Unlock()
+	if code := e.do(t, "POST", "/api/questions/"+q.ID+"/retry", Retry{}, nil); code != 200 {
+		t.Fatalf("retry %d", code)
+	}
+	q = e.wait(t, q.ID, StateReady)
+	if locates != 1 || q.Page == nil || *q.Page != 3 {
+		t.Fatalf("looked again: %d locates, page %v", locates, q.Page)
+	}
+}

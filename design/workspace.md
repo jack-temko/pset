@@ -184,7 +184,10 @@ built.
   opens New homework again as **Edit homework**, with **Delete** at the
   footer's left, confirmed in place.
 - **Failed question** (2026-09-21): one destructive line saying why, and
-  **both ways out at once**, in place of the stages:
+  the ways out that fit the failure, in place of the stages. **Found, then
+  the guide failed** (the model dropped, say): one **Try again**, which
+  writes it again without looking for it. **Not found**: both ways out at
+  once:
   - **"It's on page ___" + Try again**: you know where it is; the
     search didn't. Only for in-book questions.
   - **"Not in this book?"**: paste the question, and it becomes an

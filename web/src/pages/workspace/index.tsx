@@ -633,41 +633,55 @@ function FailedQuestion({ q, onRetry }: { q: Question; onRetry: (r: Retry) => vo
   // A plain text field, not a number spinner: people type "57", "p. 57"
   // or "page 57", and all of them mean the first number in it.
   const pageNumber = Number(page.match(/\d+/)?.[0] ?? 0)
+  const reason = (
+    <p className="flex items-start gap-2 text-sm text-destructive">
+      <span className="flex h-5 shrink-0 items-center">
+        <CircleAlert className="size-4" />
+      </span>
+      {q.reason}
+    </p>
+  )
+
+  // Found (or never looked for) and then the guide failed: where it is
+  // isn't the question, so the one way out is to write it again.
+  if (q.page !== undefined || !q.inBook) {
+    return (
+      <div className="space-y-3">
+        {reason}
+        <Button variant="outline" onClick={() => onRetry({})}>
+          Try again
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5">
-      <p className="flex items-start gap-2 text-sm text-destructive">
-        <span className="flex h-5 shrink-0 items-center">
-          <CircleAlert className="size-4" />
-        </span>
-        {q.reason}
-      </p>
+      {reason}
 
-      {/* Only an in-book question has a page to find. */}
-      {q.inBook && (
-        <form
-          className="flex items-end gap-2"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (pageNumber > 0) onRetry({ page: pdfOf(pageNumber, offset) })
-          }}
-        >
-          <Field label="It's on printed page" className="w-40">
-            <Input
-              inputMode="numeric"
-              value={page}
-              onChange={(e) => setPage(e.target.value)}
-              className="font-mono"
-            />
-          </Field>
-          <Button type="submit" variant="outline" disabled={!(pageNumber > 0)}>
-            Try again
-          </Button>
-        </form>
-      )}
+      {/* Not found: say where it is, or paste it. */}
+      <form
+        className="flex items-end gap-2"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (pageNumber > 0) onRetry({ page: pdfOf(pageNumber, offset) })
+        }}
+      >
+        <Field label="It's on printed page" className="w-40">
+          <Input
+            inputMode="numeric"
+            value={page}
+            onChange={(e) => setPage(e.target.value)}
+            className="font-mono"
+          />
+        </Field>
+        <Button type="submit" variant="outline" disabled={!(pageNumber > 0)}>
+          Try again
+        </Button>
+      </form>
 
-      <div className={cn('space-y-2', q.inBook && 'border-t pt-5')}>
-        <p className="text-sm font-medium">{q.inBook ? 'Not in this book?' : 'Try again'}</p>
+      <div className="space-y-2 border-t pt-5">
+        <p className="text-sm font-medium">Not in this book?</p>
         <p className="text-xs text-muted-foreground">
           Paste the question, and the guide is written from your text alone.
         </p>

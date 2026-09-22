@@ -459,7 +459,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 		if *r.Page < 1 || *r.Page > b.PageCount {
 			return Question{}, httpx.Invalid("page", "The book doesn't have that page.")
 		}
-		set += `, pinned_page = ?`
+		set += `, pinned_page = ?, page = NULL`
 		args = append(args, *r.Page)
 	default:
 		// The same thing again: after a model outage, say.

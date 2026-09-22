@@ -113,7 +113,9 @@ func (s *Service) work(ctx context.Context, q row) error {
 		return err
 	}
 
-	if q.InBook {
+	// A question found on an earlier run (the guide failed, or the app
+	// stopped mid-write) is where it was: straight to writing.
+	if q.InBook && q.Page == nil {
 		s.setState(ctx, q.ID, StateLocating, "")
 		loc, err := s.locate(ctx, m, book, q)
 		if err != nil {
