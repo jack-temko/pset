@@ -117,7 +117,9 @@ All findings above were fixed by three file-partitioned fixers and verified
 live against the fixed build. Gates: `tsc -b` clean, vitest 12/12,
 `npm run build` + class gate clean (one fractional `py-1.5` slipped into the
 title-prompt strip and was corrected to `py-1`), `go build`/`go vet` clean,
-scoped Go tests pass.Verification highlights (shots 28-33, `audit-round-1/`):
+scoped Go tests pass.
+
+Verification highlights (shots 28-33, `audit-round-1/`):
 
 - **P0**: adding a question now reaches the designed failed card live, no
   reload (~8s). Root cause was an event/snapshot race: the Add-questions POST
