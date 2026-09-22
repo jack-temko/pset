@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/events"
 	"github.com/jackt/pset/internal/httpx"
@@ -19,19 +20,12 @@ import (
 )
 
 // Book is what the tutor needs to know about a book.
-type Book struct {
-	ID         string
-	Title      string
-	PageCount  int
-	PageOffset int
-}
+type Book = agent.Book
 
-// Library is the book, as the tools read it. Pages are PDF pages.
+// Library is the book: the agent's tools read it, and Book names it.
 type Library interface {
+	agent.Library
 	Book(ctx context.Context, id string) (Book, error)
-	Search(ctx context.Context, bookID, query string, k int) ([]int, error)
-	PageText(ctx context.Context, bookID string, page int) (string, error)
-	PageJPEG(ctx context.Context, bookID string, page, width int) ([]byte, error)
 }
 
 type Settings interface {

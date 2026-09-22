@@ -37,7 +37,9 @@ import { Dialog } from '@/components/dialog'
 import { AutoTextarea, Field, Input } from '@/components/input'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { coverHueFromSha } from '@/lib/covers'
-import { BOOKS, DUE, sampleBook } from '@/components/fixtures'
+import { BOOKS, DUE, SEGMENTS, sampleBook } from '@/components/fixtures'
+import { CardSkeleton, Segments } from '@/components/segments'
+import { PageOffset } from '@/lib/pages'
 import { BookTile } from '@/components/book-tile'
 
 
@@ -655,6 +657,19 @@ export function Components() {
               />
             </div>
           </Shelf>
+        </Section>
+
+        <Section
+          title="Segments"
+          note="An answer as the engine sends it: prose and every card kind, at the panel's width, with the book's page offset of 16. The raw block is a card that couldn't be repaired."
+        >
+          <PageOffset value={16}>
+            <div id="segments" className="w-panel space-y-3 rounded-md border bg-rail p-card text-base">
+              <Segments segments={SEGMENTS} onJump={() => {}} />
+              <CardSkeleton kind="plot" repairing={false} />
+              <CardSkeleton kind="steps" repairing />
+            </div>
+          </PageOffset>
         </Section>
 
         <Section title="Brand" note="The mark is fixed-color and never recolored for a theme.">

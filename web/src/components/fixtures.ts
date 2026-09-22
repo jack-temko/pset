@@ -5,6 +5,7 @@
  */
 
 import type { Book } from '@/api/library'
+import type { Segment } from '@/api/gen/cards'
 import type { HomeworkStatus } from '@/components/homework-status'
 
 /** A sample book with everything the list doesn't care about filled in. */
@@ -175,3 +176,70 @@ export const DUE: Due[] = [
 ]
 
 /** How many of the due list Home shows before its door. */
+
+
+/** An answer as a model really writes one: every card kind, and the
+ *  prose around them (lists, display math, citations, inline code). Pages
+ *  are PDF pages; the components page renders with offset 16. */
+export const SEGMENTS: Segment[] = [
+  {
+    type: 'prose',
+    text: 'The **key idea** is Kirchhoff\'s voltage law [p. 58]: around any closed loop, the voltage rises equal the drops. Here that gives\n\n$$\\sum_k v_k = 0 \\quad\\Longrightarrow\\quad -\\frac{600}{13} + \\frac{150}{13}i + 10i - 5i_x + 40i = 0$$\n\nTwo things to keep straight:\n\n- the dependent source $5i_x$ is a *rise* in the direction of travel;\n- $v_1$ comes from the node equation at A, not the loop.\n\n### Solving',
+  },
+  {
+    type: 'card',
+    kind: 'steps',
+    card: {
+      steps: [
+        { math: '-\\frac{600}{13} + \\frac{150}{13}i + 10i - 5i_x + 40i = 0', why: 'KVL clockwise; the $5i_x$ source enters as a negative drop.' },
+        { math: '\\frac{800}{13}i = \\frac{600}{13} + 5i_x', why: 'Collect the resistances: $\\tfrac{150}{13} + 10 + 40 = \\tfrac{800}{13}$.' },
+        { math: 'i_x = 4 - \\frac{v_1}{15} = \\frac{12 + 10i}{13}', why: 'From the node equation at A [p. 60].' },
+        { math: '800i = 660 + 50i \\;\\Rightarrow\\; i = \\frac{660}{750} = 0.88\\ \\text{A}' },
+      ],
+    },
+  },
+  {
+    type: 'card',
+    kind: 'statement',
+    card: {
+      kind: 'Theorem',
+      number: '3.2',
+      name: 'Kirchhoff’s voltage law',
+      page: 58,
+      text: 'The algebraic sum of the voltages around any closed path in a circuit is zero: $\\sum_{k=1}^{n} v_k = 0$.',
+    },
+  },
+  {
+    type: 'card',
+    kind: 'table',
+    card: {
+      columns: ['Element', 'Voltage', 'Direction'],
+      rows: [
+        ['$R_1$', '$\\tfrac{150}{13}i$', 'drop'],
+        ['$5i_x$ source', '$5i_x$', 'rise'],
+        ['$R_2$ (40 Ω)', '$40i$', 'drop'],
+      ],
+    },
+  },
+  {
+    type: 'card',
+    kind: 'plot',
+    card: {
+      title: 'Capacitor voltage after the switch closes',
+      x: { label: 't (ms)' },
+      y: { label: 'v (V)' },
+      series: [
+        { label: 'v_C(t)', points: Array.from({ length: 60 }, (_, i) => [i / 5, 12 * (1 - Math.exp(-i / 15))] as [number, number]) },
+        { label: 'v_R(t)', points: Array.from({ length: 60 }, (_, i) => [i / 5, 12 * Math.exp(-i / 15)] as [number, number]) },
+      ],
+    },
+  },
+  { type: 'prose', text: 'To check it numerically, `numpy` solves the same system:' },
+  {
+    type: 'card',
+    kind: 'code',
+    card: { language: 'python', code: 'import numpy as np\nA = np.array([[800/13, -5], [-10/13, 1]])\nb = np.array([600/13, 12/13])\nprint(np.linalg.solve(A, b))  # [0.88, 1.6]' },
+  },
+  { type: 'raw', kind: 'plot', text: '{"title":"Broken","series":[{"label":"x","expr":"x^^2"' },
+  { type: 'prose', text: 'So $i = 0.88$ A and $i_x = 1.6$ A, as the answers at the back agree [pp. 402–403].' },
+]

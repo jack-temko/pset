@@ -18,18 +18,52 @@ type Jump = (printed: number) => void
 
 const citation = /\[(pp?)\.\s*(\d+)(?:\s*[–-]\s*\d+)?\]/g
 
+/**
+ * Math the way models write it, into the way remark-math reads it:
+ * `\[..\]` and a `$$..$$` alone on its line become display blocks (remark
+ * reads a one-line `$$x$$` as inline), and `\(..\)` becomes `$..$`.
+ */
+export function normalizeMath(text: string): string {
+  return text
+    .replace(/\\\[([\s\S]+?)\\\]/g, (_m, tex) => `\n$$\n${tex.trim()}\n$$\n`)
+    .replace(/^[ \t]*\$\$([^\n]+?)\$\$[ \t]*$/gm, (_m, tex) => `$$\n${tex.trim()}\n$$`)
+    .replace(/\\\(([\s\S]+?)\\\)/g, (_m, tex) => `$${tex.trim()}$`)
+}
+
 export function Prose({ text, onJump, inline }: { text: string; onJump?: Jump; inline?: boolean }) {
   const offset = usePageOffset()
-  const md = text.replace(citation, (_m, _pp, n) => `[p. ${n}](#pdf-${n})`)
+  const md = normalizeMath(text).replace(citation, (_m, _pp, n) => `[p. ${n}](#pdf-${n})`)
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={[rehypeKatex]}
       components={{
         p: ({ children }) => (inline ? <>{children}</> : <p>{children}</p>),
-        // The reset strips list markers; prose wants them back.
+        // The reset strips list markers and heading sizes; prose wants a
+        // quiet version of each back. Headings stay small: an answer in a
+        // 440px panel has no room for a hierarchy, only for emphasis.
         ul: ({ children }) => <ul className="list-disc space-y-1 pl-5">{children}</ul>,
         ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5">{children}</ol>,
+        h1: ({ children }) => <p className="font-semibold">{children}</p>,
+        h2: ({ children }) => <p className="font-semibold">{children}</p>,
+        h3: ({ children }) => <p className="font-semibold">{children}</p>,
+        h4: ({ children }) => <p className="font-semibold">{children}</p>,
+        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+        blockquote: ({ children }) => (
+          <blockquote className="space-y-2 border-l-2 border-border pl-3 text-muted-foreground">{children}</blockquote>
+        ),
+        hr: () => <hr className="border-border-muted" />,
+        code: ({ children, className }) =>
+          // A fenced block the engine didn't recognise as a card keeps its
+          // language class; inline code has none.
+          className ? (
+            <code className={className}>{children}</code>
+          ) : (
+            <code className="rounded-sm bg-muted/50 px-1 font-mono text-xs">{children}</code>
+          ),
+        pre: ({ children }) => (
+          <pre className="overflow-x-auto rounded-md border bg-card p-card font-mono text-xs leading-relaxed">{children}</pre>
+        ),
         a: ({ href, children }) => {
           const m = href?.match(/^#pdf-(\d+)$/)
           if (m) return <PageRef page={Number(m[1]) - offset} onJump={onJump} />

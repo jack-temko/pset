@@ -224,6 +224,9 @@ type ToolCallFunc struct {
 type Reply struct {
 	Content   string
 	ToolCalls []ToolCall
+	// Reasoned is how many characters of reasoning a thinking model wrote
+	// before answering, for the call log.
+	Reasoned int
 }
 
 // ChatRequest is one chat completion call. Model is required; MaxTokens
@@ -236,6 +239,9 @@ type ChatRequest struct {
 	MaxTokens   int       `json:"max_tokens,omitempty"`
 	Temperature *float64  `json:"temperature,omitempty"`
 	Tools       []Tool    `json:"tools,omitempty"`
+	// OnReasoning, if set, receives a thinking model's reasoning as it
+	// streams: the part it writes before, and apart from, its answer.
+	OnReasoning func(text string) `json:"-"`
 }
 
 // ToolMessage is the result turn for one tool call.
@@ -306,6 +312,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 	defer resp.Body.Close()
 
 	var full strings.Builder
+	reasoned := 0
 	calls := newToolCallAccumulator()
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
@@ -328,6 +335,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 			Choices []struct {
 				Delta struct {
 					Content   Content `json:"content"`
+					Reasoning string  `json:"reasoning_content"`
 					ToolCalls []struct {
 						Index    int    `json:"index"`
 						ID       string `json:"id"`
@@ -343,6 +351,12 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 			return Reply{}, fmt.Errorf("decode stream chunk: %w", err)
 		}
 		for _, choice := range chunk.Choices {
+			if r := choice.Delta.Reasoning; r != "" {
+				reasoned += len(r)
+				if req.OnReasoning != nil {
+					req.OnReasoning(r)
+				}
+			}
 			text := choice.Delta.Content.text
 			if text == "" {
 				calls.feed(choice.Delta.ToolCalls)
@@ -360,7 +374,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 	if err := scanner.Err(); err != nil {
 		return Reply{Content: full.String()}, fmt.Errorf("read model stream: %w", err)
 	}
-	return Reply{Content: full.String(), ToolCalls: calls.finish()}, nil
+	return Reply{Content: full.String(), ToolCalls: calls.finish(), Reasoned: reasoned}, nil
 }
 
 // toolCallAccumulator assembles streamed tool calls; each index's id and

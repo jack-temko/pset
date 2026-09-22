@@ -37,6 +37,7 @@ type callRecord struct {
 	Messages []logMsg   `json:"messages"`
 	Tools    []string   `json:"tools,omitempty"`
 	Reply    string     `json:"reply,omitempty"`
+	Reasoned int        `json:"reasoned,omitempty"`
 	Calls    []ToolCall `json:"toolCalls,omitempty"`
 	Error    string     `json:"error,omitempty"`
 }
@@ -54,7 +55,7 @@ func logCall(req ChatRequest, start time.Time, reply Reply, err error) {
 	}
 	rec := callRecord{
 		At: start.UTC().Format(time.RFC3339), Model: req.Model,
-		Millis: time.Since(start).Milliseconds(), Reply: reply.Content, Calls: reply.ToolCalls,
+		Millis: time.Since(start).Milliseconds(), Reply: reply.Content, Calls: reply.ToolCalls, Reasoned: reply.Reasoned,
 	}
 	for _, t := range req.Tools {
 		rec.Tools = append(rec.Tools, t.Function.Name)

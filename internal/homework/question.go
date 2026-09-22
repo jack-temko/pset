@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/cards"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/jobs"
@@ -82,7 +83,7 @@ func (s *Service) runQuestion(ctx context.Context, j jobs.Job) error {
 }
 
 func (s *Service) setState(ctx context.Context, id string, st State, reason string) {
-	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET state = ?, reason = ?, updated_at = ? WHERE id = ?`,
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET state = ?, reason = ?, activity = '', updated_at = ? WHERE id = ?`,
 		st, reason, db.Now(), id); err != nil {
 		slog.Error("question: set state", "question", id, "err", err)
 		return
@@ -174,15 +175,17 @@ const (
 // guideAttempts: a guide missing a part is asked for once more.
 const guideAttempts = 2
 
-// writeGuide streams the hint and the walkthrough. The hint is saved and
-// published the moment the walkthrough heading arrives, so the student can
-// open it while the rest is still being written.
+// writeGuide streams the hint and the walkthrough, with the same tools
+// Ask has: it searches and reads the book for the theory, looks at pages,
+// and does its arithmetic with compute. The hint is saved and published
+// the moment the walkthrough heading arrives, so the student can open it
+// while the rest is still being written.
 func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) error {
-	system := guideSystem(s.c.Settings.Name(ctx))
 	user, err := s.guideUser(ctx, book, q)
 	if err != nil {
 		return err
 	}
+	msgs := []llm.Message{llm.TextMessage("system", guideSystem()), user}
 	for attempt := 1; attempt <= guideAttempts; attempt++ {
 		var parser *cards.Parser
 		parser = cards.NewParser(ctx, cards.Options{
@@ -199,13 +202,19 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 				}
 			},
 		})
-		_, err := m.client.ChatStreamFull(ctx, llm.ChatRequest{
-			Model:    m.name,
-			Messages: []llm.Message{llm.TextMessage("system", system), user},
-		}, func(delta string) error {
-			parser.Feed(delta)
-			return nil
-		})
+		loop := &agent.Loop{
+			Client: m.client, Model: m.name, Library: s.c.Library,
+			Book:   agent.Book{ID: book.ID, Title: book.Title, PageCount: book.PageCount, PageOffset: book.PageOffset},
+			Rounds: guideRounds,
+			Step: func(label string, running bool) {
+				if running {
+					s.setActivity(ctx, q.ID, label)
+				}
+			},
+			Writing: func() { s.setActivity(ctx, q.ID, "Writing the guide…") },
+			Delta:   parser.Feed,
+		}
+		err := loop.Run(ctx, msgs)
 		parser.Finish()
 		if err != nil {
 			if ctx.Err() != nil {
@@ -218,7 +227,7 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 			slog.Warn("guide missing a part", "question", q.ID, "attempt", attempt, "hint", len(hint), "walkthrough", len(walk))
 			continue
 		}
-		_, err = s.c.DB.ExecContext(ctx, `UPDATE questions SET hint = ?, walkthrough = ?, state = 'ready', reason = '', updated_at = ? WHERE id = ?`,
+		_, err = s.c.DB.ExecContext(ctx, `UPDATE questions SET hint = ?, walkthrough = ?, state = 'ready', reason = '', activity = '', updated_at = ? WHERE id = ?`,
 			mustJSON(hint), mustJSON(walk), db.Now(), q.ID)
 		if err != nil {
 			return err
@@ -227,6 +236,19 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 		return nil
 	}
 	return fail(nil, "The guide came back incomplete. Try again.")
+}
+
+// guideRounds bounds the writer's tool rounds: enough to look up the
+// theory and check every number, not enough to wander.
+const guideRounds = 10
+
+// setActivity shows what the writer is doing on the walkthrough's working
+// line.
+func (s *Service) setActivity(ctx context.Context, id, label string) {
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET activity = ? WHERE id = ?`, label, id); err != nil {
+		return
+	}
+	s.publishQuestion(ctx, id)
 }
 
 func (s *Service) saveStage(ctx context.Context, id, stage string, segs []cards.Segment) {
@@ -255,10 +277,6 @@ func tidy(segs []cards.Segment) []cards.Segment {
 	return out
 }
 
-// contextPages is how many pages beyond the problem's own a guide may
-// read (and cite) for the theory behind it.
-const contextPages = 3
-
 func (s *Service) guideUser(ctx context.Context, book Book, q row) (llm.Message, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "The problem")
@@ -270,36 +288,15 @@ func (s *Service) guideUser(ctx context.Context, book Book, q row) (llm.Message,
 		b.WriteString("\nIt isn't from the book: the student typed it in. Solve it from its own statement.\n")
 	}
 
-	// The pages that teach the material, for the reasoning and the
-	// citations. Text only; the problem's own page also comes as an image.
-	query := q.Statement
-	if query == "" {
-		query = q.Text
-	}
 	var parts []llm.Part
-	hits, err := s.c.Library.Search(ctx, book.ID, query, contextPages+1)
-	if err != nil {
-		return llm.Message{}, err
-	}
-	seen := map[int]bool{}
 	if q.Page != nil {
 		text, _ := s.c.Library.PageText(ctx, book.ID, *q.Page)
 		fmt.Fprintf(&b, "\nThe problem is on %s of %q. Its text:\n\n%s\n", printedName(*q.Page, book.PageOffset), book.Title, clip(text, 3000))
-		seen[*q.Page] = true
 		if url, err := s.pageImage(ctx, book.ID, *q.Page, 1400); err == nil {
 			parts = append(parts, llm.TextPart(fmt.Sprintf("The problem's page, %s:", printedName(*q.Page, book.PageOffset))), llm.ImagePart(url))
 		}
 	}
-	n := 0
-	for _, p := range hits {
-		if seen[p] || n == contextPages {
-			continue
-		}
-		seen[p] = true
-		n++
-		text, _ := s.c.Library.PageText(ctx, book.ID, p)
-		fmt.Fprintf(&b, "\nFrom the book, %s:\n\n%s\n", printedName(p, book.PageOffset), clip(text, 1800))
-	}
+	fmt.Fprintf(&b, "\nThe book is %q: search and read it for the theory the problem rests on.\n", book.Title)
 	if len(parts) == 0 {
 		return llm.TextMessage("user", b.String()), nil
 	}

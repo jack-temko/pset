@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/cards"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/jobs"
@@ -130,50 +131,20 @@ func (r *run) loop(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	for round := 0; ; round++ {
-		req := llm.ChatRequest{Model: r.model, Messages: msgs, Tools: tools}
-		if round == maxRounds {
-			// Enough looking: answer with what's been found.
-			req.Tools = nil
-			req.Messages = append(msgs, llm.TextMessage("user", "Answer now, with what you've found."))
-		}
-		reply, err := r.llm.ChatStreamFull(ctx, req, func(delta string) error {
-			r.parser.Feed(delta)
-			return nil
-		})
-		if err != nil {
-			r.parser.Finish()
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-			return &failure{msg: "The chat model stopped answering. Check it in Settings, then try again.", err: err}
-		}
-		if len(reply.ToolCalls) == 0 || req.Tools == nil {
-			r.parser.Finish()
-			return nil
-		}
-		// Whatever it said before reaching for a tool ends its line.
-		r.parser.Feed("\n")
-		msgs = append(msgs, llm.AssistantToolMessage(reply.Content, reply.ToolCalls))
-		var images []llm.Part
-		for _, call := range reply.ToolCalls {
-			result, img := r.tool(ctx, call)
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-			msgs = append(msgs, llm.ToolMessage(call.ID, result))
-			images = append(images, img...)
-		}
-		if len(images) > 0 {
-			// Tool results are text; pages to look at come as the next
-			// user message.
-			content := llm.PartsContent(llm.TextPart("The pages you asked to look at:"))
-			for _, p := range images {
-				content.AppendPart(p)
-			}
-			msgs = append(msgs, llm.Message{Role: "user", Content: content})
-		}
+	loop := &agent.Loop{
+		Client: r.llm, Model: r.model, Library: s.c.Library, Book: r.book, Rounds: maxRounds,
+		Step:  func(label string, running bool) { r.step(ctx, label, running) },
+		Delta: r.parser.Feed,
 	}
+	err = loop.Run(ctx, msgs)
+	r.parser.Finish()
+	if err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return &failure{msg: "The chat model stopped answering. Check it in Settings, then try again.", err: err}
+	}
+	return nil
 }
 
 // messages is the system prompt, the conversation so far, and the
@@ -289,4 +260,28 @@ func (r *run) finish(ctx context.Context, st TurnState, reason string) {
 	r.s.c.DB.ExecContext(ctx, `UPDATE turns SET state = ?, reason = ?, answer = ?, steps = ?, updated_at = ? WHERE id = ?`,
 		st, reason, mustJSON(answer), mustJSON(steps), db.Now(), r.t.ID)
 	r.s.publish(ctx, r.t.ID)
+}
+
+const repairPrompt = `You fix one malformed card for a rendering pipeline. You get its kind, the
+card as written, what is wrong with it, and the JSON schema it must satisfy. Reply with only the
+corrected JSON object: no prose, no code fence, no comments.`
+
+func systemPrompt(title, name string) string {
+	who := "Be warm and encouraging, like a good tutor sitting beside the student."
+	if name != "" {
+		who = fmt.Sprintf("You're talking with %s. Be warm and encouraging, like a good tutor sitting beside them, and use their name now and then where it's natural, never in every reply.", name)
+	}
+	return fmt.Sprintf(`You are the tutor for the textbook %q, answering a student's questions about it. %s
+
+Answer focused, in short paragraphs, the way the book would put it, and no longer than the
+question needs.
+
+%s
+
+- Cite the book as [p. N], N the printed page number the tools give, right where a page supports
+  what you say. Cite only pages you read or searched.
+- If the book doesn't cover something, say so, then answer from general knowledge and say that's
+  what you did.
+
+%s`, title, who, agent.Prompt, cards.Prompt)
 }

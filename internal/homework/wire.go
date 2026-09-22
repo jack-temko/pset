@@ -73,6 +73,10 @@ type Question struct {
 	Walkthrough []cards.Segment `json:"walkthrough"`
 	State       State           `json:"state"`
 	Reason      string          `json:"reason,omitempty"`
+	// Activity is what the guide's writer is doing right now, while it
+	// writes: "Thinking…", a tool call ("Computing…"), or "Writing the
+	// guide…". Empty otherwise.
+	Activity string `json:"activity,omitempty"`
 	// Revealed names the stages the student has lifted the veil on.
 	Revealed []string `json:"revealed"`
 	Done     bool     `json:"done"`

@@ -147,8 +147,9 @@ const answer = "An eigenvalue is a scalar $\\lambda$ with $Tv = \\lambda v$ [p. 
 func TestTurnSearchesComputesAndAnswers(t *testing.T) {
 	e := newEnv(t)
 	e.llm.Script(
-		llmtest.Reply{ToolCalls: []llm.ToolCall{call("c1", "search_pages", `{"query":"eigenvalue"}`)}},
-		llmtest.Reply{ToolCalls: []llm.ToolCall{call("c2", "compute", `{"expression":"2+2"}`), call("c3", "view_page", `{"page":1}`)}},
+		llmtest.Reply{Reasoning: "Search first.", ToolCalls: []llm.ToolCall{call("c1", "search_pages", `{"query":"eigenvalue"}`)}},
+		llmtest.Reply{ToolCalls: []llm.ToolCall{call("c2", "compute", `{"expression":"2+2"}`), call("c3", "view_page", `{"page":1}`),
+			call("c4", "solve_linear", `{"a":[["2","1"],["1","3"]],"b":["3","5"]}`)}},
 		llmtest.Reply{Text: answer},
 	)
 	var turn Turn
@@ -160,7 +161,7 @@ func TestTurnSearchesComputesAndAnswers(t *testing.T) {
 	for _, s := range got.Steps {
 		labels = append(labels, s.Label)
 	}
-	if strings.Join(labels, " | ") != "Searched ‘eigenvalue’ · 1 page | Computed 2+2 = 4 | Looked at p. 1" {
+	if strings.Join(labels, " | ") != "Thought for 1s | Searched ‘eigenvalue’ · 1 page | Computed 2+2 = 4 | Looked at p. 1 | Solved 2 equations" {
 		t.Fatalf("steps %v", labels)
 	}
 	if len(got.Answer) != 3 || got.Answer[1].Type != cards.SegmentCard || !strings.Contains(got.Answer[0].Text, "[p. 3]") {
@@ -180,6 +181,9 @@ func TestTurnSearchesComputesAndAnswers(t *testing.T) {
 	for _, m := range last.Messages {
 		if m.Role == "tool" && strings.Contains(m.Content.Text(), "p. 1:\nEigenvalues") {
 			sawResult = true
+		}
+		if m.Role == "tool" && strings.Contains(m.Content.Text(), "x1 = 4/5") && !strings.Contains(m.Content.Text(), "x2 = 7/5") {
+			t.Fatalf("solve_linear: %q", m.Content.Text())
 		}
 		for _, p := range m.Content.Parts() {
 			if p.Type == "image_url" {

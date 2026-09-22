@@ -88,6 +88,12 @@ export interface Question {
   state: State;
   reason?: string;
   /**
+   * Activity is what the guide's writer is doing right now, while it
+   * writes: "Thinking…", a tool call ("Computing…"), or "Writing the
+   * guide…". Empty otherwise.
+   */
+  activity?: string;
+  /**
    * Revealed names the stages the student has lifted the veil on.
    */
   revealed: string[];

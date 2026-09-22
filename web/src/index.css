@@ -370,3 +370,13 @@
         animation: none;
     }
 }
+
+/* Display math that can't fit the panel scrolls sideways inside itself:
+   the one inner scroll the system allows, for content that can't reflow.
+   The block padding keeps an integral's tall glyphs from being clipped by
+   the scroll box. */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.25rem;
+}

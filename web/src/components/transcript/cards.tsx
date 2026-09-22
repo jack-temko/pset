@@ -70,17 +70,20 @@ export function WorkedSteps({ steps }: { steps: { math: string; why?: ReactNode 
   return (
     <ol className="divide-y divide-border-muted overflow-hidden rounded-md border bg-card">
       {steps.map((s, i) => (
-        <li key={i} className="flex gap-3 px-card py-2">
-          <span className="w-4 shrink-0 pt-1 text-right font-mono text-xs text-muted-foreground tabular-nums">
-            {i + 1}
-          </span>
-          <div className="min-w-0 flex-1 space-y-1">
+        <li key={i} className="space-y-1 px-card py-2">
+          {/* The number centres on its line of math, however tall the
+              fractions make it; the reason sits under the math, not the
+              number. */}
+          <div className="flex items-center gap-3">
+            <span className="w-4 shrink-0 text-right font-mono text-xs text-muted-foreground tabular-nums">
+              {i + 1}
+            </span>
             {/* No scroll wrapper: an overflow container clips tall glyphs
                 like an integral and shows a scrollbar. Inline KaTeX breaks
                 a long line at = and + instead. */}
-            <div dangerouslySetInnerHTML={{ __html: tex(`\\displaystyle ${s.math}`) }} />
-            {s.why && <p className="text-xs text-muted-foreground">{s.why}</p>}
+            <div className="min-w-0 flex-1" dangerouslySetInnerHTML={{ __html: tex(`\\displaystyle ${s.math}`) }} />
           </div>
+          {s.why && <p className="pl-7 text-xs text-muted-foreground">{s.why}</p>}
         </li>
       ))}
     </ol>

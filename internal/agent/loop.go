@@ -1,0 +1,132 @@
+package agent
+
+import (
+	"context"
+	"fmt"
+	"math"
+	"time"
+
+	"github.com/jackt/pset/internal/llm"
+)
+
+// Book is what the tools need to know about the book: page numbers the
+// model sees are printed ones, the library's are PDF pages.
+type Book struct {
+	ID         string
+	Title      string
+	PageCount  int
+	PageOffset int
+}
+
+// Library is the book, as the tools read it. Pages are PDF pages.
+type Library interface {
+	Search(ctx context.Context, bookID, query string, k int) ([]int, error)
+	PageText(ctx context.Context, bookID string, page int) (string, error)
+	PageJPEG(ctx context.Context, bookID string, page, width int) ([]byte, error)
+}
+
+// Loop runs a model over the book with the tools until it answers.
+type Loop struct {
+	Client  *llm.Client
+	Model   string
+	Library Library
+	Book    Book
+	// Rounds bounds the tool rounds; past it the model answers with what
+	// it has.
+	Rounds int
+	// Step puts a line on the feed: running with a present-tense label,
+	// then replaced by its past-tense one. A thinking model's reasoning is
+	// a step too ("Thinking…", then "Thought for 12s").
+	Step func(label string, running bool)
+	// Delta is the answer as it streams.
+	Delta func(text string)
+	// Writing fires when a round's answer text starts: the thinking and
+	// the tools are done, and the words are coming.
+	Writing func()
+}
+
+// Run loops until the model answers without calling a tool.
+func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
+	rounds := l.Rounds
+	if rounds == 0 {
+		rounds = 8
+	}
+	for round := 0; ; round++ {
+		req := llm.ChatRequest{Model: l.Model, Messages: msgs, Tools: Tools}
+		if round == rounds {
+			req.Tools = nil
+			req.Messages = append(msgs, llm.TextMessage("user", "Answer now, with what you've found."))
+		}
+		var thinkingSince time.Time
+		wrote := false
+		endThinking := func() {
+			if !thinkingSince.IsZero() {
+				s := int(math.Ceil(time.Since(thinkingSince).Seconds()))
+				l.step(fmt.Sprintf("Thought for %ds", s), false)
+				thinkingSince = time.Time{}
+			}
+		}
+		req.OnReasoning = func(string) {
+			if thinkingSince.IsZero() && !wrote {
+				thinkingSince = time.Now()
+				l.step("Thinking…", true)
+			}
+		}
+		reply, err := l.Client.ChatStreamFull(ctx, req, func(delta string) error {
+			if !wrote {
+				endThinking()
+				wrote = true
+				if l.Writing != nil {
+					l.Writing()
+				}
+			}
+			if l.Delta != nil {
+				l.Delta(delta)
+			}
+			return nil
+		})
+		endThinking()
+		if err != nil {
+			return err
+		}
+		if len(reply.ToolCalls) == 0 || req.Tools == nil {
+			return nil
+		}
+		if wrote && l.Delta != nil {
+			// Whatever it said before reaching for a tool ends its line.
+			l.Delta("\n")
+		}
+		msgs = append(msgs, llm.AssistantToolMessage(reply.Content, reply.ToolCalls))
+		var images []llm.Part
+		for _, call := range reply.ToolCalls {
+			result, img := l.tool(ctx, call)
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			msgs = append(msgs, llm.ToolMessage(call.ID, result))
+			images = append(images, img...)
+		}
+		if len(images) > 0 {
+			// Tool results are text; pages to look at come as the next
+			// user message.
+			content := llm.PartsContent(llm.TextPart("The pages you asked to look at:"))
+			for _, p := range images {
+				content.AppendPart(p)
+			}
+			msgs = append(msgs, llm.Message{Role: "user", Content: content})
+		}
+	}
+}
+
+func (l *Loop) step(label string, running bool) {
+	if l.Step != nil {
+		l.Step(label, running)
+	}
+}
+
+// Prompt is how to use the tools, for a system prompt.
+const Prompt = `Tools. Use the book: search_pages to find where it covers something, read_page to read it,
+view_page when a figure, a table or the layout matters. Do every calculation with compute, and
+every system of linear equations with solve_linear, rather than in your head: they are exact, and
+a guide with a wrong number in it is worse than none. Pages you give or get are printed page
+numbers.`

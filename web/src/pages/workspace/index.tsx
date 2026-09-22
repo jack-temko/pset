@@ -700,10 +700,13 @@ function StageSkeleton({ name }: { name: (typeof STAGE_NAMES)[number] }) {
   )
 }
 
-/** What the engine is doing to a question, while it does it. */
+/** What the engine is doing to a question, while it does it: finding it,
+ *  then whatever the guide's writer is doing (thinking, searching the
+ *  book, computing), then writing. */
 function workingLine(q: Question): string | null {
-  if (q.state === 'pending' || q.state === 'locating') return q.inBook ? 'Finding it in the book…' : 'Writing the guide…'
-  if (q.state === 'writing') return 'Writing the guide…'
+  if (q.state === 'pending') return q.inBook ? 'Finding it in the book…' : 'Waiting its turn…'
+  if (q.state === 'locating') return 'Finding it in the book…'
+  if (q.state === 'writing') return q.activity || 'Getting started…'
   return null
 }
 

@@ -288,15 +288,21 @@ func TestInBookQuestionIsLocatedThenGuided(t *testing.T) {
 	if !sawHintFirst {
 		t.Fatal("no event carried the hint while the walkthrough was being written")
 	}
-	// The tutor was told who it's writing for.
-	var named bool
+	// A guide is written for any student: the name is Ask's, not the
+	// walkthrough's. And the writer holds the same tools Ask does.
 	for _, r := range e.llm.Requests() {
-		if len(r.Chat.Messages) > 0 && strings.Contains(r.Chat.Messages[0].Content.Text(), "writing for Jack") {
-			named = true
+		if len(r.Chat.Messages) > 0 && strings.Contains(r.Chat.Messages[0].Content.Text(), "You write the guide") {
+			if strings.Contains(r.Chat.Messages[0].Content.Text(), "Jack") {
+				t.Fatal("the guide prompt used the student's name")
+			}
+			var names []string
+			for _, tool := range r.Chat.Tools {
+				names = append(names, tool.Function.Name)
+			}
+			if strings.Join(names, ",") != "search_pages,read_page,view_page,compute,solve_linear" {
+				t.Fatalf("guide tools %v", names)
+			}
 		}
-	}
-	if !named {
-		t.Fatal("the guide prompt didn't use the student's name")
 	}
 
 	resp, err := http.Get(e.URL + "/api/questions/" + q.ID + "/figures/0")
@@ -432,5 +438,52 @@ func TestRevealDoneReorderRemove(t *testing.T) {
 	e.do(t, "DELETE", "/api/homework/"+h.ID, nil, nil)
 	if code := e.do(t, "GET", "/api/homework/"+h.ID, nil, nil); code != 404 {
 		t.Fatalf("deleted set: %d", code)
+	}
+}
+
+func TestGuideComputesAndShowsWhatItsDoing(t *testing.T) {
+	e := newEnv(t)
+	var mu sync.Mutex
+	round := 0
+	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
+		if !strings.Contains(req.Messages[0].Content.Text(), "You write the guide") {
+			return fakeModel(req)
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		round++
+		if round == 1 {
+			return llmtest.Reply{Reasoning: "Let me check the arithmetic.", ToolCalls: []llm.ToolCall{
+				{ID: "c1", Type: "function", Function: llm.ToolCallFunc{Name: "compute", Arguments: `{"expression":"3/8"}`}},
+			}}
+		}
+		return llmtest.Reply{Text: guide}
+	})
+	h := e.newSet(t)
+	q := e.wait(t, e.add(t, h.ID, Draft{Text: "Flip three coins.", InBook: false})[0].ID, StateReady)
+	if q.Activity != "" {
+		t.Fatalf("activity left behind: %q", q.Activity)
+	}
+	var saw []string
+	for _, ev := range e.events.all() {
+		for _, a := range []string{"Thinking…", "Computing…", "Writing the guide…"} {
+			if strings.Contains(ev, `"activity":"`+a+`"`) && (len(saw) == 0 || saw[len(saw)-1] != a) {
+				saw = append(saw, a)
+			}
+		}
+	}
+	if strings.Join(saw, " > ") != "Thinking… > Computing… > Writing the guide…" {
+		t.Fatalf("activity %v", saw)
+	}
+	// The tool's exact answer went back to the model.
+	reqs := e.llm.Requests()
+	var got bool
+	for _, m := range reqs[len(reqs)-1].Chat.Messages {
+		if m.Role == "tool" && strings.Contains(m.Content.Text(), "3/8") {
+			got = true
+		}
+	}
+	if !got {
+		t.Fatal("compute's result never reached the model")
 	}
 }

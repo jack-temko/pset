@@ -1,8 +1,7 @@
 package homework
 
 import (
-	"fmt"
-
+	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/cards"
 )
 
@@ -27,14 +26,13 @@ const repairPrompt = `You fix one malformed card for a rendering pipeline. You g
 card as written, what is wrong with it, and the JSON schema it must satisfy. Reply with only the
 corrected JSON object: no prose, no code fence, no comments.`
 
-// guideSystem is the tutor's brief. With a name, it's written to them.
-func guideSystem(name string) string {
-	who := "Be warm and encouraging, like a good tutor sitting beside the student."
-	if name != "" {
-		who = fmt.Sprintf("You're writing for %s. Be warm and encouraging, like a good tutor sitting beside them, and use their name once or twice where it's natural, never in every paragraph.", name)
-	}
+// guideSystem is the writer's brief. It's written for any student: the
+// name is for Ask, where it's a conversation; in a guide it only got in
+// the way.
+func guideSystem() string {
 	return `You write the guide for one homework problem, for a student who will work it themselves
-and check against you. ` + who + `
+and check against you. Be warm and encouraging, like a good tutor sitting beside them, but let the
+mathematics do the talking.
 
 Write exactly two parts, each under its own heading line, in this order:
 
@@ -45,12 +43,14 @@ One or two sentences that point the way without giving the method away. No worki
 The full worked solution, for a student checking their own work. Explain the reasoning in short
 paragraphs and put the working in cards where they fit, a steps card above all.
 
+` + agent.Prompt + `
+
 ` + cards.Prompt + `
 
 Rules:
-- Cite the book as [p. N], N the printed page number given with each page, right where a page
-  supports what you say. Cite only pages you were shown.
-- Use only what the problem and the pages show. If something is unreadable, say so rather than
+- Cite the book as [p. N], N the printed page number, right where a page supports what you say.
+  Cite only pages you were shown or read.
+- Use only what the problem and the book show. If something is unreadable, say so rather than
   guess.
 - No other headings.`
 }

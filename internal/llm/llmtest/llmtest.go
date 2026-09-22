@@ -28,6 +28,8 @@ const Dims = 64
 type Reply struct {
 	Text      string
 	ToolCalls []llm.ToolCall
+	// Reasoning streams first, as a thinking model's reasoning_content.
+	Reasoning string
 	Status    int // non-zero answers with this status and Text as the body
 	// Pause is how long to wait between streamed chunks, to test a
 	// stop mid-answer.
@@ -197,6 +199,9 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 		if flusher != nil {
 			flusher.Flush()
 		}
+	}
+	for _, chunk := range chunks(reply.Reasoning, 7) {
+		send(map[string]any{"reasoning_content": chunk})
 	}
 	for _, chunk := range chunks(reply.Text, 7) {
 		if reply.Pause > 0 {
