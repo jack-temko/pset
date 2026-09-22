@@ -9,7 +9,7 @@ import type { HomeworkStatus } from '@/components/homework-status'
 
 /** A sample book with everything the list doesn't care about filled in. */
 export function sampleBook(b: Pick<Book, 'sha256' | 'title' | 'author' | 'state'>): Book {
-  return { id: b.sha256, pageCount: 312, pageOffset: 16, aspect: 11 / 8.5, addedAt: '2026-09-03T12:00:00Z', ...b }
+  return { id: b.sha256, pageCount: 312, pageOffset: 16, aspect: 11 / 8.5, addedAt: '2026-09-03T12:00:00Z', updatedAt: '2026-09-03T12:00:00.000000000Z', ...b }
 }
 
 export const BOOKS: Book[] = [
