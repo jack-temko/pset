@@ -24,7 +24,7 @@ import { DurationValue, StatTile } from '@/components/stat-tile'
 import { coverHueFromSha } from '@/lib/covers'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
-import { WEEK, WEEK_BY_BOOK, type Week, type WeekBook } from '@/lib/sample'
+import { useWeek, type Week } from '@/api/activity'
 import { useDue, type Summary } from '@/api/homework'
 import { dueLine, dueStatus } from '@/lib/due'
 
@@ -90,9 +90,16 @@ function WeekByBook({ books }: { books: WeekBook[] }) {
 /** This week's numbers: time on each activity, then questions worked, with
  *  the by-book bar below. Reports, never nags: no targets, no deltas, no
  *  streaks. First on the page, so the week is visible without scrolling. */
-function ThisWeek({ week, byBook }: { week: Week; byBook: WeekBook[] }) {
+/** The week's time split by book, for the bar under the stat tiles. The
+ *  colour comes from the book's cover hue: the bar is the shelf, flattened. */
+type WeekBook = { sha256: string; title: string; minutes: number }
+
+function ThisWeek({ week: loaded, byBook }: { week: Week | undefined; byBook: WeekBook[] }) {
+  // Until the numbers arrive, the tiles hold their size with skeletons.
+  const week = loaded ?? { homework: 0, reading: 0, asking: 0, questions: 0, problemSets: 0, byBook: [] }
   const total = week.homework + week.reading + week.asking
   const empty = total === 0 && week.questions === 0
+  const wait = (v: React.ReactNode) => (loaded ? v : <Skeleton className="h-6 w-16" />)
 
   return (
     <section className="space-y-5">
@@ -101,24 +108,24 @@ function ThisWeek({ week, byBook }: { week: Week; byBook: WeekBook[] }) {
         <StatTile
           label="Homework"
           chart={1}
-          value={<DurationValue minutes={week.homework} />}
+          value={wait(<DurationValue minutes={week.homework} />)}
           context={empty ? 'nothing yet this week' : 'so far this week'}
         />
         <StatTile
           label="Reading"
           chart={2}
-          value={<DurationValue minutes={week.reading} />}
+          value={wait(<DurationValue minutes={week.reading} />)}
           context={empty ? 'nothing yet this week' : 'so far this week'}
         />
         <StatTile
           label="Asking"
           chart={3}
-          value={<DurationValue minutes={week.asking} />}
+          value={wait(<DurationValue minutes={week.asking} />)}
           context={empty ? 'nothing yet this week' : 'so far this week'}
         />
         <StatTile
           label="Questions worked"
-          value={week.questions}
+          value={wait(week.questions)}
           context={
             week.questions > 0
               ? `across ${week.problemSets} problem set${week.problemSets === 1 ? '' : 's'}`
@@ -362,6 +369,11 @@ export function Home() {
   // A first run is the greeting and the shelf, nothing else: empty
   // sections read as broken, and a row of zeroes is noise.
   const firstRun = books !== undefined && books.length === 0
+  const { data: week } = useWeek()
+  const byBook = (week?.byBook ?? []).flatMap((w) => {
+    const b = books?.find((x) => x.id === w.bookId)
+    return b ? [{ sha256: b.sha256, title: b.title, minutes: w.minutes }] : []
+  })
 
   return (
     <AppShell>
@@ -369,7 +381,7 @@ export function Home() {
         <PageTitle short="Home" className="text-4xl">
           {greeting(new Date().getHours(), settings?.profile.name ?? '')}.
         </PageTitle>
-        {!firstRun && <ThisWeek week={WEEK} byBook={WEEK_BY_BOOK} />}
+        {!firstRun && <ThisWeek week={week} byBook={byBook} />}
         {!firstRun && <Homework books={books} />}
         <Shelf books={books} />
       </PageShell>

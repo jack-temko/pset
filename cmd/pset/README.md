@@ -1,21 +1,27 @@
 # cmd/pset
 
-Server entrypoint. With no arguments it runs migrations, starts the job
-runner, and serves the API + embedded SPA; `pset` is a web server, there is
-no command tree.
+The server. `main.go` is wiring only: open the database, run every
+feature's migrations (parents first), build the features, start the job
+queue, serve the API and the embedded SPA. Layering and contracts:
+`design/backend.md`.
 
 ## Flags
 
-- `--addr` — listen address, default `127.0.0.1:8420`
-- `--db` — database path; empty resolves `$PSET_DB`, then `~/.pset/pset.db`
-- `--verbose` — slog debug trace on stderr; default is quiet
-- `--version` — print and exit
+- `-addr`: listen address, default `127.0.0.1:8420`
+- `-data`: data directory; empty means `$PSET_DATA`, then
+  `$XDG_DATA_HOME/pset` or `~/.local/share/pset`
+- `-verbose`: debug logging
+- `-version`: print and exit
 
 ## Lifecycle
 
-Migrations run before listening so a broken database is an exit code, not a
-broken server. SIGINT/SIGTERM pauses the running job at its next page or
-stage boundary (status returns to `queued`; the spooled source is kept so
-the restart resumes it), waits up to 30s for the runner, then shuts the
-HTTP server down gracefully. `--version` is injected at build time via
-`-ldflags`.
+Migrations run before listening, so a broken database is an exit code.
+SIGINT/SIGTERM puts running jobs back to queued (they resume on the next
+start), ends the event streams, and shuts the server down. Every model
+call is logged to `logs/llm.jsonl` in the data directory.
+
+## Adapters
+
+Features never import each other. Where one needs another's data it
+declares an interface in its own types, and the small adapters at the
+bottom of `main.go` (`homeworkLibrary`, `askLibrary`) translate.

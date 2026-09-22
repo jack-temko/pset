@@ -69,6 +69,7 @@ import {
   type Summary,
 } from '@/api/homework'
 import { CardSkeleton, Prose, Segments } from '@/components/segments'
+import { useHeartbeat, type Kind as ActivityKind } from '@/api/activity'
 import { useAsk, useClearTurns, useStopTurn, useTurns, type About, type LiveTurn } from '@/api/ask'
 import { dueLine, dueStatus } from '@/lib/due'
 import { PageOffset, pdfOf, printedLabel, usePageOffset } from '@/lib/pages'
@@ -1065,6 +1066,7 @@ function HomeworkTab({
 function Panel({
   bookId,
   bookTitle,
+  onActive,
   homework,
   focus,
   onFocusToggle,
@@ -1072,6 +1074,8 @@ function Panel({
 }: {
   bookId: string
   bookTitle: string
+  /** Where the student last worked, for the week's time. */
+  onActive: (kind: ActivityKind) => void
   /** A homework set named in the URL opens the Homework tab on it. */
   homework?: string
   focus: boolean
@@ -1087,6 +1091,8 @@ function Panel({
 
   return (
     <aside
+      onPointerDownCapture={() => onActive(tab === 'ask' ? 'asking' : 'homework')}
+      onKeyDownCapture={() => onActive(tab === 'ask' ? 'asking' : 'homework')}
       className={cn(
         'flex shrink-0 flex-col border-l bg-rail',
         focus ? 'w-panel-wide' : 'w-panel',
@@ -1174,6 +1180,10 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   const jump = (printed: number) => jumpPdf(pdfOf(printed, offset))
   const chapters = contents.data?.chapters
   const homeworkCount = useBookHomework(book.id).data?.length ?? 0
+  // Time counts toward what you last touched: the panel's tab, or the
+  // book itself.
+  const activity = useRef<ActivityKind>('reading')
+  useHeartbeat(book.id, () => activity.current)
 
   return (
     <PageOffset value={offset}>
@@ -1195,7 +1205,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           </span>
         }
       >
-        <div className="flex h-full">
+        <div className="flex h-full" onPointerDownCapture={() => (activity.current = 'reading')}>
           {!focus &&
             (chapters === undefined ? (
               <RailSkeleton />
@@ -1214,6 +1224,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           <Panel
             bookId={book.id}
             bookTitle={book.title}
+            onActive={(k) => (activity.current = k)}
             homework={homework}
             focus={focus}
             onFocusToggle={() => setFocus((f) => !f)}

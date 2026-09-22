@@ -37,7 +37,7 @@ import { Dialog } from '@/components/dialog'
 import { AutoTextarea, Field, Input } from '@/components/input'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { coverHueFromSha } from '@/lib/covers'
-import { BOOKS, DUE, sampleBook } from '@/lib/sample'
+import { BOOKS, DUE, sampleBook } from '@/components/fixtures'
 import { BookTile } from '@/components/book-tile'
 
 

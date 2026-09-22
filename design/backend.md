@@ -252,9 +252,12 @@ directory and served `immutable`. Zoom asks for a bigger bucket.
 
 **Time stats come from heartbeats.** While the workspace tab is visible
 and there was input in the last two minutes, the client sends
-`{book, activity}` every 30 seconds: `homework` with a walkthrough open,
-`asking` with Ask focused, `reading` otherwise. The server folds
-heartbeats into sessions and answers `/api/week` from them.
+`{book, kind}` every 30 seconds: whichever of `reading` (the scan or
+rail), `asking` (the Ask tab) or `homework` (the Homework tab) was last
+touched. Each heartbeat counts 30 seconds (a second tab in the same
+half-minute counts once), and `/api/week?since=` sums them from the
+start of the student's week, which the client sends because it knows
+the local calendar.
 
 ## Logging
 

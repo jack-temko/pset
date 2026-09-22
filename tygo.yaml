@@ -42,3 +42,8 @@ packages:
     frontmatter: |
       // Generated from internal/ask/wire.go by tygo. Do not edit.
       import type { Kind, Segment } from './cards'
+  - path: github.com/jackt/pset/internal/activity
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/activity.ts
+    frontmatter: "// Generated from internal/activity/wire.go by tygo. Do not edit."

@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackt/pset/internal/activity"
 	"github.com/jackt/pset/internal/ask"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/events"
@@ -75,6 +76,7 @@ func serve(addr, dir string, log *slog.Logger) error {
 		library.Migrations(),
 		homework.Migrations(),
 		ask.Migrations(),
+		activity.Migrations(),
 	)
 	ctx := context.Background()
 	if err := db.Migrate(ctx, d, migrations); err != nil {
@@ -114,6 +116,7 @@ func serve(addr, dir string, log *slog.Logger) error {
 	books.Routes(mux)
 	sets.Routes(mux)
 	tutor.Routes(mux)
+	activity.New(d, sets).Routes(mux)
 	mux.HandleFunc("GET /api/events", bus.Handler)
 	mux.HandleFunc("/api/", httpx.NotFoundAPI)
 	mux.Handle("/", httpx.SPA(web.Dist))
