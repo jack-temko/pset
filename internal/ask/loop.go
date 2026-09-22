@@ -145,6 +145,9 @@ func (r *run) loop(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
+		if errors.Is(err, llm.ErrStreamCut) {
+			return &failure{msg: "The chat model's connection kept dropping partway through. Try again.", err: err}
+		}
 		return &failure{msg: "The chat model stopped answering. Check it in Settings, then try again.", err: err}
 	}
 	return nil

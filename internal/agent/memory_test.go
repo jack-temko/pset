@@ -116,3 +116,32 @@ func TestNoMemoryNoTool(t *testing.T) {
 		}
 	}
 }
+
+func TestACutRoundIsAskedAgain(t *testing.T) {
+	fake := llmtest.New(t)
+	fake.Script(
+		llmtest.Reply{Reasoning: "Thinking for a long time.", Cut: true},
+		llmtest.Reply{Text: "Done.", Split: true},
+	)
+	var steps []string
+	var text strings.Builder
+	l := &Loop{
+		Client: llm.Open(fake.Config()), Model: "fake-chat", Library: book{}, Book: Book{ID: "b1"},
+		Step:  func(label string, running bool) { steps = append(steps, label) },
+		Delta: func(s string) { text.WriteString(s) },
+	}
+	if err := l.Run(context.Background(), []llm.Message{llm.TextMessage("user", "hi")}); err != nil {
+		t.Fatal(err)
+	}
+	if text.String() != "Done." {
+		t.Fatalf("answer %q", text.String())
+	}
+	if !strings.Contains(strings.Join(steps, "|"), "Connection dropped · asking again") {
+		t.Fatalf("steps %q", steps)
+	}
+	// It gives up after a couple.
+	fake.Script(llmtest.Reply{Cut: true}, llmtest.Reply{Cut: true}, llmtest.Reply{Cut: true})
+	if err := l.Run(context.Background(), []llm.Message{llm.TextMessage("user", "hi")}); !errors.Is(err, llm.ErrStreamCut) {
+		t.Fatalf("err %v", err)
+	}
+}

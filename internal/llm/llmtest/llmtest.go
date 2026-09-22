@@ -34,6 +34,12 @@ type Reply struct {
 	// Pause is how long to wait between streamed chunks, to test a
 	// stop mid-answer.
 	Pause time.Duration
+	// Cut ends the stream after the reasoning, halfway through a chunk,
+	// as an endpoint dropping a long answer does.
+	Cut bool
+	// Split sends each chunk's JSON across two data: lines, which SSE
+	// allows and some endpoints do.
+	Split bool
 }
 
 // Request is what the server received, for assertions.
@@ -195,13 +201,22 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 	flusher, _ := w.(http.Flusher)
 	send := func(delta map[string]any) {
 		b, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": delta}}})
-		w.Write([]byte("data: " + string(b) + "\n\n"))
+		if reply.Split {
+			half := len(b) / 2
+			w.Write([]byte("data: " + string(b[:half]) + "\ndata: " + string(b[half:]) + "\n\n"))
+		} else {
+			w.Write([]byte("data: " + string(b) + "\n\n"))
+		}
 		if flusher != nil {
 			flusher.Flush()
 		}
 	}
 	for _, chunk := range chunks(reply.Reasoning, 7) {
 		send(map[string]any{"reasoning_content": chunk})
+	}
+	if reply.Cut {
+		w.Write([]byte(`data: {"choices":[{"delta":{"content":"Th`))
+		return
 	}
 	for _, chunk := range chunks(reply.Text, 7) {
 		if reply.Pause > 0 {

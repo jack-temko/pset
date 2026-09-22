@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -316,15 +317,40 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 	calls := newToolCallAccumulator()
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
-	for scanner.Scan() {
+	// Server-sent events: an event's data may span several data: lines,
+	// joined by newlines, and ends at a blank line.
+	var event strings.Builder
+	next := func() (string, bool) {
+		for scanner.Scan() {
+			line := scanner.Text()
+			if line == "" {
+				if event.Len() > 0 {
+					data := event.String()
+					event.Reset()
+					return data, true
+				}
+				continue
+			}
+			if strings.HasPrefix(line, "data:") {
+				if event.Len() > 0 {
+					event.WriteByte('\n')
+				}
+				event.WriteString(strings.TrimPrefix(strings.TrimPrefix(line, "data:"), " "))
+			}
+		}
+		data := event.String()
+		event.Reset()
+		return data, data != ""
+	}
+	for {
 		if ctx.Err() != nil {
 			return Reply{}, ctx.Err()
 		}
-		line := scanner.Text()
-		if !strings.HasPrefix(line, "data:") {
-			continue
+		raw, ok := next()
+		if !ok {
+			break
 		}
-		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		data := strings.TrimSpace(raw)
 		if data == "" {
 			continue
 		}
@@ -348,6 +374,10 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 			} `json:"choices"`
 		}
 		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+			if isCut(err) {
+				// The connection dropped mid-event.
+				return Reply{Content: full.String()}, fmt.Errorf("%w: %v", ErrStreamCut, err)
+			}
 			return Reply{}, fmt.Errorf("decode stream chunk: %w", err)
 		}
 		for _, choice := range chunk.Choices {
@@ -372,9 +402,18 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return Reply{Content: full.String()}, fmt.Errorf("read model stream: %w", err)
+		return Reply{Content: full.String()}, fmt.Errorf("%w: %v", ErrStreamCut, err)
 	}
 	return Reply{Content: full.String(), ToolCalls: calls.finish(), Reasoned: reasoned}, nil
+}
+
+// ErrStreamCut is a streamed reply that ended partway: the connection
+// dropped, or the endpoint gave up on a long answer.
+var ErrStreamCut = errors.New("the model's stream was cut off")
+
+// isCut is a JSON error that means the text simply stopped.
+func isCut(err error) bool {
+	return strings.Contains(err.Error(), "unexpected end of JSON input")
 }
 
 // toolCallAccumulator assembles streamed tool calls; each index's id and

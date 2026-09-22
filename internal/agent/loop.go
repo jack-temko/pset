@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -70,6 +71,7 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			tools = append(tools, forgetTool)
 		}
 	}
+	retries := cutRetries
 	for round := 0; ; round++ {
 		sent := msgs
 		if sys := l.system(ctx); sys != "" {
@@ -109,6 +111,14 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			return nil
 		})
 		endThinking()
+		if err != nil && errors.Is(err, llm.ErrStreamCut) && !wrote && retries > 0 {
+			// The endpoint dropped a long round before any answer text:
+			// nothing reached the student, so ask again.
+			retries--
+			round--
+			l.step("Connection dropped · asking again", false)
+			continue
+		}
 		if err != nil {
 			return err
 		}
@@ -140,6 +150,9 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 		}
 	}
 }
+
+// cutRetries is how many cut-off rounds one run asks again.
+const cutRetries = 2
 
 func (l *Loop) step(label string, running bool) {
 	if l.Step != nil {

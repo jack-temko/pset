@@ -44,6 +44,9 @@ func fail(err error, format string, args ...any) error {
 
 // modelDown is what any failed model call means to the student.
 func modelDown(err error) error {
+	if errors.Is(err, llm.ErrStreamCut) {
+		return fail(err, "The chat model's connection kept dropping partway through. Try again.")
+	}
 	return fail(err, "The chat model stopped answering. Check it in Settings, then try again.")
 }
 
