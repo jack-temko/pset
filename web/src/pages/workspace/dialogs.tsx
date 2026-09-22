@@ -146,7 +146,10 @@ export function HomeworkDialog({
           submit()
         }}
       >
-        <Field label="Title">
+        <Field
+          label="Title"
+          hint={editing ? undefined : title ? undefined : 'Give it a name, anything like Problem set 4.'}
+        >
           <Input
             autoFocus
             value={title}
@@ -211,7 +214,7 @@ export function BookDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title="Book"
+      title="Edit book"
       footer={
         confirming ? (
           <ConfirmFooter
@@ -355,60 +358,66 @@ export function AddQuestionsDialog({
             Cancel
           </Button>
           <Button onClick={submit} disabled={!filled.length}>
-            {filled.length === 1 ? 'Add 1 question' : `Add ${filled.length} questions`}
+            {filled.length === 0 ? 'Add questions' : filled.length === 1 ? 'Add 1 question' : `Add ${filled.length} questions`}
           </Button>
         </>
       }
     >
-      <div className="divide-y divide-border-muted">
-        {rows.map((row) => (
-          <div key={row.id} className="space-y-2 py-3 first:pt-0 last:pb-0">
-            <div className="flex items-start gap-2">
-              <AutoTextarea
-                data-row={row.id}
-                autoFocus={rows.length === 1}
-                value={row.text}
-                placeholder="A reference like 3.B.4, or paste the question"
-                onChange={(e) =>
-                  setRows((rs) =>
-                    rs.map((r) => (r.id === row.id ? { ...r, text: e.target.value } : r)),
-                  )
+      <div className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          One question per row. Untick In this book if a question isn't from this scan, and the guide
+          is written from your text alone.
+        </p>
+        <div className="divide-y divide-border-muted">
+          {rows.map((row) => (
+            <div key={row.id} className="space-y-2 py-3 first:pt-0 last:pb-0">
+              <div className="flex items-start gap-2">
+                <AutoTextarea
+                  data-row={row.id}
+                  autoFocus={rows.length === 1}
+                  value={row.text}
+                  placeholder="A reference like 3.B.4, or paste the question"
+                  onChange={(e) =>
+                    setRows((rs) =>
+                      rs.map((r) => (r.id === row.id ? { ...r, text: e.target.value } : r)),
+                    )
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter') return
+                    e.preventDefault()
+                    if (e.metaKey || e.ctrlKey) submit()
+                    else addRow(row.id)
+                  }}
+                />
+                {/* Always there, and disabled on the only row: the dialog is
+                    never empty, and the control never has to be hunted for. */}
+                <IconButton
+                  variant="ghost"
+                  aria-label="Remove this question"
+                  disabled={rows.length === 1}
+                  onClick={() => setRows((rs) => rs.filter((r) => r.id !== row.id))}
+                >
+                  <Trash2 />
+                </IconButton>
+              </div>
+              <Checkbox
+                checked={row.inBook}
+                onChange={() =>
+                  setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, inBook: !r.inBook } : r)))
                 }
-                onKeyDown={(e) => {
-                  if (e.key !== 'Enter') return
-                  e.preventDefault()
-                  if (e.metaKey || e.ctrlKey) submit()
-                  else addRow(row.id)
-                }}
-              />
-              {/* Always there, and disabled on the only row: the dialog is
-                  never empty, and the control never has to be hunted for. */}
-              <IconButton
-                variant="ghost"
-                aria-label="Remove this question"
-                disabled={rows.length === 1}
-                onClick={() => setRows((rs) => rs.filter((r) => r.id !== row.id))}
+                className="-ml-2 text-muted-foreground"
               >
-                <Trash2 />
-              </IconButton>
+                In this book
+              </Checkbox>
             </div>
-            <Checkbox
-              checked={row.inBook}
-              onChange={() =>
-                setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, inBook: !r.inBook } : r)))
-              }
-              className="-ml-2 text-muted-foreground"
-            >
-              In this book
-            </Checkbox>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      <Button variant="ghost" size="sm" className="mt-3 -ml-2" onClick={() => addRow()}>
-        <Plus />
-        Add row
-      </Button>
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => addRow()}>
+          <Plus />
+          Add row
+        </Button>
+      </div>
     </Dialog>
   )
 }

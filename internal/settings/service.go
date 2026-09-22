@@ -140,7 +140,7 @@ func (s *Service) Test(ctx context.Context, in ConnectionInput) (TestResult, err
 			return TestResult{}, httpx.Invalid("model", "Name a model.")
 		}
 		if err := s.c.Dialer.Chat(ctx, c); err != nil {
-			return TestResult{}, explain(err, true)
+			return TestResult{}, explain(err, true, c.APIKey != "")
 		}
 		return TestResult{Detail: "Connected"}, nil
 	case in.Embeddings != nil && in.Chat == nil:
@@ -153,7 +153,7 @@ func (s *Service) Test(ctx context.Context, in ConnectionInput) (TestResult, err
 		}
 		dims, err := s.c.Dialer.Embed(ctx, c)
 		if err != nil {
-			return TestResult{}, explain(err, false)
+			return TestResult{}, explain(err, false, false)
 		}
 		return TestResult{Detail: fmt.Sprintf("Connected · %d dimensions", dims)}, nil
 	}
@@ -196,14 +196,18 @@ func validEndpoint(raw string) error {
 }
 
 // explain turns a failed dial into the error for the field that caused
-// it: the endpoint when nothing answers, the key when it's refused, the
-// model when the server doesn't know it.
-func explain(err error, chat bool) error {
+// it: the endpoint when nothing answers, the key when it's refused (or
+// when there is none to refuse), the model when the server doesn't know
+// it.
+func explain(err error, chat bool, hasKey bool) error {
 	var le *llm.LLMError
 	if errors.As(err, &le) {
 		body := strings.ToLower(le.Body)
 		switch {
 		case chat && (le.Status == 401 || le.Status == 403):
+			if !hasKey {
+				return httpx.Errorf(httpx.CodeBadKey, "This endpoint wants an API key and none is set (%d).", le.Status).OnField("apiKey")
+			}
 			return httpx.Errorf(httpx.CodeBadKey, "The endpoint refused this key (%d)", le.Status).OnField("apiKey")
 		case strings.Contains(body, "model"):
 			return httpx.Errorf(httpx.CodeBadModel, "The endpoint doesn't know this model (%d)", le.Status).OnField("model")

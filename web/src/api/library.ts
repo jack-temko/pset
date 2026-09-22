@@ -93,6 +93,15 @@ async function uploadOne(file: File): Promise<Book> {
   return (data as BookChanged).book
 }
 
+/** A refusal that names its file, as the duplicate error names its book. */
+function refused(f: File, e: ApiError): ApiError {
+  const message =
+    e.message === "That isn't a PDF."
+      ? `${f.name} isn't a PDF. PSet can only shelve PDF files.`
+      : `${f.name}: ${e.message}`
+  return new ApiError(e.status, { code: e.code, message, field: e.field, id: e.id })
+}
+
 /** Uploads files one after another. Each lands in the list as it's
  *  accepted; a book that's already on the shelf comes back as
  *  `duplicate`, with its id. */
@@ -107,7 +116,7 @@ export function useUploadBooks() {
           putBook(qc, await uploadOne(f))
         } catch (e) {
           if (e instanceof ApiError && e.code === 'duplicate_book' && e.id) duplicates.push(e.id)
-          else if (e instanceof ApiError) errors.push(e)
+          else if (e instanceof ApiError) errors.push(refused(f, e))
           else throw e
         }
       }
