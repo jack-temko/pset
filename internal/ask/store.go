@@ -45,9 +45,15 @@ func scan(s interface{ Scan(...any) error }) (row, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
 	}
-	r.Steps, r.Answer = []Step{}, []cards.Segment{}
 	json.Unmarshal([]byte(steps), &r.Steps)
 	json.Unmarshal([]byte(answer), &r.Answer)
+	// "null" unmarshals to nil: the wire always carries lists.
+	if r.Steps == nil {
+		r.Steps = []Step{}
+	}
+	if r.Answer == nil {
+		r.Answer = []cards.Segment{}
+	}
 	return r, err
 }
 

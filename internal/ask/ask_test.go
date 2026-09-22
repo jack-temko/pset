@@ -173,6 +173,12 @@ func TestTurnSearchesComputesAndAnswers(t *testing.T) {
 	if e.events.count(EventTurnDelta) == 0 || e.events.count(EventTurnCardStart) != 1 || e.events.count(EventTurnCard) != 1 {
 		t.Fatalf("events %v", e.events.events)
 	}
+	// Steps come before any words: the answer is still a list, never null.
+	for _, ev := range e.events.events {
+		if strings.Contains(ev, `"answer":null`) || strings.Contains(ev, `"steps":null`) {
+			t.Fatalf("a null list on the wire: %s", ev)
+		}
+	}
 	// What the model was told: the tools' results, the page image, the
 	// homework problem, and who it's talking to.
 	reqs := e.llm.Requests()
