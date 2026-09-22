@@ -119,7 +119,7 @@ func serve(addr, dir string, log *slog.Logger) error {
 	activity.New(d, sets).Routes(mux)
 	mux.HandleFunc("GET /api/events", bus.Handler)
 	mux.HandleFunc("/api/", httpx.NotFoundAPI)
-	mux.Handle("/", httpx.SPA(web.Dist))
+	mux.Handle("/", httpx.SPAFrom(web.Dist, "dist"))
 
 	runCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

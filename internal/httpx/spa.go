@@ -11,6 +11,16 @@ func exists(fsys fs.FS, name string) bool {
 	return err == nil
 }
 
+// SPAFrom serves the SPA out of an embedded tree whose files sit under
+// dir, as //go:embed all:dist leaves them.
+func SPAFrom(tree fs.FS, dir string) http.Handler {
+	sub, err := fs.Sub(tree, dir)
+	if err != nil {
+		return notBuiltHandler{}
+	}
+	return SPA(sub)
+}
+
 // SPA returns the handler for a dist directory, degrading to the
 // not-built handler when index.html is absent.
 func SPA(dist fs.FS) http.Handler {
