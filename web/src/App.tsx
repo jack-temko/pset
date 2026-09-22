@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { useEventStream } from '@/api/events'
 // Each feature registers what its events do to the cache on load.
 import '@/api/library'
+import '@/api/homework'
 import { Components } from '@/pages/components'
 import { Home } from '@/pages/home'
 import { Settings } from '@/pages/settings'

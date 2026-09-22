@@ -20,7 +20,7 @@ import { Box, BoxRow } from '@/components/box'
 import { DoorAction } from '@/components/door'
 import { Checkbox } from '@/components/checkbox'
 import { AutoTextarea, Field, Input } from '@/components/input'
-import { HomeworkStatusLabel, dueText } from '@/components/homework-status'
+import { HomeworkStatusLabel } from '@/components/homework-status'
 import { Button, IconButton } from '@/components/button'
 import { Tooltip } from '@/components/tooltip'
 import {
@@ -53,7 +53,24 @@ import {
   type ContentsChapter,
 } from '@/api/library'
 import { ApiError } from '@/api/client'
-import { BOOK_HOMEWORK, type BookHomework } from '@/lib/sample'
+import {
+  figureURL,
+  useAddQuestions,
+  useBookHomework,
+  useCreateHomework,
+  useDeleteHomework,
+  useHomeworkSet,
+  useRemoveQuestion,
+  useRetryQuestion,
+  useUpdateHomework,
+  useUpdateQuestion,
+  worksheetURL,
+  type Question,
+  type Retry,
+  type Summary,
+} from '@/api/homework'
+import { Prose, Segments } from '@/components/segments'
+import { dueLine, dueStatus } from '@/lib/due'
 import { PageOffset, pdfOf, printedLabel, usePageOffset } from '@/lib/pages'
 import { cn } from '@/lib/utils'
 
@@ -506,142 +523,6 @@ function AskTab({
   )
 }
 
-/** Sample walkthrough content until the backend lands. Statements are
- *  extracted text with math rendered; stages reuse the transcript's
- *  pieces, per the spec. */
-type SampleQuestion = {
-  label: string
-  /** Absent when the question isn't in this book: it loses the page chip
-   *  and the scan jump, and nothing else. */
-  page?: number
-  statement: ReactNode
-  hint: ReactNode
-  /** The worked walkthrough, solution included: one stage, not two. */
-  walkthrough: ReactNode
-  figure?: string
-  /** A just-added question, still being located and written. */
-  pending?: boolean
-  /** Added with "In this book" unchecked: the engine never looks for it. */
-  offBook?: boolean
-  /** Why the engine couldn't write a guide. Replaces the stages. */
-  failed?: string
-}
-
-/** Identity survives reorder, so reveals and completions key off it. */
-type Question = SampleQuestion & { id: number }
-
-const QUESTIONS: SampleQuestion[] = [
-  {
-    label: '3.A.4',
-    page: 57,
-    statement: (
-      <>
-        Suppose <MathInline tex="T \in \mathcal{L}(V, W)" /> and{' '}
-        <MathInline tex="v_1, \dots, v_m" /> is a list of vectors in <MathInline tex="V" /> such
-        that <MathInline tex="Tv_1, \dots, Tv_m" /> is linearly independent in{' '}
-        <MathInline tex="W" />. Prove that <MathInline tex="v_1, \dots, v_m" /> is linearly
-        independent.
-      </>
-    ),
-    hint: <>Start from a dependence among the {'​'}<MathInline tex="v_k" /> and apply{' '}<MathInline tex="T" /> to it.</>,
-    walkthrough: (
-      <>
-        <p>
-          Suppose <MathInline tex="a_1 v_1 + \dots + a_m v_m = 0" />. Linearity moves the whole
-          equation across <MathInline tex="T" />:{' '}
-          <MathInline tex="0 = T(0) = a_1 Tv_1 + \dots + a_m Tv_m" />.
-        </p>
-        <p>
-          Since the <MathInline tex="Tv_k" /> are independent, each <MathInline tex="a_k = 0" />,
-          which is exactly the statement that the <MathInline tex="v_k" /> are independent.
-        </p>
-      </>
-    ),
-  },
-  {
-    label: '3.A.7',
-    page: 57,
-    statement: (
-      <>
-        Show that every linear map from a one-dimensional vector space to itself is
-        multiplication by some scalar: if <MathInline tex="\dim V = 1" /> and{' '}
-        <MathInline tex="T \in \mathcal{L}(V)" />, then there exists{' '}
-        <MathInline tex="\lambda \in \mathbf{F}" /> with <MathInline tex="Tv = \lambda v" /> for
-        all <MathInline tex="v \in V" />.
-      </>
-    ),
-    hint: <>Pick any nonzero <MathInline tex="w \in V" />. What does <MathInline tex="Tw" /> have to be?</>,
-    walkthrough: (
-      <>
-        <p>
-          With <MathInline tex="\dim V = 1" />, a nonzero <MathInline tex="w" /> spans:{' '}
-          <MathInline tex="V = \operatorname{span}(w)" />, so{' '}
-          <MathInline tex="Tw = \lambda w" /> for some <MathInline tex="\lambda" />. Any{' '}
-          <MathInline tex="v = c\,w" /> then gives
-        </p>
-        <MathDisplay tex="Tv = T(c\,w) = c\,Tw = c\,\lambda w = \lambda v." />
-      </>
-    ),
-  },
-  {
-    label: '3.B.12',
-    page: 63,
-    figure: 'figure · p. 63',
-    statement: (
-      <>
-        Suppose <MathInline tex="V" /> is finite-dimensional and{' '}
-        <MathInline tex="T \in \mathcal{L}(V, W)" />. Prove that{' '}
-        <MathInline tex="\dim V = \dim \operatorname{null} T + \dim \operatorname{range} T" />{' '}
-        using the diagram of the quotient map shown in the margin.
-      </>
-    ),
-    hint: <>Extend a basis of the null space to a basis of <MathInline tex="V" />.</>,
-    walkthrough: (
-      <p>
-        Take <MathInline tex="u_1, \dots, u_k" /> a basis of{' '}
-        <MathInline tex="\operatorname{null} T" />, extend by{' '}
-        <MathInline tex="v_1, \dots, v_r" /> to a basis of <MathInline tex="V" />. The images{' '}
-        <MathInline tex="Tv_1, \dots, Tv_r" /> span the range and stay independent, so they form
-        a basis of it, and <MathInline tex="\dim V = k + r" />.
-      </p>
-    ),
-  },
-  {
-    label: '3.B.20',
-    page: 64,
-    statement: (
-      <>
-        Suppose <MathInline tex="W" /> is finite-dimensional and{' '}
-        <MathInline tex="T \in \mathcal{L}(V, W)" />. Prove that <MathInline tex="T" /> is
-        injective if and only if there exists <MathInline tex="S \in \mathcal{L}(W, V)" /> such
-        that <MathInline tex="ST" /> is the identity on <MathInline tex="V" />.
-      </>
-    ),
-    hint: <>One direction is immediate. Which one, and why?</>,
-    walkthrough: (
-      <>
-        <p>
-          If <MathInline tex="ST = I" /> then <MathInline tex="T" /> kills nothing, so it is
-          injective. Conversely, given injectivity <MathInline tex="T^{-1}" /> exists on{' '}
-          <MathInline tex="\operatorname{range} T" />; write{' '}
-          <MathInline tex="W = \operatorname{range} T \oplus U" /> and define{' '}
-          <MathInline tex="S" /> as the inverse on the first summand, <MathInline tex="0" /> on{' '}
-          <MathInline tex="U" />. Then <MathInline tex="STv = v" /> for every{' '}
-          <MathInline tex="v" />.
-        </p>
-      </>
-    ),
-  },
-  {
-    label: '3.C.14',
-    // As typed: a failed question has only what you gave it.
-    statement: '3.C.14',
-    failed: "Couldn't find 3.C.14 in the book. No exercise with that number turned up.",
-    hint: null,
-    walkthrough: null,
-  }
-]
-
 /** A stage of the guide: the content is there from the start, behind
  *  frosted glass. One click lifts the veil: no buttons to sequence, and
  *  nothing spoiled by accident. */
@@ -672,13 +553,8 @@ function Stage({
  * where it is; the search didn't), or paste the question and let the
  * guide be written from your text alone, off the book.
  */
-function FailedQuestion({
-  q,
-  onRetry,
-}: {
-  q: Question
-  onRetry: (patch: Partial<Question>) => void
-}) {
+function FailedQuestion({ q, onRetry }: { q: Question; onRetry: (r: Retry) => void }) {
+  const offset = usePageOffset()
   const [page, setPage] = useState('')
   const [text, setText] = useState('')
   // A plain text field, not a number spinner: people type "57", "p. 57"
@@ -691,16 +567,16 @@ function FailedQuestion({
         <span className="flex h-5 shrink-0 items-center">
           <CircleAlert className="size-4" />
         </span>
-        {q.failed}
+        {q.reason}
       </p>
 
       {/* Only an in-book question has a page to find. */}
-      {!q.offBook && (
+      {q.inBook && (
         <form
           className="flex items-end gap-2"
           onSubmit={(e) => {
             e.preventDefault()
-            if (pageNumber > 0) onRetry({ page: pageNumber })
+            if (pageNumber > 0) onRetry({ page: pdfOf(pageNumber, offset) })
           }}
         >
           <Field label="It's on printed page" className="w-40">
@@ -717,8 +593,8 @@ function FailedQuestion({
         </form>
       )}
 
-      <div className={cn('space-y-2', !q.offBook && 'border-t pt-5')}>
-        <p className="text-sm font-medium">{q.offBook ? 'Try again' : 'Not in this book?'}</p>
+      <div className={cn('space-y-2', q.inBook && 'border-t pt-5')}>
+        <p className="text-sm font-medium">{q.inBook ? 'Not in this book?' : 'Try again'}</p>
         <p className="text-xs text-muted-foreground">
           Paste the question, and the guide is written from your text alone.
         </p>
@@ -731,14 +607,7 @@ function FailedQuestion({
           className="py-2"
           onChange={(e) => setText(e.target.value)}
         />
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!text.trim()}
-          onClick={() =>
-            onRetry({ statement: text.trim(), offBook: true, page: undefined })
-          }
-        >
+        <Button variant="outline" size="sm" disabled={!text.trim()} onClick={() => onRetry({ text: text.trim() })}>
           Use this text
         </Button>
       </div>
@@ -748,176 +617,81 @@ function FailedQuestion({
 
 const STAGE_NAMES = ['hint', 'walkthrough'] as const
 
-/**
- * A question still being written: the two stages it will have, at their
- * usual size, so the guide lands in space already made for it rather than
- * pushing in. The spinner says the work is running; the skeletons say
- * where it will go.
- */
-function PendingStages({ offBook }: { offBook: boolean }) {
+/** A stage still being written: skeleton lines at a stage's usual size,
+ *  so the guide lands in space already made for it. A hint runs two
+ *  lines, a walkthrough about five; the last stops short, as prose does. */
+function StageSkeleton({ name }: { name: (typeof STAGE_NAMES)[number] }) {
+  const lines = name === 'hint' ? 2 : 5
   return (
-    <div className="space-y-5">
-      <p className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Spinner className="size-3" />
-        {offBook ? 'Writing the guide…' : 'Finding it in the book…'}
-      </p>
-      {STAGE_NAMES.map((name, i) => (
-        <div key={name} className="space-y-1">
-          <p className="text-xs text-muted-foreground uppercase">{name}</p>
-          <div className="space-y-1 text-base">
-            {/* A hint runs two lines, a walkthrough about five; the last
-                line of each stops short, as prose does. */}
-            {Array.from({ length: i === 0 ? 2 : 5 }, (_, j) => (
-              <p key={j}>
-                <Skeleton className={cn('h-3', j === (i === 0 ? 1 : 4) ? 'w-2/3' : 'w-full')} />
-              </p>
-            ))}
-          </div>
-        </div>
-      ))}
+    <div className="space-y-1">
+      <p className="text-xs text-muted-foreground uppercase">{name}</p>
+      <div className="space-y-1 text-base">
+        {Array.from({ length: lines }, (_, j) => (
+          <p key={j}>
+            <Skeleton className={cn('h-3', j === lines - 1 ? 'w-2/3' : 'w-full')} />
+          </p>
+        ))}
+      </div>
     </div>
   )
 }
 
-let nextQuestionId = QUESTIONS.length
-
-/** A freshly added draft, as the walkthrough sees it before the engine has
- *  located it and written its guide. The sample flips it to ready on a
- *  timer; the backend will do it on an event. */
-function draftQuestion(text: string, inBook: boolean): Question {
-  return {
-    id: nextQuestionId++,
-    // The first line of what you typed stands in for a label until the
-    // engine names the question properly.
-    label: text.split('\n')[0].slice(0, 40),
-    page: inBook ? 57 : undefined,
-    offBook: !inBook,
-    pending: true,
-    statement: text,
-    hint: null,
-    walkthrough: null,
-  }
+/** What the engine is doing to a question, while it does it. */
+function workingLine(q: Question): string | null {
+  if (q.state === 'pending' || q.state === 'locating') return q.inBook ? 'Finding it in the book…' : 'Writing the guide…'
+  if (q.state === 'writing') return 'Writing the guide…'
+  return null
 }
 
 /** One question at a time. Both stages sit veiled below the statement:
  *  the walkthrough carries the solution, and Complete is a checkbox that
  *  does exactly one thing. Spec: design/workspace.md. */
 function Walkthrough({
-  set,
-  onToggleTurnedIn,
+  setId,
   onEdit,
   onBack,
   onJump,
   onAskAbout,
 }: {
-  set: BookHomework
-  onToggleTurnedIn: () => void
+  setId: string
   onEdit: () => void
   onBack: () => void
   onJump: (page: number) => void
   onAskAbout: (label: string) => void
 }) {
-  // A set you just made has no questions; the sample ones belong to the
-  // sets that were already there.
-  const [questions, setQuestions] = useState<Question[]>(() =>
-    set.total > 0 ? QUESTIONS.map((q, i) => ({ ...q, id: i })) : [],
-  )
-  // Per-question progress, sample-local until the backend persists it.
-  // Keyed by question id, so reordering never moves a reveal or a tick.
-  const [revealed, setRevealed] = useState<Set<string>>(new Set())
-  const [done, setDone] = useState<Set<number>>(
-    () => new Set(questions.slice(0, set.done).map((q) => q.id)),
-  )
-  // Open where you'd pick up: the first question not yet complete.
-  const [index, setIndex] = useState(() => {
-    const i = questions.findIndex((q) => !done.has(q.id))
-    return i === -1 ? 0 : i
-  })
+  const pageOffset = usePageOffset()
+  const detail = useHomeworkSet(setId)
+  const updateSet = useUpdateHomework(setId)
+  const update = useUpdateQuestion(setId)
+  const removeQ = useRemoveQuestion(setId)
+  const retryQ = useRetryQuestion()
+  const addQ = useAddQuestions(setId)
   const [adding, setAdding] = useState(false)
+  const [index, setIndex] = useState<number | null>(null)
 
-  const q = questions[index] as Question | undefined
-  const isDone = !!q && done.has(q.id)
-
-  const reveal = (name: string) => setRevealed((r) => new Set(r).add(`${q?.id}:${name}`))
-
-  // Marking a question complete does exactly that and nothing else. You
-  // move on when you decide to, not when the app decides for you, and
-  // unchecking is the undo.
-  const toggleDone = () => {
-    if (!q) return
-    setDone((d) => {
-      const next = new Set(d)
-      if (!next.delete(q.id)) next.add(q.id)
-      return next
-    })
-  }
-
-  const move = (by: number) =>
-    setQuestions((qs) => {
-      const to = index + by
-      if (to < 0 || to >= qs.length) return qs
-      const next = [...qs]
-      const [row] = next.splice(index, 1)
-      next.splice(to, 0, row)
-      // Follow the question you just moved, not the slot it left.
-      setIndex(to)
-      return next
-    })
-
-  const remove = () =>
-    setQuestions((qs) => {
-      const next = qs.filter((_, i) => i !== index)
-      setIndex(Math.min(index, Math.max(next.length - 1, 0)))
-      return next
-    })
-
-  /** The sample's stand-in for the engine finishing a question: after a
-   *  beat it becomes ready, with a placeholder guide. */
-  const resolveLater = (id: number, delay: number, patch: Partial<Question> = {}) =>
-    window.setTimeout(
-      () =>
-        setQuestions((qs) =>
-          qs.map((existing) =>
-            existing.id === id
-              ? {
-                  ...existing,
-                  ...patch,
-                  pending: false,
-                  failed: undefined,
-                  hint: <>Work from the definition before reaching for a theorem.</>,
-                  walkthrough: (
-                    <p>
-                      The engine writes this once the question is located. Sample text stands in
-                      for it.
-                    </p>
-                  ),
-                }
-              : existing,
-          ),
-        ),
-      delay,
-    )
-
-  const add = (drafts: { text: string; inBook: boolean }[]) => {
-    const fresh = drafts.map((d) => draftQuestion(d.text, d.inBook))
-    setQuestions((qs) => [...qs, ...fresh])
-    // Progressive: each lands pending and resolves in turn, the way the
-    // engine's locate → write phases will report them.
-    fresh.forEach((row, i) => resolveLater(row.id, 800 * (i + 1)))
-  }
-
-  /** Both ways out of a failed question put it back in the queue: with a
-   *  page you know it's on, or as your own text, off the book. */
-  const retry = (patch: Partial<Question>) => {
-    if (!q) return
-    setQuestions((qs) =>
-      qs.map((x) => (x.id === q.id ? { ...x, ...patch, pending: true, failed: undefined } : x)),
-    )
-    resolveLater(q.id, 900, patch)
-  }
+  const set = detail.data?.homework
+  const questions = detail.data?.questions ?? []
+  // Open where you'd pick up: the first question not yet complete, once
+  // the set has loaded.
+  useEffect(() => {
+    if (index === null && detail.data) {
+      const i = detail.data.questions.findIndex((q) => !q.done)
+      setIndex(i === -1 ? 0 : i)
+    }
+  }, [detail.data, index])
+  const at = Math.min(index ?? 0, Math.max(questions.length - 1, 0))
+  const q = questions[at] as Question | undefined
+  const turnedIn = !!set?.turnedInAt
 
   const dialog = (
-    <AddQuestionsDialog open={adding} onClose={() => setAdding(false)} onAdd={add} />
+    <AddQuestionsDialog
+      open={adding}
+      onClose={() => setAdding(false)}
+      onAdd={(drafts) => {
+        const first = questions.length
+        addQ.mutate(drafts, { onSuccess: () => setIndex(first) })
+      }}
+    />
   )
 
   // The bar keeps what you read (where you are, which set, how far in)
@@ -928,11 +702,13 @@ function Walkthrough({
       <IconButton variant="ghost" size="sm" aria-label="Back to homework" onClick={onBack}>
         <ChevronLeft />
       </IconButton>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">{set.title}</span>
-      {set.status === 'turned-in' && <Label tone="success">Turned in</Label>}
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+        {set ? set.title : <Skeleton className="h-3 w-40" />}
+      </span>
+      {turnedIn && <Label tone="success">Turned in</Label>}
       {questions.length > 0 && (
         <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
-          {index + 1} of {questions.length}
+          {at + 1} of {questions.length}
         </span>
       )}
       <Menu label="Homework actions">
@@ -943,20 +719,36 @@ function Walkthrough({
           Edit homework
         </MenuItem>
         {/* A worksheet: statements and figures with room to work, nothing
-            revealed. The engine renders it as a PDF (hwpdf.go) and it
-            opens in a new tab, wired with the backend pass. */}
-        <MenuItem icon={<Printer />} onSelect={() => {}}>
+            revealed. It opens in a new tab, to print or save from there. */}
+        <MenuItem icon={<Printer />} onSelect={() => window.open(worksheetURL(setId), '_blank')}>
           Print worksheet
         </MenuItem>
         <MenuDivider />
         {/* An act until it's done, then a fact: "Turn in", then
             "Turned in" with its check. Choosing it again takes it back. */}
-        <MenuCheckItem checked={set.status === 'turned-in'} onChange={onToggleTurnedIn}>
-          {set.status === 'turned-in' ? 'Turned in' : 'Turn in'}
+        <MenuCheckItem checked={turnedIn} onChange={() => updateSet.mutate({ turnedIn: !turnedIn })}>
+          {turnedIn ? 'Turned in' : 'Turn in'}
         </MenuCheckItem>
       </Menu>
     </div>
   )
+
+  if (!detail.data) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        {header}
+        <div className="space-y-5 p-card">
+          <Skeleton className="h-4 w-24" />
+          <p className="space-y-1">
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-2/3" />
+          </p>
+          <StageSkeleton name="hint" />
+          <StageSkeleton name="walkthrough" />
+        </div>
+      </div>
+    )
+  }
 
   if (!q) {
     return (
@@ -976,6 +768,13 @@ function Walkthrough({
     )
   }
 
+  const move = (by: number) => {
+    update.mutate({ id: q.id, patch: { position: q.position + by } })
+    // Follow the question you just moved, not the slot it left.
+    setIndex(at + by)
+  }
+  const working = workingLine(q)
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {header}
@@ -984,24 +783,18 @@ function Walkthrough({
         <div className="flex items-center gap-2">
           <span className="min-w-0 flex-1 truncate text-lg font-semibold">{q.label}</span>
           {/* A question that isn't in this book has nothing to jump to. */}
-          {q.page !== undefined && <PageRef page={q.page} onJump={onJump} />}
-          {isDone && <Check aria-label="Done" className="size-4 text-success" />}
+          {q.page !== undefined && <PageRef page={q.page - pageOffset} onJump={onJump} />}
+          {q.done && <Check aria-label="Done" className="size-4 text-success" />}
           {/* Order and removal, inline and quiet: the set is editable from
               the question you are looking at. */}
-          <IconButton
-            variant="ghost"
-            size="sm"
-            aria-label="Move this question up"
-            disabled={index === 0}
-            onClick={() => move(-1)}
-          >
+          <IconButton variant="ghost" size="sm" aria-label="Move this question up" disabled={at === 0} onClick={() => move(-1)}>
             <ChevronUp />
           </IconButton>
           <IconButton
             variant="ghost"
             size="sm"
             aria-label="Move this question down"
-            disabled={index === questions.length - 1}
+            disabled={at === questions.length - 1}
             onClick={() => move(1)}
           >
             <ChevronDown />
@@ -1010,36 +803,65 @@ function Walkthrough({
             variant="ghost"
             size="sm"
             aria-label="Remove this question"
-            onClick={remove}
+            onClick={() => {
+              removeQ.mutate(q.id)
+              setIndex(Math.max(0, Math.min(at, questions.length - 2)))
+            }}
           >
             <Trash2 />
           </IconButton>
         </div>
 
         {/* A bare reference ("3.C.14") is already the label; saying it
-            twice isn't a statement. */}
-        {q.statement !== q.label && <div className="space-y-3 text-base">{q.statement}</div>}
-        {q.figure && (
-          <div className="grid h-32 place-items-center rounded-md border bg-card font-mono text-xs text-muted-foreground">
-            {q.figure}
+            twice isn't a statement. While it's still being found, the
+            statement is a skeleton the book's text will replace. */}
+        {q.statement && q.statement !== q.label ? (
+          <div className="space-y-3 text-base">
+            <Prose text={q.statement} onJump={onJump} />
           </div>
-        )}
-
-        {q.failed ? (
-          <FailedQuestion q={q} onRetry={retry} />
-        ) : q.pending ? (
-          <PendingStages offBook={!!q.offBook} />
         ) : (
-          STAGE_NAMES.map((name) => (
-            <Stage
-              key={name}
-              label={name}
-              revealed={revealed.has(`${q.id}:${name}`)}
-              onReveal={() => reveal(name)}
-            >
-              {q[name]}
-            </Stage>
-          ))
+          q.inBook &&
+          (q.state === 'pending' || q.state === 'locating') && (
+            <p className="space-y-1 text-base">
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-2/3" />
+            </p>
+          )
+        )}
+        {q.figures.map((f, i) => (
+          <figure key={i} className="space-y-1">
+            <img src={figureURL(q.id, i)} alt={f.label || 'Figure'} className="w-full rounded-md border bg-card" />
+            {f.label && <figcaption className="text-xs text-muted-foreground">{f.label}</figcaption>}
+          </figure>
+        ))}
+
+        {q.state === 'failed' ? (
+          <FailedQuestion key={q.id} q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} />
+        ) : (
+          <>
+            {working && (
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Spinner className="size-3" />
+                {working}
+              </p>
+            )}
+            {STAGE_NAMES.map((name) => {
+              const segs = name === 'hint' ? q.hint : q.walkthrough
+              // Each stage fills in as it's written: the hint can be
+              // there while the walkthrough is still a skeleton.
+              if (segs.length === 0) return <StageSkeleton key={name} name={name} />
+              return (
+                <Stage
+                  key={name}
+                  label={name}
+                  revealed={q.revealed.includes(name)}
+                  onReveal={() => update.mutate({ id: q.id, patch: { reveal: name } })}
+                >
+                  <Segments segments={segs} onJump={onJump} />
+                </Stage>
+              )
+            })}
+          </>
         )}
       </div>
 
@@ -1048,27 +870,21 @@ function Walkthrough({
           Ask about this
         </Button>
         <div className="flex items-center gap-2">
-          <IconButton
-            variant="ghost"
-            size="sm"
-            aria-label="Previous question"
-            disabled={index === 0}
-            onClick={() => setIndex((i) => i - 1)}
-          >
+          <IconButton variant="ghost" size="sm" aria-label="Previous question" disabled={at === 0} onClick={() => setIndex(at - 1)}>
             <ChevronLeft />
           </IconButton>
           <IconButton
             variant="ghost"
             size="sm"
             aria-label="Next question"
-            disabled={index === questions.length - 1}
-            onClick={() => setIndex((i) => i + 1)}
+            disabled={at === questions.length - 1}
+            onClick={() => setIndex(at + 1)}
           >
             <ChevronRight />
           </IconButton>
           {/* Done must be as easy to take back as to claim, so it is a
               checkbox and it does not advance. */}
-          <Checkbox checked={isDone} onChange={toggleDone}>
+          <Checkbox checked={q.done} onChange={() => update.mutate({ id: q.id, patch: { done: !q.done } })}>
             Complete
           </Checkbox>
         </div>
@@ -1079,95 +895,68 @@ function Walkthrough({
   )
 }
 
+/** A set's row in the list. */
+function SetRow({ h, onOpen }: { h: Summary; onOpen: () => void }) {
+  const status = dueStatus(h)
+  return (
+    <BoxRow
+      onClick={onOpen}
+      title={h.title}
+      description={`${h.done} of ${h.total} questions · ${dueLine(h)}`}
+      trailing={<HomeworkStatusLabel status={status} />}
+    />
+  )
+}
+
 /** The homework list: active sets, then turned-in ones under a quiet
  *  label. Opening a set fills the panel with its walkthrough. */
 function HomeworkTab({
-  items,
+  bookId,
   initialSet,
   onJump,
   onAskAbout,
 }: {
-  items: BookHomework[]
+  bookId: string
   /** From the URL: Home's due list opens a set directly. */
   initialSet?: string
   onJump: (page: number) => void
   onAskAbout: (label: string) => void
 }) {
-  const [sets, setSets] = useState<BookHomework[]>(items)
-  // An id, not a copy: the open set's status changes under it.
-  const [openId, setOpenId] = useState<string | null>(
-    () => items.find((h) => h.id === initialSet)?.id ?? null,
-  )
-  const openSet = sets.find((h) => h.id === openId) ?? null
+  const list = useBookHomework(bookId)
+  const create = useCreateHomework(bookId)
+  const remove = useDeleteHomework()
+  const [openId, setOpenId] = useState<string | null>(initialSet ?? null)
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState(false)
-  const active = sets.filter((h) => h.status !== 'turned-in')
-  const turnedIn = sets.filter((h) => h.status === 'turned-in')
+  const openSet = useHomeworkSet(openId).data?.homework
+  const updateOpen = useUpdateHomework(openId ?? '')
+  const sets = list.data
+  const active = (sets ?? []).filter((h) => !h.turnedInAt)
+  const turnedIn = (sets ?? []).filter((h) => h.turnedInAt)
 
-  // A new set is a container and nothing else: it exists the moment you
-  // name it, and you land in its empty walkthrough to fill it.
-  const create = (title: string, due: string) => {
-    const set: BookHomework = {
-      id: `hw-${Date.now()}`,
-      title,
-      due: due || 'no date',
-      done: 0,
-      total: 0,
-    }
-    setSets((s) => [set, ...s])
-    setOpenId(set.id)
-  }
-
-  const editDialogFor = (openSet: BookHomework) => (
-    <HomeworkDialog
-      open={editing}
-      // The sample's due is already words ("today"); only a real date can
-      // seed the date field.
-      editing={{
-        title: openSet.title,
-        due: /^\d{4}-\d{2}-\d{2}$/.test(openSet.due) ? openSet.due : '',
-        questions: openSet.total,
-      }}
-      onClose={() => setEditing(false)}
-      onSave={(title, due) =>
-        setSets((ss) =>
-          ss.map((h) => (h.id === openSet.id ? { ...h, title, due: due || h.due } : h)),
-        )
-      }
-      onDelete={() => {
-        setSets((ss) => ss.filter((h) => h.id !== openSet.id))
-        setOpenId(null)
-      }}
-    />
-  )
-
-  if (openSet) {
+  if (openId) {
     return (
       <>
-      <Walkthrough
-        key={openSet.id}
-        set={openSet}
-        onToggleTurnedIn={() =>
-          // Turning back in un-does it; due-ness is the backend's to
-          // recompute from the date, so the sample simply clears it.
-          setSets((ss) =>
-            ss.map((h) =>
-              h.id === openSet.id
-                ? { ...h, status: h.status === 'turned-in' ? undefined : 'turned-in' }
-                : h,
-            ),
-          )
-        }
-        onEdit={() => setEditing(true)}
-        onBack={() => setOpenId(null)}
-        onJump={onJump}
-        onAskAbout={onAskAbout}
-      />
-      {editDialogFor(openSet)}
+        <Walkthrough
+          key={openId}
+          setId={openId}
+          onEdit={() => setEditing(true)}
+          onBack={() => setOpenId(null)}
+          onJump={onJump}
+          onAskAbout={onAskAbout}
+        />
+        {openSet && (
+          <HomeworkDialog
+            open={editing}
+            editing={{ title: openSet.title, due: openSet.dueDate, questions: openSet.total }}
+            onClose={() => setEditing(false)}
+            onSave={(title, due) => updateOpen.mutate({ title, dueDate: due })}
+            onDelete={() => remove.mutate(openSet, { onSuccess: () => setOpenId(null) })}
+          />
+        )}
       </>
     )
   }
-
 
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-card">
@@ -1175,19 +964,15 @@ function HomeworkTab({
           the box only said it again. The way to add one is the list's last
           row, shaped like the Door. */}
       <Box>
-        {active.map((h) => (
-          <BoxRow
-            key={h.id}
-            onClick={() => setOpenId(h.id)}
-            title={h.title}
-            description={`${h.done} of ${h.total} questions · ${dueText(h.due, h.status)}`}
-            trailing={<HomeworkStatusLabel status={h.status} />}
-          />
-        ))}
+        {sets === undefined
+          ? [0, 1].map((i) => (
+              <BoxRow key={i} title={<Skeleton className="h-3 w-40" />} description={<Skeleton className="h-3 w-48" />} />
+            ))
+          : active.map((h) => <SetRow key={h.id} h={h} onOpen={() => setOpenId(h.id)} />)}
         <DoorAction
           icon={<Plus aria-hidden />}
           onClick={() => setCreating(true)}
-          className={cn(active.length > 0 && 'border-t border-border-muted')}
+          className={cn((sets === undefined || active.length > 0) && 'border-t border-border-muted')}
         >
           New homework
         </DoorAction>
@@ -1197,19 +982,19 @@ function HomeworkTab({
           <p className="text-xs text-muted-foreground">Turned in</p>
           <Box>
             {turnedIn.map((h) => (
-              <BoxRow
-                key={h.id}
-                onClick={() => setOpenId(h.id)}
-                title={h.title}
-                description={`${h.done} of ${h.total} questions · ${dueText(h.due, h.status)}`}
-                trailing={<HomeworkStatusLabel status={h.status} />}
-              />
+              <SetRow key={h.id} h={h} onOpen={() => setOpenId(h.id)} />
             ))}
           </Box>
         </>
       )}
 
-      <HomeworkDialog open={creating} onClose={() => setCreating(false)} onSave={create} />
+      {/* A new set is a container and nothing else: it exists the moment
+          you name it, and you land in its empty walkthrough to fill it. */}
+      <HomeworkDialog
+        open={creating}
+        onClose={() => setCreating(false)}
+        onSave={(title, due) => create.mutate({ title, dueDate: due }, { onSuccess: (h) => setOpenId(h.id) })}
+      />
     </div>
   )
 }
@@ -1266,7 +1051,7 @@ function Panel({
         <AskTab about={about} onClearAbout={() => setAbout(null)} onJump={onJump} />
       ) : (
         <HomeworkTab
-          items={BOOK_HOMEWORK}
+          bookId={bookId}
           initialSet={homework}
           onJump={onJump}
           onAskAbout={(label) => {
@@ -1323,6 +1108,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   // scan is indexed by PDF page, so a jump converts once, here.
   const jump = (printed: number) => jumpPdf(pdfOf(printed, offset))
   const chapters = contents.data?.chapters
+  const homeworkCount = useBookHomework(book.id).data?.length ?? 0
 
   return (
     <PageOffset value={offset}>
@@ -1378,7 +1164,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           offset,
           pages: book.pageCount,
           imported: new Date(book.addedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-          homework: BOOK_HOMEWORK.length,
+          homework: homeworkCount,
         }}
         onClose={() => setEditingBook(false)}
         onSave={(next) => update.mutate({ title: next.title, author: next.author, pageOffset: next.offset })}

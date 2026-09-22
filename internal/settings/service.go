@@ -122,8 +122,9 @@ func (s *Service) LLM(ctx context.Context) (llm.Config, error) {
 }
 
 // probeTimeout keeps Test from hanging on an endpoint that accepts the
-// connection and then says nothing.
-const probeTimeout = 30 * time.Second
+// connection and then says nothing. Generous, because a local server
+// loading a model from disk for the first call takes most of a minute.
+const probeTimeout = 90 * time.Second
 
 // Test dials one side as given and writes nothing.
 func (s *Service) Test(ctx context.Context, in ConnectionInput) (TestResult, error) {

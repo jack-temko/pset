@@ -18,13 +18,15 @@ import { ImportRow } from '@/components/import-row'
 import { IconButton } from '@/components/button'
 import { Box, BoxBody, BoxRow, Counter } from '@/components/box'
 import { Button } from '@/components/button'
-import { HomeworkStatusLabel, dueText } from '@/components/homework-status'
+import { HomeworkStatusLabel } from '@/components/homework-status'
 import { Door } from '@/components/door'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { coverHueFromSha } from '@/lib/covers'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
-import { DUE, DUE_SHOWN, WEEK, WEEK_BY_BOOK, type Due, type Week, type WeekBook } from '@/lib/sample'
+import { WEEK, WEEK_BY_BOOK, type Week, type WeekBook } from '@/lib/sample'
+import { useDue, type Summary } from '@/api/homework'
+import { dueLine, dueStatus } from '@/lib/due'
 
 function greeting(hour: number, name: string): string {
   const time = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
@@ -129,12 +131,31 @@ function ThisWeek({ week, byBook }: { week: Week; byBook: WeekBook[] }) {
   )
 }
 
+/** How many due rows show before the door. */
+const DUE_SHOWN = 3
+
 /** What is due across every book: the only thing on the page with a
  *  deadline. The section header owns the title, count and action; the Box
- *  holds only rows and its door. */
-function Homework({ items, shown }: { items: Due[]; shown: number }) {
+ *  holds only rows and its door. Nothing due, no section. */
+function Homework({ books }: { books: Book[] | undefined }) {
   const [open, setOpen] = useState(false)
-  const visible = open ? items : items.slice(0, shown)
+  const { data: items } = useDue()
+  const titleOf = (h: Summary) => books?.find((b) => b.id === h.bookId)?.title ?? ''
+
+  if (items === undefined) {
+    return (
+      <section className="space-y-5">
+        <SectionHeader title="Homework" />
+        <Box>
+          {Array.from({ length: DUE_SHOWN }, (_, i) => (
+            <BoxRow key={i} title={<Skeleton className="h-3 w-40" />} description={<Skeleton className="h-3 w-80" />} />
+          ))}
+        </Box>
+      </section>
+    )
+  }
+  if (items.length === 0) return null
+  const visible = open ? items : items.slice(0, DUE_SHOWN)
 
   return (
     <section className="space-y-5">
@@ -145,13 +166,13 @@ function Homework({ items, shown }: { items: Due[]; shown: number }) {
         {visible.map((d) => (
           <BoxRow
             key={d.id}
-            href={`/books/${d.bookSha}/homework/${d.id}`}
+            href={`/books/${d.bookId}/homework/${d.id}`}
             title={d.title}
-            description={`${d.book} · ${d.questions} questions · ${dueText(d.due, d.status)}`}
-            trailing={<HomeworkStatusLabel status={d.status} />}
+            description={`${titleOf(d)} · ${d.total} question${d.total === 1 ? '' : 's'} · ${dueLine(d)}`}
+            trailing={<HomeworkStatusLabel status={dueStatus(d)} />}
           />
         ))}
-        {items.length > shown && (
+        {items.length > DUE_SHOWN && (
           <Door
             className="border-t border-border-muted"
             open={open}
@@ -349,7 +370,7 @@ export function Home() {
           {greeting(new Date().getHours(), settings?.profile.name ?? '')}.
         </PageTitle>
         {!firstRun && <ThisWeek week={WEEK} byBook={WEEK_BY_BOOK} />}
-        {!firstRun && <Homework items={DUE} shown={DUE_SHOWN} />}
+        {!firstRun && <Homework books={books} />}
         <Shelf books={books} />
       </PageShell>
     </AppShell>
