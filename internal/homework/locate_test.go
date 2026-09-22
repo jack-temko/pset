@@ -61,3 +61,46 @@ func TestSweepBatchesReadFromTheChaptersEnd(t *testing.T) {
 		t.Fatal("backwards span")
 	}
 }
+
+func TestRememberedPages(t *testing.T) {
+	seen := []Seen{{"3.10", 150}, {"3.30", 154}, {"3.A.2", 170}}
+	for _, c := range []struct {
+		label string
+		want  []int
+	}{
+		// Halfway between 3.10 and 3.30 is p. 152; out from there.
+		{"3.20", []int{152, 151, 153, 150, 154}},
+		// Seen before: its page, then either side.
+		{"3.30", []int{154, 155, 153}},
+		// Past the last numbered one and before 3.A.2: numbers come first.
+		{"3.40", []int{154, 155, 156, 157, 158, 159, 160, 161}},
+		// Before the first: the pages leading up to it.
+		{"3.2", []int{150, 149, 148, 147, 146, 145, 144, 143}},
+		{"", nil},
+	} {
+		got := rememberedPages(seen, c.label)
+		if c.label == "3.40" {
+			// 3.40 sits between 3.30 (p. 154) and 3.A.2 (p. 170): the eight
+			// nearest 154, where it's estimated to be.
+			if len(got) != rememberedMax || got[0] != 154 {
+				t.Errorf("3.40: %v", got)
+			}
+			continue
+		}
+		if !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s: got %v, want %v", c.label, got, c.want)
+		}
+	}
+	if got := rememberedPages([]Seen{{"1.1", 2}}, "1.0"); !reflect.DeepEqual(got, []int{2, 1}) {
+		t.Errorf("never below page 1: %v", got)
+	}
+}
+
+func TestCompareLabels(t *testing.T) {
+	ordered := []string{"3.2", "3.10", "3.10a", "3.30", "3.A.2", "3.B.1", "4.1"}
+	for i := 1; i < len(ordered); i++ {
+		if compareKeys(labelKey(ordered[i-1]), labelKey(ordered[i])) >= 0 {
+			t.Errorf("%s should come before %s", ordered[i-1], ordered[i])
+		}
+	}
+}

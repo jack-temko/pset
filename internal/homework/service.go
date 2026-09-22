@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/events"
 	"github.com/jackt/pset/internal/httpx"
@@ -44,6 +45,28 @@ type Settings interface {
 	Name(ctx context.Context) string
 }
 
+// Memory is the book's memory: the walkthrough writer's notes, and where
+// locate has found each chapter's problems. Pages are PDF pages.
+type Memory interface {
+	agent.Memory
+	ProblemsSeen(ctx context.Context, bookID string, chapter int) (Problems, error)
+	SawProblem(ctx context.Context, bookID string, offset, chapter int, label string, page int) error
+}
+
+// Problems is where a chapter's problems have been found, and the memory
+// that says so.
+type Problems struct {
+	MemoryID string
+	Text     string
+	Seen     []Seen
+}
+
+// Seen is one problem found: its label and page.
+type Seen struct {
+	Label string
+	Page  int
+}
+
 type Queue interface {
 	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
 	StopSubject(ctx context.Context, subject string) error
@@ -56,6 +79,8 @@ type Config struct {
 	Queue    Queue
 	Library  Library
 	Settings Settings
+	// Memory is the book's memory; nil runs without one.
+	Memory Memory
 }
 
 type Service struct{ c Config }
@@ -413,7 +438,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 	if q.State != StateFailed {
 		return Question{}, httpx.Errorf(httpx.CodeInvalid, "Only a question that failed can be tried again.")
 	}
-	set := `state = 'pending', reason = '', hint = '[]', walkthrough = '[]', updated_at = ?`
+	set := `state = 'pending', reason = '', hint = '[]', walkthrough = '[]', memory = '[]', updated_at = ?`
 	args := []any{db.Now()}
 	switch {
 	case r.Text != nil && strings.TrimSpace(*r.Text) != "":

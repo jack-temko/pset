@@ -77,9 +77,31 @@ type Question struct {
 	// writes: "Thinking…", a tool call ("Computing…"), or "Writing the
 	// guide…". Empty otherwise.
 	Activity string `json:"activity,omitempty"`
+	// Memory is what writing this guide did with the book's memory: what
+	// it saved, and a remembered range that found the problem.
+	Memory []MemoryLine `json:"memory"`
 	// Revealed names the stages the student has lifted the veil on.
 	Revealed []string `json:"revealed"`
 	Done     bool     `json:"done"`
+}
+
+// MemoryUse is what a guide did with a memory.
+type MemoryUse string
+
+const (
+	MemoryUseSaved   MemoryUse = "saved"
+	MemoryUseUpdated MemoryUse = "updated"
+	MemoryUseFound   MemoryUse = "found"
+)
+
+// MemoryLine is one line under a walkthrough: a memory the writer saved
+// or updated (with Undo), or one locate found the problem by. Page is a
+// PDF page.
+type MemoryLine struct {
+	MemoryID string    `json:"memoryId"`
+	Use      MemoryUse `json:"use"`
+	Text     string    `json:"text"`
+	Page     *int      `json:"page,omitempty"`
 }
 
 // Detail is GET /api/homework/{id}.

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/jackt/pset/internal/agent"
@@ -104,6 +105,10 @@ func (s *Service) work(ctx context.Context, q row) error {
 		return fail(nil, "Set up a chat model in Settings, then try again.")
 	}
 	m := model{client: llm.Open(cfg), name: cfg.ChatModel}
+	// A run starts its memory lines over: a requeued one left some.
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET memory = '[]' WHERE id = ?`, q.ID); err != nil {
+		return err
+	}
 
 	if q.InBook {
 		s.setState(ctx, q.ID, StateLocating, "")
@@ -119,6 +124,7 @@ func (s *Service) work(ctx context.Context, q row) error {
 		if statement == "" {
 			statement = q.Text
 		}
+		s.sawProblem(ctx, book, q, loc)
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET page = ?, label = ?, statement = ?, rect = ?, figures = ?, updated_at = ? WHERE id = ?`,
 			loc.Page, label, statement, mustJSON(loc.Rect), mustJSON(loc.Figures), db.Now(), q.ID); err != nil {
 			return err
@@ -185,7 +191,7 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 	if err != nil {
 		return err
 	}
-	msgs := []llm.Message{llm.TextMessage("system", guideSystem()), user}
+	msgs := []llm.Message{user}
 	for attempt := 1; attempt <= guideAttempts; attempt++ {
 		var parser *cards.Parser
 		parser = cards.NewParser(ctx, cards.Options{
@@ -206,6 +212,15 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 			Client: m.client, Model: m.name, Library: s.c.Library,
 			Book:   agent.Book{ID: book.ID, Title: book.Title, PageCount: book.PageCount, PageOffset: book.PageOffset},
 			Rounds: guideRounds,
+			System: guideSystem(),
+			Memory: s.memory(),
+			Remembered: func(n agent.Note, outcome string) {
+				use := MemoryUseSaved
+				if outcome == agent.Replaced {
+					use = MemoryUseUpdated
+				}
+				s.addMemoryLine(ctx, q.ID, MemoryLine{MemoryID: n.ID, Use: use, Text: n.Text, Page: pageOrNil(n.Page)})
+			},
 			Step: func(label string, running bool) {
 				if running {
 					s.setActivity(ctx, q.ID, label)
@@ -241,6 +256,62 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 // guideRounds bounds the writer's tool rounds: enough to look up the
 // theory and check every number, not enough to wander.
 const guideRounds = 10
+
+// memory is the loop's memory, or none: a nil Memory must stay a nil
+// interface once it's an agent.Memory.
+func (s *Service) memory() agent.Memory {
+	if s.c.Memory == nil {
+		return nil
+	}
+	return s.c.Memory
+}
+
+func pageOrNil(p int) *int {
+	if p < 1 {
+		return nil
+	}
+	return &p
+}
+
+// addMemoryLine puts a line under the question's walkthrough.
+func (s *Service) addMemoryLine(ctx context.Context, id string, l MemoryLine) {
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET memory = json_insert(memory, '$[#]', json(?)) WHERE id = ?`, mustJSON(l), id); err != nil {
+		slog.Error("question: memory line", "question", id, "err", err)
+		return
+	}
+	s.publishQuestion(ctx, id)
+}
+
+// problemLabel is the label of the problem a question names, as a range
+// memory keys it ("3.36"), and its chapter.
+func problemLabel(labels ...string) (string, int, bool) {
+	for _, l := range labels {
+		if label, ok := questionLabel(l); ok {
+			if ch, ok := labelChapter(label); ok {
+				return label, ch, true
+			}
+		}
+	}
+	return "", 0, false
+}
+
+// sawProblem tells memory where a located problem is, and says so under
+// the walkthrough when a remembered range found it.
+func (s *Service) sawProblem(ctx context.Context, book Book, q row, loc location) {
+	if s.c.Memory == nil {
+		return
+	}
+	if loc.FromMemory != nil {
+		s.addMemoryLine(ctx, q.ID, MemoryLine{MemoryID: loc.FromMemory.MemoryID, Use: MemoryUseFound, Text: loc.FromMemory.Text})
+	}
+	label, chapter, ok := problemLabel(loc.Label, q.Label, q.Text)
+	if !ok {
+		return
+	}
+	if err := s.c.Memory.SawProblem(ctx, book.ID, book.PageOffset, chapter, label, loc.Page); err != nil {
+		slog.Warn("question: remember problem", "question", q.ID, "err", err)
+	}
+}
 
 // setActivity shows what the writer is doing on the walkthrough's working
 // line.
@@ -324,6 +395,9 @@ type location struct {
 	Statement string
 	Rect      *pdf.Rect
 	Figures   []figure
+	// FromMemory is the range memory that led to the page, when it was
+	// one of its pages and nothing exact had pointed there.
+	FromMemory *Problems
 }
 
 // locate runs the ladder: a page the student pinned is the only
@@ -342,23 +416,46 @@ func (s *Service) locate(ctx context.Context, m model, book Book, q row) (locati
 		return loc, nil
 	}
 
+	// Memory's pages go after the exact tiers: a few in the first round,
+	// the rest in the wider one.
+	var problems Problems
+	var remembered []int
+	if label, chapter, ok := problemLabel(q.Text, q.Label); ok && s.c.Memory != nil {
+		if p, err := s.c.Memory.ProblemsSeen(ctx, book.ID, chapter); err == nil {
+			problems, remembered = p, rememberedPages(p.Seen, label)
+		}
+	}
 	tried := map[int]bool{}
-	for _, k := range []int{firstRound, widerRound} {
-		cands, err := s.candidates(ctx, book, q.Text, k, tried)
+	for i, k := range []int{firstRound, widerRound} {
+		take := len(remembered)
+		if i == 0 {
+			take = min(take, firstRemembered)
+		}
+		cands, exact, err := s.candidates(ctx, book, q.Text, k, tried, remembered[:take])
 		if err != nil {
 			return location{}, err
 		}
 		if len(cands) == 0 {
 			break
 		}
+		fromMemory := map[int]bool{}
 		for _, p := range cands {
 			tried[p] = true
+			if slices.Contains(remembered, p) && !exact[p] {
+				fromMemory[p] = true
+			}
+		}
+		if len(fromMemory) > 0 {
+			s.setActivity(ctx, q.ID, "Checking the pages memory points to…")
 		}
 		loc, ok, err := s.locateOnce(ctx, m, book, q, cands)
 		if err != nil {
 			return location{}, err
 		}
 		if ok {
+			if fromMemory[loc.Page] {
+				loc.FromMemory = &problems
+			}
 			return loc, nil
 		}
 	}
@@ -398,13 +495,17 @@ func quoteLabel(label string) string {
 const (
 	firstRound = 6
 	widerRound = 10
+	// firstRemembered is how many of memory's pages the first round shows.
+	firstRemembered = 3
 )
 
 // candidates picks the pages a locate round looks at, exact before
 // fuzzy: a printed page the question cites, pages that open a line with
-// its label, then search.
-func (s *Service) candidates(ctx context.Context, book Book, text string, k int, exclude map[int]bool) ([]int, error) {
+// its label, the pages memory points to, then search. exact is what the
+// first two tiers found.
+func (s *Service) candidates(ctx context.Context, book Book, text string, k int, exclude map[int]bool, remembered []int) ([]int, map[int]bool, error) {
 	var out []int
+	exact := map[int]bool{}
 	seen := map[int]bool{}
 	add := func(p int) {
 		if p >= 1 && p <= book.PageCount && !exclude[p] && !seen[p] && len(out) < k {
@@ -413,25 +514,30 @@ func (s *Service) candidates(ctx context.Context, book Book, text string, k int,
 		}
 	}
 	if printed, ok := printedPageOf(text); ok {
+		exact[printed+book.PageOffset] = true
 		add(printed + book.PageOffset)
 	}
 	if label, ok := questionLabel(text); ok {
 		texts, err := s.c.Library.PageTexts(ctx, book.ID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, p := range labelScan(texts, label) {
+			exact[p] = true
 			add(p)
 		}
 	}
+	for _, p := range remembered {
+		add(p)
+	}
 	hits, err := s.c.Library.Search(ctx, book.ID, text, k+len(exclude))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for _, p := range hits {
 		add(p)
 	}
-	return out, nil
+	return out, exact, nil
 }
 
 // locateOnce shows the model a handful of pages as images and asks which

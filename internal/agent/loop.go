@@ -31,6 +31,18 @@ type Loop struct {
 	Model   string
 	Library Library
 	Book    Book
+	// System is the system prompt. Run sends it ahead of the messages,
+	// with memory's rules and notes after it, fresh every round.
+	System string
+	// Memory, when set, gives the model remember, and the notes go in the
+	// prompt.
+	Memory Memory
+	// Student says the student is in the conversation (Ask): remember can
+	// save as theirs, and forget exists.
+	Student bool
+	// Remembered fires after remember saves (Saved) or replaces
+	// (Replaced) a note, once its step is finished.
+	Remembered func(n Note, outcome string)
 	// Rounds bounds the tool rounds; past it the model answers with what
 	// it has.
 	Rounds int
@@ -51,11 +63,22 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 	if rounds == 0 {
 		rounds = 8
 	}
+	tools := Tools
+	if l.Memory != nil {
+		tools = append(append([]llm.Tool{}, Tools...), rememberTool(l.Student))
+		if l.Student {
+			tools = append(tools, forgetTool)
+		}
+	}
 	for round := 0; ; round++ {
-		req := llm.ChatRequest{Model: l.Model, Messages: msgs, Tools: Tools}
+		sent := msgs
+		if sys := l.system(ctx); sys != "" {
+			sent = append([]llm.Message{llm.TextMessage("system", sys)}, msgs...)
+		}
+		req := llm.ChatRequest{Model: l.Model, Messages: sent, Tools: tools}
 		if round == rounds {
 			req.Tools = nil
-			req.Messages = append(msgs, llm.TextMessage("user", "Answer now, with what you've found."))
+			req.Messages = append(sent, llm.TextMessage("user", "Answer now, with what you've found."))
 		}
 		var thinkingSince time.Time
 		wrote := false

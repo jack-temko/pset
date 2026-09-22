@@ -94,10 +94,33 @@ export interface Question {
    */
   activity?: string;
   /**
+   * Memory is what writing this guide did with the book's memory: what
+   * it saved, and a remembered range that found the problem.
+   */
+  memory: MemoryLine[];
+  /**
    * Revealed names the stages the student has lifted the veil on.
    */
   revealed: string[];
   done: boolean;
+}
+/**
+ * MemoryUse is what a guide did with a memory.
+ */
+export const MemoryUseSaved = "saved";
+export const MemoryUseUpdated = "updated";
+export const MemoryUseFound = "found";
+export type MemoryUse = typeof MemoryUseSaved | typeof MemoryUseUpdated | typeof MemoryUseFound;
+/**
+ * MemoryLine is one line under a walkthrough: a memory the writer saved
+ * or updated (with Undo), or one locate found the problem by. Page is a
+ * PDF page.
+ */
+export interface MemoryLine {
+  memoryId: string;
+  use: MemoryUse;
+  text: string;
+  page?: number /* int */;
 }
 /**
  * Detail is GET /api/homework/{id}.

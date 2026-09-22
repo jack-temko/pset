@@ -20,6 +20,10 @@ export const TurnFailed: TurnState = "failed";
 export interface Step {
   label: string;
   running: boolean;
+  /**
+   * MemoryID is the memory a remember step saved, for its Undo.
+   */
+  memoryId?: string;
 }
 /**
  * About is the homework question a turn was asked about: the label the

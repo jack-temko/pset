@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/activity"
+	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/ask"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/events"
@@ -25,6 +26,7 @@ import (
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/library"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/memory"
 	"github.com/jackt/pset/internal/settings"
 	"github.com/jackt/pset/web"
 )
@@ -74,6 +76,7 @@ func serve(addr, dir string, log *slog.Logger) error {
 		jobs.Migrations(),
 		settings.Migrations(),
 		library.Migrations(),
+		memory.Migrations(),
 		homework.Migrations(),
 		ask.Migrations(),
 		activity.Migrations(),
@@ -103,12 +106,15 @@ func serve(addr, dir string, log *slog.Logger) error {
 		DB: d, DataDir: dir, Events: bus, Queue: queue, Models: cfg,
 	})
 	cfg.SetLibrary(books)
+	memories := memory.New(d, bus)
 	sets := homework.New(homework.Config{
 		DB: d, Events: bus, Queue: queue, Library: homeworkLibrary{books}, Settings: cfg,
+		Memory: homeworkMemory{agentMemory{memories}},
 	})
 
 	tutor := ask.New(ask.Config{
 		DB: d, Events: bus, Queue: queue, Library: askLibrary{books}, Settings: cfg,
+		Memory: agentMemory{memories},
 	})
 
 	mux := http.NewServeMux()
@@ -116,6 +122,7 @@ func serve(addr, dir string, log *slog.Logger) error {
 	books.Routes(mux)
 	sets.Routes(mux)
 	tutor.Routes(mux)
+	memories.Routes(mux)
 	activity.New(d, sets).Routes(mux)
 	mux.HandleFunc("GET /api/events", bus.Handler)
 	mux.HandleFunc("/api/", httpx.NotFoundAPI)
@@ -208,6 +215,56 @@ type askLibrary struct{ *library.Service }
 func (l askLibrary) Book(ctx context.Context, id string) (ask.Book, error) {
 	b, err := l.Get(ctx, id)
 	return ask.Book{ID: b.ID, Title: b.Title, PageCount: b.PageCount, PageOffset: b.PageOffset}, err
+}
+
+// agentMemory is the book's memory as the tutor's loop reads and writes
+// it: notes in, remember and forget out.
+type agentMemory struct{ *memory.Service }
+
+func note(m memory.Memory) agent.Note {
+	n := agent.Note{ID: m.ID, Kind: string(m.Kind), Text: m.Text, Source: string(m.Source)}
+	if m.Page != nil {
+		n.Page = *m.Page
+	}
+	return n
+}
+
+func (a agentMemory) Notes(ctx context.Context, bookID string) ([]agent.Note, error) {
+	ms, err := a.ForPrompt(ctx, bookID)
+	out := make([]agent.Note, len(ms))
+	for i, m := range ms {
+		out[i] = note(m)
+	}
+	return out, err
+}
+
+func (a agentMemory) Remember(ctx context.Context, bookID string, n agent.NewNote) (agent.Note, string, error) {
+	in := memory.Save{Kind: memory.Kind(n.Kind), Text: n.Text, Source: memory.SourceTutor, Replaces: n.Replaces}
+	if n.FromStudent {
+		in.Source = memory.SourceYou
+	}
+	if n.Page > 0 {
+		in.Page = &n.Page
+	}
+	m, outcome, err := a.Save(ctx, bookID, in)
+	return note(m), string(outcome), err
+}
+
+func (a agentMemory) Forget(ctx context.Context, bookID, ref string) (agent.Note, error) {
+	m, err := a.Service.Forget(ctx, bookID, ref)
+	return note(m), err
+}
+
+// homeworkMemory adds the problem ranges locate keeps.
+type homeworkMemory struct{ agentMemory }
+
+func (h homeworkMemory) ProblemsSeen(ctx context.Context, bookID string, chapter int) (homework.Problems, error) {
+	p, err := h.Service.ProblemsSeen(ctx, bookID, chapter)
+	out := homework.Problems{MemoryID: p.MemoryID, Text: p.Text}
+	for _, s := range p.Seen {
+		out.Seen = append(out.Seen, homework.Seen{Label: s.Label, Page: s.Page})
+	}
+	return out, err
 }
 
 func concat(lists ...[]db.Migration) []db.Migration {

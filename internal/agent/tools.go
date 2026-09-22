@@ -36,6 +36,16 @@ const maxReadPages = 3
 // tool runs one call and returns what to tell the model, plus any page
 // images it should see. Every call is a step on the feed.
 func (l *Loop) tool(ctx context.Context, call llm.ToolCall) (string, []llm.Part) {
+	if l.Memory != nil {
+		switch call.Function.Name {
+		case "remember":
+			return l.remember(ctx, call.Function.Arguments), nil
+		case "forget":
+			if l.Student {
+				return l.forget(ctx, call.Function.Arguments), nil
+			}
+		}
+	}
 	var args struct {
 		Query      string     `json:"query"`
 		Page       int        `json:"page"`

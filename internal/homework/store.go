@@ -51,6 +51,8 @@ CREATE INDEX questions_homework ON questions (homework_id, position);`},
 		// What the writer is doing right now, for the walkthrough's working
 		// line: thinking, a tool call, or writing.
 		{Name: "homework/2", SQL: `ALTER TABLE questions ADD COLUMN activity TEXT NOT NULL DEFAULT ''`},
+		// What writing the guide did with the book's memory.
+		{Name: "homework/3", SQL: `ALTER TABLE questions ADD COLUMN memory TEXT NOT NULL DEFAULT '[]'`},
 	}
 }
 
@@ -112,14 +114,14 @@ type figure struct {
 }
 
 const questionCols = `q.id, q.homework_id, q.position, q.text, q.in_book, q.label, q.statement, q.page, q.pinned_page,
-	q.rect, q.figures, q.hint, q.walkthrough, q.state, q.reason, q.revealed, q.done_at, q.activity, h.book_id`
+	q.rect, q.figures, q.hint, q.walkthrough, q.state, q.reason, q.revealed, q.done_at, q.activity, q.memory, h.book_id`
 
 func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	var r row
 	var page, pinned sql.NullInt64
-	var rect, figs, hint, walk, revealed, doneAt string
+	var rect, figs, hint, walk, revealed, doneAt, memory string
 	err := s.Scan(&r.ID, &r.HomeworkID, &r.Position, &r.Text, &r.InBook, &r.Label, &r.Statement, &page, &pinned,
-		&rect, &figs, &hint, &walk, &r.State, &r.Reason, &revealed, &doneAt, &r.Activity, &r.BookID)
+		&rect, &figs, &hint, &walk, &r.State, &r.Reason, &revealed, &doneAt, &r.Activity, &memory, &r.BookID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
 	}
@@ -144,6 +146,8 @@ func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	json.Unmarshal([]byte(hint), &r.Hint)
 	json.Unmarshal([]byte(walk), &r.Walkthrough)
 	json.Unmarshal([]byte(revealed), &r.Revealed)
+	r.Memory = []MemoryLine{}
+	json.Unmarshal([]byte(memory), &r.Memory)
 	r.Done = doneAt != ""
 	return r, nil
 }

@@ -127,14 +127,17 @@ func (r *run) loop(ctx context.Context) error {
 		},
 	})
 
-	msgs, err := r.messages(ctx, s.c.Settings.Name(ctx))
+	msgs, err := r.messages(ctx)
 	if err != nil {
 		return err
 	}
 	loop := &agent.Loop{
 		Client: r.llm, Model: r.model, Library: s.c.Library, Book: r.book, Rounds: maxRounds,
-		Step:  func(label string, running bool) { r.step(ctx, label, running) },
-		Delta: r.parser.Feed,
+		System: systemPrompt(r.book.Title, s.c.Settings.Name(ctx)),
+		Memory: s.c.Memory, Student: true,
+		Step:       func(label string, running bool) { r.step(ctx, label, running) },
+		Remembered: func(n agent.Note, _ string) { r.remembered(ctx, n.ID) },
+		Delta:      r.parser.Feed,
 	}
 	err = loop.Run(ctx, msgs)
 	r.parser.Finish()
@@ -147,10 +150,9 @@ func (r *run) loop(ctx context.Context) error {
 	return nil
 }
 
-// messages is the system prompt, the conversation so far, and the
-// question.
-func (r *run) messages(ctx context.Context, name string) ([]llm.Message, error) {
-	msgs := []llm.Message{llm.TextMessage("system", systemPrompt(r.book.Title, name))}
+// messages is the conversation so far, and the question.
+func (r *run) messages(ctx context.Context) ([]llm.Message, error) {
+	var msgs []llm.Message
 	prior, err := listTurns(ctx, r.s.c.DB, r.book.ID)
 	if err != nil {
 		return nil, err
@@ -238,6 +240,17 @@ func (r *run) step(ctx context.Context, label string, running bool) {
 	r.mu.Unlock()
 	r.s.c.DB.ExecContext(ctx, `UPDATE turns SET steps = ?, answer = ?, updated_at = ? WHERE id = ?`,
 		mustJSON(r.steps), mustJSON(answer), db.Now(), r.t.ID)
+	r.s.publish(ctx, r.t.ID)
+}
+
+// remembered ties the step that just saved a memory to it, for Undo.
+func (r *run) remembered(ctx context.Context, id string) {
+	r.mu.Lock()
+	if len(r.steps) > 0 {
+		r.steps[len(r.steps)-1].MemoryID = id
+	}
+	r.mu.Unlock()
+	r.save(ctx, true)
 	r.s.publish(ctx, r.t.ID)
 }
 

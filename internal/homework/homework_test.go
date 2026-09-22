@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -17,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/cards"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/httpx"
@@ -131,7 +133,9 @@ func fakeModel(req llm.ChatRequest) llmtest.Reply {
 	return llmtest.Reply{Text: "ok"}
 }
 
-func newEnv(t *testing.T) *env {
+func newEnv(t *testing.T) *env { return newEnvWith(t, nil) }
+
+func newEnvWith(t *testing.T, mem Memory) *env {
 	t.Helper()
 	d, err := db.Open(filepath.Join(t.TempDir(), "pset.db"))
 	if err != nil {
@@ -150,7 +154,7 @@ func newEnv(t *testing.T) *env {
 	e.cfg = &settings{cfg: e.llm.Config()}
 	q := jobs.New(d, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	q.Lane(LaneQuestion, 2)
-	e.svc = New(Config{DB: d, Events: e.events, Queue: q, Library: library{}, Settings: e.cfg})
+	e.svc = New(Config{DB: d, Events: e.events, Queue: q, Library: library{}, Settings: e.cfg, Memory: mem})
 	mux := http.NewServeMux()
 	e.svc.Routes(mux)
 	e.Server = httptest.NewServer(mux)
@@ -485,5 +489,89 @@ func TestGuideComputesAndShowsWhatItsDoing(t *testing.T) {
 	}
 	if !got {
 		t.Fatal("compute's result never reached the model")
+	}
+}
+
+// memory is a book memory in a map: the problems locate saw, and the
+// walkthrough writer's notes.
+type memory struct {
+	mu    sync.Mutex
+	seen  map[int][]Seen
+	notes []agent.Note
+}
+
+func (m *memory) Notes(context.Context, string) ([]agent.Note, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]agent.Note(nil), m.notes...), nil
+}
+
+func (m *memory) Remember(_ context.Context, _ string, n agent.NewNote) (agent.Note, string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	note := agent.Note{ID: fmt.Sprintf("note%d", len(m.notes)), Kind: n.Kind, Text: n.Text, Page: n.Page, Source: "tutor"}
+	m.notes = append(m.notes, note)
+	return note, agent.Saved, nil
+}
+
+func (m *memory) Forget(context.Context, string, string) (agent.Note, error) {
+	return agent.Note{}, nil
+}
+
+func (m *memory) ProblemsSeen(_ context.Context, _ string, chapter int) (Problems, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if len(m.seen[chapter]) == 0 {
+		return Problems{}, nil
+	}
+	return Problems{MemoryID: "range3", Text: "Chapter 3's problems include one on p. 1.", Seen: m.seen[chapter]}, nil
+}
+
+func (m *memory) SawProblem(_ context.Context, _ string, _, chapter int, label string, page int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.seen[chapter] = append(m.seen[chapter], Seen{Label: label, Page: page})
+	return nil
+}
+
+func TestMemoryFindsTheNextProblemAndKeepsTheWritersNotes(t *testing.T) {
+	mem := &memory{seen: map[int][]Seen{}}
+	e := newEnvWith(t, mem)
+	var guideRound int
+	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
+		if strings.Contains(req.Messages[0].Content.Text(), "You write the guide") {
+			guideRound++
+			if guideRound == 1 {
+				return llmtest.Reply{ToolCalls: []llm.ToolCall{{ID: "1", Type: "function", Function: llm.ToolCallFunc{
+					Name: "remember", Arguments: `{"kind":"book","text":"Ohm's law is stated on p. 0.","page":0}`}}}}
+			}
+		}
+		return fakeModel(req)
+	})
+	h := e.newSet(t)
+	first := e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0]
+	q := e.wait(t, first.ID, StateReady)
+	if got := mem.seen[3]; len(got) != 1 || got[0] != (Seen{Label: "3.36", Page: 3}) {
+		t.Fatalf("seen %+v", got)
+	}
+	// The writer's save is a line under the walkthrough.
+	if len(q.Memory) != 1 || q.Memory[0].Use != MemoryUseSaved || q.Memory[0].MemoryID != "note0" {
+		t.Fatalf("memory lines %+v", q.Memory)
+	}
+	// Found by the text layer: nothing to credit memory with.
+	for _, l := range q.Memory {
+		if l.Use == MemoryUseFound {
+			t.Fatal("an exact find credited to memory")
+		}
+	}
+
+	// 3.37 isn't in the text layer at all: only memory knows where to look.
+	second := e.add(t, h.ID, Draft{Text: "3.37", InBook: true})[0]
+	q = e.wait(t, second.ID, StateReady)
+	if q.Page == nil || *q.Page != 3 {
+		t.Fatalf("located %+v", q.Page)
+	}
+	if len(q.Memory) == 0 || q.Memory[0].Use != MemoryUseFound || q.Memory[0].MemoryID != "range3" {
+		t.Fatalf("memory lines %+v", q.Memory)
 	}
 }

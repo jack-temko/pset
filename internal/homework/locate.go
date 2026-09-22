@@ -96,3 +96,107 @@ func sweepBatchesOf(start, end int) [][]int {
 	}
 	return batches
 }
+
+// rememberedMax bounds the pages a remembered range offers one locate.
+const rememberedMax = 8
+
+// rememberedPages is where memory says a problem should be, most likely
+// first: between the nearest problems seen before and after it, nearest
+// the page its number suggests. Only a problem seen before is past the
+// last page seen; only one seen after, before the first.
+func rememberedPages(seen []Seen, label string) []int {
+	if label == "" || len(seen) == 0 {
+		return nil
+	}
+	key := labelKey(label)
+	var lo, hi *Seen
+	for i := range seen {
+		s := &seen[i]
+		if s.Label == label {
+			return []int{s.Page, s.Page + 1, s.Page - 1}
+		}
+		switch c := compareKeys(labelKey(s.Label), key); {
+		case c < 0 && (lo == nil || compareKeys(labelKey(lo.Label), labelKey(s.Label)) < 0):
+			lo = s
+		case c > 0 && (hi == nil || compareKeys(labelKey(s.Label), labelKey(hi.Label)) < 0):
+			hi = s
+		}
+	}
+	var from, to, est int
+	switch {
+	case lo != nil && hi != nil:
+		from, to = min(lo.Page, hi.Page), max(lo.Page, hi.Page)
+		est = from
+		if a, b, n, ok := lastNumbers(lo.Label, hi.Label, label); ok && b > a {
+			est = from + (n-a)*(to-from)/(b-a)
+		}
+	case lo != nil:
+		from, to, est = lo.Page, lo.Page+rememberedMax-1, lo.Page
+	case hi != nil:
+		from, to, est = hi.Page-rememberedMax+1, hi.Page, hi.Page
+	default:
+		return nil
+	}
+	var out []int
+	for d := 0; len(out) < rememberedMax && (est-d >= from || est+d <= to); d++ {
+		if est-d >= from && est-d >= 1 {
+			out = append(out, est-d)
+		}
+		if d > 0 && est+d <= to && len(out) < rememberedMax {
+			out = append(out, est+d)
+		}
+	}
+	return out
+}
+
+// labelKey splits a label for ordering: "3.A.12b" is 3, A, 12, b.
+func labelKey(label string) []string {
+	return labelParts.FindAllString(label, -1)
+}
+
+var labelParts = regexp.MustCompile(`\d+|[A-Za-z]+`)
+
+// compareKeys orders labels as the book numbers them: numbers by value,
+// letters alphabetically, and a shorter label before its extensions.
+func compareKeys(a, b []string) int {
+	for i := 0; i < len(a) && i < len(b); i++ {
+		x, xerr := strconv.Atoi(a[i])
+		y, yerr := strconv.Atoi(b[i])
+		switch {
+		case xerr == nil && yerr == nil && x != y:
+			return x - y
+		case (xerr == nil) != (yerr == nil):
+			// A number sorts before letters.
+			if xerr == nil {
+				return -1
+			}
+			return 1
+		case xerr != nil && a[i] != b[i]:
+			if a[i] < b[i] {
+				return -1
+			}
+			return 1
+		}
+	}
+	return len(a) - len(b)
+}
+
+// lastNumbers is the final number of three labels that differ only
+// there, as 3.10, 3.30 and 3.20 do, for interpolating a page.
+func lastNumbers(lo, hi, label string) (a, b, n int, ok bool) {
+	ka, kb, kn := labelKey(lo), labelKey(hi), labelKey(label)
+	if len(ka) != len(kn) || len(kb) != len(kn) || len(kn) == 0 {
+		return 0, 0, 0, false
+	}
+	last := len(kn) - 1
+	for i := 0; i < last; i++ {
+		if ka[i] != kn[i] || kb[i] != kn[i] {
+			return 0, 0, 0, false
+		}
+	}
+	var err1, err2, err3 error
+	a, err1 = strconv.Atoi(ka[last])
+	b, err2 = strconv.Atoi(kb[last])
+	n, err3 = strconv.Atoi(kn[last])
+	return a, b, n, err1 == nil && err2 == nil && err3 == nil
+}

@@ -17,6 +17,8 @@ const (
 type Step struct {
 	Label   string `json:"label"`
 	Running bool   `json:"running"`
+	// MemoryID is the memory a remember step saved, for its Undo.
+	MemoryID string `json:"memoryId,omitempty"`
 }
 
 // About is the homework question a turn was asked about: the label the

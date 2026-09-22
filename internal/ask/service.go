@@ -45,6 +45,8 @@ type Config struct {
 	Queue    Queue
 	Library  Library
 	Settings Settings
+	// Memory is the book's memory; nil runs without one.
+	Memory agent.Memory
 }
 
 type Service struct{ c Config }
