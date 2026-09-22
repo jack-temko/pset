@@ -146,5 +146,13 @@ func Tx(ctx context.Context, d *sql.DB, fn func(*sql.Tx) error) error {
 	return tx.Commit()
 }
 
-// Now is the one timestamp format the database stores.
-func Now() string { return time.Now().UTC().Format(time.RFC3339Nano) }
+// Stamp is the one timestamp format the database stores: UTC, RFC 3339,
+// with all nine digits of nanoseconds, so stamps compare correctly as
+// strings (in SQL and in the client).
+const Stamp = "2006-01-02T15:04:05.000000000Z07:00"
+
+// Now is the current time as a stamp.
+func Now() string { return At(time.Now()) }
+
+// At is a time as a stamp.
+func At(t time.Time) string { return t.UTC().Format(Stamp) }

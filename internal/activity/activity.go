@@ -54,7 +54,7 @@ func (s *Service) Record(ctx context.Context, h Heartbeat) error {
 		return nil
 	}
 	_, err := s.db.ExecContext(ctx, `INSERT INTO heartbeats (book_id, kind, at) VALUES (?, ?, ?)`,
-		h.BookID, h.Kind, now.Format(time.RFC3339Nano))
+		h.BookID, h.Kind, db.At(now))
 	if err != nil {
 		// A book that no longer exists: nothing to record.
 		return httpx.NotFound("book")
@@ -64,7 +64,7 @@ func (s *Service) Record(ctx context.Context, h Heartbeat) error {
 
 // Week sums everything since the start of the student's week.
 func (s *Service) Week(ctx context.Context, since time.Time) (Week, error) {
-	from := since.UTC().Format(time.RFC3339Nano)
+	from := db.At(since)
 	w := Week{ByBook: []BookMinutes{}}
 	rows, err := s.db.QueryContext(ctx, `SELECT kind, count(*) FROM heartbeats WHERE at >= ? GROUP BY kind`, from)
 	if err != nil {

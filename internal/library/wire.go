@@ -47,6 +47,9 @@ type Book struct {
 	State  BookState `json:"state"`
 	// AddedAt is when it was put on the shelf (RFC 3339).
 	AddedAt string `json:"addedAt"`
+	// UpdatedAt orders copies of the book: a reply that arrives after a
+	// newer event must not win.
+	UpdatedAt string `json:"updatedAt"`
 }
 
 // Books is GET /api/books.

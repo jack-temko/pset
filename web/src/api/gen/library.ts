@@ -53,6 +53,11 @@ export interface Book {
    * AddedAt is when it was put on the shelf (RFC 3339).
    */
   addedAt: string;
+  /**
+   * UpdatedAt orders copies of the book: a reply that arrives after a
+   * newer event must not win.
+   */
+  updatedAt: string;
 }
 /**
  * Books is GET /api/books.

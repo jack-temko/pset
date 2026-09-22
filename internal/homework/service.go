@@ -477,6 +477,6 @@ func (s *Service) publishQuestion(ctx context.Context, id string) (Question, err
 // sets they came from: Home's "questions worked" tile.
 func (s *Service) QuestionsDoneSince(ctx context.Context, since time.Time) (questions, sets int, err error) {
 	err = s.c.DB.QueryRowContext(ctx, `SELECT count(*), count(DISTINCT homework_id) FROM questions WHERE done_at >= ?`,
-		since.UTC().Format(time.RFC3339Nano)).Scan(&questions, &sets)
+		db.At(since)).Scan(&questions, &sets)
 	return
 }

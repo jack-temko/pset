@@ -284,7 +284,7 @@ func (q *Queue) Run(ctx context.Context) error {
 		return err
 	}
 	// Finished jobs are only history; a week of it is plenty.
-	cutoff := time.Now().Add(-7 * 24 * time.Hour).UTC().Format(time.RFC3339Nano)
+	cutoff := db.At(time.Now().Add(-7 * 24 * time.Hour))
 	q.db.ExecContext(ctx, `DELETE FROM jobs WHERE state IN ('done', 'cancelled') AND updated_at < ?`, cutoff)
 
 	t := time.NewTicker(poll)

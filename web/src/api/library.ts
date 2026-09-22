@@ -47,17 +47,24 @@ export function pageImageURL(bookId: string, page: number, width: number) {
 
 // ---------------------------------------------------------------- cache
 
-/** One book changed: patch it into the list and its own query. */
+/** Whether `b` is at least as new as `a`. Timestamps are the server's
+ *  RFC 3339 with fixed-width nanoseconds, so they compare as strings. */
+const newer = (b: Book, a: Book | undefined) => !a || b.updatedAt >= a.updatedAt
+
+/** One book changed: patch it into the list and its own query, unless
+ *  what's there is newer. An HTTP reply can land after an event that
+ *  already moved the book on (an upload's "queued" after "preparing"). */
 function putBook(qc: QueryClient, book: Book) {
   qc.setQueryData<Book[]>(libraryKeys.books, (list) => {
     if (!list) return list
     const i = list.findIndex((b) => b.id === book.id)
     if (i === -1) return [...list, book]
+    if (!newer(book, list[i])) return list
     const next = list.slice()
     next[i] = book
     return next
   })
-  qc.setQueryData(libraryKeys.book(book.id), book)
+  if (newer(book, qc.getQueryData<Book>(libraryKeys.book(book.id)))) qc.setQueryData(libraryKeys.book(book.id), book)
   // Ready means the contents exist now; a retried import may redo them.
   if (book.state.kind === 'ready') qc.invalidateQueries({ queryKey: libraryKeys.contents(book.id) })
 }
