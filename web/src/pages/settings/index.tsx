@@ -529,7 +529,7 @@ function AboutLine() {
 
 function Section({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
   return (
-    <section id={id} className="space-y-5">
+    <section id={id} className="scroll-mt-6 space-y-5">
       <h2 className="font-heading text-xl">{title}</h2>
       {children}
     </section>
@@ -538,9 +538,16 @@ function Section({ id, title, children }: { id?: string; title: string; children
 
 export function Settings() {
   // /settings#connections, from a failure that needs the chat model fixed.
+  // Scrolled to twice on purpose: once right away, and once after the
+  // connection cards resolve, since their loading height shifts everything
+  // below and would otherwise leave the target half off screen.
   useEffect(() => {
     const id = window.location.hash.slice(1)
-    if (id) document.getElementById(id)?.scrollIntoView()
+    if (!id) return
+    const scroll = () => document.getElementById(id)?.scrollIntoView()
+    scroll()
+    const settle = setTimeout(scroll, 400)
+    return () => clearTimeout(settle)
   }, [])
   return (
     // No middle of its own: the bar picks up "Settings" once the h1 has

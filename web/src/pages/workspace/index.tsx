@@ -536,15 +536,38 @@ function ZoomMenu({ zoom, onPick }: { zoom: number; onPick: (z: number) => void 
  * chat model: Open Settings, then Try again. Anything else: Try again.
  */
 function AskError({ error, onRetry }: { error: Error; onRetry: () => void }) {
-  const navigate = useNavigate()
   const setup = error instanceof ApiError && error.code === 'not_configured'
+  return (
+    <FailureNotice
+      title={setup ? 'The chat model needs setting up' : "The question didn't send"}
+      reason={error.message}
+      setup={setup}
+      onRetry={onRetry}
+    />
+  )
+}
+
+/** The shared Ask failure shape: what broke, the server's sentence, and the
+ *  way out. Setup failures get Open Settings; everything else Try again. */
+function FailureNotice({
+  title,
+  reason,
+  setup,
+  onRetry,
+}: {
+  title: string
+  reason: string
+  setup: boolean
+  onRetry: () => void
+}) {
+  const navigate = useNavigate()
   return (
     <div className="mb-3 space-y-1">
       <p className="flex items-center gap-2 text-sm font-semibold">
         <CircleAlert className="size-4 shrink-0 text-destructive" />
-        {setup ? 'The chat model needs setting up' : "The question didn't send"}
+        {title}
       </p>
-      <p className="text-sm text-muted-foreground">{error.message}</p>
+      <p className="text-sm text-muted-foreground">{reason}</p>
       <div className="flex items-center gap-2 pt-1">
         {setup && <Button onClick={() => navigate('/settings#connections')}>Open Settings</Button>}
         <Button variant={setup ? 'ghost' : 'primary'} onClick={onRetry}>
@@ -554,6 +577,11 @@ function AskError({ error, onRetry }: { error: Error; onRetry: () => void }) {
     </div>
   )
 }
+
+/** Mid-turn and preflight setup failures share one sentence (ask's
+ *  noChatModel const), so a model that vanished mid-answer gets the full
+ *  card, not the one-line note. */
+const isSetupReason = (reason?: string | null) => !!reason?.includes('no chat model set up yet')
 
 /** A day as a divider says it: "Today", "Yesterday", "Sep 12". */
 function dayLabel(iso: string, now = new Date()): string {
@@ -594,7 +622,17 @@ function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) 
         </p>
       )}
       {t.state === 'stopped' && <StoppedNote />}
-      {t.state === 'failed' && <FailedTurn reason={t.reason ?? ''} onRetry={onRetry} />}
+      {t.state === 'failed' &&
+        (isSetupReason(t.reason) ? (
+          <FailureNotice
+            title="The chat model needs setting up"
+            reason={t.reason ?? ''}
+            setup
+            onRetry={onRetry}
+          />
+        ) : (
+          <FailedTurn reason={t.reason ?? ''} onRetry={onRetry} />
+        ))}
     </>
   )
 }

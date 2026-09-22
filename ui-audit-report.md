@@ -117,9 +117,7 @@ All findings above were fixed by three file-partitioned fixers and verified
 live against the fixed build. Gates: `tsc -b` clean, vitest 12/12,
 `npm run build` + class gate clean (one fractional `py-1.5` slipped into the
 title-prompt strip and was corrected to `py-1`), `go build`/`go vet` clean,
-scoped Go tests pass.
-
-Verification highlights (shots 28-33, `audit-round-1/`):
+scoped Go tests pass.Verification highlights (shots 28-33, `audit-round-1/`):
 
 - **P0**: adding a question now reaches the designed failed card live, no
   reload (~8s). Root cause was an event/snapshot race: the Add-questions POST
@@ -152,3 +150,74 @@ Verification highlights (shots 28-33, `audit-round-1/`):
   failed asks (the turn never existed server-side).
 
 Round 2 re-audit of the whole app follows.
+
+---
+
+## Round 2 — 2026-09-22 (re-audit of the fixed build)
+
+Gallery: `web/e2e/artifacts/audit-round-2/` (22 shots + probes, both themes,
+fresh DB instance for first-run). Three independent fresh auditors (home/
+settings, book workspace, failure/consistency).
+
+### Fix verification
+
+Every round-1 finding was verified as holding, including the P0 re-tested
+live: a newly added question reached the designed failed card with no reload
+(`applyQuestion` monotonicity + 5s backstop poll). Week tiles reconcile with
+the by-book bar in every shot; lost-touch appears ~1s after a server kill and
+clears on recovery; the canonical sentence is shared verbatim across Ask and
+Homework.
+
+### New findings (all small; the loop continues)
+
+1. **[P2] Gallery hole** — the round-2 capture of `01-settings-top--light.png`
+   was a mislabeled duplicate of shot 02, so the settings-at-rest state (You
+   card, masked key, Show, both Save states) existed in no shot, in neither
+   theme.
+2. **[P3] Lost-touch banner lowercased the product name** ("Lost touch with
+   pset.") — the only surface that did.
+3. **[P3] A mid-turn chat-model failure** (model removed while answering)
+   still rendered as the old one-line red note instead of the failure card
+   the preflight path uses.
+4. **[P3, folded into 1's recapture] `#connections` deep-link landing** left
+   the Connections heading flush under the fixed bar before data settled.
+
+Verdict: 2/3 areas CLEAN, failure/consistency ISSUES on the four items above.
+
+---
+
+## Round 3 — 2026-09-22 (delta fixes + targeted verification)
+
+Fixes (applied directly, they were one-liners and one small refactor):
+
+1. Recaptured `01-settings-top--light.png` at rest and added
+   `24-settings-connections--dark.png` — the settings state now exists in the
+   gallery in both themes.
+2. Banner copy: "Lost touch with PSet. Reconnecting…"
+3. Mid-turn setup failures now render the full failure card: `AskError` was
+   refactored into a shared `FailureNotice`; a failed turn whose reason is
+   the canonical setup sentence gets title + Open Settings + Try again
+   (`isSetupReason`), other turn failures keep the one-line `FailedTurn`.
+   Code-verified only — exercising it live needs a real model key, which is
+   out of scope by design.
+4. `Section` gained `scroll-mt-6` and the `#connections` anchor re-scrolls
+   once the cards settle, so the deep link lands with the heading clear of
+   the bar. Verified by click-through: shot 23.
+
+Gates: `tsc -b` clean, vitest 12/12, build + class gate clean, binary
+rebuilt and re-verified live (banner wording, deep-link landing, gallery
+recaptures — shots 01, 23, 24, 25).
+
+### Final verdict
+
+All 25 round-1/2 findings fixed and verified; the round-2 audit's three
+leftovers fixed and evidenced. **The audit loop is clean.**
+
+Accepted deviations (deliberate, recorded for review): the zoom menu offers
+Fit to width / 150% / 200% (100% is the same destination in this zoom model);
+the filename-title prompt uses a filename-looking heuristic because the wire
+does not carry the original filename; week tiles are derived client-side from
+the per-book minutes (exact reconciliation would need a Go wire change);
+failed asks keep the typed question in the composer rather than showing a
+sent bubble (nothing was sent); mid-turn setup-failure card is code-verified
+only (needs a paid key to reproduce live).

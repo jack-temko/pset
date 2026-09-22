@@ -48,7 +48,7 @@ function LostTouch() {
       className="flex shrink-0 items-center justify-center gap-2 border-b border-warning bg-warning-soft px-4 py-1 text-sm text-warning"
     >
       <CircleAlert className="size-4 shrink-0" aria-hidden="true" />
-      <span>Lost touch with pset. Reconnecting…</span>
+      <span>Lost touch with PSet. Reconnecting…</span>
     </div>
   )
 }
