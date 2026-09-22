@@ -9,11 +9,19 @@ closes.
   adds the border, since the door doesn't know where it sits).
 - **Under a grid**: the row after the shelf's covers, no border.
 
-The row is `h-row` (40px) of quiet space; the button inside it is a 28px
-pill: `text-xs` in `muted-foreground`, the hover wash (`muted/50`, 150ms)
-with the text stepping up to `foreground`. Wash and click target are the
-same shape: a full-width target that highlights only its middle lies about
-where it is. Announces itself with `aria-expanded`.
+Two shapes (`shape`), and the button is always the shape, so wash and
+click target agree:
+
+- **`row`** (default), in a Box: the whole 40px row is the button and
+  washes `muted/50` on hover, like every other clickable row in a Box
+  (2026-09-22: was a pill in the middle of the row, which made it the one
+  row in a Box that didn't light up across).
+- **`pill`**, under a grid (the shelf): a 28px pill in the middle of the
+  row. A bar the width of a whole grid darkening at once reads as a giant
+  button.
+
+Either way: `text-xs` in `muted-foreground`, stepping up to `foreground`
+on hover, 150ms. Announces itself with `aria-expanded`.
 
 **What the consumer provides:** `open`, `total`, `onToggle`. The door
 names what it opens onto: the count is the whole list, not the hidden

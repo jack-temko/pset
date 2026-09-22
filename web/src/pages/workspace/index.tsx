@@ -132,7 +132,7 @@ function Rail({
             <button
               type="button"
               onClick={() => onJump(c.page)}
-              className="flex w-full items-center px-4 py-1 text-left text-sm font-medium"
+              className="flex w-full items-center px-4 py-1 text-left text-sm font-medium transition-colors duration-150 ease-out hover:bg-muted/50 motion-reduce:transition-none"
             >
               <span className="min-w-0 flex-1 truncate">{c.title}</span>
             </button>

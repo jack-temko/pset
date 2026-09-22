@@ -349,7 +349,7 @@ function Shelf({ books }: { books: Book[] | undefined }) {
               ))}
             </div>
             {ready.length > SHELF_ROW && (
-              <Door open={open} total={ready.length} onToggle={() => setOpen((o) => !o)} />
+              <Door shape="pill" open={open} total={ready.length} onToggle={() => setOpen((o) => !o)} />
             )}
           </>
         )
