@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "A definition, theorem or other numbered statement, quoted the way the book states it. page is the printed page it's on.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "number", "page", "text"],
+  "properties": {
+    "kind": { "type": "string", "minLength": 1, "maxLength": 40 },
+    "number": { "type": "string", "maxLength": 20 },
+    "name": { "type": "string", "maxLength": 200 },
+    "page": { "type": "integer", "minimum": 1 },
+    "text": { "type": "string", "minLength": 1, "maxLength": 3000 }
+  }
+}

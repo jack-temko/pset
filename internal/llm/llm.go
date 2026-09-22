@@ -260,7 +260,9 @@ func (c *Client) ChatOnce(ctx context.Context, req ChatRequest) (string, error) 
 }
 
 // ChatOnceFull is ChatOnce with any requested tool calls visible.
-func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (Reply, error) {
+func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (reply Reply, err error) {
+	start := time.Now()
+	defer func() { logCall(req, start, reply, err) }()
 	req.Stream = false
 	var payload struct {
 		Choices []struct {
@@ -292,7 +294,9 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest, delta func(tex
 // tool calls — providers stream those as argument fragments across many
 // chunks, so they are accumulated by index. The stream ends at the SSE
 // [DONE] sentinel; a cancelled ctx aborts mid-stream.
-func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func(text string) error) (Reply, error) {
+func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func(text string) error) (reply Reply, err error) {
+	start := time.Now()
+	defer func() { logCall(req, start, reply, err) }()
 	req.Stream = true
 
 	resp, err := c.doWithRetry(ctx, c.apiBaseURL+"/chat/completions", req)

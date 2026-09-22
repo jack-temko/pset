@@ -18,9 +18,11 @@ import (
 
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/events"
+	"github.com/jackt/pset/internal/homework"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/library"
+	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/settings"
 	"github.com/jackt/pset/web"
 )
@@ -70,15 +72,20 @@ func serve(addr, dir string, log *slog.Logger) error {
 		jobs.Migrations(),
 		settings.Migrations(),
 		library.Migrations(),
+		homework.Migrations(),
 	)
 	ctx := context.Background()
 	if err := db.Migrate(ctx, d, migrations); err != nil {
 		return err
 	}
 
+	// Every model request and reply, to trace a bad answer to its prompt.
+	llm.LogCallsTo(filepath.Join(dir, "logs", "llm.jsonl"))
+
 	bus := events.NewBus()
 	queue := jobs.New(d, log)
 	queue.Lane(library.LaneImport, 1)
+	queue.Lane(homework.LaneQuestion, 2)
 
 	cfg := settings.New(settings.Config{
 		DB: d, DataDir: dir, DBPath: dbPath, Version: Version,
@@ -90,10 +97,14 @@ func serve(addr, dir string, log *slog.Logger) error {
 		DB: d, DataDir: dir, Events: bus, Queue: queue, Models: cfg,
 	})
 	cfg.SetLibrary(books)
+	sets := homework.New(homework.Config{
+		DB: d, Events: bus, Queue: queue, Library: homeworkLibrary{books}, Settings: cfg,
+	})
 
 	mux := http.NewServeMux()
 	cfg.Routes(mux)
 	books.Routes(mux)
+	sets.Routes(mux)
 	mux.HandleFunc("GET /api/events", bus.Handler)
 	mux.HandleFunc("/api/", httpx.NotFoundAPI)
 	mux.Handle("/", httpx.SPA(web.Dist))
@@ -169,6 +180,15 @@ func resolveDataDir(flagValue string) (string, error) {
 		return "", err
 	}
 	return dir, os.MkdirAll(dir, 0o700)
+}
+
+// homeworkLibrary hands homework the book facts it asks for, in its own
+// shape.
+type homeworkLibrary struct{ *library.Service }
+
+func (l homeworkLibrary) Book(ctx context.Context, id string) (homework.Book, error) {
+	b, err := l.Get(ctx, id)
+	return homework.Book{ID: b.ID, Title: b.Title, PageCount: b.PageCount, PageOffset: b.PageOffset}, err
 }
 
 func concat(lists ...[]db.Migration) []db.Migration {

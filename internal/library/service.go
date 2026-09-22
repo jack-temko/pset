@@ -13,6 +13,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -381,3 +383,44 @@ func (s *Service) PageJPEG(ctx context.Context, bookID string, page, width int) 
 // PDFPath is where a book's file lives, for features that read it
 // directly (the worksheet crops).
 func (s *Service) PDFPath(bookID string) string { return s.pdfPath(bookID) }
+
+// PageTexts is every page's text, index i holding PDF page i+1.
+func (s *Service) PageTexts(ctx context.Context, bookID string) ([]string, error) {
+	b, err := getBook(ctx, s.c.DB, bookID)
+	if err != nil {
+		return nil, err
+	}
+	pages, err := loadPages(ctx, s.c.DB, bookID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, b.PageCount)
+	for _, p := range pages {
+		if p.Number >= 1 && p.Number <= b.PageCount {
+			out[p.Number-1] = p.Text
+		}
+	}
+	return out, nil
+}
+
+// ChapterSpan is the PDF pages chapter n runs across, from the contents:
+// the first top-level entry titled "Chapter 3..." or "3 ...". ok is false
+// when no entry names it.
+func (s *Service) ChapterSpan(ctx context.Context, bookID string, n int) (start, end int, ok bool, err error) {
+	secs, err := loadSections(ctx, s.c.DB, bookID)
+	if err != nil {
+		return 0, 0, false, err
+	}
+	start, end, ok = chapterSpan(secs, n)
+	return start, end, ok, nil
+}
+
+func chapterSpan(secs []section, n int) (int, int, bool) {
+	re := regexp.MustCompile(`(?i)^\s*(?:chapter\s+)?` + strconv.Itoa(n) + `(?:$|[\s.:·\-])`)
+	for _, sec := range secs {
+		if re.MatchString(sec.Title) {
+			return sec.StartPage, sec.EndPage, sec.EndPage >= sec.StartPage
+		}
+	}
+	return 0, 0, false
+}

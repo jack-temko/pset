@@ -440,3 +440,21 @@ func TestFilenameTitleAndMetaTitle(t *testing.T) {
 		}
 	}
 }
+
+func TestChapterSpan(t *testing.T) {
+	secs := []section{
+		{Level: 1, Title: "Preface", StartPage: 3, EndPage: 8},
+		{Level: 1, Title: "Chapter 1: Experiments", StartPage: 19, EndPage: 52},
+		{Level: 1, Title: "3 · Linear Maps", StartPage: 51, EndPage: 130},
+		{Level: 1, Title: "Chapter 12 Markov Chains", StartPage: 400, EndPage: 450},
+	}
+	for n, want := range map[int][2]int{1: {19, 52}, 3: {51, 130}, 12: {400, 450}} {
+		a, b, ok := chapterSpan(secs, n)
+		if !ok || a != want[0] || b != want[1] {
+			t.Errorf("chapter %d: %d-%d %v", n, a, b, ok)
+		}
+	}
+	if _, _, ok := chapterSpan(secs, 2); ok {
+		t.Error("chapter 2 isn't in the contents")
+	}
+}

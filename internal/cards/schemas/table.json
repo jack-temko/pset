@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "A small table. Cells may carry inline $math$.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["columns", "rows"],
+  "properties": {
+    "columns": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": { "type": "string", "maxLength": 120 }
+    },
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 40,
+      "items": { "type": "array", "items": { "type": "string", "maxLength": 300 } }
+    }
+  }
+}

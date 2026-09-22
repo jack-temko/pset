@@ -15,3 +15,20 @@ packages:
     enum_style: union
     output_path: web/src/api/gen/library.ts
     frontmatter: "// Generated from internal/library/wire.go by tygo. Do not edit."
+  - path: github.com/jackt/pset/internal/cards
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/cards.ts
+    frontmatter: |
+      // Generated from internal/cards/wire.go by tygo. Do not edit.
+      /** One plotted point, [x, y]. */
+      export type Point = [number, number]
+  - path: github.com/jackt/pset/internal/homework
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/homework.ts
+    type_mappings:
+      cards.Segment: "Segment"
+    frontmatter: |
+      // Generated from internal/homework/wire.go by tygo. Do not edit.
+      import type { Segment } from './cards'

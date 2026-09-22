@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "A worked derivation: one line of bare TeX per step (no $ delimiters), each with an optional one-sentence reason.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["steps"],
+  "properties": {
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["math"],
+        "properties": {
+          "math": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "why": { "type": "string", "maxLength": 500 }
+        }
+      }
+    }
+  }
+}

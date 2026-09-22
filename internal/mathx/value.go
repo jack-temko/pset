@@ -34,6 +34,17 @@ func cVal(c complex128) Value { return Value{c: c} }
 // IsExact reports whether the value is an exact rational.
 func (v Value) IsExact() bool { return v.rat != nil }
 
+// Real is the value as a real number; ok is false when it has an
+// imaginary part worth the name, or isn't finite.
+func (v Value) Real() (float64, bool) {
+	c := v.complex()
+	re, im := real(c), imag(c)
+	if math.IsNaN(re) || math.IsInf(re, 0) || math.Abs(im) > imagEps(re, im) {
+		return 0, false
+	}
+	return re, true
+}
+
 // ratFloat is the float64 view of a rational (this Go's Rat.Float64
 // returns an exactness flag we always ignore).
 func ratFloat(r *big.Rat) float64 {

@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/big"
 	"math/cmplx"
+	"strconv"
 )
 
 // Eval parses and evaluates one expression.
@@ -26,6 +27,31 @@ func Eval(expr string) (Value, error) {
 	if err != nil {
 		return Value{}, err
 	}
+	return evalTokens(tokens)
+}
+
+// EvalAt evaluates expr with the variable name bound to value, as a plot
+// samples y = f(x). The variable is substituted as a number token, so
+// juxtaposition still multiplies ("2x", "x(x+1)") and names that merely
+// contain it ("exp") are untouched.
+func EvalAt(expr, name string, value float64) (Value, error) {
+	tokens, err := lex(expr)
+	if err != nil {
+		return Value{}, err
+	}
+	r := new(big.Rat)
+	if _, ok := r.SetString(strconv.FormatFloat(value, 'g', -1, 64)); !ok {
+		return Value{}, fmt.Errorf("%v is not a number", value)
+	}
+	for i, t := range tokens {
+		if t.kind == tokIdent && t.text == name {
+			tokens[i] = token{kind: tokNumber, text: formatToken(r, false), num: r}
+		}
+	}
+	return evalTokens(tokens)
+}
+
+func evalTokens(tokens []token) (Value, error) {
 	p := &parser{tokens: tokens}
 	v, err := p.add()
 	if err != nil {

@@ -66,7 +66,7 @@ export function Statement({
  * each with a short note on why when the move isn't obvious. It's an
  * answer, not practice: the walkthrough is where things are hidden.
  */
-export function WorkedSteps({ steps }: { steps: { math: string; why?: string }[] }) {
+export function WorkedSteps({ steps }: { steps: { math: string; why?: ReactNode }[] }) {
   return (
     <ol className="divide-y divide-border-muted overflow-hidden rounded-md border bg-card">
       {steps.map((s, i) => (

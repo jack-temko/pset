@@ -1,6 +1,9 @@
 package mathx
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 func TestEvalExact(t *testing.T) {
 	cases := []struct {
@@ -116,5 +119,37 @@ func TestEvalDegreePostfixAfterAngleIsDecorative(t *testing.T) {
 	}
 	if a.String() != b.String() {
 		t.Errorf("5∠30 = %q but 5∠30° = %q; the degree sign should be decorative after ∠", a.String(), b.String())
+	}
+}
+
+func TestEvalAtBindsTheVariable(t *testing.T) {
+	cases := []struct {
+		expr string
+		x    float64
+		want float64
+	}{
+		{"x^2", 3, 9},
+		{"2x + 1", 1.5, 4},
+		{"x(x+1)", 2, 6},
+		{"exp(-x)", 0, 1},
+		{"sin(x)", 0, 0},
+		{"x^2*exp(-x)", 1, 1 / 2.718281828459045},
+	}
+	for _, c := range cases {
+		v, err := EvalAt(c.expr, "x", c.x)
+		if err != nil {
+			t.Fatalf("%s: %v", c.expr, err)
+		}
+		got, ok := v.Real()
+		if !ok || math.Abs(got-c.want) > 1e-9 {
+			t.Errorf("%s at %v = %v (%v), want %v", c.expr, c.x, got, ok, c.want)
+		}
+	}
+	if _, err := EvalAt("y + 1", "x", 1); err == nil {
+		t.Error("an unbound name should fail")
+	}
+	v, _ := EvalAt("sqrt(x)", "x", -1)
+	if _, ok := v.Real(); ok {
+		t.Error("sqrt(-1) is not real")
 	}
 }

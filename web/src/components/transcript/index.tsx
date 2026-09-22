@@ -6,7 +6,7 @@ import { Check, CircleAlert, Copy, X } from 'lucide-react'
 import { Button } from '@/components/button'
 import { Spinner } from '@/components/spinner'
 import { Tooltip } from '@/components/tooltip'
-import { pdfOf, usePageOffset } from '@/lib/pages'
+import { pdfOf, printedLabel, usePageOffset } from '@/lib/pages'
 
 /**
  * The Ask transcript's pieces. Asymmetric by design: you speak in a
@@ -123,7 +123,7 @@ export function PageRef({ page, onJump }: { page: number; onJump?: (page: number
         onClick={() => onJump?.(page)}
         className="mx-px inline-flex shrink-0 translate-y-px items-center rounded-sm bg-primary-soft px-1 font-mono text-xs whitespace-nowrap text-primary transition-colors duration-150 ease-out hover:bg-primary hover:text-primary-foreground motion-reduce:transition-none"
       >
-        p.&thinsp;{page}
+        p.&thinsp;{printedLabel(pdfOf(page, offset), offset)}
       </button>
     </Tooltip>
   )
