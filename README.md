@@ -175,7 +175,6 @@ internal/        one package per feature (library, homework, ask, settings,
                  llm, agent, cards, pdf, ocr, mathx, httpx)
 web/             the React app, embedded into the binary
 design/          the specs: the design system and each screen, as decided
-brain/           working notes and audit records
 testdata/        generated sample books the tests read
 tools/           the dev loop, the sample-book generator
 ```
