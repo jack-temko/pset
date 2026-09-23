@@ -22,16 +22,6 @@ type Info struct {
 	PDFVersion string
 }
 
-// Available reports whether every poppler utility the pipeline needs is on PATH.
-func Available() error {
-	for _, tool := range []string{"pdfinfo", "pdftotext"} {
-		if _, err := exec.LookPath(tool); err != nil {
-			return fmt.Errorf("%w: %s", ErrNotInstalled, tool)
-		}
-	}
-	return nil
-}
-
 // Metadata runs `pdfinfo <path>` and parses its stdout. Document metadata
 // (including the "PDF version:" line) goes to stdout; only `pdfinfo -v`, the
 // utility's own version, prints to stderr — do not confuse the two.

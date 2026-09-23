@@ -1,11 +1,10 @@
 /pset
 *.test
 coverage.out
-web/e2e/node_modules/
-web/e2e/artifacts/
 
 # Inspection artifacts never live in the repo root (see AGENTS.md).
 /*.png
 /.playwright-mcp/
 /node_modules/
 .dev/
+/dist/

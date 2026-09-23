@@ -15,8 +15,6 @@ binaries.
 
 ## API
 
-- `Available() error` — nil when `tesseract` and `pdftoppm` are on PATH.
-  `pset ocr` uses this as its pre-flight gate.
 - `Page(ctx, pdfPath, n, lang) (string, error)` — rasterizes page n
 (1-based) at `DefaultDPI` (300) into a temp dir, runs
 `tesseract <img> stdout -l <lang>`, returns the text. Temp files are

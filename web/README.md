@@ -43,13 +43,7 @@ src/lib/         small pure helpers (page numbers, due dates, theme, covers)
 - **Wire types come from Go.** Change a `wire.go`, run `make gen`, commit
   both; `make check-gen` fails when they drift.
 - **Embedding.** A fresh clone has only `dist/.gitkeep`, so `go build`
-  always works and serves a "not built" notice. Run `npm run build`
+  always works; the binary then serves a "not built" notice. Run `npm run build`
   before building the binary to ship the real UI. `/api/*` is JSON;
   anything else is the SPA, with hashed assets cached as immutable and
   every other path falling back to `index.html`.
-
-## Visual suite
-
-`e2e/` holds a Playwright state suite and gallery (see `e2e/README.md`).
-Its manifest still describes the pre-rewrite app and is due to be
-rewired.

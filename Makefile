@@ -2,7 +2,7 @@
 # Vite with /api proxied. Go lives in /usr/local/go/bin, nvm's node first.
 export PATH := $(HOME)/.nvm/versions/node/v24.18.0/bin:$(PATH):/usr/local/go/bin
 
-.PHONY: dev gen check-gen test build
+.PHONY: dev gen check-gen test build release
 
 dev:
 	go run ./tools/dev
@@ -21,3 +21,7 @@ test:
 build:
 	cd web && npm run build
 	go build -o pset ./cmd/pset
+
+# macOS release tarball in dist/: make release VERSION=0.1.0
+release:
+	tools/release/build.sh $(VERSION)

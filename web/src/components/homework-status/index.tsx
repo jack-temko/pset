@@ -41,15 +41,3 @@ export function HomeworkStatusLabel({ status }: { status?: HomeworkStatus }) {
   }
   return null
 }
-
-/**
- * The deadline as it appears in a row's meta line. A turned-in homework
- * says when it was turned in; everything else says when it is due.
- *
- * The date arrives already relative and human ("today", "Friday", "in
- * two weeks"): whatever produced the list knows the user's clock, and
- * this does not.
- */
-export function dueText(due: string, status?: HomeworkStatus): string {
-  return status === 'turned-in' ? `turned in ${due}` : `due ${due}`
-}

@@ -15,11 +15,6 @@ package's surface, not on poppler directly.
 
 ## API
 
-- `Available() error` — nil when every poppler utility the import pipeline
-  needs is on PATH; otherwise the first missing tool as `ErrNotInstalled`.
-  Import uses this as its pre-flight gate.
-- `XMLAvailable() error` — same gate for the structure extractor
-  (`pdftohtml`), used by indexing.
 - `PageImage(ctx, path, n, dpi) ([]byte, error)` — rasterizes page n
   (1-based) to PNG bytes via a single-page `pdftoppm -png` run into a temp
   directory; used by the ask pipeline's page-image attachments and the page

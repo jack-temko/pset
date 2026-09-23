@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -34,14 +33,6 @@ type XMLLine struct {
 	Top  int
 	Size float64
 	Text string
-}
-
-// XMLAvailable reports whether pdftohtml, the structure extractor, is on PATH.
-func XMLAvailable() error {
-	if _, err := exec.LookPath("pdftohtml"); err != nil {
-		return fmt.Errorf("%w: pdftohtml", ErrNotInstalled)
-	}
-	return nil
 }
 
 // XML runs `pdftohtml -xml -stdout -i <path>` and parses its output. One

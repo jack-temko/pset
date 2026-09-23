@@ -18,16 +18,6 @@ var ErrNotInstalled = errors.New("OCR utility not on PATH")
 // between accuracy and speed.
 const DefaultDPI = 300
 
-// Available reports whether every tool the OCR pipeline needs is on PATH.
-func Available() error {
-	for _, tool := range []string{"tesseract", "pdftoppm"} {
-		if _, err := exec.LookPath(tool); err != nil {
-			return fmt.Errorf("%w: %s", ErrNotInstalled, tool)
-		}
-	}
-	return nil
-}
-
 // Page rasterizes page n of pdfPath and OCRs it to text with tesseract.
 func Page(ctx context.Context, pdfPath string, n int, lang string) (string, error) {
 	dir, err := os.MkdirTemp("", "pset-ocr-*")

@@ -21,8 +21,6 @@ remembered at each call site.
 It carries **no controls**: it is the description line of an
 `ImportRow`, and the row owns Stop, Cancel, Try again and Dismiss.
 
-`isReady(state)` ships alongside it.
-
 **Don't:** add a "Ready" state; show it twice on one screen; put
 controls in it.
 

@@ -27,7 +27,7 @@ asks you to come back on a bigger screen.
 ## What you need
 
 - **Go 1.26** or newer, and **Node.js 24** with npm, to build it.
-- **poppler-utils** (`pdfinfo`, `pdftotext`, `pdftoppm`), to read and
+- **poppler-utils** (`pdfinfo`, `pdftotext`, `pdftoppm`, `pdftohtml`), to read and
   render PDFs.
 - **Tesseract**, to read scanned books.
 - **A chat model** behind an OpenAI-compatible API, and it must accept
@@ -56,6 +56,15 @@ ollama pull nomic-embed-text
 ```
 
 ## Install
+
+**On a Mac**, skip building: download `pset-<version>-macos.tar.gz` from
+the [Releases](https://github.com/jack-temko/pset/releases) page, open
+it, and run `bash setup.sh` in that folder. It installs the dependencies
+with Homebrew (and Homebrew itself, if needed), pulls the embeddings
+model, and picks the binary for your Mac. Then double-click
+`PSet.command`. `make release VERSION=x.y.z` builds that tarball.
+
+To build it yourself:
 
 ```bash
 git clone https://github.com/jack-temko/pset.git

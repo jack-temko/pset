@@ -39,10 +39,6 @@ export function applyTheme(theme: Theme) {
   document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
 }
 
-export function isDark(): boolean {
-  return document.documentElement.classList.contains('dark')
-}
-
 /** "System" is a promise to keep following the OS, not a one-time read at
  *  load. Called once at startup; an explicit choice ignores the change. */
 export function followSystem() {

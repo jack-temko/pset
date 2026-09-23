@@ -67,9 +67,3 @@ export function BookStatus({ state, className }: { state: BookState; className?:
     </span>
   )
 }
-
-/** Whether a book can be opened at all. A book that isn't ready is visible
- *  in its import row and usable nowhere. */
-export function isReady(state: BookState): boolean {
-  return state.kind === 'ready'
-}

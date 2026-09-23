@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/jackt/pset/internal/db"
@@ -56,9 +57,9 @@ func (s *Service) check(ctx context.Context, id string) HealthCheck {
 	case "database":
 		return s.checkDatabase(ctx)
 	case "poppler":
-		return s.checkTool("poppler", "Poppler", "pdftoppm", "sudo apt install poppler-utils")
+		return s.checkTool("poppler", "Poppler", "pdftoppm", installHint("poppler-utils", "poppler"))
 	case "tesseract":
-		return s.checkTool("tesseract", "Tesseract", "tesseract", "sudo apt install tesseract-ocr")
+		return s.checkTool("tesseract", "Tesseract", "tesseract", installHint("tesseract-ocr", "tesseract"))
 	}
 	return HealthCheck{}
 }
@@ -106,6 +107,15 @@ func (s *Service) checkDatabase(ctx context.Context) HealthCheck {
 	c.OK = true
 	c.Detail = "up to date"
 	return c
+}
+
+// installHint is the command that installs a package on this OS: apt's
+// name on Linux, Homebrew's on macOS.
+func installHint(apt, brew string) string {
+	if runtime.GOOS == "darwin" {
+		return "brew install " + brew
+	}
+	return "sudo apt install " + apt
 }
 
 func (s *Service) checkTool(id, name, bin, install string) HealthCheck {

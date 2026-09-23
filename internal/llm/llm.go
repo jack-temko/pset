@@ -549,11 +549,6 @@ func (c *Client) request(ctx context.Context, method, url string, body any) (*ht
 	return req, nil
 }
 
-func readError(resp *http.Response) error {
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 8*1024))
-	return readErrorBody(resp.StatusCode, body)
-}
-
 func readErrorBody(status int, body []byte) error {
 	return &LLMError{Status: status, Body: string(body)}
 }

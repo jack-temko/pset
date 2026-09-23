@@ -2,8 +2,8 @@
 
 How a homework row says when it is due and whether anything is wrong.
 
-**The deadline is a fact, so it lives in the meta line.** `dueText`
-renders it as the last clause of a row's description ("Linear Algebra
+**The deadline is a fact, so it lives in the meta line.** `dueLine`
+(`src/lib/due.ts`) renders it as the last clause of a row's description ("Linear Algebra
 Done Right · 4 questions · due Friday") alongside the other quiet facts
 about the set. A turned-in homework says "turned in Sep 12" instead.
 
