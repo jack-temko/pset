@@ -1,5 +1,9 @@
 # e2e (visual state suite)
 
+> **Stale.** `states.ts` still describes the pre-rewrite app (Doctor,
+> Tasks, the old reader) and hasn't been rewired to the current three
+> screens. The runner and gallery work; the manifest needs rewriting.
+
 Drives the real SPA through every UI state in the manifest and writes a
 static HTML gallery for human review. The suite asserts almost nothing:
 readiness markers found, no console errors, screenshots written. The

@@ -10,10 +10,11 @@ network at test time — httptest fakes cover it.
 
 ## Model choice
 
-`ChatModel` in `llm.go` is the single hardcoded vision-capable chat model id
-(`"glm-5.3-flash"`); flip it there and nowhere else. Base URLs, keys, and the
-embeddings model come from the engine's settings (`internal/engine/config.go`),
-never from this package.
+The chat model, like the endpoints, key and embeddings model, is a
+setting (`internal/settings`, edited on the Settings screen) and arrives
+here in `Config`; this package holds no defaults of its own. The chat
+model must be vision-capable: locating a homework problem sends page
+images as `image_url` parts.
 
 ## Wire shapes
 

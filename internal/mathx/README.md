@@ -29,5 +29,6 @@ The deterministic calculator behind the chat tools `calc` and
 
 ## Consumers
 
-`internal/engine` binds these to the chat tool loop; nothing else imports
+`internal/agent` binds these to the chat tool loop (`tools.go`), and
+`internal/cards` uses them to check worked steps; nothing else imports
 this package.

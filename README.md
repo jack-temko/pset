@@ -1,121 +1,185 @@
 # PSet
 
-PSet is a study engine for digital textbooks: it ingests textbook PDFs and
-powers homework walkthroughs, quizzes, and answers. The core is a Go engine
-with a single adapter: an HTTP server that serves the JSON API and the
-embedded web interface.
+A study app for textbooks you own as PDFs. Put a book on the shelf and
+PSet reads it, page by page (OCR included, for scans). Then, beside the
+page scan:
 
-## Status: S5
+- **Ask** about the book. The tutor searches and reads the pages, looks at
+  figures, checks its arithmetic, and answers with page citations you can
+  click to jump the scan there. Theorems, worked derivations, plots and
+  tables come back as cards, and math renders properly.
+- **Work through homework.** Add the problems your professor assigned ("3.B.4",
+  or paste the text). PSet finds each one in the book, crops its figure,
+  and writes a hint and a walkthrough, both hidden until you ask for them.
+  Tick each problem off as you finish it, and print a clean worksheet to
+  work on paper.
+- **Keep track.** Home shows what's due and how your week went: time spent
+  on homework, reading and asking, by book.
 
-One-shot ingest as a background job. Importing a PDF hashes it, copies it
-into the library, extracts its text, OCRs scans page by page (resumable,
-local tesseract), and indexes structure (PDF bookmarks, font-size inference,
-or structural patterns over OCR text) — one queued, cancellable job that
-survives restarts. Serial job queue with progress, ETA, and cancel over the
-API; the web UI adds a Tasks card in the sidebar, live progress in the
-library, and a
-clickable table of contents in the reader. SQLite model layer (pure Go, no
-cgo), doctor checks, deterministic sample textbooks, two-tier test suite.
+It runs on your machine as one small server with the web app built in.
+Your books, notes and conversations stay in a local folder; the only
+things that leave it are the requests PSet makes to the chat and
+embeddings endpoints you configure.
 
-S5 adds Ask: full-text and local-embedding retrieval fused over a book's
-pages, and vision-augmented streaming answers — each page is sent to a
-hardcoded vision chat model both as extracted text and as a rendered image.
-The model writes structured JSON envelopes (equation, steps, theorem,
-definition, note) inside the streamed markdown; the engine extracts them
-mid-stream, validates each against an embedded JSON Schema, repairs a
-broken payload with one extra model round, and re-emits typed SSE events.
-Completed answers persist as ordered segment lists (prose, validated
-envelopes, degraded raw), with inline `[p. N]` citations parsed in the
-engine and stored on the answer; the web renders cards and never parses a
-fence. Page
-embeddings are built by a queued, resumable `embed` job; questions run over
-SSE; conversations persist per book. The LLM connection (endpoints, key,
-embedding model) lives in `~/.pset/config.json`, editable through the
-settings API.
+PSet is built for laptops and desktops: below a 1024px-wide window it
+asks you to come back on a bigger screen.
 
-## Usage
+## What you need
 
-```sh
+- **Go 1.26** or newer, and **Node.js 24** with npm, to build it.
+- **poppler-utils** (`pdfinfo`, `pdftotext`, `pdftoppm`), to read and
+  render PDFs.
+- **Tesseract**, to read scanned books.
+- **A chat model** behind an OpenAI-compatible API, and it must accept
+  images: PSet shows the model page images when it locates a problem. The
+  default is Z.ai's `glm-5.3-flash`; any vision-capable model on an
+  OpenAI-compatible endpoint works.
+- **An embeddings server**, for searching a book. The default is
+  [Ollama](https://ollama.com) on this machine with `nomic-embed-text`.
+
+On Debian or Ubuntu:
+
+```bash
+sudo apt install poppler-utils tesseract-ocr
+```
+
+On macOS:
+
+```bash
+brew install poppler tesseract
+```
+
+For the default embeddings, install Ollama, then:
+
+```bash
+ollama pull nomic-embed-text
+```
+
+## Install
+
+```bash
+git clone https://github.com/jack-temko/pset.git
+```
+
+```bash
+cd pset/web && npm ci && npm run build && cd ..
+```
+
+```bash
 go build -o pset ./cmd/pset
-
-# Serve the web interface + API (the SPA is embedded in the binary):
-pset                       # http://127.0.0.1:8420
-pset --addr 0.0.0.0:8420   # listen address override
-pset --db /tmp/pset.db     # database override (also $PSET_DB)
-pset --verbose             # developer trace on stderr
-pset --version
 ```
 
-Import happens in the UI — drag & drop, or a path on the server machine —
-and runs as a background job: the book appears in the library immediately
-while text extraction, OCR, and structure indexing continue. The task
-center in the navbar shows every job's stage, progress, ETA, and cancel
-button, and survives server restarts (paused jobs auto-resume).
+The web app is embedded in the binary, so build the web first: a binary
+built without it serves a "not built" notice instead of the app. The
+result is one file, `pset`, which you can put anywhere on your `PATH`.
 
-Data lives in `~/.pset/`: `pset.db` (SQLite), `config.json` (LLM
-connection: `apiBaseURL`, `apiKey`, `embedBaseURL`, `embedModel`),
-`library/<sha256>.pdf` (content-addressed imports), `spool/` (staged upload
-sources).
+## Run
 
-## Layout
-
-```
-cmd/pset/         server entrypoint (flags, signals, job runner)
-internal/engine/  core: ingest stages, job runner, OCR, structure, ask, doctor
-internal/llm/     OpenAI-compatible client: streaming chat + embeddings
-internal/api/     HTTP adapter: /api JSON + SSE + embedded SPA serving
-internal/pdf/     poppler wrapper (metadata, text extraction, XML, page images)
-internal/store/   SQLite model layer and migrations
-web/              frontend adapter (React SPA, embedded via web/embed.go)
-tools/samplegen/  generates the deterministic sample textbooks
-testdata/         committed sample books + manifest used by tests
+```bash
+./pset
 ```
 
-The engine never parses input or renders output; adapters own both. Doctor
-results are a `Report` of checks with findings (`info`/`warning`/`error`),
-so the API and frontend render the same data their own way.
+Then open <http://127.0.0.1:8420>.
 
-Each layer folder carries its own README covering purpose, dependencies, and
-contracts — start there before changing a layer.
+| Flag | Default | |
+|---|---|---|
+| `-addr` | `127.0.0.1:8420` | Where to listen. |
+| `-data` | `$PSET_DATA`, else `~/.local/share/pset` | Where your library lives. |
+| `-verbose` | off | Debug logging. |
+| `-version` | | Print the version and exit. |
+
+Flags go straight after `pset`; there are no subcommands. Stop it with
+Ctrl+C: work in progress (a book being read, a walkthrough being written)
+picks up where it left off on the next start.
+
+## First run
+
+1. **Open Settings** (the gear, top right) and fill in **Connections**:
+   - **Chat**: the endpoint, your API key and the model.
+   - **Embeddings**: the endpoint and the model.
+
+   **Test** tries the values on screen without saving them. **Save** tests
+   first and only keeps values that work. A book can't be prepared until an
+   embeddings server is saved.
+2. **Check Health** on the same page. It confirms the data folder, the
+   database, poppler and tesseract, and offers a fix where it can.
+3. Optionally, **add your name** under You. The greeting and the tutor
+   use it.
+
+## Using it
+
+**Add a book.** Press **+** on Home's shelf and pick a PDF. It shows on
+the shelf at once while PSet reads it; a scanned book takes longer, since
+every page is OCR'd. Open the book when it's ready.
+
+**The workspace.** The book's contents are on the left (click to jump),
+the page scan in the middle, and the panel on the right. Pinch or
+Ctrl+scroll to zoom the scan; the floating bar at the bottom shows the
+page and zoom, and clicking the zoom resets to fit. Page numbers are the
+ones printed in the book; hover one to see the PDF page. If the printed
+numbers are off, fix the offset with the pencil beside the book's title.
+**Focus** (top right of the panel) folds the contents away to widen the
+panel.
+
+**Ask.** Type a question and press Enter. You'll see each step as the tutor
+takes it ("Searched…", "Read p. 137"), in place between the paragraphs of
+its answer. Click a page chip to jump there. Stop ends an answer early.
+
+**Homework.** In the panel's Homework tab, add **New homework**, then **Add
+questions**, one per row. Untick **In this book** for a problem that isn't
+from this book; its guide is written from your text alone. Each question
+gets a hidden hint and a hidden walkthrough; click to reveal either. **Ask
+about this** takes a question over to Ask as context. The **⋯** menu
+prints a worksheet and marks the set turned in. When PSet can't find a
+problem, it asks for the page, or lets you paste the problem instead.
+
+**Memory.** The tutor keeps short notes per book: where results live, how
+the book is laid out, and how you like answers ("Use SI units"). Open
+**Memory** from the book's title bar to see, add or delete them. Every
+note says who saved it: you, the tutor, or PSet.
+
+## Your data
+
+Everything is under the data folder (`~/.local/share/pset` by default):
+`pset.db` (SQLite, including your settings and API key), `books/` (your
+PDFs), `cache/` (rendered pages), and `logs/llm.jsonl`, which records
+every request made to the chat model, with the model's reply. Back up or
+move the folder to take your library with you. **Settings → Reset** erases
+all of it, settings included.
 
 ## Development
 
-```sh
-go build ./... && go test ./...
-go build -o pset ./cmd/pset
+```bash
+make dev
 ```
 
-### Frontend
+This runs the Go server (rebuilt on save) and the Vite dev server with
+hot reload, and regenerates the TypeScript wire types whenever a Go
+`wire.go` changes. It keeps its own data in `.dev/data`, apart from your
+real library.
 
-```sh
-cd web
-npm install
-npm run build    # dist/ is embedded by web/embed.go; rebuild the binary after
-npm run dev      # Vite dev server, /api/* proxied to pset
+```bash
+make test
 ```
 
-`web/README.md` carries the UI standards — the design language, tokens, and
-component conventions every page follows.
+This runs `go test ./...` and the TypeScript type check. `cd web && npm
+run test` runs the frontend unit tests. No test calls a real model: model
+calls are tested against a fake server.
 
-### Testing
+### Layout
 
-Two tiers, separated by cost:
+```
+cmd/pset/        the server: wiring, flags, lifecycle
+internal/        one package per feature (library, homework, ask, settings,
+                 activity, memory) plus shared plumbing (db, jobs, events,
+                 llm, agent, cards, pdf, ocr, mathx, httpx)
+web/             the React app, embedded into the binary
+design/          the specs: the design system and each screen, as decided
+brain/           working notes and audit records
+testdata/        generated sample books the tests read
+tools/           the dev loop, the sample-book generator
+```
 
-- **Deterministic** (free, offline): `go test ./...`. Poppler/tesseract
-  tests skip automatically when the tools are not installed; the LLM client
-  and SSE paths run against httptest fakes, so nothing needs a network.
-- **Costs tokens**: `go test -tags llm ./...` — gated behind the `llm`
-  build tag, never run by default. A live smoke test sends one embedding
-  and one streamed "reply with the word ok" ask to the real endpoints;
-  envelope prompt-conformance probes make the real model emit all five
-  kinds and repair one deliberately broken payload. Everything skips
-  unless `~/.pset/config.json` carries an API key and the endpoints
-  answer.
-
-Sample textbooks in `testdata/` are generated by `tools/samplegen` and must
-regenerate byte-identical; `testdata/README.md` maps every pipeline stage to
-the test covering it.
-
-External tools: poppler-utils (`pdfinfo`, `pdftotext`, `pdftohtml`,
-`pdftoppm`) for ingest, indexing, and page images, and tesseract-ocr for
-OCR of scanned books. The doctor page reports any of them when missing.
+Features never import each other; each package's README covers its
+contracts. Start with `design/backend.md` for the backend and
+`design/design-system.md` for the UI.

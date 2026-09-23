@@ -27,24 +27,16 @@ their text to real models. Facts contain low-prior anchors (`KAX-4471`,
 guess, so tests can assert on exact strings. Fact text matches extracted text
 after whitespace normalisation (extraction breaks lines mid-paragraph).
 
-## Pipeline stages vs tests
+## What uses them
 
-| Stage | Status | Tier | Covered by today |
-|---|---|---|---|
-| Hash / identify | available | deterministic | `TestSampleManifestIntegrity` (root, `samples_test.go`), `TestGenerateReproducesCommittedTestdata` (`tools/samplegen`) |
-| Store (book row round-trip) | available | deterministic | `TestSampleBooksRoundTrip` (`internal/store`, `book_sample_test.go`) |
-| Metadata via poppler | available | deterministic, skips without poppler | `TestMetadataDigitalSampleMatchesManifest`, `TestSamplePageCountsMatchManifest` (root) |
-| Cheap text extraction via poppler | available | deterministic, skips without poppler | `TestDigitalTextContainsPlantedFacts`, `TestScannedTextIsNearEmpty` (`internal/pdf`) |
-| Import pipeline (hash → library copy → metadata → page storage, idempotent) | available | deterministic, skips without poppler | `TestImportDigitalSample`, `TestImportDuplicateIsNoop`, `TestImportScannedSampleRegistersNeedsOCR`, `TestImportWithoutPopplerFailsBeforeWriting`, `TestImportLogsStages` (`internal/engine`) |
-| OCR of scanned books (tesseract, resumable, state machine) | available | deterministic, skips without tesseract | `TestOcrScannedSample` (asserts S1–S8 modulo OCR confusables), `TestOcrResumesPartiallyStoredBook`, `TestOcrRefusesDigitalBook`, `TestOcrAmbiguousTarget` (`internal/engine`) |
-| Structure indexing — outline path | available | deterministic, skips without poppler | `TestIndexDigitalSampleOutline` (asserts O1–O6: titles, pages, levels, derived end pages), `TestIndexReplacesPreviousSections` (`internal/engine`), `TestIndexEndpoint`, `TestSectionsEndpoint` (`internal/api`) |
-| Structure indexing — inference path | available | deterministic, skips without poppler | `TestIndexFlatSampleInfersHeadings` (asserts H1–H3 and that the body-only page yields nothing), `TestIndexBookWithoutDetectableHeadings` (zero-sections outcome), classifier + end-page unit tests in `internal/engine/structure_test.go` (no poppler) |
-| Structure indexing — guards | available | deterministic | `TestIndexRefusesBooksWithoutPDFTextLayer` (both `none` and `ocr` states), `TestIndexWithoutPdftohtmlFails`, `TestIndexUnknownTarget` (`internal/engine`) |
-| LLM walkthrough / quiz / QA | future | `llm` build tag (costs money) | `TestQuizGenerationFromDigitalSample`, `TestQAGenerationFromDigitalSample` (root, `llm_test.go`) — skip: LLM adapter not implemented |
-| Vision extraction (scanned book) | future | `llm` build tag (costs money) | `TestVisionExtractionOfScannedSample` (root, `llm_test.go`) — skip: vision adapter not implemented |
+| What | Tests |
+|---|---|
+| The manifest matches the files | `TestSampleManifestIntegrity` (root, `samples_test.go`) |
+| The generator reproduces the committed PDFs | `TestGenerateReproducesCommittedTestdata` (`tools/samplegen`) |
+| Metadata and page counts via poppler (skips without it) | `TestSamplePageCountsMatchManifest` (root), `TestMetadataDigitalSampleMatchesManifest` (`internal/pdf`) |
+| Text extraction via poppler (skips without it) | `TestDigitalTextContainsPlantedFacts`, `TestScannedTextIsNearEmpty` (`internal/pdf`) |
 
-Tiers are mechanically separated: deterministic tests run under plain
-`go test ./...` with no network and no keys (poppler-dependent ones `t.Skip`
-when poppler-utils is absent); anything that would spend tokens lives in
-`llm_test.go` behind `//go:build llm` and only runs under
-`go test -tags llm`.
+All of these are deterministic: they run under plain `go test ./...` with
+no network and no keys, and the poppler ones `t.Skip` when poppler-utils
+is absent. Model calls are tested against the fake server in
+`internal/llm/llmtest`, never a real provider.

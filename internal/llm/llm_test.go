@@ -40,7 +40,7 @@ func TestChatStreamAssemblesDeltas(t *testing.T) {
 	var deltas []string
 	client := testClient(t, srv.URL, "")
 	text, err := client.ChatStream(context.Background(), ChatRequest{
-		Model:    ChatModel,
+		Model:    "test-model",
 		Messages: []Message{TextMessage("user", "hi")},
 		Stream:   true,
 	}, func(d string) error {
@@ -59,7 +59,7 @@ func TestChatStreamAssemblesDeltas(t *testing.T) {
 	if gotAuth["auth"] != "Bearer test-key" {
 		t.Errorf("auth = %v", gotAuth)
 	}
-	if gotBody["model"] != ChatModel || gotBody["stream"] != true {
+	if gotBody["model"] != "test-model" || gotBody["stream"] != true {
 		t.Errorf("body model/stream = %v", gotBody)
 	}
 }

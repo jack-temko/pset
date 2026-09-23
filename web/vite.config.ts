@@ -14,7 +14,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // Dev-only: forward API calls to the Go server (`pset serve`).
+      // Dev-only: forward API calls to the Go server (`pset`).
       // PSET_API_TARGET repoints it, e.g. at an acceptance server on :8421.
       '/api': process.env.PSET_API_TARGET ?? 'http://127.0.0.1:8420',
     },

@@ -20,10 +20,6 @@ import (
 	"time"
 )
 
-// ChatModel is the hardcoded chat model used for every ask. Vision-capable:
-// it must accept image_url content parts. Change it here and nowhere else.
-const ChatModel = "glm-5.3-flash"
-
 // DefaultTimeout bounds a whole HTTP exchange, streaming included. It is
 // generous because the long-form calls are genuinely long: writing one
 // walkthrough is a single request that routinely runs minutes, and cutting
