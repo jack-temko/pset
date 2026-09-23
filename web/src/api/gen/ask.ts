@@ -21,6 +21,12 @@ export interface Step {
   label: string;
   running: boolean;
   /**
+   * After is how many answer segments were written when the call ran:
+   * the feed is interleaved, not stacked at the top, so each step sits
+   * between the paragraphs it happened between.
+   */
+  after: number /* int */;
+  /**
    * MemoryID is the memory a remember step saved, for its Undo.
    */
   memoryId?: string;

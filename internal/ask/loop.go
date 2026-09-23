@@ -238,9 +238,13 @@ func (r *run) save(ctx context.Context, force bool) {
 func (r *run) step(ctx context.Context, label string, running bool) {
 	r.mu.Lock()
 	if !running && len(r.steps) > 0 && r.steps[len(r.steps)-1].Running {
-		r.steps[len(r.steps)-1] = Step{Label: label}
+		last := r.steps[len(r.steps)-1]
+		r.steps[len(r.steps)-1] = Step{Label: label, After: last.After}
 	} else {
-		r.steps = append(r.steps, Step{Label: label, Running: running})
+		// The prose so far ends here: the step goes after it, and what the
+		// model writes next starts a paragraph of its own.
+		r.parser.Break()
+		r.steps = append(r.steps, Step{Label: label, Running: running, After: len(r.parser.Segments())})
 	}
 	answer := r.parser.Segments()
 	r.mu.Unlock()

@@ -65,6 +65,7 @@ type Parser struct {
 
 	line string // the line in progress
 	sent int    // how much of line has gone out as prose already
+	broke bool // a tool ran: the next prose starts its own segment
 }
 
 func NewParser(ctx context.Context, opt Options, h Handler) *Parser {
@@ -115,6 +116,16 @@ func (p *Parser) Finish() {
 		keepSec = append(keepSec, p.secOf[i])
 	}
 	p.segs, p.secOf = keep, keepSec
+}
+
+// Break ends the prose segment in progress, so what comes next starts a
+// new one. The agent loop calls it when a tool runs: the step belongs
+// between the paragraph before it and the paragraph after, and segments
+// are what the transcript interleaves them with.
+func (p *Parser) Break() {
+	if n := len(p.segs); n > 0 && p.segs[n-1].Type == SegmentProse {
+		p.broke = true
+	}
 }
 
 // Segments is the whole answer, in order.
@@ -217,10 +228,11 @@ func (p *Parser) prose(text string) {
 	if p.h.Delta != nil {
 		p.h.Delta(text)
 	}
-	if n := len(p.segs); n > 0 && p.segs[n-1].Type == SegmentProse && p.secOf[n-1] == p.section {
+	if n := len(p.segs); n > 0 && p.segs[n-1].Type == SegmentProse && p.secOf[n-1] == p.section && !p.broke {
 		p.segs[n-1].Text += text
 		return
 	}
+	p.broke = false
 	p.add(Segment{Type: SegmentProse, Text: text})
 }
 

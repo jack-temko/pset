@@ -7,9 +7,8 @@ import {
   type ReactNode,
 } from 'react'
 
-import { CircleAlert } from 'lucide-react'
-
 import { useLiveStream } from '@/api/events'
+import { Flash } from '@/components/flash'
 import { TopBar } from '@/components/top-bar'
 import { cn } from '@/lib/utils'
 
@@ -42,15 +41,7 @@ const TitleSlot = createContext<(title: string | null) => void>(() => {})
 function LostTouch() {
   const live = useLiveStream()
   if (live) return null
-  return (
-    <div
-      role="status"
-      className="flex shrink-0 items-center justify-center gap-2 border-b border-warning bg-warning-soft px-4 py-1 text-sm text-warning"
-    >
-      <CircleAlert className="size-4 shrink-0" aria-hidden="true" />
-      <span>Lost touch with PSet. Reconnecting…</span>
-    </div>
-  )
+  return <Flash tone="warning">Lost touch with PSet. Reconnecting…</Flash>
 }
 
 export function AppShell({

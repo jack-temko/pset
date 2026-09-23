@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowUp,
@@ -13,12 +13,13 @@ import {
   Pencil,
   Plus,
   Printer,
+  RotateCcw,
   Square,
   Trash2,
-  X,
 } from 'lucide-react'
 
 import { AppShell } from '@/components/shell'
+import { Flash } from '@/components/flash'
 import { Box, BoxRow } from '@/components/box'
 import { DoorAction } from '@/components/door'
 import { Checkbox } from '@/components/checkbox'
@@ -221,13 +222,13 @@ const ZOOM_MAX = 3
  * Pages stack in one scrolling pane, edge-to-edge paper. Each is the
  * engine's render of that page, in a box at the page's own proportions so
  * nothing moves when it arrives; its printed number shows until it does.
- * The only chrome is the floating pill:
+ * The only chrome is the floating bar:
  * the printed page (the PDF page on hover) and the zoom, awake on arrival
  * and fading when idle.
  *
  * Pinch on a trackpad zooms around the pointer; past the pane's width a
- * click-drag pans, and only then is the cursor a hand. The percentage
- * opens the zoom menu.
+ * click-drag pans, and only then is the cursor a hand. Zoomed, the
+ * percentage is a button that snaps back to fit.
  */
 function Scan({
   bookId,
@@ -268,10 +269,13 @@ function Scan({
     y: number
   } | null>(null)
 
+  // A pointer resting on the bar isn't idle: it stays until the pointer
+  // leaves, so its button never fades out from under the cursor.
+  const hovered = useRef(false)
   const wake = () => {
     setPillAwake(true)
     clearTimeout(sleepTimer.current)
-    sleepTimer.current = setTimeout(() => setPillAwake(false), 1200)
+    sleepTimer.current = setTimeout(() => !hovered.current && setPillAwake(false), 1200)
   }
   // The first sleep: the pill says where you are on arrival, then lets
   // the paper have the frame back.
@@ -342,6 +346,8 @@ function Scan({
 
   const fitWidth = Math.min(768, Math.max(paneWidth - 48, 0))
   const width = fitWidth * zoom
+  const percent = Math.round(zoom * 100)
+  const zoomed = percent !== 100
   // Panning only means something once the pages are wider than the pane.
   const canPan = width + 48 > paneWidth + 1
 
@@ -388,9 +394,7 @@ function Scan({
         )}
       >
         <div
-          // Night dims the paper a little, so a full-white page doesn't
-          // glare; scans themselves are never filtered.
-          className="mx-auto space-y-6 px-6 py-6 dark:brightness-90"
+          className="mx-auto space-y-6 px-6 py-6"
           style={{ width: width ? width + 48 : undefined }}
         >
           {Array.from({ length: pageCount }, (_, i) => i + 1).map((n) => (
@@ -421,166 +425,59 @@ function Scan({
         </div>
       </div>
 
+      {/* A floating bar, shaped like the Veil's chip and the Menu's card:
+          radius-md, hairline, the floating shadow. The zoom is a button
+          only while there is something to reset, and says so: the value,
+          a reset icon, and "Fit to width" on hover. At fit it's a fact. */}
       <div
-        onMouseEnter={wake}
+        onMouseEnter={() => {
+          hovered.current = true
+          wake()
+        }}
+        onMouseLeave={() => {
+          hovered.current = false
+          wake()
+        }}
         className={cn(
-          'absolute bottom-6 left-1/2 flex h-control-sm -translate-x-1/2 items-center gap-2 rounded-full border bg-card px-4 font-mono text-xs text-muted-foreground shadow-floating tabular-nums transition-opacity duration-150 ease-out focus-within:opacity-100 motion-reduce:transition-none',
+          'absolute bottom-6 left-1/2 flex h-control -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-1 text-xs text-muted-foreground shadow-floating transition-opacity duration-150 ease-out focus-within:opacity-100 motion-reduce:transition-none',
           pillAwake ? 'opacity-100' : 'opacity-0',
         )}
       >
         <Tooltip label={`PDF page ${currentPage} of ${pageCount}`}>
-          <span tabIndex={0} className="rounded-sm">
+          <span tabIndex={0} className="flex h-control-sm items-center rounded-md px-2 font-mono tabular-nums">
             p. {printedLabel(currentPage, offset)}
           </span>
         </Tooltip>
-        <span aria-hidden>·</span>
-        <ZoomMenu
-          zoom={zoom}
-          onPick={(z) => {
-            setZoom(z)
-            wake()
-          }}
-        />
-      </div>
-    </div>
-  )
-}
-
-/** The pill's zoom control: the percentage opens a menu of the stops
- *  worth naming. A pinch or ctrl-wheel still moves freely between them. */
-function ZoomMenu({ zoom, onPick }: { zoom: number; onPick: (z: number) => void }) {
-  const [open, setOpen] = useState(false)
-  const root = useRef<HTMLDivElement>(null)
-  const trigger = useRef<HTMLButtonElement>(null)
-  const panel = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    panel.current?.querySelector<HTMLElement>('[role^="menuitem"]')?.focus()
-    const onDown = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false)
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      setOpen(false)
-      trigger.current?.focus()
-    }
-    document.addEventListener('pointerdown', onDown)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('pointerdown', onDown)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
-
-  const at = (z: number) => Math.abs(zoom - z) < 0.01
-  const item =
-    'flex h-control w-full cursor-pointer items-center gap-2 px-3 text-left text-sm text-foreground transition-colors duration-150 ease-out outline-none hover:bg-muted/50 focus-visible:bg-muted/50 motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0'
-
-  return (
-    <div ref={root} className="relative">
-      <Tooltip label="Zoom">
-        <button
-          ref={trigger}
-          type="button"
-          aria-haspopup="menu"
-          aria-expanded={open}
-          onClick={() => setOpen((o) => !o)}
-          className="cursor-pointer rounded-sm transition-colors duration-150 ease-out hover:text-foreground motion-reduce:transition-none"
-        >
-          {Math.round(zoom * 100)}%
-        </button>
-      </Tooltip>
-      {open && (
-        // Opens upward: the pill sits at the pane's bottom edge.
-        <div
-          ref={panel}
-          role="menu"
-          aria-label="Zoom"
-          className="absolute bottom-full left-1/2 z-50 mb-2 flex -translate-x-1/2 flex-col overflow-hidden rounded-md border bg-card shadow-floating"
-        >
-          {(
-            [
-              { label: 'Fit to width', value: 1 },
-              { label: '150%', value: 1.5 },
-              { label: '200%', value: 2 },
-            ] as const
-          ).map((s) => (
-            <button
-              key={s.label}
-              type="button"
-              role="menuitemradio"
-              aria-checked={at(s.value)}
-              className={cn(item, '[&_svg]:text-muted-foreground')}
+        <span aria-hidden className="h-4 w-px bg-border-muted" />
+        {zoomed ? (
+          <Tooltip label="Fit to width">
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`${percent}%, fit to width`}
               onClick={() => {
-                setOpen(false)
-                onPick(s.value)
-                trigger.current?.focus()
+                setZoom(1)
+                wake()
               }}
+              className="font-mono tabular-nums"
             >
-              {at(s.value) ? <Check className="text-primary!" /> : <span className="size-4" />}
-              {s.label}
-            </button>
-          ))}
-        </div>
-      )}
+              {percent}%
+              <RotateCcw />
+            </Button>
+          </Tooltip>
+        ) : (
+          <span className="flex h-control-sm items-center px-2 font-mono tabular-nums">{percent}%</span>
+        )}
+      </div>
     </div>
   )
 }
 
 // ---------------------------------------------------------------- panel
 
-/**
- * A question that didn't send, as the homework failure card's sibling: a
- * title naming what failed, the server's sentence, and the ways out. No
- * chat model: Open Settings, then Try again. Anything else: Try again.
- */
-function AskError({ error, onRetry }: { error: Error; onRetry: () => void }) {
-  const setup = error instanceof ApiError && error.code === 'not_configured'
-  return (
-    <FailureNotice
-      title={setup ? 'The chat model needs setting up' : "The question didn't send"}
-      reason={error.message}
-      setup={setup}
-      onRetry={onRetry}
-    />
-  )
-}
-
-/** The shared Ask failure shape: what broke, the server's sentence, and the
- *  way out. Setup failures get Open Settings; everything else Try again. */
-function FailureNotice({
-  title,
-  reason,
-  setup,
-  onRetry,
-}: {
-  title: string
-  reason: string
-  setup: boolean
-  onRetry: () => void
-}) {
-  const navigate = useNavigate()
-  return (
-    <div className="mb-3 space-y-1">
-      <p className="flex items-center gap-2 text-sm font-semibold">
-        <CircleAlert className="size-4 shrink-0 text-destructive" />
-        {title}
-      </p>
-      <p className="text-sm text-muted-foreground">{reason}</p>
-      <div className="flex items-center gap-2 pt-1">
-        {setup && <Button onClick={() => navigate('/settings#connections')}>Open Settings</Button>}
-        <Button variant={setup ? 'ghost' : 'primary'} onClick={onRetry}>
-          Try again
-        </Button>
-      </div>
-    </div>
-  )
-}
-
 /** Mid-turn and preflight setup failures share one sentence (ask's
- *  noChatModel const), so a model that vanished mid-answer gets the full
- *  card, not the one-line note. */
+ *  noChatModel const), so a model that vanished mid-answer gets Open
+ *  Settings too. */
 const isSetupReason = (reason?: string | null) => !!reason?.includes('no chat model set up yet')
 
 /** A day as a divider says it: "Today", "Yesterday", "Sep 12". */
@@ -593,46 +490,60 @@ function dayLabel(iso: string, now = new Date()): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-/** One turn: the question on the right, the step feed, the answer. */
+/**
+ * One turn: the question on the right, then the answer as one stream,
+ * with each tool call on the feed where it happened. A call that runs
+ * between two paragraphs is drawn between them, because that is what it
+ * was: the app went and looked something up mid-sentence, and a feed
+ * stacked at the top would say it happened before any of it.
+ *
+ * Nothing draws a skeleton for the answer itself: its shape is unknown
+ * until it arrives, so a shimmer would promise a size it may not take.
+ * Skeletons belong to cards, where the envelope named the kind first.
+ */
 function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) => void; onRetry: () => void }) {
+  const navigate = useNavigate()
   const running = t.state === 'running'
-  const lastRunning = t.steps.length > 0 && t.steps[t.steps.length - 1].running
+  const last = t.steps[t.steps.length - 1]
+  const lastRunning = !!last?.running
+  // Each step sits after the segments written when it ran. Turns saved
+  // before steps carried a position have none, and land at the top, as
+  // they always did.
+  const feed = (i: number) => {
+    const at = t.steps.filter((s) => Math.min(s.after ?? 0, t.answer.length) === i)
+    if (at.length === 0) return null
+    return (
+      <Steps
+        steps={at.map((s) =>
+          s.memoryId ? { label: s.label, action: <MemoryUndo bookId={t.bookId} memoryId={s.memoryId} /> } : s.label,
+        )}
+        running={running && lastRunning && at.includes(last)}
+      />
+    )
+  }
   return (
     <>
       <UserTurn about={t.about || undefined}>{t.question}</UserTurn>
-      {t.steps.length > 0 && (
-        <Steps
-          steps={t.steps.map((s) =>
-            s.memoryId ? { label: s.label, action: <MemoryUndo bookId={t.bookId} memoryId={s.memoryId} /> } : s.label,
-          )}
-          running={running && lastRunning}
-        />
-      )}
-      {(t.answer.length > 0 || t.pending) && (
+      {(t.steps.length > 0 || t.answer.length > 0 || t.pending) && (
         <AssistantTurn>
-          <Segments segments={t.answer} onJump={onJump} />
+          {t.answer.map((seg, i) => (
+            <Fragment key={i}>
+              {feed(i)}
+              <Segments segments={[seg]} onJump={onJump} />
+            </Fragment>
+          ))}
+          {feed(t.answer.length)}
           {t.pending && <CardSkeleton kind={t.pending.kind} repairing={t.pending.repairing} />}
         </AssistantTurn>
       )}
-      {running && t.steps.length === 0 && t.answer.length === 0 && (
-        // Before the first step or word: the answer is on its way.
-        <p className="space-y-1 text-base" aria-busy="true">
-          <Skeleton className="h-3 w-full" />
-          <Skeleton className="h-3 w-2/3" />
-        </p>
-      )}
       {t.state === 'stopped' && <StoppedNote />}
-      {t.state === 'failed' &&
-        (isSetupReason(t.reason) ? (
-          <FailureNotice
-            title="The chat model needs setting up"
-            reason={t.reason ?? ''}
-            setup
-            onRetry={onRetry}
-          />
-        ) : (
-          <FailedTurn reason={t.reason ?? ''} onRetry={onRetry} />
-        ))}
+      {t.state === 'failed' && (
+        <FailedTurn
+          reason={t.reason ?? ''}
+          onRetry={onRetry}
+          onSetup={isSetupReason(t.reason) ? () => navigate('/settings#connections') : undefined}
+        />
+      )}
     </>
   )
 }
@@ -657,6 +568,7 @@ function AskTab({
   const ask = useAsk(bookId)
   const stop = useStopTurn()
   const clear = useClearTurns(bookId)
+  const navigate = useNavigate()
   const [text, setText] = useState('')
   const scroller = useRef<HTMLDivElement | null>(null)
   const pinned = useRef(true)
@@ -735,7 +647,19 @@ function AskTab({
             <AboutChip label={about.label} onRemove={onClearAbout} />
           </div>
         )}
-        {ask.isError && <AskError error={ask.error} onRetry={() => send(text, about)} />}
+        {ask.isError && (
+          <div className="mb-2">
+            <FailedTurn
+              reason={ask.error.message}
+              onRetry={() => send(text, about)}
+              onSetup={
+                ask.error instanceof ApiError && ask.error.code === 'not_configured'
+                  ? () => navigate('/settings#connections')
+                  : undefined
+              }
+            />
+          </div>
+        )}
         <form
           className="flex items-end gap-2"
           onSubmit={(e) => {
@@ -1159,7 +1083,7 @@ function Walkthrough({
                 yet. Working gets the spinner and the shimmer. */}
             {queued ? (
               <p className="text-xs text-muted-foreground">
-                {ahead ? 'Queued: it starts when the questions ahead of it are done.' : 'Waiting for its turn…'}
+                {ahead ? 'Queued: it starts when the questions ahead of it are done.' : 'Queued: it starts in a moment.'}
               </p>
             ) : (
               working && (
@@ -1537,22 +1461,23 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
       >
         <div className="flex h-full min-h-0 flex-col">
           {titlePrompt && (
-            <div className="flex shrink-0 items-center justify-center gap-2 border-b bg-card px-4 py-1 text-sm">
-              <span className="text-muted-foreground">This book is named after its file.</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  dismissTitlePrompt()
-                  setEditingBook(true)
-                }}
-              >
-                Edit the title
-              </Button>
-              <IconButton variant="ghost" size="sm" aria-label="Dismiss" onClick={dismissTitlePrompt}>
-                <X />
-              </IconButton>
-            </div>
+            <Flash
+              onDismiss={dismissTitlePrompt}
+              action={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    dismissTitlePrompt()
+                    setEditingBook(true)
+                  }}
+                >
+                  Edit the title
+                </Button>
+              }
+            >
+              This book is named after its file.
+            </Flash>
           )}
           <div className="flex min-h-0 flex-1" onPointerDownCapture={() => (activity.current = 'reading')}>
           {!focus &&

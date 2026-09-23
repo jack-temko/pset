@@ -17,6 +17,10 @@ const (
 type Step struct {
 	Label   string `json:"label"`
 	Running bool   `json:"running"`
+	// After is how many answer segments were written when the call ran:
+	// the feed is interleaved, not stacked at the top, so each step sits
+	// between the paragraphs it happened between.
+	After int `json:"after"`
 	// MemoryID is the memory a remember step saved, for its Undo.
 	MemoryID string `json:"memoryId,omitempty"`
 }

@@ -17,7 +17,7 @@ bar's middle names the book.
 ## Page numbers
 
 **The app speaks the printed page number everywhere** (2026-09-21): page
-chips, the rail, the scan pill, and anything you type. It's the number a
+chips, the rail, the scan's floating bar, and anything you type. It's the number a
 syllabus, the index and the professor use. **Hovering any of them shows
 the PDF page** in a Tooltip; the PDF index never appears otherwise.
 Front matter before printed page 1 shows its roman numerals, as the book
@@ -32,13 +32,18 @@ can correct it.
 
 - **Continuous vertical scroll**: pages stack like a PDF reader.
 - Pages are **backend-rendered images**, lazy-loaded `<img>`s. No pdf.js.
-- Chrome is one **floating pill**, bottom-center: page indicator · zoom.
-  Appears on hover/scroll, fades when idle. The scan is otherwise
+- Chrome is one **floating bar**, bottom-center: page indicator | zoom,
+  shaped like the system's other floating surfaces (radius-md, hairline,
+  `floating` shadow). **Shows on arrival**, then on hover, scroll or
+  focus, and fades when idle (2026-09-22: arriving, it says where you
+  are before handing the frame back to the paper). The scan is otherwise
   edge-to-edge paper.
 - **Pinch on a trackpad zooms into the spot under the pointer**, which stays put,
   from 50% to 300% of fit-width. **Past the pane's width, click-drag
   pans**, and only then is the cursor a hand. **Clicking the percentage
-  snaps back to fit.** A zoomed page scrolls sideways in its pane: content
+  snaps back to fit**: zoomed, it is a ghost button with a reset icon and
+  a "Fit to width" tooltip; at fit it is plain text, with nothing to
+  reset. A zoomed page scrolls sideways in its pane: content
   that can't reflow, the one sideways scroll the system allows.
 
 ## The book
@@ -69,9 +74,20 @@ built.
 - **Visible step feed**: each tool call renders as its own quiet row in
   the transcript, as it happens, and stays. One line per call: verb,
   object, count ("Searched 'eigenvalue' · 6 pages"), no expansion.
+  **Interleaved, not stacked** (2026-09-22): a call sits where it
+  happened, between the paragraph before it and the paragraph after,
+  because that is what it was. The engine records with each step how
+  many answer segments were written when it ran, and a running tool
+  ends the paragraph in progress. Copy takes the answer alone: the feed
+  is the app talking, not the words.
 - **Turns are asymmetric**: the question is a compact `primary-soft`
   block on the right; the answer is full-width quiet text on the panel
-  ground. The answer **streams** in after the steps.
+  ground. The answer **streams** in around the steps.
+- **No skeleton for the answer** (2026-09-22): until it arrives, its
+  shape is unknown, and a shimmer at a made-up size promises one. The
+  wait is said by the feed's first line and by Stop in the composer.
+  Skeletons are for **cards**, where the envelope names the kind before
+  the card arrives, so the shape is known.
 - **Citations are inline page chips**: a distinct small mono element
   ("p. 142") in the prose, not underlined text and not a card. Click
   scrolls the scan there and flashes the page's edge.
@@ -80,7 +96,11 @@ built.
 - **Send becomes Stop** while the loop runs; stopping freezes the feed
   and keeps the partial answer with a "stopped" note.
 - **A failed loop** freezes the feed, says what happened in one
-  destructive-ink line, and offers Try again. Partial text stays.
+  destructive-ink line, and offers Try again. Partial text stays. When
+  the cause is **setup** (no chat model), the line also offers **Open
+  Settings** at Connections, ahead of Try again, as a failed homework
+  question does (2026-09-22). A question that never sent says so in the
+  same line above the composer.
 - **Past turns**: Copy on the answer, nothing else. History is
   append-only, no edit, no retry of old turns.
 - **Endless history with day dividers** (quiet centered hairline:

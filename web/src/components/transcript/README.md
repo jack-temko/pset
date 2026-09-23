@@ -9,20 +9,30 @@ chat where you ask, page where it answers. No bubbles.
 
 - **`Steps`**: the visible step feed, one `text-xs` muted line per tool
   call, "verb · object · count". The line is the whole story; nothing
-  expands.
+  expands. A turn draws **one group per position**, inside
+  `AssistantTurn` and between the paragraphs the calls ran between: the
+  page tells `Steps` which slice goes where. The group carries
+  `data-copy-skip`, so Copy takes the answer without the feed.
 - **`PageRef`**: the inline citation, a small mono `primary-soft` chip
   ("p. 142") that reads as an object in the prose. Click jumps the scan;
   hover fills `primary`.
 - **`MathInline` / `MathDisplay`**: KaTeX, `throwOnError: false` so bad
   TeX renders as its source instead of crashing a turn.
 - **`AssistantTurn`** carries Copy on hover: the only action a past turn
-  has. History is append-only: no edit, no retry.
+  has, and it copies its children in order, skipping anything marked
+  `data-copy-skip` (the step feed). History is append-only: no edit, no
+  retry.
 - **`DayDivider`**: a quiet centered mark on a hairline when the date
   changes.
 - **`ConversationStart`**: the top of the endless history:
   "Start of conversation · Clear", confirming in place.
 - **`FailedTurn`**: one destructive-ink line + Try again; the feed above
-  stays frozen, partial text stays.
+  stays frozen, partial text stays. A setup failure (no chat model) passes
+  `onSetup` and gains **Open Settings**, which leads (outline) while Try
+  again steps back to ghost: retrying can't help until Settings is fixed.
+  The two buttons take their own row under the sentence, which is too
+  long to share a line with them in the panel.
+  The same line serves a question that never sent.
 
 **Don't:** give steps chevrons or results; render citations as bare
 links or cards; put actions on user turns; auto-clear anything.

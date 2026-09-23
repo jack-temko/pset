@@ -10,7 +10,6 @@ import { Field, Input } from '@/components/input'
 import { SegmentedControl } from '@/components/segmented-control'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
-import { cn } from '@/lib/utils'
 import { ApiError } from '@/api/client'
 import {
   useAbout,
@@ -36,15 +35,13 @@ import { applyTheme, getTheme, type Theme } from '@/lib/theme'
 
 // ---------------------------------------------------------------- connections
 
-type FieldSpec = { key: string; label: string; hint?: string; mono?: boolean; secret?: boolean }
+type FieldSpec = { key: string; label: string; hint?: string; mono?: boolean }
 
 type Status =
   | { kind: 'idle' }
   | { kind: 'working'; verb: 'Testing' | 'Saving' }
   | { kind: 'ok'; text: string }
   | { kind: 'failed'; text: string }
-
-const TEST_SAVE_HINT = 'Test tries these values without saving. Save tests first, then keeps them.'
 
 /**
  * One endpoint's fields, with Test and Save.
@@ -73,7 +70,6 @@ function ConnectionBox({
   const [values, setValues] = useState(initial)
   const [error, setError] = useState<{ field: string; text: string } | null>(null)
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
-  const [revealed, setRevealed] = useState(false)
   const rows = useRef<Record<string, HTMLDivElement | null>>({})
 
   const [savedOnce, setSavedOnce] = useState(ready)
@@ -127,48 +123,32 @@ function ConnectionBox({
               hint={f.hint}
               error={error?.field === f.key ? error.text : undefined}
             >
-              <span className="flex items-center gap-2">
-                <Input
-                  type={f.secret && !revealed ? 'password' : undefined}
-                  value={values[f.key]}
-                  spellCheck={false}
-                  className={cn(f.mono && 'font-mono', f.secret && 'min-w-0 flex-1')}
-                  aria-invalid={error?.field === f.key || undefined}
-                  onChange={(e) => {
-                    setValues((v) => ({ ...v, [f.key]: e.target.value }))
-                    // Editing the field that failed is the fix in progress.
-                    if (error?.field === f.key) setError(null)
-                    if (status.kind !== 'working') setStatus({ kind: 'idle' })
-                  }}
-                />
-                {f.secret && (
-                  <Button variant="ghost" size="sm" type="button" onClick={() => setRevealed((r) => !r)}>
-                    {revealed ? 'Hide' : 'Show'}
-                  </Button>
-                )}
-              </span>
+              <Input
+                value={values[f.key]}
+                spellCheck={false}
+                className={f.mono ? 'font-mono' : undefined}
+                aria-invalid={error?.field === f.key || undefined}
+                onChange={(e) => {
+                  setValues((v) => ({ ...v, [f.key]: e.target.value }))
+                  // Editing the field that failed is the fix in progress.
+                  if (error?.field === f.key) setError(null)
+                  if (status.kind !== 'working') setStatus({ kind: 'idle' })
+                }}
+              />
             </Field>
           </div>
         ))}
       </BoxBody>
-      <BoxFooter className="flex-col items-stretch gap-1">
-        <span className="flex items-center justify-between gap-3">
-          <StatusLine status={status} />
-          <span className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={working} onClick={() => run(false)}>
-              Test
-            </Button>
-            <Button
-              size="sm"
-              disabled={working || !dirty}
-              title={dirty ? undefined : 'Nothing to save yet'}
-              onClick={() => run(true)}
-            >
-              Save
-            </Button>
-          </span>
+      <BoxFooter>
+        <StatusLine status={status} />
+        <span className="flex gap-2">
+          <Button variant="outline" size="sm" disabled={working} onClick={() => run(false)}>
+            Test
+          </Button>
+          <Button size="sm" disabled={working || !dirty} onClick={() => run(true)}>
+            Save
+          </Button>
         </span>
-        <p>{TEST_SAVE_HINT}</p>
       </BoxFooter>
     </Box>
   )
@@ -187,14 +167,16 @@ function ConnectionSkeleton({ title, fields }: { title: string; fields: FieldSpe
           </Field>
         ))}
       </BoxBody>
-      <BoxFooter className="flex-col items-stretch gap-1">
-        <span className="flex items-center justify-between gap-3">
-          <span />
+      <BoxFooter>
+        <span />
+        <span className="flex gap-2">
           <Button variant="outline" size="sm" disabled>
             Test
           </Button>
+          <Button size="sm" disabled>
+            Save
+          </Button>
         </span>
-        <p>{TEST_SAVE_HINT}</p>
       </BoxFooter>
     </Box>
   )
@@ -477,7 +459,7 @@ function plural(n: number, word: string) {
 
 const CHAT_FIELDS: FieldSpec[] = [
   { key: 'endpoint', label: 'Endpoint', mono: true },
-  { key: 'apiKey', label: 'API key', mono: true, secret: true },
+  { key: 'apiKey', label: 'API key', mono: true },
   { key: 'model', label: 'Model', mono: true },
 ]
 

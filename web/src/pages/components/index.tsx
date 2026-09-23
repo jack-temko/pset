@@ -8,6 +8,7 @@ import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@
 import { Button, IconButton } from '@/components/button'
 import { ImportRow } from '@/components/import-row'
 import { Door } from '@/components/door'
+import { Flash } from '@/components/flash'
 import { HomeworkStatusLabel } from '@/components/homework-status'
 import { Label } from '@/components/label'
 import {
@@ -335,6 +336,31 @@ export function Components() {
         </Section>
 
         <Section
+          title="Flash"
+          note="A full-width strip under the top bar: one sentence about the whole screen, at most one action."
+        >
+          <Shelf label="warning">
+            <div className="w-full max-w-xl overflow-hidden rounded-md border">
+              <Flash tone="warning">Lost touch with PSet. Reconnecting…</Flash>
+            </div>
+          </Shelf>
+          <Shelf label="default, with action">
+            <div className="w-full max-w-xl overflow-hidden rounded-md border">
+              <Flash
+                onDismiss={() => {}}
+                action={
+                  <Button variant="outline" size="sm">
+                    Edit the title
+                  </Button>
+                }
+              >
+                This book is named after its file.
+              </Flash>
+            </div>
+          </Shelf>
+        </Section>
+
+        <Section
           title="BookCover"
           note="Six hues, derived from the sha and never chosen. Sized by its container at a 3:4 ratio."
         >
@@ -576,6 +602,14 @@ export function Components() {
             <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
               <Steps steps={['Searched ‘spectral theorem’ · 5 pages']} />
               <FailedTurn reason="The model connection dropped." />
+            </div>
+          </Shelf>
+          <Shelf label="failed: setup">
+            <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
+              <FailedTurn
+                reason="There's no chat model set up yet. Add one in Settings, under Connections, then try again."
+                onSetup={() => {}}
+              />
             </div>
           </Shelf>
           <Shelf label="marks">

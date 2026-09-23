@@ -39,14 +39,21 @@ function patchTurn(qc: QueryClient, id: string, fn: (t: LiveTurn) => LiveTurn) {
   }
 }
 
-function appendProse(answer: Segment[], text: string): Segment[] {
+/** Streamed prose joins the paragraph in progress, unless a tool call
+ *  ended it: a step sitting at the end of the answer (`after` is the
+ *  segment count it ran at) means what comes next is its own paragraph,
+ *  the way the server stored it. */
+function appendProse(t: LiveTurn, text: string): Segment[] {
+  const answer = t.answer
   const last = answer[answer.length - 1]
-  if (last?.type === 'prose') return [...answer.slice(0, -1), { ...last, text: (last.text ?? '') + text }]
+  const broke = t.steps.some((s) => s.after === answer.length)
+  if (last?.type === 'prose' && !broke)
+    return [...answer.slice(0, -1), { ...last, text: (last.text ?? '') + text }]
   return [...answer, { type: 'prose', text }]
 }
 
 on<TurnChanged>('turn.changed', (d, qc) => putTurn(qc, d.turn))
-on<TurnDelta>('turn.delta', (d, qc) => patchTurn(qc, d.turnId, (t) => ({ ...t, answer: appendProse(t.answer, d.text) })))
+on<TurnDelta>('turn.delta', (d, qc) => patchTurn(qc, d.turnId, (t) => ({ ...t, answer: appendProse(t, d.text) })))
 on<TurnCardStart>('turn.card.start', (d, qc) => patchTurn(qc, d.turnId, (t) => ({ ...t, pending: { kind: d.kind, repairing: false } })))
 on<TurnCardStart>('turn.card.repairing', (d, qc) =>
   patchTurn(qc, d.turnId, (t) => ({ ...t, pending: { kind: d.kind, repairing: true } })),

@@ -64,7 +64,8 @@ export function AboutChip({ label, onRemove }: { label: string; onRemove?: () =>
  */
 export function Steps({ steps, running }: { steps: StepLine[]; running?: boolean }) {
   return (
-    <div className="space-y-1">
+    // Not part of the answer: Copy skips it.
+    <div className="space-y-1" data-copy-skip="">
       {steps.map((s, i) => {
         const live = running && i === steps.length - 1
         const line = typeof s === 'string' ? { label: s } : s
@@ -121,7 +122,15 @@ export function AssistantTurn({ children }: { children: ReactNode }) {
         type="button"
         aria-label="Copy answer"
         onClick={(e) => {
-          const text = e.currentTarget.parentElement?.innerText ?? ''
+          // The answer, not the feed: the step lines between paragraphs
+          // are the app talking, and copying them would paste the
+          // machinery along with the words.
+          const button = e.currentTarget
+          const text = Array.from(button.parentElement?.children ?? [])
+            .filter((el) => el !== button && !el.hasAttribute('data-copy-skip'))
+            .map((el) => (el as HTMLElement).innerText)
+            .filter(Boolean)
+            .join('\n\n')
           try {
             void navigator.clipboard.writeText(text)
           } catch {
@@ -224,14 +233,45 @@ export function ConversationStart({ onClear }: { onClear?: () => void }) {
 }
 
 /** A loop that died: the feed above freezes, this says why in one line,
- *  and Try again re-runs the same question. */
-export function FailedTurn({ reason, onRetry }: { reason: string; onRetry?: () => void }) {
-  return (
-    <div className="flex items-center gap-2 text-xs text-destructive">
+ *  and Try again re-runs the same question. A setup failure (no chat
+ *  model) also takes `onSetup`: Open Settings leads, since trying again
+ *  can't help until that's fixed, and Try again steps back to ghost. */
+export function FailedTurn({
+  reason,
+  onRetry,
+  onSetup,
+}: {
+  reason: string
+  onRetry?: () => void
+  onSetup?: () => void
+}) {
+  const line = (
+    <>
       <span className="flex h-5 shrink-0 items-center">
         <CircleAlert className="size-4" />
       </span>
       <span className="min-w-0 flex-1 font-normal">{reason}</span>
+    </>
+  )
+  // Two actions don't fit beside a sentence in a 440px panel: they drop
+  // to their own row, under the text.
+  if (onSetup)
+    return (
+      <div className="space-y-2 text-xs text-destructive">
+        <div className="flex gap-2">{line}</div>
+        <div className="flex gap-2 pl-6">
+          <Button variant="outline" size="sm" onClick={onSetup}>
+            Open Settings
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onRetry}>
+            Try again
+          </Button>
+        </div>
+      </div>
+    )
+  return (
+    <div className="flex items-center gap-2 text-xs text-destructive">
+      {line}
       <Button variant="outline" size="sm" onClick={onRetry} className="shrink-0">
         Try again
       </Button>
