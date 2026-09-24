@@ -1,5 +1,16 @@
 # Agent notes
 
+## Work on a branch, then merge it
+
+Jack works on `main` at the same time, so every change goes on its own
+branch, never straight onto `main`. When the change is done and checked
+(the tests, and the real app for a UI change):
+
+1. Bring `main` into the branch and resolve any conflicts there.
+2. Run the checks again on the merged result.
+3. Merge the branch into `main` with a merge commit, named like the
+   history's own ("Merge <branch>: <what it does>"), and push.
+
 ## Checking UI changes
 
 There is no automated visual suite. See a UI change working in the real
