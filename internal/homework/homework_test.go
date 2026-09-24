@@ -676,3 +676,60 @@ func TestAFoundQuestionIsWrittenAgainWithoutLookingAgain(t *testing.T) {
 		t.Fatalf("looked again: %d locates, page %v", locates, q.Page)
 	}
 }
+
+// Every update to a question bumps its Rev by exactly one, whatever it
+// touches: the client keeps the higher Rev of two snapshots, so a write
+// that forgot to bump would let a stale snapshot win.
+func TestEveryUpdateBumpsRev(t *testing.T) {
+	ctx := context.Background()
+	d, err := db.Open(filepath.Join(t.TempDir(), "pset.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	migs := append([]db.Migration{{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`}}, Migrations()...)
+	if err := db.Migrate(ctx, d, migs); err != nil {
+		t.Fatal(err)
+	}
+	now := db.Now()
+	exec := func(q string, args ...any) {
+		t.Helper()
+		if _, err := d.Exec(q, args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	exec(`INSERT INTO books VALUES ('b1')`)
+	exec(`INSERT INTO homework (id, book_id, title, created_at, updated_at) VALUES ('h1', 'b1', 'Set', ?, ?)`, now, now)
+	for i, id := range []string{"q1", "q2", "q3"} {
+		exec(`INSERT INTO questions (id, homework_id, position, text, in_book, state, created_at, updated_at)
+			VALUES (?, 'h1', ?, '1.1', 1, 'pending', ?, ?)`, id, i+1, now, now)
+	}
+	rev := func(id string) int {
+		t.Helper()
+		q, err := getQuestion(ctx, d, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return q.Rev
+	}
+	if rev("q1") != 0 {
+		t.Fatalf("a new question starts at rev 0, got %d", rev("q1"))
+	}
+	// Writes that leave updated_at alone still count.
+	for i, q := range []string{
+		`UPDATE questions SET activity = 'Thinking…' WHERE id = 'q1'`,
+		`UPDATE questions SET revealed = '["hint"]' WHERE id = 'q1'`,
+		`UPDATE questions SET done_at = '2026-09-24T00:00:00Z' WHERE id = 'q1'`,
+		`UPDATE questions SET state = 'ready', hint = '[]', activity = '', updated_at = '2026-09-24T00:00:01Z' WHERE id = 'q1'`,
+	} {
+		exec(q)
+		if got := rev("q1"); got != i+1 {
+			t.Fatalf("after %q: rev %d, want %d", q, got, i+1)
+		}
+	}
+	// A shift that moves several rows bumps each of them once.
+	exec(`UPDATE questions SET position = position + 1 WHERE homework_id = 'h1' AND position >= 2`)
+	if rev("q2") != 1 || rev("q3") != 1 || rev("q1") != 4 {
+		t.Fatalf("shift: q1 %d q2 %d q3 %d, want 4 1 1", rev("q1"), rev("q2"), rev("q3"))
+	}
+}

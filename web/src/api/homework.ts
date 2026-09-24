@@ -76,25 +76,20 @@ function dropSummary(qc: QueryClient, id: string, bookId: string) {
   qc.invalidateQueries({ queryKey: homeworkKeys.due })
 }
 
-// A question only moves forward through its states. The stream is ordered,
-// but a mutation's response is a snapshot that can land after a newer event
-// already applied (the question failed within a second, say): the older
-// snapshot must lose, or it resurrects a state nothing will ever revisit.
-const stateRank: Record<Question['state'], number> = {
-  pending: 0,
-  locating: 1,
-  located: 2,
-  writing: 3,
-  ready: 4,
-  failed: 4,
-}
+// Two snapshots of one question can land in either order: a mutation's
+// response can arrive after a newer event already applied (the question
+// failed within a second, say), and an event can race the worker's next
+// one. The server bumps a question's `rev` on every change, so the higher
+// rev is the newer snapshot, whatever it says and whenever it lands.
 
-/** One question's newest state into a set's cached questions, keeping
- *  position order. Returns the same Detail when the write would move the
- *  question backward; `force` overrides, for the acts a student restarts. */
+/** One question's snapshot into a set's cached questions, keeping
+ *  position order. A snapshot no newer than the cached one (a lower or
+ *  equal rev) returns the same Detail. `force` writes it anyway: for the
+ *  student's own act drawn ahead of the server (a retry's pending), and
+ *  for putting it back when the server refuses. */
 export function applyQuestion(d: Detail, q: Question, force = false): Detail {
   const old = d.questions.find((x) => x.id === q.id)
-  if (!force && old && stateRank[q.state] < stateRank[old.state]) return d
+  if (!force && old && q.rev <= old.rev) return d
   const rest = d.questions.filter((x) => x.id !== q.id)
   return { ...d, questions: [...rest, q].sort((a, b) => a.position - b.position) }
 }
@@ -224,9 +219,10 @@ export function useRetryQuestion() {
   return useMutation({
     mutationFn: ({ id, retry }: { id: string; retry: Retry }) => post<Question>(`/api/questions/${id}/retry`, retry),
     // Restarting is the student's own act: pending is forced over failed
-    // before the request goes, so the run's own events (even an instant
-    // second failure) apply forward from it, and the response's snapshot
-    // loses to any of them that landed first.
+    // before the request goes, at the failed snapshot's rev. Everything the
+    // run says next (even an instant second failure) has a higher rev and
+    // applies over it, and the response's snapshot loses to any of those
+    // that landed first.
     onMutate: ({ id }) => {
       for (const [, d] of qc.getQueriesData<Detail>({ queryKey: ['homework', 'set'] })) {
         const old = d?.questions.find((x) => x.id === id)

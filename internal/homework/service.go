@@ -273,7 +273,10 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 	if len(keep) > maxDrafts {
 		return nil, httpx.Invalid("drafts", "That's more than %d questions at once. Add them in smaller batches.", maxDrafts)
 	}
-	var ids []string
+	// Each question is read back inside the transaction that made it, so
+	// the answer is the questions as added, not whatever a worker has made
+	// of them since.
+	var out []Question
 	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		var last int
 		if err := tx.QueryRowContext(ctx, `SELECT coalesce(max(position), 0) FROM questions WHERE homework_id = ?`, homeworkID).Scan(&last); err != nil {
@@ -282,7 +285,6 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 		now := db.Now()
 		for i, d := range keep {
 			id := uuid.NewString()
-			ids = append(ids, id)
 			label, statement := "", ""
 			if !d.InBook {
 				// Its own words are its statement; nothing to find.
@@ -298,22 +300,26 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 			if _, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, d.InBook)); err != nil {
 				return err
 			}
+			q, err := getQuestion(ctx, tx, id)
+			if err != nil {
+				return err
+			}
+			out = append(out, q.Question)
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	s.c.Queue.Wake()
-	out := make([]Question, 0, len(ids))
-	for _, id := range ids {
-		q, err := s.publishQuestion(ctx, id)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, q)
+	// Said before the worker is woken, so the stream says "added" ahead of
+	// what the worker does next. That's the usual order, not a promise (the
+	// queue's backstop poll can still get in first), and the client keeps
+	// the higher Rev whichever order they land in.
+	for _, q := range out {
+		s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: q})
 	}
 	s.publishSet(ctx, homeworkID)
+	s.c.Queue.Wake()
 	return out, nil
 }
 

@@ -141,6 +141,12 @@ export interface Question {
    * changed: while it waits, when the wait began.
    */
   updatedAt: string;
+  /**
+   * Rev goes up by one with every change to the question, whatever
+   * changed. Of two snapshots of one question, the higher Rev is newer:
+   * the client keeps it, whichever arrives last.
+   */
+  rev: number /* int */;
 }
 /**
  * MemoryUse is what a guide did with a memory.

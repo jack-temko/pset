@@ -109,6 +109,10 @@ type Question struct {
 	// UpdatedAt is when its state (or its statement, or a stage) last
 	// changed: while it waits, when the wait began.
 	UpdatedAt string `json:"updatedAt"`
+	// Rev goes up by one with every change to the question, whatever
+	// changed. Of two snapshots of one question, the higher Rev is newer:
+	// the client keeps it, whichever arrives last.
+	Rev int `json:"rev"`
 }
 
 // MemoryUse is what a guide did with a memory.
