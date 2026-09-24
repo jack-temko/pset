@@ -1,12 +1,14 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import { Check, CircleAlert, Copy, X } from 'lucide-react'
 
 import { Button } from '@/components/button'
+import { ConfirmPopover } from '@/components/confirm'
 import { Spinner } from '@/components/spinner'
 import { Tooltip } from '@/components/tooltip'
 import { pdfOf, printedLabel, usePageOffset } from '@/lib/pages'
+import { cn } from '@/lib/utils'
 
 /**
  * The Ask transcript's pieces. Asymmetric by design: you speak in a
@@ -222,33 +224,39 @@ export function DayDivider({ label }: { label: string }) {
 }
 
 /** The very top of the history: where it begins, and the one way to
- *  start over. Clearing asks once, in place. */
+ *  start over. Clear asks first, in a ConfirmPopover under it. */
 export function ConversationStart({ onClear }: { onClear?: () => void }) {
-  const [confirming, setConfirming] = useState(false)
+  const [asking, setAsking] = useState(false)
+  const clear = useRef<HTMLButtonElement>(null)
   return (
     <div className="flex items-center justify-center gap-2 text-xs font-normal text-muted-foreground">
-      {confirming ? (
-        <>
-          <span>Clear this conversation?</span>
-          <Button variant="destructive" size="sm" onClick={onClear}>
-            Clear
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
-            Keep
-          </Button>
-        </>
-      ) : (
-        <>
-          <span>Start of conversation</span>
-          <span aria-hidden>·</span>
-          <button
-            type="button"
-            onClick={() => setConfirming(true)}
-            className="underline underline-offset-2 transition-colors duration-150 ease-out hover:text-foreground motion-reduce:transition-none"
-          >
-            Clear
-          </button>
-        </>
+      <span>Start of conversation</span>
+      <span aria-hidden>·</span>
+      <button
+        ref={clear}
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={asking}
+        onClick={() => setAsking(true)}
+        className={cn(
+          'underline underline-offset-2 transition-colors duration-150 ease-out hover:text-foreground motion-reduce:transition-none',
+          asking && 'text-foreground',
+        )}
+      >
+        Clear
+      </button>
+      {asking && (
+        <ConfirmPopover
+          anchor={clear}
+          question="Clear this conversation?"
+          detail="Every question and answer about this book goes. What the tutor remembers stays."
+          action="Clear"
+          onCancel={() => setAsking(false)}
+          onConfirm={() => {
+            setAsking(false)
+            onClear?.()
+          }}
+        />
       )}
     </div>
   )

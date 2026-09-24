@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react'
-import { BookOpen, Check, Clock, Plus, Printer, Settings, TriangleAlert } from 'lucide-react'
+import { useRef, useState, type ReactNode } from 'react'
+import { BookOpen, Check, ChevronDown, ChevronUp, Clock, Pencil, Plus, Printer, Settings, Trash2, TriangleAlert } from 'lucide-react'
 
 import { AppShell, PageShell } from '@/components/shell'
 import { BookCover, CoverPicker } from '@/components/book-cover'
@@ -32,7 +32,8 @@ import {
 import { Veil } from '@/components/veil'
 import { Spinner } from '@/components/spinner'
 import { Skeleton } from '@/components/skeleton'
-import { Menu, MenuCheckItem, MenuDivider, MenuItem } from '@/components/menu'
+import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
+import { ConfirmPopover } from '@/components/confirm'
 import { SegmentedControl } from '@/components/segmented-control'
 import { Checkbox } from '@/components/checkbox'
 import { Dialog } from '@/components/dialog'
@@ -44,6 +45,7 @@ import { BOOKS, DUE, SEGMENTS, sampleBook } from '@/components/fixtures'
 import { CardSkeleton, Segments } from '@/components/segments'
 import { PageOffset } from '@/lib/pages'
 import { BookTile } from '@/components/book-tile'
+import { cn } from '@/lib/utils'
 
 // The reading row has a minute of pace behind it, so it shows its time
 // left as a real import would (40 pages a minute, 172 to go).
@@ -167,6 +169,101 @@ function MenuDemo() {
         Turned in
       </MenuCheckItem>
     </Menu>
+  )
+}
+
+/** The confirm in its three homes: a control in a row (a question's
+ *  trash), a menu's last item (Delete homework), a button in a Box
+ *  (Settings' Reset). */
+function QuestionHeaderDemo() {
+  const [asking, setAsking] = useState(false)
+  const trash = useRef<HTMLButtonElement>(null)
+  return (
+    <div className="flex w-96 items-center gap-2">
+      <span className="min-w-0 flex-1 truncate text-lg font-semibold">3.A.4</span>
+      <IconButton variant="ghost" size="sm" aria-label="Move this question up">
+        <ChevronUp />
+      </IconButton>
+      <IconButton variant="ghost" size="sm" aria-label="Move this question down">
+        <ChevronDown />
+      </IconButton>
+      <IconButton
+        ref={trash}
+        variant="ghost"
+        size="sm"
+        aria-label="Remove this question"
+        aria-expanded={asking}
+        className={cn(asking && 'bg-muted/50 text-foreground')}
+        onClick={() => setAsking(true)}
+      >
+        <Trash2 />
+      </IconButton>
+      {asking && (
+        <ConfirmPopover
+          anchor={trash}
+          question="Remove 3.A.4?"
+          detail="Its guide, what you revealed and its Complete go with it."
+          action="Remove"
+          onConfirm={() => setAsking(false)}
+          onCancel={() => setAsking(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+function HomeworkMenuDemo() {
+  return (
+    <Menu label="Homework actions">
+      <MenuItem icon={<Plus />} onSelect={() => {}}>
+        Add questions
+      </MenuItem>
+      <MenuItem icon={<Pencil />} onSelect={() => {}}>
+        Edit homework
+      </MenuItem>
+      <MenuItem icon={<Printer />} onSelect={() => {}}>
+        Print worksheet
+      </MenuItem>
+      <MenuDivider />
+      <MenuCheckItem checked={false} onChange={() => {}}>
+        Turn in
+      </MenuCheckItem>
+      <MenuDivider />
+      <MenuConfirmItem
+        icon={<Trash2 />}
+        question="Delete Set 3?"
+        detail="Its 8 questions go with it, with their guides and what you checked off."
+        action="Delete homework"
+        onConfirm={() => {}}
+      >
+        Delete homework
+      </MenuConfirmItem>
+    </Menu>
+  )
+}
+
+function ResetDemo() {
+  const [asking, setAsking] = useState(false)
+  const button = useRef<HTMLButtonElement>(null)
+  return (
+    <Box tone="destructive" className="w-full">
+      <BoxBody className="flex min-h-control items-center gap-3 text-sm">
+        <span className="min-w-0 flex-1 text-muted-foreground">Erase every book, set, conversation and setting.</span>
+        <Button ref={button} variant="outline" size="sm" className="text-destructive" onClick={() => setAsking(true)}>
+          Reset everything
+        </Button>
+        {asking && (
+          <ConfirmPopover
+            anchor={button}
+            question="Reset everything?"
+            detail="Deletes 4 books, 12 homework sets and 2 conversations, and your settings, API key included."
+            action="Reset everything"
+            onConfirm={() => setAsking(false)}
+            onCancel={() => setAsking(false)}
+          />
+        )}
+      </BoxBody>
+    </Box>
   )
 }
 
@@ -408,6 +505,21 @@ export function Components() {
         >
           <Shelf label="overflow">
             <MenuDemo />
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Confirm"
+          note="A destructive act asks where you asked: a small card under the control, one sentence of what goes, Cancel focused, the act never under the pointer. From a menu, the menu stays open behind it."
+        >
+          <Shelf label="from a control">
+            <QuestionHeaderDemo />
+          </Shelf>
+          <Shelf label="from a menu">
+            <HomeworkMenuDemo />
+          </Shelf>
+          <Shelf label="from a button">
+            <ResetDemo />
           </Shelf>
         </Section>
 

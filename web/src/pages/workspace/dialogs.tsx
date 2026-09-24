@@ -20,68 +20,34 @@ import type { CoverHue } from '@/lib/covers'
 export type QuestionDraft = { text: string; inBook: boolean }
 
 /**
- * In-place confirm for a destructive act inside a dialog. Dialogs never
- * nest, so "are you sure" doesn't open a second one: the dialog itself
- * turns into the question. The body says what goes; the footer is Cancel
- * (back to editing) and the act, named.
- */
-function ConfirmBody({ children }: { children: React.ReactNode }) {
-  return <div className="space-y-3 text-sm">{children}</div>
-}
-
-function ConfirmFooter({
-  action,
-  onCancel,
-  onConfirm,
-}: {
-  action: string
-  onCancel: () => void
-  onConfirm: () => void
-}) {
-  return (
-    <>
-      <Button variant="ghost" onClick={onCancel}>
-        Cancel
-      </Button>
-      <Button variant="destructive" onClick={onConfirm}>
-        {action}
-      </Button>
-    </>
-  )
-}
-
-/**
  * New homework, and the same dialog again for editing one. A title and,
  * if you like, a due date; nothing about questions: the set is a
  * container, and it exists the moment you name it. The title is required
  * because an unnamed set would still appear in the list and on Home.
  *
- * Editing adds Delete at the footer's left, confirmed in place.
+ * It only edits: deleting a set is in the walkthrough's menu, with the
+ * set's other actions.
  */
 export function HomeworkDialog({
   open,
   editing,
   onClose,
   onSave,
-  onDelete,
 }: {
   open: boolean
-  /** Present when editing: the set's current values and size. */
-  editing?: { title: string; due: string; questions: number }
+  /** Present when editing: the set's current values. */
+  editing?: { title: string; due: string }
   onClose: () => void
   onSave: (title: string, due: string) => void
-  onDelete?: () => void
 }) {
   const [title, setTitle] = useState('')
   const [due, setDue] = useState('')
-  const [confirming, setConfirming] = useState(false)
 
   // A dialog is a fresh start every time it opens, never a resumed draft.
   useEffect(() => {
     if (open) {
       setTitle(editing?.title ?? '')
       setDue(editing?.due ?? '')
-      setConfirming(false)
     }
     // Seeded on open only: `editing` is a fresh object every render, and
     // re-seeding on it would wipe what you're typing.
@@ -102,45 +68,16 @@ export function HomeworkDialog({
       onClose={onClose}
       title={editing ? 'Edit homework' : 'New homework'}
       footer={
-        confirming && editing ? (
-          <ConfirmFooter
-            action="Delete"
-            onCancel={() => setConfirming(false)}
-            onConfirm={() => {
-              onDelete?.()
-              onClose()
-            }}
-          />
-        ) : (
-          <>
-            {editing && (
-              <Button
-                variant="ghost"
-                className="mr-auto text-destructive"
-                onClick={() => setConfirming(true)}
-              >
-                Delete
-              </Button>
-            )}
-            <Button variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button onClick={submit} disabled={!title.trim() || unchanged}>
-              {editing ? 'Save' : 'Create'}
-            </Button>
-          </>
-        )
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={submit} disabled={!title.trim() || unchanged}>
+            {editing ? 'Save' : 'Create'}
+          </Button>
+        </>
       }
     >
-      {confirming && editing ? (
-        <ConfirmBody>
-          <p>
-            Delete <span className="font-medium">{editing.title}</span> and its{' '}
-            {editing.questions} questions, with everything you revealed and completed?
-          </p>
-          <p className="text-muted-foreground">There's no undo.</p>
-        </ConfirmBody>
-      ) : (
       <form
         className="space-y-4"
         onSubmit={(e) => {
@@ -163,7 +100,6 @@ export function HomeworkDialog({
           <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
         </Field>
       </form>
-      )}
     </Dialog>
   )
 }
@@ -173,27 +109,23 @@ export function HomeworkDialog({
  * hangs on. Title and author start as the PDF's metadata; the offset as
  * whatever the engine read at import. Both are yours to correct.
  *
- * Remove sits at the footer's left, confirmed in place, and says what
- * goes with the book.
+ * It only edits: removing the book is in the book's menu in the top bar.
  */
 export function BookDialog({
   open,
   book,
   onClose,
   onSave,
-  onRemove,
 }: {
   open: boolean
-  book: { title: string; author: string; offset: number; cover: CoverHue; pages: number; imported: string; homework: number }
+  book: { title: string; author: string; offset: number; cover: CoverHue; pages: number; imported: string }
   onClose: () => void
   onSave: (next: { title: string; author: string; offset: number; cover: CoverHue }) => void
-  onRemove: () => void
 }) {
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [firstPage, setFirstPage] = useState('')
   const [cover, setCover] = useState<CoverHue>(book.cover)
-  const [confirming, setConfirming] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -203,7 +135,6 @@ export function BookDialog({
       // and read off its PDF page. The offset is that minus one.
       setFirstPage(String(book.offset + 1))
       setCover(book.cover)
-      setConfirming(false)
     }
     // Seeded on open only, for the same reason as HomeworkDialog.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -220,48 +151,22 @@ export function BookDialog({
       onClose={onClose}
       title="Edit book"
       footer={
-        confirming ? (
-          <ConfirmFooter
-            action="Remove book"
-            onCancel={() => setConfirming(false)}
-            onConfirm={onRemove}
-          />
-        ) : (
-          <>
-            <Button
-              variant="ghost"
-              className="mr-auto text-destructive"
-              onClick={() => setConfirming(true)}
-            >
-              Remove book
-            </Button>
-            <Button variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              disabled={!valid || unchanged}
-              onClick={() => {
-                onSave({ title: title.trim(), author: author.trim(), offset: pdfOfFirst - 1, cover })
-                onClose()
-              }}
-            >
-              Save
-            </Button>
-          </>
-        )
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!valid || unchanged}
+            onClick={() => {
+              onSave({ title: title.trim(), author: author.trim(), offset: pdfOfFirst - 1, cover })
+              onClose()
+            }}
+          >
+            Save
+          </Button>
+        </>
       }
     >
-      {confirming ? (
-        <ConfirmBody>
-          <p>
-            Remove <span className="font-medium">{book.title}</span> from your library, with its{' '}
-            {book.homework} homework sets and its conversation?
-          </p>
-          <p className="text-muted-foreground">
-            There's no undo. You can import the PDF again, but it starts fresh.
-          </p>
-        </ConfirmBody>
-      ) : (
       <div className="space-y-4">
         <Field label="Title">
           <Input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -287,7 +192,6 @@ export function BookDialog({
           {book.pages} PDF pages · imported {book.imported}
         </p>
       </div>
-      )}
     </Dialog>
   )
 }

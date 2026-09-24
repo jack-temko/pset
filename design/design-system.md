@@ -148,6 +148,25 @@ or Esc, never also through an X in the corner. Anywhere the app offers
 a way out, it offers exactly one, and it sits beside the action it
 undoes.
 
+**Deleting** (2026-09-24). Everything you make can be deleted, and every
+delete asks first. Two rules keep that consistent:
+
+- **One menu per thing.** A thing's actions live in one "⋯" Menu beside
+  where it's named: the book's beside its title in the top bar, a
+  homework set's in the walkthrough's header. The destructive act is
+  last, below a divider, in destructive ink. Edit dialogs only edit;
+  none carries a delete.
+- **A delete asks where you asked.** A **ConfirmPopover** opens under
+  the control that was pressed, never a dialog in the middle of the
+  screen: one sentence of what goes (and what stays, where that's the
+  question), Cancel focused, the act named on a destructive button that
+  is never under the pointer, so a double click can't confirm. Asked
+  from a menu, the menu stays open behind it. A delete that is a single
+  inline control (a question's trash, the conversation's Clear) asks the
+  same way. Two things don't ask: a Memory, deleted in its dialog at
+  once, since each is one sentence and the tutor's own saves have Undo;
+  and Dismiss on a failed import, which holds nothing of yours yet.
+
 A scrolling flex child must set `min-h-0`. Flex items default to
 `min-height: auto` and refuse to shrink below their content, so a pane
 without it silently pushes the layout taller instead of scrolling.

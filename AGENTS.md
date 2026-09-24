@@ -6,7 +6,10 @@ Jack works in the main checkout at the same time, so it can hold his
 uncommitted changes at any moment. Every change goes on its own branch,
 in its own worktree next to the repo, never straight onto `main`:
 `git worktree add ../pset-<topic> -b <topic>`. Don't edit, stage or
-commit in Jack's checkout.
+commit in Jack's checkout. Name the topic for what the change does, in
+kebab-case (`delete-anything-confirmed`), never a generated name like
+`claude/laughing-gauss-1135o5`: it lands in `main`'s history through
+the merge commit.
 
 When the change is done and checked (the tests, and the real app for a
 UI change):

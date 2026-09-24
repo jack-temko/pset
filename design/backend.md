@@ -95,6 +95,7 @@ POST   /api/questions/{id}/retry         {page} or {text}
 GET    /api/books/{id}/turns             POST /api/books/{id}/turns
 POST   /api/turns/{id}/stop
 GET    /api/due   GET /api/week   POST /api/heartbeat
+DELETE /api/heartbeats                   (clear activity history)
 GET    /api/settings  PUT /api/settings  POST /api/settings/test
 PUT    /api/settings/profile             (the name)
 GET    /api/health    POST /api/health/{check}/fix
@@ -298,7 +299,9 @@ rail), `asking` (the Ask tab) or `homework` (the Homework tab) was last
 touched. Each heartbeat counts 30 seconds (a second tab in the same
 half-minute counts once), and `/api/week?since=` sums them from the
 start of the student's week, which the client sends because it knows
-the local calendar.
+the local calendar. `DELETE /api/heartbeats` forgets them all
+(Settings' Clear history); questions worked come from homework and
+stay.
 
 ## Logging
 

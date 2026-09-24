@@ -11,6 +11,7 @@ import { createPortal } from 'react-dom'
 import { Check, Ellipsis } from 'lucide-react'
 
 import { IconButton } from '@/components/button'
+import { ConfirmPopover } from '@/components/confirm'
 import { cn } from '@/lib/utils'
 
 const Close = createContext<() => void>(() => {})
@@ -49,6 +50,8 @@ export function Menu({ label, children }: { label: string; children: ReactNode }
     panel.current?.querySelector<HTMLElement>('[role^="menuitem"]')?.focus()
     const onDown = (e: PointerEvent) => {
       const t = e.target as Node
+      // A confirm opened from an item is part of the menu, not outside it.
+      if ((t as Element).closest?.('[data-confirm]')) return
       if (!panel.current?.contains(t) && !trigger.current?.contains(t)) setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
@@ -146,6 +149,62 @@ export function MenuItem({
       {children}
       {hint && <span className="ml-auto pl-4 text-xs text-muted-foreground">{hint}</span>}
     </button>
+  )
+}
+
+/** A destructive act. Choosing it asks first, in a ConfirmPopover under
+ *  its row, and the menu stays open behind the question: Cancel or Esc
+ *  lands you back on the row, and only the act closes the menu. It sits
+ *  last, below a divider, in destructive ink. */
+export function MenuConfirmItem({
+  icon,
+  question,
+  detail,
+  action,
+  onConfirm,
+  children,
+}: {
+  icon?: ReactNode
+  question: ReactNode
+  detail?: ReactNode
+  action: string
+  onConfirm: () => void
+  children: ReactNode
+}) {
+  const close = useContext(Close)
+  const [asking, setAsking] = useState(false)
+  const row = useRef<HTMLButtonElement>(null)
+  return (
+    <>
+      <button
+        ref={row}
+        type="button"
+        role="menuitem"
+        tabIndex={-1}
+        aria-haspopup="dialog"
+        aria-expanded={asking}
+        // While it asks, the row keeps its wash: it's the one being answered.
+        className={cn(item, 'text-destructive [&_svg]:text-destructive', asking && 'bg-muted/50')}
+        onClick={() => setAsking(true)}
+      >
+        {icon ?? <span className="size-4" />}
+        {children}
+      </button>
+      {asking && (
+        <ConfirmPopover
+          anchor={row}
+          question={question}
+          detail={detail}
+          action={action}
+          onCancel={() => setAsking(false)}
+          onConfirm={() => {
+            setAsking(false)
+            close()
+            onConfirm()
+          }}
+        />
+      )}
+    </>
   )
 }
 

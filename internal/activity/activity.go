@@ -106,6 +106,13 @@ func (s *Service) Week(ctx context.Context, since time.Time) (Week, error) {
 	return w, nil
 }
 
+// Clear forgets all time spent, in every book. Questions worked stay:
+// they come from homework, not from here.
+func (s *Service) Clear(ctx context.Context) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM heartbeats`)
+	return err
+}
+
 func minutes(beats int) int {
 	return int((time.Duration(beats) * Beat).Round(time.Minute) / time.Minute)
 }
@@ -117,6 +124,12 @@ func (s *Service) Routes(mux *http.ServeMux) {
 			return err
 		}
 		if err := s.Record(r.Context(), h); err != nil {
+			return err
+		}
+		return httpx.NoContent(w)
+	}))
+	mux.HandleFunc("DELETE /api/heartbeats", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
+		if err := s.Clear(r.Context()); err != nil {
 			return err
 		}
 		return httpx.NoContent(w)

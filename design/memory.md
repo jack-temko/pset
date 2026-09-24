@@ -73,8 +73,8 @@ with it.
   lines: what it remembered, with Undo, and "Found from memory" when a
   remembered range spared locate its search. Use is otherwise shown only
   through citations; there is no "recalled 9 memories" line.
-- **The memory menu**: a second icon beside the book's pencil in the
-  top bar opens the Memory dialog (wide). Add a memory at the top (kind,
+- **The memory menu**: **Memory** in the book's menu in the top bar
+  (design/workspace.md) opens the Memory dialog (wide). Add a memory at the top (kind,
   sentence, optional printed page; one already there says so), filter by
   kind with tabs (not a second segmented control, which would read as
   the kind picker), and every row shows its sentence, its page (jumps
