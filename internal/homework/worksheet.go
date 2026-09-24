@@ -16,11 +16,19 @@ import (
 // figure still reads at the size the walkthrough shows it.
 const cropWidth = 1800
 
-// crop renders a page and cuts a rect out of it. The rect gets a little
-// room, then each edge snaps to the nearest whitespace: a model's boxes
-// drift, and an unsnapped edge slices a neighbouring line mid-glyph.
-func (s *Service) crop(ctx context.Context, bookID string, page int, r pdf.Rect) ([]byte, error) {
-	img, err := s.c.Library.PageJPEG(ctx, bookID, page, cropWidth)
+// modelCropWidth is the render a figure the model reads is cut from.
+// Wider than print: at 1800 the 2 A source in Fig. 4.93 (4.25) came out
+// as pointing left eleven times in eleven, and at 2400 right every time.
+// A circuit's arrows and signs are a few pixels, and the model reads them
+// only when there are enough.
+const modelCropWidth = 2400
+
+// crop renders a page at width and cuts a rect out of it. The rect gets a
+// little room, then each edge snaps to the nearest whitespace: a model's
+// boxes drift, and an unsnapped edge slices a neighbouring line
+// mid-glyph.
+func (s *Service) crop(ctx context.Context, bookID string, page int, r pdf.Rect, width int) ([]byte, error) {
+	img, err := s.c.Library.PageJPEG(ctx, bookID, page, width)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +57,7 @@ func (s *Service) Figure(ctx context.Context, questionID string, n int) ([]byte,
 	if q.Page == nil || n < 0 || n >= len(q.FigRect) {
 		return nil, httpx.NotFound("figure")
 	}
-	return s.crop(ctx, q.BookID, *q.Page, q.FigRect[n].Rect)
+	return s.crop(ctx, q.BookID, *q.Page, q.FigRect[n].Rect, cropWidth)
 }
 
 // Sheet geometry in points: Letter, with ¾-inch margins.
@@ -140,7 +148,7 @@ func (s *Service) questionBlock(ctx context.Context, sheet *pdf.Sheet, book Book
 	if len(figs) > 0 {
 		figBlock = figureH + figureGap
 	}
-	img, err := s.crop(ctx, q.BookID, *q.Page, *q.Rect)
+	img, err := s.crop(ctx, q.BookID, *q.Page, *q.Rect, cropWidth)
 	if err != nil {
 		return err
 	}
@@ -156,7 +164,7 @@ func (s *Service) questionBlock(ctx context.Context, sheet *pdf.Sheet, book Book
 	w := (contentW - figureGap*float64(len(figs)-1)) / float64(len(figs))
 	x := margin
 	for _, f := range figs {
-		img, err := s.crop(ctx, q.BookID, *q.Page, f.Rect)
+		img, err := s.crop(ctx, q.BookID, *q.Page, f.Rect, cropWidth)
 		if err != nil {
 			return err
 		}

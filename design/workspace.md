@@ -227,6 +227,28 @@ built.
   440px is one problem's screenful; focus is the point.
 - **Statement = extracted text + figure crops** (math rendered), never a
   flat page image.
+- **The figure, as read** (2026-09-24): a question with a figure shows,
+  under it, the words its guide is written from, in a Box: every node,
+  then every part between two of them, with its value and which way its
+  arrow or its + sign points, one fact a line. A misread figure is the
+  likeliest way for a guide to be wrong, so the reading is out in the
+  open, where a glance against the figure catches it. It shows its
+  first four lines, the rest behind a Door. It is not veiled: it says
+  what the problem is, not how to solve it.
+  - **Correct** turns it into a text box, a fact a line. **Save and
+    rewrite the guide** writes the guide again from the student's lines,
+    which the writer is told are the student's and win over its own
+    look at the figure; the Box then carries a **Corrected** Label. A
+    guide that hasn't started yet just waits for the new lines, and the
+    button says **Save**. **Read it again**, at the row's other end,
+    throws the lines away for a fresh reading, and the guide with them.
+  - The engine reads every figure as the question is found, before any
+    guide is written, so a set's readings are there to check while its
+    guides wait: the working line says "Reading the figure…", then
+    "Checking the reading…". How it reads: design/backend.md.
+  - A guide written before figures were read shows the Box with a
+    sentence saying so and **Read the figure**, which reads it and
+    writes the guide again from the reading.
 - **Scan jumps on demand**: a page chip in the question header; opening a
   question never moves the scan by itself.
 - **Two stages, both veiled**: *hint* and *walkthrough*: the walkthrough

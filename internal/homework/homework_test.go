@@ -128,6 +128,10 @@ func fakeModel(req llm.ChatRequest) llmtest.Reply {
 		return llmtest.Reply{Text: `{"image": 1, "label": "3.36", "statement": "Find the voltage across $R_2$.",
 			"question_rect": {"x": 0.1, "y": 0.2, "w": 0.8, "h": 0.2},
 			"figures": [{"label": "Figure 3.7", "rect": {"x": 0.1, "y": 0.5, "w": 0.4, "h": 0.3}}]}`}
+	case strings.Contains(sys, "You read the figures"):
+		return llmtest.Reply{Text: "- Node A: top of $R_1$.\n- 2 A current source from B to A (its arrow points to A)."}
+	case strings.Contains(sys, "several readings"):
+		return llmtest.Reply{Text: "- Node A: top of $R_1$.\n- 2 A current source from A to B (its arrow points to B)."}
 	case strings.Contains(sys, "You write the guide"):
 		return llmtest.Reply{Text: guide}
 	}

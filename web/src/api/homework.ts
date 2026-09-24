@@ -35,9 +35,13 @@ export const useBookHomework = (bookId: string) =>
   })
 
 /** A question the engine still owes work on: queued, being found, found
- *  and waiting for its guide, or being written. */
+ *  and waiting, having its figure read, or being written. */
 export const outstanding = (q: Question) =>
-  q.state === 'pending' || q.state === 'locating' || q.state === 'located' || q.state === 'writing'
+  q.state === 'pending' ||
+  q.state === 'locating' ||
+  q.state === 'located' ||
+  q.state === 'reading' ||
+  q.state === 'writing'
 
 /** A question the engine has yet to find in the book: one that isn't in
  *  it has nothing to find, and its guide is all it waits for. Until it's
@@ -104,10 +108,10 @@ function dropQuestion(qc: QueryClient, id: string, homeworkId: string) {
 
 on<HomeworkChanged>('homework.changed', (d, qc) => putSummary(qc, d.homework))
 on<HomeworkRemoved>('homework.removed', (d, qc) => dropSummary(qc, d.id, d.bookId))
-/** The step a question is in, for its time left (lib/eta): being found
- *  or being written, none otherwise. */
+/** The step a question is in, for its time left (lib/eta): being found,
+ *  having its figure read, or being written, none otherwise. */
 export const questionStep = (q: Pick<Question, 'state'>) =>
-  q.state === 'locating' || q.state === 'writing' ? `homework:${q.state}` : undefined
+  q.state === 'locating' || q.state === 'reading' || q.state === 'writing' ? `homework:${q.state}` : undefined
 
 on<QuestionChanged>('question.changed', (d, qc) => {
   observe(`question:${d.question.id}`, questionStep(d.question))
@@ -229,6 +233,42 @@ export function useRetryQuestion() {
         if (old) {
           // Pending as of now: a wait that may be over in a moment.
           putQuestion(qc, { ...old, state: 'pending', updatedAt: new Date().toISOString() }, true)
+          return { old }
+        }
+      }
+    },
+    onError: (_e, _v, ctx) => ctx?.old && putQuestion(qc, ctx.old, true),
+    onSuccess: (q) => putQuestion(qc, q),
+  })
+}
+
+/** A new reading of a question's figure: the student's correction
+ *  (`lines`), or with none, a fresh read. Either way the guide is written
+ *  again from it, so the question goes back to waiting for it, forced
+ *  at its old rev as a retry is: the student restarted it, and whatever
+ *  the run says next is newer. */
+export function useRedoReading() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, lines }: { id: string; lines?: string[] }) =>
+      patch<Question>(`/api/questions/${id}`, lines ? { reading: lines } : { reread: true }),
+    onMutate: ({ id, lines }) => {
+      for (const [, d] of qc.getQueriesData<Detail>({ queryKey: ['homework', 'set'] })) {
+        const old = d?.questions.find((x) => x.id === id)
+        if (old) {
+          const next: Question = {
+            ...old,
+            reading: lines ?? [],
+            readingEdited: !!lines,
+            state: 'located',
+            hint: [],
+            walkthrough: [],
+            failure: undefined,
+            reason: undefined,
+            activity: undefined,
+            updatedAt: new Date().toISOString(),
+          }
+          putQuestion(qc, next, true)
           return { old }
         }
       }

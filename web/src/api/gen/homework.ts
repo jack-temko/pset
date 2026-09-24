@@ -59,12 +59,17 @@ export const StateLocating = "locating";
  */
 export const StateLocated = "located";
 /**
+ * StateReading is reading its figures into words, which its guide is
+ * written from. A question without figures skips it.
+ */
+export const StateReading = "reading";
+/**
  * StateWriting is writing its guide; the hint may already be there.
  */
 export const StateWriting = "writing";
 export const StateReady = "ready";
 export const StateFailed = "failed";
-export type State = typeof StatePending | typeof StateLocating | typeof StateLocated | typeof StateWriting | typeof StateReady | typeof StateFailed;
+export type State = typeof StatePending | typeof StateLocating | typeof StateLocated | typeof StateReading | typeof StateWriting | typeof StateReady | typeof StateFailed;
 /**
  * Failure is what kind of failure a failed question had.
  */
@@ -127,6 +132,17 @@ export interface Question {
    */
   activity?: string;
   /**
+   * Reading is how its figures read, one fact a line ("Node A: top of
+   * the 4 Ω, …", "2 A current source from A to B"): the guide is
+   * written from it, and the student can correct it. Empty for a
+   * question without figures, or one found before readings.
+   */
+  reading: string[];
+  /**
+   * ReadingEdited is true once the student has corrected the reading.
+   */
+  readingEdited: boolean;
+  /**
    * Memory is what writing this guide did with the book's memory: what
    * it saved, and a remembered range that found the problem.
    */
@@ -188,12 +204,16 @@ export interface Questions {
 }
 /**
  * QuestionPatch is what the walkthrough changes directly: a stage
- * revealed, done ticked or unticked, a new position in the set.
+ * revealed, done ticked or unticked, a new position in the set. Reading
+ * corrects how the figures read, and Reread reads them again; either
+ * writes the guide again, from the new reading.
  */
 export interface QuestionPatch {
   reveal?: string;
   done?: boolean;
   position?: number /* int */;
+  reading?: string[];
+  reread?: boolean;
 }
 /**
  * Retry is one of a failed question's two ways out: the PDF page it's on,

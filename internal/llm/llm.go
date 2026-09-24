@@ -244,6 +244,9 @@ type ChatRequest struct {
 	// Thinking is Z.ai's thinking switch. The client sets it itself when
 	// the conversation carries reasoning back; see keepsReasoning.
 	Thinking *Thinking `json:"thinking,omitempty"`
+	// ReasoningEffort is how hard a thinking model thinks: "low",
+	// "high" or "max" on Z.ai. Only Z.ai gets it; see shape.
+	ReasoningEffort string `json:"reasoning_effort,omitempty"`
 	// OnReasoning, if set, receives a thinking model's reasoning as it
 	// streams: the part it writes before, and apart from, its answer.
 	OnReasoning func(text string) `json:"-"`
@@ -290,8 +293,11 @@ func (c *Client) keepsReasoning() bool {
 
 // shape fits a request to the endpoint: reasoning goes back to one that
 // keeps it, with preserved thinking switched on, and is dropped for any
-// other.
+// other, as is a reasoning effort.
 func (c *Client) shape(req ChatRequest) ChatRequest {
+	if !c.keepsReasoning() {
+		req.ReasoningEffort = ""
+	}
 	carries := false
 	for _, m := range req.Messages {
 		if m.ReasoningContent != "" {

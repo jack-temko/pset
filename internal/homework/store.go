@@ -70,6 +70,10 @@ CREATE TRIGGER questions_rev AFTER UPDATE ON questions FOR EACH ROW WHEN NEW.rev
 BEGIN
 	UPDATE questions SET rev = OLD.rev + 1 WHERE id = NEW.id;
 END;`},
+		// How its figure reads, one fact a line, and whether the student
+		// has corrected it: the guide is written from it.
+		{Name: "homework/7", SQL: `ALTER TABLE questions ADD COLUMN reading TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE questions ADD COLUMN reading_edited INTEGER NOT NULL DEFAULT 0`},
 	}
 }
 
@@ -131,14 +135,14 @@ type figure struct {
 }
 
 const questionCols = `q.id, q.homework_id, q.position, q.text, q.in_book, q.label, q.statement, q.page, q.pinned_page,
-	q.rect, q.figures, q.hint, q.walkthrough, q.state, q.reason, q.revealed, q.done_at, q.activity, q.memory, q.failure, q.updated_at, q.rev, h.book_id`
+	q.rect, q.figures, q.hint, q.walkthrough, q.state, q.reason, q.revealed, q.done_at, q.activity, q.memory, q.failure, q.reading, q.reading_edited, q.updated_at, q.rev, h.book_id`
 
 func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	var r row
 	var page, pinned sql.NullInt64
-	var rect, figs, hint, walk, revealed, doneAt, memory string
+	var rect, figs, hint, walk, revealed, doneAt, memory, reading string
 	err := s.Scan(&r.ID, &r.HomeworkID, &r.Position, &r.Text, &r.InBook, &r.Label, &r.Statement, &page, &pinned,
-		&rect, &figs, &hint, &walk, &r.State, &r.Reason, &revealed, &doneAt, &r.Activity, &memory, &r.Failure, &r.UpdatedAt, &r.Rev, &r.BookID)
+		&rect, &figs, &hint, &walk, &r.State, &r.Reason, &revealed, &doneAt, &r.Activity, &memory, &r.Failure, &reading, &r.ReadingEdited, &r.UpdatedAt, &r.Rev, &r.BookID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
 	}
@@ -165,6 +169,8 @@ func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	json.Unmarshal([]byte(revealed), &r.Revealed)
 	r.Memory = []MemoryLine{}
 	json.Unmarshal([]byte(memory), &r.Memory)
+	r.Reading = []string{}
+	json.Unmarshal([]byte(reading), &r.Reading)
 	r.Done = doneAt != ""
 	return r, nil
 }

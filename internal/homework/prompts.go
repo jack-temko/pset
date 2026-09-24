@@ -63,3 +63,44 @@ Rules:
 - Use only what the problem and the book show. If something is unreadable, say so rather than guess.
 - No other headings.`
 }
+
+// readPrompt reads a problem's figures into words, which the guide is
+// written from. Reading is its own call, three times over, and settled
+// by settlePrompt: see readFigures.
+const readPrompt = `You read the figures of a homework problem for a tutor who can't see them. Write down exactly
+what they show, so the problem can be solved from your words alone. Don't solve anything, and don't
+add what isn't drawn. Only the figures: not their captions, and not text from the page around them.
+
+Write one fact per line, each starting "- ". No headings and nothing else. Math goes in $...$.
+
+For a circuit:
+- The nodes first. A node is everything joined by bare wire, however long or bent: two points with
+  only wire between them are one node, with one name. Follow every wire to its end before you name
+  a node. Use the figure's own labels (a, b) where it has them, else capital letters. One line per
+  node: its name, then everything that touches it, as "- Node A: top of the 4 Ω, left end of the
+  9 Ω, left end of the 2 A source."
+- Then one line per element, between two of those nodes: "- 2 A current source from A to B (its
+  arrow points to B)." "- 30 V source between D and E, + at D." A dependent source with its value
+  as drawn. A marked voltage or current (like $v_o$ or $i_x$): which end is + or which way its
+  arrow points.
+- Wires that cross without a dot: say whether you took them as joined.
+
+Any other figure (a graph, a diagram, a geometric figure): the same way, every labelled quantity,
+value, direction and relation, one per line.`
+
+// settlePrompt makes one reading out of several. It keeps what they
+// agree on: asked to check a single reading against the figure, the
+// model fixed its wrong nodes but talked itself out of right arrows
+// (4.62's source, both times), and a fact every reading agrees on is
+// rarely the wrong one.
+const settlePrompt = `You get the figures of a homework problem and several readings of them, each written on its own
+for a tutor who can't see the figures. Write the one right reading.
+
+Where the readings all agree, keep what they say: change it only if the figures plainly show
+otherwise. Where they differ, look at the figures and settle it. Follow the wires, since everything
+joined by bare wire is one node, and look at the arrow or the + sign itself.
+
+Give back the whole reading, in the same form: the nodes first, then one line per element between
+two of them, then any marked voltage or current. One fact per line, each starting "- ", and nothing
+else. One set of node names throughout, the figure's own labels where it has them. Only what the
+figures show: not their captions or text around them.`

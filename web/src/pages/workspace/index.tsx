@@ -47,6 +47,7 @@ import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
 import { AddQuestionsDialog, BookDialog, HomeworkDialog } from './dialogs'
 import { MemoryDialog, MemoryLines, MemoryUndo } from './memory'
+import { FigureReading } from './reading'
 import {
   pageImageURL,
   useBook,
@@ -68,6 +69,7 @@ import {
   useDeleteHomework,
   useHomeworkSet,
   useRemoveQuestion,
+  useRedoReading,
   useRetryQuestion,
   useUpdateHomework,
   useUpdateQuestion,
@@ -901,10 +903,11 @@ function StageSkeleton({ name, still }: { name: (typeof STAGE_NAMES)[number]; st
 }
 
 /** What the engine is doing to a question, while it does it: finding it,
- *  then whatever the guide's writer is doing (thinking, searching the
+ *  reading its figure, then whatever the guide's writer is doing (thinking, searching the
  *  book, computing), then writing. */
 function workingLine(q: Question): string | null {
   if (q.state === 'locating') return q.activity || 'Finding it in the book…'
+  if (q.state === 'reading') return q.activity || 'Reading the figure…'
   if (q.state === 'writing') return q.activity || 'Getting started…'
   return null
 }
@@ -966,6 +969,7 @@ function Walkthrough({
   const update = useUpdateQuestion(setId)
   const removeQ = useRemoveQuestion(setId)
   const retryQ = useRetryQuestion()
+  const redoReading = useRedoReading()
   const addQ = useAddQuestions(setId)
   const [adding, setAdding] = useState(false)
   const [index, setIndex] = useState<number | null>(null)
@@ -1195,6 +1199,21 @@ function Walkthrough({
             {f.label && <figcaption className="text-xs text-muted-foreground">{f.label}</figcaption>}
           </figure>
         ))}
+
+        {/* The words the guide is written from, once there are any: a
+            question still being found or read has none to check yet. */}
+        {q.figures.length > 0 &&
+          q.page !== undefined &&
+          q.state !== 'pending' &&
+          q.state !== 'locating' &&
+          q.state !== 'reading' && (
+            <FigureReading
+              key={q.id}
+              q={q}
+              onCorrect={(lines) => redoReading.mutate({ id: q.id, lines })}
+              onReread={() => redoReading.mutate({ id: q.id })}
+            />
+          )}
 
         {q.state === 'failed' ? (
           <FailedQuestion key={q.id} q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} />
