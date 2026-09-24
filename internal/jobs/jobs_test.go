@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"path/filepath"
@@ -204,6 +205,89 @@ func TestWakeAfterCommitStartsTheJobWithoutWaitingForThePoll(t *testing.T) {
 	case <-time.After(2 * poll):
 		t.Fatal("never started")
 	}
+}
+
+func TestResumableJobGivesWayToAHigherOneThenResumes(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 1)
+	var mu sync.Mutex
+	var log []string
+	note := func(s string) { mu.Lock(); log = append(log, s); mu.Unlock() }
+	started := make(chan struct{}, 4)
+	q.Handle("slow", "l", func(ctx context.Context, j Job) error {
+		note(fmt.Sprintf("slow run %d", j.Attempts))
+		started <- struct{}{}
+		if j.Attempts > 1 {
+			return nil
+		}
+		<-ctx.Done()
+		if Stopped(ctx) {
+			t.Error("an interruption read as a stop")
+		}
+		return ctx.Err()
+	})
+	q.Resumable("slow")
+	q.Handle("fast", "l", func(ctx context.Context, j Job) error {
+		var p struct{ Name string }
+		j.Decode(&p)
+		note(p.Name)
+		return nil
+	})
+	ctx := context.Background()
+	run(t, q)
+	slow, _ := q.Enqueue(ctx, q.db, Spec{Kind: "slow"})
+	<-started
+
+	// An equal never interrupts: it waits its turn.
+	equal, _ := q.Enqueue(ctx, q.db, Spec{Kind: "fast", Payload: map[string]string{"Name": "equal"}})
+	time.Sleep(100 * time.Millisecond)
+	if j, _ := q.Get(ctx, equal); j.State != Queued {
+		t.Fatalf("an equal-priority job is %s", j.State)
+	}
+
+	high, _ := q.Enqueue(ctx, q.db, Spec{Kind: "fast", Priority: 1, Payload: map[string]string{"Name": "high"}})
+	waitState(t, q, high, Done)
+	if j := waitState(t, q, slow, Done); j.Attempts != 2 {
+		t.Fatalf("slow ran %d times", j.Attempts)
+	}
+	waitState(t, q, equal, Done)
+	mu.Lock()
+	defer mu.Unlock()
+	// Back in line oldest first, the interrupted job resumes before the
+	// equal that queued after it.
+	if got := strings.Join(log, ", "); got != "slow run 1, high, slow run 2, equal" {
+		t.Fatalf("order: %s", got)
+	}
+}
+
+func TestAJobThatIsntResumableIsNeverInterrupted(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 1)
+	started, release := make(chan struct{}), make(chan struct{})
+	q.Handle("slow", "l", func(ctx context.Context, j Job) error {
+		close(started)
+		select {
+		case <-release:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	})
+	q.Handle("fast", "l", func(ctx context.Context, j Job) error { return nil })
+	ctx := context.Background()
+	run(t, q)
+	slow, _ := q.Enqueue(ctx, q.db, Spec{Kind: "slow"})
+	<-started
+	high, _ := q.Enqueue(ctx, q.db, Spec{Kind: "fast", Priority: 1})
+	time.Sleep(100 * time.Millisecond)
+	if j, _ := q.Get(ctx, high); j.State != Queued {
+		t.Fatalf("the higher job is %s while the slow one runs", j.State)
+	}
+	close(release)
+	if j := waitState(t, q, slow, Done); j.Attempts != 1 {
+		t.Fatalf("slow ran %d times", j.Attempts)
+	}
+	waitState(t, q, high, Done)
 }
 
 func TestSameKeyNeverRunsTogether(t *testing.T) {

@@ -7,9 +7,15 @@ that from inside their handlers.
 - **Lanes** bound concurrency (`import` 1, `question` 2, `turn` many).
   Jobs sharing a **key** never run together (one turn per book).
 - **Priority** orders a lane's queue: higher starts first, oldest first
-  among equals, default 0. It never stops a running job. Homework's finds
-  run at 1, so they start ahead of every queued guide, even guides queued
-  before the question was added.
+  among equals, default 0. Homework's finds run at 1, so they start ahead
+  of every queued guide, even guides queued before the question was added.
+- **Resumable** kinds give way. `Resumable(kind)` marks a handler that
+  saves its work as it goes; when its lane is full and a strictly higher
+  job waits, the lowest such run is interrupted: its context is
+  cancelled, it settles back to `queued` (its age kept, so it resumes
+  first among its equals) and its slot is the waiting job's. Any other
+  kind is never interrupted. Import's `prepare` is resumable, so a scan's
+  reading steps aside for a digital book.
 - `Enqueue(ctx, execer, spec)` takes a `*sql.Tx`, so a row and the job that
   fills it commit together. The scheduler can't see the job until then,
   so call `Wake` after the commit; a 2s poll is only the backstop.

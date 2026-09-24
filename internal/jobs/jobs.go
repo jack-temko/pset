@@ -6,7 +6,10 @@
 // Lanes bound concurrency. A job may also carry a key, and two jobs with
 // the same key never run at once in a lane (one Ask turn per book). A
 // job's priority orders its lane's queue: higher starts first, oldest
-// first among equals (homework's finds start ahead of its guides).
+// first among equals (homework's finds start ahead of its guides). A kind
+// whose handler saves its work as it goes can be marked Resumable: a run
+// of it gives its slot up to a higher-priority job and resumes later (a
+// scan's reading steps aside for a digital book).
 package jobs
 
 import (
@@ -17,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -86,15 +90,22 @@ CREATE INDEX jobs_lane_state ON jobs (lane, state, priority DESC, created_at);`}
 }
 
 type kind struct {
-	lane    string
-	handler Handler
+	lane      string
+	handler   Handler
+	resumable bool
 }
 
 type running struct {
-	lane    string
-	key     string
-	cancel  context.CancelFunc
-	stopped atomic.Bool
+	id, kind  string
+	lane      string
+	key       string
+	priority  int
+	resumable bool
+	cancel    context.CancelFunc
+	stopped   atomic.Bool
+	// preempted is set when the job is interrupted for a higher-priority
+	// one: it settles back to queued, and its slot is promised.
+	preempted atomic.Bool
 }
 
 // Queue runs jobs. Configure lanes and kinds before Run.
@@ -143,7 +154,23 @@ func (q *Queue) Handle(kindName, lane string, h Handler) {
 	if _, ok := q.lanes[lane]; !ok {
 		panic("jobs: unknown lane " + lane)
 	}
-	q.kinds[kindName] = kind{lane, h}
+	q.kinds[kindName] = kind{lane: lane, handler: h}
+}
+
+// Resumable marks a kind whose handler saves its work as it goes, so a
+// run can give its slot up to a higher-priority job in its lane: its
+// context is cancelled, it settles back to queued, oldest among its
+// equals, and resumes where it stopped. The handler treats that as it
+// treats a shutdown.
+func (q *Queue) Resumable(kindName string) {
+	q.conf.Lock()
+	defer q.conf.Unlock()
+	k, ok := q.kinds[kindName]
+	if !ok {
+		panic("jobs: unknown kind " + kindName)
+	}
+	k.resumable = true
+	q.kinds[kindName] = k
 }
 
 // Execer is a *sql.DB or a *sql.Tx: enqueue inside the caller's
@@ -158,8 +185,8 @@ type Spec struct {
 	Subject string // the row this job works on, for StopSubject
 	Key     string // jobs sharing a key run one at a time
 	// Priority orders a lane's queued jobs: higher starts first, and equals
-	// start oldest first. Zero is the default; a running job is never
-	// stopped for a higher one.
+	// start oldest first. Zero is the default. A running job gives way to a
+	// higher one only if its kind is Resumable.
 	Priority int
 	Payload  any
 }
@@ -337,15 +364,26 @@ func (q *Queue) schedule(ctx context.Context) error {
 	for lane, limit := range lanes {
 		busy := map[string]bool{}
 		n := 0
+		// What a full lane can give up: resumable runs not yet asked to,
+		// and the slots of interrupted ones still settling.
+		var yielding []*running
+		promised := 0
 		for _, r := range q.running {
-			if r.lane == lane {
-				n++
-				if r.key != "" {
-					busy[r.key] = true
-				}
+			if r.lane != lane {
+				continue
+			}
+			n++
+			if r.key != "" {
+				busy[r.key] = true
+			}
+			switch {
+			case r.preempted.Load():
+				promised++
+			case r.resumable:
+				yielding = append(yielding, r)
 			}
 		}
-		if n >= limit {
+		if n >= limit && len(yielding) == 0 {
 			continue
 		}
 		rows, err := q.db.QueryContext(ctx, `SELECT id, kind, lane, subject, key, priority, state, payload, error, attempts
@@ -354,7 +392,7 @@ func (q *Queue) schedule(ctx context.Context) error {
 			return err
 		}
 		var next []Job
-		for rows.Next() && n+len(next) < limit {
+		for rows.Next() {
 			j, err := scanJob(rows)
 			if err != nil {
 				rows.Close()
@@ -363,10 +401,27 @@ func (q *Queue) schedule(ctx context.Context) error {
 			if _, ok := q.running[j.ID]; ok || (j.Key != "" && busy[j.Key]) {
 				continue
 			}
-			if j.Key != "" {
-				busy[j.Key] = true
+			if n+len(next) < limit {
+				if j.Key != "" {
+					busy[j.Key] = true
+				}
+				next = append(next, j)
+				continue
 			}
-			next = append(next, j)
+			// The lane is full. The queue runs highest first, so once a job
+			// can't take a slot, none after it can.
+			if promised > 0 {
+				promised-- // an interrupted job's slot is already this one's
+				continue
+			}
+			v := lowest(yielding)
+			if v == nil || v.priority >= j.Priority {
+				break
+			}
+			v.preempted.Store(true)
+			v.cancel()
+			yielding = slices.DeleteFunc(yielding, func(r *running) bool { return r == v })
+			q.log.Debug("jobs: interrupted", "kind", v.kind, "id", v.id, "for", j.Kind)
 		}
 		rows.Close()
 		for _, j := range next {
@@ -376,6 +431,17 @@ func (q *Queue) schedule(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// lowest is the running job with the lowest priority, or nil.
+func lowest(rs []*running) *running {
+	var out *running
+	for _, r := range rs {
+		if out == nil || r.priority < out.priority {
+			out = r
+		}
+	}
+	return out
 }
 
 // start runs j. Called with q.mu held.
@@ -393,7 +459,7 @@ func (q *Queue) start(ctx context.Context, j Job) error {
 	}
 	j.State = Running
 	j.Attempts++
-	r := &running{lane: j.Lane, key: j.Key}
+	r := &running{id: j.ID, kind: j.Kind, lane: j.Lane, key: j.Key, priority: j.Priority, resumable: k.resumable}
 	jctx, cancel := context.WithCancel(context.WithValue(ctx, stopKey{}, r))
 	r.cancel = cancel
 	q.running[j.ID] = r
@@ -421,7 +487,8 @@ func (q *Queue) safely(ctx context.Context, h Handler, j Job) (err error) {
 func (q *Queue) settle(j Job, r *running, err error) {
 	q.mu.Lock()
 	stopped := r.stopped.Load()
-	paused := q.paused
+	// Paused, interrupted or shut down: it runs again later.
+	again := q.paused || r.preempted.Load()
 	delete(q.running, j.ID)
 	q.mu.Unlock()
 
@@ -429,7 +496,7 @@ func (q *Queue) settle(j Job, r *running, err error) {
 	switch {
 	case stopped:
 		state = Cancelled
-	case err != nil && (paused || q.rootDone()):
+	case err != nil && (again || q.rootDone()):
 		state = Queued
 	case err != nil:
 		state, msg = Failed, err.Error()
