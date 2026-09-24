@@ -1,85 +1,23 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useEffect, useEffectEvent, useId, useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 
 import { Button } from '@/components/button'
 
 /**
- * Confirming a destructive act where it was asked for: no trip to the
- * middle of the screen. Two candidates, on /components side by side until
- * one is chosen.
+ * Confirming a destructive act where it was asked for, with no trip to
+ * the middle of the screen: a small floating card under the control that
+ * was pressed, right-aligned to it like the Menu's card. One sentence
+ * says what goes; Cancel, then the act, named. Focus lands on Cancel, so
+ * Enter is the safe key, and the act is never drawn under the pointer
+ * that asked, so a double click can't confirm.
  *
- * Both say what goes in one sentence, put focus on Cancel (the safe key
- * press), and close on Esc or a press elsewhere. The red act is never
- * drawn under the pointer that asked, so a double click can't confirm.
- */
-
-/** Esc, or a press outside `ref`, cancels. */
-function useDismiss(ref: RefObject<HTMLElement | null>, onCancel: () => void, active = true) {
-  useEffect(() => {
-    if (!active) return
-    const onDown = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) onCancel()
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      e.preventDefault()
-      onCancel()
-    }
-    document.addEventListener('pointerdown', onDown)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('pointerdown', onDown)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [ref, onCancel, active])
-}
-
-/**
- * Candidate A, the control asks: the row that held the control becomes the
- * question. The sentence takes the row's width, then the act, then Cancel
- * at the end, where the control was.
- */
-export function ConfirmRow({
-  question,
-  detail,
-  action,
-  onConfirm,
-  onCancel,
-}: {
-  question: ReactNode
-  detail?: ReactNode
-  action: string
-  onConfirm: () => void
-  onCancel: () => void
-}) {
-  const row = useRef<HTMLDivElement>(null)
-  const cancel = useRef<HTMLButtonElement>(null)
-  useEffect(() => cancel.current?.focus(), [])
-  useDismiss(row, onCancel)
-  return (
-    // One line where there's room; in a narrow panel the buttons wrap
-    // under the sentence, right-aligned, Cancel still at the row's end.
-    <div ref={row} role="group" aria-label={action} className="flex min-h-control flex-wrap items-center justify-end gap-x-3 gap-y-2">
-      <p className="min-w-64 flex-1 text-sm">
-        <span className="font-medium">{question}</span>
-        {detail && <span className="text-muted-foreground"> {detail}</span>}
-      </p>
-      <span className="flex gap-2">
-        <Button variant="destructive" size="sm" onClick={onConfirm}>
-          {action}
-        </Button>
-        <Button ref={cancel} variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-      </span>
-    </div>
-  )
-}
-
-/**
- * Candidate B, a popover at the control: a small floating card under what
- * was pressed, right-aligned to it like the Menu's card. It portals to the
- * body with fixed positioning, so no scrolling pane can clip it.
+ * It is the top layer while it's open: Esc closes it and nothing below
+ * (a Menu it came from stays open), and a press anywhere else cancels it
+ * too. Cancel and Esc hand focus back to the control; a press elsewhere
+ * leaves focus where you put it.
+ *
+ * It portals to the body with fixed positioning, so no scrolling pane can
+ * clip it. Menus know it: a press inside it doesn't close one.
  */
 export function ConfirmPopover({
   anchor,
@@ -89,38 +27,69 @@ export function ConfirmPopover({
   onConfirm,
   onCancel,
 }: {
+  /** The control that asked, to sit under and to hand focus back to. */
   anchor: RefObject<HTMLElement | null>
+  /** The question, in the ink: "Remove 3.A.4?" */
   question: ReactNode
+  /** What goes with it, muted: "Its guide and Complete go with it." */
   detail?: ReactNode
+  /** The act, named on its button: "Remove", "Delete homework". */
   action: string
   onConfirm: () => void
   onCancel: () => void
 }) {
   const card = useRef<HTMLDivElement>(null)
   const cancel = useRef<HTMLButtonElement>(null)
-  const [at, setAt] = useState<{ top: number; right: number } | null>(null)
+  const sentence = useId()
+  // Placed under the control before the first paint: measured and written
+  // straight onto the card, so it never shows anywhere else first.
   useLayoutEffect(() => {
     const r = anchor.current?.getBoundingClientRect()
-    if (r) setAt({ top: r.bottom + 4, right: window.innerWidth - r.right })
+    if (!r || !card.current) return
+    card.current.style.top = `${r.bottom + 4}px`
+    card.current.style.right = `${window.innerWidth - r.right}px`
   }, [anchor])
-  useEffect(() => {
-    if (at) cancel.current?.focus()
-  }, [at])
+
   const back = () => {
     onCancel()
     anchor.current?.focus()
   }
-  useDismiss(card, back, !!at)
-  if (!at) return null
+  // The document listeners are wired once; these always reach the latest
+  // props without rewiring them.
+  const outside = useEffectEvent(() => onCancel())
+  const escape = useEffectEvent(() => back())
+
+  useEffect(() => {
+    cancel.current?.focus()
+    const onDown = (e: PointerEvent) => {
+      if (!card.current?.contains(e.target as Node)) outside()
+    }
+    // Capture, and stop it there: a document listener in the capture phase
+    // runs before any in the bubble phase, so a Menu underneath never
+    // hears this Esc.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      e.stopPropagation()
+      escape()
+    }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey, true)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey, true)
+    }
+  }, [])
+
   return createPortal(
     <div
       ref={card}
       role="alertdialog"
-      aria-label={action}
-      style={{ top: at.top, right: at.right }}
+      aria-labelledby={sentence}
+      data-confirm=""
       className="fixed z-50 w-80 space-y-3 rounded-md border bg-card p-3 text-sm shadow-floating"
     >
-      <p>
+      <p id={sentence}>
         <span className="font-medium">{question}</span>
         {detail && <span className="text-muted-foreground"> {detail}</span>}
       </p>

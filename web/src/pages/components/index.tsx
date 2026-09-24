@@ -33,7 +33,7 @@ import { Veil } from '@/components/veil'
 import { Spinner } from '@/components/spinner'
 import { Skeleton } from '@/components/skeleton'
 import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
-import { ConfirmPopover, ConfirmRow } from '@/components/confirm'
+import { ConfirmPopover } from '@/components/confirm'
 import { SegmentedControl } from '@/components/segmented-control'
 import { Checkbox } from '@/components/checkbox'
 import { Dialog } from '@/components/dialog'
@@ -45,6 +45,7 @@ import { BOOKS, DUE, SEGMENTS, sampleBook } from '@/components/fixtures'
 import { CardSkeleton, Segments } from '@/components/segments'
 import { PageOffset } from '@/lib/pages'
 import { BookTile } from '@/components/book-tile'
+import { cn } from '@/lib/utils'
 
 // The reading row has a minute of pace behind it, so it shows its time
 // left as a real import would (40 pages a minute, 172 to go).
@@ -171,21 +172,12 @@ function MenuDemo() {
   )
 }
 
-/** The same three acts under each confirm candidate: removing a question
- *  from its header, deleting a set from its menu, Reset in Settings. */
-type Style = 'row' | 'popover'
-
-function QuestionHeaderDemo({ style }: { style: Style }) {
+/** The confirm in its three homes: a control in a row (a question's
+ *  trash), a menu's last item (Delete homework), a button in a Box
+ *  (Settings' Reset). */
+function QuestionHeaderDemo() {
   const [asking, setAsking] = useState(false)
   const trash = useRef<HTMLButtonElement>(null)
-  const question = 'Remove 3.A.4?'
-  const detail = 'Its guide, what you revealed and its Complete go with it.'
-  if (style === 'row' && asking)
-    return (
-      <div className="w-96">
-        <ConfirmRow question={question} detail={detail} action="Remove" onConfirm={() => setAsking(false)} onCancel={() => setAsking(false)} />
-      </div>
-    )
   return (
     <div className="flex w-96 items-center gap-2">
       <span className="min-w-0 flex-1 truncate text-lg font-semibold">3.A.4</span>
@@ -195,74 +187,80 @@ function QuestionHeaderDemo({ style }: { style: Style }) {
       <IconButton variant="ghost" size="sm" aria-label="Move this question down">
         <ChevronDown />
       </IconButton>
-      <IconButton ref={trash} variant="ghost" size="sm" aria-label="Remove this question" onClick={() => setAsking(true)}>
+      <IconButton
+        ref={trash}
+        variant="ghost"
+        size="sm"
+        aria-label="Remove this question"
+        aria-expanded={asking}
+        className={cn(asking && 'bg-muted/50 text-foreground')}
+        onClick={() => setAsking(true)}
+      >
         <Trash2 />
       </IconButton>
-      {style === 'popover' && asking && (
-        <ConfirmPopover anchor={trash} question={question} detail={detail} action="Remove" onConfirm={() => setAsking(false)} onCancel={() => setAsking(false)} />
+      {asking && (
+        <ConfirmPopover
+          anchor={trash}
+          question="Remove 3.A.4?"
+          detail="Its guide, what you revealed and its Complete go with it."
+          action="Remove"
+          onConfirm={() => setAsking(false)}
+          onCancel={() => setAsking(false)}
+        />
       )}
     </div>
   )
 }
 
-function HomeworkMenuDemo({ style }: { style: Style }) {
-  const [asking, setAsking] = useState(false)
-  const bar = useRef<HTMLSpanElement>(null)
-  const question = 'Delete Set 3 and its 8 questions? Their guides and what you checked off go too.'
+function HomeworkMenuDemo() {
   return (
-    <span ref={bar} className="inline-flex">
-      <Menu label="Homework actions">
-        <MenuItem icon={<Plus />} onSelect={() => {}}>
-          Add questions
-        </MenuItem>
-        <MenuItem icon={<Pencil />} onSelect={() => {}}>
-          Edit homework
-        </MenuItem>
-        <MenuItem icon={<Printer />} onSelect={() => {}}>
-          Print worksheet
-        </MenuItem>
-        <MenuDivider />
-        <MenuCheckItem checked={false} onChange={() => {}}>
-          Turn in
-        </MenuCheckItem>
-        <MenuDivider />
-        {style === 'row' ? (
-          <MenuConfirmItem icon={<Trash2 />} question={question} action="Delete" onConfirm={() => {}}>
-            Delete homework
-          </MenuConfirmItem>
-        ) : (
-          <MenuItem icon={<Trash2 />} onSelect={() => setAsking(true)}>
-            Delete homework
-          </MenuItem>
-        )}
-      </Menu>
-      {style === 'popover' && asking && (
-        <ConfirmPopover anchor={bar} question={question} action="Delete" onConfirm={() => setAsking(false)} onCancel={() => setAsking(false)} />
-      )}
-    </span>
+    <Menu label="Homework actions">
+      <MenuItem icon={<Plus />} onSelect={() => {}}>
+        Add questions
+      </MenuItem>
+      <MenuItem icon={<Pencil />} onSelect={() => {}}>
+        Edit homework
+      </MenuItem>
+      <MenuItem icon={<Printer />} onSelect={() => {}}>
+        Print worksheet
+      </MenuItem>
+      <MenuDivider />
+      <MenuCheckItem checked={false} onChange={() => {}}>
+        Turn in
+      </MenuCheckItem>
+      <MenuDivider />
+      <MenuConfirmItem
+        icon={<Trash2 />}
+        question="Delete Set 3?"
+        detail="Its 8 questions go with it, with their guides and what you checked off."
+        action="Delete homework"
+        onConfirm={() => {}}
+      >
+        Delete homework
+      </MenuConfirmItem>
+    </Menu>
   )
 }
 
-function ResetDemo({ style }: { style: Style }) {
+function ResetDemo() {
   const [asking, setAsking] = useState(false)
   const button = useRef<HTMLButtonElement>(null)
-  const question = 'Reset everything?'
-  const detail = 'Deletes 4 books, 12 homework sets and 2 conversations, and your settings, API key included.'
   return (
     <Box tone="destructive" className="w-full">
-      <BoxBody className="text-sm">
-        {style === 'row' && asking ? (
-          <ConfirmRow question={question} detail={detail} action="Reset everything" onConfirm={() => setAsking(false)} onCancel={() => setAsking(false)} />
-        ) : (
-          <div className="flex min-h-control items-center gap-3">
-            <span className="min-w-0 flex-1 text-muted-foreground">Erase every book, set, conversation and setting.</span>
-            <Button ref={button} variant="outline" size="sm" className="text-destructive" onClick={() => setAsking(true)}>
-              Reset everything
-            </Button>
-          </div>
-        )}
-        {style === 'popover' && asking && (
-          <ConfirmPopover anchor={button} question={question} detail={detail} action="Reset everything" onConfirm={() => setAsking(false)} onCancel={() => setAsking(false)} />
+      <BoxBody className="flex min-h-control items-center gap-3 text-sm">
+        <span className="min-w-0 flex-1 text-muted-foreground">Erase every book, set, conversation and setting.</span>
+        <Button ref={button} variant="outline" size="sm" className="text-destructive" onClick={() => setAsking(true)}>
+          Reset everything
+        </Button>
+        {asking && (
+          <ConfirmPopover
+            anchor={button}
+            question="Reset everything?"
+            detail="Deletes 4 books, 12 homework sets and 2 conversations, and your settings, API key included."
+            action="Reset everything"
+            onConfirm={() => setAsking(false)}
+            onCancel={() => setAsking(false)}
+          />
         )}
       </BoxBody>
     </Box>
@@ -512,25 +510,16 @@ export function Components() {
 
         <Section
           title="Confirm"
-          note="Two candidates, until one is chosen. Both confirm where you asked, say what goes in one sentence, and focus Cancel; the red act is never under the pointer."
+          note="A destructive act asks where you asked: a small card under the control, one sentence of what goes, Cancel focused, the act never under the pointer. From a menu, the menu stays open behind it."
         >
-          <Shelf label="A · in place">
-            <QuestionHeaderDemo style="row" />
+          <Shelf label="from a control">
+            <QuestionHeaderDemo />
           </Shelf>
-          <Shelf label="A · in the menu">
-            <HomeworkMenuDemo style="row" />
+          <Shelf label="from a menu">
+            <HomeworkMenuDemo />
           </Shelf>
-          <Shelf label="A · a row">
-            <ResetDemo style="row" />
-          </Shelf>
-          <Shelf label="B · popover">
-            <QuestionHeaderDemo style="popover" />
-          </Shelf>
-          <Shelf label="B · from the menu">
-            <HomeworkMenuDemo style="popover" />
-          </Shelf>
-          <Shelf label="B · from a row">
-            <ResetDemo style="popover" />
+          <Shelf label="from a button">
+            <ResetDemo />
           </Shelf>
         </Section>
 
