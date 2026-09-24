@@ -310,42 +310,47 @@ export function Plot({
         {y.label} against {x.label}
       </p>
 
-      <table className="sr-only">
-        <caption>{title}</caption>
-        <thead>
-          <tr>
-            <th>{x.label}</th>
-            {series.map((s) => (
-              <th key={s.label}>{s.label}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {base.map((p) => (
-            <tr key={p[0]}>
-              <td>{fmt(p[0])}</td>
-              {series.map((s) => {
-                const q = at(s.points, p[0])
-                return <td key={s.label}>{q && q[0] === p[0] ? fmt(q[1]) : ''}</td>
-              })}
+      {/* The data for screen readers. The div hides it: a table ignores a
+          1px height and grows to fit its rows, and hidden that way a long
+          series left thousands of pixels of empty scroll under the answer. */}
+      <div className="sr-only">
+        <table>
+          <caption>{title}</caption>
+          <thead>
+            <tr>
+              <th>{x.label}</th>
+              {series.map((s) => (
+                <th key={s.label}>{s.label}</th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {base.map((p) => (
+              <tr key={p[0]}>
+                <td>{fmt(p[0])}</td>
+                {series.map((s) => {
+                  const q = at(s.points, p[0])
+                  return <td key={s.label}>{q && q[0] === p[0] ? fmt(q[1]) : ''}</td>
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   )
 }
 
 /** A plain comparison table in an answer. Wide ones scroll sideways
  *  inside their own frame. */
-export function AnswerTable({ columns, rows }: { columns: string[]; rows: ReactNode[][] }) {
+export function AnswerTable({ columns, rows }: { columns: ReactNode[]; rows: ReactNode[][] }) {
   return (
     <div className="overflow-x-auto rounded-md border bg-card">
       <table className="w-full text-sm">
         <thead className="bg-card-header text-left text-xs text-muted-foreground">
           <tr>
-            {columns.map((c) => (
-              <th key={c} className="px-3 py-2 font-medium">
+            {columns.map((c, i) => (
+              <th key={i} className="px-3 py-2 font-medium">
                 {c}
               </th>
             ))}

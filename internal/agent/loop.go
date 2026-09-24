@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -56,6 +57,21 @@ type Loop struct {
 	// Writing fires when a round's answer text starts: the thinking and
 	// the tools are done, and the words are coming.
 	Writing func()
+	// Shown is the PDF pages the messages already show as images:
+	// view_page on one points back at it instead of sending it again.
+	Shown []int
+	// Round fires after each tool round with the whole conversation so
+	// far, for a caller that saves it to carry on after a restart: Run
+	// takes those messages back and goes on from the next round.
+	Round func(msgs []llm.Message)
+	// Complete reports whether the answer written so far is whole. A
+	// round that completes it and calls only remember ends the run once
+	// the saves are done: asked again, a model only adds a sign-off to
+	// an answer that was finished.
+	Complete func() bool
+
+	// seen is the pages in view this run: Shown, and every view_page.
+	seen map[int]bool
 }
 
 // Run loops until the model answers without calling a tool.
@@ -71,14 +87,34 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			tools = append(tools, forgetTool)
 		}
 	}
+	l.seen = map[int]bool{}
+	for _, p := range l.Shown {
+		l.seen[p] = true
+	}
+	// Rounds already in msgs (a run carried on after a restart) count
+	// toward the bound, and their pages are in view.
+	done := 0
+	for _, m := range msgs {
+		for _, c := range m.ToolCalls {
+			if c.Function.Name == "view_page" {
+				var a struct{ Page int }
+				if json.Unmarshal([]byte(c.Function.Arguments), &a) == nil {
+					l.seen[a.Page+l.Book.PageOffset] = true
+				}
+			}
+		}
+		if m.Role == "assistant" && len(m.ToolCalls) > 0 {
+			done++
+		}
+	}
 	retries := cutRetries
-	for round := 0; ; round++ {
+	for round := done; ; round++ {
 		sent := msgs
 		if sys := l.system(ctx); sys != "" {
 			sent = append([]llm.Message{llm.TextMessage("system", sys)}, msgs...)
 		}
 		req := llm.ChatRequest{Model: l.Model, Messages: sent, Tools: tools}
-		if round == rounds {
+		if round >= rounds {
 			req.Tools = nil
 			req.Messages = append(sent, llm.TextMessage("user", "Answer now, with what you've found."))
 		}
@@ -111,7 +147,7 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			return nil
 		})
 		endThinking()
-		if err != nil && errors.Is(err, llm.ErrStreamCut) && !wrote && retries > 0 {
+		if err != nil && errors.Is(err, llm.ErrStreamCut) && !wrote && retries > 0 && ctx.Err() == nil {
 			// The endpoint dropped a long round before any answer text:
 			// nothing reached the student, so ask again.
 			retries--
@@ -129,7 +165,7 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			// Whatever it said before reaching for a tool ends its line.
 			l.Delta("\n")
 		}
-		msgs = append(msgs, llm.AssistantToolMessage(reply.Content, reply.ToolCalls))
+		msgs = append(msgs, llm.AssistantToolMessage(reply))
 		var images []llm.Part
 		for _, call := range reply.ToolCalls {
 			result, img := l.tool(ctx, call)
@@ -148,7 +184,23 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			}
 			msgs = append(msgs, llm.Message{Role: "user", Content: content})
 		}
+		if wrote && l.Complete != nil && onlyRemembers(reply.ToolCalls) && l.Complete() {
+			return nil
+		}
+		if l.Round != nil {
+			l.Round(msgs)
+		}
 	}
+}
+
+// onlyRemembers is a round whose calls all save to memory.
+func onlyRemembers(calls []llm.ToolCall) bool {
+	for _, c := range calls {
+		if c.Function.Name != "remember" {
+			return false
+		}
+	}
+	return len(calls) > 0
 }
 
 // cutRetries is how many cut-off rounds one run asks again.

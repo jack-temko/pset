@@ -323,3 +323,72 @@ func TestClassify(t *testing.T) {
 		}
 	}
 }
+
+func TestAStreamThatStopsWithoutFinishingIsCut(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"Let me think about the \"}}]}\n\n")
+	}))
+	defer srv.Close()
+	reply, err := testClient(t, srv.URL, "").ChatStreamFull(context.Background(), ChatRequest{Model: "m"}, nil)
+	if !errors.Is(err, ErrStreamCut) {
+		t.Fatalf("err = %v, reply %+v: every event parsed, but nothing said it was done", err, reply)
+	}
+}
+
+func TestAFinishReasonEndsAStreamWithoutDone(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"Easy.\"}}]}\n\n")
+		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"4\"},\"finish_reason\":\"stop\"}]}\n\n")
+	}))
+	defer srv.Close()
+	reply, err := testClient(t, srv.URL, "").ChatStreamFull(context.Background(), ChatRequest{Model: "m"}, nil)
+	if err != nil || reply.Content != "4" || reply.Reasoning != "Easy." {
+		t.Fatalf("reply %+v, err %v", reply, err)
+	}
+}
+
+func TestAStreamStoppedByUsIsNotCut(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"Hmm\"}}]}\n\n")
+		w.(http.Flusher).Flush()
+		cancel()
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+	_, err := testClient(t, srv.URL, "").ChatStreamFull(ctx, ChatRequest{Model: "m"}, nil)
+	if errors.Is(err, ErrStreamCut) || !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v: a shutdown isn't the endpoint dropping the answer", err)
+	}
+}
+
+func TestReasoningGoesBackOnlyToZai(t *testing.T) {
+	turn := AssistantToolMessage(Reply{Reasoning: "The source points right.", ToolCalls: []ToolCall{{ID: "c1", Type: "function"}}})
+	req := ChatRequest{Model: "glm", Messages: []Message{TextMessage("user", "4.32"), turn}}
+
+	for _, base := range []string{"https://api.z.ai/api/paas/v4", "https://api.z.ai/api/coding/paas/v4", "https://open.bigmodel.cn/api/paas/v4"} {
+		got := New(base, "k", "", "").shape(req)
+		if got.Messages[1].ReasoningContent != "The source points right." {
+			t.Fatalf("%s: reasoning dropped", base)
+		}
+		if got.Thinking == nil || got.Thinking.Type != "enabled" || got.Thinking.ClearThinking == nil || *got.Thinking.ClearThinking {
+			t.Fatalf("%s: thinking %+v, want preserved", base, got.Thinking)
+		}
+	}
+	for _, base := range []string{"https://api.deepseek.com", "http://localhost:11434/v1", "https://notz.ai.example.com/v1"} {
+		got := New(base, "k", "", "").shape(req)
+		if got.Messages[1].ReasoningContent != "" || got.Thinking != nil {
+			t.Fatalf("%s: sent %+v", base, got)
+		}
+	}
+	if req.Messages[1].ReasoningContent == "" {
+		t.Fatal("shape changed the caller's messages")
+	}
+	plain := ChatRequest{Model: "glm", Messages: []Message{TextMessage("user", "hi")}}
+	if New("https://api.z.ai/api/paas/v4", "k", "", "").shape(plain).Thinking != nil {
+		t.Fatal("thinking set on a conversation with no reasoning to keep")
+	}
+}

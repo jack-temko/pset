@@ -32,7 +32,8 @@ type Reply struct {
 	Reasoning string
 	Status    int // non-zero answers with this status and Text as the body
 	// Pause is how long to wait between streamed chunks, to test a
-	// stop mid-answer.
+	// stop mid-answer, or before a whole reply that isn't streamed, to
+	// test a call that stalls.
 	Pause time.Duration
 	// Cut ends the stream after the reasoning, halfway through a chunk,
 	// as an endpoint dropping a long answer does.
@@ -40,6 +41,9 @@ type Reply struct {
 	// Split sends each chunk's JSON across two data: lines, which SSE
 	// allows and some endpoints do.
 	Split bool
+	// Unfinished ends the stream after the reasoning on a whole event,
+	// with no finish_reason and no [DONE]: Z.ai drops long streams so.
+	Unfinished bool
 }
 
 // Request is what the server received, for assertions.
@@ -193,6 +197,13 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !req.Stream {
+		if reply.Pause > 0 {
+			select {
+			case <-r.Context().Done():
+				return
+			case <-time.After(reply.Pause):
+			}
+		}
 		msg := map[string]any{"role": "assistant", "content": reply.Text}
 		if len(reply.ToolCalls) > 0 {
 			msg["tool_calls"] = reply.ToolCalls
@@ -220,6 +231,9 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 	}
 	if reply.Cut {
 		w.Write([]byte(`data: {"choices":[{"delta":{"content":"Th`))
+		return
+	}
+	if reply.Unfinished {
 		return
 	}
 	for _, chunk := range chunks(reply.Text, 7) {

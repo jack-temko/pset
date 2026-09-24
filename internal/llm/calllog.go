@@ -9,8 +9,9 @@ import (
 	"time"
 )
 
-// The call log: every chat request and what came back, one JSON object
-// per line, so a bad walkthrough can be traced to its exact prompt. Images
+// The call log: every chat request and what came back, the model's
+// reasoning included, one JSON object per line, so a bad or slow
+// walkthrough can be traced to its exact prompt and thinking. Images
 // are replaced by a placeholder; they would make the log unreadable and
 // huge. The file rolls over at logMax, keeping one previous file.
 const logMax = 20 << 20
@@ -31,15 +32,16 @@ func LogCallsTo(path string) {
 }
 
 type callRecord struct {
-	At       string     `json:"at"`
-	Model    string     `json:"model"`
-	Millis   int64      `json:"ms"`
-	Messages []logMsg   `json:"messages"`
-	Tools    []string   `json:"tools,omitempty"`
-	Reply    string     `json:"reply,omitempty"`
-	Reasoned int        `json:"reasoned,omitempty"`
-	Calls    []ToolCall `json:"toolCalls,omitempty"`
-	Error    string     `json:"error,omitempty"`
+	At        string     `json:"at"`
+	Model     string     `json:"model"`
+	Millis    int64      `json:"ms"`
+	Messages  []logMsg   `json:"messages"`
+	Tools     []string   `json:"tools,omitempty"`
+	Reply     string     `json:"reply,omitempty"`
+	Reasoned  int        `json:"reasoned,omitempty"`
+	Reasoning string     `json:"reasoning,omitempty"`
+	Calls     []ToolCall `json:"toolCalls,omitempty"`
+	Error     string     `json:"error,omitempty"`
 }
 
 type logMsg struct {
@@ -55,7 +57,7 @@ func logCall(req ChatRequest, start time.Time, reply Reply, err error) {
 	}
 	rec := callRecord{
 		At: start.UTC().Format(time.RFC3339), Model: req.Model,
-		Millis: time.Since(start).Milliseconds(), Reply: reply.Content, Calls: reply.ToolCalls, Reasoned: reply.Reasoned,
+		Millis: time.Since(start).Milliseconds(), Reply: reply.Content, Calls: reply.ToolCalls, Reasoned: len(reply.Reasoning), Reasoning: reply.Reasoning,
 	}
 	for _, t := range req.Tools {
 		rec.Tools = append(rec.Tools, t.Function.Name)

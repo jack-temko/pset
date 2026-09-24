@@ -1,5 +1,6 @@
 import { Spinner } from '@/components/spinner'
-import { IMPORT_PHASES, type BookState } from '@/api/library'
+import { bookStep, IMPORT_PHASES, type BookState } from '@/api/library'
+import { useTimeLeft } from '@/lib/eta'
 import { useSettled } from '@/lib/settled'
 import { cn } from '@/lib/utils'
 
@@ -16,6 +17,10 @@ import { cn } from '@/lib/utils'
  * you can watch is worth more than a shape that turns, so the spinner is
  * the fallback and never the default.
  *
+ * Beside the phase, the time left on it, in rounded words (lib/eta): from
+ * the pace of a phase that counts, from past imports for one that can't.
+ * Until there's an honest estimate, nothing.
+ *
  * Queued can be over in a moment (a book going from one of its steps to
  * the next), so it shows only once it has lasted: until then the line
  * before it stays, or a blank of the same height. `since` is when the book
@@ -23,8 +28,21 @@ import { cn } from '@/lib/utils'
  *
  * It carries no controls: the row it sits in owns those.
  */
-export function BookStatus({ state: now, since, className }: { state: BookState; since?: string; className?: string }) {
+export function BookStatus({
+  bookId,
+  state: now,
+  since,
+  className,
+}: {
+  bookId: string
+  state: BookState
+  since?: string
+  className?: string
+}) {
   const state = useSettled(now, now.kind === 'queued' && since ? Date.parse(since) : null)
+  // The estimate follows the book's real state, not the settled one on
+  // screen, so a brief step still counts toward its pace.
+  const left = useTimeLeft(`book:${bookId}`, bookStep(now), now)
   if (!state) return <span className={className}>{'\u00a0'}</span>
   if (state.kind === 'ready') return null
 
@@ -68,6 +86,7 @@ export function BookStatus({ state: now, since, className }: { state: BookState;
             </span>
           </>
         )}
+        {left && ` · ${left}`}
       </span>
       {counted && (
         <span

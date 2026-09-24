@@ -53,16 +53,24 @@ export function AboutChip({ label, onRemove }: { label: string; onRemove?: () =>
   )
 }
 
+/** A step line's ink: the live one in full foreground, the rest quiet.
+ *  Colour eases, so a line fades back as the next begins or the answer
+ *  ends. */
+const stepInk = (live: boolean) =>
+  `flex items-center gap-2 text-xs font-normal transition-colors duration-150 ease-out motion-reduce:transition-none ${
+    live ? 'text-foreground' : 'text-muted-foreground'
+  }`
+
 /**
  * The step feed: one quiet line per tool call, giving verb, object, count.
  * The line is the whole story; nothing expands.
  *
- * With `running`, the last line is the call in flight: present tense and a
- * Spinner at its start ("Searching 'eigenvalue'…"). When it finishes, the
- * caller replaces it with the past-tense line and its count, and the
- * spinner is gone. It's the one sign of work in the transcript.
+ * With `running`, the last line is the call in flight: present tense, a
+ * Spinner at its start ("Searching 'eigenvalue'…"), and full ink. When it
+ * finishes, the caller replaces it with the past-tense line and its count,
+ * the spinner goes, and the line fades back to the feed's quiet ink.
  */
-export function Steps({ steps, running }: { steps: StepLine[]; running?: boolean }) {
+export function Steps({ steps, running, thinking }: { steps: StepLine[]; running?: boolean; thinking?: boolean }) {
   return (
     // Not part of the answer: Copy skips it.
     <div className="space-y-1" data-copy-skip="">
@@ -70,7 +78,7 @@ export function Steps({ steps, running }: { steps: StepLine[]; running?: boolean
         const live = running && i === steps.length - 1
         const line = typeof s === 'string' ? { label: s } : s
         return (
-          <p key={i} className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
+          <p key={i} className={stepInk(!!live)}>
             {live && <Spinner className="size-3" label="Working" />}
             <span className="min-w-0">
               {line.label}
@@ -84,7 +92,21 @@ export function Steps({ steps, running }: { steps: StepLine[]; running?: boolean
           </p>
         )
       })}
+      {thinking && <Thinking />}
     </div>
+  )
+}
+
+/** The loop waiting on the model, with nothing else on screen saying so:
+ *  before the first step or word, and between a step and what follows.
+ *  Drawn as a live step line, since that is what it is; after steps,
+ *  `Steps` draws it in their group. */
+export function Thinking() {
+  return (
+    <p className={stepInk(true)} data-copy-skip="">
+      <Spinner className="size-3" label="Thinking" />
+      <span>Thinking…</span>
+    </p>
   )
 }
 

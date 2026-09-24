@@ -2,7 +2,6 @@ import { BoxRow } from '@/components/box'
 import { BookStatus } from '@/components/book-status'
 import { CoverSwatch } from '@/components/book-cover'
 import { Button } from '@/components/button'
-import { coverHueFromSha } from '@/lib/covers'
 import type { Book } from '@/api/library'
 
 /**
@@ -54,9 +53,9 @@ export function ImportRow({
 
   return (
     <BoxRow
-      leading={<CoverSwatch hue={coverHueFromSha(book.sha256)} />}
+      leading={<CoverSwatch hue={book.cover} />}
       title={book.title}
-      description={<BookStatus state={state} since={book.updatedAt} />}
+      description={<BookStatus bookId={book.id} state={state} since={book.updatedAt} />}
       trailing={trailing}
     />
   )

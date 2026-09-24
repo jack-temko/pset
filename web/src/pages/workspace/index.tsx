@@ -19,7 +19,6 @@ import {
 } from 'lucide-react'
 
 import { AppShell } from '@/components/shell'
-import { Flash } from '@/components/flash'
 import { Box, BoxRow } from '@/components/box'
 import { DoorAction } from '@/components/door'
 import { Checkbox } from '@/components/checkbox'
@@ -36,6 +35,7 @@ import {
   StoppedNote,
   PageRef,
   Steps,
+  Thinking,
   UserTurn,
 } from '@/components/transcript'
 import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
@@ -59,6 +59,7 @@ import { ApiError } from '@/api/client'
 import {
   figureURL,
   outstanding,
+  questionStep,
   toFind,
   useAddQuestions,
   useBookHomework,
@@ -79,6 +80,7 @@ import { CardSkeleton, Prose, Segments } from '@/components/segments'
 import { useHeartbeat, type Kind as ActivityKind } from '@/api/activity'
 import { useAsk, useClearTurns, useStopTurn, useTurns, type About, type LiveTurn } from '@/api/ask'
 import { dueLine, dueStatus } from '@/lib/due'
+import { useTimeLeft } from '@/lib/eta'
 import { PageOffset, pdfOf, printedLabel, usePageOffset } from '@/lib/pages'
 import { useSettled } from '@/lib/settled'
 import { cn } from '@/lib/utils'
@@ -113,11 +115,12 @@ function writeTab(bookId: string, tab: Tab) {
 // ---------------------------------------------------------------- rail
 
 /** The book's contents as a tree of quiet rows; the reader's position
- *  highlights the section or chapter it is inside. A jump puts the
- *  destination there at once, until the next scroll moves the page. A
- *  book with no contents has no rail. Pages here are PDF pages, as the
- *  engine sends them; each shows its printed number, with the PDF page
- *  on hover. */
+ *  highlights the section or chapter it is inside, and the rail keeps that
+ *  row in view. A jump puts the destination there at once, until the next
+ *  scroll moves the page. A book with no contents has no rail. Pages here
+ *  are PDF pages, as the engine sends them; each row shows its printed
+ *  number, with the PDF page on hover. Rows touch, so the hover runs
+ *  unbroken from one to the next. */
 function Rail({
   toc,
   page,
@@ -130,6 +133,7 @@ function Rail({
   onJump: (pdfPage: number) => void
 }) {
   const offset = usePageOffset()
+  const rail = useRef<HTMLElement>(null)
   // The current heading is the last one, chapter or section, that starts
   // at or before the page the scan is showing.
   const currentId = (() => {
@@ -141,9 +145,28 @@ function Rail({
     return id
   })()
 
+  // Keep the current row in view, with a row of room around it. Only the
+  // rail scrolls: scrollIntoView would move the whole workspace too.
+  useEffect(() => {
+    const el = rail.current
+    const row = el?.querySelector<HTMLElement>('[aria-current]')
+    if (!el || !row) return
+    const room = row.offsetHeight
+    const r = row.getBoundingClientRect()
+    const box = el.getBoundingClientRect()
+    if (r.top < box.top + room) el.scrollTop -= box.top + room - r.top
+    else if (r.bottom > box.bottom - room) el.scrollTop += r.bottom - (box.bottom - room)
+  }, [currentId])
+
+  const pageLabel = (pdfPage: number) => (
+    <Tooltip label={`PDF page ${pdfPage}`} side="left">
+      <span className="shrink-0 font-mono text-xs tabular-nums">{printedLabel(pdfPage, offset)}</span>
+    </Tooltip>
+  )
+
   return (
-    <aside className="w-rail shrink-0 overflow-y-auto border-r bg-rail py-4">
-      <nav aria-label="Contents" className="space-y-4">
+    <aside ref={rail} className="w-rail shrink-0 overflow-y-auto border-r bg-rail py-4">
+      <nav aria-label="Contents">
         {toc.map((c) => {
           const current = c.id === currentId
           return (
@@ -153,13 +176,14 @@ function Rail({
                 onClick={() => onJump(c.page)}
                 aria-current={current || undefined}
                 className={cn(
-                  'flex w-full items-center px-4 py-1 text-left text-sm font-medium transition-colors duration-150 ease-out motion-reduce:transition-none',
+                  'flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-medium transition-colors duration-150 ease-out motion-reduce:transition-none',
                   current
                     ? 'bg-primary-soft text-primary'
                     : 'text-foreground hover:bg-muted/50',
                 )}
               >
                 <span className="min-w-0 flex-1 truncate">{c.title}</span>
+                {pageLabel(c.page)}
               </button>
               {c.sections.map((s) => {
                 const current = s.id === currentId
@@ -177,11 +201,7 @@ function Rail({
                     )}
                   >
                     <span className="min-w-0 flex-1 truncate">{s.title}</span>
-                    <Tooltip label={`PDF page ${s.page}`} side="left">
-                      <span className="shrink-0 font-mono text-xs tabular-nums">
-                        {printedLabel(s.page, offset)}
-                      </span>
-                    </Tooltip>
+                    {pageLabel(s.page)}
                   </button>
                 )
               })}
@@ -196,10 +216,10 @@ function Rail({
 /** The rail before the contents arrive: rows at their real height. */
 function RailSkeleton() {
   return (
-    <aside className="w-rail shrink-0 space-y-4 overflow-hidden border-r bg-rail py-4" aria-hidden>
+    <aside className="w-rail shrink-0 overflow-hidden border-r bg-rail py-4" aria-hidden>
       {[3, 4, 2].map((n, i) => (
         <div key={i}>
-          <div className="px-4 py-1 text-sm">
+          <div className="px-4 py-2 text-sm">
             <Skeleton className="h-3 w-40" />
           </div>
           {Array.from({ length: n }, (_, j) => (
@@ -508,6 +528,11 @@ function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) 
   const running = t.state === 'running'
   const last = t.steps[t.steps.length - 1]
   const lastRunning = !!last?.running
+  // Waiting on the model with nothing saying so: no call running, no card
+  // on its way, and no words since the last step (streaming words say it
+  // themselves).
+  const endsInStep = t.steps.some((s) => Math.min(s.after ?? 0, t.answer.length) === t.answer.length)
+  const thinking = running && !lastRunning && !t.pending && (t.answer.length === 0 || endsInStep)
   // Each step sits after the segments written when it ran. Turns saved
   // before steps carried a position have none, and land at the top, as
   // they always did.
@@ -520,13 +545,14 @@ function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) 
           s.memoryId ? { label: s.label, action: <MemoryUndo bookId={t.bookId} memoryId={s.memoryId} /> } : s.label,
         )}
         running={running && lastRunning && at.includes(last)}
+        thinking={thinking && i === t.answer.length}
       />
     )
   }
   return (
     <>
       <UserTurn about={t.about || undefined}>{t.question}</UserTurn>
-      {(t.steps.length > 0 || t.answer.length > 0 || t.pending) && (
+      {(t.steps.length > 0 || t.answer.length > 0 || t.pending || thinking) && (
         <AssistantTurn>
           {t.answer.map((seg, i) => (
             <Fragment key={i}>
@@ -535,6 +561,7 @@ function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) 
             </Fragment>
           ))}
           {feed(t.answer.length)}
+          {thinking && t.steps.length === 0 && <Thinking />}
           {t.pending && <CardSkeleton kind={t.pending.kind} repairing={t.pending.repairing} />}
         </AssistantTurn>
       )}
@@ -881,6 +908,24 @@ function workingLine(q: Question): string | null {
   return null
 }
 
+/** What the engine is doing to a question, and the time left on it
+ *  (lib/eta) once past questions give an estimate. */
+function WorkingLine({ q, text }: { q: Question; text: string }) {
+  const left = useTimeLeft(`question:${q.id}`, questionStep(q))
+  return (
+    <p className="flex items-center gap-2 text-xs text-muted-foreground">
+      <Spinner className="size-3" />
+      {/* An ellipsis run into the dot reads as a smudge ("memory… ·"):
+          with an estimate after it, the words drop their ellipsis, and the
+          spinner still says it's under way. The estimate wraps whole. */}
+      <span>
+        {left ? text.replace(/…$/, '') : text}
+        {left && <span className="whitespace-nowrap"> · {left}</span>}
+      </span>
+    </p>
+  )
+}
+
 /** What a queued question is waiting for. Every question is found before
  *  any guide is written, so one still to be found waits only on the finds
  *  ahead of it, and a guide waits on every find in the set, then on the
@@ -1118,10 +1163,7 @@ function Walkthrough({
             {queued ? (
               <p className="text-xs text-muted-foreground">{waitingLine(q, questions, pageOffset)}</p>
             ) : working ? (
-              <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Spinner className="size-3" />
-                {working}
-              </p>
+              <WorkingLine q={q} text={working} />
             ) : (
               // A wait too young to show yet, with nothing shown before
               // it: a blank at the line's height, so nothing moves.
@@ -1405,32 +1447,8 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   const [pinnedPage, setPinnedPage] = useState<number | null>(null)
   const [editingBook, setEditingBook] = useState(false)
   const [memoryOpen, setMemoryOpen] = useState(false)
-  const [titlePrompt, setTitlePrompt] = useState(() => {
-    // The file's own name isn't kept past import, only the title it
-    // became: a title that still looks like a filename stem, lowercase
-    // with no author, is a placeholder that was never replaced. Asked
-    // once per book; a blocked localStorage just never asks.
-    try {
-      return (
-        localStorage.getItem(`pset:title-prompt:${book.id}`) !== '1' &&
-        /^[a-z0-9][a-z0-9 ]*$/.test(book.title) &&
-        !book.author
-      )
-    } catch {
-      return false
-    }
-  })
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const pageRefs = useRef(new Map<number, HTMLDivElement>())
-
-  const dismissTitlePrompt = () => {
-    try {
-      localStorage.setItem(`pset:title-prompt:${book.id}`, '1')
-    } catch {
-      /* forgetting is fine */
-    }
-    setTitlePrompt(false)
-  }
 
   const offset = book.pageOffset
   // The jump's own scroll lands a frame later and mustn't unpin it: near
@@ -1494,25 +1512,6 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
         }
       >
         <div className="flex h-full min-h-0 flex-col">
-          {titlePrompt && (
-            <Flash
-              onDismiss={dismissTitlePrompt}
-              action={
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    dismissTitlePrompt()
-                    setEditingBook(true)
-                  }}
-                >
-                  Edit the title
-                </Button>
-              }
-            >
-              This book is named after its file.
-            </Flash>
-          )}
           <div className="flex min-h-0 flex-1" onPointerDownCapture={() => (activity.current = 'reading')}>
           {!focus &&
             (chapters === undefined ? (
@@ -1550,12 +1549,20 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           title: book.title,
           author: book.author,
           offset,
+          cover: book.cover,
           pages: book.pageCount,
           imported: new Date(book.addedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
           homework: homeworkCount,
         }}
         onClose={() => setEditingBook(false)}
-        onSave={(next) => update.mutate({ title: next.title, author: next.author, pageOffset: next.offset })}
+        onSave={(next) => {
+          // Only what changed: a colour alone isn't an edit to the name.
+          const named = next.title !== book.title || next.author !== book.author || next.offset !== offset
+          update.mutate({
+            ...(named && { title: next.title, author: next.author, pageOffset: next.offset }),
+            ...(next.cover !== book.cover && { cover: next.cover }),
+          })
+        }}
         onRemove={() => remove.mutate(book.id, { onSuccess: () => navigate('/') })}
       />
     </PageOffset>

@@ -121,7 +121,8 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 	case jobs.Stopped(ctx):
 		return err // removed; nothing left to update
 	case ctx.Err() != nil:
-		// Shutting down: the step starts over on the next run.
+		// Shutting down: the step runs again on the next start. A find
+		// starts over; a guide carries on from its last saved round.
 		s.setState(settle, q.ID, waiting(q), "")
 		return err
 	}
@@ -191,7 +192,7 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 	}
 	s.sawProblem(ctx, book, q, loc)
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `UPDATE questions SET page = ?, label = ?, statement = ?, rect = ?, figures = ?, state = ?, activity = '', updated_at = ? WHERE id = ?`,
+		if _, err := tx.ExecContext(ctx, `UPDATE questions SET page = ?, label = ?, statement = ?, rect = ?, figures = ?, rounds = '[]', state = ?, activity = '', updated_at = ? WHERE id = ?`,
 			loc.Page, label, statement, mustJSON(loc.Rect), mustJSON(loc.Figures), StateLocated, db.Now(), q.ID); err != nil {
 			return err
 		}
@@ -210,14 +211,15 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 // write writes a question's guide, found or never looked for.
 func (s *Service) write(ctx context.Context, m model, book Book, q row) error {
 	// A run starts its own memory lines over (a requeued one left some),
-	// keeping the line the find wrote.
+	// keeping the line the find wrote, unless it carries on a guide's
+	// saved rounds: then the lines are theirs.
 	kept := []MemoryLine{}
 	for _, l := range q.Memory {
 		if l.Use == MemoryUseFound {
 			kept = append(kept, l)
 		}
 	}
-	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET memory = ? WHERE id = ?`, mustJSON(kept), q.ID); err != nil {
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET memory = ? WHERE id = ? AND rounds = '[]'`, mustJSON(kept), q.ID); err != nil {
 		return err
 	}
 	s.setState(ctx, q.ID, StateWriting, "")
@@ -273,13 +275,21 @@ const guideAttempts = 2
 // and does its arithmetic with compute. The hint is saved and published
 // the moment the walkthrough heading arrives, so the student can open it
 // while the rest is still being written.
+//
+// Each tool round is saved as it finishes. A guide the app stopped
+// partway, or one asked again after a failure, carries on from its last
+// round rather than thinking the whole problem through again.
 func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) error {
-	user, err := s.guideUser(ctx, book, q)
+	user, shown, err := s.guideUser(ctx, book, q)
 	if err != nil {
 		return err
 	}
-	msgs := []llm.Message{user}
+	rounds, err := savedRounds(ctx, s.c.DB, q.ID)
+	if err != nil {
+		return err
+	}
 	for attempt := 1; attempt <= guideAttempts; attempt++ {
+		msgs := append([]llm.Message{user}, rounds...)
 		var parser *cards.Parser
 		parser = cards.NewParser(ctx, cards.Options{
 			Offset:   book.PageOffset,
@@ -315,6 +325,16 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 			},
 			Writing: func() { s.setActivity(ctx, q.ID, "Writing the guide…") },
 			Delta:   parser.Feed,
+			Shown:   shown,
+			Complete: func() bool {
+				return len(parser.Section(stageHint)) > 0 && len(parser.Section(stageWalkthrough)) > 0
+			},
+			Round: func(all []llm.Message) {
+				rounds = slices.Clone(all[1:])
+				if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET rounds = ? WHERE id = ?`, mustJSON(rounds), q.ID); err != nil {
+					slog.Warn("question: save rounds", "question", q.ID, "err", err)
+				}
+			},
 		}
 		err := loop.Run(ctx, msgs)
 		parser.Finish()
@@ -329,7 +349,7 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 			slog.Warn("guide missing a part", "question", q.ID, "attempt", attempt, "hint", len(hint), "walkthrough", len(walk))
 			continue
 		}
-		_, err = s.c.DB.ExecContext(ctx, `UPDATE questions SET hint = ?, walkthrough = ?, state = 'ready', reason = '', activity = '', updated_at = ? WHERE id = ?`,
+		_, err = s.c.DB.ExecContext(ctx, `UPDATE questions SET hint = ?, walkthrough = ?, state = 'ready', reason = '', activity = '', rounds = '[]', updated_at = ? WHERE id = ?`,
 			mustJSON(hint), mustJSON(walk), db.Now(), q.ID)
 		if err != nil {
 			return err
@@ -435,7 +455,13 @@ func tidy(segs []cards.Segment) []cards.Segment {
 	return out
 }
 
-func (s *Service) guideUser(ctx context.Context, book Book, q row) (llm.Message, error) {
+// guideUser is the writer's opening message, and the PDF pages it shows
+// whole. A problem with figures gets its figures, cut from the page, and
+// not the page: on a page of eight circuits the one that matters is a
+// corner, and a model that can't make out which way a source points
+// reasons for many minutes over it and still gets it wrong. view_page
+// shows the whole page when the writer wants the rest.
+func (s *Service) guideUser(ctx context.Context, book Book, q row) (llm.Message, []int, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "The problem")
 	if q.Label != "" && q.Label != q.Statement {
@@ -447,22 +473,116 @@ func (s *Service) guideUser(ctx context.Context, book Book, q row) (llm.Message,
 	}
 
 	var parts []llm.Part
+	var shown []int
 	if q.Page != nil {
-		text, _ := s.c.Library.PageText(ctx, book.ID, *q.Page)
-		fmt.Fprintf(&b, "\nThe problem is on %s of %q. Its text:\n\n%s\n", printedName(*q.Page, book.PageOffset), book.Title, clip(text, 3000))
-		if url, err := s.pageImage(ctx, book.ID, *q.Page, 1400); err == nil {
-			parts = append(parts, llm.TextPart(fmt.Sprintf("The problem's page, %s:", printedName(*q.Page, book.PageOffset))), llm.ImagePart(url))
+		page := printedName(*q.Page, book.PageOffset)
+		if figs := s.figureParts(ctx, book, q); len(figs) > 0 {
+			fmt.Fprintf(&b, "\nThe problem is on %s of %q. Its figures follow, cut from the page; view_page shows the whole page.\n", page, book.Title)
+			parts = figs
+		} else {
+			text, _ := s.c.Library.PageText(ctx, book.ID, *q.Page)
+			fmt.Fprintf(&b, "\nThe problem is on %s of %q. Its text:\n\n%s\n", page, book.Title, clip(text, 3000))
+			if url, err := s.pageImage(ctx, book.ID, *q.Page, 1400); err == nil {
+				parts = append(parts, llm.TextPart(fmt.Sprintf("The problem's page, %s:", page)), llm.ImagePart(url))
+				shown = append(shown, *q.Page)
+			}
 		}
 	}
-	fmt.Fprintf(&b, "\nThe book is %q: search and read it for the theory the problem rests on.\n", book.Title)
+	if theory := s.theory(ctx, book, q); theory != "" {
+		fmt.Fprintf(&b, "\nThe book is %q. Your memory points to these pages for this problem's theory; search and read it for anything more.\n%s", book.Title, theory)
+	} else {
+		fmt.Fprintf(&b, "\nThe book is %q: search and read it for the theory the problem rests on.\n", book.Title)
+	}
 	if len(parts) == 0 {
-		return llm.TextMessage("user", b.String()), nil
+		return llm.TextMessage("user", b.String()), shown, nil
 	}
 	content := llm.PartsContent(llm.TextPart(b.String()))
 	for _, p := range parts {
 		content.AppendPart(p)
 	}
-	return llm.Message{Role: "user", Content: content}, nil
+	return llm.Message{Role: "user", Content: content}, shown, nil
+}
+
+// figureParts is a question's figures as images, each under its label,
+// cut the way the walkthrough shows them. None when any fails to cut: a
+// problem missing one of its figures is better read off the whole page.
+func (s *Service) figureParts(ctx context.Context, book Book, q row) []llm.Part {
+	var parts []llm.Part
+	for _, f := range q.FigRect {
+		img, err := s.crop(ctx, book.ID, *q.Page, f.Rect)
+		if err != nil {
+			slog.Warn("guide: figure crop", "question", q.ID, "figure", f.Label, "err", err)
+			return nil
+		}
+		label := f.Label
+		if label == "" {
+			label = "A figure"
+		}
+		parts = append(parts, llm.TextPart(label+":"), llm.ImagePart("data:image/jpeg;base64,"+base64.StdEncoding.EncodeToString(img)))
+	}
+	return parts
+}
+
+// theoryPages bounds the pages memory puts in a guide's opening message.
+const theoryPages = 2
+
+// theoryDepth is how far down a search for the problem a remembered page
+// may rank. A problem's words match the problem pages around it best, so
+// the theory it rests on sits lower than a question's would.
+const theoryDepth = 30
+
+// theory is the text of the pages memory points to for a problem, so the
+// writer starts with them instead of spending a round, and all the
+// thinking a round costs, reading them. A page qualifies when a book
+// memory names it, it's in the problem's chapter, and a search for the
+// problem finds it: memory says the page is worth reading, the chapter
+// and the search that it's this problem's.
+func (s *Service) theory(ctx context.Context, book Book, q row) string {
+	if s.c.Memory == nil || strings.TrimSpace(q.Statement) == "" {
+		return ""
+	}
+	_, chapter, ok := problemLabel(q.Label, q.Text)
+	if !ok {
+		return ""
+	}
+	start, end, ok, err := s.c.Library.ChapterSpan(ctx, book.ID, chapter)
+	if err != nil || !ok {
+		return ""
+	}
+	notes, err := s.c.Memory.Notes(ctx, book.ID)
+	if err != nil {
+		return ""
+	}
+	named := map[int]bool{}
+	for _, n := range notes {
+		if n.Kind == "book" && n.Page >= start && n.Page <= end && (q.Page == nil || n.Page != *q.Page) {
+			named[n.Page] = true
+		}
+	}
+	if len(named) == 0 {
+		return ""
+	}
+	hits, err := s.c.Library.Search(ctx, book.ID, q.Statement, theoryDepth)
+	if err != nil {
+		slog.Warn("guide: theory search", "question", q.ID, "err", err)
+		return ""
+	}
+	var b strings.Builder
+	n := 0
+	for _, p := range hits {
+		if !named[p] {
+			continue
+		}
+		text, err := s.c.Library.PageText(ctx, book.ID, p)
+		if err != nil || strings.TrimSpace(text) == "" {
+			continue
+		}
+		fmt.Fprintf(&b, "\n%s:\n%s\n", printedName(p, book.PageOffset), clip(text, 5000))
+		if n++; n == theoryPages {
+			break
+		}
+	}
+	return b.String()
 }
 
 func clip(s string, n int) string {
@@ -533,7 +653,7 @@ func (s *Service) locate(ctx context.Context, m model, book Book, q row) (locati
 			}
 		}
 		if len(fromMemory) > 0 {
-			s.setActivity(ctx, q.ID, "Checking the pages memory points to…")
+			s.setActivity(ctx, q.ID, "Checking pages from memory…")
 		}
 		loc, ok, err := s.locateOnce(ctx, m, book, q, cands)
 		if err != nil {
@@ -665,7 +785,7 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 			Rect  *pdf.Rect `json:"rect"`
 		} `json:"figures"`
 	}
-	if err := json.Unmarshal([]byte(unfence(reply)), &pin); err != nil {
+	if err := json.Unmarshal([]byte(llm.Unfence(reply)), &pin); err != nil {
 		slog.Warn("locate: reply wasn't JSON", "question", q.ID, "err", err)
 		return location{}, false, nil
 	}
@@ -686,18 +806,3 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 
 // maxFigures caps the figures one question shows.
 const maxFigures = 3
-
-// unfence tolerates JSON wrapped in a code fence.
-func unfence(s string) string {
-	s = strings.TrimSpace(s)
-	if !strings.HasPrefix(s, "```") {
-		return s
-	}
-	if i := strings.IndexByte(s, '\n'); i >= 0 {
-		s = s[i+1:]
-	}
-	if i := strings.LastIndex(s, "```"); i >= 0 {
-		s = s[:i]
-	}
-	return strings.TrimSpace(s)
-}

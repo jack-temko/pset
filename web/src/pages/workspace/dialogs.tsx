@@ -1,10 +1,12 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 
+import { CoverPicker } from '@/components/book-cover'
 import { Button, IconButton } from '@/components/button'
 import { Checkbox } from '@/components/checkbox'
 import { Dialog } from '@/components/dialog'
 import { AutoTextarea, Field, Input } from '@/components/input'
+import type { CoverHue } from '@/lib/covers'
 
 /**
  * The workspace's dialogs. Making a homework set and filling it are
@@ -182,14 +184,15 @@ export function BookDialog({
   onRemove,
 }: {
   open: boolean
-  book: { title: string; author: string; offset: number; pages: number; imported: string; homework: number }
+  book: { title: string; author: string; offset: number; cover: CoverHue; pages: number; imported: string; homework: number }
   onClose: () => void
-  onSave: (next: { title: string; author: string; offset: number }) => void
+  onSave: (next: { title: string; author: string; offset: number; cover: CoverHue }) => void
   onRemove: () => void
 }) {
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [firstPage, setFirstPage] = useState('')
+  const [cover, setCover] = useState<CoverHue>(book.cover)
   const [confirming, setConfirming] = useState(false)
 
   useEffect(() => {
@@ -199,6 +202,7 @@ export function BookDialog({
       // Asked the way a person checks it: find printed page 1 in the scan
       // and read off its PDF page. The offset is that minus one.
       setFirstPage(String(book.offset + 1))
+      setCover(book.cover)
       setConfirming(false)
     }
     // Seeded on open only, for the same reason as HomeworkDialog.
@@ -208,7 +212,7 @@ export function BookDialog({
   const pdfOfFirst = Number(firstPage.match(/\d+/)?.[0] ?? 0)
   const valid = title.trim() && pdfOfFirst >= 1 && pdfOfFirst <= book.pages
   const unchanged =
-    title === book.title && author === book.author && pdfOfFirst === book.offset + 1
+    title === book.title && author === book.author && pdfOfFirst === book.offset + 1 && cover === book.cover
 
   return (
     <Dialog
@@ -237,7 +241,7 @@ export function BookDialog({
             <Button
               disabled={!valid || unchanged}
               onClick={() => {
-                onSave({ title: title.trim(), author: author.trim(), offset: pdfOfFirst - 1 })
+                onSave({ title: title.trim(), author: author.trim(), offset: pdfOfFirst - 1, cover })
                 onClose()
               }}
             >
@@ -275,6 +279,9 @@ export function BookDialog({
             onChange={(e) => setFirstPage(e.target.value)}
             className="w-24 font-mono"
           />
+        </Field>
+        <Field label="Cover">
+          <CoverPicker value={cover} onChange={setCover} />
         </Field>
         <p className="font-mono text-xs text-muted-foreground">
           {book.pages} PDF pages · imported {book.imported}

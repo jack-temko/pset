@@ -138,6 +138,9 @@ func newEnv(t *testing.T) *env {
 	}
 	e := &env{llm: llmtest.New(t), events: &recorder{}, dir: dir}
 	e.models = &models{cfg: e.llm.Config()}
+	// A book without an outline asks the model for its contents; unless a
+	// test scripts an answer, it finds none.
+	e.llm.Fallback(func(llm.ChatRequest) llmtest.Reply { return llmtest.Reply{Text: "{}"} })
 	e.queue = jobs.New(d, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	e.queue.Lane(LaneImport, 1)
 	tools := LiveTools()
@@ -278,12 +281,22 @@ func TestDuplicateAndNotAPDFAreRefused(t *testing.T) {
 	}
 }
 
-func TestUploadRefusedWithoutEmbeddings(t *testing.T) {
+func TestUploadRefusedWithoutEmbeddingsOrChat(t *testing.T) {
 	e := newEnv(t)
-	e.models.cfg = llm.Config{}
-	var er httpx.Error
-	if code := e.upload(t, "a.pdf", fixturePDF(t, 0, 2, "X"), &er); code != 422 || er.Code != httpx.CodeNotConfigured {
-		t.Fatalf("%d %+v", code, er)
+	full := e.models.cfg
+	for _, c := range []struct {
+		cfg  llm.Config
+		want string
+	}{
+		{llm.Config{}, "a chat model and an embeddings server"},
+		{llm.Config{EmbedEndpoint: full.EmbedEndpoint, EmbedModel: full.EmbedModel}, "Set up a chat model"},
+		{llm.Config{ChatEndpoint: full.ChatEndpoint, APIKey: full.APIKey, ChatModel: full.ChatModel}, "Set up an embeddings server"},
+	} {
+		e.models.cfg = c.cfg
+		var er httpx.Error
+		if code := e.upload(t, "a.pdf", fixturePDF(t, 0, 2, "X"), &er); code != 422 || er.Code != httpx.CodeNotConfigured || !strings.Contains(er.Message, c.want) {
+			t.Errorf("%d %+v, want %q", code, er, c.want)
+		}
 	}
 }
 

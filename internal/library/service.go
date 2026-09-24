@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -91,6 +92,9 @@ func New(c Config) *Service {
 	c.Queue.Handle(JobPrepare, LaneImport, s.runPrepare)
 	// It saves every page read and every batch embedded as it goes.
 	c.Queue.Resumable(JobPrepare)
+	if err := fillCovers(context.Background(), c.DB); err != nil {
+		slog.Error("library: giving books their colours", "err", err)
+	}
 	return s
 }
 
@@ -118,10 +122,11 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 	if err != nil {
 		return Book{}, err
 	}
-	if !cfg.EmbedReady() {
-		// Preparing ends in search, which needs embeddings: refuse now,
-		// not forty minutes into reading the pages.
-		return Book{}, httpx.Errorf(httpx.CodeNotConfigured, "Set up an embeddings server in Settings first. Books need it to be prepared.")
+	// Preparing needs the chat model (for the contents) and ends in search,
+	// which needs embeddings: refuse now, not forty minutes into reading
+	// the pages.
+	if err := preparable(cfg); err != nil {
+		return Book{}, err
 	}
 	if err := os.MkdirAll(s.booksDir(), 0o700); err != nil {
 		return Book{}, err
@@ -154,10 +159,20 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 	if err := os.Rename(tmp.Name(), s.pdfPath(id)); err != nil {
 		return Book{}, err
 	}
+	// The colours are counted before the transaction, which then only
+	// writes: a read that turns into a write fails outright (SQLITE_BUSY,
+	// snapshot) when a running import commits in between, and a wait
+	// doesn't help. Two uploads at once may pick the same colour; that's
+	// all a race costs.
+	used, err := coversInUse(ctx, s.c.DB)
+	if err != nil {
+		os.Remove(s.pdfPath(id))
+		return Book{}, err
+	}
 	now := db.Now()
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO books (id, sha256, title, state, created_at, updated_at) VALUES (?, ?, ?, 'queued', ?, ?)`,
-			id, sha, filenameTitle(filename), now, now); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO books (id, sha256, title, cover, state, created_at, updated_at) VALUES (?, ?, ?, ?, 'queued', ?, ?)`,
+			id, sha, filenameTitle(filename), pickCover(sha, used), now, now); err != nil {
 			return err
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, examineJob(id))
@@ -225,8 +240,17 @@ func (s *Service) Update(ctx context.Context, id string, p BookPatch) (Book, err
 		}
 		cur.PageOffset = *p.PageOffset
 	}
-	if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET title = ?, author = ?, page_offset = ?, edited = 1, updated_at = ? WHERE id = ?`,
-		cur.Title, cur.Author, cur.PageOffset, db.Now(), id); err != nil {
+	if p.Cover != nil {
+		if !validCover(*p.Cover) {
+			return Book{}, httpx.Invalid("cover", "That isn't one of the cover colours.")
+		}
+		cur.Cover = *p.Cover
+	}
+	// Only the name and the offset are the student's to guard: a retried
+	// import never writes over them. A colour is never rewritten anyway.
+	named := p.Title != nil || p.Author != nil || p.PageOffset != nil
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET title = ?, author = ?, page_offset = ?, cover = ?, edited = edited OR ?, updated_at = ? WHERE id = ?`,
+		cur.Title, cur.Author, cur.PageOffset, cur.Cover, named, db.Now(), id); err != nil {
 		return Book{}, err
 	}
 	return s.publish(ctx, id)
@@ -275,6 +299,20 @@ func (s *Service) Stop(ctx context.Context, id string) (Book, error) {
 	return s.publish(ctx, id)
 }
 
+// preparable refuses when a book couldn't be prepared: it needs a chat
+// model and an embeddings server.
+func preparable(cfg llm.Config) error {
+	switch {
+	case !cfg.ChatReady() && !cfg.EmbedReady():
+		return httpx.Errorf(httpx.CodeNotConfigured, "Set up a chat model and an embeddings server in Settings first. Books need both to be prepared.")
+	case !cfg.ChatReady():
+		return httpx.Errorf(httpx.CodeNotConfigured, "Set up a chat model in Settings first. Books need it to be prepared.")
+	case !cfg.EmbedReady():
+		return httpx.Errorf(httpx.CodeNotConfigured, "Set up an embeddings server in Settings first. Books need it to be prepared.")
+	}
+	return nil
+}
+
 // Retry queues a failed import again. Whatever the last run finished
 // (pages read, vectors built) is kept and skipped.
 func (s *Service) Retry(ctx context.Context, id string) (Book, error) {
@@ -289,8 +327,8 @@ func (s *Service) Retry(ctx context.Context, id string) (Book, error) {
 	if err != nil {
 		return Book{}, err
 	}
-	if !cfg.EmbedReady() {
-		return Book{}, httpx.Errorf(httpx.CodeNotConfigured, "Set up an embeddings server in Settings first. Books need it to be prepared.")
+	if err := preparable(cfg); err != nil {
+		return Book{}, err
 	}
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if err := setState(ctx, tx, id, BookState{Kind: StateQueued}); err != nil {

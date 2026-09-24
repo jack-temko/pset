@@ -2,17 +2,26 @@
 
 ## Work on a branch, then merge it
 
-Jack works on `main` at the same time, so every change goes on its own
-branch, never straight onto `main`. Name the branch for what the change
-does, in kebab-case (`delete-anything-confirmed`), never a generated
-name like `claude/laughing-gauss-1135o5`: the name lands in `main`'s
-history through the merge commit. When the change is done and checked
-(the tests, and the real app for a UI change):
+Jack works in the main checkout at the same time, so it can hold his
+uncommitted changes at any moment. Every change goes on its own branch,
+in its own worktree next to the repo, never straight onto `main`:
+`git worktree add ../pset-<topic> -b <topic>`. Don't edit, stage or
+commit in Jack's checkout. Name the topic for what the change does, in
+kebab-case (`delete-anything-confirmed`), never a generated name like
+`claude/laughing-gauss-1135o5`: it lands in `main`'s history through
+the merge commit.
+
+When the change is done and checked (the tests, and the real app for a
+UI change):
 
 1. Bring `main` into the branch and resolve any conflicts there.
 2. Run the checks again on the merged result.
 3. Merge the branch into `main` with a merge commit, named like the
-   history's own ("Merge <branch>: <what it does>"), and push.
+   history's own ("Merge <branch>: <what it does>"), and push. The merge
+   is the one step that runs in the main checkout. If Jack's uncommitted
+   changes touch the files the merge would change, stop and ask rather
+   than stash, reset or overwrite.
+4. Remove the worktree and delete the branch.
 
 ## Checking UI changes
 

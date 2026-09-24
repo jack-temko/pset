@@ -10,12 +10,11 @@ import (
 )
 
 // Structure: the book's contents, from the PDF's outline when it has one,
-// else from headings inferred from font sizes (a digital book) or from
-// line shapes in the recognized text (a scanned one).
+// else as the model reads them (contents.go). What's here is the outline,
+// the heading-shaped lines the model picks from, and the end pages.
 
-// Heading detection thresholds: a line counts as a heading when its font
-// size clears 1.25x the coverage-weighted body median and the text stays
-// short.
+// A digital book's line is a heading candidate when its font size clears
+// 1.25x the coverage-weighted body median and the text stays short.
 const (
 	headingSizeRatio = 1.25
 	headingMaxRunes  = 80
@@ -30,20 +29,20 @@ func outlineSections(entries []pdf.XMLOutlineEntry) []section {
 	return out
 }
 
-// inferSections finds heading candidates for a digital book with no
-// outline: the body median is the font size carrying half of all words,
-// and a line qualifies when it renders clearly above it and stays short.
-func inferSections(lines []pdf.XMLLine) []section {
+// largerLines are a digital book's lines set clearly larger than its body
+// text and short enough to be headings: candidates for the model to pick
+// from. The body median is the font size carrying half of all words.
+func largerLines(lines []pdf.XMLLine) []candidate {
 	median := bodyMedianSize(lines)
 	if median <= 0 {
 		return nil
 	}
-	var out []section
+	var out []candidate
 	for _, ln := range lines {
 		if ln.Size < headingSizeRatio*median || len([]rune(ln.Text)) > headingMaxRunes {
 			continue
 		}
-		out = append(out, section{Level: 1, Title: strings.TrimSpace(ln.Text), StartPage: ln.Page})
+		out = append(out, candidate{Page: ln.Page, Text: collapseSpaces(ln.Text)})
 	}
 	return out
 }
@@ -118,18 +117,16 @@ func cleanSections(secs []section, pageCount int) []section {
 	return out
 }
 
-// Structural-pattern heading detection for books whose text lives only in
-// stored page rows (OCR scans). Three conservative line shapes qualify:
+// Heading-shaped lines, the candidates the model picks from when a book
+// has no usable printed contents. Three line shapes qualify:
 //
-//  1. a leading keyword with a number: "Chapter 3", "Appendix 12: Foo"
+//  1. a leading keyword with a number: "Chapter 3", "Section 2.3 Foo"
 //  2. a short numbered line: "3.2 Collar Maintenance"
 //  3. a short ALL-CAPS line: "THE KETTLE ARRAY"
 //
-// Matches become flat level-1 sections (source inferred). When in doubt,
-// nothing is emitted: lines must stay short, numbered/caps remainders must
-// not read like sentence fragments, and duplicate titles dedupe with the
-// strongest shape winning: a "Chapter 1. Foo" heading beats an identical
-// "1. Foo" table-of-contents entry found on an earlier page.
+// The numbering stays in the text: it is how the model tells a chapter
+// from a section. A numbered line that reads like a sentence fragment
+// doesn't qualify.
 const (
 	patternKeywordMaxRunes  = 80
 	patternNumberedMaxRunes = 80
@@ -137,123 +134,24 @@ const (
 	patternCapsMinLetters   = 3
 )
 
-var patternKeywordRe = regexp.MustCompile(`(?i)^\s*(chapter|part|section|appendix)\s+(\d{1,3})(.*)$`)
+var patternKeywordRe = regexp.MustCompile(`(?i)^\s*(chapter|part|section|appendix)\s+(\d{1,3}(?:\.\d{1,3})*|[A-Z])\b`)
 
 var patternNumberedRe = regexp.MustCompile(`^\s*(\d{1,3}(?:\.\d{1,3}){0,2})\.?\s+(\S.*)$`)
 
-// patternKind ranks duplicate titles; higher wins.
-type patternKind int
-
-const (
-	kindCaps patternKind = iota + 1
-	kindNumbered
-	kindKeyword
-)
-
-type patternHit struct {
-	page  int
-	order int
-	kind  patternKind
-	title string
-}
-
-// patternSections scans stored page text line by line and returns the
-// structural headings it finds, in document order, with end pages assigned.
-func patternSections(pages []storedPage) []section {
-	hits := scanPatternLines(pages)
-	kept := dedupePatternHits(hits)
-
-	sections := make([]section, 0, len(kept))
-	for _, hit := range kept {
-		sections = append(sections, section{Level: 1, Title: hit.title, StartPage: hit.page})
-	}
-	return sections
-}
-
-func scanPatternLines(pages []storedPage) []patternHit {
-	var hits []patternHit
-	order := 0
-	for _, page := range pages {
-		for _, line := range strings.Split(page.Text, "\n") {
-			if kind, title, ok := matchPatternLine(line); ok {
-				hits = append(hits, patternHit{page: page.Number, order: order, kind: kind, title: title})
-			}
-			order++
-		}
-	}
-	return hits
-}
-
-// dedupePatternHits collapses repeated titles (case- and space-insensitive),
-// keeping the strongest pattern kind, then earliest occurrence.
-func dedupePatternHits(hits []patternHit) []patternHit {
-	best := map[string]patternHit{}
-	for _, hit := range hits {
-		key := strings.ToLower(collapseSpaces(hit.title))
-		if prev, ok := best[key]; ok && hit.kind <= prev.kind {
-			continue
-		}
-		best[key] = hit
-	}
-	out := make([]patternHit, 0, len(best))
-	for _, hit := range best {
-		out = append(out, hit)
-	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].page != out[j].page {
-			return out[i].page < out[j].page
-		}
-		return out[i].order < out[j].order
-	})
-	return out
-}
-
-func matchPatternLine(line string) (patternKind, string, bool) {
-	line = strings.TrimRight(line, " \t\r")
+// headingShaped reports whether a line has one of the three shapes.
+func headingShaped(line string) bool {
+	line = strings.TrimSpace(line)
 	if line == "" {
-		return 0, "", false
+		return false
 	}
-
-	if m := patternKeywordRe.FindStringSubmatch(line); m != nil && runeLen(line) <= patternKeywordMaxRunes {
-		title := keywordTitle(m[1], m[2], m[3])
-		return kindKeyword, title, true
+	if patternKeywordRe.MatchString(line) {
+		return runeLen(line) <= patternKeywordMaxRunes
 	}
 	if m := patternNumberedRe.FindStringSubmatch(line); m != nil && runeLen(line) <= patternNumberedMaxRunes {
 		rest := collapseSpaces(m[2])
-		if !startsWithLetter(rest) || endsWithSentencePunct(rest) {
-			return 0, "", false
-		}
-		return kindNumbered, rest, true
+		return startsWithLetter(rest) && !endsWithSentencePunct(rest)
 	}
-	if runeLen(line) <= patternCapsMaxRunes && isCapsHeading(line) {
-		return kindCaps, collapseSpaces(line), true
-	}
-	return 0, "", false
-}
-
-// keywordTitle renders the heading text after the keyword and number; with
-// no remainder the canonical keyword and number stand alone ("Chapter 3").
-func keywordTitle(keyword, number, rest string) string {
-	rest = strings.TrimLeft(rest, " \t.:-–-")
-	rest = collapseSpaces(rest)
-	if rest == "" || endsWithSentencePunct(rest) {
-		return keywordCanonical(keyword) + " " + number
-	}
-	return rest
-}
-
-func keywordCanonical(keyword string) string {
-	switch strings.ToLower(keyword) {
-	case "chapter":
-		return "Chapter"
-	case "part":
-		return "Part"
-	case "section":
-		return "Section"
-	case "appendix":
-		return "Appendix"
-	}
-	return keyword
+	return runeLen(line) <= patternCapsMaxRunes && isCapsHeading(line)
 }
 
 // isCapsHeading reports whether a line reads as a short ALL-CAPS heading: it

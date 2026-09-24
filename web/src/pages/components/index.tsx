@@ -2,7 +2,7 @@ import { useRef, useState, type ReactNode } from 'react'
 import { BookOpen, Check, ChevronDown, ChevronUp, Clock, Pencil, Plus, Printer, Settings, Trash2, TriangleAlert } from 'lucide-react'
 
 import { AppShell, PageShell } from '@/components/shell'
-import { BookCover } from '@/components/book-cover'
+import { BookCover, CoverPicker } from '@/components/book-cover'
 import { BrandLockup, Mark } from '@/components/brand'
 import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@/components/box'
 import { Button, IconButton } from '@/components/button'
@@ -25,6 +25,7 @@ import {
   Statement,
   Steps,
   StoppedNote,
+  Thinking,
   UserTurn,
   WorkedSteps,
 } from '@/components/transcript'
@@ -38,11 +39,17 @@ import { Checkbox } from '@/components/checkbox'
 import { Dialog } from '@/components/dialog'
 import { AutoTextarea, Field, Input } from '@/components/input'
 import { DurationValue, StatTile } from '@/components/stat-tile'
-import { coverHueFromSha } from '@/lib/covers'
+import { observe } from '@/lib/eta'
+import type { CoverHue } from '@/lib/covers'
 import { BOOKS, DUE, SEGMENTS, sampleBook } from '@/components/fixtures'
 import { CardSkeleton, Segments } from '@/components/segments'
 import { PageOffset } from '@/lib/pages'
 import { BookTile } from '@/components/book-tile'
+
+// The reading row has a minute of pace behind it, so it shows its time
+// left as a real import would (40 pages a minute, 172 to go).
+observe('book:b89d3b72', 'import:read', { done: 100, total: 312 }, Date.now() - 60_000)
+observe('book:b89d3b72', 'import:read', { done: 140, total: 312 }, Date.now())
 
 
 /** Sample series for the Plot demo: logistic growth levelling at 100
@@ -464,7 +471,7 @@ export function Components() {
 
         <Section
           title="BookCover"
-          note="Six hues, derived from the sha and never chosen. Sized by its container at a 3:4 ratio."
+          note="Six hues. A book's is picked when it's added (the one fewest books wear, seeded by its hash) and kept; the Book dialog changes it with the picker. Sized by its container at a 3:4 ratio."
         >
           <Shelf label="hues">
             <div className="grid w-full grid-cols-6 gap-4">
@@ -473,14 +480,17 @@ export function Components() {
                   <BookCover
                     title={b.title}
                     author={b.author}
-                    hue={coverHueFromSha(b.sha256)}
+                    hue={b.cover}
                   />
                   <p className="font-mono text-xs text-muted-foreground">
-                    {coverHueFromSha(b.sha256)}
+                    {b.cover}
                   </p>
                 </div>
               ))}
             </div>
+          </Shelf>
+          <Shelf label="picker">
+            <CoverPickerDemo />
           </Shelf>
           <Shelf label="book tile">
             <div className="grid w-full grid-cols-6 gap-4">
@@ -559,7 +569,7 @@ export function Components() {
 
         <Section
           title="ImportRow"
-          note="A book on its way to the shelf. The engine's own phase names; a phase that can count fills a bar, one that can't spins. The row owns the controls for exactly its state."
+          note="A book on its way to the shelf. The engine's own phase names; a phase that can count fills a bar, one that can't spins. Once there's an honest estimate, the time left follows in rounded words (lib/eta): from the pace of a counted phase, from past imports for one that can't count. The row owns the controls for exactly its state."
         >
           <Shelf label="rows">
             <Box className="w-full">
@@ -567,7 +577,7 @@ export function Components() {
                 book={sampleBook({ sha256: 'b89d3b72', title: 'Introduction to the Theory of Computation', author: '', state: { kind: 'preparing', phase: 'read', done: 140, total: 312 } })}
               />
               <ImportRow
-                book={sampleBook({ sha256: 'a41c09e2', title: 'Calculus', author: '', state: { kind: 'preparing', phase: 'search' } })}
+                book={sampleBook({ sha256: 'a41c09e2', title: 'Calculus', author: '', state: { kind: 'preparing', phase: 'contents' } })}
               />
               <ImportRow
                 book={sampleBook({ sha256: '7ce04a15', title: 'Griffiths Introduction To Electrodynamics', author: '', state: { kind: 'queued' } })}
@@ -615,12 +625,12 @@ export function Components() {
             </div>
           </Shelf>
           <Shelf label="count">
-            <div className="w-56">
+            <div className="grid w-full max-w-2xl grid-cols-3 gap-4">
               <StatTile label="Questions worked" value={14} context="across 3 problem sets" />
             </div>
           </Shelf>
           <Shelf label="empty week">
-            <div className="w-56">
+            <div className="grid w-full max-w-2xl grid-cols-3 gap-4">
               <StatTile label="Homework" chart={1} value="0" context="nothing yet this week" />
             </div>
           </Shelf>
@@ -718,7 +728,7 @@ export function Components() {
 
         <Section
           title="Transcript"
-          note="Asymmetric: you speak in a soft block, the book answers full-width. Steps are one line per tool call."
+          note="Asymmetric: you speak in a soft block, the book answers full-width. Steps are one line per tool call: the live one in full ink with its spinner, fading back to quiet ink when the next begins or the answer ends. Thinking… is the wait on the model when nothing else says so."
         >
           <Shelf label="turn">
             <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
@@ -756,6 +766,17 @@ export function Components() {
           <Shelf label="running">
             <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
               <Steps running steps={['Searched ‘eigenvalue’ · 6 pages', 'Reading p. 132–134…']} />
+            </div>
+          </Shelf>
+          <Shelf label="thinking">
+            <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
+              <UserTurn>What does the damping term do to the spring?</UserTurn>
+              <Thinking />
+            </div>
+          </Shelf>
+          <Shelf label="thinking after steps">
+            <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
+              <Steps thinking steps={['Searched ‘damped vibrations’ · 6 pages', 'Read p. 150–155']} />
             </div>
           </Shelf>
           <Shelf label="stopped">
@@ -1007,4 +1028,10 @@ function Radius({ label, className }: { label: string; className: string }) {
       <span className="font-mono text-xs text-muted-foreground">{label}</span>
     </div>
   )
+}
+
+/** The Book dialog's colour picker, live. */
+function CoverPickerDemo() {
+  const [hue, setHue] = useState<CoverHue>('rose')
+  return <CoverPicker value={hue} onChange={setHue} />
 }
