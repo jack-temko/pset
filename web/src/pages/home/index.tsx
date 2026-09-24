@@ -27,6 +27,7 @@ import { Spinner } from '@/components/spinner'
 import { useWeek, type Week } from '@/api/activity'
 import { useDue, type Summary } from '@/api/homework'
 import { dueLine, dueStatus } from '@/lib/due'
+import { useShowPending } from '@/lib/settled'
 
 function greeting(hour: number, name: string): string {
   const time = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
@@ -233,6 +234,8 @@ function Shelf({ books }: { books: Book[] | undefined }) {
   const navigate = useNavigate()
   const settings = useSettings()
   const upload = useUploadBooks()
+  // A small PDF uploads in a blink: the spinner only for a slow one.
+  const adding = useShowPending(upload)
   const stop = useStopImport()
   const retry = useRetryImport()
   const remove = useRemoveBook()
@@ -280,10 +283,10 @@ function Shelf({ books }: { books: Book[] | undefined }) {
             variant="outline"
             size="sm"
             aria-label="Add a textbook"
-            disabled={!embeddingsReady || upload.isPending}
-            onClick={() => picker.current?.click()}
+            disabled={!embeddingsReady || adding}
+            onClick={() => !upload.isPending && picker.current?.click()}
           >
-            {upload.isPending ? <Spinner className="size-3" label="Adding" /> : <Plus />}
+            {adding ? <Spinner className="size-3" label="Adding" /> : <Plus />}
           </IconButton>
         }
       />

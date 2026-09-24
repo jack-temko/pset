@@ -123,8 +123,11 @@ func (s *Service) Ask(ctx context.Context, bookID string, q Question) (Turn, err
 	if err != nil {
 		return Turn{}, err
 	}
+	// The turn's first event goes out before its job can start, so the
+	// page holds the turn before anything streams into it.
+	t, err := s.publish(ctx, id)
 	s.c.Queue.Wake()
-	return s.publish(ctx, id)
+	return t, err
 }
 
 // Stop ends a running turn. What it had written stays, with a "Stopped"

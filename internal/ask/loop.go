@@ -82,7 +82,7 @@ func (s *Service) runTurn(ctx context.Context, j jobs.Job) error {
 	case ctx.Err() != nil:
 		// Shutting down: the job runs again on the next start, from the
 		// question, so what it had written goes.
-		s.c.DB.ExecContext(settle, `UPDATE turns SET steps = '[]', answer = '[]' WHERE id = ?`, t.ID)
+		s.c.DB.ExecContext(settle, `UPDATE turns SET steps = '[]', answer = '[]', updated_at = ? WHERE id = ?`, db.Now(), t.ID)
 		s.publish(settle, t.ID)
 		return err
 	}

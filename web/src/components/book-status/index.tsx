@@ -1,5 +1,6 @@
 import { Spinner } from '@/components/spinner'
 import { IMPORT_PHASES, type BookState } from '@/api/library'
+import { useSettled } from '@/lib/settled'
 import { cn } from '@/lib/utils'
 
 /**
@@ -15,9 +16,16 @@ import { cn } from '@/lib/utils'
  * you can watch is worth more than a shape that turns, so the spinner is
  * the fallback and never the default.
  *
+ * Queued can be over in a moment (a book going from one of its steps to
+ * the next), so it shows only once it has lasted: until then the line
+ * before it stays, or a blank of the same height. `since` is when the book
+ * last changed, its `updatedAt`.
+ *
  * It carries no controls: the row it sits in owns those.
  */
-export function BookStatus({ state, className }: { state: BookState; className?: string }) {
+export function BookStatus({ state: now, since, className }: { state: BookState; since?: string; className?: string }) {
+  const state = useSettled(now, now.kind === 'queued' && since ? Date.parse(since) : null)
+  if (!state) return <span className={className}>{'\u00a0'}</span>
   if (state.kind === 'ready') return null
 
   if (state.kind === 'failed') {

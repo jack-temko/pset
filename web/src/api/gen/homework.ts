@@ -136,6 +136,11 @@ export interface Question {
    */
   revealed: string[];
   done: boolean;
+  /**
+   * UpdatedAt is when its state (or its statement, or a stage) last
+   * changed: while it waits, when the wait began.
+   */
+  updatedAt: string;
 }
 /**
  * MemoryUse is what a guide did with a memory.

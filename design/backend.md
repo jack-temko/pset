@@ -170,6 +170,13 @@ Every event has a monotonic id. The server keeps a ring buffer, so a
 reconnect with `Last-Event-ID` replays what was missed; if the gap is
 older than the buffer, the client invalidates everything.
 
+**An older copy never wins** (2026-09-24). A request's reply is a
+snapshot, and it can land after a newer event has applied. Books and
+turns carry `updatedAt` and the cache keeps the newer copy; questions
+only move forward through their states. A new turn's first event goes
+out before its job can start, so nothing streams into a turn the page
+doesn't hold yet.
+
 **Ask turns are jobs.** Leaving the workspace or reloading does not stop
 an answer: coming back fetches the turn mid-flight and the stream carries
 on. Stop is an explicit call.

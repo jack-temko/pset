@@ -80,6 +80,7 @@ import { useHeartbeat, type Kind as ActivityKind } from '@/api/activity'
 import { useAsk, useClearTurns, useStopTurn, useTurns, type About, type LiveTurn } from '@/api/ask'
 import { dueLine, dueStatus } from '@/lib/due'
 import { PageOffset, pdfOf, printedLabel, usePageOffset } from '@/lib/pages'
+import { useSettled } from '@/lib/settled'
 import { cn } from '@/lib/utils'
 
 /**
@@ -936,6 +937,13 @@ function Walkthrough({
   const turnedIn = !!set?.turnedInAt
   // Until every question is found, the worksheet has bare labels in it.
   const finding = questions.filter(toFind).length
+  // A question waits between its steps for a moment, often less: the wait
+  // shows only once it has lasted, and until then the line before it
+  // stays (its state and what it was doing), or a blank at first.
+  const waits = q !== undefined && (q.state === 'pending' || q.state === 'located')
+  const waitSince = waits ? Date.parse(q.updatedAt) : null
+  const shownState = useSettled(q?.state, waitSince, q?.id)
+  const shownActivity = useSettled(q?.activity, waitSince, q?.id)
 
   const dialog = (
     <AddQuestionsDialog
@@ -1033,10 +1041,13 @@ function Walkthrough({
     // Follow the question you just moved, not the slot it left.
     setIndex(at + by)
   }
-  const working = workingLine(q)
+  const working = shownState && workingLine({ ...q, state: shownState, activity: shownActivity })
   // Waiting to be found, or found and waiting for its guide: either way
   // nothing is happening to it yet.
-  const queued = q.state === 'pending' || q.state === 'located'
+  const queued = shownState === 'pending' || shownState === 'located'
+  // The skeletons shimmer only for work: still while queued, and still
+  // while it isn't known yet whether this is a wait.
+  const still = queued || !shownState
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -1086,8 +1097,8 @@ function Walkthrough({
           q.inBook &&
           (q.state === 'pending' || q.state === 'locating') && (
             <p className="space-y-1 text-base">
-              <Skeleton still={queued} className="h-3 w-full" />
-              <Skeleton still={queued} className="h-3 w-2/3" />
+              <Skeleton still={still} className="h-3 w-full" />
+              <Skeleton still={still} className="h-3 w-2/3" />
             </p>
           )
         )}
@@ -1106,19 +1117,21 @@ function Walkthrough({
                 yet. Working gets the spinner and the shimmer. */}
             {queued ? (
               <p className="text-xs text-muted-foreground">{waitingLine(q, questions, pageOffset)}</p>
+            ) : working ? (
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Spinner className="size-3" />
+                {working}
+              </p>
             ) : (
-              working && (
-                <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Spinner className="size-3" />
-                  {working}
-                </p>
-              )
+              // A wait too young to show yet, with nothing shown before
+              // it: a blank at the line's height, so nothing moves.
+              outstanding(q) && <p className="text-xs">{'\u00a0'}</p>
             )}
             {STAGE_NAMES.map((name) => {
               const segs = name === 'hint' ? q.hint : q.walkthrough
               // Each stage fills in as it's written: the hint can be
               // there while the walkthrough is still a skeleton.
-              if (segs.length === 0) return <StageSkeleton key={name} name={name} still={queued} />
+              if (segs.length === 0) return <StageSkeleton key={name} name={name} still={still} />
               return (
                 <Stage
                   key={name}

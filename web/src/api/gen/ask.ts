@@ -53,6 +53,11 @@ export interface Turn {
   state: 'running' | 'done' | 'stopped' | 'failed';
   reason?: string;
   createdAt: string;
+  /**
+   * UpdatedAt orders copies of the turn: a reply that arrives after a
+   * newer event must not win.
+   */
+  updatedAt: string;
 }
 export interface Turns {
   turns: Turn[];
