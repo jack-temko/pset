@@ -166,3 +166,34 @@ func TestAGuideCarriesOnAfterARestart(t *testing.T) {
 		t.Fatalf("a finished guide kept its rounds: %d", len(saved))
 	}
 }
+
+// A guide that's finished when the writer saves a memory is finished:
+// asking again only gets a sign-off tacked onto the walkthrough.
+func TestAGuideEndsWhenItsFinishedAndRemembers(t *testing.T) {
+	mem := &memory{seen: map[int][]Seen{}}
+	e := newEnvWith(t, mem)
+	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
+		if !isGuide(req) {
+			return fakeModel(req)
+		}
+		if len(req.Messages) > 2 {
+			return llmtest.Reply{Text: "The guide above is complete, good luck!"}
+		}
+		return llmtest.Reply{Text: guide, ToolCalls: []llm.ToolCall{
+			call("r1", "remember", `{"kind":"book","page":0,"text":"Ohm's law is in Chapter 3."}`),
+		}}
+	})
+	h := e.newSet(t)
+	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
+	if n := len(guideRequests(e)); n != 1 {
+		t.Fatalf("asked the writer %d times", n)
+	}
+	for _, s := range q.Walkthrough {
+		if strings.Contains(s.Text, "good luck") {
+			t.Fatalf("sign-off in the walkthrough: %q", s.Text)
+		}
+	}
+	if len(mem.notes) != 1 || len(q.Memory) != 1 {
+		t.Fatalf("notes %v, memory lines %v", mem.notes, q.Memory)
+	}
+}

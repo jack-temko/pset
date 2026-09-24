@@ -64,6 +64,11 @@ type Loop struct {
 	// far, for a caller that saves it to carry on after a restart: Run
 	// takes those messages back and goes on from the next round.
 	Round func(msgs []llm.Message)
+	// Complete reports whether the answer written so far is whole. A
+	// round that completes it and calls only remember ends the run once
+	// the saves are done: asked again, a model only adds a sign-off to
+	// an answer that was finished.
+	Complete func() bool
 
 	// seen is the pages in view this run: Shown, and every view_page.
 	seen map[int]bool
@@ -179,10 +184,23 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			}
 			msgs = append(msgs, llm.Message{Role: "user", Content: content})
 		}
+		if wrote && l.Complete != nil && onlyRemembers(reply.ToolCalls) && l.Complete() {
+			return nil
+		}
 		if l.Round != nil {
 			l.Round(msgs)
 		}
 	}
+}
+
+// onlyRemembers is a round whose calls all save to memory.
+func onlyRemembers(calls []llm.ToolCall) bool {
+	for _, c := range calls {
+		if c.Function.Name != "remember" {
+			return false
+		}
+	}
+	return len(calls) > 0
 }
 
 // cutRetries is how many cut-off rounds one run asks again.

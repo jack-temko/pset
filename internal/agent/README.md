@@ -14,6 +14,9 @@ guide checks its work exactly as an answer does.
 - **Carrying on**: `Round` hands the caller the conversation after each
   tool round. Given those messages back, `Run` goes on from the next
   round, counting the ones before toward `Rounds`.
+- **Finished answers**: with `Complete` set, a round that completes the
+  answer and calls only `remember` ends the run once the saves are done,
+  rather than asking again and getting a sign-off tacked on.
 - **Pages in view**: `Shown` is the pages the messages already show as
   images. `view_page` on one of those, or on a page viewed earlier in the
   run, points back at it instead of sending the same image again.

@@ -268,6 +268,9 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 			Writing: func() { s.setActivity(ctx, q.ID, "Writing the guide…") },
 			Delta:   parser.Feed,
 			Shown:   shown,
+			Complete: func() bool {
+				return len(parser.Section(stageHint)) > 0 && len(parser.Section(stageWalkthrough)) > 0
+			},
 			Round: func(all []llm.Message) {
 				rounds = slices.Clone(all[1:])
 				if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET rounds = ? WHERE id = ?`, mustJSON(rounds), q.ID); err != nil {
