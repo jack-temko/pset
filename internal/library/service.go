@@ -34,6 +34,8 @@ type Models interface {
 // Queue is what the library needs from the job queue.
 type Queue interface {
 	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
+	// Wake starts what was enqueued, once its transaction has committed.
+	Wake()
 	StopSubject(ctx context.Context, subject string) error
 	Handle(kind, lane string, h jobs.Handler)
 }
@@ -147,6 +149,7 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 		}
 		return Book{}, err
 	}
+	s.c.Queue.Wake()
 	return s.publish(ctx, id)
 }
 
@@ -275,6 +278,7 @@ func (s *Service) Retry(ctx context.Context, id string) (Book, error) {
 	if err != nil {
 		return Book{}, err
 	}
+	s.c.Queue.Wake()
 	return s.publish(ctx, id)
 }
 

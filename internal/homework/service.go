@@ -69,6 +69,8 @@ type Seen struct {
 
 type Queue interface {
 	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
+	// Wake starts what was enqueued, once its transaction has committed.
+	Wake()
 	StopSubject(ctx context.Context, subject string) error
 	Handle(kind, lane string, h jobs.Handler)
 }
@@ -302,6 +304,7 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 	if err != nil {
 		return nil, err
 	}
+	s.c.Queue.Wake()
 	out := make([]Question, 0, len(ids))
 	for _, id := range ids {
 		q, err := s.publishQuestion(ctx, id)
@@ -491,6 +494,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 	if err != nil {
 		return Question{}, err
 	}
+	s.c.Queue.Wake()
 	return s.publishQuestion(ctx, id)
 }
 
