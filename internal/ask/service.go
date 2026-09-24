@@ -35,6 +35,8 @@ type Settings interface {
 
 type Queue interface {
 	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
+	// Wake starts what was enqueued, once its transaction has committed.
+	Wake()
 	StopSubject(ctx context.Context, subject string) error
 	Handle(kind, lane string, h jobs.Handler)
 }
@@ -121,6 +123,7 @@ func (s *Service) Ask(ctx context.Context, bookID string, q Question) (Turn, err
 	if err != nil {
 		return Turn{}, err
 	}
+	s.c.Queue.Wake()
 	return s.publish(ctx, id)
 }
 

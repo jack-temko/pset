@@ -167,6 +167,45 @@ func TestEnqueueInATransactionNeverWaitsOnTheScheduler(t *testing.T) {
 	waitState(t, q, second, Done)
 }
 
+func TestWakeAfterCommitStartsTheJobWithoutWaitingForThePoll(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 1)
+	started := make(chan time.Time, 1)
+	q.Handle("k", "l", func(ctx context.Context, j Job) error {
+		started <- time.Now()
+		return nil
+	})
+	ctx := context.Background()
+	run(t, q)
+	// Once a job has run, the scheduler is past its start-up writes.
+	warm, _ := q.Enqueue(ctx, q.db, Spec{Kind: "k"})
+	waitState(t, q, warm, Done)
+	<-started
+	// Enqueue's own wake comes before the commit: the scheduler looks,
+	// finds nothing yet, and goes back to waiting.
+	tx, err := q.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := q.Enqueue(ctx, tx, Spec{Kind: "k"}); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	committed := time.Now()
+	q.Wake()
+	select {
+	case at := <-started:
+		if waited := at.Sub(committed); waited > poll/4 {
+			t.Fatalf("started %v after the commit", waited)
+		}
+	case <-time.After(2 * poll):
+		t.Fatal("never started")
+	}
+}
+
 func TestSameKeyNeverRunsTogether(t *testing.T) {
 	q := newQueue(t)
 	q.Lane("turn", 8)

@@ -164,8 +164,9 @@ type Spec struct {
 	Payload  any
 }
 
-// Enqueue adds a job. Call Wake after the transaction commits; a backstop
-// poll finds it anyway, only later.
+// Enqueue adds a job. It wakes the scheduler, which is enough on a *sql.DB;
+// inside a transaction the scheduler can't see the job yet, so call Wake
+// once it commits, or the job waits for the backstop poll.
 func (q *Queue) Enqueue(ctx context.Context, ex Execer, s Spec) (string, error) {
 	q.conf.RLock()
 	k, ok := q.kinds[s.Kind]

@@ -201,6 +201,8 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 	if err != nil {
 		return err
 	}
+	// No Wake: the guide waits for this job's slot, and settling wakes
+	// the queue.
 	s.publishQuestion(ctx, q.ID)
 	return nil
 }

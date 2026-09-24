@@ -11,7 +11,8 @@ that from inside their handlers.
   run at 1, so they start ahead of every queued guide, even guides queued
   before the question was added.
 - `Enqueue(ctx, execer, spec)` takes a `*sql.Tx`, so a row and the job that
-  fills it commit together. A 2s poll backs up the wake.
+  fills it commit together. The scheduler can't see the job until then,
+  so call `Wake` after the commit; a 2s poll is only the backstop.
 - **States:** queued → running → done | failed | cancelled.
   - `Stop` cancels a queued job at once, or cancels a running one's
     context; it settles `cancelled`. `Stopped(ctx)` tells a handler it
