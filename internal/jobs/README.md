@@ -6,6 +6,10 @@ that from inside their handlers.
 
 - **Lanes** bound concurrency (`import` 1, `question` 2, `turn` many).
   Jobs sharing a **key** never run together (one turn per book).
+- **Priority** orders a lane's queue: higher starts first, oldest first
+  among equals, default 0. It never stops a running job. Homework's finds
+  run at 1, so they start ahead of every queued guide, even guides queued
+  before the question was added.
 - `Enqueue(ctx, execer, spec)` takes a `*sql.Tx`, so a row and the job that
   fills it commit together. A 2s poll backs up the wake.
 - **States:** queued → running → done | failed | cancelled.

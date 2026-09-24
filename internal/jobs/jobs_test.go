@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -85,6 +86,85 @@ func TestLaneRunsInOrderOneAtATime(t *testing.T) {
 			t.Fatalf("order %v", order)
 		}
 	}
+}
+
+func TestHigherPriorityStartsFirstThenOldest(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 1)
+	var mu sync.Mutex
+	var order []string
+	q.Handle("k", "l", func(ctx context.Context, j Job) error {
+		var p struct{ Name string }
+		j.Decode(&p)
+		mu.Lock()
+		order = append(order, p.Name)
+		mu.Unlock()
+		return nil
+	})
+	ctx := context.Background()
+	var last string
+	for _, s := range []struct {
+		name     string
+		priority int
+	}{{"low-a", 0}, {"high-a", 1}, {"low-b", 0}, {"high-b", 1}} {
+		last, _ = q.Enqueue(ctx, q.db, Spec{Kind: "k", Priority: s.priority, Payload: map[string]string{"Name": s.name}})
+	}
+	if j, _ := q.Get(ctx, last); j.Priority != 1 {
+		t.Fatalf("priority stored as %d", j.Priority)
+	}
+	run(t, q)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		n := len(order)
+		mu.Unlock()
+		if n == 4 {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if got := strings.Join(order, ","); got != "high-a,high-b,low-a,low-b" {
+		t.Fatalf("order %s", got)
+	}
+}
+
+func TestEnqueueInATransactionNeverWaitsOnTheScheduler(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 1)
+	q.Handle("k", "l", func(ctx context.Context, j Job) error { return nil })
+	ctx := context.Background()
+	run(t, q)
+	// Once a job has run, the scheduler is past its start-up writes.
+	warm, _ := q.Enqueue(ctx, q.db, Spec{Kind: "k"})
+	waitState(t, q, warm, Done)
+	q.Pause()
+	first, _ := q.Enqueue(ctx, q.db, Spec{Kind: "k"})
+	// The caller's transaction takes the write lock, then the scheduler
+	// wakes to start the first job and waits on that lock.
+	tx, err := q.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE jobs SET updated_at = updated_at`); err != nil {
+		t.Fatal(err)
+	}
+	q.Resume()
+	time.Sleep(50 * time.Millisecond)
+	start := time.Now()
+	second, err := q.Enqueue(ctx, tx, Spec{Kind: "k"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if waited := time.Since(start); waited > time.Second {
+		t.Fatalf("Enqueue waited %v on the scheduler", waited)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	waitState(t, q, first, Done)
+	waitState(t, q, second, Done)
 }
 
 func TestSameKeyNeverRunsTogether(t *testing.T) {

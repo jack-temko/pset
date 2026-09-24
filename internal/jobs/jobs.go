@@ -4,7 +4,9 @@
 // what the UI shows: it never publishes anything.
 //
 // Lanes bound concurrency. A job may also carry a key, and two jobs with
-// the same key never run at once in a lane (one Ask turn per book).
+// the same key never run at once in a lane (one Ask turn per book). A
+// job's priority orders its lane's queue: higher starts first, oldest
+// first among equals (homework's finds start ahead of its guides).
 package jobs
 
 import (
@@ -14,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -40,6 +43,7 @@ type Job struct {
 	Lane     string
 	Subject  string
 	Key      string
+	Priority int
 	State    State
 	Payload  json.RawMessage
 	Error    string
@@ -71,7 +75,14 @@ CREATE TABLE jobs (
 	updated_at TEXT NOT NULL
 );
 CREATE INDEX jobs_lane_state ON jobs (lane, state, created_at);
-CREATE INDEX jobs_subject ON jobs (subject);`}}
+CREATE INDEX jobs_subject ON jobs (subject);`},
+		// Which of a lane's queued jobs starts first: the index follows the
+		// scheduler's order.
+		{Name: "jobs/2", SQL: `
+ALTER TABLE jobs ADD COLUMN priority INTEGER NOT NULL DEFAULT 0;
+DROP INDEX jobs_lane_state;
+CREATE INDEX jobs_lane_state ON jobs (lane, state, priority DESC, created_at);`},
+	}
 }
 
 type kind struct {
@@ -91,9 +102,15 @@ type Queue struct {
 	db  *sql.DB
 	log *slog.Logger
 
+	// conf guards the lanes and kinds apart from mu, and is never held
+	// across a query: Enqueue runs inside its caller's transaction, and
+	// waiting there on mu, which the scheduler holds while it writes, would
+	// lock the two up until SQLite's busy timeout.
+	conf  sync.RWMutex
+	lanes map[string]int
+	kinds map[string]kind
+
 	mu      sync.Mutex
-	lanes   map[string]int
-	kinds   map[string]kind
 	running map[string]*running
 	paused  bool
 	wake    chan struct{}
@@ -114,15 +131,15 @@ func New(d *sql.DB, log *slog.Logger) *Queue {
 
 // Lane declares a lane and how many of its jobs run at once.
 func (q *Queue) Lane(name string, concurrency int) {
-	q.mu.Lock()
-	defer q.mu.Unlock()
+	q.conf.Lock()
+	defer q.conf.Unlock()
 	q.lanes[name] = concurrency
 }
 
 // Handle registers the handler for a kind, and the lane it runs in.
 func (q *Queue) Handle(kindName, lane string, h Handler) {
-	q.mu.Lock()
-	defer q.mu.Unlock()
+	q.conf.Lock()
+	defer q.conf.Unlock()
 	if _, ok := q.lanes[lane]; !ok {
 		panic("jobs: unknown lane " + lane)
 	}
@@ -140,15 +157,19 @@ type Spec struct {
 	Kind    string
 	Subject string // the row this job works on, for StopSubject
 	Key     string // jobs sharing a key run one at a time
-	Payload any
+	// Priority orders a lane's queued jobs: higher starts first, and equals
+	// start oldest first. Zero is the default; a running job is never
+	// stopped for a higher one.
+	Priority int
+	Payload  any
 }
 
 // Enqueue adds a job. Call Wake after the transaction commits; a backstop
 // poll finds it anyway, only later.
 func (q *Queue) Enqueue(ctx context.Context, ex Execer, s Spec) (string, error) {
-	q.mu.Lock()
+	q.conf.RLock()
 	k, ok := q.kinds[s.Kind]
-	q.mu.Unlock()
+	q.conf.RUnlock()
 	if !ok {
 		return "", fmt.Errorf("jobs: unknown kind %q", s.Kind)
 	}
@@ -158,8 +179,8 @@ func (q *Queue) Enqueue(ctx context.Context, ex Execer, s Spec) (string, error) 
 	}
 	id := uuid.NewString()
 	now := db.Now()
-	_, err = ex.ExecContext(ctx, `INSERT INTO jobs (id, kind, lane, subject, key, state, payload, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, 'queued', ?, ?, ?)`, id, s.Kind, k.lane, s.Subject, s.Key, string(payload), now, now)
+	_, err = ex.ExecContext(ctx, `INSERT INTO jobs (id, kind, lane, subject, key, priority, state, payload, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?)`, id, s.Kind, k.lane, s.Subject, s.Key, s.Priority, string(payload), now, now)
 	if err != nil {
 		return "", err
 	}
@@ -177,13 +198,13 @@ func (q *Queue) Wake() {
 
 // Get reads one job.
 func (q *Queue) Get(ctx context.Context, id string) (Job, error) {
-	return scanJob(q.db.QueryRowContext(ctx, `SELECT id, kind, lane, subject, key, state, payload, error, attempts FROM jobs WHERE id = ?`, id))
+	return scanJob(q.db.QueryRowContext(ctx, `SELECT id, kind, lane, subject, key, priority, state, payload, error, attempts FROM jobs WHERE id = ?`, id))
 }
 
 func scanJob(row interface{ Scan(...any) error }) (Job, error) {
 	var j Job
 	var payload string
-	err := row.Scan(&j.ID, &j.Kind, &j.Lane, &j.Subject, &j.Key, &j.State, &payload, &j.Error, &j.Attempts)
+	err := row.Scan(&j.ID, &j.Kind, &j.Lane, &j.Subject, &j.Key, &j.Priority, &j.State, &payload, &j.Error, &j.Attempts)
 	j.Payload = json.RawMessage(payload)
 	return j, err
 }
@@ -309,7 +330,10 @@ func (q *Queue) schedule(ctx context.Context) error {
 	if q.paused || ctx.Err() != nil {
 		return nil
 	}
-	for lane, limit := range q.lanes {
+	q.conf.RLock()
+	lanes := maps.Clone(q.lanes)
+	q.conf.RUnlock()
+	for lane, limit := range lanes {
 		busy := map[string]bool{}
 		n := 0
 		for _, r := range q.running {
@@ -323,8 +347,8 @@ func (q *Queue) schedule(ctx context.Context) error {
 		if n >= limit {
 			continue
 		}
-		rows, err := q.db.QueryContext(ctx, `SELECT id, kind, lane, subject, key, state, payload, error, attempts
-			FROM jobs WHERE lane = ? AND state = 'queued' ORDER BY created_at, rowid`, lane)
+		rows, err := q.db.QueryContext(ctx, `SELECT id, kind, lane, subject, key, priority, state, payload, error, attempts
+			FROM jobs WHERE lane = ? AND state = 'queued' ORDER BY priority DESC, created_at, rowid`, lane)
 		if err != nil {
 			return err
 		}
@@ -355,7 +379,9 @@ func (q *Queue) schedule(ctx context.Context) error {
 
 // start runs j. Called with q.mu held.
 func (q *Queue) start(ctx context.Context, j Job) error {
+	q.conf.RLock()
 	k, ok := q.kinds[j.Kind]
+	q.conf.RUnlock()
 	if !ok {
 		_, err := q.db.ExecContext(ctx, `UPDATE jobs SET state = 'failed', error = ?, updated_at = ? WHERE id = ?`,
 			"no handler for "+j.Kind, db.Now(), j.ID)
