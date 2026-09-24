@@ -10,7 +10,7 @@ import {
 import { createPortal } from 'react-dom'
 import { Check, Ellipsis } from 'lucide-react'
 
-import { IconButton } from '@/components/button'
+import { Button, IconButton } from '@/components/button'
 import { cn } from '@/lib/utils'
 
 const Close = createContext<() => void>(() => {})
@@ -146,6 +146,68 @@ export function MenuItem({
       {children}
       {hint && <span className="ml-auto pl-4 text-xs text-muted-foreground">{hint}</span>}
     </button>
+  )
+}
+
+/** A destructive act that asks in place (candidate A of the confirm): the
+ *  first press opens the question under the row, inside the menu, which
+ *  stays open; the act runs from there. Its buttons are menu items, so the
+ *  arrow keys reach them, and focus lands on Cancel. */
+export function MenuConfirmItem({
+  icon,
+  question,
+  action,
+  onConfirm,
+  children,
+}: {
+  icon?: ReactNode
+  question: ReactNode
+  action: string
+  onConfirm: () => void
+  children: ReactNode
+}) {
+  const close = useContext(Close)
+  const [asking, setAsking] = useState(false)
+  const cancel = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (asking) cancel.current?.focus()
+  }, [asking])
+  return (
+    <>
+      <button
+        type="button"
+        role="menuitem"
+        tabIndex={-1}
+        aria-expanded={asking}
+        className={cn(item, 'text-destructive [&_svg]:text-destructive')}
+        onClick={() => setAsking((a) => !a)}
+      >
+        {icon ?? <span className="size-4" />}
+        {children}
+      </button>
+      {asking && (
+        <div role="group" aria-label={action} className="w-80 space-y-3 px-3 pt-1 pb-3 text-sm text-muted-foreground">
+          <p>{question}</p>
+          <div className="flex justify-end gap-2">
+            <Button
+              role="menuitem"
+              tabIndex={-1}
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                close()
+                onConfirm()
+              }}
+            >
+              {action}
+            </Button>
+            <Button ref={cancel} role="menuitem" tabIndex={-1} variant="ghost" size="sm" onClick={() => setAsking(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
