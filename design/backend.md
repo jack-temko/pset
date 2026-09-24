@@ -233,6 +233,9 @@ it finishes, so a restart, or a retry of the same problem, carries on
 from the last round instead of starting over. A model's reasoning goes
 back with its turn to endpoints that keep it (Z.ai), so it carries on
 from its own thinking rather than redoing it after every tool call.
+The writer's brief is a short rule list, how to work before what to
+write: set the problem up as equations and let `compute` and
+`solve_linear` do every number in the guide, checks included.
 
 ## Ask's agent loop
 
