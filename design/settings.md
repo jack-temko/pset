@@ -75,11 +75,20 @@ can't hold three states.
 
 ## Reset
 
-A destructive-tone Box at the bottom, with an outline button in red ink.
-**It is a fresh install:** every book, page, homework set and
-conversation, **and the settings, API key included**. The confirm
-dialog gives the counts from the engine's dry run, says there is no
-undo, and lands you on an empty Home.
+A destructive-tone Box at the bottom with two ways to start over,
+smallest first, each a row with an outline button in red ink. Each asks
+first in a confirm under its button (over it, at the foot of the page),
+naming what goes (2026-09-24, replacing Reset's dialog).
+
+- **Activity history · Clear history** forgets the time Home counts for
+  homework, reading and asking, in every book. Books, homework,
+  conversations and the questions you've worked stay: those come from
+  homework, not from the time.
+- **Reset PSet · Reset everything.** **It is a fresh install:** every
+  book, page, homework set and conversation, **and the settings, API
+  key included**. The confirm gives the counts from the engine's dry
+  run, says there is no undo, reads "Resetting…" while it runs, and
+  lands you on an empty Home.
 
 ## Backend changes this asks for
 

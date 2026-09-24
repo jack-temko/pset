@@ -18,8 +18,15 @@ right-aligned to the trigger.
 - **`MenuCheckItem`**: a fact you can take back, like Turned in. A
   primary check sits in the icon column when it's true, so labels stay
   aligned either way.
+- **`MenuConfirmItem`**: the destructive act, last, below a divider:
+  the row in destructive ink, icon included. Choosing it asks first in a
+  **ConfirmPopover** under the row, and the menu **stays open** behind
+  it: a press inside the popover isn't "outside" the menu, and its Esc
+  is caught before the menu's. Cancel or Esc lands you back on the row;
+  only the act closes the menu.
 - **`MenuDivider`**: a `border-muted` hairline, for setting a state
-  apart from the actions above it.
+  apart from the actions above it, and the destructive act from the
+  rest.
 
 It closes on Esc, on any press outside it, and after an item runs, and
 focus returns to the trigger. Opening focuses the first item; arrow keys
@@ -35,3 +42,5 @@ the rest); nest menus; put a form or anything that needs typing in one
 - **New in the app.** It was deferred once ("inline buttons until it's
   proven") and arrived when the walkthrough header filled up with Add
   questions, Edit, Print and Turned in beside the set's title.
+- **`MenuConfirmItem`** (2026-09-24) arrived with "one menu per thing":
+  the book's menu and the homework set's both end with their delete.

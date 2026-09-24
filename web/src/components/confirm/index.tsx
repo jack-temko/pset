@@ -6,7 +6,8 @@ import { Button } from '@/components/button'
 /**
  * Confirming a destructive act where it was asked for, with no trip to
  * the middle of the screen: a small floating card under the control that
- * was pressed, right-aligned to it like the Menu's card. One sentence
+ * was pressed (over it, when there's no room below), right-aligned to it
+ * like the Menu's card. One sentence
  * says what goes; Cancel, then the act, named. Focus lands on Cancel, so
  * Enter is the safe key, and the act is never drawn under the pointer
  * that asked, so a double click can't confirm.
@@ -49,13 +50,19 @@ export function ConfirmPopover({
   const card = useRef<HTMLDivElement>(null)
   const cancel = useRef<HTMLButtonElement>(null)
   const sentence = useId()
-  // Placed under the control before the first paint: measured and written
-  // straight onto the card, so it never shows anywhere else first.
+  // Placed before the first paint, measured and written straight onto the
+  // card, so it never shows anywhere else first. Under the control, or
+  // over it when there's no room below (Reset, at the foot of Settings);
+  // right-aligned to it, but never past the window's left edge.
   useLayoutEffect(() => {
     const r = anchor.current?.getBoundingClientRect()
-    if (!r || !card.current) return
-    card.current.style.top = `${r.bottom + 4}px`
-    card.current.style.right = `${window.innerWidth - r.right}px`
+    const el = card.current
+    if (!r || !el) return
+    const gap = 4
+    const margin = 8
+    const below = r.bottom + gap + el.offsetHeight <= window.innerHeight - margin
+    el.style.top = `${below ? r.bottom + gap : Math.max(margin, r.top - gap - el.offsetHeight)}px`
+    el.style.right = `${Math.min(window.innerWidth - r.right, window.innerWidth - el.offsetWidth - margin)}px`
   }, [anchor])
 
   const back = () => {
