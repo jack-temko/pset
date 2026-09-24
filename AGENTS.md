@@ -3,7 +3,10 @@
 ## Work on a branch, then merge it
 
 Jack works on `main` at the same time, so every change goes on its own
-branch, never straight onto `main`. When the change is done and checked
+branch, never straight onto `main`. Name the branch for what the change
+does, in kebab-case (`delete-anything-confirmed`), never a generated
+name like `claude/laughing-gauss-1135o5`: the name lands in `main`'s
+history through the merge commit. When the change is done and checked
 (the tests, and the real app for a UI change):
 
 1. Bring `main` into the branch and resolve any conflicts there.
