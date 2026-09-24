@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 
 import { del, get, patch, post } from './client'
 import { on } from './events'
+import { forget, observe } from '@/lib/eta'
 import type {
   Detail,
   Draft,
@@ -102,8 +103,19 @@ function dropQuestion(qc: QueryClient, id: string, homeworkId: string) {
 
 on<HomeworkChanged>('homework.changed', (d, qc) => putSummary(qc, d.homework))
 on<HomeworkRemoved>('homework.removed', (d, qc) => dropSummary(qc, d.id, d.bookId))
-on<QuestionChanged>('question.changed', (d, qc) => putQuestion(qc, d.question))
-on<QuestionRemoved>('question.removed', (d, qc) => dropQuestion(qc, d.id, d.homeworkId))
+/** The step a question is in, for its time left (lib/eta): being found
+ *  or being written, none otherwise. */
+export const questionStep = (q: Pick<Question, 'state'>) =>
+  q.state === 'locating' || q.state === 'writing' ? `homework:${q.state}` : undefined
+
+on<QuestionChanged>('question.changed', (d, qc) => {
+  observe(`question:${d.question.id}`, questionStep(d.question))
+  putQuestion(qc, d.question)
+})
+on<QuestionRemoved>('question.removed', (d, qc) => {
+  forget(`question:${d.id}`)
+  dropQuestion(qc, d.id, d.homeworkId)
+})
 
 // ---------------------------------------------------------------- sets
 

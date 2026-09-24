@@ -30,9 +30,20 @@ export function normalizeMath(text: string): string {
     .replace(/\\\(([\s\S]+?)\\\)/g, (_m, tex) => `$${tex.trim()}$`)
 }
 
+/**
+ * An inline fragment (a table cell, a step's why) is never a block: "> 0"
+ * is a comparison, not a quote, and "- 3" a number, not a list. A leading
+ * block marker is escaped so markdown reads it as text.
+ */
+export function escapeBlockStart(text: string): string {
+  return text
+    .replace(/^(\s*)(>|#{1,6}|[-+*])(?=\s|$)/, '$1\\$2')
+    .replace(/^(\s*\d+)([.)])(?=\s|$)/, '$1\\$2')
+}
+
 export function Prose({ text, onJump, inline }: { text: string; onJump?: Jump; inline?: boolean }) {
   const offset = usePageOffset()
-  const md = normalizeMath(text).replace(citation, (_m, _pp, n) => `[p. ${n}](#pdf-${n})`)
+  const md = normalizeMath(inline ? escapeBlockStart(text) : text).replace(citation, (_m, _pp, n) => `[p. ${n}](#pdf-${n})`)
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkMath]}
@@ -107,7 +118,9 @@ function Card({ s, onJump }: { s: Segment; onJump?: Jump }) {
       const c = s.card as TableCard
       return (
         <AnswerTable
-          columns={c.columns}
+          // Headers carry math too ("$\gamma^2 - 4km$"), so they render
+          // like the cells.
+          columns={c.columns.map((col, i) => <Prose key={i} text={col} onJump={onJump} inline />)}
           rows={c.rows.map((r) => r.map((cell, i) => <Prose key={i} text={cell} onJump={onJump} inline />))}
         />
       )

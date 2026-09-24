@@ -2,14 +2,16 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 
 import { ApiError, del, get, patch, post } from './client'
 import { on } from './events'
-import type { Book, BookChanged, BookPatch, BookRemoved, Books, Contents, Phase } from './gen/library'
+import type { Book, BookChanged, BookPatch, BookRemoved, Books, BookState, Contents, Phase } from './gen/library'
+import { forget, observe } from '@/lib/eta'
 
 export type * from './gen/library'
 
-/** The four phases, in the words a student reads. */
+/** The five phases, in the words a student reads. */
 export const IMPORT_PHASES: Record<Phase, string> = {
   examine: 'Examine the pages',
   read: 'Read the pages',
+  contents: 'Read the contents',
   index: 'Index the sections',
   search: 'Build search',
 }
@@ -74,8 +76,18 @@ function dropBook(qc: QueryClient, id: string) {
   qc.removeQueries({ queryKey: libraryKeys.book(id) })
 }
 
-on<BookChanged>('book.changed', (d, qc) => putBook(qc, d.book))
-on<BookRemoved>('book.removed', (d, qc) => dropBook(qc, d.id))
+/** The step a book is in, for its time left (lib/eta): its import
+ *  phase while preparing, none otherwise. */
+export const bookStep = (s: BookState) => (s.kind === 'preparing' && s.phase ? `import:${s.phase}` : undefined)
+
+on<BookChanged>('book.changed', (d, qc) => {
+  observe(`book:${d.book.id}`, bookStep(d.book.state), d.book.state)
+  putBook(qc, d.book)
+})
+on<BookRemoved>('book.removed', (d, qc) => {
+  forget(`book:${d.id}`)
+  dropBook(qc, d.id)
+})
 
 // ---------------------------------------------------------------- mutations
 

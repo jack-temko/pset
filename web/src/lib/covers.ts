@@ -1,15 +1,12 @@
-export type CoverHue = 'indigo' | 'teal' | 'amber' | 'rose' | 'violet' | 'slate'
+import type { Cover } from '@/api/library'
 
-const order: CoverHue[] = ['indigo', 'teal', 'amber', 'rose', 'violet', 'slate']
+export type CoverHue = Cover
 
 /**
- * The hue is derived, never chosen: the first byte of the sha256, modulo
- * six. The same book is always the same colour, and a seventh hue would
- * break the shelf.
+ * The six cloth colours, in the engine's order. A book's colour is picked
+ * when it's added (the one fewest books wear, seeded by its hash) and kept;
+ * the student can change it in the Book dialog. Spec: design/contents.md.
  *
  * The colours themselves are the `--cover-*` tokens in index.css.
  */
-export function coverHueFromSha(sha: string): CoverHue {
-  const byte = Number.parseInt(sha.slice(0, 2), 16)
-  return order[(Number.isNaN(byte) ? 0 : byte) % order.length]
-}
+export const COVERS: CoverHue[] = ['indigo', 'teal', 'amber', 'rose', 'violet', 'slate']

@@ -13,6 +13,7 @@ import (
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/pdf"
 )
 
 type importPayload struct {
@@ -67,7 +68,7 @@ func classify(pages []string) string {
 	return "scanned"
 }
 
-// runImport is the import job: the four phases, then ready. A book that
+// runImport is the import job: the five phases, then ready. A book that
 // was removed meanwhile ends the job quietly.
 func (s *Service) runImport(ctx context.Context, j jobs.Job) error {
 	var p importPayload
@@ -116,7 +117,7 @@ func (s *Service) prepare(ctx context.Context, b row) error {
 			return err
 		}
 	}
-	if err := s.index(ctx, b.ID, path, kind, pages); err != nil {
+	if err := s.index(ctx, b, path, kind, pages); err != nil {
 		return err
 	}
 	return s.buildSearch(ctx, b.ID)
@@ -281,11 +282,13 @@ func pageList(pages []int) string {
 	return strings.Join(parts, ", ")
 }
 
-// index works out the book's contents and its printed page offset.
-func (s *Service) index(ctx context.Context, bookID, path, kind string, pages []string) error {
-	s.setState(ctx, bookID, BookState{Kind: StatePreparing, Phase: PhaseIndex}, true)
+// index works out the book's name and contents (the PDF's outline, else
+// as the model reads them) and its printed page offset.
+func (s *Service) index(ctx context.Context, b row, path, kind string, pages []string) error {
+	s.setState(ctx, b.ID, BookState{Kind: StatePreparing, Phase: PhaseContents}, true)
 	count := len(pages)
 	var secs []section
+	var lines []pdf.XMLLine
 	if kind == "digital" {
 		doc, err := s.c.Tools.XML(ctx, path)
 		if err != nil {
@@ -294,30 +297,39 @@ func (s *Service) index(ctx context.Context, bookID, path, kind string, pages []
 			}
 			return fail(err, "PSet couldn't read this book's structure.")
 		}
-		if len(doc.Outline) > 0 {
-			secs = outlineSections(doc.Outline)
-		} else {
-			secs = inferSections(doc.Lines)
-		}
-	} else {
-		stored := make([]storedPage, len(pages))
-		for i, t := range pages {
-			stored[i] = storedPage{Number: i + 1, Text: t}
-		}
-		secs = patternSections(stored)
+		secs, lines = outlineSections(doc.Outline), doc.Lines
 	}
+	m, err := s.chatModel(ctx)
+	if err != nil {
+		return err
+	}
+	// Examine has since set the page count, size and metadata.
+	if b, err = getBook(ctx, s.c.DB, b.ID); err != nil {
+		return err
+	}
+	printed := findContentsPages(pages)
+	if err := s.nameBook(ctx, m, b, path, pages, printed); err != nil {
+		return err
+	}
+	if len(secs) == 0 {
+		if secs, err = s.readContents(ctx, m, b, path, pages, lines, printed); err != nil {
+			return err
+		}
+	}
+
+	s.setState(ctx, b.ID, BookState{Kind: StatePreparing, Phase: PhaseIndex}, true)
 	secs = cleanSections(secs, count)
 	assignEndPages(secs, count)
 	if len(secs) == 0 {
 		// Every book has structure: a contents nobody wrote is one section.
 		secs = []section{{Level: 1, Title: "Whole book", StartPage: 1, EndPage: count}}
 	}
-	if err := saveSections(ctx, s.c.DB, bookID, secs); err != nil {
+	if err := saveSections(ctx, s.c.DB, b.ID, secs); err != nil {
 		return err
 	}
 	if offset, ok := detectOffset(pages); ok {
 		// Never over the student's own number.
-		if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET page_offset = ? WHERE id = ? AND edited = 0`, offset, bookID); err != nil {
+		if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET page_offset = ? WHERE id = ? AND edited = 0`, offset, b.ID); err != nil {
 			return err
 		}
 	}

@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 
 import { BookCover } from '@/components/book-cover'
-import { coverHueFromSha } from '@/lib/covers'
 import type { Book } from '@/api/library'
 
 /**
@@ -18,7 +17,7 @@ export function BookTile({ book }: { book: Book }) {
       <BookCover
         title={book.title}
         author={book.author}
-        hue={coverHueFromSha(book.sha256)}
+        hue={book.cover}
         className="transition duration-150 ease-out group-hover:-translate-y-1 group-hover:shadow-lift motion-reduce:transition-none"
       />
     </Link>

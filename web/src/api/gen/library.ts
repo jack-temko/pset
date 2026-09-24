@@ -12,13 +12,26 @@ export const StateReady = "ready";
 export const StateFailed = "failed";
 export type State = typeof StateQueued | typeof StatePreparing | typeof StateReady | typeof StateFailed;
 /**
- * Phase is one of the four named steps of preparing a book.
+ * Phase is one of the five named steps of preparing a book.
  */
 export const PhaseExamine = "examine";
 export const PhaseRead = "read";
+export const PhaseContents = "contents";
 export const PhaseIndex = "index";
 export const PhaseSearch = "search";
-export type Phase = typeof PhaseExamine | typeof PhaseRead | typeof PhaseIndex | typeof PhaseSearch;
+export type Phase = typeof PhaseExamine | typeof PhaseRead | typeof PhaseContents | typeof PhaseIndex | typeof PhaseSearch;
+/**
+ * Cover is a book's cloth colour: one of six, the --cover-* tokens in
+ * web/src/index.css. Picked when the book is added, kept, and changeable
+ * in the Book dialog (covers.go).
+ */
+export const CoverIndigo = "indigo";
+export const CoverTeal = "teal";
+export const CoverAmber = "amber";
+export const CoverRose = "rose";
+export const CoverViolet = "violet";
+export const CoverSlate = "slate";
+export type Cover = typeof CoverIndigo | typeof CoverTeal | typeof CoverAmber | typeof CoverRose | typeof CoverViolet | typeof CoverSlate;
 /**
  * BookState is a book's import state. Phase is set while preparing; Done
  * and Total only where the phase can count (reading and search); Reason
@@ -32,9 +45,9 @@ export interface BookState {
   reason?: string;
 }
 /**
- * Book is a book as every screen sees it. SHA256 picks the cover's cloth
- * colour; PageOffset turns a PDF page into the printed one (PDF = printed
- * + offset). Page numbers on the wire are always PDF pages.
+ * Book is a book as every screen sees it. Cover is its cloth colour;
+ * PageOffset turns a PDF page into the printed one (PDF = printed +
+ * offset). Page numbers on the wire are always PDF pages.
  */
 export interface Book {
   id: string;
@@ -43,6 +56,7 @@ export interface Book {
   author: string;
   pageCount: number /* int */;
   pageOffset: number /* int */;
+  cover: Cover;
   /**
    * Aspect is page height over width, so a scan holds its box before the
    * image arrives.
@@ -66,12 +80,13 @@ export interface Books {
   books: Book[];
 }
 /**
- * BookPatch is PATCH /api/books/{id}: any subset of the three.
+ * BookPatch is PATCH /api/books/{id}: any subset of the four.
  */
 export interface BookPatch {
   title?: string;
   author?: string;
   pageOffset?: number /* int */;
+  cover?: Cover;
 }
 /**
  * ContentsSection is a section of a chapter, at its PDF page.

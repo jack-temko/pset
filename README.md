@@ -108,8 +108,9 @@ picks up where it left off on the next start.
    - **Embeddings**: the endpoint and the model.
 
    **Test** tries the values on screen without saving them. **Save** tests
-   first and only keeps values that work. A book can't be prepared until an
-   embeddings server is saved.
+   first and only keeps values that work. A book can't be prepared until
+   both are saved: the chat model reads the book's contents, and the
+   embeddings build its search.
 2. **Check Health** on the same page. It confirms the data folder, the
    database, poppler and tesseract, and offers a fix where it can.
 3. Optionally, **add your name** under You. The greeting and the tutor

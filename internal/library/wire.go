@@ -10,14 +10,29 @@ const (
 	StateFailed    State = "failed"
 )
 
-// Phase is one of the four named steps of preparing a book.
+// Phase is one of the five named steps of preparing a book.
 type Phase string
 
 const (
-	PhaseExamine Phase = "examine"
-	PhaseRead    Phase = "read"
-	PhaseIndex   Phase = "index"
-	PhaseSearch  Phase = "search"
+	PhaseExamine  Phase = "examine"
+	PhaseRead     Phase = "read"
+	PhaseContents Phase = "contents"
+	PhaseIndex    Phase = "index"
+	PhaseSearch   Phase = "search"
+)
+
+// Cover is a book's cloth colour: one of six, the --cover-* tokens in
+// web/src/index.css. Picked when the book is added, kept, and changeable
+// in the Book dialog (covers.go).
+type Cover string
+
+const (
+	CoverIndigo Cover = "indigo"
+	CoverTeal   Cover = "teal"
+	CoverAmber  Cover = "amber"
+	CoverRose   Cover = "rose"
+	CoverViolet Cover = "violet"
+	CoverSlate  Cover = "slate"
 )
 
 // BookState is a book's import state. Phase is set while preparing; Done
@@ -31,9 +46,9 @@ type BookState struct {
 	Reason string `json:"reason,omitempty"`
 }
 
-// Book is a book as every screen sees it. SHA256 picks the cover's cloth
-// colour; PageOffset turns a PDF page into the printed one (PDF = printed
-// + offset). Page numbers on the wire are always PDF pages.
+// Book is a book as every screen sees it. Cover is its cloth colour;
+// PageOffset turns a PDF page into the printed one (PDF = printed +
+// offset). Page numbers on the wire are always PDF pages.
 type Book struct {
 	ID         string `json:"id"`
 	SHA256     string `json:"sha256"`
@@ -41,6 +56,7 @@ type Book struct {
 	Author     string `json:"author"`
 	PageCount  int    `json:"pageCount"`
 	PageOffset int    `json:"pageOffset"`
+	Cover      Cover  `json:"cover"`
 	// Aspect is page height over width, so a scan holds its box before the
 	// image arrives.
 	Aspect float64   `json:"aspect"`
@@ -57,11 +73,12 @@ type Books struct {
 	Books []Book `json:"books"`
 }
 
-// BookPatch is PATCH /api/books/{id}: any subset of the three.
+// BookPatch is PATCH /api/books/{id}: any subset of the four.
 type BookPatch struct {
 	Title      *string `json:"title,omitempty"`
 	Author     *string `json:"author,omitempty"`
 	PageOffset *int    `json:"pageOffset,omitempty"`
+	Cover      *Cover  `json:"cover,omitempty"`
 }
 
 // ContentsSection is a section of a chapter, at its PDF page.

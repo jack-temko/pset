@@ -49,7 +49,9 @@ can correct it.
 ## The book
 
 A **pencil beside the book's title in the top bar** opens the Book
-dialog: title and author, editable (they start as the PDF's metadata);
+dialog: title and author, editable (they start as the title page reads,
+design/contents.md); the cover colour, one of six swatches
+(design/import.md);
 "Printed page 1 is PDF page ___", the offset, correctable; the page count
 and import date. **Remove book** sits at the footer's left. Confirming
 turns the dialog itself into the question (dialogs never nest), naming
@@ -60,7 +62,13 @@ what goes with the book: its homework and its conversation. Beside it,
 ## Contents rail
 
 - **TOC only**: the chapter/section tree as an ActionList, current
-  section highlighted, page numbers in mono on the right.
+  section highlighted, page numbers in mono on the right, chapters' as
+  well as sections'. Where the contents come from: design/contents.md.
+- **The current row stays in view**: as the scan moves on, the rail
+  scrolls to keep the highlighted row on screen, with a row of room.
+- **Rows touch** (2026-09-22): no gap between chapter groups, so the
+  hover runs unbroken from row to row. Chapter rows are taller (8px
+  padding against sections' 4px) and set in medium weight instead.
 - A book with **no usable TOC has no rail**: the scan takes the width,
   and Focus simply has less to collapse.
 
@@ -80,12 +88,20 @@ built.
   many answer segments were written when it ran, and a running tool
   ends the paragraph in progress. Copy takes the answer alone: the feed
   is the app talking, not the words.
+- **The live line stands out** (2026-09-23): the call in flight is in
+  full foreground ink with its Spinner; when the next call starts or the
+  answer ends, it eases back (150ms) to the feed's muted ink.
+- **Thinking…** (2026-09-23): while the loop waits on the model and
+  nothing else says so (before the first step or word, and after a step
+  until the next thing arrives), a live line reads "Thinking…". Streaming
+  words say it themselves, so it never sits under a paragraph.
 - **Turns are asymmetric**: the question is a compact `primary-soft`
   block on the right; the answer is full-width quiet text on the panel
   ground. The answer **streams** in around the steps.
 - **No skeleton for the answer** (2026-09-22): until it arrives, its
   shape is unknown, and a shimmer at a made-up size promises one. The
-  wait is said by the feed's first line and by Stop in the composer.
+  wait is said by the feed (a step, or Thinking…) and by Stop in the
+  composer.
   Skeletons are for **cards**, where the envelope names the kind before
   the card arrives, so the shape is known.
 - **Citations are inline page chips**: a distinct small mono element
@@ -156,7 +172,9 @@ built.
   same statement, same two veiled stages, same Complete.
 - **Progressive rows**: questions appear as they are located, each with a
   quiet working state until its guide is ready ("Finding it in the
-  book…", or "Writing the guide…" when there is nothing to find).
+  book…", or "Writing the guide…" when there is nothing to find),
+  followed by the time left on that step once past questions give an
+  estimate ("· less than a minute left"; rules in design/import.md).
 - Walkthrough per question: two veiled stages and a Complete checkbox,
   detailed below. Reveals and marks persist; progress is questions
   marked done.

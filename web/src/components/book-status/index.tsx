@@ -1,5 +1,6 @@
 import { Spinner } from '@/components/spinner'
-import { IMPORT_PHASES, type BookState } from '@/api/library'
+import { bookStep, IMPORT_PHASES, type BookState } from '@/api/library'
+import { useTimeLeft } from '@/lib/eta'
 import { cn } from '@/lib/utils'
 
 /**
@@ -15,9 +16,14 @@ import { cn } from '@/lib/utils'
  * you can watch is worth more than a shape that turns, so the spinner is
  * the fallback and never the default.
  *
+ * Beside the phase, the time left on it, in rounded words (lib/eta): from
+ * the pace of a phase that counts, from past imports for one that can't.
+ * Until there's an honest estimate, nothing.
+ *
  * It carries no controls: the row it sits in owns those.
  */
-export function BookStatus({ state, className }: { state: BookState; className?: string }) {
+export function BookStatus({ bookId, state, className }: { bookId: string; state: BookState; className?: string }) {
+  const left = useTimeLeft(`book:${bookId}`, bookStep(state), state)
   if (state.kind === 'ready') return null
 
   if (state.kind === 'failed') {
@@ -48,6 +54,7 @@ export function BookStatus({ state, className }: { state: BookState; className?:
             </span>
           </>
         )}
+        {left && ` · ${left}`}
       </span>
       {counted && (
         <span

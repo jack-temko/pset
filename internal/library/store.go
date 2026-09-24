@@ -71,7 +71,10 @@ CREATE TABLE embeddings (
 	model   TEXT NOT NULL,
 	vector  BLOB NOT NULL,
 	PRIMARY KEY (book_id, number)
-);`}}
+);`}, {Name: "library/2", SQL: `
+-- The cloth colour, picked when the book is added and kept (covers.go).
+-- Empty until picked: books from before are given one at startup.
+ALTER TABLE books ADD COLUMN cover TEXT NOT NULL DEFAULT '';`}}
 }
 
 var errNotFound = errors.New("not found")
@@ -85,13 +88,13 @@ type row struct {
 	Edited bool
 }
 
-const bookCols = `id, sha256, title, author, page_count, page_width, page_height, page_offset, kind, edited, state, phase, done, total, reason, created_at, updated_at`
+const bookCols = `id, sha256, title, author, page_count, page_width, page_height, page_offset, kind, edited, state, phase, done, total, reason, created_at, updated_at, cover`
 
 func scanBook(s interface{ Scan(...any) error }) (row, error) {
 	var r row
 	var done, total sql.NullInt64
 	err := s.Scan(&r.ID, &r.SHA256, &r.Title, &r.Author, &r.PageCount, &r.Width, &r.Height,
-		&r.PageOffset, &r.Kind, &r.Edited, &r.State.Kind, &r.State.Phase, &done, &total, &r.State.Reason, &r.AddedAt, &r.UpdatedAt)
+		&r.PageOffset, &r.Kind, &r.Edited, &r.State.Kind, &r.State.Phase, &done, &total, &r.State.Reason, &r.AddedAt, &r.UpdatedAt, &r.Cover)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
 	}

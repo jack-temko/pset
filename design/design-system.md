@@ -45,7 +45,7 @@ the semantic token, never a raw value; both themes then come free.
 | `input` | Control borders: fields, the outline button. Darker than `border` on purpose. |
 | `ring` | Focus: a solid 2px ring, offset 2px. |
 | `chart-1..5` | Data series, in order. |
-| `cover-*` | The six book-cloth hues. Identical in both themes: a book is an object. |
+| `cover-*` | The six book-cloth hues. Identical in both themes: a book is an object. A book's hue is picked when it's added (the one fewest books wear, seeded by its hash) and kept; the Book dialog can change it (design/import.md). Every picture of a book (cover, swatch, chart bar) draws the same stored hue. |
 
 **Status is ink, not fill.** A status colour sets text, icons and borders;
 its `-soft` tint is the only ground it gets. There is no solid red button.

@@ -18,10 +18,10 @@ import { ImportRow } from '@/components/import-row'
 import { Box, BoxBody, BoxRow, Counter } from '@/components/box'
 import { Button, IconButton, buttonVariants } from '@/components/button'
 import { CoverSwatch } from '@/components/book-cover'
+import type { CoverHue } from '@/lib/covers'
 import { HomeworkStatusLabel } from '@/components/homework-status'
 import { Door } from '@/components/door'
 import { DurationValue, StatTile } from '@/components/stat-tile'
-import { coverHueFromSha } from '@/lib/covers'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
 import { useWeek, type Week } from '@/api/activity'
@@ -62,7 +62,7 @@ function WeekByBook({ books }: { books: WeekBook[] }) {
             className="h-full"
             style={{
               width: `${(b.minutes / total) * 100}%`,
-              background: `var(--cover-${coverHueFromSha(b.sha256)})`,
+              background: `var(--cover-${b.cover})`,
             }}
           />
         ))}
@@ -72,7 +72,7 @@ function WeekByBook({ books }: { books: WeekBook[] }) {
           <span key={b.sha256} className="flex items-center gap-2 text-xs text-muted-foreground">
             {/* A spine, not a dot: the activity tiles own the dots, and this
                 swatch ties the entry to its cover on the shelf below. */}
-            <CoverSwatch hue={coverHueFromSha(b.sha256)} className="h-3 w-2" />
+            <CoverSwatch hue={b.cover} className="h-3 w-2" />
             {b.title}
             <span className="font-mono font-normal tabular-nums">
               {Math.floor(b.minutes / 60) > 0 && `${Math.floor(b.minutes / 60)}h `}
@@ -90,7 +90,7 @@ function WeekByBook({ books }: { books: WeekBook[] }) {
  *  streaks. First on the page, so the week is visible without scrolling. */
 /** The week's time split by book, for the bar under the stat tiles. The
  *  colour comes from the book's cover hue: the bar is the shelf, flattened. */
-type WeekBook = { sha256: string; title: string; minutes: number }
+type WeekBook = { sha256: string; cover: CoverHue; title: string; minutes: number }
 
 /** One rounding, from one array: the tiles are cut from the same per-book
  *  minutes the bar shows (weighted by the per-activity totals, spare minutes
@@ -237,10 +237,19 @@ function Shelf({ books }: { books: Book[] | undefined }) {
   const retry = useRetryImport()
   const remove = useRemoveBook()
 
-  // The engine refuses an import without embeddings rather than failing
-  // forty minutes into reading the pages, so the shelf refuses it too,
-  // before you've picked a file. Unknown until settings load: not blocked.
+  // The engine refuses an import without a chat model (it reads the
+  // contents) or embeddings (it builds search) rather than failing forty
+  // minutes into reading the pages, so the shelf refuses it too, before
+  // you've picked a file. Unknown until settings load: not blocked.
+  const chatReady = settings.data?.ready.chat ?? true
   const embeddingsReady = settings.data?.ready.embeddings ?? true
+  const preparable = chatReady && embeddingsReady
+  const missing =
+    !chatReady && !embeddingsReady
+      ? 'a saved chat model and embeddings server'
+      : !chatReady
+        ? 'a saved chat model'
+        : 'a saved embeddings server'
 
   const add = (files: File[]) => {
     if (files.length === 0) return
@@ -276,7 +285,7 @@ function Shelf({ books }: { books: Book[] | undefined }) {
             variant="outline"
             size="sm"
             aria-label="Add a textbook"
-            disabled={!embeddingsReady || upload.isPending}
+            disabled={!preparable || upload.isPending}
             onClick={() => picker.current?.click()}
           >
             {upload.isPending ? <Spinner className="size-3" label="Adding" /> : <Plus />}
@@ -286,12 +295,12 @@ function Shelf({ books }: { books: Book[] | undefined }) {
 
       {/* The one blocking condition, said before you can hit it, with the
           gesture that unblocks it: a Save in Settings. */}
-      {!embeddingsReady && (
+      {!preparable && (
         <Box tone="warning">
           <BoxBody className="text-sm">
-            PSet needs a saved embeddings server before it can prepare a book.{' '}
+            PSet needs {missing} before it can prepare a book.{' '}
             <Link to="/settings#connections" className="text-primary underline underline-offset-2">
-              Save one in Settings
+              {!chatReady && !embeddingsReady ? 'Save them in Settings' : 'Save one in Settings'}
             </Link>
             .
           </BoxBody>
@@ -357,9 +366,9 @@ function Shelf({ books }: { books: Book[] | undefined }) {
             Nothing on the shelf yet.
           </p>
           {/* Blocked, the primary CTA is the way out, not a dead button:
-              the shelf opens once a server is saved. The header's + stays
+              the shelf opens once the connections are saved. The header's + stays
               quietly disabled until then. */}
-          {embeddingsReady ? (
+          {preparable ? (
             <Button size="lg" onClick={() => picker.current?.click()}>
               <Plus />
               Add your first book
@@ -402,7 +411,7 @@ export function Home() {
   const { data: week } = useWeek()
   const byBook = (week?.byBook ?? []).flatMap((w) => {
     const b = books?.find((x) => x.id === w.bookId)
-    return b ? [{ sha256: b.sha256, title: b.title, minutes: w.minutes }] : []
+    return b ? [{ sha256: b.sha256, cover: b.cover, title: b.title, minutes: w.minutes }] : []
   })
 
   return (

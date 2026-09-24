@@ -636,3 +636,18 @@ func Refusal(status int) string {
 	}
 	return fmt.Sprintf("Your chat model provider turned the request down (HTTP %d).", status)
 }
+
+// Unfence tolerates JSON wrapped in a code fence.
+func Unfence(s string) string {
+	s = strings.TrimSpace(s)
+	if !strings.HasPrefix(s, "```") {
+		return s
+	}
+	if i := strings.IndexByte(s, '\n'); i >= 0 {
+		s = s[i+1:]
+	}
+	if i := strings.LastIndex(s, "```"); i >= 0 {
+		s = s[:i]
+	}
+	return strings.TrimSpace(s)
+}

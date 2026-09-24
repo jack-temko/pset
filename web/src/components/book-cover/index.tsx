@@ -1,12 +1,13 @@
 import type { CSSProperties } from 'react'
 
-import type { CoverHue } from '@/lib/covers'
+import { COVERS, type CoverHue } from '@/lib/covers'
 import { cn } from '@/lib/utils'
 
 /**
  * A book, drawn in CSS. There is no cover art anywhere in the product:
- * every book is a clothbound board in one of six hues, and the hue is
- * derived from the book's sha, never chosen.
+ * every book is a clothbound board in one of six hues. Every picture of a
+ * book (this, the swatch, a bar in a chart) draws `book.cover`, so they
+ * always agree.
  *
  * The board is sized by its container: it holds a 3:4 ratio and the plate
  * type is fixed, so it belongs at a shelf tile's 160–200px. Don't scale it
@@ -72,5 +73,32 @@ export function CoverSwatch({ hue, className }: { hue: CoverHue; className?: str
       className={cn('block h-10 w-8 shrink-0 rounded-sm border border-black/15', className)}
       style={{ background: `linear-gradient(160deg, var(--cover-${hue}), var(--cover-${hue}-to))` }}
     />
+  )
+}
+
+/**
+ * Choosing a book's colour: the six swatches as a radiogroup, the chosen
+ * one ringed. Only the six exist; there's no custom colour.
+ */
+export function CoverPicker({ value, onChange }: { value: CoverHue; onChange: (hue: CoverHue) => void }) {
+  return (
+    <div role="radiogroup" aria-label="Cover colour" className="flex gap-2">
+      {COVERS.map((hue) => (
+        <button
+          key={hue}
+          type="button"
+          role="radio"
+          aria-checked={hue === value}
+          aria-label={hue}
+          onClick={() => onChange(hue)}
+          className={cn(
+            'cursor-pointer rounded-sm transition-shadow duration-150 ease-out motion-reduce:transition-none',
+            hue === value ? 'ring-2 ring-primary' : 'hover:ring-1 hover:ring-border',
+          )}
+        >
+          <CoverSwatch hue={hue} />
+        </button>
+      ))}
+    </div>
   )
 }

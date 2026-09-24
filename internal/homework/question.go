@@ -607,7 +607,7 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 			Rect  *pdf.Rect `json:"rect"`
 		} `json:"figures"`
 	}
-	if err := json.Unmarshal([]byte(unfence(reply)), &pin); err != nil {
+	if err := json.Unmarshal([]byte(llm.Unfence(reply)), &pin); err != nil {
 		slog.Warn("locate: reply wasn't JSON", "question", q.ID, "err", err)
 		return location{}, false, nil
 	}
@@ -628,18 +628,3 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 
 // maxFigures caps the figures one question shows.
 const maxFigures = 3
-
-// unfence tolerates JSON wrapped in a code fence.
-func unfence(s string) string {
-	s = strings.TrimSpace(s)
-	if !strings.HasPrefix(s, "```") {
-		return s
-	}
-	if i := strings.IndexByte(s, '\n'); i >= 0 {
-		s = s[i+1:]
-	}
-	if i := strings.LastIndex(s, "```"); i >= 0 {
-		s = s[:i]
-	}
-	return strings.TrimSpace(s)
-}
