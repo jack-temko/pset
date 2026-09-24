@@ -224,6 +224,19 @@ the walkthrough are each validated and pushed as `question.stage` as soon
 as they are done, so a student can open the hint while the walkthrough
 is still being written.
 
+**The writer sees the problem's figures, not its page.** A problem with
+figures opens with them cut from the page (the crops the walkthrough
+shows); one without gets the page. The pages memory names that a search
+for the problem also finds open the guide too, so the writer doesn't
+spend a round reading them. Each tool round is saved on the question as
+it finishes, so a restart, or a retry of the same problem, carries on
+from the last round instead of starting over. A model's reasoning goes
+back with its turn to endpoints that keep it (Z.ai), so it carries on
+from its own thinking rather than redoing it after every tool call.
+The writer's brief is a short rule list, how to work before what to
+write: set the problem up as equations and let `compute` and
+`solve_linear` do every number in the guide, checks included.
+
 ## Ask's agent loop
 
 The chat model is required to be a vision model. Four tools, as few as
@@ -261,9 +274,10 @@ the local calendar.
 
 ## Logging
 
-`slog` to stderr. Every LLM request and response is also appended to a
-rotating JSONL log in the data directory, so a bad walkthrough traces
-back to its exact prompt. Reset wipes it.
+`slog` to stderr. Every LLM request and response, with the model's
+reasoning, is also appended to a rotating JSONL log in the data
+directory, so a bad or slow walkthrough traces back to its exact prompt
+and thinking. Reset wipes it.
 
 ## Tests
 

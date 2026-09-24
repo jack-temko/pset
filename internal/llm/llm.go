@@ -14,6 +14,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -113,6 +114,11 @@ type Message struct {
 	Content    Content    `json:"content"`
 	ToolCallID string     `json:"tool_call_id,omitempty"`
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
+	// ReasoningContent is what a thinking model reasoned before this
+	// assistant turn. Sent back, it lets the model carry on from its own
+	// thinking instead of redoing it after every tool call; the client
+	// only sends it to endpoints that take it (see keepsReasoning).
+	ReasoningContent string `json:"reasoning_content,omitempty"`
 }
 
 // TextMessage is a plain-text chat turn.
@@ -221,9 +227,8 @@ type ToolCallFunc struct {
 type Reply struct {
 	Content   string
 	ToolCalls []ToolCall
-	// Reasoned is how many characters of reasoning a thinking model wrote
-	// before answering, for the call log.
-	Reasoned int
+	// Reasoning is what a thinking model reasoned before answering.
+	Reasoning string
 }
 
 // ChatRequest is one chat completion call. Model is required; MaxTokens
@@ -236,9 +241,19 @@ type ChatRequest struct {
 	MaxTokens   int       `json:"max_tokens,omitempty"`
 	Temperature *float64  `json:"temperature,omitempty"`
 	Tools       []Tool    `json:"tools,omitempty"`
+	// Thinking is Z.ai's thinking switch. The client sets it itself when
+	// the conversation carries reasoning back; see keepsReasoning.
+	Thinking *Thinking `json:"thinking,omitempty"`
 	// OnReasoning, if set, receives a thinking model's reasoning as it
 	// streams: the part it writes before, and apart from, its answer.
 	OnReasoning func(text string) `json:"-"`
+}
+
+// Thinking asks a GLM model to think, and with ClearThinking false to
+// read the reasoning_content of earlier turns ("preserved thinking").
+type Thinking struct {
+	Type          string `json:"type"`
+	ClearThinking *bool  `json:"clear_thinking,omitempty"`
 }
 
 // ToolMessage is the result turn for one tool call.
@@ -247,9 +262,60 @@ func ToolMessage(callID, content string) Message {
 }
 
 // AssistantToolMessage is the assistant turn that requested calls, kept so
-// the transcript replays exactly as the exchange happened.
-func AssistantToolMessage(content string, calls []ToolCall) Message {
-	return Message{Role: "assistant", Content: TextContent(content), ToolCalls: calls}
+// the transcript replays exactly as the exchange happened, reasoning
+// included.
+func AssistantToolMessage(reply Reply) Message {
+	return Message{Role: "assistant", Content: TextContent(reply.Content), ToolCalls: reply.ToolCalls, ReasoningContent: reply.Reasoning}
+}
+
+// keepsReasoning reports whether the endpoint takes reasoning_content back
+// on assistant turns. Z.ai's GLM models do, and think far less for it: a
+// model that gets its reasoning back carries on from it, one that doesn't
+// works the whole problem out again after every tool call. Other
+// endpoints may refuse the field (DeepSeek answers 400), so it only goes
+// to Z.ai.
+func (c *Client) keepsReasoning() bool {
+	u, err := url.Parse(c.apiBaseURL)
+	if err != nil {
+		return false
+	}
+	host := u.Hostname()
+	for _, h := range []string{"z.ai", "bigmodel.cn"} {
+		if host == h || strings.HasSuffix(host, "."+h) {
+			return true
+		}
+	}
+	return false
+}
+
+// shape fits a request to the endpoint: reasoning goes back to one that
+// keeps it, with preserved thinking switched on, and is dropped for any
+// other.
+func (c *Client) shape(req ChatRequest) ChatRequest {
+	carries := false
+	for _, m := range req.Messages {
+		if m.ReasoningContent != "" {
+			carries = true
+			break
+		}
+	}
+	if !carries {
+		return req
+	}
+	if c.keepsReasoning() {
+		if req.Thinking == nil {
+			keep := false
+			req.Thinking = &Thinking{Type: "enabled", ClearThinking: &keep}
+		}
+		return req
+	}
+	msgs := make([]Message, len(req.Messages))
+	for i, m := range req.Messages {
+		m.ReasoningContent = ""
+		msgs[i] = m
+	}
+	req.Messages = msgs
+	return req
 }
 
 // ChatOnce runs a non-streaming completion and returns the reply text —
@@ -267,6 +333,7 @@ func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (reply Reply
 	start := time.Now()
 	defer func() { logCall(req, start, reply, err) }()
 	req.Stream = false
+	req = c.shape(req)
 	var payload struct {
 		Choices []struct {
 			Message struct {
@@ -301,6 +368,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 	start := time.Now()
 	defer func() { logCall(req, start, reply, err) }()
 	req.Stream = true
+	req = c.shape(req)
 
 	resp, err := c.doWithRetry(ctx, c.apiBaseURL+"/chat/completions", req)
 	if err != nil {
@@ -308,8 +376,11 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 	}
 	defer resp.Body.Close()
 
-	var full strings.Builder
-	reasoned := 0
+	var full, reasoning strings.Builder
+	// finished is the stream saying it's done, by [DONE] or a choice's
+	// finish_reason. A stream that just stops without either was cut, even
+	// when every event in it parsed.
+	finished := false
 	calls := newToolCallAccumulator()
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
@@ -351,11 +422,13 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 			continue
 		}
 		if data == "[DONE]" {
+			finished = true
 			break
 		}
 		var chunk struct {
 			Choices []struct {
-				Delta struct {
+				FinishReason string `json:"finish_reason"`
+				Delta        struct {
 					Content   Content `json:"content"`
 					Reasoning string  `json:"reasoning_content"`
 					ToolCalls []struct {
@@ -370,6 +443,10 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 			} `json:"choices"`
 		}
 		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+			if ctx.Err() != nil {
+				// Stopped, or shutting down: the drop is ours.
+				return Reply{}, ctx.Err()
+			}
 			if isCut(err) {
 				// The connection dropped mid-event.
 				return Reply{Content: full.String()}, fmt.Errorf("%w: %v", ErrStreamCut, err)
@@ -377,8 +454,11 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 			return Reply{}, fmt.Errorf("decode stream chunk: %w", err)
 		}
 		for _, choice := range chunk.Choices {
+			if choice.FinishReason != "" {
+				finished = true
+			}
 			if r := choice.Delta.Reasoning; r != "" {
-				reasoned += len(r)
+				reasoning.WriteString(r)
 				if req.OnReasoning != nil {
 					req.OnReasoning(r)
 				}
@@ -397,10 +477,16 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 			}
 		}
 	}
+	if ctx.Err() != nil {
+		return Reply{}, ctx.Err()
+	}
 	if err := scanner.Err(); err != nil {
 		return Reply{Content: full.String()}, fmt.Errorf("%w: %v", ErrStreamCut, err)
 	}
-	return Reply{Content: full.String(), ToolCalls: calls.finish(), Reasoned: reasoned}, nil
+	if !finished {
+		return Reply{Content: full.String()}, fmt.Errorf("%w: the stream ended without finishing", ErrStreamCut)
+	}
+	return Reply{Content: full.String(), ToolCalls: calls.finish(), Reasoning: reasoning.String()}, nil
 }
 
 // ErrStreamCut is a streamed reply that ended partway: the connection

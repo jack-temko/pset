@@ -108,12 +108,20 @@ func (l *Loop) tool(ctx context.Context, call llm.ToolCall) (string, []llm.Part)
 			l.step(fmt.Sprintf("Looked for p. %d · not in the book", p), false)
 			return fmt.Sprintf("The book has no p. %d.", p), nil
 		}
+		if l.seen[pdf] {
+			// The same image again would add nothing but another look.
+			l.step(fmt.Sprintf("Looked at p. %d · already in view", p), false)
+			return fmt.Sprintf("You already have p. %d as an image above: look at it there.", p), nil
+		}
 		img, err := l.Library.PageJPEG(ctx, b.ID, pdf, 1400)
 		if err != nil {
 			l.step(fmt.Sprintf("Looked at p. %d · couldn't render it", p), false)
 			return "Error: the page couldn't be rendered.", nil
 		}
 		l.step(fmt.Sprintf("Looked at p. %d", p), false)
+		if l.seen != nil {
+			l.seen[pdf] = true
+		}
 		return fmt.Sprintf("The image of p. %d follows.", p), []llm.Part{
 			llm.TextPart(fmt.Sprintf("p. %d:", p)),
 			llm.ImagePart("data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(img)),

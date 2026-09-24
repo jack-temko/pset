@@ -110,6 +110,7 @@ type env struct {
 	llm    *llmtest.Server
 	events *recorder
 	cfg    *settings
+	queue  *jobs.Queue
 }
 
 const guide = "## Hint\nStart from Ohm's law [p. 1].\n\n## Walkthrough\nGood work getting here, Jack.\n```steps\n{\"steps\":[{\"math\":\"V = IR\",\"why\":\"Ohm's law.\"},{\"math\":\"V = 2 \\\\cdot 3 = 6\"}]}\n```\nSo $V = 6$ volts.\n"
@@ -154,6 +155,7 @@ func newEnvWith(t *testing.T, mem Memory) *env {
 	e.cfg = &settings{cfg: e.llm.Config()}
 	q := jobs.New(d, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	q.Lane(LaneQuestion, 2)
+	e.queue = q
 	e.svc = New(Config{DB: d, Events: e.events, Queue: q, Library: library{}, Settings: e.cfg, Memory: mem})
 	mux := http.NewServeMux()
 	e.svc.Routes(mux)
