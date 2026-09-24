@@ -502,12 +502,12 @@ export function Components() {
             </div>
           </Shelf>
           <Shelf label="count">
-            <div className="w-56">
+            <div className="grid w-full max-w-2xl grid-cols-3 gap-4">
               <StatTile label="Questions worked" value={14} context="across 3 problem sets" />
             </div>
           </Shelf>
           <Shelf label="empty week">
-            <div className="w-56">
+            <div className="grid w-full max-w-2xl grid-cols-3 gap-4">
               <StatTile label="Homework" chart={1} value="0" context="nothing yet this week" />
             </div>
           </Shelf>
