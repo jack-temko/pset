@@ -18,6 +18,7 @@ const q = (over: Partial<Question> = {}): Question => ({
   memory: [],
   revealed: [],
   done: false,
+  updatedAt: '',
   ...over,
 })
 

@@ -106,6 +106,9 @@ type Question struct {
 	// Revealed names the stages the student has lifted the veil on.
 	Revealed []string `json:"revealed"`
 	Done     bool     `json:"done"`
+	// UpdatedAt is when its state (or its statement, or a stage) last
+	// changed: while it waits, when the wait began.
+	UpdatedAt string `json:"updatedAt"`
 }
 
 // MemoryUse is what a guide did with a memory.

@@ -44,6 +44,9 @@ type Turn struct {
 	State     TurnState       `json:"state" tstype:"'running' | 'done' | 'stopped' | 'failed'"`
 	Reason    string          `json:"reason,omitempty"`
 	CreatedAt string          `json:"createdAt"`
+	// UpdatedAt orders copies of the turn: a reply that arrives after a
+	// newer event must not win.
+	UpdatedAt string `json:"updatedAt"`
 }
 
 type Turns struct {

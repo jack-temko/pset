@@ -21,15 +21,21 @@ export const useTurns = (bookId: string) =>
 
 // ---------------------------------------------------------------- cache
 
+/** A turn's newest copy into a book's cached turns. Returns the same list
+ *  when the copy is older than the one held: a reply can land after a
+ *  newer event (the answer already streaming in), and must not roll the
+ *  turn back. */
+export function applyTurn(list: LiveTurn[], t: Turn): LiveTurn[] {
+  const i = list.findIndex((x) => x.id === t.id)
+  if (i === -1) return [...list, t]
+  if (t.updatedAt < list[i].updatedAt) return list
+  // A card mid-write survives a step update; a settled turn has none.
+  const pending = t.state === 'running' ? list[i].pending : undefined
+  return list.map((x) => (x.id === t.id ? { ...t, pending } : x))
+}
+
 function putTurn(qc: QueryClient, t: Turn) {
-  qc.setQueryData<LiveTurn[]>(askKeys.turns(t.bookId), (list) => {
-    if (!list) return list
-    const i = list.findIndex((x) => x.id === t.id)
-    if (i === -1) return [...list, t]
-    // A card mid-write survives a step update; a settled turn has none.
-    const pending = t.state === 'running' ? list[i].pending : undefined
-    return list.map((x) => (x.id === t.id ? { ...t, pending } : x))
-  })
+  qc.setQueryData<LiveTurn[]>(askKeys.turns(t.bookId), (list) => list && applyTurn(list, t))
 }
 
 /** Patch the turn wherever it is: stream events carry only its id. */

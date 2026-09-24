@@ -219,7 +219,8 @@ export function useRetryQuestion() {
       for (const [, d] of qc.getQueriesData<Detail>({ queryKey: ['homework', 'set'] })) {
         const old = d?.questions.find((x) => x.id === id)
         if (old) {
-          putQuestion(qc, { ...old, state: 'pending' }, true)
+          // Pending as of now: a wait that may be over in a moment.
+          putQuestion(qc, { ...old, state: 'pending', updatedAt: new Date().toISOString() }, true)
           return { old }
         }
       }

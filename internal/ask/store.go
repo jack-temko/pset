@@ -36,12 +36,12 @@ type row struct {
 	AboutText string
 }
 
-const cols = `id, book_id, question, about, about_text, steps, answer, state, reason, created_at`
+const cols = `id, book_id, question, about, about_text, steps, answer, state, reason, created_at, updated_at`
 
 func scan(s interface{ Scan(...any) error }) (row, error) {
 	var r row
 	var steps, answer string
-	err := s.Scan(&r.ID, &r.BookID, &r.Question, &r.About, &r.AboutText, &steps, &answer, &r.State, &r.Reason, &r.CreatedAt)
+	err := s.Scan(&r.ID, &r.BookID, &r.Question, &r.About, &r.AboutText, &steps, &answer, &r.State, &r.Reason, &r.CreatedAt, &r.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
 	}

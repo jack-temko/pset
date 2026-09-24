@@ -173,6 +173,14 @@ merely queued gets the word "Queued" and no motion at all: nothing is
 happening to it yet. Anything that isn't waiting must not borrow the
 meaning, which is why the Veil never shimmers.
 
+**Nothing flickers either** (2026-09-24). A state that may be over in a
+moment (a wait between two of the engine's steps, a request in flight)
+shows only once it has lasted 300ms: `useSettled` and `useShowPending`
+in `web/src/lib/settled.ts`. Until then what was on screen stays, or a
+blank of the same height when nothing was. Progress shows at once. A
+quick answer never blinks a spinner, and a book passing from one step to
+the next never says "Queued" for a frame.
+
 **Nothing jumps when data arrives.** Anything that waits on a request
 draws a **Skeleton** first: shimmering `muted` blocks at the size and
 count of what's coming, inline in real line boxes so a skeleton row and
