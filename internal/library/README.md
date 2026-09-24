@@ -19,12 +19,20 @@ retried import never writes over those again.
 `POST /api/books` (multipart, field `file`) stages the upload while
 hashing it, refuses a non-PDF (`invalid` on `file`), a duplicate
 (`duplicate_book` with the existing id) and a missing embeddings server
-(`not_configured`), then inserts the book `queued` and enqueues its job in
+(`not_configured`), then inserts the book `queued` and enqueues its first job in
 one transaction.
 
-The job (`import` lane, one at a time) runs four phases, publishing
-`book.changed` with the whole book at each step, and progress at most
-four times a second:
+Two jobs in the `import` lane, one at a time, publishing `book.changed`
+with the whole book at each step, and progress at most four times a
+second. **examine** (priority 2; the kind keeps the old job's name,
+`import`, so one queued before the split still runs) is phase 1, and
+queues **prepare** in the same write: priority 1 for a digital book, 0
+for a scan. prepare runs phases 2 to 4 and is resumable: a book ahead of
+it interrupts it, it goes back to `queued` (a scan with its count read so
+far, `phase: read`, `done`, `total`) and resumes later, having lost at
+most the page it was on. The book's `kind` (empty until examined,
+`digital` or `scanned`) is on the wire, so Home orders the queue as it
+runs. The phases:
 
 1. **examine**: metadata (a real title and author replace the tidied
    filename, unless the metadata is authoring-tool junk), the text layer,
@@ -40,8 +48,8 @@ four times a second:
    from another model are dropped first; the count is checked at the end.
 
 Stop (`POST /api/books/{id}/stop`) leaves the book `failed` with
-"Stopped." (or "Cancelled before it started."); Retry (`.../retry`)
-queues it again; `DELETE` removes it, which is also Dismiss. A shutdown
+"Stopped." (or "Cancelled before it started." for one not examined yet);
+Retry (`.../retry`) queues it again from examine, skipping what's done; `DELETE` removes it, which is also Dismiss. A shutdown
 puts a running import back to `queued` and it resumes.
 
 ## Reading

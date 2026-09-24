@@ -184,7 +184,7 @@ the UI.
 
 | Lane | Concurrency | Why |
 |---|---|---|
-| `import` | 1 | Imports run in order; the UI shows "Queued" for the rest. |
+| `import` | 1 | One at a time: every book examined first, then digital books ahead of scans (below). The UI shows "Queued" for the rest. |
 | `question` | 2 | Two homework steps at once, finds before guides (below). A constant, not a setting. |
 | `turn` | 1 per book | One running conversation per book. |
 
@@ -195,8 +195,19 @@ highest first, oldest first among equals; finds run at 1. So a free
 slot always takes a question still to be found before a guide: a set is
 found, and its worksheet whole, first, and a question added later is
 found in the next free slot, ahead of guides already queued. A running
-job is never stopped for a higher one, so a guide may start beside the
-last find once no find is waiting.
+guide is never interrupted (its kind isn't resumable), so one may start
+beside the last find once no find is waiting.
+
+**A scan steps aside** (2026-09-24). An import is two jobs in the
+`import` lane: `examine` at priority 2, which learns the title, the page
+count and whether the book is digital or scanned, and queues `prepare`
+in the same write: at 1 for a digital book, 0 for a scan. `prepare`
+(reading a scan's pages, the contents, search) is **resumable**: it
+saves every page and batch as it goes, so when a higher job waits, the
+queue interrupts it (its context cancelled, as a shutdown does) and it
+goes back to `queued` with its age, losing at most the page it was on.
+A digital book added while a scan is being read is ready in minutes;
+the scan carries on after it. Homework and Ask jobs are not resumable.
 
 Cancel cancels the handler's context. On restart, `running` goes back to
 `queued`. Retry re-enqueues with the same payload. Import's Stop leaves

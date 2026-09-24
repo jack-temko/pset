@@ -26,8 +26,20 @@ export function BookStatus({ state, className }: { state: BookState; className?:
 
   // Queued gets no spinner. Nothing is happening to this book yet (the
   // runner prepares one at a time) and a turning shape would say
-  // otherwise for the next forty minutes.
+  // otherwise for the next forty minutes. A scan that stepped aside for
+  // another book keeps the count it reached, still and without a bar.
   if (state.kind === 'queued') {
+    if (state.phase === 'read' && state.done !== undefined && state.total !== undefined) {
+      return (
+        <span className={className}>
+          Queued ·{' '}
+          <span className="tabular-nums">
+            {state.done} of {state.total}
+          </span>{' '}
+          pages read
+        </span>
+      )
+    }
     return <span className={className}>Queued</span>
   }
 

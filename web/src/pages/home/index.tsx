@@ -259,11 +259,15 @@ function Shelf({ books }: { books: Book[] | undefined }) {
     })
   }
 
-  // Running first, then waiting in order, then what failed.
+  // Running first, then waiting in the order it will run, then what
+  // failed. The runner examines every book first, then prepares digital
+  // books ahead of scans, oldest first within each (the list comes
+  // oldest first, and the sort is stable).
   const rank = { preparing: 0, queued: 1, failed: 2, ready: 3 } as const
+  const turn = { '': 0, digital: 1, scanned: 2 } as const
   const inFlight = (books ?? [])
     .filter((b) => b.state.kind !== 'ready')
-    .sort((a, b) => rank[a.state.kind] - rank[b.state.kind])
+    .sort((a, b) => rank[a.state.kind] - rank[b.state.kind] || (a.state.kind === 'queued' ? turn[a.kind] - turn[b.kind] : 0))
   const ready = (books ?? []).filter((b) => b.state.kind === 'ready')
   const shown = open ? ready : ready.slice(0, SHELF_ROW)
 

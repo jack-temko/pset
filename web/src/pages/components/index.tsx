@@ -450,6 +450,15 @@ export function Components() {
                 book={sampleBook({ sha256: '7ce04a15', title: 'Griffiths Introduction To Electrodynamics', author: '', state: { kind: 'queued' } })}
               />
               <ImportRow
+                book={sampleBook({
+                  sha256: '5e2b7f90',
+                  title: 'Foundations of Brontolithics',
+                  author: '',
+                  kind: 'scanned',
+                  state: { kind: 'queued', phase: 'read', done: 140, total: 312 },
+                })}
+              />
+              <ImportRow
                 book={sampleBook({ sha256: '3a80b5d4', title: 'Organic Chemistry', author: '', state: { kind: 'failed', reason: "This PDF can't be read. PSet couldn't open it." } })}
               />
             </Box>

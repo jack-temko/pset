@@ -79,7 +79,6 @@ var errNotFound = errors.New("not found")
 // row is a book as stored, with the columns the wire doesn't carry.
 type row struct {
 	Book
-	Kind   string
 	Width  float64
 	Height float64
 	Edited bool

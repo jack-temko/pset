@@ -38,6 +38,7 @@ type Queue interface {
 	Wake()
 	StopSubject(ctx context.Context, subject string) error
 	Handle(kind, lane string, h jobs.Handler)
+	Resumable(kind string)
 }
 
 type Config struct {
@@ -55,11 +56,30 @@ type Service struct {
 	pacer *pacer
 }
 
-// The import job's kind and lane.
+// Importing a book is two jobs in one lane, one at a time: examining it
+// (title, pages, digital or scanned), then preparing it (reading a scan,
+// the contents, search). Every queued book is examined first, then
+// digital books are prepared ahead of scans, and preparing is resumable:
+// a scan's reading steps aside for a book ahead of it and carries on
+// after, having lost at most the page it was on.
 const (
-	JobImport  = "import"
+	// JobExamine keeps the name of the one import job it grew out of, so
+	// an import queued before the split still runs.
+	JobExamine = "import"
+	JobPrepare = "prepare"
 	LaneImport = "import"
 )
+
+// Priorities in the import lane; a scan prepares at 0.
+const (
+	examineFirst = 2
+	digitalFirst = 1
+)
+
+// examineJob is a book's first import job.
+func examineJob(id string) jobs.Spec {
+	return jobs.Spec{Kind: JobExamine, Subject: id, Priority: examineFirst, Payload: importPayload{BookID: id}}
+}
 
 func New(c Config) *Service {
 	if c.Tools.Metadata == nil {
@@ -67,7 +87,10 @@ func New(c Config) *Service {
 	}
 	s := &Service{c: c, scans: newScanCache(filepath.Join(c.DataDir, "cache", "pages"), c.Tools.PageImage)}
 	s.pacer = newPacer()
-	c.Queue.Handle(JobImport, LaneImport, s.runImport)
+	c.Queue.Handle(JobExamine, LaneImport, s.runExamine)
+	c.Queue.Handle(JobPrepare, LaneImport, s.runPrepare)
+	// It saves every page read and every batch embedded as it goes.
+	c.Queue.Resumable(JobPrepare)
 	return s
 }
 
@@ -137,7 +160,7 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 			id, sha, filenameTitle(filename), now, now); err != nil {
 			return err
 		}
-		_, err := s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobImport, Subject: id, Payload: importPayload{BookID: id}})
+		_, err := s.c.Queue.Enqueue(ctx, tx, examineJob(id))
 		return err
 	})
 	if err != nil {
@@ -242,7 +265,8 @@ func (s *Service) Stop(ctx context.Context, id string) (Book, error) {
 		return Book{}, err
 	}
 	reason := "Stopped."
-	if b.State.Kind == StateQueued {
+	if b.State.Kind == StateQueued && b.Kind == KindUnknown {
+		// Nothing has happened to it yet; an examined book has begun.
 		reason = "Cancelled before it started."
 	}
 	if err := setState(ctx, s.c.DB, id, BookState{Kind: StateFailed, Reason: reason}); err != nil {
@@ -272,7 +296,7 @@ func (s *Service) Retry(ctx context.Context, id string) (Book, error) {
 		if err := setState(ctx, tx, id, BookState{Kind: StateQueued}); err != nil {
 			return err
 		}
-		_, err := s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobImport, Subject: id, Payload: importPayload{BookID: id}})
+		_, err := s.c.Queue.Enqueue(ctx, tx, examineJob(id))
 		return err
 	})
 	if err != nil {
