@@ -87,23 +87,27 @@ type Config struct {
 
 type Service struct{ c Config }
 
-// A question is two jobs, one per step: finding it in the book, then
-// writing its guide. Both share one lane (two at a time), and a queued
-// find always starts before a queued guide, so a set's questions are
-// found first and its worksheet is whole early.
+// A question is a job per step: finding it in the book, reading its
+// figures when it has any, then writing its guide. All share one lane
+// (two at a time), and a queued find or reading always starts before a
+// queued guide, so a set's questions are found first and its worksheet
+// is whole early, and its readings are there to check while the guides
+// wait.
 const (
 	JobLocate    = "locate"
+	JobRead      = "read"
 	JobGuide     = "guide"
 	LaneQuestion = "question"
 )
 
-// locateFirst is a find's priority in the lane: ahead of every queued
-// guide, even ones queued before the question was added.
+// locateFirst is a find's priority in the lane, and a reading's: ahead
+// of every queued guide, even ones queued before the question was added.
 const locateFirst = 1
 
 func New(c Config) *Service {
 	s := &Service{c}
 	c.Queue.Handle(JobLocate, LaneQuestion, s.runLocate)
+	c.Queue.Handle(JobRead, LaneQuestion, s.runRead)
 	c.Queue.Handle(JobGuide, LaneQuestion, s.runGuide)
 	return s
 }
@@ -337,6 +341,9 @@ func (s *Service) UpdateQuestion(ctx context.Context, id string, p QuestionPatch
 	if err != nil {
 		return Question{}, err
 	}
+	if p.Reading != nil || p.Reread {
+		return s.redoReading(ctx, q, p.Reading)
+	}
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if p.Reveal != nil {
 			stage := *p.Reveal
@@ -381,6 +388,75 @@ func (s *Service) UpdateQuestion(ctx context.Context, id string, p QuestionPatch
 		s.publishSet(ctx, q.HomeworkID)
 	}
 	return out, err
+}
+
+// redoReading puts a new reading of a question's figures in: the
+// student's correction, or, given none, a fresh read. Either way the
+// guide is written again from it, and one written from the old reading,
+// or being written, is stopped and cleared. A guide that hasn't started
+// just waits for the new reading.
+func (s *Service) redoReading(ctx context.Context, q row, corrected *[]string) (Question, error) {
+	if len(q.FigRect) == 0 || q.Page == nil {
+		return Question{}, httpx.Invalid("reading", "This question has no figure to read.")
+	}
+	switch q.State {
+	case StatePending, StateLocating, StateReading:
+		return Question{}, httpx.Invalid("reading", "Its figure is still being read.")
+	}
+	var lines []string
+	if corrected != nil {
+		for _, l := range *corrected {
+			l = strings.TrimSpace(l)
+			l = strings.TrimSpace(strings.TrimPrefix(l, "- "))
+			if l == "" {
+				continue
+			}
+			if len([]rune(l)) > maxReadingLine {
+				return Question{}, httpx.Invalid("reading", "Keep each line under %d characters.", maxReadingLine)
+			}
+			lines = append(lines, l)
+		}
+		if len(lines) == 0 {
+			return Question{}, httpx.Invalid("reading", "Write at least one line.")
+		}
+		if len(lines) > maxReadingLines {
+			return Question{}, httpx.Invalid("reading", "Keep it to %d lines.", maxReadingLines)
+		}
+		if slices.Equal(lines, q.Reading) {
+			return q.Question, nil
+		}
+		// A guide that hasn't started reads the reading when it does.
+		res, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = 1, updated_at = ? WHERE id = ? AND state = ?`,
+			mustJSON(lines), db.Now(), q.ID, StateLocated)
+		if err != nil {
+			return Question{}, err
+		}
+		if n, _ := res.RowsAffected(); n == 1 {
+			return s.publishQuestion(ctx, q.ID)
+		}
+	}
+	s.c.Queue.StopSubject(ctx, q.ID)
+	next, edited := readStep(q.ID), 0
+	if corrected != nil {
+		next, edited = nextStep(q.ID, false), 1
+	}
+	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		// Memory lines go with the guide they came from, but for the
+		// one that found the problem; the new guide starts its own.
+		if _, err := tx.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = ?, hint = '[]', walkthrough = '[]', rounds = '[]',
+			memory = coalesce((SELECT json_group_array(json(value)) FROM json_each(memory) WHERE json_extract(value, '$.use') = ?), '[]'),
+			state = ?, failure = '', reason = '', activity = '', updated_at = ? WHERE id = ?`,
+			mustJSON(orEmpty(lines)), edited, MemoryUseFound, StateLocated, db.Now(), q.ID); err != nil {
+			return err
+		}
+		_, err := s.c.Queue.Enqueue(ctx, tx, next)
+		return err
+	})
+	if err != nil {
+		return Question{}, err
+	}
+	s.c.Queue.Wake()
+	return s.publishQuestion(ctx, q.ID)
 }
 
 // move puts a question at position to (1-based), shifting the ones in
@@ -465,7 +541,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 		if len(text) > maxDraftText {
 			return Question{}, httpx.Invalid("text", "That's too long for a single question.")
 		}
-		set += `, text = ?, in_book = 0, statement = ?, label = ?, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]', rounds = '[]'`
+		set += `, text = ?, in_book = 0, statement = ?, label = ?, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]', rounds = '[]', reading = '[]', reading_edited = 0`
 		args = append(args, text, text, labelFromText(text))
 		st, find = StatePending, false
 	case r.Page != nil:

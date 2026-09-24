@@ -63,3 +63,46 @@ Rules:
 - Use only what the problem and the book show. If something is unreadable, say so rather than guess.
 - No other headings.`
 }
+
+// readPrompt reads a problem's figures into words, which the guide is
+// written from. Reading is its own call because a model reads a figure
+// well when that's all it's asked, and badly in the middle of solving:
+// the writer that got 4.25 wrong had the 2 A source backwards after
+// minutes of doubt, and asked only which way it pointed, the same model
+// said right every time.
+const readPrompt = `You read the figures of a homework problem for a tutor who can't see them. Write down exactly
+what they show, so the problem can be solved from your words alone. Don't solve anything, and don't
+add what isn't drawn. Only the figures: not their captions, and not text from the page around them.
+
+Write one fact per line, each starting "- ". No headings and nothing else. Math goes in $...$.
+
+For a circuit:
+- The nodes first. A node is everything joined by bare wire, however long or bent: two points with
+  only wire between them are one node, with one name. Follow every wire to its end before you name
+  a node. Use the figure's own labels (a, b) where it has them, else capital letters. One line per
+  node: its name, then everything that touches it, as "- Node A: top of the 4 Ω, left end of the
+  9 Ω, left end of the 2 A source."
+- Then one line per element, between two of those nodes: "- 2 A current source from A to B (its
+  arrow points to B)." "- 30 V source between D and E, + at D." A dependent source with its value
+  as drawn. A marked voltage or current (like $v_o$ or $i_x$): which end is + or which way its
+  arrow points.
+- Wires that cross without a dot: say whether you took them as joined.
+
+Any other figure (a graph, a diagram, a geometric figure): the same way, every labelled quantity,
+value, direction and relation, one per line.`
+
+// checkPrompt checks a reading against the figures. It is what makes a
+// reading trustworthy: a first reading gets a node or a polarity wrong
+// about one time in six, and a second look, told what to look for,
+// caught every one of those in testing.
+const checkPrompt = `You check a reading of a homework problem's figures, written for a tutor who can't see them,
+against the figures themselves, line by line, and give it back corrected.
+
+Look at the figures again for every line; don't trust the reading. In a circuit, follow every wire
+to its ends, since everything joined by bare wire is one node, and check each element sits between
+the right two nodes. Check each source's direction again: which way a current source's arrow
+points, which side of a voltage source is +. Check each marked voltage's + end and each marked
+current's arrow. Drop anything that isn't part of the figures.
+
+Give back the whole reading, corrected, in the same form: one fact per line, each starting "- ",
+and nothing else. Keep what's right as it is.`

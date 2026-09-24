@@ -392,3 +392,15 @@ func TestReasoningGoesBackOnlyToZai(t *testing.T) {
 		t.Fatal("thinking set on a conversation with no reasoning to keep")
 	}
 }
+
+// A reasoning effort goes to Z.ai, which takes it, and no one else, since
+// a model that doesn't think may refuse it.
+func TestReasoningEffortGoesOnlyToZai(t *testing.T) {
+	req := ChatRequest{Model: "glm", ReasoningEffort: "low", Messages: []Message{TextMessage("user", "hi")}}
+	if got := New("https://api.z.ai/api/coding/paas/v4", "k", "", "").shape(req); got.ReasoningEffort != "low" {
+		t.Fatalf("Z.ai lost the effort: %q", got.ReasoningEffort)
+	}
+	if got := New("https://api.openai.com/v1", "k", "", "").shape(req); got.ReasoningEffort != "" {
+		t.Fatalf("sent %q to OpenAI", got.ReasoningEffort)
+	}
+}

@@ -78,6 +78,13 @@ func nextStep(id string, find bool) jobs.Spec {
 	return jobs.Spec{Kind: JobGuide, Subject: id, Payload: p}
 }
 
+// readStep is the job that reads a found question's figures. It runs
+// with the finds, ahead of every guide, so a set's readings are there to
+// check while its guides wait.
+func readStep(id string) jobs.Spec {
+	return jobs.Spec{Kind: JobRead, Subject: id, Priority: locateFirst, Payload: questionPayload{QuestionID: id}}
+}
+
 // waiting is the state a question waits for its next step in: a found
 // one waits for its guide as located, anything else as pending.
 func waiting(q row) State {
@@ -93,7 +100,13 @@ func (s *Service) runLocate(ctx context.Context, j jobs.Job) error {
 	return s.runStep(ctx, j, s.find)
 }
 
-// runGuide is a question's second step: write its hint and walkthrough.
+// runRead is a found question's step when it has figures: read them
+// into words, then queue its guide.
+func (s *Service) runRead(ctx context.Context, j jobs.Job) error {
+	return s.runStep(ctx, j, s.read)
+}
+
+// runGuide is a question's last step: write its hint and walkthrough.
 func (s *Service) runGuide(ctx context.Context, j jobs.Job) error {
 	return s.runStep(ctx, j, s.write)
 }
@@ -192,11 +205,15 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 	}
 	s.sawProblem(ctx, book, q, loc)
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `UPDATE questions SET page = ?, label = ?, statement = ?, rect = ?, figures = ?, rounds = '[]', state = ?, activity = '', updated_at = ? WHERE id = ?`,
+		if _, err := tx.ExecContext(ctx, `UPDATE questions SET page = ?, label = ?, statement = ?, rect = ?, figures = ?, rounds = '[]', reading = '[]', reading_edited = 0, state = ?, activity = '', updated_at = ? WHERE id = ?`,
 			loc.Page, label, statement, mustJSON(loc.Rect), mustJSON(loc.Figures), StateLocated, db.Now(), q.ID); err != nil {
 			return err
 		}
-		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(q.ID, false))
+		next := nextStep(q.ID, false)
+		if len(loc.Figures) > 0 {
+			next = readStep(q.ID)
+		}
+		_, err := s.c.Queue.Enqueue(ctx, tx, next)
 		return err
 	})
 	if err != nil {
@@ -206,6 +223,131 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 	// the queue.
 	s.publishQuestion(ctx, q.ID)
 	return nil
+}
+
+// read reads a found question's figures into words, then queues its
+// guide, which is written from them. A reading that fails leaves none,
+// and the guide reads the figures itself, as it did before readings: a
+// question never fails over its reading.
+func (s *Service) read(ctx context.Context, m model, book Book, q row) error {
+	s.setState(ctx, q.ID, StateReading, "")
+	lines, err := s.readFigures(ctx, m, book, q)
+	if err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		slog.Warn("question: reading the figures", "question", q.ID, "err", err)
+		lines = nil
+	}
+	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = 0, state = ?, activity = '', updated_at = ? WHERE id = ?`,
+			mustJSON(orEmpty(lines)), StateLocated, db.Now(), q.ID); err != nil {
+			return err
+		}
+		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(q.ID, false))
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	s.publishQuestion(ctx, q.ID)
+	return nil
+}
+
+// readFigures is a reading of a question's figures, one fact a line:
+// read quickly, then checked against the figures with more thought. An
+// unchecked reading is kept when the check fails. None when there are no
+// figures to read.
+func (s *Service) readFigures(ctx context.Context, m model, book Book, q row) ([]string, error) {
+	if q.Page == nil {
+		return nil, nil
+	}
+	figs := s.figureParts(ctx, book, q)
+	if len(figs) == 0 {
+		return nil, nil
+	}
+	ask := func(system, effort string, extra ...llm.Part) (string, error) {
+		content := llm.PartsContent(llm.TextPart(fmt.Sprintf("The problem:\n\n%s\n\nIts figures follow.", q.Statement)))
+		for _, p := range append(figs, extra...) {
+			content.AppendPart(p)
+		}
+		return m.client.ChatOnce(ctx, llm.ChatRequest{Model: m.name, ReasoningEffort: effort, Messages: []llm.Message{
+			llm.TextMessage("system", system),
+			{Role: "user", Content: content},
+		}})
+	}
+	// A quick first reading: the check is where the care goes.
+	first, err := ask(readPrompt, "low")
+	if err != nil {
+		return nil, err
+	}
+	lines := readingLines(first)
+	if len(lines) == 0 {
+		return nil, nil
+	}
+	s.setActivity(ctx, q.ID, "Checking the reading…")
+	checked, err := ask(checkPrompt, "", llm.TextPart("The reading:\n"+bullets(lines)))
+	if err != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		slog.Warn("question: checking the reading", "question", q.ID, "err", err)
+		return lines, nil
+	}
+	if c := readingLines(checked); len(c) > 0 {
+		return c, nil
+	}
+	return lines, nil
+}
+
+// Caps on a reading: a figure's facts run to a couple of dozen lines.
+const (
+	maxReadingLines = 80
+	maxReadingLine  = 400
+)
+
+// readingLines is a reading as the model writes it, one fact a line
+// after a "- ", as lines. Lines without a marker count only when none
+// has one; blank ones never do.
+func readingLines(text string) []string {
+	var marked, plain []string
+	for _, l := range strings.Split(text, "\n") {
+		l = strings.TrimSpace(l)
+		if l == "" || strings.HasPrefix(l, "```") {
+			continue
+		}
+		if rest, ok := strings.CutPrefix(l, "- "); ok {
+			marked = append(marked, strings.TrimSpace(rest))
+		} else if rest, ok := strings.CutPrefix(l, "* "); ok {
+			marked = append(marked, strings.TrimSpace(rest))
+		} else {
+			plain = append(plain, l)
+		}
+	}
+	out := marked
+	if len(out) == 0 {
+		out = plain
+	}
+	if len(out) > maxReadingLines {
+		out = out[:maxReadingLines]
+	}
+	return out
+}
+
+// bullets is a reading as the model reads it back: a line each, marked.
+func bullets(lines []string) string {
+	var b strings.Builder
+	for _, l := range lines {
+		b.WriteString("- " + l + "\n")
+	}
+	return b.String()
+}
+
+func orEmpty(lines []string) []string {
+	if lines == nil {
+		return []string{}
+	}
+	return lines
 }
 
 // write writes a question's guide, found or never looked for.
@@ -478,6 +620,7 @@ func (s *Service) guideUser(ctx context.Context, book Book, q row) (llm.Message,
 		page := printedName(*q.Page, book.PageOffset)
 		if figs := s.figureParts(ctx, book, q); len(figs) > 0 {
 			fmt.Fprintf(&b, "\nThe problem is on %s of %q. Its figures follow, cut from the page; view_page shows the whole page.\n", page, book.Title)
+			b.WriteString(readingText(q))
 			parts = figs
 		} else {
 			text, _ := s.c.Library.PageText(ctx, book.ID, *q.Page)
@@ -501,6 +644,21 @@ func (s *Service) guideUser(ctx context.Context, book Book, q row) (llm.Message,
 		content.AppendPart(p)
 	}
 	return llm.Message{Role: "user", Content: content}, shown, nil
+}
+
+// readingText is how the figures read, for the writer, which works from
+// it rather than its own look at them: the reading was made with care
+// and checked, and the student may have corrected it. Nothing when there
+// isn't one.
+func readingText(q row) string {
+	if len(q.Reading) == 0 {
+		return ""
+	}
+	lead := "How the figures read, checked line by line against them. Work from this reading, not your own look at the figures: where the two seem to disagree, the reading is right."
+	if q.ReadingEdited {
+		lead = "How the figures read, as the student corrected it. Work from this reading: it is the problem, even where you would read the figures differently."
+	}
+	return "\n" + lead + "\n" + bullets(q.Reading)
 }
 
 // figureParts is a question's figures as images, each under its label,

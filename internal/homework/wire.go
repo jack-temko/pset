@@ -46,6 +46,9 @@ const (
 	// StateLocated is found and waiting its turn to be written: its
 	// statement, page and figures are there, its guide isn't yet.
 	StateLocated State = "located"
+	// StateReading is reading its figures into words, which its guide is
+	// written from. A question without figures skips it.
+	StateReading State = "reading"
 	// StateWriting is writing its guide; the hint may already be there.
 	StateWriting State = "writing"
 	StateReady   State = "ready"
@@ -100,6 +103,13 @@ type Question struct {
 	// writes: "Thinking…", a tool call ("Computing…"), or "Writing the
 	// guide…". Empty otherwise.
 	Activity string `json:"activity,omitempty"`
+	// Reading is how its figures read, one fact a line ("Node A: top of
+	// the 4 Ω, …", "2 A current source from A to B"): the guide is
+	// written from it, and the student can correct it. Empty for a
+	// question without figures, or one found before readings.
+	Reading []string `json:"reading"`
+	// ReadingEdited is true once the student has corrected the reading.
+	ReadingEdited bool `json:"readingEdited"`
 	// Memory is what writing this guide did with the book's memory: what
 	// it saved, and a remembered range that found the problem.
 	Memory []MemoryLine `json:"memory"`
@@ -151,11 +161,15 @@ type Questions struct {
 }
 
 // QuestionPatch is what the walkthrough changes directly: a stage
-// revealed, done ticked or unticked, a new position in the set.
+// revealed, done ticked or unticked, a new position in the set. Reading
+// corrects how the figures read, and Reread reads them again; either
+// writes the guide again, from the new reading.
 type QuestionPatch struct {
-	Reveal   *string `json:"reveal,omitempty"`
-	Done     *bool   `json:"done,omitempty"`
-	Position *int    `json:"position,omitempty"`
+	Reveal   *string   `json:"reveal,omitempty"`
+	Done     *bool     `json:"done,omitempty"`
+	Position *int      `json:"position,omitempty"`
+	Reading  *[]string `json:"reading,omitempty"`
+	Reread   bool      `json:"reread,omitempty"`
 }
 
 // Retry is one of a failed question's two ways out: the PDF page it's on,
