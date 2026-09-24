@@ -915,9 +915,12 @@ function WorkingLine({ q, text }: { q: Question; text: string }) {
   return (
     <p className="flex items-center gap-2 text-xs text-muted-foreground">
       <Spinner className="size-3" />
+      {/* An ellipsis run into the dot reads as a smudge ("memory… ·"):
+          with an estimate after it, the words drop their ellipsis, and the
+          spinner still says it's under way. The estimate wraps whole. */}
       <span>
-        {text}
-        {left && ` · ${left}`}
+        {left ? text.replace(/…$/, '') : text}
+        {left && <span className="whitespace-nowrap"> · {left}</span>}
       </span>
     </p>
   )

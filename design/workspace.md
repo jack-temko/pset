@@ -175,6 +175,8 @@ built.
   book…", or "Writing the guide…" when there is nothing to find),
   followed by the time left on that step once past questions give an
   estimate ("· less than a minute left"; rules in design/import.md).
+  With an estimate the words drop their ellipsis, so it never runs into
+  the dot: "Finding it in the book · about 2 minutes left".
 - **Found first, written second** (2026-09-24): the engine finds every
   question in a set before it writes their guides, so the worksheet is
   whole and ready to print while the guides are still coming, and one

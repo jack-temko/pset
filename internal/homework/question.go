@@ -653,7 +653,7 @@ func (s *Service) locate(ctx context.Context, m model, book Book, q row) (locati
 			}
 		}
 		if len(fromMemory) > 0 {
-			s.setActivity(ctx, q.ID, "Checking the pages memory points to…")
+			s.setActivity(ctx, q.ID, "Checking pages from memory…")
 		}
 		loc, ok, err := s.locateOnce(ctx, m, book, q, cands)
 		if err != nil {
