@@ -173,10 +173,15 @@ older than the buffer, the client invalidates everything.
 
 **An older copy never wins** (2026-09-24). A request's reply is a
 snapshot, and it can land after a newer event has applied. Books and
-turns carry `updatedAt` and the cache keeps the newer copy; questions
-only move forward through their states. A new turn's first event goes
+turns carry `updatedAt` and the cache keeps the newer copy. Questions
+carry a **`rev`** that every change bumps, a database trigger rather
+than each write, so none can forget; the cache keeps the higher rev,
+which holds within a state too (a reveal drawn at once survives a
+stale event from before it). A question's `updatedAt` stays when its
+state began, for the waiting lines. A new turn's first event goes
 out before its job can start, so nothing streams into a turn the page
-doesn't hold yet.
+doesn't hold yet; new questions are said the same way, before the queue
+is woken, and the reply to adding them is the questions as added.
 
 **Ask turns are jobs.** Leaving the workspace or reloading does not stop
 an answer: coming back fetches the turn mid-flight and the stream carries
