@@ -130,7 +130,7 @@ func fakeModel(req llm.ChatRequest) llmtest.Reply {
 			"figures": [{"label": "Figure 3.7", "rect": {"x": 0.1, "y": 0.5, "w": 0.4, "h": 0.3}}]}`}
 	case strings.Contains(sys, "You read the figures"):
 		return llmtest.Reply{Text: "- Node A: top of $R_1$.\n- 2 A current source from B to A (its arrow points to A)."}
-	case strings.Contains(sys, "You check a reading"):
+	case strings.Contains(sys, "several readings"):
 		return llmtest.Reply{Text: "- Node A: top of $R_1$.\n- 2 A current source from A to B (its arrow points to B)."}
 	case strings.Contains(sys, "You write the guide"):
 		return llmtest.Reply{Text: guide}

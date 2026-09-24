@@ -198,16 +198,19 @@ the UI.
 | Lane | Concurrency | Why |
 |---|---|---|
 | `import` | 1 | One at a time: every book examined first, then digital books ahead of scans (below). The UI shows "Queued" for the rest. |
-| `question` | 2 | Two homework steps at once, finds before guides (below). A constant, not a setting. |
+| `question` | 2 | Two homework steps at once, finds and readings before guides (below). A constant, not a setting. |
 | `turn` | 1 per book | One running conversation per book. |
 
-**Finds go first** (2026-09-24). A question is two jobs in the
-`question` lane: `locate`, which finds it and queues its guide in the same
-write, then `guide`. A job carries a priority, and a lane starts its
-highest first, oldest first among equals; finds run at 1. So a free
-slot always takes a question still to be found before a guide: a set is
-found, and its worksheet whole, first, and a question added later is
-found in the next free slot, ahead of guides already queued. A running
+**Finds go first** (2026-09-24). A question is up to three jobs in the
+`question` lane: `locate`, which finds it and queues its next step in
+the same write; `read`, for a question with figures, which reads them
+into words and queues the guide; then `guide`. A job carries a
+priority, and a lane starts its highest first, oldest first among
+equals; finds and readings run at 1. So a free slot always takes a
+question still to be found or read before a guide: a set is found, and
+its worksheet whole, first, its readings are there to check while its
+guides wait, and a question added later is found in the next free
+slot, ahead of guides already queued. A running
 guide is never interrupted (its kind isn't resumable), so one may start
 beside the last find once no find is waiting.
 
@@ -258,9 +261,32 @@ the walkthrough are each validated and pushed as `question.stage` as soon
 as they are done, so a student can open the hint while the walkthrough
 is still being written.
 
+**Figures are read out before the guide** (2026-09-24). A misread
+figure was the likeliest way for a guide to be wrong: the 4.25 guide had
+its 2 A source backwards. Three things fixed it:
+
+- **The model's crops are cut from a 2400px render**, not the 1800 the
+  walkthrough and the worksheet use. At 1800 that source's arrow read as
+  pointing left eleven times in eleven; at 2400, right every time.
+- **Reading is its own step.** Three quick readings (low effort, at
+  once), each listing every node, then every part between two nodes with
+  its value and direction, are settled into one by a careful call that
+  keeps what they agree on and looks at the figure where they differ.
+  One reading alone got a node or an arrow wrong about one time in four;
+  a single reading "checked" against the figure had its wrong nodes
+  fixed but its right arrows talked out of. Settled, the set's hardest
+  five figures came out right ten times in ten.
+- **The guide works from the reading**, which opens its brief under the
+  figures: "where your own look at the figures disagrees, the reading
+  is right". The student sees the reading and can correct it
+  (design/workspace.md); a corrected reading writes the guide again and
+  is the student's word, over the figure.
+
+A reading that fails leaves none, and the guide reads the figures itself.
+
 **The writer sees the problem's figures, not its page.** A problem with
-figures opens with them cut from the page (the crops the walkthrough
-shows); one without gets the page. The pages memory names that a search
+figures opens with them cut from the page (as the walkthrough shows
+them, from the wider render); one without gets the page. The pages memory names that a search
 for the problem also finds open the guide too, so the writer doesn't
 spend a round reading them. Each tool round is saved on the question as
 it finishes, so a restart, or a retry of the same problem, carries on

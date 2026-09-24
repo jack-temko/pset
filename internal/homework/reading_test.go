@@ -21,23 +21,26 @@ func requestsTo(e *env, system string) int {
 	return n
 }
 
-// A found problem's figure is read, the reading checked against it, and
-// the guide written from the checked reading.
-func TestAFigureIsReadCheckedAndTheGuideWrittenFromIt(t *testing.T) {
+// A found problem's figure is read three times, the readings settled
+// into one against the figure, and the guide written from that.
+func TestAFigureIsReadSettledAndTheGuideWrittenFromIt(t *testing.T) {
 	e := newEnv(t)
 	h := e.newSet(t)
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
 
 	want := []string{"Node A: top of $R_1$.", "2 A current source from A to B (its arrow points to B)."}
 	if strings.Join(q.Reading, "|") != strings.Join(want, "|") || q.ReadingEdited {
-		t.Fatalf("reading %q (edited %v), want the checked one", q.Reading, q.ReadingEdited)
+		t.Fatalf("reading %q (edited %v), want the settled one", q.Reading, q.ReadingEdited)
+	}
+	if n := requestsTo(e, "You read the figures"); n != 3 {
+		t.Fatalf("read %d times, want 3", n)
 	}
 	for _, r := range e.llm.Requests() {
-		if strings.Contains(r.Chat.Messages[0].Content.Text(), "You check a reading") {
+		if strings.Contains(r.Chat.Messages[0].Content.Text(), "several readings") {
 			parts := r.Chat.Messages[1].Content.Parts()
 			last := parts[len(parts)-1].Text
-			if parts[2].ImageURL == nil || !strings.Contains(last, "from B to A") {
-				t.Fatalf("the check didn't get the figure and the first reading: %+v", parts)
+			if parts[2].ImageURL == nil || !strings.Contains(last, "Reading 3:\n- Node A") || !strings.Contains(last, "from B to A") {
+				t.Fatalf("settling didn't get the figure and the three readings: %+v", parts)
 			}
 		}
 	}
@@ -100,7 +103,7 @@ func TestACorrectedReadingWritesTheGuideAgain(t *testing.T) {
 	if len(reqs) != 2 || !strings.Contains(text, "as the student corrected it") || !strings.Contains(text, "from B to A") {
 		t.Fatalf("%d guides; the last opened:\n%s", len(reqs), text)
 	}
-	if !q.ReadingEdited || requestsTo(e, "You read the figures") != 1 {
+	if !q.ReadingEdited || requestsTo(e, "You read the figures") != 3 {
 		t.Fatalf("the correction was read over: %+v", q)
 	}
 
@@ -126,7 +129,7 @@ func TestReadingAgainRedoesTheReadingAndTheGuide(t *testing.T) {
 		t.Fatalf("reread: %d", code)
 	}
 	q := e.wait(t, id, StateReady)
-	if q.ReadingEdited || len(q.Reading) != 2 || requestsTo(e, "You read the figures") != 2 || len(guideRequests(e)) != 3 {
+	if q.ReadingEdited || len(q.Reading) != 2 || requestsTo(e, "You read the figures") != 6 || len(guideRequests(e)) != 3 {
 		t.Fatalf("after reading again: %+v, %d guides", q, len(guideRequests(e)))
 	}
 
@@ -144,5 +147,21 @@ func TestReadingLines(t *testing.T) {
 	}
 	if got := readingLines("Node A: left.\nNode B: right.\n"); len(got) != 2 {
 		t.Fatalf("unmarked lines %q", got)
+	}
+}
+
+// When the readings can't be settled, the first one stands.
+func TestAnUnsettledReadingKeepsTheFirst(t *testing.T) {
+	e := newEnv(t)
+	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
+		if strings.Contains(req.Messages[0].Content.Text(), "several readings") {
+			return llmtest.Reply{Status: 400, Text: `{"error":"no"}`}
+		}
+		return fakeModel(req)
+	})
+	h := e.newSet(t)
+	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
+	if len(q.Reading) != 2 || !strings.Contains(q.Reading[1], "from B to A") {
+		t.Fatalf("reading %q, want the first one", q.Reading)
 	}
 }

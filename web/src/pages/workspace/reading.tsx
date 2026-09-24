@@ -13,6 +13,9 @@ import type { Question } from '@/api/homework'
  *  parts behind the door. */
 const closedLines = 4
 
+/** A value keeps its unit on its line: "9 Ω" never breaks after the 9. */
+const keepUnits = (line: string) => line.replace(/(\d) (?=[kmMµ]?(Ω|A|V|W|F|H|s)\b|[kmMµ]?Ω)/g, '$1\u00a0')
+
 /**
  * How a question's figure reads, one fact a line: the words its guide is
  * written from. A misread figure is the likeliest reason a guide is
@@ -122,7 +125,9 @@ export function FigureReading({
           The figure, as read
           {q.readingEdited && <Label>Corrected</Label>}
         </span>
-        <Button variant="ghost" size="sm" onClick={() => setDraft(lines.join('\n'))}>
+        {/* Each fact keeps its dash in the box, so a line that wraps still
+            reads as one. */}
+        <Button variant="ghost" size="sm" onClick={() => setDraft(lines.map((l) => `- ${l}`).join('\n'))}>
           <Pencil />
           Correct
         </Button>
@@ -131,7 +136,7 @@ export function FigureReading({
         <ul className="list-disc space-y-1 pl-5">
           {shown.map((l, i) => (
             <li key={i}>
-              <Prose text={l} inline />
+              <Prose text={keepUnits(l)} inline />
             </li>
           ))}
         </ul>

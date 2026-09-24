@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/cards"
@@ -255,9 +256,12 @@ func (s *Service) read(ctx context.Context, m model, book Book, q row) error {
 }
 
 // readFigures is a reading of a question's figures, one fact a line:
-// read quickly, then checked against the figures with more thought. An
-// unchecked reading is kept when the check fails. None when there are no
-// figures to read.
+// read three times, quickly and at once, then settled into one with more
+// thought. On the nine circuits of a real problem set a single quick
+// reading got a node or a direction wrong about one time in four, never
+// the same way twice; settled, the hardest five came out right ten times
+// in ten. A reading that fails is left out, and when the settling fails
+// the first reading stands. None when there are no figures to read.
 func (s *Service) readFigures(ctx context.Context, m model, book Book, q row) ([]string, error) {
 	if q.Page == nil {
 		return nil, nil
@@ -268,7 +272,7 @@ func (s *Service) readFigures(ctx context.Context, m model, book Book, q row) ([
 	}
 	ask := func(system, effort string, extra ...llm.Part) (string, error) {
 		content := llm.PartsContent(llm.TextPart(fmt.Sprintf("The problem:\n\n%s\n\nIts figures follow.", q.Statement)))
-		for _, p := range append(figs, extra...) {
+		for _, p := range append(slices.Clone(figs), extra...) {
 			content.AppendPart(p)
 		}
 		return m.client.ChatOnce(ctx, llm.ChatRequest{Model: m.name, ReasoningEffort: effort, Messages: []llm.Message{
@@ -276,29 +280,54 @@ func (s *Service) readFigures(ctx context.Context, m model, book Book, q row) ([
 			{Role: "user", Content: content},
 		}})
 	}
-	// A quick first reading: the check is where the care goes.
-	first, err := ask(readPrompt, "low")
-	if err != nil {
-		return nil, err
+	replies := make([]string, readings)
+	errs := make([]error, readings)
+	var wg sync.WaitGroup
+	for i := range readings {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			replies[i], errs[i] = ask(readPrompt, "low")
+		}()
 	}
-	lines := readingLines(first)
-	if len(lines) == 0 {
-		return nil, nil
+	wg.Wait()
+	var read [][]string
+	for i, r := range replies {
+		if errs[i] != nil {
+			continue
+		}
+		if lines := readingLines(r); len(lines) > 0 {
+			read = append(read, lines)
+		}
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if len(read) == 0 {
+		return nil, errors.Join(errs...)
 	}
 	s.setActivity(ctx, q.ID, "Checking the reading…")
-	checked, err := ask(checkPrompt, "", llm.TextPart("The reading:\n"+bullets(lines)))
+	var b strings.Builder
+	for i, lines := range read {
+		fmt.Fprintf(&b, "Reading %d:\n%s\n", i+1, bullets(lines))
+	}
+	settled, err := ask(settlePrompt, "", llm.TextPart(b.String()))
 	if err != nil {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		slog.Warn("question: checking the reading", "question", q.ID, "err", err)
+		slog.Warn("question: settling the reading", "question", q.ID, "err", err)
+		return read[0], nil
+	}
+	if lines := readingLines(settled); len(lines) > 0 {
 		return lines, nil
 	}
-	if c := readingLines(checked); len(c) > 0 {
-		return c, nil
-	}
-	return lines, nil
+	return read[0], nil
 }
+
+// readings is how many times a figure is read before the readings are
+// settled into one.
+const readings = 3
 
 // Caps on a reading: a figure's facts run to a couple of dozen lines.
 const (
@@ -662,12 +691,13 @@ func readingText(q row) string {
 }
 
 // figureParts is a question's figures as images, each under its label,
-// cut the way the walkthrough shows them. None when any fails to cut: a
-// problem missing one of its figures is better read off the whole page.
+// cut as the walkthrough shows them but from a wider render. None when
+// any fails to cut: a problem missing one of its figures is better read
+// off the whole page.
 func (s *Service) figureParts(ctx context.Context, book Book, q row) []llm.Part {
 	var parts []llm.Part
 	for _, f := range q.FigRect {
-		img, err := s.crop(ctx, book.ID, *q.Page, f.Rect)
+		img, err := s.crop(ctx, book.ID, *q.Page, f.Rect, modelCropWidth)
 		if err != nil {
 			slog.Warn("guide: figure crop", "question", q.ID, "figure", f.Label, "err", err)
 			return nil
