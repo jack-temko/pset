@@ -32,38 +32,51 @@ const src = walk(join(web, 'src'))
   .map((s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, ''))
   .join('\n')
 
-const STEPS = '0|1|2|3|4|5|6|7|8|9|10|11|12|14|16|20|24|28|32|36|40|44|48|52|56|60|64|72|80|96'
-const SPACING = String.raw`(?:p|px|py|pt|pb|pl|pr|ps|pe|m|mx|my|mt|mb|ml|mr|ms|me|gap|w|h|min-w|min-h|max-w|max-h|size|top|right|bottom|left|inset|inset-x|inset-y|basis|space-x|space-y|translate-x|translate-y)`
+// The scale is whatever index.css defines: numeric steps (--spacing-4) and
+// named tokens (--spacing-card). A hard-coded copy drifted once, listing
+// steps the theme never had.
+const theme = readFileSync(join(web, 'src/index.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+const defined = [...theme.matchAll(/--spacing-([\w-]+)\s*:/g)].map((m) => m[1])
+const steps = new Set(defined.filter((t) => /^\d+$/.test(t)))
+// Longest first, so control-sm is tried before control.
+const named = defined.filter((t) => !steps.has(t)).sort((a, b) => b.length - a.length)
+const SPACING = String.raw`(?:p|px|py|pt|pb|pl|pr|ps|pe|m|mx|my|mt|mb|ml|mr|ms|me|gap|gap-x|gap-y|w|h|min-w|min-h|max-w|max-h|size|top|right|bottom|left|inset|inset-x|inset-y|basis|space-x|space-y|translate-x|translate-y)`
 
 const families = [
-  // The step group swallows a trailing .5 (space-y-1.5) so the fractional
-  // filter below sees it — a bare integer prefix would read space-y-1.5 as
-  // the sanctioned space-y-1 and wave it through. The non-capturing wrapper
-  // around STEPS matters: without it the optional decimal binds to the last
-  // alternative only, not the whole step list.
-  ['spacing', new RegExp(String.raw`(?<![\w-])(-?${SPACING})-((?:${STEPS})(?:\.[05])?|page|section|card)(?![\w-])`, 'g')],
-  ['type scale', /(?<![\w-])(text-(?:xs|sm|base|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl))(?![\w-])/g],
-  ['radius', /(?<![\w-])(rounded-(?:4xl))(?![\w-])/g],
+  // Any number is caught, on the scale or not, so a step the theme doesn't
+  // define (w-72) is reported rather than skipped; a trailing decimal is
+  // caught with it (space-y-1.5) so it can't pass as space-y-1.
+  ['spacing', new RegExp(String.raw`(?<![\w-])-?${SPACING}-(?:\d+(?:\.\d+)?|${named.join('|')})(?![\w-])`, 'g')],
+  ['type scale', /(?<![\w-])text-(?:xs|sm|base|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl)(?![\w-])/g],
+  ['radius', /(?<![\w-])rounded-4xl(?![\w-])/g],
 ]
 const arbitrary = new RegExp(String.raw`(?<![\w-])${SPACING}-\[[^\]]+\]`, 'g')
 
+// The whole class is the key. (It once kept only the spacing step, so the
+// check below asked whether "72" appeared anywhere in the CSS, which it
+// always did.)
 const used = new Map()
 for (const [family, re] of families) {
-  for (const m of src.matchAll(re)) {
-    const cls = m[2] ?? m[1]
-    if (!used.has(cls)) used.set(cls, family)
-  }
+  for (const m of src.matchAll(re)) if (!used.has(m[0])) used.set(m[0], family)
 }
 const fractional = [...used.keys()].filter((c) => /\d\.\d/.test(c))
+const offScale = [...used.keys()].filter((c) => {
+  const n = used.get(c) === 'spacing' && c.match(/-(\d+)$/)
+  return n && !steps.has(n[1])
+})
 const arbitraryHits = [...new Set([...src.matchAll(arbitrary)].map((m) => m[0]))]
 
-const missing = [...used.keys()].filter((c) => !css.includes(c))
+// Present means a rule for exactly this class: a selector ending in it,
+// after the dot or a variant's colon. A bare substring passes on anything.
+const esc = (c) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const missing = [...used.keys()].filter((c) => !new RegExp(String.raw`[.:]${esc(c)}(?![\w-])`).test(css))
 
 console.log(`checked ${used.size} distinct theme-dependent utilities`)
 console.log(`fractional in use (should be 0): ${fractional.length}`, fractional)
+console.log(`steps off the scale (should be 0): ${offScale.length}`, offScale)
 // Informational: pre-existing arbitraries in stock primitives and pages
 // awaiting their own re-grill. New spacing/type arbitraries are banned.
 console.log(`arbitrary-length utilities (pre-existing, informational): ${arbitraryHits.length}`)
 console.log(`missing from built CSS (${missing.length}):`)
 for (const c of missing) console.log(`  MISSING: ${c}`)
-process.exit(missing.length + fractional.length > 0 ? 1 : 0)
+process.exit(missing.length + fractional.length + offScale.length > 0 ? 1 : 0)
