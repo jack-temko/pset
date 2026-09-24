@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { get, post } from './client'
+import { del, get, post } from './client'
 import type { Kind, Week } from './gen/activity'
 
 export type * from './gen/activity'
@@ -20,6 +20,16 @@ export const useWeek = () =>
     // Time accrues without events: fresh each visit to Home.
     staleTime: 0,
   })
+
+/** Forget all time spent, in every book. Questions worked stay: they come
+ *  from homework. */
+export function useClearActivity() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => del<void>('/api/heartbeats'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['week'] }),
+  })
+}
 
 const BEAT = 30_000
 /** Input older than this, and the student has wandered off. */

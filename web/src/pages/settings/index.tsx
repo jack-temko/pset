@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CircleAlert, CircleCheck } from 'lucide-react'
 
 import { AppShell, PageShell, PageTitle } from '@/components/shell'
 import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow } from '@/components/box'
 import { Button } from '@/components/button'
-import { Dialog } from '@/components/dialog'
 import { Field, Input } from '@/components/input'
 import { SegmentedControl } from '@/components/segmented-control'
 import { Skeleton } from '@/components/skeleton'
@@ -25,6 +24,9 @@ import {
 } from '@/api/settings'
 import { useSettled, useShowPending } from '@/lib/settled'
 import { applyTheme, getTheme, type Theme } from '@/lib/theme'
+import { cn, plural } from '@/lib/utils'
+import { ConfirmPopover } from '@/components/confirm'
+import { useClearActivity } from '@/api/activity'
 
 /**
  * Settings: one document page, stacked. Connections, Health, Appearance,
@@ -383,88 +385,146 @@ function Appearance() {
 
 // ---------------------------------------------------------------- reset
 
-/** The app's one destructive act: everything goes, settings included, as
- *  if it had never been installed. The dialog names exactly what, from the
- *  engine's dry run. */
+/** Two ways to start over, smallest first: forget the time Home counts,
+ *  or everything. Each asks first, under its own button, naming what goes;
+ *  Reset's counts come from the engine's dry run as it asks. */
 function Reset() {
-  const [open, setOpen] = useState(false)
-  const navigate = useNavigate()
-  const counts = useResetCounts(open)
-  const reset = useReset()
-  const resetting = useShowPending(reset)
-
   return (
-    <>
-      <Box tone="destructive">
-        <BoxBody className="flex items-center justify-between gap-4">
-          <span>
-            <span className="block text-sm font-medium">Reset PSet</span>
-            <span className="block text-xs text-muted-foreground">
-              Deletes every book, every homework set, and these settings. It's a fresh install.
-            </span>
-          </span>
-          {/* Outline, not destructive: the destructive button is
-              destructive-soft, the same ground as this Box, and vanished
-              into it. On card it reads as a control; the red ink says what
-              kind. */}
-          <Button variant="outline" className="text-destructive" onClick={() => setOpen(true)}>
-            Reset everything
-          </Button>
-        </BoxBody>
-      </Box>
-
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Reset everything?"
-        footer={
-          <>
-            <Button variant="ghost" disabled={resetting} onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={resetting}
-              onClick={() =>
-                !reset.isPending &&
-                reset.mutate(undefined, {
-                  onSuccess: () => {
-                    setOpen(false)
-                    navigate('/')
-                  },
-                })
-              }
-            >
-              {resetting ? 'Resetting…' : 'Reset everything'}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-3 text-sm">
-          <p>
-            This deletes{' '}
-            <span className="font-medium tabular-nums">
-              {counts.data ? plural(counts.data.books, 'book') : <Skeleton className="h-3 w-12" />}
-            </span>{' '}
-            and their{' '}
-            <span className="font-medium tabular-nums">
-              {counts.data ? plural(counts.data.pages, 'page') : <Skeleton className="h-3 w-16" />}
-            </span>
-            , every homework set and conversation, and your settings, including the API key.
-          </p>
-          {reset.isError && <p className="text-destructive">{reset.error.message}</p>}
-          <p className="text-muted-foreground">
-            PSet will be as it was the first time you opened it. There's no undo.
-          </p>
-        </div>
-      </Dialog>
-    </>
+    <Box tone="destructive">
+      <ClearActivity />
+      <ResetEverything />
+    </Box>
   )
 }
 
-function plural(n: number, word: string) {
-  return `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`
+/** One act in the Reset Box: what it is, what it does, and its button.
+ *  Outline, not destructive: the destructive button is destructive-soft,
+ *  the same ground as this Box, and vanished into it. On card it reads as
+ *  a control; the red ink says what kind. */
+function ResetRow({
+  title,
+  description,
+  action,
+  actionRef,
+  asking,
+  onAsk,
+  className,
+  children,
+}: {
+  title: string
+  description: string
+  /** The button's label, and the ref its popover hangs from. */
+  action: string
+  actionRef: RefObject<HTMLButtonElement | null>
+  asking: boolean
+  onAsk: () => void
+  className?: string
+  children?: ReactNode
+}) {
+  return (
+    <BoxBody className={cn('flex items-center justify-between gap-4', className)}>
+      <span>
+        <span className="block text-sm font-medium">{title}</span>
+        <span className="block text-xs text-muted-foreground">{description}</span>
+      </span>
+      <Button
+        ref={actionRef}
+        variant="outline"
+        className="text-destructive"
+        aria-haspopup="dialog"
+        aria-expanded={asking}
+        onClick={onAsk}
+      >
+        {action}
+      </Button>
+      {children}
+    </BoxBody>
+  )
 }
+
+function ClearActivity() {
+  const [asking, setAsking] = useState(false)
+  const button = useRef<HTMLButtonElement>(null)
+  const clear = useClearActivity()
+  return (
+    <ResetRow
+      title="Activity history"
+      description="The time Home counts for homework, reading and asking."
+      action="Clear history"
+      actionRef={button}
+      asking={asking}
+      onAsk={() => setAsking(true)}
+    >
+      {asking && (
+        <ConfirmPopover
+          anchor={button}
+          question="Clear activity history?"
+          detail="Time spent starts again from zero, in every book. Books, homework, conversations and the questions you've worked stay."
+          action="Clear history"
+          error={clear.isError ? clear.error.message : undefined}
+          onCancel={() => setAsking(false)}
+          onConfirm={() => !clear.isPending && clear.mutate(undefined, { onSuccess: () => setAsking(false) })}
+        />
+      )}
+    </ResetRow>
+  )
+}
+
+/** The app's one total act: everything goes, settings included, as if it
+ *  had never been installed. */
+function ResetEverything() {
+  const [asking, setAsking] = useState(false)
+  const button = useRef<HTMLButtonElement>(null)
+  const navigate = useNavigate()
+  const counts = useResetCounts(asking)
+  const reset = useReset()
+  const resetting = useShowPending(reset)
+  return (
+    <ResetRow
+      title="Reset PSet"
+      description="Deletes every book, every homework set, and these settings. It's a fresh install."
+      action="Reset everything"
+      actionRef={button}
+      asking={asking}
+      onAsk={() => setAsking(true)}
+      className="border-t border-destructive"
+    >
+      {asking && (
+        <ConfirmPopover
+          anchor={button}
+          question="Reset everything?"
+          detail={
+            <>
+              Deletes{' '}
+              <span className="tabular-nums">
+                {counts.data ? plural(counts.data.books, 'book') : <Skeleton className="h-3 w-12" />}
+              </span>{' '}
+              and their{' '}
+              <span className="tabular-nums">
+                {counts.data ? plural(counts.data.pages, 'page') : <Skeleton className="h-3 w-16" />}
+              </span>
+              , every homework set and conversation, and your settings, API key included. There's no undo.
+            </>
+          }
+          action="Reset everything"
+          busy={resetting ? 'Resetting…' : undefined}
+          error={reset.isError ? reset.error.message : undefined}
+          onCancel={() => setAsking(false)}
+          onConfirm={() =>
+            !reset.isPending &&
+            reset.mutate(undefined, {
+              onSuccess: () => {
+                setAsking(false)
+                navigate('/')
+              },
+            })
+          }
+        />
+      )}
+    </ResetRow>
+  )
+}
+
 
 // ---------------------------------------------------------------- page
 

@@ -24,6 +24,8 @@ export function ConfirmPopover({
   question,
   detail,
   action,
+  busy,
+  error,
   onConfirm,
   onCancel,
 }: {
@@ -35,6 +37,12 @@ export function ConfirmPopover({
   detail?: ReactNode
   /** The act, named on its button: "Remove", "Delete homework". */
   action: string
+  /** For an act that takes a while and stays open while it runs: the
+   *  act's label meanwhile ("Resetting…"). Both buttons wait, and nothing
+   *  cancels it. */
+  busy?: string
+  /** Why the act failed, in destructive ink under the sentence. */
+  error?: ReactNode
   onConfirm: () => void
   onCancel: () => void
 }) {
@@ -51,12 +59,13 @@ export function ConfirmPopover({
   }, [anchor])
 
   const back = () => {
+    if (busy) return
     onCancel()
     anchor.current?.focus()
   }
   // The document listeners are wired once; these always reach the latest
   // props without rewiring them.
-  const outside = useEffectEvent(() => onCancel())
+  const outside = useEffectEvent(() => !busy && onCancel())
   const escape = useEffectEvent(() => back())
 
   useEffect(() => {
@@ -93,12 +102,13 @@ export function ConfirmPopover({
         <span className="font-medium">{question}</span>
         {detail && <span className="text-muted-foreground"> {detail}</span>}
       </p>
+      {error && <p className="text-destructive">{error}</p>}
       <div className="flex justify-end gap-2">
-        <Button ref={cancel} variant="ghost" size="sm" onClick={back}>
+        <Button ref={cancel} variant="ghost" size="sm" disabled={!!busy} onClick={back}>
           Cancel
         </Button>
-        <Button variant="destructive" size="sm" onClick={onConfirm}>
-          {action}
+        <Button variant="destructive" size="sm" disabled={!!busy} onClick={onConfirm}>
+          {busy ?? action}
         </Button>
       </div>
     </div>,
