@@ -43,6 +43,9 @@ const (
 	StatePending State = "pending"
 	// StateLocating is finding it in the book.
 	StateLocating State = "locating"
+	// StateLocated is found and waiting its turn to be written: its
+	// statement, page and figures are there, its guide isn't yet.
+	StateLocated State = "located"
 	// StateWriting is writing its guide; the hint may already be there.
 	StateWriting State = "writing"
 	StateReady   State = "ready"
@@ -103,6 +106,9 @@ type Question struct {
 	// Revealed names the stages the student has lifted the veil on.
 	Revealed []string `json:"revealed"`
 	Done     bool     `json:"done"`
+	// UpdatedAt is when its state (or its statement, or a stage) last
+	// changed: while it waits, when the wait began.
+	UpdatedAt string `json:"updatedAt"`
 }
 
 // MemoryUse is what a guide did with a memory.

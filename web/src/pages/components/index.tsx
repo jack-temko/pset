@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { BookOpen, Check, Clock, Plus, Settings, TriangleAlert } from 'lucide-react'
+import { BookOpen, Check, Clock, Plus, Printer, Settings, TriangleAlert } from 'lucide-react'
 
 import { AppShell, PageShell } from '@/components/shell'
 import { BookCover, CoverPicker } from '@/components/book-cover'
@@ -159,6 +159,9 @@ function MenuDemo() {
         Add questions
       </MenuItem>
       <MenuItem onSelect={() => {}}>Edit homework</MenuItem>
+      <MenuItem icon={<Printer />} hint="3 still being found" onSelect={() => {}}>
+        Print worksheet
+      </MenuItem>
       <MenuDivider />
       <MenuCheckItem checked={on} onChange={() => setOn((v) => !v)}>
         Turned in
@@ -455,6 +458,15 @@ export function Components() {
               />
               <ImportRow
                 book={sampleBook({ sha256: '7ce04a15', title: 'Griffiths Introduction To Electrodynamics', author: '', state: { kind: 'queued' } })}
+              />
+              <ImportRow
+                book={sampleBook({
+                  sha256: '5e2b7f90',
+                  title: 'Foundations of Brontolithics',
+                  author: '',
+                  kind: 'scanned',
+                  state: { kind: 'queued', phase: 'read', done: 140, total: 312 },
+                })}
               />
               <ImportRow
                 book={sampleBook({ sha256: '3a80b5d4', title: 'Organic Chemistry', author: '', state: { kind: 'failed', reason: "This PDF can't be read. PSet couldn't open it." } })}

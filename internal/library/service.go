@@ -35,8 +35,11 @@ type Models interface {
 // Queue is what the library needs from the job queue.
 type Queue interface {
 	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
+	// Wake starts what was enqueued, once its transaction has committed.
+	Wake()
 	StopSubject(ctx context.Context, subject string) error
 	Handle(kind, lane string, h jobs.Handler)
+	Resumable(kind string)
 }
 
 type Config struct {
@@ -54,11 +57,30 @@ type Service struct {
 	pacer *pacer
 }
 
-// The import job's kind and lane.
+// Importing a book is two jobs in one lane, one at a time: examining it
+// (title, pages, digital or scanned), then preparing it (reading a scan,
+// the contents, search). Every queued book is examined first, then
+// digital books are prepared ahead of scans, and preparing is resumable:
+// a scan's reading steps aside for a book ahead of it and carries on
+// after, having lost at most the page it was on.
 const (
-	JobImport  = "import"
+	// JobExamine keeps the name of the one import job it grew out of, so
+	// an import queued before the split still runs.
+	JobExamine = "import"
+	JobPrepare = "prepare"
 	LaneImport = "import"
 )
+
+// Priorities in the import lane; a scan prepares at 0.
+const (
+	examineFirst = 2
+	digitalFirst = 1
+)
+
+// examineJob is a book's first import job.
+func examineJob(id string) jobs.Spec {
+	return jobs.Spec{Kind: JobExamine, Subject: id, Priority: examineFirst, Payload: importPayload{BookID: id}}
+}
 
 func New(c Config) *Service {
 	if c.Tools.Metadata == nil {
@@ -66,7 +88,10 @@ func New(c Config) *Service {
 	}
 	s := &Service{c: c, scans: newScanCache(filepath.Join(c.DataDir, "cache", "pages"), c.Tools.PageImage)}
 	s.pacer = newPacer()
-	c.Queue.Handle(JobImport, LaneImport, s.runImport)
+	c.Queue.Handle(JobExamine, LaneImport, s.runExamine)
+	c.Queue.Handle(JobPrepare, LaneImport, s.runPrepare)
+	// It saves every page read and every batch embedded as it goes.
+	c.Queue.Resumable(JobPrepare)
 	if err := fillCovers(context.Background(), c.DB); err != nil {
 		slog.Error("library: giving books their colours", "err", err)
 	}
@@ -134,17 +159,23 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 	if err := os.Rename(tmp.Name(), s.pdfPath(id)); err != nil {
 		return Book{}, err
 	}
+	// The colours are counted before the transaction, which then only
+	// writes: a read that turns into a write fails outright (SQLITE_BUSY,
+	// snapshot) when a running import commits in between, and a wait
+	// doesn't help. Two uploads at once may pick the same colour; that's
+	// all a race costs.
+	used, err := coversInUse(ctx, s.c.DB)
+	if err != nil {
+		os.Remove(s.pdfPath(id))
+		return Book{}, err
+	}
 	now := db.Now()
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
-		used, err := coversInUse(ctx, tx)
-		if err != nil {
-			return err
-		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO books (id, sha256, title, cover, state, created_at, updated_at) VALUES (?, ?, ?, ?, 'queued', ?, ?)`,
 			id, sha, filenameTitle(filename), pickCover(sha, used), now, now); err != nil {
 			return err
 		}
-		_, err = s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobImport, Subject: id, Payload: importPayload{BookID: id}})
+		_, err := s.c.Queue.Enqueue(ctx, tx, examineJob(id))
 		return err
 	})
 	if err != nil {
@@ -156,6 +187,7 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 		}
 		return Book{}, err
 	}
+	s.c.Queue.Wake()
 	return s.publish(ctx, id)
 }
 
@@ -257,7 +289,8 @@ func (s *Service) Stop(ctx context.Context, id string) (Book, error) {
 		return Book{}, err
 	}
 	reason := "Stopped."
-	if b.State.Kind == StateQueued {
+	if b.State.Kind == StateQueued && b.Kind == KindUnknown {
+		// Nothing has happened to it yet; an examined book has begun.
 		reason = "Cancelled before it started."
 	}
 	if err := setState(ctx, s.c.DB, id, BookState{Kind: StateFailed, Reason: reason}); err != nil {
@@ -301,12 +334,13 @@ func (s *Service) Retry(ctx context.Context, id string) (Book, error) {
 		if err := setState(ctx, tx, id, BookState{Kind: StateQueued}); err != nil {
 			return err
 		}
-		_, err := s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobImport, Subject: id, Payload: importPayload{BookID: id}})
+		_, err := s.c.Queue.Enqueue(ctx, tx, examineJob(id))
 		return err
 	})
 	if err != nil {
 		return Book{}, err
 	}
+	s.c.Queue.Wake()
 	return s.publish(ctx, id)
 }
 

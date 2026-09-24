@@ -3,9 +3,11 @@ package jobs
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -85,6 +87,207 @@ func TestLaneRunsInOrderOneAtATime(t *testing.T) {
 			t.Fatalf("order %v", order)
 		}
 	}
+}
+
+func TestHigherPriorityStartsFirstThenOldest(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 1)
+	var mu sync.Mutex
+	var order []string
+	q.Handle("k", "l", func(ctx context.Context, j Job) error {
+		var p struct{ Name string }
+		j.Decode(&p)
+		mu.Lock()
+		order = append(order, p.Name)
+		mu.Unlock()
+		return nil
+	})
+	ctx := context.Background()
+	var last string
+	for _, s := range []struct {
+		name     string
+		priority int
+	}{{"low-a", 0}, {"high-a", 1}, {"low-b", 0}, {"high-b", 1}} {
+		last, _ = q.Enqueue(ctx, q.db, Spec{Kind: "k", Priority: s.priority, Payload: map[string]string{"Name": s.name}})
+	}
+	if j, _ := q.Get(ctx, last); j.Priority != 1 {
+		t.Fatalf("priority stored as %d", j.Priority)
+	}
+	run(t, q)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		n := len(order)
+		mu.Unlock()
+		if n == 4 {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if got := strings.Join(order, ","); got != "high-a,high-b,low-a,low-b" {
+		t.Fatalf("order %s", got)
+	}
+}
+
+func TestEnqueueInATransactionNeverWaitsOnTheScheduler(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 1)
+	q.Handle("k", "l", func(ctx context.Context, j Job) error { return nil })
+	ctx := context.Background()
+	run(t, q)
+	// Once a job has run, the scheduler is past its start-up writes.
+	warm, _ := q.Enqueue(ctx, q.db, Spec{Kind: "k"})
+	waitState(t, q, warm, Done)
+	q.Pause()
+	first, _ := q.Enqueue(ctx, q.db, Spec{Kind: "k"})
+	// The caller's transaction takes the write lock, then the scheduler
+	// wakes to start the first job and waits on that lock.
+	tx, err := q.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE jobs SET updated_at = updated_at`); err != nil {
+		t.Fatal(err)
+	}
+	q.Resume()
+	time.Sleep(50 * time.Millisecond)
+	start := time.Now()
+	second, err := q.Enqueue(ctx, tx, Spec{Kind: "k"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if waited := time.Since(start); waited > time.Second {
+		t.Fatalf("Enqueue waited %v on the scheduler", waited)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	waitState(t, q, first, Done)
+	waitState(t, q, second, Done)
+}
+
+func TestWakeAfterCommitStartsTheJobWithoutWaitingForThePoll(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 1)
+	started := make(chan time.Time, 1)
+	q.Handle("k", "l", func(ctx context.Context, j Job) error {
+		started <- time.Now()
+		return nil
+	})
+	ctx := context.Background()
+	run(t, q)
+	// Once a job has run, the scheduler is past its start-up writes.
+	warm, _ := q.Enqueue(ctx, q.db, Spec{Kind: "k"})
+	waitState(t, q, warm, Done)
+	<-started
+	// Enqueue's own wake comes before the commit: the scheduler looks,
+	// finds nothing yet, and goes back to waiting.
+	tx, err := q.db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := q.Enqueue(ctx, tx, Spec{Kind: "k"}); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	committed := time.Now()
+	q.Wake()
+	select {
+	case at := <-started:
+		if waited := at.Sub(committed); waited > poll/4 {
+			t.Fatalf("started %v after the commit", waited)
+		}
+	case <-time.After(2 * poll):
+		t.Fatal("never started")
+	}
+}
+
+func TestResumableJobGivesWayToAHigherOneThenResumes(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 1)
+	var mu sync.Mutex
+	var log []string
+	note := func(s string) { mu.Lock(); log = append(log, s); mu.Unlock() }
+	started := make(chan struct{}, 4)
+	q.Handle("slow", "l", func(ctx context.Context, j Job) error {
+		note(fmt.Sprintf("slow run %d", j.Attempts))
+		started <- struct{}{}
+		if j.Attempts > 1 {
+			return nil
+		}
+		<-ctx.Done()
+		if Stopped(ctx) {
+			t.Error("an interruption read as a stop")
+		}
+		return ctx.Err()
+	})
+	q.Resumable("slow")
+	q.Handle("fast", "l", func(ctx context.Context, j Job) error {
+		var p struct{ Name string }
+		j.Decode(&p)
+		note(p.Name)
+		return nil
+	})
+	ctx := context.Background()
+	run(t, q)
+	slow, _ := q.Enqueue(ctx, q.db, Spec{Kind: "slow"})
+	<-started
+
+	// An equal never interrupts: it waits its turn.
+	equal, _ := q.Enqueue(ctx, q.db, Spec{Kind: "fast", Payload: map[string]string{"Name": "equal"}})
+	time.Sleep(100 * time.Millisecond)
+	if j, _ := q.Get(ctx, equal); j.State != Queued {
+		t.Fatalf("an equal-priority job is %s", j.State)
+	}
+
+	high, _ := q.Enqueue(ctx, q.db, Spec{Kind: "fast", Priority: 1, Payload: map[string]string{"Name": "high"}})
+	waitState(t, q, high, Done)
+	if j := waitState(t, q, slow, Done); j.Attempts != 2 {
+		t.Fatalf("slow ran %d times", j.Attempts)
+	}
+	waitState(t, q, equal, Done)
+	mu.Lock()
+	defer mu.Unlock()
+	// Back in line oldest first, the interrupted job resumes before the
+	// equal that queued after it.
+	if got := strings.Join(log, ", "); got != "slow run 1, high, slow run 2, equal" {
+		t.Fatalf("order: %s", got)
+	}
+}
+
+func TestAJobThatIsntResumableIsNeverInterrupted(t *testing.T) {
+	q := newQueue(t)
+	q.Lane("l", 1)
+	started, release := make(chan struct{}), make(chan struct{})
+	q.Handle("slow", "l", func(ctx context.Context, j Job) error {
+		close(started)
+		select {
+		case <-release:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	})
+	q.Handle("fast", "l", func(ctx context.Context, j Job) error { return nil })
+	ctx := context.Background()
+	run(t, q)
+	slow, _ := q.Enqueue(ctx, q.db, Spec{Kind: "slow"})
+	<-started
+	high, _ := q.Enqueue(ctx, q.db, Spec{Kind: "fast", Priority: 1})
+	time.Sleep(100 * time.Millisecond)
+	if j, _ := q.Get(ctx, high); j.State != Queued {
+		t.Fatalf("the higher job is %s while the slow one runs", j.State)
+	}
+	close(release)
+	if j := waitState(t, q, slow, Done); j.Attempts != 1 {
+		t.Fatalf("slow ran %d times", j.Attempts)
+	}
+	waitState(t, q, high, Done)
 }
 
 func TestSameKeyNeverRunsTogether(t *testing.T) {

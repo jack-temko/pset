@@ -141,7 +141,7 @@ func TestAGuideCarriesOnAfterARestart(t *testing.T) {
 	id := e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID
 	<-inRound2
 	e.queue.Pause() // what shutting down does to a running job
-	if q := e.wait(t, id, StatePending); len(q.Hint) != 0 {
+	if q := e.wait(t, id, StateLocated); len(q.Hint) != 0 {
 		t.Fatalf("stopped question kept a hint %v", q.Hint)
 	}
 	saved, err := savedRounds(context.Background(), e.svc.c.DB, id)

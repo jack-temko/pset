@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { applyQuestion, outstanding, type Detail, type Question, type Summary } from './homework'
+import { applyQuestion, outstanding, toFind, type Detail, type Question, type Summary } from './homework'
 
 let n = 0
 const q = (over: Partial<Question> = {}): Question => ({
@@ -18,6 +18,7 @@ const q = (over: Partial<Question> = {}): Question => ({
   memory: [],
   revealed: [],
   done: false,
+  updatedAt: '',
   ...over,
 })
 
@@ -59,6 +60,12 @@ describe('applyQuestion', () => {
     expect(applyQuestion(d, q({ id: 'x', state: 'locating' }))).toBe(d)
   })
 
+  it('puts located between being found and being written', () => {
+    const d = detail(q({ id: 'x', state: 'located', page: 12 }))
+    expect(applyQuestion(d, q({ id: 'x', state: 'locating' }))).toBe(d)
+    expect(applyQuestion(d, q({ id: 'x', state: 'writing' })).questions[0].state).toBe('writing')
+  })
+
   it('force is a restart: pending applies over failed, and later events follow', () => {
     const d = detail(q({ id: 'x', state: 'failed' }))
     expect(applyQuestion(d, q({ id: 'x', state: 'pending' }), true).questions[0].state).toBe('pending')
@@ -76,11 +83,25 @@ describe('outstanding', () => {
   it('is true while the engine still owes the question work', () => {
     expect(outstanding(q({ state: 'pending' }))).toBe(true)
     expect(outstanding(q({ state: 'locating' }))).toBe(true)
+    expect(outstanding(q({ state: 'located' }))).toBe(true)
     expect(outstanding(q({ state: 'writing' }))).toBe(true)
   })
 
   it('is false once the question is settled', () => {
     expect(outstanding(q({ state: 'ready' }))).toBe(false)
     expect(outstanding(q({ state: 'failed' }))).toBe(false)
+  })
+})
+
+describe('toFind', () => {
+  it('is a question in the book that is queued or being found', () => {
+    expect(toFind(q({ state: 'pending' }))).toBe(true)
+    expect(toFind(q({ state: 'locating' }))).toBe(true)
+  })
+
+  it('is false once found, and for one that has nothing to find', () => {
+    expect(toFind(q({ state: 'located' }))).toBe(false)
+    expect(toFind(q({ state: 'writing' }))).toBe(false)
+    expect(toFind(q({ state: 'pending', inBook: false }))).toBe(false)
   })
 })

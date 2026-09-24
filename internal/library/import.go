@@ -68,9 +68,56 @@ func classify(pages []string) string {
 	return "scanned"
 }
 
-// runImport is the import job: the five phases, then ready. A book that
-// was removed meanwhile ends the job quietly.
-func (s *Service) runImport(ctx context.Context, j jobs.Job) error {
+// runExamine is an import's first job: examine the book, then queue its
+// preparation, a digital book ahead of scans.
+func (s *Service) runExamine(ctx context.Context, j jobs.Job) error {
+	return s.runStep(ctx, j, func(ctx context.Context, b row) error {
+		_, kind, err := s.examine(ctx, b, s.pdfPath(b.ID))
+		if err != nil {
+			return err
+		}
+		prepare := jobs.Spec{Kind: JobPrepare, Subject: b.ID, Payload: importPayload{BookID: b.ID}}
+		if kind == string(KindDigital) {
+			prepare.Priority = digitalFirst
+		}
+		err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+			if err := setState(ctx, tx, b.ID, BookState{Kind: StateQueued}); err != nil {
+				return err
+			}
+			_, err := s.c.Queue.Enqueue(ctx, tx, prepare)
+			return err
+		})
+		if err != nil {
+			return err
+		}
+		// No Wake: preparing waits for this job's slot, and settling wakes
+		// the queue.
+		if _, err := s.publish(ctx, b.ID); err != nil && !isNotFound(err) {
+			slog.Error("import: publish", "book", b.ID, "err", err)
+		}
+		return nil
+	})
+}
+
+// runPrepare is an import's second job: read a scan's pages, work out the
+// contents, build search, then ready. It can be interrupted at any point
+// and resumes where it stopped.
+func (s *Service) runPrepare(ctx context.Context, j jobs.Job) error {
+	return s.runStep(ctx, j, func(ctx context.Context, b row) error {
+		if err := s.prepare(ctx, b); err != nil {
+			return err
+		}
+		// Finished is finished, even if the job was asked to stop just now.
+		s.setState(context.WithoutCancel(ctx), b.ID, BookState{Kind: StateReady}, true)
+		return nil
+	})
+}
+
+// runStep runs one of an import's jobs on its book and settles what the
+// job leaves. Stopped, the book fails with "Stopped."; interrupted for
+// another book, or shut down, it's queued again and resumes later; failed,
+// it says why. A book removed meanwhile ends the job quietly.
+func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Context, row) error) error {
 	var p importPayload
 	if err := j.Decode(&p); err != nil {
 		return err
@@ -82,18 +129,16 @@ func (s *Service) runImport(ctx context.Context, j jobs.Job) error {
 	if err != nil {
 		return err
 	}
-	err = s.prepare(ctx, b)
+	err = step(ctx, b)
 	settle := context.WithoutCancel(ctx)
 	switch {
 	case err == nil:
-		s.setState(settle, b.ID, BookState{Kind: StateReady}, true)
 		return nil
 	case jobs.Stopped(ctx):
 		s.setState(settle, b.ID, BookState{Kind: StateFailed, Reason: "Stopped."}, true)
 		return err
 	case ctx.Err() != nil:
-		// Shutting down: it resumes on the next start.
-		s.setState(settle, b.ID, BookState{Kind: StateQueued}, true)
+		s.setState(settle, b.ID, s.requeued(settle, b), true)
 		return err
 	}
 	var f *failure
@@ -101,23 +146,44 @@ func (s *Service) runImport(ctx context.Context, j jobs.Job) error {
 	if errors.As(err, &f) {
 		reason = f.msg
 	}
-	slog.Warn("import failed", "book", b.ID, "err", err)
+	slog.Warn("import failed", "book", b.ID, "job", j.Kind, "err", err)
 	s.setState(settle, b.ID, BookState{Kind: StateFailed, Reason: reason}, true)
 	return err
 }
 
+// requeued is the state of a book going back to the queue. A scan stopped
+// partway through reading keeps its count, so its row doesn't forget the
+// pages already read.
+func (s *Service) requeued(ctx context.Context, b row) BookState {
+	st := BookState{Kind: StateQueued}
+	if b.Kind != KindScanned {
+		return st
+	}
+	settled, err := settledPages(ctx, s.c.DB, b.ID)
+	if err != nil || len(settled) == 0 || len(settled) >= b.PageCount {
+		return st
+	}
+	done, total := len(settled), b.PageCount
+	st.Phase, st.Done, st.Total = PhaseRead, &done, &total
+	return st
+}
+
+// prepare is everything after examining: a scan's pages read, then the
+// contents and search. Each part skips what an earlier run finished.
 func (s *Service) prepare(ctx context.Context, b row) error {
 	path := s.pdfPath(b.ID)
-	pages, kind, err := s.examine(ctx, b, path)
+	var pages []string
+	var err error
+	if b.Kind == KindScanned {
+		pages, err = s.read(ctx, b.ID, path, b.PageCount)
+	} else {
+		// A digital book's pages were stored when it was examined.
+		pages, err = s.pageTexts(ctx, b.ID, b.PageCount)
+	}
 	if err != nil {
 		return err
 	}
-	if kind == "scanned" {
-		if pages, err = s.read(ctx, b.ID, path, len(pages)); err != nil {
-			return err
-		}
-	}
-	if err := s.index(ctx, b, path, kind, pages); err != nil {
+	if err := s.index(ctx, b, path, string(b.Kind), pages); err != nil {
 		return err
 	}
 	return s.buildSearch(ctx, b.ID)
@@ -249,6 +315,11 @@ func (s *Service) read(ctx context.Context, bookID, path string, count int) ([]s
 		return nil, fail(nil, "%s couldn't be read (%s). Try again, or check that Tesseract works in Settings.",
 			plural(len(failed), "page"), pageList(failed))
 	}
+	return s.pageTexts(ctx, bookID, count)
+}
+
+// pageTexts is a book's stored pages as text, one per page.
+func (s *Service) pageTexts(ctx context.Context, bookID string, count int) ([]string, error) {
 	stored, err := loadPages(ctx, s.c.DB, bookID)
 	if err != nil {
 		return nil, err

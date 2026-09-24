@@ -34,8 +34,9 @@ export const CoverSlate = "slate";
 export type Cover = typeof CoverIndigo | typeof CoverTeal | typeof CoverAmber | typeof CoverRose | typeof CoverViolet | typeof CoverSlate;
 /**
  * BookState is a book's import state. Phase is set while preparing; Done
- * and Total only where the phase can count (reading and search); Reason
- * only when failed, in words written for the student.
+ * and Total only where the phase can count (reading and search), and on a
+ * queued scan whose reading was interrupted, as the pages it has read;
+ * Reason only when failed, in words written for the student.
  */
 export interface BookState {
   kind: State;
@@ -44,6 +45,17 @@ export interface BookState {
   total?: number /* int */;
   reason?: string;
 }
+/**
+ * Kind is what examining a book found: a digital book has a text layer,
+ * a scanned one is read page by page with OCR.
+ */
+/**
+ * KindUnknown is a book not examined yet.
+ */
+export const KindUnknown = "";
+export const KindDigital = "digital";
+export const KindScanned = "scanned";
+export type Kind = typeof KindUnknown | typeof KindDigital | typeof KindScanned;
 /**
  * Book is a book as every screen sees it. Cover is its cloth colour;
  * PageOffset turns a PDF page into the printed one (PDF = printed +
@@ -62,6 +74,11 @@ export interface Book {
    * image arrives.
    */
   aspect: number /* float64 */;
+  /**
+   * Kind orders queued imports: books not yet examined, then digital
+   * ones, then scans.
+   */
+  kind: Kind;
   state: BookState;
   /**
    * AddedAt is when it was put on the shelf (RFC 3339).

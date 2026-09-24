@@ -35,6 +35,8 @@ type Settings interface {
 
 type Queue interface {
 	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
+	// Wake starts what was enqueued, once its transaction has committed.
+	Wake()
 	StopSubject(ctx context.Context, subject string) error
 	Handle(kind, lane string, h jobs.Handler)
 }
@@ -121,7 +123,11 @@ func (s *Service) Ask(ctx context.Context, bookID string, q Question) (Turn, err
 	if err != nil {
 		return Turn{}, err
 	}
-	return s.publish(ctx, id)
+	// The turn's first event goes out before its job can start, so the
+	// page holds the turn before anything streams into it.
+	t, err := s.publish(ctx, id)
+	s.c.Queue.Wake()
+	return t, err
 }
 
 // Stop ends a running turn. What it had written stays, with a "Stopped"

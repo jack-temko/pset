@@ -175,6 +175,21 @@ built.
   book…", or "Writing the guide…" when there is nothing to find),
   followed by the time left on that step once past questions give an
   estimate ("· less than a minute left"; rules in design/import.md).
+- **Found first, written second** (2026-09-24): the engine finds every
+  question in a set before it writes their guides, so the worksheet is
+  whole and ready to print while the guides are still coming, and one
+  added later is found ahead of the guides already waiting. A found question shows
+  its statement and figures at once, over a line that is a word and no
+  motion, like Queued: **"Found on p. 12. Its guide starts once every
+  question is found."**, then "…once the questions ahead of it are
+  written.", then "…in a moment.". One still to be found reads "Queued:
+  it starts when the questions ahead of it are found."; one that isn't
+  in the book waits for its guide like a found one, as "Queued: it
+  starts…".
+- **Print worksheet says what isn't found yet** (2026-09-24): while any
+  question is still being found, the menu item carries a muted hint, "3
+  still being found", since those print as a bare label. It never stops
+  you printing.
 - Walkthrough per question: two veiled stages and a Complete checkbox,
   detailed below. Reveals and marks persist; progress is questions
   marked done.

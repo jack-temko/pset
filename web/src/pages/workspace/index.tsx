@@ -60,6 +60,7 @@ import {
   figureURL,
   outstanding,
   questionStep,
+  toFind,
   useAddQuestions,
   useBookHomework,
   useCreateHomework,
@@ -81,6 +82,7 @@ import { useAsk, useClearTurns, useStopTurn, useTurns, type About, type LiveTurn
 import { dueLine, dueStatus } from '@/lib/due'
 import { useTimeLeft } from '@/lib/eta'
 import { PageOffset, pdfOf, printedLabel, usePageOffset } from '@/lib/pages'
+import { useSettled } from '@/lib/settled'
 import { cn } from '@/lib/utils'
 
 /**
@@ -921,6 +923,21 @@ function WorkingLine({ q, text }: { q: Question; text: string }) {
   )
 }
 
+/** What a queued question is waiting for. Every question is found before
+ *  any guide is written, so one still to be found waits only on the finds
+ *  ahead of it, and a guide waits on every find in the set, then on the
+ *  questions ahead of it. */
+function waitingLine(q: Question, questions: Question[], offset: number): string {
+  const ahead = questions.filter((x) => x.position < q.position)
+  if (toFind(q)) {
+    return ahead.some(toFind) ? 'Queued: it starts when the questions ahead of it are found.' : 'Queued: it starts in a moment.'
+  }
+  const lead = q.page !== undefined ? `Found on p. ${printedLabel(q.page, offset)}. Its guide starts` : 'Queued: it starts'
+  if (questions.some((x) => x.id !== q.id && toFind(x))) return `${lead} once every question is found.`
+  if (ahead.some(outstanding)) return `${lead} once the questions ahead of it are written.`
+  return `${lead} in a moment.`
+}
+
 /** One question at a time. Both stages sit veiled below the statement:
  *  the walkthrough carries the solution, and Complete is a checkbox that
  *  does exactly one thing. Spec: design/workspace.md. */
@@ -960,6 +977,15 @@ function Walkthrough({
   const at = Math.min(index ?? 0, Math.max(questions.length - 1, 0))
   const q = questions[at] as Question | undefined
   const turnedIn = !!set?.turnedInAt
+  // Until every question is found, the worksheet has bare labels in it.
+  const finding = questions.filter(toFind).length
+  // A question waits between its steps for a moment, often less: the wait
+  // shows only once it has lasted, and until then the line before it
+  // stays (its state and what it was doing), or a blank at first.
+  const waits = q !== undefined && (q.state === 'pending' || q.state === 'located')
+  const waitSince = waits ? Date.parse(q.updatedAt) : null
+  const shownState = useSettled(q?.state, waitSince, q?.id)
+  const shownActivity = useSettled(q?.activity, waitSince, q?.id)
 
   const dialog = (
     <AddQuestionsDialog
@@ -997,8 +1023,14 @@ function Walkthrough({
           Edit homework
         </MenuItem>
         {/* A worksheet: statements and figures with room to work, nothing
-            revealed. It opens in a new tab, to print or save from there. */}
-        <MenuItem icon={<Printer />} onSelect={() => window.open(worksheetURL(setId), '_blank')}>
+            revealed. It opens in a new tab, to print or save from there.
+            While questions are still being found, the hint says how many
+            would print as a bare label; it never stops you printing. */}
+        <MenuItem
+          icon={<Printer />}
+          hint={finding > 0 ? `${finding} still being found` : undefined}
+          onSelect={() => window.open(worksheetURL(setId), '_blank')}
+        >
           Print worksheet
         </MenuItem>
         <MenuDivider />
@@ -1051,11 +1083,13 @@ function Walkthrough({
     // Follow the question you just moved, not the slot it left.
     setIndex(at + by)
   }
-  const working = workingLine(q)
-  const queued = q.state === 'pending'
-  // The line under a queued question is only about waiting behind others
-  // when others really are still in line ahead of it.
-  const ahead = questions.some((x) => x.position < q.position && outstanding(x))
+  const working = shownState && workingLine({ ...q, state: shownState, activity: shownActivity })
+  // Waiting to be found, or found and waiting for its guide: either way
+  // nothing is happening to it yet.
+  const queued = shownState === 'pending' || shownState === 'located'
+  // The skeletons shimmer only for work: still while queued, and still
+  // while it isn't known yet whether this is a wait.
+  const still = queued || !shownState
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -1105,8 +1139,8 @@ function Walkthrough({
           q.inBook &&
           (q.state === 'pending' || q.state === 'locating') && (
             <p className="space-y-1 text-base">
-              <Skeleton still={queued} className="h-3 w-full" />
-              <Skeleton still={queued} className="h-3 w-2/3" />
+              <Skeleton still={still} className="h-3 w-full" />
+              <Skeleton still={still} className="h-3 w-2/3" />
             </p>
           )
         )}
@@ -1124,17 +1158,19 @@ function Walkthrough({
             {/* Queued is a word and no motion: nothing is happening to it
                 yet. Working gets the spinner and the shimmer. */}
             {queued ? (
-              <p className="text-xs text-muted-foreground">
-                {ahead ? 'Queued: it starts when the questions ahead of it are done.' : 'Queued: it starts in a moment.'}
-              </p>
+              <p className="text-xs text-muted-foreground">{waitingLine(q, questions, pageOffset)}</p>
+            ) : working ? (
+              <WorkingLine q={q} text={working} />
             ) : (
-              working && <WorkingLine q={q} text={working} />
+              // A wait too young to show yet, with nothing shown before
+              // it: a blank at the line's height, so nothing moves.
+              outstanding(q) && <p className="text-xs">{'\u00a0'}</p>
             )}
             {STAGE_NAMES.map((name) => {
               const segs = name === 'hint' ? q.hint : q.walkthrough
               // Each stage fills in as it's written: the hint can be
               // there while the walkthrough is still a skeleton.
-              if (segs.length === 0) return <StageSkeleton key={name} name={name} still={queued} />
+              if (segs.length === 0) return <StageSkeleton key={name} name={name} still={still} />
               return (
                 <Stage
                   key={name}

@@ -10,11 +10,11 @@ import type { HomeworkStatus } from '@/components/homework-status'
 import { COVERS } from '@/lib/covers'
 
 /** A sample book with everything the list doesn't care about filled in. */
-export function sampleBook(b: Pick<Book, 'sha256' | 'title' | 'author' | 'state'> & { cover?: Book['cover'] }): Book {
+export function sampleBook(b: Pick<Book, 'sha256' | 'title' | 'author' | 'state'> & Partial<Pick<Book, 'kind' | 'cover'>>): Book {
   // Each sample wears the colour its hash seeds, as a book on an empty
   // shelf would.
   const cover = b.cover ?? COVERS[Number.parseInt(b.sha256.slice(0, 2), 16) % COVERS.length]
-  return { id: b.sha256, pageCount: 312, pageOffset: 16, aspect: 11 / 8.5, addedAt: '2026-09-03T12:00:00Z', updatedAt: '2026-09-03T12:00:00.000000000Z', ...b, cover }
+  return { id: b.sha256, pageCount: 312, pageOffset: 16, aspect: 11 / 8.5, kind: 'digital', addedAt: '2026-09-03T12:00:00Z', updatedAt: '2026-09-03T12:00:00.000000000Z', ...b, cover }
 }
 
 export const BOOKS: Book[] = [

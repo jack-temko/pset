@@ -22,6 +22,11 @@ doesn't. How the contents are read is design/contents.md (2026-09-22).
   second entry point in the top bar. Books live on the shelf, so that is
   where you add one.
 - The picker takes **several files**; the runner prepares one at a time.
+- **A scan steps aside** (2026-09-24). The runner examines every book
+  first (title, pages, digital or scanned), then prepares digital books
+  ahead of scans. A book added while a scan is being read interrupts the
+  reading: the scan goes back to the queue with the pages it has read,
+  and carries on from there once the book ahead of it is ready.
 - **No dialog.** There is nothing to ask: the title comes from the
   book's title page and the sha comes from the bytes.
 
@@ -52,6 +57,7 @@ line of status, and the controls for that state.
 | state | line | controls |
 |---|---|---|
 | queued | Queued: no spinner, nothing is happening yet | Cancel |
+| queued, a scan that stepped aside | "Queued · 140 of 312 pages read", still, no bar | Cancel |
 | preparing, can count | "Read the pages · 140 of 312 · about 12 minutes left" and a bar | Stop |
 | preparing, can't count | the phase name and a `Spinner`, then "· less than a minute left" once past imports give an estimate | Stop |
 | failed | the engine's own sentence, in destructive ink | **Try again** · Dismiss |
@@ -64,9 +70,13 @@ line of status, and the controls for that state.
   its last five runs in this browser, and past that says "taking longer
   than usual". No honest estimate yet means no words at all. The
   arithmetic lives in `web/src/lib/eta.ts`, for any long step to reuse.
-- Rows run preparing first, then queued in order, then failed.
+- Rows run preparing first, then queued in the order they will run
+  (books not yet examined, then digital, then scans, oldest first within
+  each), then failed.
 - **Stopping leaves a failed row**, so Try again is the undo: one shape
-  for "not going to finish", not two.
+  for "not going to finish", not two. It says "Cancelled before it
+  started." only for a book nothing has happened to yet; one that has
+  been examined says "Stopped.", and Try again resumes it.
 - A failure stays until you dismiss it: one you didn't watch happen must
   still be there when you come back. It never interrupts with a dialog.
 - **You cannot open a book that isn't ready**: it isn't on the shelf.

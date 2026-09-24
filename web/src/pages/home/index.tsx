@@ -27,6 +27,7 @@ import { Spinner } from '@/components/spinner'
 import { useWeek, type Week } from '@/api/activity'
 import { useDue, type Summary } from '@/api/homework'
 import { dueLine, dueStatus } from '@/lib/due'
+import { useShowPending } from '@/lib/settled'
 
 function greeting(hour: number, name: string): string {
   const time = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
@@ -233,6 +234,8 @@ function Shelf({ books }: { books: Book[] | undefined }) {
   const navigate = useNavigate()
   const settings = useSettings()
   const upload = useUploadBooks()
+  // A small PDF uploads in a blink: the spinner only for a slow one.
+  const adding = useShowPending(upload)
   const stop = useStopImport()
   const retry = useRetryImport()
   const remove = useRemoveBook()
@@ -268,11 +271,15 @@ function Shelf({ books }: { books: Book[] | undefined }) {
     })
   }
 
-  // Running first, then waiting in order, then what failed.
+  // Running first, then waiting in the order it will run, then what
+  // failed. The runner examines every book first, then prepares digital
+  // books ahead of scans, oldest first within each (the list comes
+  // oldest first, and the sort is stable).
   const rank = { preparing: 0, queued: 1, failed: 2, ready: 3 } as const
+  const turn = { '': 0, digital: 1, scanned: 2 } as const
   const inFlight = (books ?? [])
     .filter((b) => b.state.kind !== 'ready')
-    .sort((a, b) => rank[a.state.kind] - rank[b.state.kind])
+    .sort((a, b) => rank[a.state.kind] - rank[b.state.kind] || (a.state.kind === 'queued' ? turn[a.kind] - turn[b.kind] : 0))
   const ready = (books ?? []).filter((b) => b.state.kind === 'ready')
   const shown = open ? ready : ready.slice(0, SHELF_ROW)
 
@@ -285,10 +292,10 @@ function Shelf({ books }: { books: Book[] | undefined }) {
             variant="outline"
             size="sm"
             aria-label="Add a textbook"
-            disabled={!preparable || upload.isPending}
-            onClick={() => picker.current?.click()}
+            disabled={!preparable || adding}
+            onClick={() => !upload.isPending && picker.current?.click()}
           >
-            {upload.isPending ? <Spinner className="size-3" label="Adding" /> : <Plus />}
+            {adding ? <Spinner className="size-3" label="Adding" /> : <Plus />}
           </IconButton>
         }
       />

@@ -55,7 +55,7 @@ export function ImportRow({
     <BoxRow
       leading={<CoverSwatch hue={book.cover} />}
       title={book.title}
-      description={<BookStatus bookId={book.id} state={state} />}
+      description={<BookStatus bookId={book.id} state={state} since={book.updatedAt} />}
       trailing={trailing}
     />
   )

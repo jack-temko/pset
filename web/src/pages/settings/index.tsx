@@ -23,6 +23,7 @@ import {
   useTestConnection,
   type ConnectionInput,
 } from '@/api/settings'
+import { useSettled, useShowPending } from '@/lib/settled'
 import { applyTheme, getTheme, type Theme } from '@/lib/theme'
 
 /**
@@ -39,7 +40,7 @@ type FieldSpec = { key: string; label: string; hint?: string; mono?: boolean }
 
 type Status =
   | { kind: 'idle' }
-  | { kind: 'working'; verb: 'Testing' | 'Saving' }
+  | { kind: 'working'; verb: 'Testing' | 'Saving'; since: number }
   | { kind: 'ok'; text: string }
   | { kind: 'failed'; text: string }
 
@@ -75,13 +76,19 @@ function ConnectionBox({
   const [savedOnce, setSavedOnce] = useState(ready)
   const dirty = fields.some((f) => values[f.key] !== saved[f.key]) || !savedOnce
   const working = status.kind === 'working'
+  // A local endpoint answers in a blink: "Testing…" and the disabled
+  // buttons show only once the call has lasted; until then the last
+  // verdict stays.
+  const shown = useSettled(status, working ? status.since : null) ?? { kind: 'idle' }
+  const looksWorking = shown.kind === 'working'
 
   const test = useTestConnection()
   const saveConnection = useSaveConnection()
 
   const run = async (save: boolean) => {
+    if (working) return
     setError(null)
-    setStatus({ kind: 'working', verb: save ? 'Saving' : 'Testing' })
+    setStatus({ kind: 'working', verb: save ? 'Saving' : 'Testing', since: Date.now() })
     // Exactly one side per call: the values on screen, not the saved ones.
     const body: ConnectionInput =
       kind === 'chat'
@@ -140,12 +147,12 @@ function ConnectionBox({
         ))}
       </BoxBody>
       <BoxFooter>
-        <StatusLine status={status} />
+        <StatusLine status={shown} />
         <span className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={working} onClick={() => run(false)}>
+          <Button variant="outline" size="sm" disabled={looksWorking} onClick={() => run(false)}>
             Test
           </Button>
-          <Button size="sm" disabled={working || !dirty} onClick={() => run(true)}>
+          <Button size="sm" disabled={looksWorking || !dirty} onClick={() => run(true)}>
             Save
           </Button>
         </span>
@@ -214,6 +221,7 @@ function StatusLine({ status }: { status: Status }) {
 function You() {
   const { data } = useSettings()
   const saveProfile = useSaveProfile()
+  const savingShown = useShowPending(saveProfile)
   const [value, setValue] = useState<string | null>(null)
   const saved = data?.profile.name ?? ''
   const current = value ?? saved
@@ -237,7 +245,7 @@ function You() {
                 saveProfile.reset()
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && dirty) saveProfile.mutate({ name: current })
+                if (e.key === 'Enter' && dirty && !saveProfile.isPending) saveProfile.mutate({ name: current })
               }}
             />
           ) : (
@@ -256,7 +264,7 @@ function You() {
             <span />
           )}
           {dirty && (
-            <Button size="sm" disabled={saveProfile.isPending} onClick={() => saveProfile.mutate({ name: current })}>
+            <Button size="sm" disabled={savingShown} onClick={() => !saveProfile.isPending && saveProfile.mutate({ name: current })}>
               Save
             </Button>
           )}
@@ -283,7 +291,8 @@ function Health() {
   const { data } = useHealth()
   const fix = useFixCheck()
   const checks = data?.checks ?? null
-  const fixing = fix.isPending ? fix.variables : null
+  // "Fixing…" only for a fix that takes a while; a quick one just lands.
+  const fixing = useShowPending(fix) ? fix.variables : null
 
   return (
     <Box>
@@ -326,7 +335,7 @@ function Health() {
                   variant="outline"
                   size="sm"
                   disabled={fixing === c.id}
-                  onClick={() => fix.mutate(c.id)}
+                  onClick={() => !fix.isPending && fix.mutate(c.id)}
                 >
                   {fixing === c.id ? 'Fixing…' : 'Fix'}
                 </Button>
@@ -382,6 +391,7 @@ function Reset() {
   const navigate = useNavigate()
   const counts = useResetCounts(open)
   const reset = useReset()
+  const resetting = useShowPending(reset)
 
   return (
     <>
@@ -409,13 +419,14 @@ function Reset() {
         title="Reset everything?"
         footer={
           <>
-            <Button variant="ghost" disabled={reset.isPending} onClick={() => setOpen(false)}>
+            <Button variant="ghost" disabled={resetting} onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
-              disabled={reset.isPending}
+              disabled={resetting}
               onClick={() =>
+                !reset.isPending &&
                 reset.mutate(undefined, {
                   onSuccess: () => {
                     setOpen(false)
@@ -424,7 +435,7 @@ function Reset() {
                 })
               }
             >
-              {reset.isPending ? 'Resetting…' : 'Reset everything'}
+              {resetting ? 'Resetting…' : 'Reset everything'}
             </Button>
           </>
         }

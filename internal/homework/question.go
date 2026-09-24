@@ -2,6 +2,7 @@ package homework
 
 import (
 	"context"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -67,9 +68,40 @@ func problemName(q row) string {
 	return "this question"
 }
 
-// runQuestion is the question job: locate it (if it's in the book), then
-// write its hint and walkthrough, publishing each step.
-func (s *Service) runQuestion(ctx context.Context, j jobs.Job) error {
+// nextStep is the job for what a question needs next: finding it, while
+// it's in the book and not yet found, else writing its guide.
+func nextStep(id string, find bool) jobs.Spec {
+	p := questionPayload{QuestionID: id}
+	if find {
+		return jobs.Spec{Kind: JobLocate, Subject: id, Priority: locateFirst, Payload: p}
+	}
+	return jobs.Spec{Kind: JobGuide, Subject: id, Payload: p}
+}
+
+// waiting is the state a question waits for its next step in: a found
+// one waits for its guide as located, anything else as pending.
+func waiting(q row) State {
+	if q.Page != nil {
+		return StateLocated
+	}
+	return StatePending
+}
+
+// runLocate is a question's first step: find it in the book, then queue
+// its guide.
+func (s *Service) runLocate(ctx context.Context, j jobs.Job) error {
+	return s.runStep(ctx, j, s.find)
+}
+
+// runGuide is a question's second step: write its hint and walkthrough.
+func (s *Service) runGuide(ctx context.Context, j jobs.Job) error {
+	return s.runStep(ctx, j, s.write)
+}
+
+// runStep runs one step of a question's job and settles what it leaves:
+// a question stopped on shutdown goes back to waiting (its job resumes on
+// the next run), and a failure is the question's, in words.
+func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Context, model, Book, row) error) error {
 	var p questionPayload
 	if err := j.Decode(&p); err != nil {
 		return err
@@ -81,7 +113,7 @@ func (s *Service) runQuestion(ctx context.Context, j jobs.Job) error {
 	if err != nil {
 		return err
 	}
-	err = s.work(ctx, q)
+	err = s.withModel(ctx, q, step)
 	settle := context.WithoutCancel(ctx)
 	switch {
 	case err == nil:
@@ -89,14 +121,14 @@ func (s *Service) runQuestion(ctx context.Context, j jobs.Job) error {
 	case jobs.Stopped(ctx):
 		return err // removed; nothing left to update
 	case ctx.Err() != nil:
-		// Shutting down: on the next run the guide carries on from its
-		// last saved round.
-		s.setState(settle, q.ID, StatePending, "")
+		// Shutting down: the step runs again on the next start. A find
+		// starts over; a guide carries on from its last saved round.
+		s.setState(settle, q.ID, waiting(q), "")
 		return err
 	}
 	f := &failure{kind: FailureGeneration, msg: fmt.Sprintf("Something went wrong writing the walkthrough for %s. Trying again usually works.", problemName(q))}
 	errors.As(err, &f)
-	slog.Warn("question failed", "question", q.ID, "err", err)
+	slog.Warn("question failed", "question", q.ID, "kind", j.Kind, "err", err)
 	s.setFailed(settle, q.ID, f.kind, f.msg)
 	return err
 }
@@ -120,7 +152,9 @@ func (s *Service) setState(ctx context.Context, id string, st State, reason stri
 	s.publishQuestion(ctx, id)
 }
 
-func (s *Service) work(ctx context.Context, q row) error {
+// withModel runs a step with the question's book and the chat model, or
+// fails it readably when there's no model to run it with.
+func (s *Service) withModel(ctx context.Context, q row, step func(context.Context, model, Book, row) error) error {
 	book, err := s.c.Library.Book(ctx, q.BookID)
 	if err != nil {
 		return err
@@ -132,39 +166,63 @@ func (s *Service) work(ctx context.Context, q row) error {
 	if !cfg.ChatReady() {
 		return fail(FailureSetup, nil, "There's no chat model set up yet. Add one in Settings, under Connections, then try again.")
 	}
-	m := model{client: llm.Open(cfg), name: cfg.ChatModel}
-	// A run starts its memory lines over (a requeued one left some),
-	// unless it carries on a guide's saved rounds: the lines are theirs.
-	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET memory = '[]' WHERE id = ? AND rounds = '[]'`, q.ID); err != nil {
+	return step(ctx, model{client: llm.Open(cfg), name: cfg.ChatModel}, book, q)
+}
+
+// find locates a question and saves where it is and what it says. Its
+// guide is queued in the same write, so a found question is never left
+// without one.
+func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
+	// A run starts its memory lines over: a requeued one left some.
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET memory = '[]' WHERE id = ?`, q.ID); err != nil {
 		return err
 	}
+	s.setState(ctx, q.ID, StateLocating, "")
+	loc, err := s.locate(ctx, m, book, q)
+	if err != nil {
+		return err
+	}
+	label := q.Label
+	if loc.Label != "" {
+		label = loc.Label
+	}
+	statement := loc.Statement
+	if statement == "" {
+		statement = q.Text
+	}
+	s.sawProblem(ctx, book, q, loc)
+	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `UPDATE questions SET page = ?, label = ?, statement = ?, rect = ?, figures = ?, rounds = '[]', state = ?, activity = '', updated_at = ? WHERE id = ?`,
+			loc.Page, label, statement, mustJSON(loc.Rect), mustJSON(loc.Figures), StateLocated, db.Now(), q.ID); err != nil {
+			return err
+		}
+		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(q.ID, false))
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	// No Wake: the guide waits for this job's slot, and settling wakes
+	// the queue.
+	s.publishQuestion(ctx, q.ID)
+	return nil
+}
 
-	// A question found on an earlier run (the guide failed, or the app
-	// stopped mid-write) is where it was: straight to writing.
-	if q.InBook && q.Page == nil {
-		s.setState(ctx, q.ID, StateLocating, "")
-		loc, err := s.locate(ctx, m, book, q)
-		if err != nil {
-			return err
+// write writes a question's guide, found or never looked for.
+func (s *Service) write(ctx context.Context, m model, book Book, q row) error {
+	// A run starts its own memory lines over (a requeued one left some),
+	// keeping the line the find wrote, unless it carries on a guide's
+	// saved rounds: then the lines are theirs.
+	kept := []MemoryLine{}
+	for _, l := range q.Memory {
+		if l.Use == MemoryUseFound {
+			kept = append(kept, l)
 		}
-		label := q.Label
-		if loc.Label != "" {
-			label = loc.Label
-		}
-		statement := loc.Statement
-		if statement == "" {
-			statement = q.Text
-		}
-		s.sawProblem(ctx, book, q, loc)
-		if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET page = ?, label = ?, statement = ?, rect = ?, figures = ?, rounds = '[]', updated_at = ? WHERE id = ?`,
-			loc.Page, label, statement, mustJSON(loc.Rect), mustJSON(loc.Figures), db.Now(), q.ID); err != nil {
-			return err
-		}
+	}
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET memory = ? WHERE id = ? AND rounds = '[]'`, mustJSON(kept), q.ID); err != nil {
+		return err
 	}
 	s.setState(ctx, q.ID, StateWriting, "")
-	if q, err = getQuestion(ctx, s.c.DB, q.ID); err != nil {
-		return err
-	}
 	return s.writeGuide(ctx, m, book, q)
 }
 

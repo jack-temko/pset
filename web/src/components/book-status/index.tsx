@@ -1,6 +1,7 @@
 import { Spinner } from '@/components/spinner'
 import { bookStep, IMPORT_PHASES, type BookState } from '@/api/library'
 import { useTimeLeft } from '@/lib/eta'
+import { useSettled } from '@/lib/settled'
 import { cn } from '@/lib/utils'
 
 /**
@@ -20,10 +21,29 @@ import { cn } from '@/lib/utils'
  * the pace of a phase that counts, from past imports for one that can't.
  * Until there's an honest estimate, nothing.
  *
+ * Queued can be over in a moment (a book going from one of its steps to
+ * the next), so it shows only once it has lasted: until then the line
+ * before it stays, or a blank of the same height. `since` is when the book
+ * last changed, its `updatedAt`.
+ *
  * It carries no controls: the row it sits in owns those.
  */
-export function BookStatus({ bookId, state, className }: { bookId: string; state: BookState; className?: string }) {
-  const left = useTimeLeft(`book:${bookId}`, bookStep(state), state)
+export function BookStatus({
+  bookId,
+  state: now,
+  since,
+  className,
+}: {
+  bookId: string
+  state: BookState
+  since?: string
+  className?: string
+}) {
+  const state = useSettled(now, now.kind === 'queued' && since ? Date.parse(since) : null)
+  // The estimate follows the book's real state, not the settled one on
+  // screen, so a brief step still counts toward its pace.
+  const left = useTimeLeft(`book:${bookId}`, bookStep(now), now)
+  if (!state) return <span className={className}>{'\u00a0'}</span>
   if (state.kind === 'ready') return null
 
   if (state.kind === 'failed') {
@@ -32,8 +52,20 @@ export function BookStatus({ bookId, state, className }: { bookId: string; state
 
   // Queued gets no spinner. Nothing is happening to this book yet (the
   // runner prepares one at a time) and a turning shape would say
-  // otherwise for the next forty minutes.
+  // otherwise for the next forty minutes. A scan that stepped aside for
+  // another book keeps the count it reached, still and without a bar.
   if (state.kind === 'queued') {
+    if (state.phase === 'read' && state.done !== undefined && state.total !== undefined) {
+      return (
+        <span className={className}>
+          Queued ·{' '}
+          <span className="tabular-nums">
+            {state.done} of {state.total}
+          </span>{' '}
+          pages read
+        </span>
+      )
+    }
     return <span className={className}>Queued</span>
   }
 

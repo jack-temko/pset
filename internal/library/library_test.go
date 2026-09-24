@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -362,6 +363,114 @@ func TestStopQueuedThenRetry(t *testing.T) {
 	}
 	e.do(t, "POST", "/api/books/"+second.Book.ID+"/retry", nil, nil)
 	e.waitFor(t, second.Book.ID, StateReady)
+}
+
+// slowOCR reads a page in a few milliseconds and counts how often each
+// page was read. Like Tesseract, it finishes the page it's on even when
+// its job is interrupted.
+func (e *env) slowOCR() (reads func() map[int]int) {
+	var mu sync.Mutex
+	count := map[int]int{}
+	e.setOCR(func(p int) (string, error) {
+		time.Sleep(5 * time.Millisecond)
+		mu.Lock()
+		count[p]++
+		mu.Unlock()
+		return fmt.Sprintf("Recognized text of page %d about eigenvalues.", p), nil
+	})
+	return func() map[int]int {
+		mu.Lock()
+		defer mu.Unlock()
+		return maps.Clone(count)
+	}
+}
+
+// waitRead waits until a scan has read at least n pages.
+func (e *env) waitRead(t *testing.T, id string, n int) {
+	t.Helper()
+	deadline := time.Now().Add(20 * time.Second)
+	for time.Now().Before(deadline) {
+		var b Book
+		e.do(t, "GET", "/api/books/"+id, nil, &b)
+		if b.State.Phase == PhaseRead && b.State.Done != nil && *b.State.Done >= n {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("book %s never read %d pages", id, n)
+}
+
+func TestADigitalBookGoesAheadOfAScansReading(t *testing.T) {
+	e := newEnv(t)
+	reads := e.slowOCR()
+	const pages = 60
+	var scan, digital BookChanged
+	e.upload(t, "scan.pdf", scannedPDF(t, pages), &scan)
+	e.waitRead(t, scan.Book.ID, 3)
+
+	e.upload(t, "notes.pdf", fixturePDF(t, 0, 8, "Notes"), &digital)
+	d := e.waitFor(t, digital.Book.ID, StateReady)
+	var mid Book
+	e.do(t, "GET", "/api/books/"+scan.Book.ID, nil, &mid)
+	if mid.State.Kind == StateReady || len(reads()) >= pages {
+		t.Fatalf("the digital book waited for the scan: %+v, %d pages read", mid.State, len(reads()))
+	}
+	if d.Kind != KindDigital || mid.Kind != KindScanned {
+		t.Fatalf("kinds %q, %q", d.Kind, mid.Kind)
+	}
+	// While it stepped aside, the scan was queued with what it had read.
+	if !e.events.has(EventBookChanged, `"kind":"queued","phase":"read","done":`) {
+		t.Fatal("the interrupted scan forgot its count")
+	}
+
+	e.waitFor(t, scan.Book.ID, StateReady)
+	twice := 0
+	for p := 1; p <= pages; p++ {
+		switch n := reads()[p]; {
+		case n == 0:
+			t.Fatalf("page %d never read", p)
+		case n > 1:
+			twice++
+		}
+	}
+	// Only the page it was on when interrupted is read again.
+	if twice > 1 {
+		t.Fatalf("%d pages read twice", twice)
+	}
+}
+
+func TestAnInterruptedScanKeepsItsPagesThroughStopAndRetry(t *testing.T) {
+	e := newEnv(t)
+	reads := e.slowOCR()
+	const pages = 40
+	var up BookChanged
+	e.upload(t, "scan.pdf", scannedPDF(t, pages), &up)
+	e.waitRead(t, up.Book.ID, 5)
+
+	// Pause interrupts it the way a shutdown does.
+	e.queue.Pause()
+	var b Book
+	e.do(t, "GET", "/api/books/"+up.Book.ID, nil, &b)
+	if b.State.Kind != StateQueued || b.State.Phase != PhaseRead || b.State.Done == nil || *b.State.Done < 5 || *b.State.Total != pages {
+		t.Fatalf("interrupted: %+v", b.State)
+	}
+	// It has begun, so stopping it is Stopped, not Cancelled.
+	var stopped Book
+	e.do(t, "POST", "/api/books/"+b.ID+"/stop", nil, &stopped)
+	if stopped.State.Reason != "Stopped." {
+		t.Fatalf("stop: %+v", stopped.State)
+	}
+	e.queue.Resume()
+	e.do(t, "POST", "/api/books/"+b.ID+"/retry", nil, nil)
+	e.waitFor(t, b.ID, StateReady)
+	for p, n := range reads() {
+		if n > 2 {
+			t.Fatalf("page %d read %d times", p, n)
+		}
+	}
+	if len(reads()) != pages {
+		t.Fatalf("%d of %d pages read", len(reads()), pages)
+	}
 }
 
 func TestEditRemoveAndScans(t *testing.T) {

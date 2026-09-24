@@ -10,7 +10,13 @@ remembered at each call site.
 
 - `queued`: the word "Queued", **and no spinner**, because the runner prepares
   one book at a time, so nothing is happening to this one yet and a
-  turning shape would claim otherwise for the next forty minutes.
+  turning shape would claim otherwise for the next forty minutes. A scan
+  that stepped aside for another book keeps the count it reached,
+  "Queued · 140 of 312 pages read", still and with no bar: the pages it
+  has read are kept, and it carries on from there. **Queued shows only
+  once it has lasted 300ms** (`since`, the book's `updatedAt`): a book
+  passing from one step to the next is queued for a few milliseconds,
+  and the line before it stays instead, or a blank of the same height.
 - `preparing`: **the engine's own phase name**, so a student reads the
   same words the log does. A phase that can count counts ("Read the
   pages · 140 of 312") beside a 160px `primary` bar on a `muted` track,

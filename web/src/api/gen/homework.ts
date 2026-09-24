@@ -54,12 +54,17 @@ export const StatePending = "pending";
  */
 export const StateLocating = "locating";
 /**
+ * StateLocated is found and waiting its turn to be written: its
+ * statement, page and figures are there, its guide isn't yet.
+ */
+export const StateLocated = "located";
+/**
  * StateWriting is writing its guide; the hint may already be there.
  */
 export const StateWriting = "writing";
 export const StateReady = "ready";
 export const StateFailed = "failed";
-export type State = typeof StatePending | typeof StateLocating | typeof StateWriting | typeof StateReady | typeof StateFailed;
+export type State = typeof StatePending | typeof StateLocating | typeof StateLocated | typeof StateWriting | typeof StateReady | typeof StateFailed;
 /**
  * Failure is what kind of failure a failed question had.
  */
@@ -131,6 +136,11 @@ export interface Question {
    */
   revealed: string[];
   done: boolean;
+  /**
+   * UpdatedAt is when its state (or its statement, or a stage) last
+   * changed: while it waits, when the wait began.
+   */
+  updatedAt: string;
 }
 /**
  * MemoryUse is what a guide did with a memory.

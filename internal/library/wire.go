@@ -36,8 +36,9 @@ const (
 )
 
 // BookState is a book's import state. Phase is set while preparing; Done
-// and Total only where the phase can count (reading and search); Reason
-// only when failed, in words written for the student.
+// and Total only where the phase can count (reading and search), and on a
+// queued scan whose reading was interrupted, as the pages it has read;
+// Reason only when failed, in words written for the student.
 type BookState struct {
 	Kind   State  `json:"kind"`
 	Phase  Phase  `json:"phase,omitempty"`
@@ -45,6 +46,17 @@ type BookState struct {
 	Total  *int   `json:"total,omitempty"`
 	Reason string `json:"reason,omitempty"`
 }
+
+// Kind is what examining a book found: a digital book has a text layer,
+// a scanned one is read page by page with OCR.
+type Kind string
+
+const (
+	// KindUnknown is a book not examined yet.
+	KindUnknown Kind = ""
+	KindDigital Kind = "digital"
+	KindScanned Kind = "scanned"
+)
 
 // Book is a book as every screen sees it. Cover is its cloth colour;
 // PageOffset turns a PDF page into the printed one (PDF = printed +
@@ -59,8 +71,11 @@ type Book struct {
 	Cover      Cover  `json:"cover"`
 	// Aspect is page height over width, so a scan holds its box before the
 	// image arrives.
-	Aspect float64   `json:"aspect"`
-	State  BookState `json:"state"`
+	Aspect float64 `json:"aspect"`
+	// Kind orders queued imports: books not yet examined, then digital
+	// ones, then scans.
+	Kind  Kind      `json:"kind"`
+	State BookState `json:"state"`
 	// AddedAt is when it was put on the shelf (RFC 3339).
 	AddedAt string `json:"addedAt"`
 	// UpdatedAt orders copies of the book: a reply that arrives after a
