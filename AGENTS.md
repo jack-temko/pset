@@ -1,5 +1,17 @@
 # Agent notes
 
+## Branches: never work in Jack's checkout
+
+Jack works in the main checkout while agents run, so it can hold his
+uncommitted changes at any moment. Don't edit, stage or commit there.
+
+- Make every change on its own branch, in its own worktree next to the
+  repo: `git worktree add ../pset-<topic> -b <topic>`.
+- When the change is done and checked, merge it into `main`, then remove
+  the worktree and delete the branch. The merge is the one step that runs
+  in the main checkout. If Jack's uncommitted changes touch the files the
+  merge would change, stop and ask rather than stash, reset or overwrite.
+
 ## Checking UI changes
 
 There is no automated visual suite. See a UI change working in the real
