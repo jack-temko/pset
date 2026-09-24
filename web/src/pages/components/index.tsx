@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { BookOpen, Check, Clock, Plus, Settings, TriangleAlert } from 'lucide-react'
+import { BookOpen, Check, Clock, Plus, Printer, Settings, TriangleAlert } from 'lucide-react'
 
 import { AppShell, PageShell } from '@/components/shell'
 import { BookCover } from '@/components/book-cover'
@@ -152,6 +152,9 @@ function MenuDemo() {
         Add questions
       </MenuItem>
       <MenuItem onSelect={() => {}}>Edit homework</MenuItem>
+      <MenuItem icon={<Printer />} hint="3 still being found" onSelect={() => {}}>
+        Print worksheet
+      </MenuItem>
       <MenuDivider />
       <MenuCheckItem checked={on} onChange={() => setOn((v) => !v)}>
         Turned in

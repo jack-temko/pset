@@ -33,10 +33,15 @@ export const useBookHomework = (bookId: string) =>
     queryFn: () => get<List>(`/api/books/${bookId}/homework`).then((r) => r.homework),
   })
 
-/** A question the engine still owes work on: queued, being found, or
- *  being written. */
+/** A question the engine still owes work on: queued, being found, found
+ *  and waiting for its guide, or being written. */
 export const outstanding = (q: Question) =>
-  q.state === 'pending' || q.state === 'locating' || q.state === 'writing'
+  q.state === 'pending' || q.state === 'locating' || q.state === 'located' || q.state === 'writing'
+
+/** A question the engine has yet to find in the book: one that isn't in
+ *  it has nothing to find, and its guide is all it waits for. Until it's
+ *  found, the worksheet prints only its label. */
+export const toFind = (q: Question) => q.inBook && (q.state === 'pending' || q.state === 'locating')
 
 export const useHomeworkSet = (id: string | null) =>
   useQuery({
@@ -77,9 +82,10 @@ function dropSummary(qc: QueryClient, id: string, bookId: string) {
 const stateRank: Record<Question['state'], number> = {
   pending: 0,
   locating: 1,
-  writing: 2,
-  ready: 3,
-  failed: 3,
+  located: 2,
+  writing: 3,
+  ready: 4,
+  failed: 4,
 }
 
 /** One question's newest state into a set's cached questions, keeping

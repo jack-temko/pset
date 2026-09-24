@@ -322,6 +322,61 @@ func TestInBookQuestionIsLocatedThenGuided(t *testing.T) {
 	}
 }
 
+func TestEveryQuestionIsFoundBeforeAnyGuideIsWritten(t *testing.T) {
+	e := newEnv(t)
+	// A guide holds its slot until the test lets one finish, as a slow
+	// model does: the lane of two is then full of writing.
+	writing, release := make(chan struct{}, 8), make(chan struct{})
+	var once sync.Once
+	t.Cleanup(func() { once.Do(func() { close(release) }) })
+	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
+		if strings.Contains(req.Messages[0].Content.Text(), "You write the guide") {
+			writing <- struct{}{}
+			<-release
+		}
+		return fakeModel(req)
+	})
+	started := func() {
+		t.Helper()
+		select {
+		case <-writing:
+		case <-time.After(10 * time.Second):
+			t.Fatal("no guide started")
+		}
+	}
+	h := e.newSet(t)
+	first := e.add(t, h.ID, Draft{Text: "3.36", InBook: true}, Draft{Text: "3.37", InBook: true}, Draft{Text: "3.38", InBook: true})
+	started()
+	started()
+	// Two guides are being written, so all three were found first; the
+	// third waits its turn, found, with its statement for the worksheet.
+	states := map[State]int{}
+	for _, q := range first {
+		got, _ := getQuestion(context.Background(), e.svc.c.DB, q.ID)
+		if got.Page == nil || got.Statement == "" {
+			t.Fatalf("%s: a guide started before it was found (%s)", got.Text, got.State)
+		}
+		states[got.State]++
+	}
+	if states[StateWriting] != 2 || states[StateLocated] != 1 {
+		t.Fatalf("states %v", states)
+	}
+
+	// One added now is found in the next free slot, ahead of the guide
+	// that was already waiting.
+	late := e.add(t, h.ID, Draft{Text: "3.40", InBook: true})[0]
+	release <- struct{}{}
+	started()
+	if got, _ := getQuestion(context.Background(), e.svc.c.DB, late.ID); got.State != StateLocated || got.Page == nil {
+		t.Fatalf("the late question is %s: a waiting guide went first", got.State)
+	}
+
+	once.Do(func() { close(release) })
+	for _, q := range append(first, late) {
+		e.wait(t, q.ID, StateReady)
+	}
+}
+
 func TestOffBookQuestionSkipsLocating(t *testing.T) {
 	e := newEnv(t)
 	h := e.newSet(t)
@@ -537,11 +592,15 @@ func (m *memory) SawProblem(_ context.Context, _ string, _, chapter int, label s
 func TestMemoryFindsTheNextProblemAndKeepsTheWritersNotes(t *testing.T) {
 	mem := &memory{seen: map[int][]Seen{}}
 	e := newEnvWith(t, mem)
+	var mu sync.Mutex
 	var guideRound int
 	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
 		if strings.Contains(req.Messages[0].Content.Text(), "You write the guide") {
+			mu.Lock()
 			guideRound++
-			if guideRound == 1 {
+			round := guideRound
+			mu.Unlock()
+			if round == 1 {
 				return llmtest.Reply{ToolCalls: []llm.ToolCall{{ID: "1", Type: "function", Function: llm.ToolCallFunc{
 					Name: "remember", Arguments: `{"kind":"book","text":"Ohm's law is stated on p. 0.","page":0}`}}}}
 			}

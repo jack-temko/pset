@@ -43,6 +43,9 @@ const (
 	StatePending State = "pending"
 	// StateLocating is finding it in the book.
 	StateLocating State = "locating"
+	// StateLocated is found and waiting its turn to be written: its
+	// statement, page and figures are there, its guide isn't yet.
+	StateLocated State = "located"
 	// StateWriting is writing its guide; the hint may already be there.
 	StateWriting State = "writing"
 	StateReady   State = "ready"

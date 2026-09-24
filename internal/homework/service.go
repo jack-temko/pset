@@ -85,15 +85,24 @@ type Config struct {
 
 type Service struct{ c Config }
 
-// The question job's kind and lane: two at a time.
+// A question is two jobs, one per step: finding it in the book, then
+// writing its guide. Both share one lane (two at a time), and a queued
+// find always starts before a queued guide, so a set's questions are
+// found first and its worksheet is whole early.
 const (
-	JobQuestion  = "question"
+	JobLocate    = "locate"
+	JobGuide     = "guide"
 	LaneQuestion = "question"
 )
 
+// locateFirst is a find's priority in the lane: ahead of every queued
+// guide, even ones queued before the question was added.
+const locateFirst = 1
+
 func New(c Config) *Service {
 	s := &Service{c}
-	c.Queue.Handle(JobQuestion, LaneQuestion, s.runQuestion)
+	c.Queue.Handle(JobLocate, LaneQuestion, s.runLocate)
+	c.Queue.Handle(JobGuide, LaneQuestion, s.runGuide)
 	return s
 }
 
@@ -236,8 +245,9 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 
 // ---------------------------------------------------------------- questions
 
-// Add appends drafts to a set, all at once, and queues each one. Blank
-// drafts are dropped: an empty row in the dialog means nothing.
+// Add appends drafts to a set, all at once, and queues each one's first
+// step: finding it, or writing the guide of one that isn't in the book.
+// Blank drafts are dropped: an empty row in the dialog means nothing.
 func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([]Question, error) {
 	if _, err := getSummary(ctx, s.c.DB, homeworkID); errors.Is(err, errNotFound) {
 		return nil, httpx.NotFound("homework set")
@@ -283,7 +293,7 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 				id, homeworkID, last+i+1, d.Text, d.InBook, label, statement, now, now); err != nil {
 				return err
 			}
-			if _, err := s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobQuestion, Subject: id, Payload: questionPayload{QuestionID: id}}); err != nil {
+			if _, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, d.InBook)); err != nil {
 				return err
 			}
 		}
@@ -438,8 +448,11 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 	if q.State != StateFailed {
 		return Question{}, httpx.Errorf(httpx.CodeInvalid, "Only a question that failed can be tried again.")
 	}
-	set := `state = 'pending', reason = '', failure = '', hint = '[]', walkthrough = '[]', memory = '[]', updated_at = ?`
+	set := `reason = '', failure = '', hint = '[]', walkthrough = '[]', memory = '[]', updated_at = ?`
 	args := []any{db.Now()}
+	// What's left to do, and the state it waits in: the step that failed,
+	// unless the retry changes what there is to find.
+	st, find := waiting(q), q.InBook && q.Page == nil
 	switch {
 	case r.Text != nil && strings.TrimSpace(*r.Text) != "":
 		text := strings.TrimSpace(*r.Text)
@@ -448,6 +461,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 		}
 		set += `, text = ?, in_book = 0, statement = ?, label = ?, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]'`
 		args = append(args, text, text, labelFromText(text))
+		st, find = StatePending, false
 	case r.Page != nil:
 		if !q.InBook {
 			return Question{}, httpx.Invalid("page", "This question isn't in the book, so it has no page.")
@@ -461,15 +475,17 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 		}
 		set += `, pinned_page = ?, page = NULL`
 		args = append(args, *r.Page)
+		st, find = StatePending, true
 	default:
 		// The same thing again: after a model outage, say.
 	}
-	args = append(args, id)
+	set += `, state = ?`
+	args = append(args, st, id)
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET `+set+` WHERE id = ?`, args...); err != nil {
 			return err
 		}
-		_, err := s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobQuestion, Subject: id, Payload: questionPayload{QuestionID: id}})
+		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, find))
 		return err
 	})
 	if err != nil {
