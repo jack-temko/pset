@@ -185,8 +185,18 @@ the UI.
 | Lane | Concurrency | Why |
 |---|---|---|
 | `import` | 1 | Imports run in order; the UI shows "Queued" for the rest. |
-| `question` | 2 | Locate and write two questions at once. A constant, not a setting. |
+| `question` | 2 | Two homework steps at once, finds before guides (below). A constant, not a setting. |
 | `turn` | 1 per book | One running conversation per book. |
+
+**Finds go first** (2026-09-24). A question is two jobs in the
+`question` lane: `locate`, which finds it and queues its guide in the same
+write, then `guide`. A job carries a priority, and a lane starts its
+highest first, oldest first among equals; finds run at 1. So a free
+slot always takes a question still to be found before a guide: a set is
+found, and its worksheet whole, first, and a question added later is
+found in the next free slot, ahead of guides already queued. A running
+job is never stopped for a higher one, so a guide may start beside the
+last find once no find is waiting.
 
 Cancel cancels the handler's context. On restart, `running` goes back to
 `queued`. Retry re-enqueues with the same payload. Import's Stop leaves

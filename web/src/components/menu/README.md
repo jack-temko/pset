@@ -11,7 +11,10 @@ right-aligned to the trigger.
   padding the wash stopped short of the boundary, and those strips were
   dead to the pointer.)
 - **`MenuItem`**: a 32px row, a muted 16px icon, the label in `text-sm`.
-  It runs, then the menu closes.
+  It runs, then the menu closes. An optional **hint** sits at the row's
+  end in muted `text-xs`: a short fact worth knowing before you choose
+  it, like Print worksheet's "3 still being found". It says, it never
+  disables: the item still runs.
 - **`MenuCheckItem`**: a fact you can take back, like Turned in. A
   primary check sits in the icon column when it's true, so labels stay
   aligned either way.

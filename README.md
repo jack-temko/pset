@@ -134,13 +134,16 @@ panel.
 takes it ("Searched…", "Read p. 137"), in place between the paragraphs of
 its answer. Click a page chip to jump there. Stop ends an answer early.
 
-**Homework.** In the panel's Homework tab, add **New homework**, then **Add
-questions**, one per row. Untick **In this book** for a problem that isn't
-from this book; its guide is written from your text alone. Each question
-gets a hidden hint and a hidden walkthrough; click to reveal either. **Ask
-about this** takes a question over to Ask as context. The **⋯** menu
-prints a worksheet and marks the set turned in. When PSet can't find a
-problem, it asks for the page, or lets you paste the problem instead.
+**Homework.** In the panel's Homework tab, add **New homework**, then
+**Add questions**, one per row. Untick **In this book** for a problem that
+isn't from this book; its guide is written from your text alone. Each
+question gets a hidden hint and a hidden walkthrough; click to reveal
+either. **Ask about this** takes a question over to Ask as context. The
+**⋯** menu prints a worksheet and marks the set turned in. PSet finds
+every question before it writes any guide, so the worksheet is ready to
+print early; until then, Print worksheet says how many are still being
+found. When PSet can't find a problem, it asks for the page, or lets you
+paste the problem instead.
 
 **Memory.** The tutor keeps short notes per book: where results live, how
 the book is laid out, and how you like answers ("Use SI units"). Open

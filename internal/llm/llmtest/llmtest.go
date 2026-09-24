@@ -82,7 +82,9 @@ func (s *Server) Script(r ...Reply) {
 	s.replies = append(s.replies, r...)
 }
 
-// Fallback answers any chat request the script has run out for.
+// Fallback answers any chat request the script has run out for. It runs
+// outside the server's lock, so it may block to hold a request open while
+// others are answered; it guards its own state.
 func (s *Server) Fallback(fn func(llm.ChatRequest) Reply) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -174,15 +176,17 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	s.requests = append(s.requests, Request{Path: "/chat/completions", Chat: req})
 	var reply Reply
+	fallback := s.fallback
 	switch {
 	case len(s.replies) > 0:
-		reply, s.replies = s.replies[0], s.replies[1:]
-	case s.fallback != nil:
-		reply = s.fallback(req)
-	default:
+		reply, s.replies, fallback = s.replies[0], s.replies[1:], nil
+	case fallback == nil:
 		reply = Reply{Text: "ok"}
 	}
 	s.mu.Unlock()
+	if fallback != nil {
+		reply = fallback(req)
+	}
 
 	if reply.Status != 0 {
 		http.Error(w, reply.Text, reply.Status)

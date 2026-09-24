@@ -54,12 +54,17 @@ export const StatePending = "pending";
  */
 export const StateLocating = "locating";
 /**
+ * StateLocated is found and waiting its turn to be written: its
+ * statement, page and figures are there, its guide isn't yet.
+ */
+export const StateLocated = "located";
+/**
  * StateWriting is writing its guide; the hint may already be there.
  */
 export const StateWriting = "writing";
 export const StateReady = "ready";
 export const StateFailed = "failed";
-export type State = typeof StatePending | typeof StateLocating | typeof StateWriting | typeof StateReady | typeof StateFailed;
+export type State = typeof StatePending | typeof StateLocating | typeof StateLocated | typeof StateWriting | typeof StateReady | typeof StateFailed;
 /**
  * Failure is what kind of failure a failed question had.
  */
