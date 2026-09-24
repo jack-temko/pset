@@ -465,13 +465,27 @@ func (s *Service) figureParts(ctx context.Context, book Book, q row) []llm.Part 
 // theoryPages bounds the pages memory puts in a guide's opening message.
 const theoryPages = 2
 
+// theoryDepth is how far down a search for the problem a remembered page
+// may rank. A problem's words match the problem pages around it best, so
+// the theory it rests on sits lower than a question's would.
+const theoryDepth = 30
+
 // theory is the text of the pages memory points to for a problem, so the
 // writer starts with them instead of spending a round, and all the
 // thinking a round costs, reading them. A page qualifies when a book
-// memory names it and a search for the problem ranks it: memory says the
-// page is worth reading, the search says it's this problem's.
+// memory names it, it's in the problem's chapter, and a search for the
+// problem finds it: memory says the page is worth reading, the chapter
+// and the search that it's this problem's.
 func (s *Service) theory(ctx context.Context, book Book, q row) string {
 	if s.c.Memory == nil || strings.TrimSpace(q.Statement) == "" {
+		return ""
+	}
+	_, chapter, ok := problemLabel(q.Label, q.Text)
+	if !ok {
+		return ""
+	}
+	start, end, ok, err := s.c.Library.ChapterSpan(ctx, book.ID, chapter)
+	if err != nil || !ok {
 		return ""
 	}
 	notes, err := s.c.Memory.Notes(ctx, book.ID)
@@ -480,21 +494,22 @@ func (s *Service) theory(ctx context.Context, book Book, q row) string {
 	}
 	named := map[int]bool{}
 	for _, n := range notes {
-		if n.Kind == "book" && n.Page > 0 {
+		if n.Kind == "book" && n.Page >= start && n.Page <= end && (q.Page == nil || n.Page != *q.Page) {
 			named[n.Page] = true
 		}
 	}
 	if len(named) == 0 {
 		return ""
 	}
-	hits, err := s.c.Library.Search(ctx, book.ID, q.Statement, 8)
+	hits, err := s.c.Library.Search(ctx, book.ID, q.Statement, theoryDepth)
 	if err != nil {
+		slog.Warn("guide: theory search", "question", q.ID, "err", err)
 		return ""
 	}
 	var b strings.Builder
 	n := 0
 	for _, p := range hits {
-		if !named[p] || (q.Page != nil && p == *q.Page) {
+		if !named[p] {
 			continue
 		}
 		text, err := s.c.Library.PageText(ctx, book.ID, p)
