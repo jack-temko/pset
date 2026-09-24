@@ -21,6 +21,7 @@ const q = (over: Partial<Question> = {}): Question => ({
   revealed: [],
   done: false,
   updatedAt: '',
+  rev: 0,
   ...over,
 })
 
@@ -39,39 +40,42 @@ const detail = (...questions: Question[]): Detail => ({ homework: h, questions }
 
 describe('applyQuestion', () => {
   it('keeps a failed question failed when an older pending snapshot lands late', () => {
-    // The P0: a mutation's response carries the question as it was at add
-    // time; the failure event already applied must win.
-    const d = detail(q({ id: 'x', state: 'failed', failure: 'setup', reason: 'no chat model' }))
-    expect(applyQuestion(d, q({ id: 'x', state: 'pending' }))).toBe(d)
+    // A mutation's response carries the question as it was at add time;
+    // the failure event already applied is newer and must win.
+    const d = detail(q({ id: 'x', state: 'failed', failure: 'setup', reason: 'no chat model', rev: 2 }))
+    expect(applyQuestion(d, q({ id: 'x', state: 'pending', rev: 0 }))).toBe(d)
   })
 
-  it('applies a forward transition', () => {
-    const d = detail(q({ id: 'x', state: 'pending' }))
-    const next = applyQuestion(d, q({ id: 'x', state: 'writing', activity: 'Thinking…' }))
+  it('applies a newer snapshot', () => {
+    const d = detail(q({ id: 'x', state: 'pending', rev: 0 }))
+    const next = applyQuestion(d, q({ id: 'x', state: 'writing', activity: 'Thinking…', rev: 3 }))
     expect(next.questions[0].state).toBe('writing')
   })
 
-  it('applies an equal-state update, like an activity line or a saved hint', () => {
-    const d = detail(q({ id: 'x', state: 'writing' }))
-    const next = applyQuestion(d, q({ id: 'x', state: 'writing', hint: [] }))
-    expect(next).not.toBe(d)
+  it('applies a change within a state, like an activity line', () => {
+    const d = detail(q({ id: 'x', state: 'writing', activity: 'Thinking…', rev: 3 }))
+    const next = applyQuestion(d, q({ id: 'x', state: 'writing', activity: 'Computing…', rev: 4 }))
+    expect(next.questions[0].activity).toBe('Computing…')
   })
 
-  it('still refuses a backward step between working states', () => {
-    const d = detail(q({ id: 'x', state: 'writing' }))
-    expect(applyQuestion(d, q({ id: 'x', state: 'locating' }))).toBe(d)
+  it('drops an older snapshot in the same state', () => {
+    // The student revealed the hint (drawn at once, same rev); a stale
+    // event from before the reveal lands after: the reveal stays.
+    const d = detail(q({ id: 'x', state: 'ready', revealed: ['hint'], rev: 5 }))
+    expect(applyQuestion(d, q({ id: 'x', state: 'ready', revealed: [], rev: 5 }))).toBe(d)
+    expect(applyQuestion(d, q({ id: 'x', state: 'ready', revealed: [], rev: 4 }))).toBe(d)
+    // The server's own reveal comes back one rev on, and applies.
+    expect(applyQuestion(d, q({ id: 'x', state: 'ready', revealed: ['hint'], rev: 6 }))).not.toBe(d)
   })
 
-  it('puts located between being found and being written', () => {
-    const d = detail(q({ id: 'x', state: 'located', page: 12 }))
-    expect(applyQuestion(d, q({ id: 'x', state: 'locating' }))).toBe(d)
-    expect(applyQuestion(d, q({ id: 'x', state: 'writing' })).questions[0].state).toBe('writing')
-  })
-
-  it('force is a restart: pending applies over failed, and later events follow', () => {
-    const d = detail(q({ id: 'x', state: 'failed' }))
-    expect(applyQuestion(d, q({ id: 'x', state: 'pending' }), true).questions[0].state).toBe('pending')
-    expect(applyQuestion(d, q({ id: 'x', state: 'locating' }), true).questions[0].state).toBe('locating')
+  it('force draws a restart ahead of the server, and what the run says next follows', () => {
+    const d = detail(q({ id: 'x', state: 'failed', rev: 7 }))
+    const restarted = applyQuestion(d, q({ id: 'x', state: 'pending', rev: 7 }), true)
+    expect(restarted.questions[0].state).toBe('pending')
+    // The old failure, arriving late, doesn't undo the restart.
+    expect(applyQuestion(restarted, q({ id: 'x', state: 'failed', rev: 7 }))).toBe(restarted)
+    // The run's own events do apply, even an instant second failure.
+    expect(applyQuestion(restarted, q({ id: 'x', state: 'failed', rev: 9 })).questions[0].state).toBe('failed')
   })
 
   it('keeps the questions in position order', () => {

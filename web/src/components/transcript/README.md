@@ -25,7 +25,8 @@ chat where you ask, page where it answers. No bubbles.
 - **`DayDivider`**: a quiet centered mark on a hairline when the date
   changes.
 - **`ConversationStart`**: the top of the endless history:
-  "Start of conversation · Clear", confirming in place.
+  "Start of conversation · Clear". Clear asks first, in a
+  ConfirmPopover under it.
 - **`FailedTurn`**: one destructive-ink line + Try again; the feed above
   stays frozen, partial text stays. A setup failure (no chat model) passes
   `onSetup` and gains **Open Settings**, which leads (outline) while Try

@@ -95,6 +95,7 @@ POST   /api/questions/{id}/retry         {page} or {text}
 GET    /api/books/{id}/turns             POST /api/books/{id}/turns
 POST   /api/turns/{id}/stop
 GET    /api/due   GET /api/week   POST /api/heartbeat
+DELETE /api/heartbeats                   (clear activity history)
 GET    /api/settings  PUT /api/settings  POST /api/settings/test
 PUT    /api/settings/profile             (the name)
 GET    /api/health    POST /api/health/{check}/fix
@@ -172,10 +173,15 @@ older than the buffer, the client invalidates everything.
 
 **An older copy never wins** (2026-09-24). A request's reply is a
 snapshot, and it can land after a newer event has applied. Books and
-turns carry `updatedAt` and the cache keeps the newer copy; questions
-only move forward through their states. A new turn's first event goes
+turns carry `updatedAt` and the cache keeps the newer copy. Questions
+carry a **`rev`** that every change bumps, a database trigger rather
+than each write, so none can forget; the cache keeps the higher rev,
+which holds within a state too (a reveal drawn at once survives a
+stale event from before it). A question's `updatedAt` stays when its
+state began, for the waiting lines. A new turn's first event goes
 out before its job can start, so nothing streams into a turn the page
-doesn't hold yet.
+doesn't hold yet; new questions are said the same way, before the queue
+is woken, and the reply to adding them is the questions as added.
 
 **Ask turns are jobs.** Leaving the workspace or reloading does not stop
 an answer: coming back fetches the turn mid-flight and the stream carries
@@ -298,7 +304,9 @@ rail), `asking` (the Ask tab) or `homework` (the Homework tab) was last
 touched. Each heartbeat counts 30 seconds (a second tab in the same
 half-minute counts once), and `/api/week?since=` sums them from the
 start of the student's week, which the client sends because it knows
-the local calendar.
+the local calendar. `DELETE /api/heartbeats` forgets them all
+(Settings' Clear history); questions worked come from homework and
+stay.
 
 ## Logging
 

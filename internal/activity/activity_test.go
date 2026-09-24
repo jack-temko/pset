@@ -53,3 +53,31 @@ func TestHeartbeatsBecomeTheWeek(t *testing.T) {
 		t.Fatal("unknown kind accepted")
 	}
 }
+
+func TestClearForgetsTimeButNotQuestions(t *testing.T) {
+	ctx := context.Background()
+	d, _ := db.Open(filepath.Join(t.TempDir(), "pset.db"))
+	defer d.Close()
+	db.Migrate(ctx, d, append([]db.Migration{{Name: "t/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`}}, Migrations()...))
+	d.Exec(`INSERT INTO books VALUES ('a')`)
+	s := New(d, hw{})
+	s.now = func() time.Time { return time.Date(2026, 9, 21, 10, 0, 0, 0, time.UTC) }
+	if err := s.Record(ctx, Heartbeat{BookID: "a", Kind: KindReading}); err != nil {
+		t.Fatal(err)
+	}
+	d.Exec(`INSERT INTO heartbeats VALUES ('a', 'homework', '2026-09-21T09:00:00Z')`)
+
+	if err := s.Clear(ctx); err != nil {
+		t.Fatal(err)
+	}
+	w, err := s.Week(ctx, time.Date(2026, 9, 21, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.Reading != 0 || w.Homework != 0 || w.Asking != 0 || len(w.ByBook) != 0 {
+		t.Fatalf("time left after clear: %+v", w)
+	}
+	if w.Questions != 5 || w.ProblemSets != 2 {
+		t.Fatalf("questions worked should stay: %+v", w)
+	}
+}

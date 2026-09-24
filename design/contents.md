@@ -85,7 +85,8 @@ EBook Online Access for Fundamentals of Electric Circuits").
   in those pages' text (a few OCR slips allowed). What doesn't check out
   keeps the metadata or the filename.
 - **Failure is quiet**: a failed call leaves the name as it was and the
-  import carries on. The title can always be fixed with the pencil.
+  import carries on. The title can always be fixed in Edit book, in the
+  book's menu.
 - A title or author the student edited is **never replaced**.
 - The workspace's one-time "named after its file" prompt is gone.
 

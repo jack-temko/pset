@@ -127,7 +127,8 @@ the page scan in the middle, and the panel on the right. Pinch or
 Ctrl+scroll to zoom the scan; the floating bar at the bottom shows the
 page and zoom, and clicking the zoom resets to fit. Page numbers are the
 ones printed in the book; hover one to see the PDF page. If the printed
-numbers are off, fix the offset with the pencil beside the book's title.
+numbers are off, fix the offset in **Edit book**, in the menu beside the
+book's title. The same menu opens **Memory** and removes the book.
 **Focus** (top right of the panel) folds the contents away to widen the
 panel.
 
@@ -158,7 +159,8 @@ Everything is under the data folder (`~/.local/share/pset` by default):
 PDFs), `cache/` (rendered pages), and `logs/llm.jsonl`, which records
 every request made to the chat model, with the model's reply. Back up or
 move the folder to take your library with you. **Settings → Reset** erases
-all of it, settings included.
+all of it, settings included; **Clear history** beside it forgets only the
+time Home counts.
 
 ## Development
 

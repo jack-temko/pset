@@ -48,16 +48,25 @@ can correct it.
 
 ## The book
 
-A **pencil beside the book's title in the top bar** opens the Book
-dialog: title and author, editable (they start as the title page reads,
-design/contents.md); the cover colour, one of six swatches
-(design/import.md);
-"Printed page 1 is PDF page ___", the offset, correctable; the page count
-and import date. **Remove book** sits at the footer's left. Confirming
-turns the dialog itself into the question (dialogs never nest), naming
-what goes with the book: its homework and its conversation. Beside it,
-**Memory** opens what the tutor remembers about the book
-(design/memory.md). Both act on the thing the bar names.
+**One menu beside the book's title in the top bar** (2026-09-24,
+replacing a pencil and a memory icon) holds what you do to the book:
+
+- **Edit book** opens the Book dialog: title and author, editable (they
+  start as the title page reads, design/contents.md); the cover colour,
+  one of six swatches (design/import.md); "Printed page 1 is PDF page
+  ___", the offset, correctable; the page count and import date. It only
+  edits.
+- **Memory** opens what the tutor remembers about the book
+  (design/memory.md).
+- **Remove book**, last, below a divider, in destructive ink. It asks
+  first in a confirm under its row, with the menu kept open behind it,
+  naming what goes: its homework sets, the conversation and what the
+  tutor remembers. Removing lands you on Home.
+
+Every thing that can be deleted has one menu for its actions, with the
+destructive one last: the book here, the homework set in the
+walkthrough's header. A book is removed only from inside it; the shelf
+stays covers.
 
 ## Contents rail
 
@@ -121,7 +130,8 @@ built.
   append-only, no edit, no retry of old turns.
 - **Endless history with day dividers** (quiet centered hairline:
   "Yesterday", "Sep 12"); the very top of the transcript carries
-  "Start of conversation · Clear" with a confirm.
+  "Start of conversation · Clear". Clear asks first, in a confirm under
+  it: every question and answer goes, what the tutor remembers stays.
 - **While it works** (2026-09-21): the step in flight is the feed's last
   line, in the present tense with a Spinner at its start ("Searching
   'eigenvalue'…"); finished, it turns past tense with its count and the
@@ -203,7 +213,8 @@ built.
 - **The walkthrough header** (2026-09-21) keeps what you read: back, the
   set's title, "3 of 8", and a **"⋯" menu** for what you do to the set:
   Add questions, Edit homework, Print worksheet, then **Turn in** below a
-  divider, which reads **Turned in** with a check once done. While a set is turned in, a success
+  divider, which reads **Turned in** with a check once done, then
+  **Delete homework** below another. While a set is turned in, a success
   Label says so in the bar.
 - **A Home due-row lands straight in that walkthrough** at
   `/books/{sha}/homework/{id}`, on the **first question not yet
@@ -236,8 +247,13 @@ built.
   the box stays empty for your own words; the sent turn keeps the chip,
   so the transcript records what you asked about.
 - **Editing a set** (2026-09-21): Edit homework in the header's menu
-  opens New homework again as **Edit homework**, with **Delete** at the
-  footer's left, confirmed in place.
+  opens New homework again as **Edit homework**. It only edits
+  (2026-09-24): deleting is the menu's last item.
+- **Deleting a set** (2026-09-24): **Delete homework** is the last item
+  in the header's menu, below a divider, in destructive ink. It asks
+  first in a confirm under its row, the menu kept open behind it:
+  "Delete Set 3? Its 8 questions go with it, with their guides and what
+  you checked off." Deleting lands you on the list.
 - **Failed question** (2026-09-22): a recoverable state about that
   question, not an error dump. A **title naming what failed**, a
   sentence saying what happened (no internals, no "check Settings"
@@ -260,8 +276,10 @@ built.
 - **Sets are editable: add, remove and reorder.** The controls sit inline
   on the question you are looking at (move up, move down, remove, as
   quiet icon buttons beside its page chip) because the walkthrough is
-  the only view of the set there is. The system has no menu component,
-  and this did not justify inventing one.
+  the only view of the set there is. **Remove asks first** (2026-09-24),
+  in a confirm under the trash: "Remove 3.A.4? Its guide and your
+  progress on it go with it." The confirm belongs to that question:
+  moving to another one can't retarget it.
 - **Turned in is a checkable item in the header's menu** (2026-09-21):
   the set-level twin of Complete, and like it a fact you can take back.
   It lives with the set's actions, away from Complete in the footer, so

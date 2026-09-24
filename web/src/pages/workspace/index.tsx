@@ -41,7 +41,8 @@ import {
 import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
 import { Veil } from '@/components/veil'
 import { Label } from '@/components/label'
-import { Menu, MenuCheckItem, MenuDivider, MenuItem } from '@/components/menu'
+import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
+import { ConfirmPopover } from '@/components/confirm'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
 import { AddQuestionsDialog, BookDialog, HomeworkDialog } from './dialogs'
@@ -85,7 +86,7 @@ import { dueLine, dueStatus } from '@/lib/due'
 import { useTimeLeft } from '@/lib/eta'
 import { PageOffset, pdfOf, printedLabel, usePageOffset } from '@/lib/pages'
 import { useSettled } from '@/lib/settled'
-import { cn } from '@/lib/utils'
+import { cn, plural } from '@/lib/utils'
 
 /**
  * The book workspace: the app's one filled screen. Contents rail, page
@@ -950,12 +951,14 @@ function waitingLine(q: Question, questions: Question[], offset: number): string
 function Walkthrough({
   setId,
   onEdit,
+  onDelete,
   onBack,
   onJump,
   onAskAbout,
 }: {
   setId: string
   onEdit: () => void
+  onDelete: () => void
   onBack: () => void
   onJump: (page: number) => void
   onAskAbout: (about: About) => void
@@ -970,6 +973,10 @@ function Walkthrough({
   const addQ = useAddQuestions(setId)
   const [adding, setAdding] = useState(false)
   const [index, setIndex] = useState<number | null>(null)
+  // Removing a question asks first, under its trash button. It holds the
+  // id it asked about, so moving to another question can't retarget it.
+  const [removing, setRemoving] = useState<string | null>(null)
+  const trash = useRef<HTMLButtonElement>(null)
 
   const set = detail.data?.homework
   const questions = detail.data?.questions ?? []
@@ -1046,6 +1053,26 @@ function Walkthrough({
         <MenuCheckItem checked={turnedIn} onChange={() => updateSet.mutate({ turnedIn: !turnedIn })}>
           {turnedIn ? 'Turned in' : 'Turn in'}
         </MenuCheckItem>
+        {/* Last and apart, as on the book's menu. It asks first, naming
+            what goes; the set has to have loaded to say so. */}
+        {set && (
+          <>
+            <MenuDivider />
+            <MenuConfirmItem
+              icon={<Trash2 />}
+              question={`Delete ${set.title}?`}
+              detail={
+                set.total === 0
+                  ? 'It has no questions yet.'
+                  : `Its ${plural(set.total, 'question')} go with it, with their guides and what you checked off.`
+              }
+              action="Delete homework"
+              onConfirm={onDelete}
+            >
+              Delete homework
+            </MenuConfirmItem>
+          </>
+        )}
       </Menu>
     </div>
   )
@@ -1123,16 +1150,31 @@ function Walkthrough({
             <ChevronDown />
           </IconButton>
           <IconButton
+            ref={trash}
             variant="ghost"
             size="sm"
             aria-label="Remove this question"
-            onClick={() => {
-              removeQ.mutate(q.id)
-              setIndex(Math.max(0, Math.min(at, questions.length - 2)))
-            }}
+            aria-haspopup="dialog"
+            aria-expanded={removing === q.id}
+            onClick={() => setRemoving(q.id)}
+            className={cn(removing === q.id && 'bg-muted/50 text-foreground')}
           >
             <Trash2 />
           </IconButton>
+          {removing === q.id && (
+            <ConfirmPopover
+              anchor={trash}
+              question={`Remove ${q.label}?`}
+              detail="Its guide and your progress on it go with it."
+              action="Remove"
+              onCancel={() => setRemoving(null)}
+              onConfirm={() => {
+                setRemoving(null)
+                removeQ.mutate(q.id)
+                setIndex(Math.max(0, Math.min(at, questions.length - 2)))
+              }}
+            />
+          )}
         </div>
 
         {/* A bare reference ("3.C.14") is already the label; saying it
@@ -1285,6 +1327,7 @@ function HomeworkTab({
           key={openId}
           setId={openId}
           onEdit={() => setEditing(true)}
+          onDelete={() => openSet && remove.mutate(openSet, { onSuccess: () => setOpenId(null) })}
           onBack={() => setOpenId(null)}
           onJump={onJump}
           onAskAbout={onAskAbout}
@@ -1292,10 +1335,9 @@ function HomeworkTab({
         {openSet && (
           <HomeworkDialog
             open={editing}
-            editing={{ title: openSet.title, due: openSet.dueDate, questions: openSet.total }}
+            editing={{ title: openSet.title, due: openSet.dueDate }}
             onClose={() => setEditing(false)}
             onSave={(title, due) => updateOpen.mutate({ title, dueDate: due })}
-            onDelete={() => remove.mutate(openSet, { onSuccess: () => setOpenId(null) })}
           />
         )}
       </>
@@ -1499,34 +1541,30 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
       <AppShell
         scroll="fill"
         middle={
-          // The top bar's actions are about the thing it names: the book
-          // itself, and what the tutor knows about it.
-          <span className="flex items-center gap-3">
+          // The bar names the book, and its one menu holds what you do to
+          // it: edit it, see what the tutor remembers, and, last and apart,
+          // remove it. Every thing has one menu for its actions, the
+          // homework set's included.
+          <span className="flex items-center gap-2">
             <span>{book.title}</span>
-            <span className="flex items-center gap-1">
-              <Tooltip label="Edit this book">
-                <IconButton
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Edit this book"
-                  onClick={() => setEditingBook(true)}
-                  className="text-muted-foreground"
-                >
-                  <Pencil />
-                </IconButton>
-              </Tooltip>
-              <Tooltip label="What the tutor remembers">
-                <IconButton
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Memory"
-                  onClick={() => setMemoryOpen(true)}
-                  className="text-muted-foreground"
-                >
-                  <Brain />
-                </IconButton>
-              </Tooltip>
-            </span>
+            <Menu label="Book actions">
+              <MenuItem icon={<Pencil />} onSelect={() => setEditingBook(true)}>
+                Edit book
+              </MenuItem>
+              <MenuItem icon={<Brain />} onSelect={() => setMemoryOpen(true)}>
+                Memory
+              </MenuItem>
+              <MenuDivider />
+              <MenuConfirmItem
+                icon={<Trash2 />}
+                question={`Remove ${book.title}?`}
+                detail={`${plural(homeworkCount, 'homework set')}, the conversation and what the tutor remembers go with it. Importing the PDF again starts fresh.`}
+                action="Remove book"
+                onConfirm={() => remove.mutate(book.id, { onSuccess: () => navigate('/') })}
+              >
+                Remove book
+              </MenuConfirmItem>
+            </Menu>
           </span>
         }
       >
@@ -1571,7 +1609,6 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           cover: book.cover,
           pages: book.pageCount,
           imported: new Date(book.addedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-          homework: homeworkCount,
         }}
         onClose={() => setEditingBook(false)}
         onSave={(next) => {
@@ -1582,7 +1619,6 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
             ...(next.cover !== book.cover && { cover: next.cover }),
           })
         }}
-        onRemove={() => remove.mutate(book.id, { onSuccess: () => navigate('/') })}
       />
     </PageOffset>
   )
