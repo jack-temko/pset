@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackt/pset/internal/cards"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pdf"
 )
 
@@ -55,6 +56,10 @@ CREATE INDEX questions_homework ON questions (homework_id, position);`},
 		{Name: "homework/3", SQL: `ALTER TABLE questions ADD COLUMN memory TEXT NOT NULL DEFAULT '[]'`},
 		// What kind of failure a failed question had.
 		{Name: "homework/4", SQL: `ALTER TABLE questions ADD COLUMN failure TEXT NOT NULL DEFAULT ''`},
+		// The guide's conversation so far, one tool round at a time, so a
+		// restart carries on from its last round instead of starting over.
+		// Read only by the writer: it holds images, so no list selects it.
+		{Name: "homework/5", SQL: `ALTER TABLE questions ADD COLUMN rounds TEXT NOT NULL DEFAULT '[]'`},
 	}
 }
 
@@ -175,6 +180,21 @@ func listQuestions(ctx context.Context, q queryer, homeworkID string) ([]Questio
 		out = append(out, r.Question)
 	}
 	return out, rows.Err()
+}
+
+// savedRounds is a question's saved guide conversation: every message
+// after the opening one, which is rebuilt each run.
+func savedRounds(ctx context.Context, q queryer, id string) ([]llm.Message, error) {
+	var raw string
+	if err := q.QueryRowContext(ctx, `SELECT rounds FROM questions WHERE id = ?`, id).Scan(&raw); err != nil {
+		return nil, err
+	}
+	var msgs []llm.Message
+	if err := json.Unmarshal([]byte(raw), &msgs); err != nil {
+		// Unreadable progress is no progress: start the guide over.
+		return nil, nil
+	}
+	return msgs, nil
 }
 
 func mustJSON(v any) string {

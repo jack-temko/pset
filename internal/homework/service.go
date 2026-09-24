@@ -438,7 +438,10 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 	if q.State != StateFailed {
 		return Question{}, httpx.Errorf(httpx.CodeInvalid, "Only a question that failed can be tried again.")
 	}
-	set := `state = 'pending', reason = '', failure = '', hint = '[]', walkthrough = '[]', memory = '[]', updated_at = ?`
+	// Memory lines stay with saved rounds, which a retry of the same
+	// problem carries on from; work clears them with the rounds.
+	set := `state = 'pending', reason = '', failure = '', hint = '[]', walkthrough = '[]',
+		memory = CASE WHEN rounds = '[]' THEN '[]' ELSE memory END, updated_at = ?`
 	args := []any{db.Now()}
 	switch {
 	case r.Text != nil && strings.TrimSpace(*r.Text) != "":
@@ -446,7 +449,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 		if len(text) > maxDraftText {
 			return Question{}, httpx.Invalid("text", "That's too long for a single question.")
 		}
-		set += `, text = ?, in_book = 0, statement = ?, label = ?, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]'`
+		set += `, text = ?, in_book = 0, statement = ?, label = ?, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]', rounds = '[]'`
 		args = append(args, text, text, labelFromText(text))
 	case r.Page != nil:
 		if !q.InBook {
@@ -459,10 +462,11 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 		if *r.Page < 1 || *r.Page > b.PageCount {
 			return Question{}, httpx.Invalid("page", "The book doesn't have that page.")
 		}
-		set += `, pinned_page = ?, page = NULL`
+		set += `, pinned_page = ?, page = NULL, rounds = '[]'`
 		args = append(args, *r.Page)
 	default:
-		// The same thing again: after a model outage, say.
+		// The same thing again: after a model outage, say. The guide
+		// carries on from its saved rounds.
 	}
 	args = append(args, id)
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {

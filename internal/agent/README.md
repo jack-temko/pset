@@ -9,7 +9,14 @@ guide checks its work exactly as an answer does.
   the next user message), `compute` and `solve_linear` (mathx, exact).
 - **`Loop.Run`** streams a round, runs any tool calls, and goes again,
   until the model answers without a tool or `Rounds` runs out (then it's
-  told to answer with what it has).
+  told to answer with what it has). Each assistant turn keeps its
+  reasoning, which the llm client sends back to endpoints that take it.
+- **Carrying on**: `Round` hands the caller the conversation after each
+  tool round. Given those messages back, `Run` goes on from the next
+  round, counting the ones before toward `Rounds`.
+- **Pages in view**: `Shown` is the pages the messages already show as
+  images. `view_page` on one of those, or on a page viewed earlier in the
+  run, points back at it instead of sending the same image again.
 - **Steps**: every tool call is a step, present tense while it runs and
   past tense with its count after. A thinking model's reasoning is a step
   too: "Thinking…", then "Thought for 12s". `Writing` fires when a

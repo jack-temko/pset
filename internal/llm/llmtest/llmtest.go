@@ -40,6 +40,9 @@ type Reply struct {
 	// Split sends each chunk's JSON across two data: lines, which SSE
 	// allows and some endpoints do.
 	Split bool
+	// Unfinished ends the stream after the reasoning on a whole event,
+	// with no finish_reason and no [DONE]: Z.ai drops long streams so.
+	Unfinished bool
 }
 
 // Request is what the server received, for assertions.
@@ -216,6 +219,9 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 	}
 	if reply.Cut {
 		w.Write([]byte(`data: {"choices":[{"delta":{"content":"Th`))
+		return
+	}
+	if reply.Unfinished {
 		return
 	}
 	for _, chunk := range chunks(reply.Text, 7) {
