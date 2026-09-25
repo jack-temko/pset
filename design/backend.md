@@ -87,6 +87,9 @@ POST   /api/books/{id}/stop              POST /api/books/{id}/retry
 GET    /api/books/{id}/contents
 GET    /api/books/{id}/pages/{n}/image?w=
 GET    /api/books/{id}/homework          POST /api/books/{id}/homework
+POST   /api/books/{id}/assignments/read  (a file, or {url} or {text}: read for review)
+POST   /api/books/{id}/assignments       (the kept due dates, made sets)
+GET    /api/books/{id}/assignments/source (the course page last read)
 GET    /api/homework/{id}                PATCH, DELETE
 POST   /api/homework/{id}/questions      (batch of drafts)
 GET    /api/homework/{id}/worksheet      (PDF)

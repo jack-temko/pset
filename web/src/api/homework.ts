@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 
-import { del, get, patch, post } from './client'
+import { del, get, patch, post, postForm } from './client'
 import { on } from './events'
 import { forget, observe } from '@/lib/eta'
 import type {
+  Assignment,
+  AssignmentImport,
+  AssignmentSource,
   Box,
   Detail,
   Draft,
@@ -27,6 +30,7 @@ export const homeworkKeys = {
   forBook: (bookId: string) => ['homework', 'book', bookId] as const,
   set: (id: string) => ['homework', 'set', id] as const,
   due: ['homework', 'due'] as const,
+  assignmentSource: (bookId: string) => ['homework', 'assignment-source', bookId] as const,
 }
 
 export const useBookHomework = (bookId: string) =>
@@ -328,3 +332,45 @@ export function usePointOut() {
 
 export const worksheetURL = (homeworkId: string) => `/api/homework/${homeworkId}/worksheet`
 export const figureURL = (questionId: string, n: number) => `/api/questions/${questionId}/figures/${n}`
+
+// ---------------------------------------------------------------- assignments
+
+/** Where an assignment is read from: a PDF or photo, a course web page, or
+ *  text pasted in. */
+export type AssignmentFrom = { file: File } | { url: string } | { text: string }
+
+/** Reads an assignment out for review. Nothing is added until the
+ *  student imports what they kept. */
+export function useReadAssignment(bookId: string) {
+  return useMutation({
+    mutationFn: (from: AssignmentFrom) => {
+      const path = `/api/books/${bookId}/assignments/read`
+      if ('file' in from) {
+        const body = new FormData()
+        body.append('file', from.file)
+        return postForm<Assignment>(path, body)
+      }
+      return post<Assignment>(path, from)
+    },
+  })
+}
+
+/** Makes each kept due date a set, its lines questions. */
+export function useImportAssignment(bookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (a: AssignmentImport) => post<List>(`/api/books/${bookId}/assignments`, a).then((r) => r.homework),
+    onSuccess: (sets) => {
+      sets.forEach((h) => putSummary(qc, h))
+      qc.invalidateQueries({ queryKey: homeworkKeys.assignmentSource(bookId) })
+    },
+  })
+}
+
+/** The course page this book's homework was last read from, offered
+ *  again for checking. */
+export const useAssignmentSource = (bookId: string) =>
+  useQuery({
+    queryKey: homeworkKeys.assignmentSource(bookId),
+    queryFn: () => get<AssignmentSource>(`/api/books/${bookId}/assignments/source`).then((r) => r.url),
+  })

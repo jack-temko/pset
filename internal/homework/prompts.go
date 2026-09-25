@@ -23,6 +23,36 @@ Reply with only JSON, no prose and no code fence:
   is and how the book prints its number, a problem with that number on a page from that part of
   the book is the one.`
 
+// assignmentPrompt reads a homework assignment out into due dates and
+// lines. Filled with today's date, the book's title and how it numbers
+// its problems.
+const assignmentPrompt = `You read a course's homework assignment for a student, from what their professor gave them: a
+PDF, a web page, a photo, or pasted text. Today is %s. The course's textbook is %q, and in it
+%s.
+
+Reply with only JSON, no prose and no code fence:
+{"title": "Assignment #3", "groups": [{"due": "2026-09-15", "title": "Assignment #3", "rows": [
+  {"kind": "book", "text": "Problem 2.1.4, p. 57."},
+  {"kind": "own", "text": "There are 24 letters in the Greek alphabet. (a) How many ...? (b) ..."},
+  {"kind": "other", "text": "Reading: Sections 2.1 to 2.4"}]}]}
+
+- title: the document's own name for the assignment, or "".
+- A group is everything due on one date, in the document's order. due is the date as YYYY-MM-DD,
+  its year worked out from the document and today, or "" when none is given. title is the
+  group's own name if it has one, else "".
+- A table with a row a lecture and a column of problems (a semester schedule) is one group per
+  due date, gathering every row due then.
+- rows, one per line of homework as the document gives it:
+  - "book": problems from the textbook. text is the line as written, the reference and every
+    note with it, like "2.1: 1, 4, 6 (do c, 6 pts each)", "4.25 (no PSpice or MultiSim)" or
+    "Problem 2.3.4, p. 60. Express your answer in terms of p." Keep notes in the line.
+  - "own": a problem the professor wrote out. text is all of it, every part, as written, with
+    math in LaTeX between $...$. A book problem with changes ("do problem 2.5.2, but for 500
+    packets") is "book", the changes kept as its note.
+  - "other": anything that isn't a problem to hand in: reading, quizzes done but not handed in,
+    lecture notes, links.
+- Leave out headings, footers, copyright lines and page numbers.`
+
 // boxedPrompt reads a problem from the boxes a student drew around it.
 const boxedPrompt = `You read one homework problem from pictures of its text, cut from a textbook in the order
 it runs (it may continue from one picture to the next).

@@ -199,6 +199,40 @@ built.
     header shows.
   - Both leave the same way: **Cancel in the footer, or Esc**. No X in
     the corner: one job, one control.
+- **Importing an assignment** (2026-09-25): the professor's own
+  document, read into sets. "Import an assignment" is the list's second
+  DoorAction, under New homework. One wide dialog, three steps:
+  - **Where it is**: a segmented control, File · Web page · Paste. File
+    is the professor's PDF or a photo (a printout, a slide, the board),
+    picked with the footer's **Choose a file**, which starts reading at
+    once: no drop zone, one gesture. Web page is a public course page's
+    address, fetched by the server, its tables kept a row to a line; a
+    page behind a login is pasted or photographed instead. Paste takes
+    any text, due dates and all. A failed read says why under the field
+    and stays on this step.
+  - **Reading**: a spinner and "Reading 220_Homework.pdf…", with the
+    wait said plainly: seconds for a one-page sheet, minutes for a
+    semester's page or a scan on a slow model (the 202 page took three
+    and a half on a flash model). Cancel drops it.
+  - **The review**, before anything is added: a block per due date,
+    ticked to become a set, with its title and date editable; its lines
+    under it, each ticked to become a question, each an editable field
+    with **In this book** as in Add questions, and a line saying what it
+    reads as in the book's numbering ("2.1 #1, 2.1 #4 · From your
+    professor: do c"), or that PSet can't read it as a reference. A
+    line that isn't homework (reading, a quiz done in class, a link)
+    shows unticked, as one quiet line. Dates gone by or already added
+    start unticked and fold behind **Show 4 earlier due dates**, so a
+    semester's table checked in October opens on what's next; a sheet
+    with one date is ticked even when late. **Back** in the footer
+    returns to the source; the primary is **Add 2 sets**.
+  - One set made lands you in its walkthrough, as New homework does;
+    several stay on the list. Each set remembers where it came from: a
+    course page opens the dialog on Web page with its address filled,
+    and reading it again marks the dates already added.
+  - A set's title is the document's own name ("Assignment #3") for a
+    one-date sheet, and "Homework due Sep 25" for a semester's table,
+    whose dates would all share one name.
 - **Not every question is in the book.** A professor's own problem still
   needs a walkthrough. An unchecked row skips the engine's locate stage:
   it gets **no page chip and no scan jump**, and is otherwise identical:

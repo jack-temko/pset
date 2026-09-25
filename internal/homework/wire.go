@@ -222,6 +222,81 @@ type Retry struct {
 	Text *string `json:"text,omitempty"`
 }
 
+// RowKind is what a line of an assignment is.
+type RowKind string
+
+const (
+	// RowKindBook is problems from the textbook, as the professor wrote
+	// the line: "2.1: 1, 4, 6 (do c, 6 pts each)".
+	RowKindBook RowKind = "book"
+	// RowKindOwn is a problem the professor wrote out in full.
+	RowKindOwn RowKind = "own"
+	// RowKindOther is anything that isn't a problem to hand in: reading,
+	// quizzes, notes.
+	RowKindOther RowKind = "other"
+)
+
+// AssignmentRow is one line of an assignment, as read out for review.
+type AssignmentRow struct {
+	Kind RowKind `json:"kind"`
+	Text string  `json:"text"`
+	// Labels are the questions a book line becomes, in the book's
+	// numbering ("2.1 #1", "2.1 #4"); none when it couldn't be read as a
+	// reference, which Unread says.
+	Labels []string `json:"labels"`
+	Unread bool     `json:"unread,omitempty"`
+	// Notes are the professor's instructions the line carries.
+	Notes []string `json:"notes"`
+}
+
+// AssignmentGroup is everything due on one date.
+type AssignmentGroup struct {
+	// Due is a calendar date (YYYY-MM-DD), or empty.
+	Due   string          `json:"due"`
+	Title string          `json:"title"`
+	Rows  []AssignmentRow `json:"rows"`
+	// Imported is true when a set from this source already has this due
+	// date: a page checked again offers only what's new.
+	Imported bool `json:"imported,omitempty"`
+}
+
+// Assignment is a document read out into due dates and lines, for the
+// student to review before anything is added.
+type Assignment struct {
+	// Source is where it came from: a web page's URL, a file's name, or
+	// "pasted".
+	Source string            `json:"source"`
+	Title  string            `json:"title"`
+	Groups []AssignmentGroup `json:"groups"`
+}
+
+// AssignmentText is POST /api/books/{id}/assignments/read with a web
+// page or pasted text; a file comes as a multipart upload instead.
+type AssignmentText struct {
+	URL  string `json:"url,omitempty"`
+	Text string `json:"text,omitempty"`
+}
+
+// ImportGroup is one set to make: its title, due date and questions.
+type ImportGroup struct {
+	Title string  `json:"title"`
+	Due   string  `json:"due"`
+	Rows  []Draft `json:"rows"`
+}
+
+// AssignmentImport is POST /api/books/{id}/assignments: the groups the
+// student kept, each becoming a set.
+type AssignmentImport struct {
+	Source string        `json:"source"`
+	Groups []ImportGroup `json:"groups"`
+}
+
+// AssignmentSource is where the book's assignments were last read from,
+// for checking again.
+type AssignmentSource struct {
+	URL string `json:"url"`
+}
+
 // Event types this feature publishes.
 const (
 	EventHomeworkChanged = "homework.changed"

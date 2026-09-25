@@ -302,27 +302,7 @@ export function AddQuestionsDialog({
       }
     >
       <div className="space-y-3">
-        {/* Asked once, where it matters: what "3.1 #7" means depends on
-            how the book numbers its problems. */}
-        {numberingUnsure(here.problems) && (
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-warning">
-              PSet isn't sure how this book numbers its problems, which decides what a reference like "3.1 #7"
-              means here.
-            </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="shrink-0"
-              onClick={() => {
-                onClose()
-                here.editBook()
-              }}
-            >
-              Check it
-            </Button>
-          </div>
-        )}
+        <NumberingCheck onLeave={onClose} />
         <p className="text-xs text-muted-foreground">
           One question per row. Untick In this book if a question isn't from this scan, and the guide
           is written from your text alone.
@@ -378,5 +358,35 @@ export function AddQuestionsDialog({
         </Button>
       </div>
     </Dialog>
+  )
+}
+
+/**
+ * Asked once, where it matters: what "3.1 #7" means depends on how the
+ * book numbers its problems, so a dialog that reads references asks the
+ * student to check it when PSet isn't sure. Checking it leaves the
+ * dialog for the book's.
+ */
+export function NumberingCheck({ onLeave }: { onLeave: () => void }) {
+  const here = useBookHere()
+  if (!numberingUnsure(here.problems)) return null
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-xs text-warning">
+        PSet isn't sure how this book numbers its problems, which decides what a reference like "3.1 #7"
+        means here.
+      </p>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="shrink-0"
+        onClick={() => {
+          onLeave()
+          here.editBook()
+        }}
+      >
+        Check it
+      </Button>
+    </div>
   )
 }

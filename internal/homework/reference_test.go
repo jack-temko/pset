@@ -51,6 +51,14 @@ func TestParseRefs(t *testing.T) {
 		{"2.23 (find power to the 12-Ohm resistor!)", perChapter, []Ref{{Chapter: "2", Number: "23", Note: "find power to the 12-Ohm resistor!"}}},
 		{"Problem 4.27", perChapter, []Ref{{Chapter: "4", Number: "27"}}},
 		{"Chapter 4 Problem 27", perChapter, []Ref{{Chapter: "4", Number: "27"}}},
+		// The EECS 461 sheet's long lines: a reference, then a paragraph.
+		{"Problem 2.3.2, p. 60. This problem relates to one of the most dominant streaks in sports history since the Celtics won eight straight titles.",
+			bySection, []Ref{{Chapter: "2", Section: "2.3", Number: "2", Page: 60,
+				Note: "This problem relates to one of the most dominant streaks in sports history since the Celtics won eight straight titles"}}},
+		// And a book problem in the professor's own words.
+		{"Use MATLAB or any other computer language/platform to do problem 2.5.2 on p. 61, augmented as below. HOWEVER, use 500 packets.",
+			bySection, []Ref{{Chapter: "2", Section: "2.5", Number: "2", Page: 61,
+				Note: "Use MATLAB or any other computer language/platform to do problem 2.5.2 on p. 61, augmented as below. HOWEVER, use 500 packets"}}},
 	} {
 		got, ok := ParseRefs(c.text, c.style)
 		if !ok || !reflect.DeepEqual(got, c.want) {
@@ -64,6 +72,10 @@ func TestParseRefsLeavesProseAlone(t *testing.T) {
 		"Find the voltage across a 2 Ω resistor carrying 3 A.",
 		"There are 24 letters in the Greek alphabet.",
 		"",
+		// A long problem written out that starts with a number, and one
+		// that names two problems.
+		"3 resistors of 4, 6 and 12 ohms are in parallel across a 24 V source. Find the current through each one and the power the source delivers.",
+		"Compare your answers to problem 2.1.4 and problem 2.2.4, and explain the difference.",
 	} {
 		if refs, ok := ParseRefs(text, perSection); ok {
 			t.Errorf("ParseRefs(%q) = %+v", text, refs)

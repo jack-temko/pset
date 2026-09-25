@@ -3,6 +3,7 @@ package homework
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -72,6 +73,17 @@ var (
 	refProblem = regexp.MustCompile(`(?i)^(?:problems?|probs?\.?|exercises?|ex\.?|questions?|q\.?|no\.?|numbers?|nos?\.?|#)$`)
 	// The words that join a reference's parts and mean nothing alone.
 	refFiller = regexp.MustCompile(`(?i)^(?:in|on|of|from|at|and|the|do|hw|homework|from|book|text(?:book)?)$`)
+	// A book problem named inside the professor's own words: "Use MATLAB
+	// to do problem 2.5.2 on p. 61, augmented as below".
+	refInProse = regexp.MustCompile(`(?i)\bproblems?\s+(\d{1,2}(?:\.\d{1,3}){1,2})\b`)
+)
+
+// A reference with a note is most of the line: past refLong characters
+// only a plain one ("Problem 2.3.2, p. 60." and then a paragraph) is read
+// as a reference, since a problem written out can start with a number.
+const (
+	refLong     = 120
+	refLongHead = 60
 )
 
 // ParseRefs reads a question as book references, in the book's style.
@@ -80,7 +92,7 @@ var (
 // searches for by its words.
 func ParseRefs(text string, style probnum.Style) (refs []Ref, ok bool) {
 	text = strings.TrimSpace(text)
-	if text == "" || len(text) > 120 {
+	if text == "" {
 		return nil, false
 	}
 	var notes []string
@@ -117,6 +129,9 @@ func ParseRefs(text string, style probnum.Style) (refs []Ref, ok bool) {
 	var numbers []string
 	var dotted []string
 	expectSection := false
+	// Named as a reference in so many words: "Problem", "Section", "#",
+	// or a dotted number, not just a number that could start a sentence.
+	plain := false
 	words := strings.FieldsFunc(rest, func(r rune) bool { return r == ' ' || r == ',' || r == ';' || r == '\t' })
 	// Where each word starts in rest, so a note keeps its own commas.
 	cursor := 0
@@ -131,6 +146,7 @@ words:
 		w = strings.Trim(w, ":.")
 		if strings.HasPrefix(w, "#") && len(w) > 1 {
 			numbers = append(numbers, w[1:])
+			plain = true
 			continue
 		}
 		if strings.HasPrefix(w, "§") && len(w) > len("§") {
@@ -141,12 +157,16 @@ words:
 		case w == "":
 		case refSection.MatchString(w):
 			expectSection = true
-		case refProblem.MatchString(w), refFiller.MatchString(w):
+			plain = true
+		case refProblem.MatchString(w):
+			plain = true
+		case refFiller.MatchString(w):
 		case refDotted.MatchString(w) && expectSection && section == "":
 			section = w
 			expectSection = false
 		case refDotted.MatchString(w):
 			dotted = append(dotted, w)
+			plain = true
 		case refPlain.MatchString(w) && expectSection && section == "":
 			// "Chapter 3 Problem 12": a chapter, the problem to follow.
 			section = w
@@ -156,6 +176,9 @@ words:
 		default:
 			// Prose: the rest is a note, if a reference came before it.
 			if len(numbers)+len(dotted) == 0 && section == "" {
+				return refInWords(text, style)
+			}
+			if len(text) > refLong && (!plain || starts[i] > refLongHead) {
 				return nil, false
 			}
 			notes = append(notes, strings.TrimSpace(strings.TrimRight(strings.TrimSpace(rest[starts[i]:]), ".")))
@@ -218,4 +241,24 @@ words:
 		}
 	}
 	return refs, len(refs) > 0
+}
+
+// refInWords is a line in the professor's own words naming one book
+// problem ("do problem 2.5.2 on p. 61, but for 500 packets"): that
+// problem, the whole line its note. A line naming none, or several, is
+// the professor's own problem.
+func refInWords(text string, style probnum.Style) ([]Ref, bool) {
+	ms := refInProse.FindAllStringSubmatch(text, -1)
+	if len(ms) == 0 || slices.ContainsFunc(ms, func(m []string) bool { return m[1] != ms[0][1] }) {
+		return nil, false
+	}
+	refs, ok := ParseRefs(ms[0][0], style)
+	if !ok || len(refs) != 1 {
+		return nil, false
+	}
+	if m := refPage.FindStringSubmatch(text); m != nil {
+		refs[0].Page, _ = strconv.Atoi(m[1])
+	}
+	refs[0].Note = strings.TrimRight(text, ". ")
+	return refs, true
 }

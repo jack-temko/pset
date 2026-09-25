@@ -1,8 +1,11 @@
 package homework
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/jackt/pset/internal/httpx"
 )
@@ -27,6 +30,45 @@ func (s *Service) Routes(mux *http.ServeMux) {
 		}
 		httpx.JSON(w, http.StatusCreated, h)
 		return nil
+	}))
+	// Reading an assignment: a file as a multipart upload, or a web page
+	// or pasted text as JSON.
+	mux.HandleFunc("POST /api/books/{id}/assignments/read", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
+		var file *AssignmentFile
+		var in AssignmentText
+		if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/") {
+			f, err := assignmentUpload(r)
+			if err != nil {
+				return err
+			}
+			file = f
+		} else if err := httpx.Decode(r, &in); err != nil {
+			return err
+		}
+		a, err := s.ReadAssignment(r.Context(), r.PathValue("id"), file, in)
+		if err != nil {
+			return err
+		}
+		return httpx.OK(w, a)
+	}))
+	mux.HandleFunc("POST /api/books/{id}/assignments", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
+		var in AssignmentImport
+		if err := httpx.Decode(r, &in); err != nil {
+			return err
+		}
+		sets, err := s.ImportAssignment(r.Context(), r.PathValue("id"), in)
+		if err != nil {
+			return err
+		}
+		httpx.JSON(w, http.StatusCreated, List{Homework: sets})
+		return nil
+	}))
+	mux.HandleFunc("GET /api/books/{id}/assignments/source", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
+		src, err := s.LastSource(r.Context(), r.PathValue("id"))
+		if err != nil {
+			return err
+		}
+		return httpx.OK(w, src)
 	}))
 	mux.HandleFunc("GET /api/due", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
 		list, err := s.Due(r.Context())
@@ -146,4 +188,30 @@ func (s *Service) Routes(mux *http.ServeMux) {
 		w.Write(data)
 		return nil
 	}))
+}
+
+// assignmentUpload is the file of a multipart upload, read whole: an
+// assignment is a few pages, never a textbook.
+func assignmentUpload(r *http.Request) (*AssignmentFile, error) {
+	mr, err := r.MultipartReader()
+	if err != nil {
+		return nil, httpx.Invalid("file", "Send the file as a multipart upload.")
+	}
+	for {
+		part, err := mr.NextPart()
+		if errors.Is(err, io.EOF) {
+			return nil, httpx.Invalid("file", "No file came with the upload.")
+		}
+		if err != nil {
+			return nil, httpx.Invalid("file", "The upload was cut off.")
+		}
+		if part.FormName() != "file" {
+			continue
+		}
+		data, err := io.ReadAll(io.LimitReader(part, maxAssignmentBytes+1))
+		if err != nil {
+			return nil, httpx.Invalid("file", "The upload was cut off.")
+		}
+		return &AssignmentFile{Name: part.FileName(), Data: data}, nil
+	}
 }

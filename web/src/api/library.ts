@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 
-import { ApiError, del, get, patch, post } from './client'
+import { ApiError, del, get, patch, post, postForm } from './client'
 import { on } from './events'
 import type { Book, BookChanged, BookPatch, BookRemoved, Books, BookState, Contents, Phase } from './gen/library'
 import { forget, observe } from '@/lib/eta'
@@ -94,15 +94,7 @@ on<BookRemoved>('book.removed', (d, qc) => {
 async function uploadOne(file: File): Promise<Book> {
   const body = new FormData()
   body.append('file', file)
-  let res: Response
-  try {
-    res = await fetch('/api/books', { method: 'POST', body })
-  } catch {
-    throw new ApiError(0, { code: 'unreachable', message: "PSet's server isn't answering." })
-  }
-  const data = await res.json().catch(() => null)
-  if (!res.ok) throw new ApiError(res.status, data ?? { code: 'internal', message: `The server answered ${res.status}.` })
-  return (data as BookChanged).book
+  return (await postForm<BookChanged>('/api/books', body)).book
 }
 
 /** A refusal that names its file, as the duplicate error names its book. */

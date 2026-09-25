@@ -6,8 +6,12 @@
 (`tools/findertest`, branch `finding-problems`): Jack's real misses, the
 professors' references and the typed forms, against his three books.
 First run (2026-09-25): 22 of 22 found where they should be, every
-reference that failed before included. Still to do: the lookalike
-assignment documents, which wait for [importing](importing-assignments.md).
+reference that failed before included. Importing's tests
+(`internal/homework/assignment_test.go`) now carry a lookalike of the
+202 page (its Word-export table, cells split over lines) and every
+professor's line forms read in each book's numbering. Still to do:
+lookalike PDFs of the 220 and 461 sheets, run through the real model
+and scored, rather than a fake model's fixed answer.
 
 ## Information
 
