@@ -1,0 +1,71 @@
+# Finder test set
+
+## Status
+
+**Planned** · phase 1, first. Nothing blocks it. Every other phase-1 idea
+is judged by it, so it goes in before them.
+
+## Information
+
+### Why
+
+Finding a problem is the most delicate stage: it misses whole groups of
+references (every "Chapter 3.1 Problem 7" in *Elementary Differential
+Equations* failed or found the wrong problem), and nothing measures it,
+so a fix for one book can quietly break another. The figure-reading
+work showed what measuring buys: the 1800px render was only caught by
+running the same question many times.
+
+### Decided (2026-09-25)
+
+- **Made-up lookalike documents**, safe to commit, but close enough to
+  the real ones that passing them means the real ones pass. The real
+  assignments are the professors' copyrighted material and stay out of
+  the repo.
+- The books themselves can't be committed either, so the set runs on
+  Jack's machine against his library, not in CI.
+
+### What it holds
+
+Lookalikes of the four real sources, same shapes and same traps:
+
+- **Math 220** (LaTeX table, Boyce): rows of due date, then
+  `1.1: 1, 7, (4 pts each)`, `2.1: 1, 4, 6 (do c, 6 pts each)`,
+  `2.1: 12 (also graph the solution, 9 pts)`: a section, then a list, with
+  parts, points and notes mixed in.
+- **EECS 461** (groff, numbered list, Yates/Goodman): `Problem 2.1.4, p.
+  57.` beside problems written out in full with parts a to c, changes to
+  book problems ("do it for 500 packets, each with 150 bits"), and
+  reading and quiz lines that aren't homework.
+- **EECS 202** (a semester table on a web page, Alexander/Sadiku): rows
+  of lecture date, reading pages, due date, `4.27 , 4.32 , 4.25 (no
+  PSpice or MulitSim)`, including "(all on page 24)" and a typo in the
+  note.
+- **Typed text**, as the Add questions box takes it today: "Chapter 3.1
+  Problem 7", "3.1 #7", "Page 33 Problem 7", "4.25".
+- A **photo** of one of the above, once importing takes photos.
+
+For each: the rows it should read out (reference, parts, notes, due
+date), and for each book reference the PDF page and label the finder
+must land on. Known answers come from Jack's books, checked by hand;
+the misses found on 2026-09-24 go in first (Boyce 1.1 #7, 2.1 #7, 2.2 #2,
+2.5 #6, 2.6 #1, 3.1 #6, 3.2 #4, 3.2 #19, and "Page 8 Problem 7", "Page 33
+Problem 7").
+
+### How it runs
+
+A `tools/` command (like `samplegen`) that runs each reference through
+the real finder against the local library and prints hits, misses and
+wrong pages, with the model calls logged. Parser and deterministic tiers
+also get plain unit tests on OCR-shaped text (garbled numbers like
+`1. Oy" +8y'` for problem 11), which do run in CI.
+
+### Weight and risks
+
+- ~150 lines of runner plus fixtures; unit tests grow with each parser
+  rule.
+- Every full run costs model calls (a find is 1 to 3 calls). Keep it
+  small enough to run after each change: around 30 references.
+- Expected pages go stale if a book is re-imported with a different
+  scan; key them by the book's hash so a stale answer is noticed, not
+  trusted.

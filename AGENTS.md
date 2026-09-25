@@ -23,6 +23,14 @@ UI change):
    than stash, reset or overwrite.
 4. Remove the worktree and delete the branch.
 
+## Ideas in progress
+
+`ideas/` holds work that's decided but not built, being built, or
+stuck: one file per group, each with a Status and an Information
+section, indexed in `ideas/README.md`. When you start one, mark it In
+progress with its branch; when it ships, the spec goes in `design/` and
+the idea is marked Done.
+
 ## Checking UI changes
 
 There is no automated visual suite. See a UI change working in the real

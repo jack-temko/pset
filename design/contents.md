@@ -119,4 +119,4 @@ $0.005 a book.
 ## Out of scope
 
 - A page offset that changes partway through a book:
-  `issues/page-offset-shift.md`.
+  `ideas/book-structure.md`.
