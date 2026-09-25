@@ -75,7 +75,7 @@ export function RadioRows<T extends string>({
             onClick={() => onChange(o.value)}
             onKeyDown={(e) => move(e, i)}
             className={cn(
-              'flex w-full cursor-pointer items-start gap-3 px-3 py-2 text-left transition-colors duration-150 ease-out motion-reduce:transition-none',
+              'flex w-full cursor-pointer items-start gap-3 px-3 py-2 text-left',
               on ? 'bg-primary-soft' : 'hover:bg-muted/50',
             )}
           >

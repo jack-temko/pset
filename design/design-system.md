@@ -182,7 +182,8 @@ others:
   when a hint or a walkthrough is revealed, and easing part of the way
   on hover.
 
-Everything else is a colour or opacity change.
+Everything else is a colour or opacity change, and a hover's is
+instant (below).
 
 **Two things loop, and both mean "waiting".** The **Spinner** turns where
 work is genuinely running and can't be counted: examining a PDF, building
@@ -205,10 +206,19 @@ draws a **Skeleton** first: shimmering `muted` blocks at the size and
 count of what's coming, inline in real line boxes so a skeleton row and
 the row that replaces it measure the same.
 
-Anything that moves states `transition duration-150 ease-out` explicitly.
-A hover class without it doesn't animate, it snaps, and the difference is
-quiet enough to ship by accident. Pair it with
-`motion-reduce:transition-none`.
+**Hover shows at once** (2026-09-25). A hover wash or ink change has no
+transition: it's there the instant the pointer is, and gone the instant
+it leaves. Faded, a list swept with the pointer lit each row late and
+left a trail fading behind it, and crossing the hairline between two
+rows blinked both: Jack saw it as jitter and lag ("It seems to jitter
+and flash away sometimes. Almost looks like its lagging. Its also quite
+slow."). The fade stays for changes of state, which happen once and are
+worth seeing happen: a checkbox's tick, a radio's dot, a transcript step
+easing back, the veil resolving, the cover lifting, a tooltip appearing.
+
+Anything that moves states `transition duration-150 ease-out` explicitly,
+paired with `motion-reduce:transition-none`. A hover class leaves it
+off.
 
 ## Writing
 

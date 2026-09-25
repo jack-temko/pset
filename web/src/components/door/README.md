@@ -21,7 +21,7 @@ click target agree:
   button.
 
 Either way: `text-xs` in `muted-foreground`, stepping up to `foreground`
-on hover, 150ms. Announces itself with `aria-expanded`.
+on hover, at once. Announces itself with `aria-expanded`.
 
 **What the consumer provides:** `open`, `total`, `onToggle`. The door
 names what it opens onto: the count is the whole list, not the hidden

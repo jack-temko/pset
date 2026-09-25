@@ -32,7 +32,7 @@ export function Checkbox({
       disabled={disabled}
       onClick={onChange}
       className={cn(
-        'flex h-control-sm cursor-pointer items-center gap-2 rounded-md px-2 text-sm font-medium transition-colors duration-150 ease-out hover:bg-muted/50 disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none',
+        'flex h-control-sm cursor-pointer items-center gap-2 rounded-md px-2 text-sm font-medium hover:bg-muted/50 disabled:pointer-events-none disabled:opacity-50',
         className,
       )}
     >

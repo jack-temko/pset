@@ -26,7 +26,7 @@ export function UnderlineTab({
       onClick={onClick}
       aria-current={active ? 'true' : undefined}
       className={cn(
-        'relative flex h-row items-center text-sm text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground motion-reduce:transition-none',
+        'relative flex h-row items-center text-sm text-muted-foreground hover:text-foreground',
         active && 'font-medium text-foreground',
       )}
     >

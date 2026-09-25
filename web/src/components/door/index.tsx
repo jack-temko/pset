@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils'
 export type DoorShape = 'row' | 'pill'
 
 const quiet =
-  'flex cursor-pointer items-center justify-center gap-1 text-xs text-muted-foreground transition-colors duration-150 ease-out hover:bg-muted/50 hover:text-foreground motion-reduce:transition-none [&_svg]:size-4'
+  'flex cursor-pointer items-center justify-center gap-1 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground [&_svg]:size-4'
 
 function DoorButton({
   shape,
