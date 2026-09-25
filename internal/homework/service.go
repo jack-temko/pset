@@ -32,6 +32,31 @@ type Book struct {
 	// Problems is how the book numbers its problems; the zero Style when
 	// it isn't known.
 	Problems probnum.Style
+	// Parts is its numbered chapters and sections, from the contents.
+	Parts []probnum.Part
+}
+
+// span is the PDF pages a numbered chapter or section runs across.
+func (b Book) span(number string) (start, end int, ok bool) {
+	for _, p := range b.Parts {
+		if p.Number == number && p.End >= p.Start {
+			return p.Start, p.End, true
+		}
+	}
+	return 0, 0, false
+}
+
+// partOf is the most specific numbered part a PDF page is in: the
+// section, else the chapter.
+func (b Book) partOf(page int) (probnum.Part, bool) {
+	var best probnum.Part
+	found := false
+	for _, p := range b.Parts {
+		if page >= p.Start && page <= p.End && (!found || strings.Count(p.Number, ".") > strings.Count(best.Number, ".")) {
+			best, found = p, true
+		}
+	}
+	return best, found
 }
 
 // Library is what homework reads from books. Page numbers are PDF pages.
@@ -41,7 +66,6 @@ type Library interface {
 	PageText(ctx context.Context, bookID string, page int) (string, error)
 	PageTexts(ctx context.Context, bookID string) ([]string, error)
 	PageJPEG(ctx context.Context, bookID string, page, width int) ([]byte, error)
-	ChapterSpan(ctx context.Context, bookID string, chapter int) (start, end int, ok bool, err error)
 }
 
 // Settings is the model connection and who's studying.
@@ -260,12 +284,17 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 // step: finding it, or writing the guide of one that isn't in the book.
 // Blank drafts are dropped: an empty row in the dialog means nothing.
 func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([]Question, error) {
-	if _, err := getSummary(ctx, s.c.DB, homeworkID); errors.Is(err, errNotFound) {
+	h, err := getSummary(ctx, s.c.DB, homeworkID)
+	if errors.Is(err, errNotFound) {
 		return nil, httpx.NotFound("homework set")
 	} else if err != nil {
 		return nil, err
 	}
-	var keep []Draft
+	book, err := s.c.Library.Book(ctx, h.BookID)
+	if err != nil {
+		return nil, err
+	}
+	var keep []splitRow
 	for _, d := range drafts {
 		d.Text = strings.TrimSpace(d.Text)
 		if d.Text == "" {
@@ -274,7 +303,7 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 		if len(d.Text) > maxDraftText {
 			return nil, httpx.Invalid("drafts", "One of these is too long for a single question.")
 		}
-		keep = append(keep, d)
+		keep = append(keep, splitDraft(d, book.Problems)...)
 	}
 	if len(keep) == 0 {
 		return nil, httpx.Invalid("drafts", "Write at least one question.")
@@ -286,7 +315,7 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 	// the answer is the questions as added, not whatever a worker has made
 	// of them since.
 	var out []Question
-	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		var last int
 		if err := tx.QueryRowContext(ctx, `SELECT coalesce(max(position), 0) FROM questions WHERE homework_id = ?`, homeworkID).Scan(&last); err != nil {
 			return err
@@ -294,12 +323,10 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 		now := db.Now()
 		for i, d := range keep {
 			id := uuid.NewString()
-			label, statement := "", ""
+			label, statement := d.label, ""
 			if !d.InBook {
 				// Its own words are its statement; nothing to find.
-				label, statement = labelFromText(d.Text), d.Text
-			} else {
-				label = labelFromText(d.Text)
+				statement = d.Text
 			}
 			if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, state, created_at, updated_at)
 				VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
@@ -330,6 +357,38 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 	s.publishSet(ctx, homeworkID)
 	s.c.Queue.Wake()
 	return out, nil
+}
+
+// splitRow is one question a draft becomes, with its label.
+type splitRow struct {
+	Draft
+	label string
+}
+
+// splitDraft reads a draft as the book references it names, in the
+// book's style: one question each, labelled the book's way ("1.1: 1, 7"
+// is 1.1 #1 and 1.1 #7). A draft that isn't a reference stays as it is.
+func splitDraft(d Draft, style probnum.Style) []splitRow {
+	type draft = splitRow
+	refs, ok := ParseRefs(d.Text, style)
+	if !d.InBook || !ok {
+		return []draft{{d, labelFromText(d.Text)}}
+	}
+	if len(refs) == 1 {
+		return []draft{{d, refs[0].Label(style)}}
+	}
+	out := make([]draft, 0, len(refs))
+	for _, r := range refs {
+		text := r.Label(style)
+		if r.Part != "" {
+			text += r.Part
+		}
+		if r.Note != "" {
+			text += " (" + r.Note + ")"
+		}
+		out = append(out, draft{Draft{Text: text, InBook: true}, r.Label(style)})
+	}
+	return out
 }
 
 // labelFromText stands in for the book's own label until the question is

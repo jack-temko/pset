@@ -15,10 +15,26 @@ func detectProblems(secs []section, pages []string) (probnum.Style, bool) {
 	var parts []probnum.Part
 	for _, s := range secs {
 		if n := probnum.PartNumber(s.Title); n != "" {
-			parts = append(parts, probnum.Part{Number: n, Start: s.StartPage, End: s.EndPage})
+			parts = append(parts, probnum.Part{Number: n, Title: s.Title, Start: s.StartPage, End: s.EndPage})
 		}
 	}
 	return probnum.Detect(pages, parts)
+}
+
+// Parts is the book's numbered chapters and sections, on PDF pages, in
+// contents order.
+func (s *Service) Parts(ctx context.Context, bookID string) ([]probnum.Part, error) {
+	secs, err := loadSections(ctx, s.c.DB, bookID)
+	if err != nil {
+		return nil, err
+	}
+	var parts []probnum.Part
+	for _, sec := range secs {
+		if n := probnum.PartNumber(sec.Title); n != "" {
+			parts = append(parts, probnum.Part{Number: n, Title: sec.Title, Start: sec.StartPage, End: sec.EndPage})
+		}
+	}
+	return parts, nil
 }
 
 // saveProblems stores a detected style, never over one the student

@@ -18,8 +18,15 @@ import (
 var labelShape = regexp.MustCompile(
 	`(?i)^\s*(?:problem\s+|prob\.?\s*|exercise\s+|ex\.?\s*|question\s+|q\.?\s*)?(\d{1,2}(?:\.(?:[A-Z]|\d{1,2}))?\.\d{1,3}[a-z]?)\.?\s*(?:\([^()]*\))?\s*$`)
 
+// sectionLabel is a label in a book whose problems start again in each
+// section, as the app writes it: "3.1 #7".
+var sectionLabel = regexp.MustCompile(`^\s*(\d{1,2}\.\d{1,2} #\d{1,3}[a-h]?)\s*$`)
+
 // questionLabel reports the label a question is nothing but.
 func questionLabel(text string) (string, bool) {
+	if m := sectionLabel.FindStringSubmatch(text); m != nil {
+		return m[1], true
+	}
 	m := labelShape.FindStringSubmatch(text)
 	if m == nil {
 		return "", false

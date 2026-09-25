@@ -2,8 +2,12 @@
 
 ## Status
 
-**Planned** · phase 1, first. Nothing blocks it. Every other phase-1 idea
-is judged by it, so it goes in before them.
+**In progress** · phase 1. The runner and the book cases are built
+(`tools/findertest`, branch `finding-problems`): Jack's real misses, the
+professors' references and the typed forms, against his three books.
+First run (2026-09-25): 22 of 22 found where they should be, every
+reference that failed before included. Still to do: the lookalike
+assignment documents, which wait for [importing](importing-assignments.md).
 
 ## Information
 

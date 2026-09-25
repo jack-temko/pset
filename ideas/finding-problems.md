@@ -2,9 +2,18 @@
 
 ## Status
 
-**Planned** · phase 1, after [Book structure](book-structure.md) (the
-reference parser needs the book's numbering style) and with the [finder
-test set](finder-tests.md) in place to measure it.
+**Done** · phase 1 (branch `finding-problems`, 2026-09-25). Built:
+the reference parser (`internal/homework/reference.go`), finding in
+scope with the model told what it's looking at (`scope.go`), the check
+on the pick, memory inside the scope, and splitting a row into its
+problems. Spec in `design/backend.md`, "Finding a problem starts from
+its reference". Measured with the [finder test set](finder-tests.md).
+
+Not built, and why:
+- **Parts** ("7c") are read and dropped: they belong with the
+  [professor's notes](professor-notes.md), which the guide will follow.
+- **The parse isn't shown separately**: the question's label is the
+  parse ("3.1 #7"), and the import review will show it for documents.
 
 ## Information
 
