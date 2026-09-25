@@ -15,7 +15,10 @@ triggers, `sections` (the contents, in order, with levels), and
 `pages_edited` when they change the page numbering; a retried import
 never writes over either again. `page_runs` holds the numbering as
 `pagenum.Run`s; books from before it get theirs worked out from their
-stored text on startup (`pageruns.go`).
+stored text on startup (`pageruns.go`). `problem_style` holds how the
+book numbers its problems (`probnum.Style`), detected at import and for
+older books on startup (`problems.go`); the student's word is
+`confirmed` and never overwritten.
 
 ## Import
 

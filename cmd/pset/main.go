@@ -208,7 +208,11 @@ type homeworkLibrary struct{ *library.Service }
 
 func (l homeworkLibrary) Book(ctx context.Context, id string) (homework.Book, error) {
 	b, err := l.Get(ctx, id)
-	return homework.Book{ID: b.ID, Title: b.Title, PageCount: b.PageCount, Pages: pagenum.New(b.PageRuns)}, err
+	hb := homework.Book{ID: b.ID, Title: b.Title, PageCount: b.PageCount, Pages: pagenum.New(b.PageRuns)}
+	if b.Problems != nil {
+		hb.Problems = *b.Problems
+	}
+	return hb, err
 }
 
 type askLibrary struct{ *library.Service }

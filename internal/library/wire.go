@@ -1,6 +1,9 @@
 package library
 
-import "github.com/jackt/pset/internal/pagenum"
+import (
+	"github.com/jackt/pset/internal/pagenum"
+	"github.com/jackt/pset/internal/probnum"
+)
 
 // State is where a book is on its way to the shelf.
 type State string
@@ -71,7 +74,9 @@ type Book struct {
 	Author    string        `json:"author"`
 	PageCount int           `json:"pageCount"`
 	PageRuns  []pagenum.Run `json:"pageRuns"`
-	Cover     Cover         `json:"cover"`
+	// Problems is how the book numbers its problems, once worked out.
+	Problems *probnum.Style `json:"problems,omitempty"`
+	Cover    Cover          `json:"cover"`
 	// Aspect is page height over width, so a scan holds its box before the
 	// image arrives.
 	Aspect float64 `json:"aspect"`
@@ -91,13 +96,23 @@ type Books struct {
 	Books []Book `json:"books"`
 }
 
-// BookPatch is PATCH /api/books/{id}: any subset of the four. PageRuns
+// BookPatch is PATCH /api/books/{id}: any subset. PageRuns
 // replaces the book's numbering whole.
 type BookPatch struct {
 	Title    *string       `json:"title,omitempty"`
 	Author   *string       `json:"author,omitempty"`
 	PageRuns []pagenum.Run `json:"pageRuns,omitempty"`
 	Cover    *Cover        `json:"cover,omitempty"`
+	// Problems says how the book numbers its problems: the student's
+	// word, which import never overrides.
+	Problems *ProblemsPatch `json:"problems,omitempty"`
+}
+
+// ProblemsPatch is the student's word on how the book numbers its
+// problems.
+type ProblemsPatch struct {
+	Form  probnum.Form  `json:"form"`
+	Where probnum.Where `json:"where"`
 }
 
 // ContentsSection is a section of a chapter, at its PDF page.

@@ -9,7 +9,11 @@ import { AutoTextarea, Field, Input } from '@/components/input'
 import type { CoverHue } from '@/lib/covers'
 import type { Run } from '@/api/gen/pagenum'
 import { PageMap } from '@/lib/pages'
-import { anchorsOf, PageNumbersField, runsOf, type PageAnchor } from './page-numbers'
+import { PageNumbersField } from './page-numbers'
+import { ProblemStyleField } from './problem-style'
+import { anchorsOf, choiceOf, runsOf, settled, type PageAnchor, type StyleChoice } from './book-numbering'
+import { numberingUnsure, useBookHere } from './book-here'
+import type { Form, Style, Where } from '@/api/gen/probnum'
 
 /**
  * The workspace's dialogs. Making a homework set and filling it are
@@ -122,14 +126,24 @@ export function BookDialog({
   onSave,
 }: {
   open: boolean
-  book: { title: string; author: string; runs: Run[]; cover: CoverHue; pages: number; imported: string }
+  book: { title: string; author: string; runs: Run[]; problems?: Style; cover: CoverHue; pages: number; imported: string }
   onClose: () => void
-  onSave: (next: { title: string; author: string; runs: Run[]; cover: CoverHue }) => void
+  onSave: (next: {
+    title: string
+    author: string
+    runs: Run[]
+    problems?: { form: Form; where: Where }
+    cover: CoverHue
+  }) => void
 }) {
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [anchors, setAnchors] = useState<PageAnchor[]>(() => anchorsOf(book.runs))
   const [cover, setCover] = useState<CoverHue>(book.cover)
+  const [style, setStyle] = useState<StyleChoice>(() => choiceOf(book.problems))
+  // Saying the detected style is right, or picking one, is the student's
+  // word, and saves even when it matches what was detected.
+  const [styleTouched, setStyleTouched] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -138,6 +152,8 @@ export function BookDialog({
       // Asked the way a person checks it: find printed page 1 in the scan
       // and read off its PDF page, then the same where the numbers jump.
       setAnchors(anchorsOf(book.runs))
+      setStyle(choiceOf(book.problems))
+      setStyleTouched(false)
       setCover(book.cover)
     }
     // Seeded on open only, for the same reason as HomeworkDialog.
@@ -151,6 +167,7 @@ export function BookDialog({
     title === book.title &&
     author === book.author &&
     JSON.stringify(runs) === JSON.stringify(new PageMap(book.runs).runs) &&
+    !styleTouched &&
     cover === book.cover
 
   return (
@@ -166,7 +183,8 @@ export function BookDialog({
           <Button
             disabled={!valid || unchanged}
             onClick={() => {
-              if (runs) onSave({ title: title.trim(), author: author.trim(), runs, cover })
+              const problems = styleTouched ? (settled(style) ?? undefined) : undefined
+              if (runs) onSave({ title: title.trim(), author: author.trim(), runs, problems, cover })
               onClose()
             }}
           >
@@ -183,6 +201,16 @@ export function BookDialog({
           <Input value={author} onChange={(e) => setAuthor(e.target.value)} />
         </Field>
         <PageNumbersField anchors={anchors} pageCount={book.pages} onChange={setAnchors} />
+        <ProblemStyleField
+          style={book.problems}
+          value={style}
+          confirmed={styleTouched}
+          onChange={(next) => {
+            setStyle(next)
+            setStyleTouched(true)
+          }}
+          onConfirm={() => setStyleTouched(true)}
+        />
         <Field label="Cover">
           <CoverPicker value={cover} onChange={setCover} />
         </Field>
@@ -237,6 +265,7 @@ export function AddQuestionsDialog({
   }, [focusRow])
 
   const filled = rows.filter((r) => r.text.trim())
+  const here = useBookHere()
 
   const submit = () => {
     if (!filled.length) return
@@ -273,6 +302,27 @@ export function AddQuestionsDialog({
       }
     >
       <div className="space-y-3">
+        {/* Asked once, where it matters: what "3.1 #7" means depends on
+            how the book numbers its problems. */}
+        {numberingUnsure(here.problems) && (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-warning">
+              PSet isn't sure how this book numbers its problems, which decides what a reference like "3.1 #7"
+              means here.
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0"
+              onClick={() => {
+                onClose()
+                here.editBook()
+              }}
+            >
+              Check it
+            </Button>
+          </div>
+        )}
         <p className="text-xs text-muted-foreground">
           One question per row. Untick In this book if a question isn't from this scan, and the guide
           is written from your text alone.
@@ -285,7 +335,7 @@ export function AddQuestionsDialog({
                   data-row={row.id}
                   autoFocus={rows.length === 1}
                   value={row.text}
-                  placeholder="A reference like 3.B.4, or paste the question"
+                  placeholder={`A reference like ${here.problems?.example?.label ?? '3.B.4'}, or paste the question`}
                   onChange={(e) =>
                     setRows((rs) =>
                       rs.map((r) => (r.id === row.id ? { ...r, text: e.target.value } : r)),

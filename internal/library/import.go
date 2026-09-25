@@ -398,6 +398,11 @@ func (s *Service) index(ctx context.Context, b row, path, kind string, pages []s
 	if err := saveSections(ctx, s.c.DB, b.ID, secs); err != nil {
 		return err
 	}
+	if st, ok := detectProblems(secs, pages); ok {
+		if err := saveProblems(ctx, s.c.DB, b.ID, st); err != nil {
+			return err
+		}
+	}
 	if runs, ok := detectRuns(pages); ok {
 		// Never over the student's own numbering.
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET page_runs = ?, page_offset = ? WHERE id = ? AND pages_edited = 0`,
