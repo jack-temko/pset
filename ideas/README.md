@@ -33,6 +33,6 @@ pointing, then importing, because the importer feeds the same finder.
 | [Book structure](book-structure.md) | Done | 1 | Printed page ranges and each book's problem numbering, detected at import. |
 | [Finding problems](finding-problems.md) | Done | 1 | Read a reference into its parts, look where the book keeps it, and check the pick. |
 | [Boxing a problem on the page](boxing-on-the-page.md) | Done | 2 | Drag a box (or several) on the scan: to add a question, or to show a failed find where it is. |
-| [Importing assignments](importing-assignments.md) | Planned | 3 | PDFs, a course web page, a photo or text, read into rows you review before they're added. |
+| [Importing assignments](importing-assignments.md) | Done | 3 | PDFs, a course web page, a photo or text, read into rows you review before they're added. |
 | [Professor's notes](professor-notes.md) | Done | 3 | "do c", "no PSpice", "500 packets": kept with the question and followed by the guide. |
 | [Loose ends](loose-ends.md) | Idea | any | Small things noticed along the way. |

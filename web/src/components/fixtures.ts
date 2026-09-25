@@ -4,6 +4,7 @@
  * No screen reads this file; they all read the API.
  */
 
+import type { Assignment } from '@/api/homework'
 import type { Book } from '@/api/library'
 import type { Segment } from '@/api/gen/cards'
 import type { HomeworkStatus } from '@/components/homework-status'
@@ -247,3 +248,47 @@ export const SEGMENTS: Segment[] = [
   { type: 'raw', kind: 'plot', text: '{"title":"Broken","series":[{"label":"x","expr":"x^^2"' },
   { type: 'prose', text: 'So $i = 0.88$ A and $i_x = 1.6$ A, as the answers at the back agree [pp. 402–403].' },
 ]
+
+/** An assignment as read for review, like a course's semester table
+ *  checked mid-September: a date gone by, one already added, one to
+ *  come with every kind of line. */
+export const ASSIGNMENT: Assignment = {
+  source: 'https://people.example.edu/~prof/202/homework.htm',
+  title: 'EECS 202 Homework',
+  groups: [
+    {
+      due: '2026-09-04',
+      title: 'Homework due Sep 4',
+      imported: true,
+      rows: [{ kind: 'book', text: '1.18 , 1.28', labels: ['1.18', '1.28'], notes: [] }],
+    },
+    {
+      due: '2026-09-11',
+      title: 'Homework due Sep 11',
+      rows: [
+        { kind: 'book', text: '2.31 , 2.32', labels: ['2.31', '2.32'], notes: [] },
+        { kind: 'book', text: '3.2 , 3.8 , 3.10 , 3.12', labels: ['3.2', '3.8', '3.10', '3.12'], notes: [] },
+      ],
+    },
+    {
+      due: '2026-10-02',
+      title: 'Homework due Oct 2',
+      rows: [
+        {
+          kind: 'book',
+          text: '4.27 , 4.32 , 4.25 (no PSpice or MulitSim)',
+          labels: ['4.27', '4.32', '4.25'],
+          notes: ['no PSpice or MulitSim'],
+        },
+        {
+          kind: 'own',
+          text: 'A 12 V source drives a 4 Ohm and an 8 Ohm resistor in series. (a) Find the current. (b) Find the power to the 8 Ohm resistor.',
+          labels: [],
+          notes: [],
+        },
+        { kind: 'book', text: 'the ladder network one from lecture', labels: [], notes: [], unread: true },
+        { kind: 'other', text: 'Reading: pages 147-148, 137-146', labels: [], notes: [] },
+      ],
+    },
+  ],
+}

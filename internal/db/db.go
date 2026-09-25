@@ -15,8 +15,11 @@ import (
 )
 
 // Every connection gets these. Foreign keys are what make a book's removal
-// take its homework and turns with it.
-const pragmas = "_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)&_pragma=synchronous(NORMAL)"
+// take its homework and turns with it. A transaction takes the write lock
+// when it begins (_txlock=immediate), so it waits its turn behind a job's
+// write rather than failing at once (SQLITE_BUSY_SNAPSHOT) when it reads
+// and then writes.
+const pragmas = "_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)&_pragma=synchronous(NORMAL)&_txlock=immediate"
 
 // Open opens (creating if needed) the database at path.
 func Open(path string) (*sql.DB, error) {

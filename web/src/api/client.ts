@@ -47,6 +47,27 @@ export async function api<T>(method: string, path: string, body?: unknown): Prom
   return data as T
 }
 
+/** A file upload, as multipart form data: the same answers and errors as
+ *  `api`, without the JSON body. */
+export async function postForm<T>(path: string, body: FormData): Promise<T> {
+  let res: Response
+  try {
+    res = await fetch(path, { method: 'POST', body })
+  } catch {
+    throw new ApiError(0, { code: 'unreachable', message: "PSet's server isn't answering." })
+  }
+  const data = await res.json().catch(() => null)
+  if (!res.ok) {
+    throw new ApiError(
+      res.status,
+      data && typeof data.code === 'string'
+        ? data
+        : { code: 'internal', message: `The server answered ${res.status}.` },
+    )
+  }
+  return data as T
+}
+
 export const get = <T>(path: string) => api<T>('GET', path)
 export const post = <T>(path: string, body?: unknown) => api<T>('POST', path, body)
 export const put = <T>(path: string, body?: unknown) => api<T>('PUT', path, body)

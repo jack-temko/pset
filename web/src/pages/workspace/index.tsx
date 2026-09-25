@@ -10,6 +10,7 @@ import {
   ChevronUp,
   CircleAlert,
   Focus,
+  Import,
   Pencil,
   Plus,
   Printer,
@@ -47,6 +48,7 @@ import { ConfirmPopover } from '@/components/confirm'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
 import { AddQuestionsDialog, BookDialog, HomeworkDialog } from './dialogs'
+import { ImportAssignmentDialog } from './import-assignment'
 import { MemoryDialog, MemoryLines, MemoryUndo } from './memory'
 import { FigureReading } from './reading'
 import { ProfessorNotes } from './notes'
@@ -1367,6 +1369,7 @@ function HomeworkTab({
   const remove = useDeleteHomework()
   const [openId, setOpenId] = useState<string | null>(initialSet ?? null)
   const [creating, setCreating] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [editing, setEditing] = useState(false)
   const openSet = useHomeworkSet(openId).data?.homework
   const updateOpen = useUpdateHomework(openId ?? '')
@@ -1408,8 +1411,8 @@ function HomeworkTab({
     >
       {sets?.length === 0 && (
         <p className="text-center text-sm text-muted-foreground">
-          No homework here yet. New homework makes a set, then you add the questions you want walked
-          through.
+          No homework here yet. Import your professor's assignment, or make a set with New homework and
+          add the questions you want walked through.
         </p>
       )}
       {/* No header: the tab already says Homework, and a second label on
@@ -1427,6 +1430,14 @@ function HomeworkTab({
           className={cn((sets === undefined || active.length > 0) && 'border-t border-border-muted')}
         >
           New homework
+        </DoorAction>
+        {/* Its twin: the professor's own document, read into sets. */}
+        <DoorAction
+          icon={<Import aria-hidden />}
+          onClick={() => setImporting(true)}
+          className="border-t border-border-muted"
+        >
+          Import an assignment
         </DoorAction>
       </Box>
       {turnedIn.length > 0 && (
@@ -1446,6 +1457,14 @@ function HomeworkTab({
         open={creating}
         onClose={() => setCreating(false)}
         onSave={(title, due) => create.mutate({ title, dueDate: due }, { onSuccess: (h) => setOpenId(h.id) })}
+      />
+      {/* One set made lands you in it, as New homework does; several stay
+          on the list, where they all are. */}
+      <ImportAssignmentDialog
+        open={importing}
+        bookId={bookId}
+        onClose={() => setImporting(false)}
+        onDone={(made) => made.length === 1 && setOpenId(made[0].id)}
       />
     </div>
   )

@@ -2,8 +2,13 @@
 
 ## Status
 
-**Planned** · phase 3. Waits on phase 1: the importer hands every book
-reference to the finder, so the finder must be reliable first.
+**Done** (2026-09-25, branch `importing-assignments`). The spec is in
+`design/workspace.md`, "Importing an assignment". Checked on the real
+documents: the Math 220 PDF (one date, labels in Boyce's numbering, the
+points dropped and "do c" kept), the EECS 461 PDF (2.1.4 and friends,
+the written-out problems as not in the book, 2.5.2 found inside the
+MATLAB line) and the EECS 202 page (six due dates, every label right,
+the notes kept). Left open below.
 
 ## Information
 
@@ -75,6 +80,20 @@ URLs and re-checks (~50). A new dialog spec in `design/workspace.md`.
 
 ### Open
 
-- Whether points ("4 pts each") are shown on questions or dropped.
-- Whether the set's title comes from the document ("Assignment #3") or
-  the due date.
+- **Points are dropped**, as professor's notes already do ("4 pts
+  each" isn't an instruction). Say if you want them shown.
+- **A document naming another book isn't flagged.** 461's sheet names
+  Yates/Goodman; imported from a different book's tab its references
+  would be looked for in the wrong book. The model could say which book
+  it names.
+- **Reading waits in the dialog.** The 202 page took three and a half
+  minutes on GLM flash. A background job with the review waiting in
+  the Homework tab would free you to keep reading meanwhile.
+- **A professor's edit to an imported date isn't noticed.** Reading a
+  page again marks dates already added by due date alone; a problem
+  swapped on an added date isn't shown as a change.
+- **Photos**: no "retake" in the review yet; untested on a real photo.
+- **"Check for new homework" is the dialog, not a button of its own.**
+  Import opens on the remembered course page with its address filled,
+  so checking again is Import, then Read it. A separate row would be a
+  third action at the foot of the list.

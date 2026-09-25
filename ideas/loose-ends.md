@@ -23,6 +23,11 @@ branch of its own. Move one into its own file if it grows.
 - **`TestDigitalBookImportsToReady` failed once in about twenty runs**
   (2026-09-25), while a scratch server was busy on the same machine.
   Probably a race in the upload reply's queued state; not chased yet.
+  Importing found a real race of that family: a transaction that read
+  and then wrote failed at once (SQLITE_BUSY_SNAPSHOT) when a job wrote
+  in between. Transactions now take the write lock when they begin
+  (`_txlock=immediate`, internal/db). Forty runs of this test passed
+  both before and after, so whether it was the cause is unknown.
 - **Figure crops can cut the figure off.** 4.27's crop stops at "40"
   on the right: the figure box the finder's model gave is too tight.
   Boxing it by hand fixes one question; the padding could grow for

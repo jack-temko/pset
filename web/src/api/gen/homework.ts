@@ -272,6 +272,102 @@ export interface Retry {
   page?: number /* int */;
   text?: string;
 }
+/**
+ * RowKind is what a line of an assignment is.
+ */
+/**
+ * RowKindBook is problems from the textbook, as the professor wrote
+ * the line: "2.1: 1, 4, 6 (do c, 6 pts each)".
+ */
+export const RowKindBook = "book";
+/**
+ * RowKindOwn is a problem the professor wrote out in full.
+ */
+export const RowKindOwn = "own";
+/**
+ * RowKindOther is anything that isn't a problem to hand in: reading,
+ * quizzes, notes.
+ */
+export const RowKindOther = "other";
+export type RowKind = typeof RowKindBook | typeof RowKindOwn | typeof RowKindOther;
+/**
+ * AssignmentRow is one line of an assignment, as read out for review.
+ */
+export interface AssignmentRow {
+  kind: RowKind;
+  text: string;
+  /**
+   * Labels are the questions a book line becomes, in the book's
+   * numbering ("2.1 #1", "2.1 #4"); none when it couldn't be read as a
+   * reference, which Unread says.
+   */
+  labels: string[];
+  unread?: boolean;
+  /**
+   * Notes are the professor's instructions the line carries.
+   */
+  notes: string[];
+}
+/**
+ * AssignmentGroup is everything due on one date.
+ */
+export interface AssignmentGroup {
+  /**
+   * Due is a calendar date (YYYY-MM-DD), or empty.
+   */
+  due: string;
+  title: string;
+  rows: AssignmentRow[];
+  /**
+   * Imported is true when a set from this source already has this due
+   * date: a page checked again offers only what's new.
+   */
+  imported?: boolean;
+}
+/**
+ * Assignment is a document read out into due dates and lines, for the
+ * student to review before anything is added.
+ */
+export interface Assignment {
+  /**
+   * Source is where it came from: a web page's URL, a file's name, or
+   * "pasted".
+   */
+  source: string;
+  title: string;
+  groups: AssignmentGroup[];
+}
+/**
+ * AssignmentText is POST /api/books/{id}/assignments/read with a web
+ * page or pasted text; a file comes as a multipart upload instead.
+ */
+export interface AssignmentText {
+  url?: string;
+  text?: string;
+}
+/**
+ * ImportGroup is one set to make: its title, due date and questions.
+ */
+export interface ImportGroup {
+  title: string;
+  due: string;
+  rows: Draft[];
+}
+/**
+ * AssignmentImport is POST /api/books/{id}/assignments: the groups the
+ * student kept, each becoming a set.
+ */
+export interface AssignmentImport {
+  source: string;
+  groups: ImportGroup[];
+}
+/**
+ * AssignmentSource is where the book's assignments were last read from,
+ * for checking again.
+ */
+export interface AssignmentSource {
+  url: string;
+}
 export const EventHomeworkChanged = "homework.changed";
 export const EventHomeworkRemoved = "homework.removed";
 export const EventQuestionChanged = "question.changed";

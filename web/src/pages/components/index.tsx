@@ -41,7 +41,7 @@ import { AutoTextarea, Field, Input } from '@/components/input'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { observe } from '@/lib/eta'
 import type { CoverHue } from '@/lib/covers'
-import { BOOKS, DUE, SEGMENTS, sampleBook } from '@/components/fixtures'
+import { ASSIGNMENT, BOOKS, DUE, SEGMENTS, sampleBook } from '@/components/fixtures'
 import { CardSkeleton, Segments } from '@/components/segments'
 import { PageMap, Pages } from '@/lib/pages'
 import type { Run } from '@/api/gen/pagenum'
@@ -50,6 +50,8 @@ import { anchorsOf, choiceOf } from '@/pages/workspace/book-numbering'
 import { ProblemStyleField } from '@/pages/workspace/problem-style'
 import { BoxingBar, BoxingProvider, DrawnBox } from '@/pages/workspace/boxing'
 import { useBoxing } from '@/pages/workspace/boxing-state'
+import { AssignmentReview, AssignmentSourceFields } from '@/pages/workspace/import-assignment'
+import { reviewOf } from '@/pages/workspace/import-state'
 import type { Style } from '@/api/gen/probnum'
 import { BookTile } from '@/components/book-tile'
 import { cn } from '@/lib/utils'
@@ -140,6 +142,45 @@ function StartBoxing() {
     }
   }, [b])
   return null
+}
+
+/** Importing an assignment's review, live, on a course page checked
+ *  in mid-September. */
+function AssignmentReviewDemo() {
+  const [groups, setGroups] = useState(() => reviewOf(ASSIGNMENT, '2026-09-18'))
+  return (
+    <div className="w-dialog-wide rounded-lg border bg-card p-card">
+      <AssignmentReview
+        source={ASSIGNMENT.source}
+        title={ASSIGNMENT.title}
+        groups={groups}
+        onChange={setGroups}
+        onLeave={() => {}}
+      />
+    </div>
+  )
+}
+
+/** Where an assignment comes from, each way in, with a failed read. */
+function AssignmentSourceDemo({ failed }: { failed?: boolean }) {
+  const [mode, setMode] = useState<'file' | 'page' | 'paste'>(failed ? 'page' : 'file')
+  const [url, setUrl] = useState(failed ? 'https://canvas.example.edu/courses/461/assignments' : '')
+  const [text, setText] = useState('')
+  return (
+    <div className="w-dialog-wide rounded-lg border bg-card p-card">
+      <AssignmentSourceFields
+        mode={mode}
+        onMode={setMode}
+        url={url}
+        onUrl={setUrl}
+        remembered={false}
+        text={text}
+        onText={setText}
+        error={failed ? 'That page answered 401. A page behind a login can be pasted or photographed instead.' : ''}
+        onSubmit={() => {}}
+      />
+    </div>
+  )
 }
 
 /** The Door needs state to be worth looking at, so it gets a live demo. */
@@ -821,6 +862,21 @@ export function Components() {
             <div className="relative h-40 w-panel">
               <BoxingDemo />
             </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Importing an assignment"
+          note="Where it comes from: a file, a course web page, or pasted text. Then the review: a block a due date, ticked to become a set; its lines below, ticked to become questions, each saying what it reads as. Dates gone by or already added fold away behind one button; a line that isn't homework shows as one quiet line, unticked."
+        >
+          <Shelf label="source">
+            <AssignmentSourceDemo />
+          </Shelf>
+          <Shelf label="failed read">
+            <AssignmentSourceDemo failed />
+          </Shelf>
+          <Shelf label="review">
+            <AssignmentReviewDemo />
           </Shelf>
         </Section>
 

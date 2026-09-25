@@ -80,6 +80,9 @@ ALTER TABLE questions ADD COLUMN reading_edited INTEGER NOT NULL DEFAULT 0`},
 		// The professor's instructions for the problem ("do c", "no
 		// PSpice"), which the guide follows over the book.
 		{Name: "homework/9", SQL: `ALTER TABLE questions ADD COLUMN notes TEXT NOT NULL DEFAULT '[]'`},
+		// Where an imported set came from (a web page's URL, a file's
+		// name), so checking the page again offers only new due dates.
+		{Name: "homework/10", SQL: `ALTER TABLE homework ADD COLUMN source TEXT NOT NULL DEFAULT ''`},
 	}
 }
 
