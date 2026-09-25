@@ -2,16 +2,35 @@
 
 ## Status
 
-**In progress** · phase 1. The runner and the book cases are built
-(`tools/findertest`, branch `finding-problems`): Jack's real misses, the
-professors' references and the typed forms, against his three books.
-First run (2026-09-25): 22 of 22 found where they should be, every
-reference that failed before included. Importing's tests
-(`internal/homework/assignment_test.go`) now carry a lookalike of the
-202 page (its Word-export table, cells split over lines) and every
-professor's line forms read in each book's numbering. Still to do:
-lookalike PDFs of the 220 and 461 sheets, run through the real model
-and scored, rather than a fake model's fixed answer.
+**Done** (2026-09-25). Two runners, both driving a running PSet with its
+real chat model, on Jack's machine against his library:
+
+- **`tools/findertest`** (finding): Jack's real misses, the professors'
+  references and the typed forms, against his three books. 22 of 22
+  found where they should be.
+- **`tools/assignmenttest`** (reading assignments, branch
+  `assignment-tests`): ten made-up documents, built as they'd arrive
+  (PDFs made by the tool, web pages served by it so the server fetches
+  them, pasted text), each scored on its due dates, the problems due on
+  each in the book's labels, the professor's notes, and the problems
+  written out. Lookalikes of the Math 220 table, the EECS 461 sheet and
+  the EECS 202 page, then harder ones: a two-page syllabus whose
+  schedule says "due the next Monday", a chatty email quoting last
+  week's, two assignments in two columns, a Canvas page full of chrome,
+  ranges ("1-8 all", "1-15 odd", "4.27–4.30"), a January due date with
+  no year, and an announcement with no homework. First run: 7 of 10,
+  every miss a range, which the reference parser then learned; then 10
+  of 10.
+
+Run them with the app up (`make dev`, or the app itself):
+
+```
+go run ./tools/findertest -addr http://127.0.0.1:8420
+go run ./tools/assignmenttest -addr http://127.0.0.1:8420 [-doc email] [-keep] [-out dir]
+```
+
+`-keep` leaves the reads in the Homework list, to look over in the app;
+`-out` writes each document out, to look at.
 
 ## Information
 
