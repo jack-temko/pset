@@ -39,7 +39,7 @@ export function SegmentedControl<T extends string>({
             aria-checked={on}
             onClick={() => onChange(o.value)}
             className={cn(
-              'flex h-full cursor-pointer items-center rounded-sm px-3 text-sm font-medium transition-colors duration-150 ease-out motion-reduce:transition-none',
+              'flex h-full cursor-pointer items-center rounded-sm px-3 text-sm font-medium',
               on
                 ? 'bg-card text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.08)]'
                 : 'text-muted-foreground hover:text-foreground',

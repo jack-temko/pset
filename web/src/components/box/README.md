@@ -11,7 +11,7 @@ Box.
 - **`BoxRow`**: 40px minimum, divided by `border-muted`. A row is
   ActionList-shaped: an optional leading visual, a title with an optional
   description, something trailing. A row with a description is 59px. A row
-  with an `href` **or `onClick`** washes `muted/50` on hover (150ms fade)
+  with an `href` **or `onClick`** washes `muted/50` on hover, at once (no fade: see design-system.md, Motion)
   and takes the pointer cursor; a `selected` row is `primary-soft`.
 - **`BoxBody`**: `spacing-card` padding, `text-base`, for prose and forms.
 - **`BoxFooter`**: a `card-header` band with a border above it, for totals,

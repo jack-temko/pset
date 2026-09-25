@@ -190,7 +190,7 @@ function Rail({
                 onClick={() => onJump(c.page)}
                 aria-current={current || undefined}
                 className={cn(
-                  'flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-medium transition-colors duration-150 ease-out motion-reduce:transition-none',
+                  'flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-medium',
                   current
                     ? 'bg-primary-soft text-primary'
                     : 'text-foreground hover:bg-muted/50',
@@ -208,7 +208,7 @@ function Rail({
                     onClick={() => onJump(s.page)}
                     aria-current={current || undefined}
                     className={cn(
-                      'flex w-full items-center gap-2 py-1 pr-4 pl-8 text-left text-sm transition-colors duration-150 ease-out motion-reduce:transition-none',
+                      'flex w-full items-center gap-2 py-1 pr-4 pl-8 text-left text-sm',
                       current
                         ? 'bg-primary-soft text-primary'
                         : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',

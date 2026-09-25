@@ -117,7 +117,7 @@ export function Menu({ label, children }: { label: string; children: ReactNode }
 }
 
 const item =
-  'flex h-control w-full cursor-pointer items-center gap-2 px-3 text-left text-sm text-foreground transition-colors duration-150 ease-out outline-none hover:bg-muted/50 focus-visible:bg-muted/50 motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground'
+  'flex h-control w-full cursor-pointer items-center gap-2 px-3 text-left text-sm text-foreground outline-none hover:bg-muted/50 focus-visible:bg-muted/50 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground'
 
 /** One action. Runs, then closes the menu. A hint is a short, muted fact
  *  at the row's end, worth knowing before you choose it ("3 still being

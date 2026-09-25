@@ -106,8 +106,7 @@ export function BoxRow({
     selected && 'bg-primary-soft text-primary',
     // Half-strength muted: a hover wash only signals, it doesn't have to
     // carry shape, and full muted (1.43:1 on card) reads as selection.
-    (href || onClick) &&
-      'cursor-pointer transition-colors duration-150 ease-out hover:bg-muted/50 motion-reduce:transition-none',
+    (href || onClick) && 'cursor-pointer hover:bg-muted/50',
     className,
   )
 

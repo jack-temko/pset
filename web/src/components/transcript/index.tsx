@@ -44,7 +44,7 @@ export function AboutChip({ label, onRemove }: { label: string; onRemove?: () =>
           type="button"
           onClick={onRemove}
           aria-label={`Stop asking about ${label}`}
-          className="grid size-5 cursor-pointer place-items-center rounded-sm transition-colors duration-150 ease-out hover:bg-primary/15 motion-reduce:transition-none"
+          className="grid size-5 cursor-pointer place-items-center rounded-sm hover:bg-primary/15"
         >
           <X className="size-3" />
         </button>
@@ -182,7 +182,7 @@ export function PageRef({ pdf, onJump }: { pdf: number; onJump?: (pdf: number) =
       <button
         type="button"
         onClick={() => onJump?.(pdf)}
-        className="mx-px inline-flex shrink-0 translate-y-px items-center rounded-sm bg-primary-soft px-1 font-mono text-xs whitespace-nowrap text-primary transition-colors duration-150 ease-out hover:bg-primary hover:text-primary-foreground motion-reduce:transition-none"
+        className="mx-px inline-flex shrink-0 translate-y-px items-center rounded-sm bg-primary-soft px-1 font-mono text-xs whitespace-nowrap text-primary hover:bg-primary hover:text-primary-foreground"
       >
         p.&thinsp;{pages.label(pdf)}
       </button>
@@ -240,7 +240,7 @@ export function ConversationStart({ onClear }: { onClear?: () => void }) {
         aria-expanded={asking}
         onClick={() => setAsking(true)}
         className={cn(
-          'underline underline-offset-2 transition-colors duration-150 ease-out hover:text-foreground motion-reduce:transition-none',
+          'underline underline-offset-2 hover:text-foreground',
           asking && 'text-foreground',
         )}
       >
