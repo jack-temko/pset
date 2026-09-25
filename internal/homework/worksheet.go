@@ -57,7 +57,7 @@ func (s *Service) Figure(ctx context.Context, questionID string, n int) ([]byte,
 	if q.Page == nil || n < 0 || n >= len(q.FigRect) {
 		return nil, httpx.NotFound("figure")
 	}
-	return s.crop(ctx, q.BookID, *q.Page, q.FigRect[n].Rect, cropWidth)
+	return s.crop(ctx, q.BookID, q.FigRect[n].on(q), q.FigRect[n].Rect, cropWidth)
 }
 
 // Sheet geometry in points: Letter, with ¾-inch margins.
@@ -148,23 +148,42 @@ func (s *Service) questionBlock(ctx context.Context, sheet *pdf.Sheet, book Book
 	if len(figs) > 0 {
 		figBlock = figureH + figureGap
 	}
-	img, err := s.crop(ctx, q.BookID, *q.Page, *q.Rect, cropWidth)
-	if err != nil {
-		return err
+	// Its words: the statement's crop, or each box drawn around them, in
+	// order, for a problem that runs over pages or columns.
+	words := []struct {
+		page int
+		rect pdf.Rect
+	}{{*q.Page, *q.Rect}}
+	if len(q.Boxes) > 0 {
+		words = words[:0]
+		for _, b := range q.Boxes {
+			if b.Kind == BoxKindText {
+				words = append(words, struct {
+					page int
+					rect pdf.Rect
+				}{b.Page, pdf.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}})
+			}
+		}
 	}
-	room := math.Max(sheetH-margin-y-minWorkSpace-figBlock, 60)
-	used, err := sheet.ImageFit(margin, y, contentW, room, img)
-	if err != nil {
-		return err
+	room := math.Max(sheetH-margin-y-minWorkSpace-figBlock, 60) / float64(len(words))
+	for _, w := range words {
+		img, err := s.crop(ctx, q.BookID, w.page, w.rect, cropWidth)
+		if err != nil {
+			return err
+		}
+		used, err := sheet.ImageFit(margin, y, contentW, room, img)
+		if err != nil {
+			return err
+		}
+		y += used + 10
 	}
-	y += used + 10
 	if len(figs) == 0 {
 		return nil
 	}
 	w := (contentW - figureGap*float64(len(figs)-1)) / float64(len(figs))
 	x := margin
 	for _, f := range figs {
-		img, err := s.crop(ctx, q.BookID, *q.Page, f.Rect, cropWidth)
+		img, err := s.crop(ctx, q.BookID, f.on(q), f.Rect, cropWidth)
 		if err != nil {
 			return err
 		}

@@ -143,6 +143,11 @@ export interface Question {
    */
   readingEdited: boolean;
   /**
+   * Boxes are what the student drew around the problem on the scan,
+   * when they showed where it is rather than having it found.
+   */
+  boxes: Box[];
+  /**
    * Memory is what writing this guide did with the book's memory: what
    * it saved, and a remembered range that found the problem.
    */
@@ -214,6 +219,38 @@ export interface QuestionPatch {
   position?: number /* int */;
   reading?: string[];
   reread?: boolean;
+}
+/**
+ * BoxKind is what a box around a problem holds.
+ */
+/**
+ * BoxKindText is the problem's words, read in order as its statement.
+ */
+export const BoxKindText = "text";
+/**
+ * BoxKindFigure is one of its figures.
+ */
+export const BoxKindFigure = "figure";
+export type BoxKind = typeof BoxKindText | typeof BoxKindFigure;
+/**
+ * Box is a rectangle the student drew around part of a problem on the
+ * scan: its PDF page, and where on it as fractions of the page (y from
+ * the top).
+ */
+export interface Box {
+  page: number /* int */;
+  x: number /* float64 */;
+  y: number /* float64 */;
+  w: number /* float64 */;
+  h: number /* float64 */;
+  kind: BoxKind;
+}
+/**
+ * Boxes is POST /api/homework/{id}/boxed (a new question) and POST
+ * /api/questions/{id}/boxes (where a question is, shown).
+ */
+export interface Boxes {
+  boxes: Box[];
 }
 /**
  * Retry is one of a failed question's two ways out: the PDF page it's on,

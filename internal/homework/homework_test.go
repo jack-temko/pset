@@ -132,6 +132,8 @@ func fakeModel(req llm.ChatRequest) llmtest.Reply {
 		return llmtest.Reply{Text: "- Node A: top of $R_1$.\n- 2 A current source from B to A (its arrow points to A)."}
 	case strings.Contains(sys, "several readings"):
 		return llmtest.Reply{Text: "- Node A: top of $R_1$.\n- 2 A current source from A to B (its arrow points to B)."}
+	case strings.Contains(sys, "You read one homework problem from pictures"):
+		return llmtest.Reply{Text: `{"label": "7", "statement": "Find the general solution of $y'' + 5y' + 6y = 0$."}`}
 	case strings.Contains(sys, "You write the guide"):
 		return llmtest.Reply{Text: guide}
 	}

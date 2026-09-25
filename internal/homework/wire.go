@@ -110,6 +110,9 @@ type Question struct {
 	Reading []string `json:"reading"`
 	// ReadingEdited is true once the student has corrected the reading.
 	ReadingEdited bool `json:"readingEdited"`
+	// Boxes are what the student drew around the problem on the scan,
+	// when they showed where it is rather than having it found.
+	Boxes []Box `json:"boxes"`
 	// Memory is what writing this guide did with the book's memory: what
 	// it saved, and a remembered range that found the problem.
 	Memory []MemoryLine `json:"memory"`
@@ -174,6 +177,34 @@ type QuestionPatch struct {
 	Position *int      `json:"position,omitempty"`
 	Reading  *[]string `json:"reading,omitempty"`
 	Reread   bool      `json:"reread,omitempty"`
+}
+
+// BoxKind is what a box around a problem holds.
+type BoxKind string
+
+const (
+	// BoxKindText is the problem's words, read in order as its statement.
+	BoxKindText BoxKind = "text"
+	// BoxKindFigure is one of its figures.
+	BoxKindFigure BoxKind = "figure"
+)
+
+// Box is a rectangle the student drew around part of a problem on the
+// scan: its PDF page, and where on it as fractions of the page (y from
+// the top).
+type Box struct {
+	Page int     `json:"page"`
+	X    float64 `json:"x"`
+	Y    float64 `json:"y"`
+	W    float64 `json:"w"`
+	H    float64 `json:"h"`
+	Kind BoxKind `json:"kind"`
+}
+
+// Boxes is POST /api/homework/{id}/boxed (a new question) and POST
+// /api/questions/{id}/boxes (where a question is, shown).
+type Boxes struct {
+	Boxes []Box `json:"boxes"`
 }
 
 // Retry is one of a failed question's two ways out: the PDF page it's on,

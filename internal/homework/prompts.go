@@ -23,6 +23,16 @@ Reply with only JSON, no prose and no code fence:
   is and how the book prints its number, a problem with that number on a page from that part of
   the book is the one.`
 
+// boxedPrompt reads a problem from the boxes a student drew around it.
+const boxedPrompt = `You read one homework problem from pictures of its text, cut from a textbook in the order
+it runs (it may continue from one picture to the next).
+
+Reply with only JSON, no prose and no code fence: {"label": "7", "statement": "..."}
+
+- label: the problem's number as printed ("7", "4.27", "2.1.4"), or "" if it has none.
+- statement: the problem's full text, every part of it, exactly as the book words it. Math in LaTeX
+  between $...$. No solution, no commentary.`
+
 const repairPrompt = `You fix one malformed card for a rendering pipeline. You get its kind, the
 card as written, what is wrong with it, and the JSON schema it must satisfy. Reply with only the
 corrected JSON object: no prose, no code fence, no comments.`
