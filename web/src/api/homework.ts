@@ -4,6 +4,7 @@ import { del, get, patch, post } from './client'
 import { on } from './events'
 import { forget, observe } from '@/lib/eta'
 import type {
+  Box,
   Detail,
   Draft,
   HomeworkChanged,
@@ -269,6 +270,52 @@ export function useRedoReading() {
             updatedAt: new Date().toISOString(),
           }
           putQuestion(qc, next, true)
+          return { old }
+        }
+      }
+    },
+    onError: (_e, _v, ctx) => ctx?.old && putQuestion(qc, ctx.old, true),
+    onSuccess: (q) => putQuestion(qc, q),
+  })
+}
+
+/** A question from boxes drawn on the scan, added to a set. */
+export function useAddBoxed() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ setId, boxes }: { setId: string; boxes: Box[] }) =>
+      post<Question>(`/api/homework/${setId}/boxed`, { boxes }),
+    onSuccess: (q) => putQuestion(qc, q),
+  })
+}
+
+/** Where a question is, shown with boxes: it's read from them and written
+ *  again, forced over its state as a retry is. */
+export function usePointOut() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, boxes }: { id: string; boxes: Box[] }) => post<Question>(`/api/questions/${id}/boxes`, { boxes }),
+    onMutate: ({ id, boxes }) => {
+      for (const [, d] of qc.getQueriesData<Detail>({ queryKey: ['homework', 'set'] })) {
+        const old = d?.questions.find((x) => x.id === id)
+        if (old) {
+          putQuestion(
+            qc,
+            {
+              ...old,
+              boxes,
+              state: 'pending',
+              page: undefined,
+              figures: [],
+              hint: [],
+              walkthrough: [],
+              reading: [],
+              failure: undefined,
+              reason: undefined,
+              updatedAt: new Date().toISOString(),
+            },
+            true,
+          )
           return { old }
         }
       }

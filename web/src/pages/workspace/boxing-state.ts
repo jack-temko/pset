@@ -14,6 +14,8 @@ export interface Boxing {
   kind: BoxKind
   sending: boolean
   error: string
+  /** The question the last boxing added, for the walkthrough to open. */
+  added: string | null
   start: (target: BoxingTarget) => void
   cancel: () => void
   setKind: (kind: BoxKind) => void
@@ -30,6 +32,7 @@ const idle: Boxing = {
   kind: 'text',
   sending: false,
   error: '',
+  added: null,
   start: () => {},
   cancel: () => {},
   setKind: () => {},

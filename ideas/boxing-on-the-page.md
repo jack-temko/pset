@@ -2,9 +2,14 @@
 
 ## Status
 
-**Planned** · phase 2, after the phase-1 finding work. Nothing blocks
-it technically; it needs a design pass (the scan's interaction and the
-walkthrough's states) before code.
+**Done** · phase 2 (branch `boxing-on-the-page`, 2026-09-25). Spec in
+`design/workspace.md`, "Boxing a problem on the page". Built as decided:
+both ways in, several boxes over pages and columns, words and figures.
+
+Answers to the open questions, for Jack to confirm: a box's kind is
+chosen (the bar's Words or Figure for the next box, a click on its
+label to switch), not read by the model; and boxing adds one problem at
+a time (Done ends the session).
 
 ## Information
 

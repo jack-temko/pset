@@ -19,8 +19,9 @@ export function BoxingProvider({
   onDone,
   children,
 }: {
-  /** Sends the boxes where the target says; resolves once they're taken. */
-  onDone: (target: BoxingTarget, boxes: Box[]) => Promise<void>
+  /** Sends the boxes where the target says; resolves, with the question
+   *  it added if any, once they're taken. */
+  onDone: (target: BoxingTarget, boxes: Box[]) => Promise<string | void>
   children: ReactNode
 }) {
   const [target, setTarget] = useState<BoxingTarget | null>(null)
@@ -28,6 +29,7 @@ export function BoxingProvider({
   const [kind, setKind] = useState<BoxKind>('text')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
+  const [added, setAdded] = useState<string | null>(null)
 
   const cancel = () => {
     setTarget(null)
@@ -50,6 +52,7 @@ export function BoxingProvider({
         kind,
         sending,
         error,
+        added,
         start: (t) => {
           setTarget(t)
           setBoxes([])
@@ -64,7 +67,9 @@ export function BoxingProvider({
         },
         remove: (i) => setBoxes((bs) => bs.filter((_, j) => j !== i)),
         flip: (i) =>
-          setBoxes((bs) => bs.map((b, j) => (j === i ? { ...b, kind: b.kind === 'text' ? 'figure' : 'text' } : b))),
+          setBoxes((bs) =>
+            bs.map((b, j) => (j === i ? { ...b, kind: b.kind === 'text' ? 'figure' : 'text' } : b)),
+          ),
         done: async () => {
           if (!target) return
           if (!boxes.some((b) => b.kind === 'text')) {
@@ -73,7 +78,8 @@ export function BoxingProvider({
           }
           setSending(true)
           try {
-            await onDone(target, boxes)
+            const id = await onDone(target, boxes)
+            if (id) setAdded(id)
             cancel()
           } catch (e) {
             setError(e instanceof Error ? e.message : "Couldn't send the boxes. Try again.")
@@ -99,7 +105,12 @@ const MIN_BOX = 0.01
 export function PageBoxes({ page }: { page: number }) {
   const b = useBoxing()
   const layer = useRef<HTMLDivElement>(null)
-  const [draft, setDraft] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
+  const [draft, setDraft] = useState<{
+    x0: number
+    y0: number
+    x1: number
+    y1: number
+  } | null>(null)
   if (!b.target) return null
 
   const at = (e: React.PointerEvent) => {
@@ -168,7 +179,12 @@ export function DrawnBox({
         'absolute rounded-sm border-2 border-primary bg-primary/10',
         box.kind === 'figure' && 'border-dashed bg-primary/5',
       )}
-      style={{ left: `${box.x * 100}%`, top: `${box.y * 100}%`, width: `${box.w * 100}%`, height: `${box.h * 100}%` }}
+      style={{
+        left: `${box.x * 100}%`,
+        top: `${box.y * 100}%`,
+        width: `${box.w * 100}%`,
+        height: `${box.h * 100}%`,
+      }}
     >
       {n !== undefined && (
         <div data-box-control className="absolute -top-8 left-0 flex items-center gap-1">
@@ -213,33 +229,37 @@ export function BoxingBar() {
     .join(', ')
   const first = b.boxes.find((x) => x.kind === 'text')
   return (
-    <div className="absolute bottom-6 left-1/2 w-max max-w-[calc(100%-48px)] -translate-x-1/2 space-y-2 rounded-md border bg-card p-2 shadow-floating">
-      <div className="flex items-center gap-3">
-        <p className="px-1 text-sm">
-          {b.target.kind === 'find' ? `Box ${b.target.label}` : 'Box a problem to add'}
+    // Centred over the scan and inset from its edges, like the pill; only
+    // the card itself takes the pointer.
+    <div className="pointer-events-none absolute inset-x-6 bottom-6 z-20 flex justify-center">
+      <div className="pointer-events-auto space-y-2 rounded-md border bg-card p-2 shadow-floating">
+        <div className="flex items-center gap-3">
+          <p className="px-1 text-sm whitespace-nowrap">
+            {b.target.kind === 'find' ? `Box ${b.target.label}` : 'Box a problem to add'}
+          </p>
+          <SegmentedControl
+            label="The next box holds"
+            options={[
+              { value: 'text', label: 'Words' },
+              { value: 'figure', label: 'Figure' },
+            ]}
+            value={b.kind}
+            onChange={b.setKind}
+          />
+          <Button variant="ghost" size="sm" onClick={b.cancel}>
+            Cancel
+          </Button>
+          <Button size="sm" disabled={b.boxes.length === 0 || b.sending} onClick={b.done}>
+            {b.sending ? 'Sending…' : 'Done'}
+          </Button>
+        </div>
+        <p className={cn('max-w-md px-1 text-xs', b.error ? 'text-destructive' : 'text-muted-foreground')}>
+          {b.error ||
+            (b.boxes.length === 0
+              ? 'Drag a box around its words, then around each figure. A problem over two pages or columns gets a box for each part.'
+              : `${count}${first ? `, starting on p. ${pages.label(first.page)}` : ''}. Click a box's label to switch it between words and figure.`)}
         </p>
-        <SegmentedControl
-          label="The next box holds"
-          options={[
-            { value: 'text', label: 'Words' },
-            { value: 'figure', label: 'Figure' },
-          ]}
-          value={b.kind}
-          onChange={b.setKind}
-        />
-        <Button variant="ghost" size="sm" onClick={b.cancel}>
-          Cancel
-        </Button>
-        <Button size="sm" disabled={b.boxes.length === 0 || b.sending} onClick={b.done}>
-          {b.sending ? 'Sending…' : 'Done'}
-        </Button>
       </div>
-      <p className={cn('px-1 text-xs', b.error ? 'text-destructive' : 'text-muted-foreground')}>
-        {b.error ||
-          (b.boxes.length === 0
-            ? 'Drag a box around its words, then around each figure. A problem over two pages or columns gets a box for each part.'
-            : `${count}${first ? `, starting on p. ${pages.label(first.page)}` : ''}. Click a box's label to switch it between words and figure.`)}
-      </p>
     </div>
   )
 }

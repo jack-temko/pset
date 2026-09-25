@@ -15,6 +15,7 @@ import {
   Printer,
   RotateCcw,
   Square,
+  SquareDashedMousePointer,
   Trash2,
 } from 'lucide-react'
 
@@ -48,6 +49,8 @@ import { Spinner } from '@/components/spinner'
 import { AddQuestionsDialog, BookDialog, HomeworkDialog } from './dialogs'
 import { MemoryDialog, MemoryLines, MemoryUndo } from './memory'
 import { FigureReading } from './reading'
+import { BoxingBar, BoxingProvider, PageBoxes } from './boxing'
+import { useBoxing } from './boxing-state'
 import { BookHereContext } from './book-here'
 import {
   pageImageURL,
@@ -70,6 +73,8 @@ import {
   useDeleteHomework,
   useHomeworkSet,
   useRemoveQuestion,
+  useAddBoxed,
+  usePointOut,
   useRedoReading,
   useRetryQuestion,
   useUpdateHomework,
@@ -276,6 +281,9 @@ function Scan({
   pageRefs: React.RefObject<Map<number, HTMLDivElement>>
 }) {
   const pages = usePages()
+  // Boxing a problem takes the pointer: a drag draws, and doesn't pan.
+  const boxing = useBoxing()
+  const boxingOn = boxing.target !== null
   // Awake on arrival, asleep shortly after; scroll, hover or focus wake
   // it again.
   const [pillAwake, setPillAwake] = useState(true)
@@ -375,7 +383,7 @@ function Scan({
   const percent = Math.round(zoom * 100)
   const zoomed = percent !== 100
   // Panning only means something once the pages are wider than the pane.
-  const canPan = width + 48 > paneWidth + 1
+  const canPan = width + 48 > paneWidth + 1 && !boxingOn
 
   const onScroll = () => {
     wake()
@@ -446,6 +454,7 @@ function Scan({
                   className="absolute inset-0 size-full"
                 />
               )}
+              <PageBoxes page={n} />
             </div>
           ))}
         </div>
@@ -455,7 +464,9 @@ function Scan({
           radius-md, hairline, the floating shadow. The zoom is a button
           only while there is something to reset, and says so: the value,
           a reset icon, and "Fit to width" on hover. At fit it's a fact. */}
+      <BoxingBar />
       <div
+        hidden={boxingOn}
         onMouseEnter={() => {
           hovered.current = true
           wake()
@@ -768,6 +779,7 @@ function Stage({
  */
 function FailedQuestion({ q, onRetry }: { q: Question; onRetry: (r: Retry) => void }) {
   const pages = usePages()
+  const boxing = useBoxing()
   const navigate = useNavigate()
   const [page, setPage] = useState('')
   const [text, setText] = useState('')
@@ -818,30 +830,37 @@ function FailedQuestion({ q, onRetry }: { q: Question; onRetry: (r: Retry) => vo
         </div>
 
         {kind === 'not_found' ? (
-          <form
-            className="flex items-start gap-2"
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (pageNumber > 0) onRetry({ page: pages.nearest(pageNumber) })
-              else setPageError('Type the page number first.')
-            }}
-          >
-            <Field label="Printed page" error={pageError || undefined} className="w-40">
-              <Input
-                inputMode="numeric"
-                value={page}
-                onChange={(e) => {
-                  setPage(e.target.value)
-                  setPageError('')
-                }}
-                className="font-mono"
-              />
-            </Field>
-            {/* Level with the input, under the field's label. */}
-            <Button type="submit" className="mt-6">
-              Look there
+          <div className="space-y-3">
+            {/* The way out that always works: show it on the page. */}
+            <Button onClick={() => boxing.start({ kind: 'find', questionId: q.id, label: name })}>
+              <SquareDashedMousePointer />
+              Show me where it is
             </Button>
-          </form>
+            <form
+              className="flex items-start gap-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (pageNumber > 0) onRetry({ page: pages.nearest(pageNumber) })
+                else setPageError('Type the page number first.')
+              }}
+            >
+              <Field label="Printed page" error={pageError || undefined} className="w-40">
+                <Input
+                  inputMode="numeric"
+                  value={page}
+                  onChange={(e) => {
+                    setPage(e.target.value)
+                    setPageError('')
+                  }}
+                  className="font-mono"
+                />
+              </Field>
+              {/* Level with the input, under the field's label. */}
+              <Button type="submit" variant="outline" className="mt-6">
+                Look there
+              </Button>
+            </form>
+          </div>
         ) : kind === 'setup' ? (
           <div className="flex items-center gap-2">
             <Button onClick={() => navigate('/settings#connections')}>Open Settings</Button>
@@ -972,6 +991,7 @@ function Walkthrough({
   const retryQ = useRetryQuestion()
   const redoReading = useRedoReading()
   const addQ = useAddQuestions(setId)
+  const boxing = useBoxing()
   const [adding, setAdding] = useState(false)
   const [index, setIndex] = useState<number | null>(null)
   // Removing a question asks first, under its trash button. It holds the
@@ -989,6 +1009,16 @@ function Walkthrough({
       setIndex(i === -1 ? 0 : i)
     }
   }, [detail.data, index])
+  // A question boxed on the page opens once it's in the set.
+  const [openedBoxed, setOpenedBoxed] = useState<string | null>(null)
+  useEffect(() => {
+    if (!boxing.added || boxing.added === openedBoxed || !detail.data) return
+    const i = detail.data.questions.findIndex((x) => x.id === boxing.added)
+    if (i !== -1) {
+      setIndex(i)
+      setOpenedBoxed(boxing.added)
+    }
+  }, [boxing.added, openedBoxed, detail.data])
   const at = Math.min(index ?? 0, Math.max(questions.length - 1, 0))
   const q = questions[at] as Question | undefined
   const turnedIn = !!set?.turnedInAt
@@ -1033,6 +1063,11 @@ function Walkthrough({
       <Menu label="Homework actions">
         <MenuItem icon={<Plus />} onSelect={() => setAdding(true)}>
           Add questions
+        </MenuItem>
+        {/* The other way to add one: show it on the page, which works for
+            any book, however it numbers its problems. */}
+        <MenuItem icon={<SquareDashedMousePointer />} onSelect={() => boxing.start({ kind: 'add', setId })}>
+          Box one on the page
         </MenuItem>
         <MenuItem icon={<Pencil />} onSelect={onEdit}>
           Edit homework
@@ -1200,6 +1235,20 @@ function Walkthrough({
             {f.label && <figcaption className="text-xs text-muted-foreground">{f.label}</figcaption>}
           </figure>
         ))}
+        {/* A find can land on the wrong problem; showing the right one is
+            the same tool a failed find offers. */}
+        {q.inBook && q.page !== undefined && q.state !== 'failed' && (
+          <p className="text-xs text-muted-foreground">
+            Not the right problem?{' '}
+            <button
+              type="button"
+              className="text-primary underline-offset-2 hover:underline"
+              onClick={() => boxing.start({ kind: 'find', questionId: q.id, label: q.label })}
+            >
+              Show me where it is
+            </button>
+          </p>
+        )}
 
         {/* The words the guide is written from, once there are any: a
             question still being found or read has none to check yet. */}
@@ -1500,6 +1549,8 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   const contents = useContents(book.id)
   const update = useUpdateBook(book.id)
   const remove = useRemoveBook()
+  const addBoxed = useAddBoxed()
+  const pointOut = usePointOut()
 
   const [focus, setFocus] = useState(false)
   // A PDF index: the scan is the one place that counts in those.
@@ -1539,94 +1590,101 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
 
   return (
     <Pages value={pages}>
-      <BookHereContext value={{ problems: book.problems, editBook: () => setEditingBook(true) }}>
-      <AppShell
-        scroll="fill"
-        middle={
-          // The bar names the book, and its one menu holds what you do to
-          // it: edit it, see what the tutor remembers, and, last and apart,
-          // remove it. Every thing has one menu for its actions, the
-          // homework set's included.
-          <span className="flex items-center gap-2">
-            <span>{book.title}</span>
-            <Menu label="Book actions">
-              <MenuItem icon={<Pencil />} onSelect={() => setEditingBook(true)}>
-                Edit book
-              </MenuItem>
-              <MenuItem icon={<Brain />} onSelect={() => setMemoryOpen(true)}>
-                Memory
-              </MenuItem>
-              <MenuDivider />
-              <MenuConfirmItem
-                icon={<Trash2 />}
-                question={`Remove ${book.title}?`}
-                detail={`${plural(homeworkCount, 'homework set')}, the conversation and what the tutor remembers go with it. Importing the PDF again starts fresh.`}
-                action="Remove book"
-                onConfirm={() => remove.mutate(book.id, { onSuccess: () => navigate('/') })}
-              >
-                Remove book
-              </MenuConfirmItem>
-            </Menu>
-          </span>
-        }
+      <BoxingProvider
+        onDone={async (target, boxes) => {
+          if (target.kind === 'add') return (await addBoxed.mutateAsync({ setId: target.setId, boxes })).id
+          await pointOut.mutateAsync({ id: target.questionId, boxes })
+        }}
       >
-        <div className="flex h-full min-h-0 flex-col">
-          <div className="flex min-h-0 flex-1" onPointerDownCapture={() => (activity.current = 'reading')}>
-          {!focus &&
-            (chapters === undefined ? (
-              <RailSkeleton />
-            ) : (
-              chapters.length > 0 && <Rail toc={chapters} page={pinnedPage ?? currentPage} onJump={jumpPdf} />
-            ))}
-          <Scan
-            bookId={book.id}
-            aspect={book.aspect}
-            pageCount={book.pageCount}
-            currentPage={currentPage}
-            onPageChange={settlePage}
-            scrollRef={scrollRef}
-            pageRefs={pageRefs}
-          />
-          <Panel
-            bookId={book.id}
-            bookTitle={book.title}
-            onActive={(k) => (activity.current = k)}
-            homework={homework}
-            focus={focus}
-            onFocusToggle={() => setFocus((f) => !f)}
-            onJump={jump}
-          />
-          </div>
-        </div>
-      </AppShell>
+        <BookHereContext value={{ problems: book.problems, editBook: () => setEditingBook(true) }}>
+          <AppShell
+            scroll="fill"
+            middle={
+              // The bar names the book, and its one menu holds what you do to
+              // it: edit it, see what the tutor remembers, and, last and apart,
+              // remove it. Every thing has one menu for its actions, the
+              // homework set's included.
+              <span className="flex items-center gap-2">
+                <span>{book.title}</span>
+                <Menu label="Book actions">
+                  <MenuItem icon={<Pencil />} onSelect={() => setEditingBook(true)}>
+                    Edit book
+                  </MenuItem>
+                  <MenuItem icon={<Brain />} onSelect={() => setMemoryOpen(true)}>
+                    Memory
+                  </MenuItem>
+                  <MenuDivider />
+                  <MenuConfirmItem
+                    icon={<Trash2 />}
+                    question={`Remove ${book.title}?`}
+                    detail={`${plural(homeworkCount, 'homework set')}, the conversation and what the tutor remembers go with it. Importing the PDF again starts fresh.`}
+                    action="Remove book"
+                    onConfirm={() => remove.mutate(book.id, { onSuccess: () => navigate('/') })}
+                  >
+                    Remove book
+                  </MenuConfirmItem>
+                </Menu>
+              </span>
+            }
+          >
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="flex min-h-0 flex-1" onPointerDownCapture={() => (activity.current = 'reading')}>
+              {!focus &&
+                (chapters === undefined ? (
+                  <RailSkeleton />
+                ) : (
+                  chapters.length > 0 && <Rail toc={chapters} page={pinnedPage ?? currentPage} onJump={jumpPdf} />
+                ))}
+              <Scan
+                bookId={book.id}
+                aspect={book.aspect}
+                pageCount={book.pageCount}
+                currentPage={currentPage}
+                onPageChange={settlePage}
+                scrollRef={scrollRef}
+                pageRefs={pageRefs}
+              />
+              <Panel
+                bookId={book.id}
+                bookTitle={book.title}
+                onActive={(k) => (activity.current = k)}
+                homework={homework}
+                focus={focus}
+                onFocusToggle={() => setFocus((f) => !f)}
+                onJump={jump}
+              />
+              </div>
+            </div>
+          </AppShell>
 
-      <MemoryDialog open={memoryOpen} bookId={book.id} onClose={() => setMemoryOpen(false)} onJump={jump} />
+          <MemoryDialog open={memoryOpen} bookId={book.id} onClose={() => setMemoryOpen(false)} onJump={jump} />
 
-      <BookDialog
-        open={editingBook}
-        book={{
-          title: book.title,
-          author: book.author,
-          runs: book.pageRuns,
-          problems: book.problems,
-          cover: book.cover,
-          pages: book.pageCount,
-          imported: new Date(book.addedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        }}
-        onClose={() => setEditingBook(false)}
-        onSave={(next) => {
-          // Only what changed: a colour alone isn't an edit to the name.
-          const named = next.title !== book.title || next.author !== book.author
-          const numbered = JSON.stringify(next.runs) !== JSON.stringify(pages.runs)
-          update.mutate({
-            ...(named && { title: next.title, author: next.author }),
-            ...(numbered && { pageRuns: next.runs }),
-            ...(next.problems && { problems: next.problems }),
-            ...(next.cover !== book.cover && { cover: next.cover }),
-          })
-        }}
-      />
-      </BookHereContext>
+          <BookDialog
+            open={editingBook}
+            book={{
+              title: book.title,
+              author: book.author,
+              runs: book.pageRuns,
+              problems: book.problems,
+              cover: book.cover,
+              pages: book.pageCount,
+              imported: new Date(book.addedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+            }}
+            onClose={() => setEditingBook(false)}
+            onSave={(next) => {
+              // Only what changed: a colour alone isn't an edit to the name.
+              const named = next.title !== book.title || next.author !== book.author
+              const numbered = JSON.stringify(next.runs) !== JSON.stringify(pages.runs)
+              update.mutate({
+                ...(named && { title: next.title, author: next.author }),
+                ...(numbered && { pageRuns: next.runs }),
+                ...(next.problems && { problems: next.problems }),
+                ...(next.cover !== book.cover && { cover: next.cover }),
+              })
+            }}
+          />
+        </BookHereContext>
+      </BoxingProvider>
     </Pages>
   )
 }
