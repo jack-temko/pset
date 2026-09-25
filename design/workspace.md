@@ -61,7 +61,18 @@ replacing a pencil and a memory icon) holds what you do to the book:
   "Printed page 1 is PDF page ___" and one "PDF page ___ is printed page
   ___" wherever the numbering jumps, with the jump named under them
   ("Printed page 85 is missing from the scan.") and **Add a jump** to add
-  one; the page count and import date. It only edits.
+  one; **Problems are numbered like** (2026-09-25), a segmented control
+  of the three ways books do it, `4.27` (through each chapter), `2.1.4`
+  (by section, with where the book keeps them) and `3.1 #7` (starting
+  again in each section), with a sentence saying what a reference means
+  in the chosen one and an example from the book ("In this book: 1.1 #7,
+  on p. 8."); the page count and import date. It only edits.
+- **How problems are numbered is detected at import** from the book's
+  text and contents. When the text didn't make it plain, the field says
+  so in warning ink with **It's right** beside it, and **Add questions**
+  opens with the same line and **Check it**, which closes it and opens
+  the Book dialog: asked once, where it matters. The Add questions
+  placeholder uses the book's own example ("A reference like 1.1 #7").
 - **Memory** opens what the tutor remembers about the book
   (design/memory.md).
 - **Remove book**, last, below a divider, in destructive ink. It asks

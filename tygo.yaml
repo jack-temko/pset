@@ -15,15 +15,24 @@ packages:
     enum_style: union
     output_path: web/src/api/gen/pagenum.ts
     frontmatter: "// Generated from internal/pagenum/wire.go by tygo. Do not edit."
+  - path: github.com/jackt/pset/internal/probnum
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/probnum.ts
+    frontmatter: "// Generated from internal/probnum/wire.go by tygo. Do not edit."
   - path: github.com/jackt/pset/internal/library
     include_files: [wire.go]
     enum_style: union
     output_path: web/src/api/gen/library.ts
     type_mappings:
       pagenum.Run: "Run"
+      probnum.Style: "Style"
+      probnum.Form: "Form"
+      probnum.Where: "Where"
     frontmatter: |
       // Generated from internal/library/wire.go by tygo. Do not edit.
       import type { Run } from './pagenum'
+      import type { Form, Style, Where } from './probnum'
 
   - path: github.com/jackt/pset/internal/cards
     include_files: [wire.go]

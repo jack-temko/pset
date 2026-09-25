@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -98,6 +99,9 @@ func New(c Config) *Service {
 	}
 	if err := fillPageRuns(context.Background(), c.DB); err != nil {
 		slog.Error("library: working out books' page numbers", "err", err)
+	}
+	if err := fillProblems(context.Background(), c.DB); err != nil {
+		slog.Error("library: working out how books number their problems", "err", err)
 	}
 	return s
 }
@@ -245,6 +249,15 @@ func (s *Service) Update(ctx context.Context, id string, p BookPatch) (Book, err
 		}
 		cur.PageRuns = pagenum.New(p.PageRuns).Runs()
 	}
+	var problems string
+	if p.Problems != nil {
+		st, err := patchProblems(cur.Problems, *p.Problems)
+		if err != nil {
+			return Book{}, err
+		}
+		b, _ := json.Marshal(st)
+		problems = string(b)
+	}
 	if p.Cover != nil {
 		if !validCover(*p.Cover) {
 			return Book{}, httpx.Invalid("cover", "That isn't one of the cover colours.")
@@ -260,6 +273,11 @@ func (s *Service) Update(ctx context.Context, id string, p BookPatch) (Book, err
 		edited = edited OR ?, pages_edited = pages_edited OR ?, updated_at = ? WHERE id = ?`,
 		cur.Title, cur.Author, runsJSON(cur.PageRuns), cur.PageRuns[0].Offset, cur.Cover, named, numbered, db.Now(), id); err != nil {
 		return Book{}, err
+	}
+	if problems != "" {
+		if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET problem_style = ? WHERE id = ?`, problems, id); err != nil {
+			return Book{}, err
+		}
 	}
 	return s.publish(ctx, id)
 }

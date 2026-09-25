@@ -2,13 +2,16 @@
 
 ## Status
 
-**In progress** · phase 1.
+**Done** · phase 1.
 
 - **1. Printed page numbers, in ranges: Done** (branch `page-ranges`,
   2026-09-25). The spec is in `design/workspace.md`, "Page numbers".
-- **2. How a book numbers its problems: Planned**, next. [Finding
-  problems](finding-problems.md) builds on it: a reference can't be read
-  until the book's numbering is known.
+- **2. How a book numbers its problems: Done** (branch
+  `problem-numbering`, 2026-09-25). Spec in `design/workspace.md`, "The
+  book".
+
+Both halves shipped; the file stays for its decisions and the open
+question at the end.
 
 ## Information
 
@@ -57,7 +60,17 @@ has to become editable ranges, or a single "this page is printed as ___"
 correction that splits a range. A wrong seam is worse than no seam, so a
 run needs several agreeing pages before it counts.
 
-### 2. How a book numbers its problems
+### 2. How a book numbers its problems (done)
+
+Built as `internal/probnum`. **Changed from the plan:** detection is
+deterministic, from the text and the contents, with no model reads. It
+counts, for each style, how many chapters or sections fit it (numbers
+past the chapter's sections opening lines for `4.27`; `2.1.4` lines not
+in the contents; a heading then `1.`, `2.`, `3.` in a section for
+`3.1 #7`), and is sure when one style fits at least 40% and twice any
+other. On Jack's three books it's right and sure for each, so the two
+model reads weren't needed; if a book defeats it, it says it isn't sure
+and the student is asked. What follows is the plan as written.
 
 **Why.** Three of Jack's books, three styles, and the same digits mean
 different things in each:

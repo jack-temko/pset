@@ -1,16 +1,36 @@
-import { useRef, useState, type ReactNode } from 'react'
-import { BookOpen, Check, ChevronDown, ChevronUp, Clock, Pencil, Plus, Printer, Settings, Trash2, TriangleAlert } from 'lucide-react'
+import { useRef, useState, type ReactNode } from "react";
+import {
+  BookOpen,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Pencil,
+  Plus,
+  Printer,
+  Settings,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
 
-import { AppShell, PageShell } from '@/components/shell'
-import { BookCover, CoverPicker } from '@/components/book-cover'
-import { BrandLockup, Mark } from '@/components/brand'
-import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@/components/box'
-import { Button, IconButton } from '@/components/button'
-import { ImportRow } from '@/components/import-row'
-import { Door } from '@/components/door'
-import { Flash } from '@/components/flash'
-import { HomeworkStatusLabel } from '@/components/homework-status'
-import { Label } from '@/components/label'
+import { AppShell, PageShell } from "@/components/shell";
+import { BookCover, CoverPicker } from "@/components/book-cover";
+import { BrandLockup, Mark } from "@/components/brand";
+import {
+  Box,
+  BoxBody,
+  BoxFooter,
+  BoxHeader,
+  BoxRow,
+  Counter,
+  RowValue,
+} from "@/components/box";
+import { Button, IconButton } from "@/components/button";
+import { ImportRow } from "@/components/import-row";
+import { Door } from "@/components/door";
+import { Flash } from "@/components/flash";
+import { HomeworkStatusLabel } from "@/components/homework-status";
+import { Label } from "@/components/label";
 import {
   AssistantTurn,
   ConversationStart,
@@ -28,37 +48,79 @@ import {
   Thinking,
   UserTurn,
   WorkedSteps,
-} from '@/components/transcript'
-import { Veil } from '@/components/veil'
-import { Spinner } from '@/components/spinner'
-import { Skeleton } from '@/components/skeleton'
-import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
-import { ConfirmPopover } from '@/components/confirm'
-import { SegmentedControl } from '@/components/segmented-control'
-import { Checkbox } from '@/components/checkbox'
-import { Dialog } from '@/components/dialog'
-import { AutoTextarea, Field, Input } from '@/components/input'
-import { DurationValue, StatTile } from '@/components/stat-tile'
-import { observe } from '@/lib/eta'
-import type { CoverHue } from '@/lib/covers'
-import { BOOKS, DUE, SEGMENTS, sampleBook } from '@/components/fixtures'
-import { CardSkeleton, Segments } from '@/components/segments'
-import { PageMap, Pages } from '@/lib/pages'
-import type { Run } from '@/api/gen/pagenum'
-import { anchorsOf, PageNumbersField } from '@/pages/workspace/page-numbers'
-import { BookTile } from '@/components/book-tile'
-import { cn } from '@/lib/utils'
+} from "@/components/transcript";
+import { Veil } from "@/components/veil";
+import { Spinner } from "@/components/spinner";
+import { Skeleton } from "@/components/skeleton";
+import {
+  Menu,
+  MenuCheckItem,
+  MenuConfirmItem,
+  MenuDivider,
+  MenuItem,
+} from "@/components/menu";
+import { ConfirmPopover } from "@/components/confirm";
+import { SegmentedControl } from "@/components/segmented-control";
+import { Checkbox } from "@/components/checkbox";
+import { Dialog } from "@/components/dialog";
+import { AutoTextarea, Field, Input } from "@/components/input";
+import { DurationValue, StatTile } from "@/components/stat-tile";
+import { observe } from "@/lib/eta";
+import type { CoverHue } from "@/lib/covers";
+import { BOOKS, DUE, SEGMENTS, sampleBook } from "@/components/fixtures";
+import { CardSkeleton, Segments } from "@/components/segments";
+import { PageMap, Pages } from "@/lib/pages";
+import type { Run } from "@/api/gen/pagenum";
+import { PageNumbersField } from "@/pages/workspace/page-numbers";
+import { anchorsOf, choiceOf } from "@/pages/workspace/book-numbering";
+import { ProblemStyleField } from "@/pages/workspace/problem-style";
+import type { Style } from "@/api/gen/probnum";
+import { BookTile } from "@/components/book-tile";
+import { cn } from "@/lib/utils";
 
 // The reading row has a minute of pace behind it, so it shows its time
 // left as a real import would (40 pages a minute, 172 to go).
-observe('book:b89d3b72', 'import:read', { done: 100, total: 312 }, Date.now() - 60_000)
-observe('book:b89d3b72', 'import:read', { done: 140, total: 312 }, Date.now())
-
+observe(
+  "book:b89d3b72",
+  "import:read",
+  { done: 100, total: 312 },
+  Date.now() - 60_000,
+);
+observe("book:b89d3b72", "import:read", { done: 140, total: 312 }, Date.now());
 
 /** Sample series for the Plot demo: logistic growth levelling at 100
  *  against the exponential it starts out as. */
-const EXP: [number, number][] = [[0.0, 10.0], [0.5, 12.84], [1.0, 16.49], [1.5, 21.17], [2.0, 27.18], [2.5, 34.9], [3.0, 44.82], [3.5, 57.55], [4.0, 73.89], [4.5, 94.88]]
-const LOGISTIC: [number, number][] = [[0.0, 10.0], [0.5, 12.49], [1.0, 15.48], [1.5, 19.04], [2.0, 23.2], [2.5, 27.94], [3.0, 33.24], [3.5, 39.0], [4.0, 45.09], [4.5, 51.32], [5.0, 57.51], [5.5, 63.48], [6.0, 69.06], [6.5, 74.13], [7.0, 78.63], [7.5, 82.53], [8.0, 85.85]]
+const EXP: [number, number][] = [
+  [0.0, 10.0],
+  [0.5, 12.84],
+  [1.0, 16.49],
+  [1.5, 21.17],
+  [2.0, 27.18],
+  [2.5, 34.9],
+  [3.0, 44.82],
+  [3.5, 57.55],
+  [4.0, 73.89],
+  [4.5, 94.88],
+];
+const LOGISTIC: [number, number][] = [
+  [0.0, 10.0],
+  [0.5, 12.49],
+  [1.0, 15.48],
+  [1.5, 19.04],
+  [2.0, 23.2],
+  [2.5, 27.94],
+  [3.0, 33.24],
+  [3.5, 39.0],
+  [4.0, 45.09],
+  [4.5, 51.32],
+  [5.0, 57.51],
+  [5.5, 63.48],
+  [6.0, 69.06],
+  [6.5, 74.13],
+  [7.0, 78.63],
+  [7.5, 82.53],
+  [8.0, 85.85],
+];
 
 /**
  * Every component and every variant, on one page, in the app itself.
@@ -68,7 +130,15 @@ const LOGISTIC: [number, number][] = [[0.0, 10.0], [0.5, 12.49], [1.0, 15.48], [
  * you build one; anything missing from this page is unreviewed.
  */
 
-function Section({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
+function Section({
+  title,
+  note,
+  children,
+}: {
+  title: string;
+  note?: string;
+  children: ReactNode;
+}) {
   return (
     <section className="space-y-5">
       <div className="space-y-1 border-b pb-3">
@@ -77,7 +147,7 @@ function Section({ title, note, children }: { title: string; note?: string; chil
       </div>
       <div className="space-y-6">{children}</div>
     </section>
-  )
+  );
 }
 
 /** One labelled shelf of specimens. The label is mono so it never reads as
@@ -85,23 +155,45 @@ function Section({ title, note, children }: { title: string; note?: string; chil
 function Shelf({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[10rem_1fr] items-start gap-6">
-      <div className="pt-2 font-mono text-xs text-muted-foreground">{label}</div>
+      <div className="pt-2 font-mono text-xs text-muted-foreground">
+        {label}
+      </div>
       <div className="flex flex-wrap items-center gap-3">{children}</div>
     </div>
-  )
+  );
 }
 
 /** The Book dialog's page numbers, live: one run, or a scan that lost a
  *  page (Boyce's printed 85). */
 function PageNumbersDemo({ runs }: { runs: Run[] }) {
-  const [anchors, setAnchors] = useState(() => anchorsOf(runs))
-  return <PageNumbersField anchors={anchors} pageCount={640} onChange={setAnchors} />
+  const [anchors, setAnchors] = useState(() => anchorsOf(runs));
+  return (
+    <PageNumbersField anchors={anchors} pageCount={640} onChange={setAnchors} />
+  );
+}
+
+/** The Book dialog's problem numbering, live, from what import found. */
+function ProblemStyleDemo({ style }: { style: Style | undefined }) {
+  const [value, setValue] = useState(() => choiceOf(style));
+  const [touched, setTouched] = useState(false);
+  return (
+    <ProblemStyleField
+      style={style}
+      value={value}
+      confirmed={touched}
+      onChange={(v) => {
+        setValue(v);
+        setTouched(true);
+      }}
+      onConfirm={() => setTouched(true)}
+    />
+  );
 }
 
 /** The Door needs state to be worth looking at, so it gets a live demo. */
 function DoorDemo() {
-  const [open, setOpen] = useState(false)
-  const rows = open ? DUE : DUE.slice(0, 2)
+  const [open, setOpen] = useState(false);
+  const rows = open ? DUE : DUE.slice(0, 2);
   return (
     <Box>
       {rows.map((d) => (
@@ -114,21 +206,25 @@ function DoorDemo() {
         onToggle={() => setOpen((o) => !o)}
       />
     </Box>
-  )
+  );
 }
 
 /** The Veil needs state to be worth looking at. */
 function VeilDemo() {
-  const [shown, setShown] = useState(false)
+  const [shown, setShown] = useState(false);
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground uppercase">walkthrough</p>
-      <Veil label="Show walkthrough" revealed={shown} onReveal={() => setShown(true)}>
+      <Veil
+        label="Show walkthrough"
+        revealed={shown}
+        onReveal={() => setShown(true)}
+      >
         <div className="space-y-3 text-base">
           <p>
-            With <MathInline tex="\dim V = 1" /> a nonzero <MathInline tex="w" /> spans, so{' '}
-            <MathInline tex="Tw = \lambda w" /> for some scalar. Any{' '}
-            <MathInline tex="v = c\,w" /> then gives
+            With <MathInline tex="\dim V = 1" /> a nonzero{" "}
+            <MathInline tex="w" /> spans, so <MathInline tex="Tw = \lambda w" />{" "}
+            for some scalar. Any <MathInline tex="v = c\,w" /> then gives
           </p>
           <MathDisplay tex="Tv = T(c\,w) = c\,Tw = c\,\lambda w = \lambda v." />
         </div>
@@ -143,34 +239,38 @@ function VeilDemo() {
         </button>
       )}
     </div>
-  )
+  );
 }
 
 function SegmentedDemo() {
-  const [v, setV] = useState<'light' | 'dark' | 'system'>('system')
+  const [v, setV] = useState<"light" | "dark" | "system">("system");
   return (
     <SegmentedControl
       label="Theme"
       value={v}
       onChange={setV}
       options={[
-        { value: 'light', label: 'Paper' },
-        { value: 'dark', label: 'Night' },
-        { value: 'system', label: 'System' },
+        { value: "light", label: "Paper" },
+        { value: "dark", label: "Night" },
+        { value: "system", label: "System" },
       ]}
     />
-  )
+  );
 }
 
 function MenuDemo() {
-  const [on, setOn] = useState(false)
+  const [on, setOn] = useState(false);
   return (
     <Menu label="Homework actions">
       <MenuItem icon={<Plus />} onSelect={() => {}}>
         Add questions
       </MenuItem>
       <MenuItem onSelect={() => {}}>Edit homework</MenuItem>
-      <MenuItem icon={<Printer />} hint="3 still being found" onSelect={() => {}}>
+      <MenuItem
+        icon={<Printer />}
+        hint="3 still being found"
+        onSelect={() => {}}
+      >
         Print worksheet
       </MenuItem>
       <MenuDivider />
@@ -178,22 +278,28 @@ function MenuDemo() {
         Turned in
       </MenuCheckItem>
     </Menu>
-  )
+  );
 }
 
 /** The confirm in its three homes: a control in a row (a question's
  *  trash), a menu's last item (Delete homework), a button in a Box
  *  (Settings' Reset). */
 function QuestionHeaderDemo() {
-  const [asking, setAsking] = useState(false)
-  const trash = useRef<HTMLButtonElement>(null)
+  const [asking, setAsking] = useState(false);
+  const trash = useRef<HTMLButtonElement>(null);
   return (
     <div className="flex w-96 items-center gap-2">
-      <span className="min-w-0 flex-1 truncate text-lg font-semibold">3.A.4</span>
+      <span className="min-w-0 flex-1 truncate text-lg font-semibold">
+        3.A.4
+      </span>
       <IconButton variant="ghost" size="sm" aria-label="Move this question up">
         <ChevronUp />
       </IconButton>
-      <IconButton variant="ghost" size="sm" aria-label="Move this question down">
+      <IconButton
+        variant="ghost"
+        size="sm"
+        aria-label="Move this question down"
+      >
         <ChevronDown />
       </IconButton>
       <IconButton
@@ -202,7 +308,7 @@ function QuestionHeaderDemo() {
         size="sm"
         aria-label="Remove this question"
         aria-expanded={asking}
-        className={cn(asking && 'bg-muted/50 text-foreground')}
+        className={cn(asking && "bg-muted/50 text-foreground")}
         onClick={() => setAsking(true)}
       >
         <Trash2 />
@@ -218,7 +324,7 @@ function QuestionHeaderDemo() {
         />
       )}
     </div>
-  )
+  );
 }
 
 function HomeworkMenuDemo() {
@@ -248,17 +354,25 @@ function HomeworkMenuDemo() {
         Delete homework
       </MenuConfirmItem>
     </Menu>
-  )
+  );
 }
 
 function ResetDemo() {
-  const [asking, setAsking] = useState(false)
-  const button = useRef<HTMLButtonElement>(null)
+  const [asking, setAsking] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
   return (
     <Box tone="destructive" className="w-full">
       <BoxBody className="flex min-h-control items-center gap-3 text-sm">
-        <span className="min-w-0 flex-1 text-muted-foreground">Erase every book, set, conversation and setting.</span>
-        <Button ref={button} variant="outline" size="sm" className="text-destructive" onClick={() => setAsking(true)}>
+        <span className="min-w-0 flex-1 text-muted-foreground">
+          Erase every book, set, conversation and setting.
+        </span>
+        <Button
+          ref={button}
+          variant="outline"
+          size="sm"
+          className="text-destructive"
+          onClick={() => setAsking(true)}
+        >
           Reset everything
         </Button>
         {asking && (
@@ -273,37 +387,37 @@ function ResetDemo() {
         )}
       </BoxBody>
     </Box>
-  )
+  );
 }
 
 function CheckboxDemo() {
-  const [on, setOn] = useState(true)
+  const [on, setOn] = useState(true);
   return (
     <Checkbox checked={on} onChange={() => setOn((v) => !v)}>
       In this book
     </Checkbox>
-  )
+  );
 }
 
-function DialogDemo({ width }: { width: 'default' | 'wide' }) {
-  const [open, setOpen] = useState(false)
+function DialogDemo({ width }: { width: "default" | "wide" }) {
+  const [open, setOpen] = useState(false);
   return (
     <>
       <Button variant="outline" onClick={() => setOpen(true)}>
-        Open the {width === 'wide' ? '560' : '400'} dialog
+        Open the {width === "wide" ? "560" : "400"} dialog
       </Button>
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
         width={width}
-        title={width === 'wide' ? 'Add questions' : 'New homework'}
+        title={width === "wide" ? "Add questions" : "New homework"}
         footer={
           <>
             <Button variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button onClick={() => setOpen(false)}>
-              {width === 'wide' ? 'Add 2 questions' : 'Create'}
+              {width === "wide" ? "Add 2 questions" : "Create"}
             </Button>
           </>
         }
@@ -314,12 +428,14 @@ function DialogDemo({ width }: { width: 'default' | 'wide' }) {
         </p>
       </Dialog>
     </>
-  )
+  );
 }
 
 export function Components() {
   return (
-    <AppShell middle={<span className="text-muted-foreground">Components</span>}>
+    <AppShell
+      middle={<span className="text-muted-foreground">Components</span>}
+    >
       <PageShell>
         <div className="space-y-3">
           <h1 className="font-heading text-3xl">Components</h1>
@@ -328,7 +444,10 @@ export function Components() {
           </p>
         </div>
 
-        <Section title="Button" note="Five variants, three sizes. 32px by default; all radius-md.">
+        <Section
+          title="Button"
+          note="Five variants, three sizes. 32px by default; all radius-md."
+        >
           <Shelf label="variant">
             <Button variant="primary">New homework</Button>
             <Button variant="outline">Try again</Button>
@@ -407,9 +526,19 @@ export function Components() {
           <Shelf label="rows, no description">
             <div className="w-full max-w-xl">
               <Box>
-                <BoxRow title="1 · Vector Spaces" trailing={<RowValue>1</RowValue>} />
-                <BoxRow title="2 · Finite-Dimensional Spaces" trailing={<RowValue>27</RowValue>} />
-                <BoxRow title="3 · Linear Maps" trailing={<RowValue>51</RowValue>} selected />
+                <BoxRow
+                  title="1 · Vector Spaces"
+                  trailing={<RowValue>1</RowValue>}
+                />
+                <BoxRow
+                  title="2 · Finite-Dimensional Spaces"
+                  trailing={<RowValue>27</RowValue>}
+                />
+                <BoxRow
+                  title="3 · Linear Maps"
+                  trailing={<RowValue>51</RowValue>}
+                  selected
+                />
               </Box>
             </div>
           </Shelf>
@@ -418,8 +547,8 @@ export function Components() {
               <Box>
                 <BoxHeader>About this book</BoxHeader>
                 <BoxBody>
-                  Prepared yesterday from a 312-page digital PDF. Sections came from the PDF&apos;s
-                  own outline.
+                  Prepared yesterday from a 312-page digital PDF. Sections came
+                  from the PDF&apos;s own outline.
                 </BoxBody>
                 <BoxFooter>
                   <RowValue>sha256:4f1a9c2e</RowValue>
@@ -434,7 +563,10 @@ export function Components() {
                 <BoxBody>Not ready · reading the pages, 62%.</BoxBody>
               </Box>
               <Box tone="destructive">
-                <BoxBody>Couldn&apos;t prepare this book. The PDF has no extractable text.</BoxBody>
+                <BoxBody>
+                  Couldn&apos;t prepare this book. The PDF has no extractable
+                  text.
+                </BoxBody>
               </Box>
             </div>
           </Shelf>
@@ -484,11 +616,7 @@ export function Components() {
             <div className="grid w-full grid-cols-6 gap-4">
               {BOOKS.slice(0, 6).map((b) => (
                 <div key={b.sha256} className="space-y-2">
-                  <BookCover
-                    title={b.title}
-                    author={b.author}
-                    hue={b.cover}
-                  />
+                  <BookCover title={b.title} author={b.author} hue={b.cover} />
                   <p className="font-mono text-xs text-muted-foreground">
                     {b.cover}
                   </p>
@@ -501,9 +629,11 @@ export function Components() {
           </Shelf>
           <Shelf label="book tile">
             <div className="grid w-full grid-cols-6 gap-4">
-              {BOOKS.filter((b) => b.state.kind === 'ready').slice(0, 3).map((b) => (
-                <BookTile key={b.sha256} book={b} />
-              ))}
+              {BOOKS.filter((b) => b.state.kind === "ready")
+                .slice(0, 3)
+                .map((b) => (
+                  <BookTile key={b.sha256} book={b} />
+                ))}
             </div>
           </Shelf>
         </Section>
@@ -547,9 +677,15 @@ export function Components() {
           </Shelf>
           <Shelf label="prose">
             <div className="w-panel space-y-1 text-base">
-              <p><Skeleton className="h-3 w-full" /></p>
-              <p><Skeleton className="h-3 w-full" /></p>
-              <p><Skeleton className="h-3 w-2/3" /></p>
+              <p>
+                <Skeleton className="h-3 w-full" />
+              </p>
+              <p>
+                <Skeleton className="h-3 w-full" />
+              </p>
+              <p>
+                <Skeleton className="h-3 w-2/3" />
+              </p>
             </div>
           </Shelf>
         </Section>
@@ -572,25 +708,58 @@ export function Components() {
           <Shelf label="rows">
             <Box className="w-full">
               <ImportRow
-                book={sampleBook({ sha256: 'b89d3b72', title: 'Introduction to the Theory of Computation', author: '', state: { kind: 'preparing', phase: 'read', done: 140, total: 312 } })}
-              />
-              <ImportRow
-                book={sampleBook({ sha256: 'a41c09e2', title: 'Calculus', author: '', state: { kind: 'preparing', phase: 'contents' } })}
-              />
-              <ImportRow
-                book={sampleBook({ sha256: '7ce04a15', title: 'Griffiths Introduction To Electrodynamics', author: '', state: { kind: 'queued' } })}
-              />
-              <ImportRow
                 book={sampleBook({
-                  sha256: '5e2b7f90',
-                  title: 'Foundations of Brontolithics',
-                  author: '',
-                  kind: 'scanned',
-                  state: { kind: 'queued', phase: 'read', done: 140, total: 312 },
+                  sha256: "b89d3b72",
+                  title: "Introduction to the Theory of Computation",
+                  author: "",
+                  state: {
+                    kind: "preparing",
+                    phase: "read",
+                    done: 140,
+                    total: 312,
+                  },
                 })}
               />
               <ImportRow
-                book={sampleBook({ sha256: '3a80b5d4', title: 'Organic Chemistry', author: '', state: { kind: 'failed', reason: "This PDF can't be read. PSet couldn't open it." } })}
+                book={sampleBook({
+                  sha256: "a41c09e2",
+                  title: "Calculus",
+                  author: "",
+                  state: { kind: "preparing", phase: "contents" },
+                })}
+              />
+              <ImportRow
+                book={sampleBook({
+                  sha256: "7ce04a15",
+                  title: "Griffiths Introduction To Electrodynamics",
+                  author: "",
+                  state: { kind: "queued" },
+                })}
+              />
+              <ImportRow
+                book={sampleBook({
+                  sha256: "5e2b7f90",
+                  title: "Foundations of Brontolithics",
+                  author: "",
+                  kind: "scanned",
+                  state: {
+                    kind: "queued",
+                    phase: "read",
+                    done: 140,
+                    total: 312,
+                  },
+                })}
+              />
+              <ImportRow
+                book={sampleBook({
+                  sha256: "3a80b5d4",
+                  title: "Organic Chemistry",
+                  author: "",
+                  state: {
+                    kind: "failed",
+                    reason: "This PDF can't be read. PSet couldn't open it.",
+                  },
+                })}
               />
             </Box>
           </Shelf>
@@ -624,12 +793,21 @@ export function Components() {
           </Shelf>
           <Shelf label="count">
             <div className="grid w-full max-w-2xl grid-cols-3 gap-4">
-              <StatTile label="Questions worked" value={14} context="across 3 problem sets" />
+              <StatTile
+                label="Questions worked"
+                value={14}
+                context="across 3 problem sets"
+              />
             </div>
           </Shelf>
           <Shelf label="empty week">
             <div className="grid w-full max-w-2xl grid-cols-3 gap-4">
-              <StatTile label="Homework" chart={1} value="0" context="nothing yet this week" />
+              <StatTile
+                label="Homework"
+                chart={1}
+                value="0"
+                context="nothing yet this week"
+              />
             </div>
           </Shelf>
         </Section>
@@ -702,7 +880,10 @@ export function Components() {
               <Field label="Due date" hint="Optional.">
                 <Input type="date" />
               </Field>
-              <Field label="API key" error="The endpoint refused this key (401)">
+              <Field
+                label="API key"
+                error="The endpoint refused this key (401)"
+              >
                 <Input defaultValue="sk-wrong" className="font-mono" />
               </Field>
               <Field label="Question" hint="Grows as you type; never scrolls.">
@@ -725,6 +906,37 @@ export function Components() {
               />
             </div>
           </Shelf>
+          <Shelf label="problems, sure">
+            <div className="w-dialog">
+              <ProblemStyleDemo
+                style={{
+                  form: "local",
+                  where: "section",
+                  heading: "Problems",
+                  example: { label: "3.1 #7", page: 139 },
+                  sure: true,
+                  confirmed: false,
+                }}
+              />
+            </div>
+          </Shelf>
+          <Shelf label="problems, unsure">
+            <div className="w-dialog">
+              <ProblemStyleDemo
+                style={{
+                  form: "section",
+                  where: "chapter",
+                  sure: false,
+                  confirmed: false,
+                }}
+              />
+            </div>
+          </Shelf>
+          <Shelf label="problems, unknown">
+            <div className="w-dialog">
+              <ProblemStyleDemo style={undefined} />
+            </div>
+          </Shelf>
           <Shelf label="segmented">
             <SegmentedDemo />
           </Shelf>
@@ -745,12 +957,20 @@ export function Components() {
         >
           <Shelf label="turn">
             <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
-              <UserTurn>Why does every operator have a minimal polynomial?</UserTurn>
-              <Steps steps={['Searched ‘minimal polynomial’ · 6 pages', 'Read p. 142–145']} />
+              <UserTurn>
+                Why does every operator have a minimal polynomial?
+              </UserTurn>
+              <Steps
+                steps={[
+                  "Searched ‘minimal polynomial’ · 6 pages",
+                  "Read p. 142–145",
+                ]}
+              />
               <AssistantTurn>
                 <p>
-                  Because powers of <MathInline tex="T" /> cannot stay independent forever{' '}
-                  <PageRef pdf={142} />: the space has dimension <MathInline tex="n^2" />.
+                  Because powers of <MathInline tex="T" /> cannot stay
+                  independent forever <PageRef pdf={142} />: the space has
+                  dimension <MathInline tex="n^2" />.
                 </p>
                 <MathDisplay tex="I,\;T,\;T^2,\;\dots,\;T^{n^2}" />
               </AssistantTurn>
@@ -758,7 +978,7 @@ export function Components() {
           </Shelf>
           <Shelf label="failed">
             <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
-              <Steps steps={['Searched ‘spectral theorem’ · 5 pages']} />
+              <Steps steps={["Searched ‘spectral theorem’ · 5 pages"]} />
               <FailedTurn reason="The model connection dropped." />
             </div>
           </Shelf>
@@ -778,7 +998,13 @@ export function Components() {
           </Shelf>
           <Shelf label="running">
             <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
-              <Steps running steps={['Searched ‘eigenvalue’ · 6 pages', 'Reading p. 132–134…']} />
+              <Steps
+                running
+                steps={[
+                  "Searched ‘eigenvalue’ · 6 pages",
+                  "Reading p. 132–134…",
+                ]}
+              />
             </div>
           </Shelf>
           <Shelf label="thinking">
@@ -789,7 +1015,13 @@ export function Components() {
           </Shelf>
           <Shelf label="thinking after steps">
             <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
-              <Steps thinking steps={['Searched ‘damped vibrations’ · 6 pages', 'Read p. 150–155']} />
+              <Steps
+                thinking
+                steps={[
+                  "Searched ‘damped vibrations’ · 6 pages",
+                  "Read p. 150–155",
+                ]}
+              />
             </div>
           </Shelf>
           <Shelf label="stopped">
@@ -806,11 +1038,17 @@ export function Components() {
         >
           <Shelf label="statement">
             <div className="w-panel">
-              <Statement kind="Definition" number="2.17" name="linearly independent" page={32}>
+              <Statement
+                kind="Definition"
+                number="2.17"
+                name="linearly independent"
+                page={32}
+              >
                 <p>
-                  A list <MathInline tex="v_1, \dots, v_m" /> in <MathInline tex="V" /> is linearly
-                  independent if the only choice of <MathInline tex="a_1, \dots, a_m" /> that makes{' '}
-                  <MathInline tex="a_1 v_1 + \dots + a_m v_m = 0" /> is{' '}
+                  A list <MathInline tex="v_1, \dots, v_m" /> in{" "}
+                  <MathInline tex="V" /> is linearly independent if the only
+                  choice of <MathInline tex="a_1, \dots, a_m" /> that makes{" "}
+                  <MathInline tex="a_1 v_1 + \dots + a_m v_m = 0" /> is{" "}
                   <MathInline tex="a_1 = \dots = a_m = 0" />.
                 </p>
               </Statement>
@@ -820,10 +1058,13 @@ export function Components() {
             <div className="w-panel">
               <WorkedSteps
                 steps={[
-                  { math: '\\int_0^1 x e^{x}\\,dx', why: 'Integrate by parts with u = x, dv = eˣ dx.' },
-                  { math: '= \\big[x e^{x}\\big]_0^1 - \\int_0^1 e^{x}\\,dx' },
-                  { math: '= e - (e - 1)' },
-                  { math: '= 1' },
+                  {
+                    math: "\\int_0^1 x e^{x}\\,dx",
+                    why: "Integrate by parts with u = x, dv = eˣ dx.",
+                  },
+                  { math: "= \\big[x e^{x}\\big]_0^1 - \\int_0^1 e^{x}\\,dx" },
+                  { math: "= e - (e - 1)" },
+                  { math: "= 1" },
                 ]}
               />
             </div>
@@ -832,11 +1073,11 @@ export function Components() {
             <div className="w-panel">
               <Plot
                 title="Logistic growth against pure exponential"
-                x={{ label: 't' }}
-                y={{ label: 'population' }}
+                x={{ label: "t" }}
+                y={{ label: "population" }}
                 series={[
-                  { label: 'Exponential', points: EXP },
-                  { label: 'Logistic', points: LOGISTIC },
+                  { label: "Exponential", points: EXP },
+                  { label: "Logistic", points: LOGISTIC },
                 ]}
               />
             </div>
@@ -844,10 +1085,10 @@ export function Components() {
           <Shelf label="table">
             <div className="w-panel">
               <AnswerTable
-                columns={['', 'Injective', 'Surjective']}
+                columns={["", "Injective", "Surjective"]}
                 rows={[
-                  ['Means', 'null T = {0}', 'range T = W'],
-                  ['Needs', 'dim V ≤ dim W', 'dim V ≥ dim W'],
+                  ["Means", "null T = {0}", "range T = W"],
+                  ["Needs", "dim V ≤ dim W", "dim V ≥ dim W"],
                 ]}
               />
             </div>
@@ -867,7 +1108,10 @@ export function Components() {
           note="An answer as the engine sends it: prose and every card kind, at the panel's width, with the book's page offset of 16. The raw block is a card that couldn't be repaired."
         >
           <Pages value={PageMap.single(16)}>
-            <div id="segments" className="w-panel space-y-3 rounded-md border bg-rail p-card text-base">
+            <div
+              id="segments"
+              className="w-panel space-y-3 rounded-md border bg-rail p-card text-base"
+            >
               <Segments segments={SEGMENTS} onJump={() => {}} />
               <CardSkeleton kind="plot" repairing={false} />
               <CardSkeleton kind="steps" repairing />
@@ -875,7 +1119,10 @@ export function Components() {
           </Pages>
         </Section>
 
-        <Section title="Brand" note="The mark is fixed-color and never recolored for a theme.">
+        <Section
+          title="Brand"
+          note="The mark is fixed-color and never recolored for a theme."
+        >
           <Shelf label="mark">
             <Mark />
             <Mark className="size-12" />
@@ -885,7 +1132,10 @@ export function Components() {
           </Shelf>
         </Section>
 
-        <Section title="Type" note="Nine steps. 14px is the floor. Nothing in the product is smaller.">
+        <Section
+          title="Type"
+          note="Nine steps. 14px is the floor. Nothing in the product is smaller."
+        >
           <Shelf label="display">
             <div className="space-y-2">
               <p className="font-heading text-4xl">Good evening, Jack.</p>
@@ -901,18 +1151,27 @@ export function Components() {
             <div className="space-y-2">
               <p className="text-lg font-semibold">Linear Algebra Done Right</p>
               <p className="max-w-layout-reading text-reading">
-                A vector space is a set V along with an addition on V and a scalar multiplication on
-                V such that the following properties hold.
+                A vector space is a set V along with an addition on V and a
+                scalar multiplication on V such that the following properties
+                hold.
               </p>
-              <p className="text-base">Default UI copy: descriptions, list rows, settings labels.</p>
-              <p className="text-sm">Dense · buttons, rail rows, tabs, table cells.</p>
-              <p className="text-xs text-muted-foreground">12 pages · prepared yesterday</p>
+              <p className="text-base">
+                Default UI copy: descriptions, list rows, settings labels.
+              </p>
+              <p className="text-sm">
+                Dense · buttons, rail rows, tabs, table cells.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                12 pages · prepared yesterday
+              </p>
             </div>
           </Shelf>
           <Shelf label="mono">
             <div className="space-y-2">
               <p className="font-mono text-sm">https://api.example.com/v1</p>
-              <p className="font-mono text-xs text-muted-foreground">v0.5.0 · p. 142</p>
+              <p className="font-mono text-xs text-muted-foreground">
+                v0.5.0 · p. 142
+              </p>
             </div>
           </Shelf>
         </Section>
@@ -941,7 +1200,10 @@ export function Components() {
             <Ink name="primary" className="bg-primary-soft px-2 text-primary" />
             <Ink name="success" className="bg-success-soft px-2 text-success" />
             <Ink name="warning" className="bg-warning-soft px-2 text-warning" />
-            <Ink name="destructive" className="bg-destructive-soft px-2 text-destructive" />
+            <Ink
+              name="destructive"
+              className="bg-destructive-soft px-2 text-destructive"
+            />
           </Shelf>
           <Shelf label="lines">
             <Swatch name="border" className="bg-border" />
@@ -1009,7 +1271,7 @@ export function Components() {
         </Section>
       </PageShell>
     </AppShell>
-  )
+  );
 }
 
 function Swatch({ name, className }: { name: string; className: string }) {
@@ -1018,11 +1280,11 @@ function Swatch({ name, className }: { name: string; className: string }) {
       <div className={`size-12 rounded-md border ${className}`} />
       <span className="font-mono text-xs text-muted-foreground">{name}</span>
     </div>
-  )
+  );
 }
 
 function Ink({ name, className }: { name: string; className: string }) {
-  return <span className={`rounded-md py-1 text-sm ${className}`}>{name}</span>
+  return <span className={`rounded-md py-1 text-sm ${className}`}>{name}</span>;
 }
 
 function Step({ label, className }: { label: string; className: string }) {
@@ -1031,7 +1293,7 @@ function Step({ label, className }: { label: string; className: string }) {
       <div className={`w-4 bg-primary ${className}`} />
       <span className="font-mono text-xs text-muted-foreground">{label}</span>
     </div>
-  )
+  );
 }
 
 function Radius({ label, className }: { label: string; className: string }) {
@@ -1040,11 +1302,11 @@ function Radius({ label, className }: { label: string; className: string }) {
       <div className={`size-12 border bg-card ${className}`} />
       <span className="font-mono text-xs text-muted-foreground">{label}</span>
     </div>
-  )
+  );
 }
 
 /** The Book dialog's colour picker, live. */
 function CoverPickerDemo() {
-  const [hue, setHue] = useState<CoverHue>('rose')
-  return <CoverPicker value={hue} onChange={setHue} />
+  const [hue, setHue] = useState<CoverHue>("rose");
+  return <CoverPicker value={hue} onChange={setHue} />;
 }

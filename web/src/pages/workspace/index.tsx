@@ -48,6 +48,7 @@ import { Spinner } from '@/components/spinner'
 import { AddQuestionsDialog, BookDialog, HomeworkDialog } from './dialogs'
 import { MemoryDialog, MemoryLines, MemoryUndo } from './memory'
 import { FigureReading } from './reading'
+import { BookHereContext } from './book-here'
 import {
   pageImageURL,
   useBook,
@@ -1538,6 +1539,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
 
   return (
     <Pages value={pages}>
+      <BookHereContext value={{ problems: book.problems, editBook: () => setEditingBook(true) }}>
       <AppShell
         scroll="fill"
         middle={
@@ -1606,6 +1608,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           title: book.title,
           author: book.author,
           runs: book.pageRuns,
+          problems: book.problems,
           cover: book.cover,
           pages: book.pageCount,
           imported: new Date(book.addedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
@@ -1618,10 +1621,12 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           update.mutate({
             ...(named && { title: next.title, author: next.author }),
             ...(numbered && { pageRuns: next.runs }),
+            ...(next.problems && { problems: next.problems }),
             ...(next.cover !== book.cover && { cover: next.cover }),
           })
         }}
       />
+      </BookHereContext>
     </Pages>
   )
 }

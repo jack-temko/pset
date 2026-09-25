@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { anchorsOf, runsOf } from './page-numbers'
+import { anchorsOf, runsOf } from './book-numbering'
 
 describe('page number rows', () => {
   it('ask about printed page 1, then each jump where it starts', () => {

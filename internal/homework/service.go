@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/jackt/pset/internal/pagenum"
+	"github.com/jackt/pset/internal/probnum"
 	"slices"
 	"strings"
 	"time"
@@ -28,6 +29,9 @@ type Book struct {
 	Title     string
 	PageCount int
 	Pages     pagenum.Map
+	// Problems is how the book numbers its problems; the zero Style when
+	// it isn't known.
+	Problems probnum.Style
 }
 
 // Library is what homework reads from books. Page numbers are PDF pages.
