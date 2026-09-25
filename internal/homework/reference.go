@@ -78,6 +78,79 @@ var (
 	refInProse = regexp.MustCompile(`(?i)\bproblems?\s+(\d{1,2}(?:\.\d{1,3}){1,2})\b`)
 )
 
+// A range of problems: "1-8" in one word, or "1 – 8" and "1 to 8" in
+// three; its ends plain numbers or a book's full ones ("4.27–4.30",
+// "4.27–30", "2.1.3-2.1.6"). "odd", "even" or "all" may follow it.
+var (
+	refRange     = regexp.MustCompile(`^#?(\d{1,2}(?:\.\d{1,3}){1,2}|\d{1,3})[-–—](\d{1,2}(?:\.\d{1,3}){1,2}|\d{1,3})$`)
+	refRangeWord = regexp.MustCompile(`(?i)^(?:-|–|—|to|through|thru)$`)
+	refRangeEnd  = regexp.MustCompile(`^#?(\d{1,2}(?:\.\d{1,3}){1,2}|\d{1,3})$`)
+	refParity    = regexp.MustCompile(`(?i)^(?:odd|even|all)(?:\s+(?:ones|problems))?$`)
+)
+
+// maxRange is the most problems one range names: a typo ("1-100")
+// shouldn't make a hundred questions.
+const maxRange = 40
+
+// rangeAt reads a range starting at words[i]: its ends, and how many
+// words it takes (none when it isn't one).
+func rangeAt(words []string, i int) (lo, hi string, n int) {
+	w := strings.Trim(words[i], ":.")
+	if m := refRange.FindStringSubmatch(w); m != nil {
+		return m[1], m[2], 1
+	}
+	if i+2 < len(words) && refRangeWord.MatchString(words[i+1]) {
+		a := refRangeEnd.FindStringSubmatch(w)
+		b := refRangeEnd.FindStringSubmatch(strings.Trim(words[i+2], ":."))
+		if a != nil && b != nil {
+			return a[1], b[1], 3
+		}
+	}
+	return "", "", 0
+}
+
+// expandRange is every problem a range names, the last part counting up
+// under the first end's prefix: "1"–"8" is 1 to 8, "4.27"–"30" is 4.27
+// to 4.30. None when the ends don't make a range.
+func expandRange(lo, hi string) []string {
+	prefix := ""
+	if i := strings.LastIndex(lo, "."); i >= 0 {
+		prefix, lo = lo[:i+1], lo[i+1:]
+	}
+	if j := strings.LastIndex(hi, "."); j >= 0 {
+		if hi[:j+1] != prefix {
+			return nil
+		}
+		hi = hi[j+1:]
+	}
+	a, err1 := strconv.Atoi(lo)
+	b, err2 := strconv.Atoi(hi)
+	if err1 != nil || err2 != nil || b <= a || b-a >= maxRange {
+		return nil
+	}
+	out := make([]string, 0, b-a+1)
+	for n := a; n <= b; n++ {
+		out = append(out, prefix+strconv.Itoa(n))
+	}
+	return out
+}
+
+// keepParity keeps a range's odd or even problems.
+func keepParity(ns []string, word string) []string {
+	word = strings.ToLower(strings.Fields(word)[0])
+	if word == "all" {
+		return ns
+	}
+	var out []string
+	for _, n := range ns {
+		last, _ := strconv.Atoi(n[strings.LastIndex(n, ".")+1:])
+		if (last%2 == 1) == (word == "odd") {
+			out = append(out, n)
+		}
+	}
+	return out
+}
+
 // A reference with a note is most of the line: past refLong characters
 // only a plain one ("Problem 2.3.2, p. 60." and then a paragraph) is read
 // as a reference, since a problem written out can start with a number.
@@ -141,9 +214,43 @@ func ParseRefs(text string, style probnum.Style) (refs []Ref, ok bool) {
 		starts[i] = cursor + max(at, 0)
 		cursor = starts[i] + len(w)
 	}
+	// The words a range took past its first, and the range just read,
+	// for an "odd" or "even" after it.
+	skip := 0
+	var ranged []string
+	rangedDotted := false
 words:
 	for i, w := range words {
+		if skip > 0 {
+			skip--
+			continue
+		}
 		w = strings.Trim(w, ":.")
+		if !expectSection {
+			if lo, hi, n := rangeAt(words, i); n > 0 {
+				if ns := expandRange(lo, hi); ns != nil {
+					skip, ranged, rangedDotted = n-1, ns, strings.Contains(ns[0], ".")
+					if rangedDotted {
+						dotted = append(dotted, ns...)
+					} else {
+						numbers = append(numbers, ns...)
+					}
+					plain = true
+					continue
+				}
+			}
+		}
+		if ranged != nil && refParity.MatchString(w) {
+			kept := keepParity(ranged, w)
+			if rangedDotted {
+				dotted = append(dotted[:len(dotted)-len(ranged)], kept...)
+			} else {
+				numbers = append(numbers[:len(numbers)-len(ranged)], kept...)
+			}
+			ranged = nil
+			continue
+		}
+		ranged = nil
 		if strings.HasPrefix(w, "#") && len(w) > 1 {
 			numbers = append(numbers, w[1:])
 			plain = true
