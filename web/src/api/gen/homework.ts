@@ -307,6 +307,21 @@ export interface AssignmentRow {
    * Notes are the professor's instructions the line carries.
    */
   notes: string[];
+  /**
+   * Present is which of its labels the set it updates already has: all
+   * of them, and the line is in; some, and adding it adds the rest.
+   */
+  present: string[];
+  /**
+   * Added is true when the set it updates already has the line: every
+   * label, or, for a line not from the book, its text.
+   */
+  added?: boolean;
+  /**
+   * Changed is each problem the set has whose professor's instructions
+   * the document now gives differently.
+   */
+  changed: NotesChange[];
 }
 /**
  * AssignmentGroup is everything due on one date.
@@ -323,6 +338,16 @@ export interface AssignmentGroup {
    * date: a page checked again offers only what's new.
    */
   imported?: boolean;
+  /**
+   * SetID is the set this date updates: the one made from it before,
+   * or the one the student is updating.
+   */
+  setId?: string;
+  /**
+   * Gone is what that set has that the document doesn't list: offered
+   * for removal, never removed unasked.
+   */
+  gone: SetQuestion[];
 }
 /**
  * Assignment is a document read out into due dates and lines, for the
@@ -338,28 +363,110 @@ export interface Assignment {
   groups: AssignmentGroup[];
 }
 /**
+ * NotesChange is a problem whose professor's instructions a document
+ * gives differently from its set.
+ */
+export interface NotesChange {
+  questionId: string;
+  label: string;
+  was: string[];
+  now: string[];
+}
+/**
+ * SetQuestion names a question in a set.
+ */
+export interface SetQuestion {
+  questionId: string;
+  label: string;
+}
+/**
  * AssignmentText is POST /api/books/{id}/assignments/read with a web
- * page or pasted text; a file comes as a multipart upload instead.
+ * page or pasted text; a file comes as a multipart upload instead, with
+ * setId as a form field.
  */
 export interface AssignmentText {
   url?: string;
   text?: string;
+  /**
+   * SetID reads the document as an update to that set: new problems,
+   * changed instructions, and what it no longer lists.
+   */
+  setId?: string;
 }
 /**
- * ImportGroup is one set to make: its title, due date and questions.
+ * ImportGroup is one set to make, or, with SetID, one to add to: its
+ * title, due date and questions.
  */
 export interface ImportGroup {
   title: string;
   due: string;
   rows: Draft[];
+  /**
+   * SetID updates that set instead of making one: the rows are added,
+   * skipping what it already has; Notes are rewritten and Remove taken
+   * out.
+   */
+  setId?: string;
+  notes?: NotesUpdate[];
+  remove?: string[];
+}
+/**
+ * NotesUpdate is a question's new professor's instructions.
+ */
+export interface NotesUpdate {
+  questionId: string;
+  notes: string[];
 }
 /**
  * AssignmentImport is POST /api/books/{id}/assignments: the groups the
- * student kept, each becoming a set.
+ * student kept, each becoming a set, and the read they came from, which
+ * is done with once they're in.
  */
 export interface AssignmentImport {
+  readId?: string;
   source: string;
   groups: ImportGroup[];
+}
+/**
+ * ReadState is where reading an assignment stands.
+ */
+export const ReadStateReading = "reading";
+export const ReadStateReady = "ready";
+export const ReadStateFailed = "failed";
+export type ReadState = typeof ReadStateReading | typeof ReadStateReady | typeof ReadStateFailed;
+/**
+ * AssignmentRead is an assignment being read in the background, or read
+ * and waiting for its review, until it's imported or dismissed.
+ */
+export interface AssignmentRead {
+  id: string;
+  bookId: string;
+  source: string;
+  /**
+   * SetID is the set it was read to update, if it was.
+   */
+  setId?: string;
+  state: ReadState;
+  /**
+   * Error says why it couldn't be read, when it failed.
+   */
+  error?: string;
+  /**
+   * Assignment is what was read, once it's ready, marked against the
+   * sets already made from the same source.
+   */
+  assignment?: Assignment;
+  createdAt: string;
+  /**
+   * UpdatedAt is when it started reading, or finished.
+   */
+  updatedAt: string;
+}
+/**
+ * AssignmentReads is GET /api/books/{id}/assignments/reads.
+ */
+export interface AssignmentReads {
+  reads: AssignmentRead[];
 }
 /**
  * AssignmentSource is where the book's assignments were last read from,
@@ -372,10 +479,19 @@ export const EventHomeworkChanged = "homework.changed";
 export const EventHomeworkRemoved = "homework.removed";
 export const EventQuestionChanged = "question.changed";
 export const EventQuestionRemoved = "question.removed";
+export const EventReadChanged = "assignment.changed";
+export const EventReadRemoved = "assignment.removed";
 /**
  * Event types this feature publishes.
  */
-export type Event = typeof EventHomeworkChanged | typeof EventHomeworkRemoved | typeof EventQuestionChanged | typeof EventQuestionRemoved;
+export type Event = typeof EventHomeworkChanged | typeof EventHomeworkRemoved | typeof EventQuestionChanged | typeof EventQuestionRemoved | typeof EventReadChanged | typeof EventReadRemoved;
+export interface ReadChanged {
+  read: AssignmentRead;
+}
+export interface ReadRemoved {
+  id: string;
+  bookId: string;
+}
 export interface HomeworkChanged {
   homework: Summary;
 }

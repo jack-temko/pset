@@ -138,6 +138,7 @@ func New(c Config) *Service {
 	c.Queue.Handle(JobLocate, LaneQuestion, s.runLocate)
 	c.Queue.Handle(JobRead, LaneQuestion, s.runRead)
 	c.Queue.Handle(JobGuide, LaneQuestion, s.runGuide)
+	c.Queue.Handle(JobAssignment, LaneAssignment, s.runAssignmentRead)
 	return s
 }
 

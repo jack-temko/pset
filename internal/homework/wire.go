@@ -247,6 +247,15 @@ type AssignmentRow struct {
 	Unread bool     `json:"unread,omitempty"`
 	// Notes are the professor's instructions the line carries.
 	Notes []string `json:"notes"`
+	// Present is which of its labels the set it updates already has: all
+	// of them, and the line is in; some, and adding it adds the rest.
+	Present []string `json:"present"`
+	// Added is true when the set it updates already has the line: every
+	// label, or, for a line not from the book, its text.
+	Added bool `json:"added,omitempty"`
+	// Changed is each problem the set has whose professor's instructions
+	// the document now gives differently.
+	Changed []NotesChange `json:"changed"`
 }
 
 // AssignmentGroup is everything due on one date.
@@ -258,6 +267,12 @@ type AssignmentGroup struct {
 	// Imported is true when a set from this source already has this due
 	// date: a page checked again offers only what's new.
 	Imported bool `json:"imported,omitempty"`
+	// SetID is the set this date updates: the one made from it before,
+	// or the one the student is updating.
+	SetID string `json:"setId,omitempty"`
+	// Gone is what that set has that the document doesn't list: offered
+	// for removal, never removed unasked.
+	Gone []SetQuestion `json:"gone"`
 }
 
 // Assignment is a document read out into due dates and lines, for the
@@ -270,25 +285,92 @@ type Assignment struct {
 	Groups []AssignmentGroup `json:"groups"`
 }
 
+// NotesChange is a problem whose professor's instructions a document
+// gives differently from its set.
+type NotesChange struct {
+	QuestionID string   `json:"questionId"`
+	Label      string   `json:"label"`
+	Was        []string `json:"was"`
+	Now        []string `json:"now"`
+}
+
+// SetQuestion names a question in a set.
+type SetQuestion struct {
+	QuestionID string `json:"questionId"`
+	Label      string `json:"label"`
+}
+
 // AssignmentText is POST /api/books/{id}/assignments/read with a web
-// page or pasted text; a file comes as a multipart upload instead.
+// page or pasted text; a file comes as a multipart upload instead, with
+// setId as a form field.
 type AssignmentText struct {
 	URL  string `json:"url,omitempty"`
 	Text string `json:"text,omitempty"`
+	// SetID reads the document as an update to that set: new problems,
+	// changed instructions, and what it no longer lists.
+	SetID string `json:"setId,omitempty"`
 }
 
-// ImportGroup is one set to make: its title, due date and questions.
+// ImportGroup is one set to make, or, with SetID, one to add to: its
+// title, due date and questions.
 type ImportGroup struct {
 	Title string  `json:"title"`
 	Due   string  `json:"due"`
 	Rows  []Draft `json:"rows"`
+	// SetID updates that set instead of making one: the rows are added,
+	// skipping what it already has; Notes are rewritten and Remove taken
+	// out.
+	SetID  string        `json:"setId,omitempty"`
+	Notes  []NotesUpdate `json:"notes,omitempty"`
+	Remove []string      `json:"remove,omitempty"`
+}
+
+// NotesUpdate is a question's new professor's instructions.
+type NotesUpdate struct {
+	QuestionID string   `json:"questionId"`
+	Notes      []string `json:"notes"`
 }
 
 // AssignmentImport is POST /api/books/{id}/assignments: the groups the
-// student kept, each becoming a set.
+// student kept, each becoming a set, and the read they came from, which
+// is done with once they're in.
 type AssignmentImport struct {
+	ReadID string        `json:"readId,omitempty"`
 	Source string        `json:"source"`
 	Groups []ImportGroup `json:"groups"`
+}
+
+// ReadState is where reading an assignment stands.
+type ReadState string
+
+const (
+	ReadStateReading ReadState = "reading"
+	ReadStateReady   ReadState = "ready"
+	ReadStateFailed  ReadState = "failed"
+)
+
+// AssignmentRead is an assignment being read in the background, or read
+// and waiting for its review, until it's imported or dismissed.
+type AssignmentRead struct {
+	ID     string `json:"id"`
+	BookID string `json:"bookId"`
+	Source string `json:"source"`
+	// SetID is the set it was read to update, if it was.
+	SetID string    `json:"setId,omitempty"`
+	State ReadState `json:"state"`
+	// Error says why it couldn't be read, when it failed.
+	Error string `json:"error,omitempty"`
+	// Assignment is what was read, once it's ready, marked against the
+	// sets already made from the same source.
+	Assignment *Assignment `json:"assignment,omitempty"`
+	CreatedAt  string      `json:"createdAt"`
+	// UpdatedAt is when it started reading, or finished.
+	UpdatedAt string `json:"updatedAt"`
+}
+
+// AssignmentReads is GET /api/books/{id}/assignments/reads.
+type AssignmentReads struct {
+	Reads []AssignmentRead `json:"reads"`
 }
 
 // AssignmentSource is where the book's assignments were last read from,
@@ -303,7 +385,18 @@ const (
 	EventHomeworkRemoved = "homework.removed"
 	EventQuestionChanged = "question.changed"
 	EventQuestionRemoved = "question.removed"
+	EventReadChanged     = "assignment.changed"
+	EventReadRemoved     = "assignment.removed"
 )
+
+type ReadChanged struct {
+	Read AssignmentRead `json:"read"`
+}
+
+type ReadRemoved struct {
+	ID     string `json:"id"`
+	BookID string `json:"bookId"`
+}
 
 type HomeworkChanged struct {
 	Homework Summary `json:"homework"`

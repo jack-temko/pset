@@ -42,7 +42,7 @@ import { AutoTextarea, Field, Input } from '@/components/input'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { observe } from '@/lib/eta'
 import type { CoverHue } from '@/lib/covers'
-import { ASSIGNMENT, BOOKS, DUE, SEGMENTS, sampleBook } from '@/components/fixtures'
+import { ASSIGNMENT, ASSIGNMENT_SETS, BOOKS, DUE, SEGMENTS, sampleBook } from '@/components/fixtures'
 import { CardSkeleton, Segments } from '@/components/segments'
 import { PageMap, Pages } from '@/lib/pages'
 import type { Run } from '@/api/gen/pagenum'
@@ -52,8 +52,10 @@ import { ProblemStyleField } from '@/pages/workspace/problem-style'
 import { BoxingBar, BoxingProvider, DrawnBox } from '@/pages/workspace/boxing'
 import { useBoxing } from '@/pages/workspace/boxing-state'
 import { AssignmentReview, AssignmentSourceFields } from '@/pages/workspace/import-assignment'
+import { AssignmentReadRow } from '@/pages/workspace/assignment-reads'
 import { reviewOf } from '@/pages/workspace/import-state'
 import type { Style } from '@/api/gen/probnum'
+import type { AssignmentRead } from '@/api/homework'
 import { BookTile } from '@/components/book-tile'
 import { cn } from '@/lib/utils'
 
@@ -145,6 +147,46 @@ function StartBoxing() {
   return null
 }
 
+/** Reads in the Homework list: reading, read, an update read, failed. */
+const READS: AssignmentRead[] = [
+  {
+    id: 'r1',
+    bookId: 'b',
+    source: 'https://people.example.edu/~prof/202/homework.htm',
+    state: 'reading',
+    createdAt: '',
+    updatedAt: '',
+  },
+  {
+    id: 'r2',
+    bookId: 'b',
+    source: 'Assignment 3.pdf',
+    state: 'ready',
+    assignment: ASSIGNMENT,
+    createdAt: '',
+    updatedAt: '',
+  },
+  {
+    id: 'r3',
+    bookId: 'b',
+    source: 'pasted',
+    setId: 'set-sep11',
+    state: 'ready',
+    assignment: ASSIGNMENT,
+    createdAt: '',
+    updatedAt: '',
+  },
+  {
+    id: 'r4',
+    bookId: 'b',
+    source: 'https://canvas.example.edu/courses/461/assignments',
+    state: 'failed',
+    error: 'That page answered 401. A page behind a login can be pasted or photographed instead.',
+    createdAt: '',
+    updatedAt: '',
+  },
+]
+
 /** Importing an assignment's review, live, on a course page checked
  *  in mid-September. */
 function AssignmentReviewDemo() {
@@ -155,6 +197,7 @@ function AssignmentReviewDemo() {
         source={ASSIGNMENT.source}
         title={ASSIGNMENT.title}
         groups={groups}
+        titles={ASSIGNMENT_SETS}
         onChange={setGroups}
         onLeave={() => {}}
       />
@@ -899,7 +942,7 @@ export function Components() {
 
         <Section
           title="Importing an assignment"
-          note="Where it comes from: a file, a course web page, or pasted text. Then the review: a block a due date, ticked to become a set; its lines below, ticked to become questions, each saying what it reads as. Dates gone by or already added fold away behind one button; a line that isn't homework shows as one quiet line, unticked."
+          note="Where it comes from: a file, a course web page, or pasted text. Then the review: a block a due date, ticked to become a set; its lines below, ticked to become questions, each saying what it reads as. Dates gone by or already added fold away behind one button; a line that isn't homework shows as one quiet line, unticked. A date matching a set made before is an update: what's new, whose instructions changed, what it no longer lists. In the list, a read waits: reading, ready to review, or failed with why."
         >
           <Shelf label="source">
             <AssignmentSourceDemo />
@@ -909,6 +952,20 @@ export function Components() {
           </Shelf>
           <Shelf label="review">
             <AssignmentReviewDemo />
+          </Shelf>
+          <Shelf label="in the list">
+            <div className="w-panel">
+              <Box>
+                {READS.map((r) => (
+                  <AssignmentReadRow
+                    key={r.id}
+                    r={r}
+                    setTitle={r.setId ? 'Homework due Sep 11' : undefined}
+                    onReview={() => {}}
+                  />
+                ))}
+              </Box>
+            </div>
           </Shelf>
         </Section>
 

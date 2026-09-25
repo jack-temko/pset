@@ -94,6 +94,7 @@ func serve(addr, dir string, log *slog.Logger) error {
 	queue := jobs.New(d, log)
 	queue.Lane(library.LaneImport, 1)
 	queue.Lane(homework.LaneQuestion, 2)
+	queue.Lane(homework.LaneAssignment, 2)
 	// Many books may be answering at once; each book one question at a time.
 	queue.Lane(ask.LaneTurn, 8)
 

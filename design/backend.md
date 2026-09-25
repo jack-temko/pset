@@ -87,8 +87,11 @@ POST   /api/books/{id}/stop              POST /api/books/{id}/retry
 GET    /api/books/{id}/contents
 GET    /api/books/{id}/pages/{n}/image?w=
 GET    /api/books/{id}/homework          POST /api/books/{id}/homework
-POST   /api/books/{id}/assignments/read  (a file, or {url} or {text}: read for review)
-POST   /api/books/{id}/assignments       (the kept due dates, made sets)
+POST   /api/books/{id}/assignments/read  (a file, or {url} or {text}, maybe {setId}: starts a read, 202)
+GET    /api/books/{id}/assignments/reads (reading, or read and waiting for review)
+GET    /api/assignment-reads/{id}        DELETE (dismiss, stopping it)
+POST   /api/assignment-reads/{id}/retry  (a failed read, again)
+POST   /api/books/{id}/assignments       (the kept due dates: new sets, and updates to sets)
 GET    /api/books/{id}/assignments/source (the course page last read)
 GET    /api/homework/{id}                PATCH, DELETE
 POST   /api/homework/{id}/questions      (batch of drafts)

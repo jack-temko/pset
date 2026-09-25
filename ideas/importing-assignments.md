@@ -78,22 +78,25 @@ URLs and re-checks (~50). A new dialog spec in `design/workspace.md`.
   duplicating.
 - Photos are the least reliable source; worth a "retake" in the review.
 
+### Decided after (2026-09-25, Jack's answers)
+
+- **Reading runs in the background**: done (branch
+  `import-in-background`). The read waits in the Homework list.
+- **Changes on a page read again are shown, and any set can be updated
+  from a document**: done, the same branch. Jack asked for the second
+  ("update any homework with a new source, and it will pull in new
+  problems or adjust ones... packaged so it can be reused"): one
+  comparison (`internal/homework/update.go`) behind both, and one
+  review. Adjusting means a problem's instructions; a problem swapped
+  for another shows as one new and one no longer listed.
+- **No warning for a document naming another book**: dropped.
+- **Points stay dropped.**
+- **"Check for new homework" is the dialog on the remembered page**:
+  kept.
+
 ### Open
 
-- **Points are dropped**, as professor's notes already do ("4 pts
-  each" isn't an instruction). Say if you want them shown.
-- **A document naming another book isn't flagged.** 461's sheet names
-  Yates/Goodman; imported from a different book's tab its references
-  would be looked for in the wrong book. The model could say which book
-  it names.
-- **Reading waits in the dialog.** The 202 page took three and a half
-  minutes on GLM flash. A background job with the review waiting in
-  the Homework tab would free you to keep reading meanwhile.
-- **A professor's edit to an imported date isn't noticed.** Reading a
-  page again marks dates already added by due date alone; a problem
-  swapped on an added date isn't shown as a change.
-- **Photos**: no "retake" in the review yet; untested on a real photo.
-- **"Check for new homework" is the dialog, not a button of its own.**
-  Import opens on the remembered course page with its address filled,
-  so checking again is Import, then Read it. A separate row would be a
-  third action at the foot of the list.
+- **Photos**: no "retake" in the review yet, and untested on a real
+  photo. Later, and more for screenshots than photos of the board.
+- **A problem's number changed by the professor** (4.27 became 4.28)
+  shows as a new line and a removal, not as a change.

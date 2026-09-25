@@ -4,8 +4,9 @@ import { del, get, patch, post, postForm } from './client'
 import { on } from './events'
 import { forget, observe } from '@/lib/eta'
 import type {
-  Assignment,
   AssignmentImport,
+  AssignmentRead,
+  AssignmentReads,
   AssignmentSource,
   Box,
   Detail,
@@ -20,6 +21,8 @@ import type {
   QuestionPatch,
   QuestionRemoved,
   Questions,
+  ReadChanged,
+  ReadRemoved,
   Retry,
   Summary,
 } from './gen/homework'
@@ -31,6 +34,8 @@ export const homeworkKeys = {
   set: (id: string) => ['homework', 'set', id] as const,
   due: ['homework', 'due'] as const,
   assignmentSource: (bookId: string) => ['homework', 'assignment-source', bookId] as const,
+  reads: (bookId: string) => ['homework', 'reads', bookId] as const,
+  read: (id: string) => ['homework', 'read', id] as const,
 }
 
 export const useBookHomework = (bookId: string) =>
@@ -339,29 +344,92 @@ export const figureURL = (questionId: string, n: number) => `/api/questions/${qu
  *  text pasted in. */
 export type AssignmentFrom = { file: File } | { url: string } | { text: string }
 
-/** Reads an assignment out for review. Nothing is added until the
+/** An assignment being read, or read and waiting for its review. */
+const putRead = (qc: QueryClient, r: AssignmentRead) => {
+  qc.setQueryData<AssignmentRead[]>(homeworkKeys.reads(r.bookId), (list) => {
+    if (!list) return list
+    const i = list.findIndex((x) => x.id === r.id)
+    return i === -1 ? [r, ...list] : list.map((x) => (x.id === r.id ? r : x))
+  })
+  qc.setQueryData(homeworkKeys.read(r.id), r)
+}
+
+const dropRead = (qc: QueryClient, id: string, bookId: string) => {
+  qc.setQueryData<AssignmentRead[]>(homeworkKeys.reads(bookId), (list) => list?.filter((x) => x.id !== id))
+  qc.removeQueries({ queryKey: homeworkKeys.read(id) })
+}
+
+on<ReadChanged>('assignment.changed', (d, qc) => putRead(qc, d.read))
+on<ReadRemoved>('assignment.removed', (d, qc) => dropRead(qc, d.id, d.bookId))
+
+/** The book's assignments being read or waiting for review. */
+export const useAssignmentReads = (bookId: string) =>
+  useQuery({
+    queryKey: homeworkKeys.reads(bookId),
+    queryFn: () => get<AssignmentReads>(`/api/books/${bookId}/assignments/reads`).then((r) => r.reads),
+    // Events carry every change; while one is reading, poll as a backstop
+    // for a missed one.
+    refetchInterval: (query) => (query.state.data?.some((r) => r.state === 'reading') ? 10_000 : false),
+  })
+
+/** One read, for its review. */
+export const useAssignmentRead = (id: string | null) =>
+  useQuery({
+    queryKey: homeworkKeys.read(id ?? ''),
+    queryFn: () => get<AssignmentRead>(`/api/assignment-reads/${id}`),
+    enabled: !!id,
+    refetchInterval: (query) => (query.state.data?.state === 'reading' ? 10_000 : false),
+  })
+
+/** Starts reading an assignment in the background, or, with setId,
+ *  reading it as an update to that set. Nothing is added until the
  *  student imports what they kept. */
-export function useReadAssignment(bookId: string) {
+export function useStartRead(bookId: string) {
+  const qc = useQueryClient()
   return useMutation({
-    mutationFn: (from: AssignmentFrom) => {
+    mutationFn: ({ from, setId }: { from: AssignmentFrom; setId?: string }) => {
       const path = `/api/books/${bookId}/assignments/read`
       if ('file' in from) {
         const body = new FormData()
+        if (setId) body.append('setId', setId)
         body.append('file', from.file)
-        return postForm<Assignment>(path, body)
+        return postForm<AssignmentRead>(path, body)
       }
-      return post<Assignment>(path, from)
+      return post<AssignmentRead>(path, { ...from, setId })
     },
+    onSuccess: (r) => putRead(qc, r),
   })
 }
 
-/** Makes each kept due date a set, its lines questions. */
+export function useRetryRead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => post<AssignmentRead>(`/api/assignment-reads/${id}/retry`),
+    onSuccess: (r) => putRead(qc, r),
+  })
+}
+
+export function useDismissRead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (r: AssignmentRead) => del<void>(`/api/assignment-reads/${r.id}`),
+    onSuccess: (_, r) => dropRead(qc, r.id, r.bookId),
+  })
+}
+
+/** Makes each kept due date a set, its lines questions, and applies the
+ *  kept changes to the sets they update. The read is done with. */
 export function useImportAssignment(bookId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (a: AssignmentImport) => post<List>(`/api/books/${bookId}/assignments`, a).then((r) => r.homework),
-    onSuccess: (sets) => {
+    onSuccess: (sets, a) => {
       sets.forEach((h) => putSummary(qc, h))
+      // An updated set's questions changed under it: fetch them again.
+      for (const g of a.groups) {
+        if (g.setId) qc.invalidateQueries({ queryKey: homeworkKeys.set(g.setId) })
+      }
+      if (a.readId) dropRead(qc, a.readId, bookId)
       qc.invalidateQueries({ queryKey: homeworkKeys.assignmentSource(bookId) })
     },
   })

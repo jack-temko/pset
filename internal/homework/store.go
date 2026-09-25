@@ -83,6 +83,25 @@ ALTER TABLE questions ADD COLUMN reading_edited INTEGER NOT NULL DEFAULT 0`},
 		// Where an imported set came from (a web page's URL, a file's
 		// name), so checking the page again offers only new due dates.
 		{Name: "homework/10", SQL: `ALTER TABLE homework ADD COLUMN source TEXT NOT NULL DEFAULT ''`},
+		// An assignment being read in the background, then waiting for its
+		// review: what it was read from, and what was read. Gone once it's
+		// imported or dismissed.
+		{Name: "homework/11", SQL: `
+CREATE TABLE assignment_reads (
+	id         TEXT PRIMARY KEY,
+	book_id    TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+	source     TEXT NOT NULL,
+	set_id     TEXT NOT NULL DEFAULT '',
+	url        TEXT NOT NULL DEFAULT '',
+	text       TEXT NOT NULL DEFAULT '',
+	file       BLOB,
+	state      TEXT NOT NULL,
+	error      TEXT NOT NULL DEFAULT '',
+	result     TEXT NOT NULL DEFAULT '',
+	created_at TEXT NOT NULL,
+	updated_at TEXT NOT NULL
+);
+CREATE INDEX assignment_reads_book ON assignment_reads (book_id, created_at);`},
 	}
 }
 
