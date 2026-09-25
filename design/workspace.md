@@ -213,10 +213,18 @@ built.
     page behind a login is pasted or photographed instead. Paste takes
     any text, due dates and all. A failed read says why under the field
     and stays on this step.
-  - **Reading**: a spinner and "Reading 220_Homework.pdf…", with the
-    wait said plainly: seconds for a one-page sheet, minutes for a
-    semester's page or a scan on a slow model (the 202 page took three
-    and a half on a flash model). Cancel drops it.
+  - **Reading, in the background** (2026-09-25, Jack: "reading in the
+    background"): a spinner and "Reading 220_Homework.pdf…", with the
+    wait said plainly (seconds for a one-page sheet, minutes for a
+    semester's page or a scan on a slow model: the 202 page took three
+    and a half on a flash model) and that it needn't be watched. The
+    footer's **Close** leaves it reading. A read waits at the top of the
+    Homework list, above the sets: reading (with a spinner and ✕ to
+    stop), read ("1 due date to look over", **Review**, ✕ to dismiss),
+    or failed (why, in warning ink, **Try again**, ✕). Review opens this
+    dialog on its review; staying in the dialog moves to the review by
+    itself when it's read. A read is gone once it's imported or
+    dismissed.
   - **The review**, before anything is added: a block per due date,
     ticked to become a set, with its title and date editable; its lines
     under it, each ticked to become a question, each an editable field
@@ -231,8 +239,25 @@ built.
     returns to the source; the primary is **Add 2 sets**.
   - One set made lands you in its walkthrough, as New homework does;
     several stay on the list. Each set remembers where it came from: a
-    course page opens the dialog on Web page with its address filled,
-    and reading it again marks the dates already added.
+    course page opens the dialog on Web page with its address filled.
+  - **Updating a set** (2026-09-25): a date already made into a set
+    from the same document shows as **Update Homework due Sep 5**, the
+    set's name, instead of a new set, with what changed since: new
+    lines (ticked; a line naming problems the set partly has says
+    "adds 1.1 #9 (1.1 #1, 1.1 #7 are in the set)"), lines already in it
+    (one quiet line each), a problem whose professor's instructions
+    changed ("2.1 #1: now "do b"", "Was "do c". Its guide is written
+    again.", ticked), and what the set has that the document no longer
+    lists ("Remove 2.1 #12", never ticked: taking a question out is the
+    student's call). A date with nothing new is "Already added" and
+    folds away with the dates gone by. Only the questions added or whose
+    instructions changed are found or written; nothing else is redone.
+    The primary says it: **Update 1 set**, **Add 2 sets, update 1**.
+  - **Update from an assignment**, in a set's "⋯" menu, is the same
+    dialog titled so, reading any document against that set whatever it
+    came from: a revised sheet, a corrected page, a pasted email. The
+    review is the same update. A set updated from a document it didn't
+    come from remembers that document from then on.
   - A set's title is the document's own name ("Assignment #3") for a
     one-date sheet, and "Homework due Sep 25" for a semester's table,
     whose dates would all share one name.
@@ -272,7 +297,8 @@ built.
   saving happen there.
 - **The walkthrough header** (2026-09-21) keeps what you read: back, the
   set's title, "3 of 8", and a **"⋯" menu** for what you do to the set:
-  Add questions, Edit homework, Print worksheet, then **Turn in** below a
+  Add questions, Box one on the page, Update from an assignment, Edit
+  homework, Print worksheet, then **Turn in** below a
   divider, which reads **Turned in** with a check once done, then
   **Delete homework** below another. While a set is turned in, a success
   Label says so in the bar.

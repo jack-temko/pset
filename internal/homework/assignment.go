@@ -7,6 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
+	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/jobs"
 	"html"
 	"io"
 	"log/slog"
@@ -45,34 +48,180 @@ type AssignmentFile struct {
 	Data []byte
 }
 
-// ReadAssignment reads an assignment out for review: from a file, a web
-// page, or text, whichever is given.
-func (s *Service) ReadAssignment(ctx context.Context, bookID string, file *AssignmentFile, in AssignmentText) (Assignment, error) {
+// Reading runs in the background, as a job in its own lane, so a
+// semester's page on a slow model (minutes) never holds the student in a
+// dialog: the read waits in the Homework tab until it's reviewed.
+const (
+	JobAssignment  = "assignment"
+	LaneAssignment = "assignment"
+)
+
+// StartRead checks what it's given and starts reading it: from a file, a
+// web page, or text, whichever is given. The page itself is fetched by the
+// job; only its address is checked here.
+func (s *Service) StartRead(ctx context.Context, bookID string, file *AssignmentFile, in AssignmentText) (AssignmentRead, error) {
+	if _, err := s.c.Library.Book(ctx, bookID); err != nil {
+		return AssignmentRead{}, err
+	}
+	if in.SetID != "" {
+		h, err := getSummary(ctx, s.c.DB, in.SetID)
+		if errors.Is(err, errNotFound) || (err == nil && h.BookID != bookID) {
+			return AssignmentRead{}, httpx.NotFound("homework set")
+		} else if err != nil {
+			return AssignmentRead{}, err
+		}
+	}
+	var source, pageURL, text string
+	var data []byte
+	switch {
+	case file != nil:
+		if _, err := fileKind(file.Data); err != nil {
+			return AssignmentRead{}, err
+		}
+		source, data = strings.TrimSpace(file.Name), file.Data
+		if source == "" {
+			source = "file"
+		}
+	case strings.TrimSpace(in.URL) != "":
+		u, err := pageAddress(in.URL)
+		if err != nil {
+			return AssignmentRead{}, err
+		}
+		source, pageURL = u.String(), u.String()
+	case strings.TrimSpace(in.Text) != "":
+		source, text = "pasted", clip(in.Text, maxAssignmentText)
+	default:
+		return AssignmentRead{}, httpx.Invalid("source", "Give a file, a web page's address, or the assignment's text.")
+	}
+	id := uuid.NewString()
+	now := db.Now()
+	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO assignment_reads (id, book_id, source, set_id, url, text, file, state, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, bookID, source, in.SetID, pageURL, text, data, ReadStateReading, now, now); err != nil {
+			return err
+		}
+		_, err := s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobAssignment, Subject: id, Payload: readJob{ReadID: id}})
+		return err
+	})
+	if err != nil {
+		return AssignmentRead{}, err
+	}
+	s.c.Queue.Wake()
+	return s.publishRead(ctx, id)
+}
+
+// RetryRead reads a failed read again, from what it was given.
+func (s *Service) RetryRead(ctx context.Context, id string) (AssignmentRead, error) {
+	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		res, err := tx.ExecContext(ctx, `UPDATE assignment_reads SET state = ?, error = '', updated_at = ? WHERE id = ? AND state = ?`,
+			ReadStateReading, db.Now(), id, ReadStateFailed)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return httpx.Errorf(httpx.CodeInvalid, "That assignment is already read, or reading.")
+		}
+		_, err = s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobAssignment, Subject: id, Payload: readJob{ReadID: id}})
+		return err
+	})
+	if err != nil {
+		var n int
+		if s.c.DB.QueryRowContext(ctx, `SELECT count(*) FROM assignment_reads WHERE id = ?`, id).Scan(&n); n == 0 {
+			return AssignmentRead{}, httpx.NotFound("assignment")
+		}
+		return AssignmentRead{}, err
+	}
+	s.c.Queue.Wake()
+	return s.publishRead(ctx, id)
+}
+
+type readJob struct {
+	ReadID string `json:"readId"`
+}
+
+// runAssignmentRead reads one assignment out. A failure is the read's,
+// said in a sentence on it; the job itself only fails on a fault.
+func (s *Service) runAssignmentRead(ctx context.Context, j jobs.Job) error {
+	var p readJob
+	if err := j.Decode(&p); err != nil {
+		return err
+	}
+	var bookID, source, pageURL, text string
+	var data []byte
+	err := s.c.DB.QueryRowContext(ctx, `SELECT book_id, source, url, text, file FROM assignment_reads WHERE id = ?`, p.ReadID).
+		Scan(&bookID, &source, &pageURL, &text, &data)
+	if errors.Is(err, sql.ErrNoRows) {
+		// Dismissed before it started.
+		return nil
+	} else if err != nil {
+		return err
+	}
+	var content []llm.Part
+	switch {
+	case data != nil:
+		content, err = fileParts(ctx, AssignmentFile{Name: source, Data: data})
+	case pageURL != "":
+		var page string
+		page, err = fetchPage(ctx, pageURL)
+		content = []llm.Part{llm.TextPart(page)}
+	default:
+		content = []llm.Part{llm.TextPart(text)}
+	}
+	var a Assignment
+	if err == nil {
+		a, err = s.readOut(ctx, bookID, source, content)
+	}
+	if err != nil {
+		if ctx.Err() != nil {
+			// Shutting down or stopped: it's read again on the next start.
+			return ctx.Err()
+		}
+		msg := "Couldn't read it. Try again, or paste just the part with the problems."
+		var he *httpx.Error
+		if errors.As(err, &he) {
+			msg = he.Message
+		} else {
+			slog.Warn("assignment: read failed", "read", p.ReadID, "err", err)
+		}
+		return s.settleRead(p.ReadID, ReadStateFailed, msg, nil)
+	}
+	return s.settleRead(p.ReadID, ReadStateReady, "", &a)
+}
+
+// settleRead records how a read ended and says so. On a fresh context:
+// the job's may be ending.
+func (s *Service) settleRead(id string, state ReadState, msg string, a *Assignment) error {
+	ctx := context.Background()
+	result := ""
+	if a != nil {
+		b, err := json.Marshal(a)
+		if err != nil {
+			return err
+		}
+		result = string(b)
+	}
+	// The input is done with once it's read: a PDF needn't sit in the
+	// database until the review. A failed one keeps it, to try again.
+	res, err := s.c.DB.ExecContext(ctx, `UPDATE assignment_reads SET state = ?, error = ?, result = ?,
+		file = CASE WHEN ? = 'ready' THEN NULL ELSE file END, updated_at = ? WHERE id = ?`,
+		state, msg, result, state, db.Now(), id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return nil
+	}
+	_, err = s.publishRead(ctx, id)
+	return err
+}
+
+// readOut is the model's pass over an assignment: due dates, and each
+// line as the book's numbering reads it.
+func (s *Service) readOut(ctx context.Context, bookID, source string, content []llm.Part) (Assignment, error) {
 	book, err := s.c.Library.Book(ctx, bookID)
 	if err != nil {
 		return Assignment{}, err
 	}
-	var content []llm.Part
-	var source string
-	switch {
-	case file != nil:
-		source = file.Name
-		content, err = fileParts(ctx, *file)
-	case strings.TrimSpace(in.URL) != "":
-		source = strings.TrimSpace(in.URL)
-		var text string
-		text, err = fetchPage(ctx, source)
-		content = []llm.Part{llm.TextPart(text)}
-	case strings.TrimSpace(in.Text) != "":
-		source = "pasted"
-		content = []llm.Part{llm.TextPart(clip(in.Text, maxAssignmentText))}
-	default:
-		return Assignment{}, httpx.Invalid("source", "Give a file, a web page's address, or the assignment's text.")
-	}
-	if err != nil {
-		return Assignment{}, err
-	}
-
 	cfg, err := s.c.Settings.LLM(ctx)
 	if err != nil {
 		return Assignment{}, err
@@ -90,6 +239,9 @@ func (s *Service) ReadAssignment(ctx context.Context, bookID string, file *Assig
 		{Role: "user", Content: msg},
 	}})
 	if err != nil {
+		if ctx.Err() != nil {
+			return Assignment{}, ctx.Err()
+		}
 		trouble, status := llm.Classify(err)
 		if trouble == llm.TroubleRejected {
 			return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "%s Check the chat connection in Settings, then try again.", llm.Refusal(status))
@@ -113,22 +265,18 @@ func (s *Service) ReadAssignment(ctx context.Context, bookID string, file *Assig
 	}
 
 	out := Assignment{Source: source, Title: strings.TrimSpace(read.Title), Groups: []AssignmentGroup{}}
-	imported, err := s.importedDates(ctx, bookID, source)
-	if err != nil {
-		return Assignment{}, err
-	}
 	for _, g := range read.Groups {
 		if len(out.Groups) == maxGroups {
 			break
 		}
 		due, _ := cleanDate(g.Due)
-		group := AssignmentGroup{Due: due, Title: strings.TrimSpace(g.Title), Rows: []AssignmentRow{}, Imported: due != "" && imported[due]}
+		group := AssignmentGroup{Due: due, Title: strings.TrimSpace(g.Title), Rows: []AssignmentRow{}, Gone: []SetQuestion{}}
 		for _, r := range g.Rows {
 			text := strings.TrimSpace(r.Text)
 			if text == "" || len(group.Rows) == maxRows {
 				continue
 			}
-			row := AssignmentRow{Kind: r.Kind, Text: text, Labels: []string{}, Notes: []string{}}
+			row := AssignmentRow{Kind: r.Kind, Text: text, Labels: []string{}, Notes: []string{}, Present: []string{}, Changed: []NotesChange{}}
 			switch r.Kind {
 			case RowKindBook:
 				row.Labels, row.Notes, row.Unread = readLine(text, book.Problems)
@@ -190,32 +338,44 @@ func defaultTitle(doc, due string, several bool) string {
 	return "Homework"
 }
 
-// importedDates is the due dates already made into sets from a source.
-func (s *Service) importedDates(ctx context.Context, bookID, source string) (map[string]bool, error) {
-	out := map[string]bool{}
-	rows, err := s.c.DB.QueryContext(ctx, `SELECT due_date FROM homework WHERE book_id = ? AND source = ? AND due_date != ''`, bookID, source)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var d string
-		if err := rows.Scan(&d); err != nil {
-			return nil, err
-		}
-		out[d] = true
-	}
-	return out, rows.Err()
-}
-
 // ImportAssignment makes each group the student kept into a set, its
-// lines into questions, as Add does.
+// lines into questions, as Add does; a group that updates a set applies
+// its changes to that set instead. The read they came from is done with.
 func (s *Service) ImportAssignment(ctx context.Context, bookID string, in AssignmentImport) ([]Summary, error) {
 	if len(in.Groups) == 0 {
 		return nil, httpx.Invalid("groups", "Pick at least one due date to add.")
 	}
+	book, err := s.c.Library.Book(ctx, bookID)
+	if err != nil {
+		return nil, err
+	}
 	var out []Summary
 	for _, g := range in.Groups {
+		if g.SetID != "" {
+			h, err := getSummary(ctx, s.c.DB, g.SetID)
+			if errors.Is(err, errNotFound) || (err == nil && h.BookID != bookID) {
+				return nil, httpx.NotFound("homework set")
+			} else if err != nil {
+				return nil, err
+			}
+			changed, err := s.updateSet(ctx, g, book.Problems)
+			if err != nil {
+				return nil, err
+			}
+			if !changed {
+				continue
+			}
+			// A set updated from a document it didn't come from is checked
+			// against that document from now on.
+			if _, err := s.c.DB.ExecContext(ctx, `UPDATE homework SET source = ? WHERE id = ? AND source = ''`, in.Source, g.SetID); err != nil {
+				return nil, err
+			}
+			if h, err = s.publishSet(ctx, g.SetID); err != nil {
+				return nil, err
+			}
+			out = append(out, h)
+			continue
+		}
 		var rows []Draft
 		for _, r := range g.Rows {
 			if strings.TrimSpace(r.Text) != "" {
@@ -235,14 +395,18 @@ func (s *Service) ImportAssignment(ctx context.Context, bookID string, in Assign
 		if _, err := s.Add(ctx, h.ID, rows); err != nil {
 			return nil, err
 		}
-		h, err = s.publishSet(ctx, h.ID)
-		if err != nil {
+		if h, err = s.publishSet(ctx, h.ID); err != nil {
 			return nil, err
 		}
 		out = append(out, h)
 	}
 	if len(out) == 0 {
-		return nil, httpx.Invalid("groups", "None of those has a question left in it.")
+		return nil, httpx.Invalid("groups", "There's nothing left to add or change in those.")
+	}
+	if in.ReadID != "" {
+		if err := s.DismissRead(ctx, in.ReadID); err != nil && !isNotFound(err) {
+			return nil, err
+		}
 	}
 	return out, nil
 }
@@ -262,10 +426,10 @@ func (s *Service) LastSource(ctx context.Context, bookID string) (AssignmentSour
 // fileParts is an uploaded file as what the model reads: a PDF's text,
 // or its pages as images when it has none; a photo as itself.
 func fileParts(ctx context.Context, f AssignmentFile) ([]llm.Part, error) {
-	if len(f.Data) > maxAssignmentBytes {
-		return nil, httpx.Invalid("file", "That file is too big for an assignment.")
+	kind, err := fileKind(f.Data)
+	if err != nil {
+		return nil, err
 	}
-	kind := http.DetectContentType(f.Data)
 	switch {
 	case kind == "application/pdf":
 		dir, err := os.MkdirTemp("", "pset-assignment-*")
@@ -299,17 +463,28 @@ func fileParts(ctx context.Context, f AssignmentFile) ([]llm.Part, error) {
 		return parts, nil
 	case strings.HasPrefix(kind, "image/"):
 		return []llm.Part{llm.ImagePart("data:" + kind + ";base64," + base64.StdEncoding.EncodeToString(f.Data))}, nil
-	case strings.HasPrefix(kind, "text/"):
-		return []llm.Part{llm.TextPart(clip(string(f.Data), maxAssignmentText))}, nil
 	}
-	return nil, httpx.Invalid("file", "Send a PDF, a photo, or a text file.")
+	return []llm.Part{llm.TextPart(clip(string(f.Data), maxAssignmentText))}, nil
+}
+
+// fileKind is what an uploaded file is, if it's one PSet reads: a PDF,
+// an image, or text.
+func fileKind(data []byte) (string, error) {
+	if len(data) > maxAssignmentBytes {
+		return "", httpx.Invalid("file", "That file is too big for an assignment.")
+	}
+	kind := http.DetectContentType(data)
+	if kind == "application/pdf" || strings.HasPrefix(kind, "image/") || strings.HasPrefix(kind, "text/") {
+		return kind, nil
+	}
+	return "", httpx.Invalid("file", "Send a PDF, a photo, or a text file.")
 }
 
 // fetchPage is a course web page as text, its tables kept as rows.
 func fetchPage(ctx context.Context, raw string) (string, error) {
-	u, err := url.Parse(raw)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return "", httpx.Invalid("url", "That isn't a web page's address.")
+	u, err := pageAddress(raw)
+	if err != nil {
+		return "", err
 	}
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
@@ -334,6 +509,16 @@ func fetchPage(ctx context.Context, raw string) (string, error) {
 		return "", httpx.Invalid("url", "That page has no text to read.")
 	}
 	return clip(text, maxAssignmentText), nil
+}
+
+// pageAddress is a web page's address, if it is one PSet fetches: http
+// or https, with a host.
+func pageAddress(raw string) (*url.URL, error) {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return nil, httpx.Invalid("url", "That isn't a web page's address.")
+	}
+	return u, nil
 }
 
 var (

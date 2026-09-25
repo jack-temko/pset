@@ -250,8 +250,9 @@ export const SEGMENTS: Segment[] = [
 ]
 
 /** An assignment as read for review, like a course's semester table
- *  checked mid-September: a date gone by, one already added, one to
- *  come with every kind of line. */
+ *  checked mid-September: a date already added with nothing new, one
+ *  added before that the professor has changed since, and one to come
+ *  with every kind of line. */
 export const ASSIGNMENT: Assignment = {
   source: 'https://people.example.edu/~prof/202/homework.htm',
   title: 'EECS 202 Homework',
@@ -260,35 +261,85 @@ export const ASSIGNMENT: Assignment = {
       due: '2026-09-04',
       title: 'Homework due Sep 4',
       imported: true,
-      rows: [{ kind: 'book', text: '1.18 , 1.28', labels: ['1.18', '1.28'], notes: [] }],
+      setId: 'set-sep4',
+      gone: [],
+      rows: [
+        {
+          kind: 'book',
+          text: '1.18 , 1.28',
+          labels: ['1.18', '1.28'],
+          notes: [],
+          present: ['1.18', '1.28'],
+          added: true,
+          changed: [],
+        },
+      ],
     },
     {
       due: '2026-09-11',
       title: 'Homework due Sep 11',
+      imported: true,
+      setId: 'set-sep11',
+      gone: [{ questionId: 'q-312', label: '3.12' }],
       rows: [
-        { kind: 'book', text: '2.31 , 2.32', labels: ['2.31', '2.32'], notes: [] },
-        { kind: 'book', text: '3.2 , 3.8 , 3.10 , 3.12', labels: ['3.2', '3.8', '3.10', '3.12'], notes: [] },
+        {
+          kind: 'book',
+          text: '2.31 , 2.32 (use PSpice)',
+          labels: ['2.31', '2.32'],
+          notes: ['use PSpice'],
+          present: ['2.31', '2.32'],
+          added: true,
+          changed: [{ questionId: 'q-232', label: '2.32', was: ['no PSpice'], now: ['use PSpice'] }],
+        },
+        {
+          kind: 'book',
+          text: '3.2 , 3.8 , 3.10 , 3.14',
+          labels: ['3.2', '3.8', '3.10', '3.14'],
+          notes: [],
+          present: ['3.2', '3.8', '3.10'],
+          changed: [],
+        },
       ],
     },
     {
       due: '2026-10-02',
       title: 'Homework due Oct 2',
+      gone: [],
       rows: [
         {
           kind: 'book',
           text: '4.27 , 4.32 , 4.25 (no PSpice or MulitSim)',
           labels: ['4.27', '4.32', '4.25'],
           notes: ['no PSpice or MulitSim'],
+          present: [],
+          changed: [],
         },
         {
           kind: 'own',
-          text: 'A 12 V source drives a 4 Ohm and an 8 Ohm resistor in series. (a) Find the current. (b) Find the power to the 8 Ohm resistor.',
+          text:
+            'A 12 V source drives a 4 Ohm and an 8 Ohm resistor in series. (a) Find the current. (b) Find the power to the 8 Ohm resistor.',
           labels: [],
           notes: [],
+          present: [],
+          changed: [],
         },
-        { kind: 'book', text: 'the ladder network one from lecture', labels: [], notes: [], unread: true },
-        { kind: 'other', text: 'Reading: pages 147-148, 137-146', labels: [], notes: [] },
+        {
+          kind: 'book',
+          text: 'the ladder network one from lecture',
+          labels: [],
+          notes: [],
+          unread: true,
+          present: [],
+          changed: [],
+        },
+        { kind: 'other', text: 'Reading: pages 147-148, 137-146', labels: [], notes: [], present: [], changed: [] },
       ],
     },
   ],
+}
+
+/** The sets the sample assignment updates, by id. */
+export const ASSIGNMENT_SETS: Record<string, string> = {
+  'set-sep4': 'Homework due Sep 4',
+  'set-sep11': 'Homework due Sep 11',
 }

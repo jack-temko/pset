@@ -161,6 +161,7 @@ func newEnvWith(t *testing.T, mem Memory) *env {
 	e.cfg = &settings{cfg: e.llm.Config()}
 	q := jobs.New(d, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	q.Lane(LaneQuestion, 2)
+	q.Lane(LaneAssignment, 2)
 	e.queue = q
 	e.svc = New(Config{DB: d, Events: e.events, Queue: q, Library: library{}, Settings: e.cfg, Memory: mem})
 	mux := http.NewServeMux()

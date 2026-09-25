@@ -14,6 +14,7 @@ import {
   Pencil,
   Plus,
   Printer,
+  RefreshCw,
   RotateCcw,
   Square,
   SquareDashedMousePointer,
@@ -49,6 +50,7 @@ import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
 import { AddQuestionsDialog, BookDialog, HomeworkDialog } from './dialogs'
 import { ImportAssignmentDialog } from './import-assignment'
+import { AssignmentReads } from './assignment-reads'
 import { MemoryDialog, MemoryLines, MemoryUndo } from './memory'
 import { FigureReading } from './reading'
 import { ProfessorNotes } from './notes'
@@ -974,6 +976,7 @@ function waitingLine(q: Question, questions: Question[], pages: PageMap): string
 function Walkthrough({
   setId,
   onEdit,
+  onUpdate,
   onDelete,
   onBack,
   onJump,
@@ -981,6 +984,8 @@ function Walkthrough({
 }: {
   setId: string
   onEdit: () => void
+  /** Reads a newer version of its assignment against it. */
+  onUpdate: () => void
   onDelete: () => void
   onBack: () => void
   onJump: (page: number) => void
@@ -1071,6 +1076,11 @@ function Walkthrough({
             any book, however it numbers its problems. */}
         <MenuItem icon={<SquareDashedMousePointer />} onSelect={() => boxing.start({ kind: 'add', setId })}>
           Box one on the page
+        </MenuItem>
+        {/* A newer version of the professor's sheet or page: what's new,
+            whose instructions changed, what it no longer lists. */}
+        <MenuItem icon={<RefreshCw />} onSelect={onUpdate}>
+          Update from an assignment
         </MenuItem>
         <MenuItem icon={<Pencil />} onSelect={onEdit}>
           Edit homework
@@ -1370,6 +1380,10 @@ function HomeworkTab({
   const [openId, setOpenId] = useState<string | null>(initialSet ?? null)
   const [creating, setCreating] = useState(false)
   const [importing, setImporting] = useState(false)
+  // The read the import dialog opens on, from the list; or the set it
+  // updates, from the walkthrough's menu.
+  const [reviewing, setReviewing] = useState<string | null>(null)
+  const [updating, setUpdating] = useState(false)
   const [editing, setEditing] = useState(false)
   const openSet = useHomeworkSet(openId).data?.homework
   const updateOpen = useUpdateHomework(openId ?? '')
@@ -1384,6 +1398,7 @@ function HomeworkTab({
           key={openId}
           setId={openId}
           onEdit={() => setEditing(true)}
+          onUpdate={() => setUpdating(true)}
           onDelete={() => openSet && remove.mutate(openSet, { onSuccess: () => setOpenId(null) })}
           onBack={() => setOpenId(null)}
           onJump={onJump}
@@ -1395,6 +1410,15 @@ function HomeworkTab({
             editing={{ title: openSet.title, due: openSet.dueDate }}
             onClose={() => setEditing(false)}
             onSave={(title, due) => updateOpen.mutate({ title, dueDate: due })}
+          />
+        )}
+        {openSet && (
+          <ImportAssignmentDialog
+            open={updating}
+            bookId={bookId}
+            update={{ setId: openSet.id, title: openSet.title }}
+            onClose={() => setUpdating(false)}
+            onDone={() => {}}
           />
         )}
       </>
@@ -1415,6 +1439,15 @@ function HomeworkTab({
           add the questions you want walked through.
         </p>
       )}
+      {/* Assignments reading in the background, or read and waiting to
+          be looked over, first: they're what's new. */}
+      <AssignmentReads
+        bookId={bookId}
+        onReview={(id) => {
+          setReviewing(id)
+          setImporting(true)
+        }}
+      />
       {/* No header: the tab already says Homework, and a second label on
           the box only said it again. The way to add one is the list's last
           row, shaped like the Door. */}
@@ -1463,7 +1496,11 @@ function HomeworkTab({
       <ImportAssignmentDialog
         open={importing}
         bookId={bookId}
-        onClose={() => setImporting(false)}
+        readId={reviewing}
+        onClose={() => {
+          setImporting(false)
+          setReviewing(null)
+        }}
         onDone={(made) => made.length === 1 && setOpenId(made[0].id)}
       />
     </div>

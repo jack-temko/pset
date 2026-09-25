@@ -10,19 +10,24 @@ import { SegmentedControl } from '@/components/segmented-control'
 import { Spinner } from '@/components/spinner'
 import { ApiError } from '@/api/client'
 import {
+  useAssignmentRead,
   useAssignmentSource,
+  useBookHomework,
+  useDismissRead,
   useImportAssignment,
-  useReadAssignment,
+  useStartRead,
   type AssignmentFrom,
   type Summary,
 } from '@/api/homework'
 import { cn, plural } from '@/lib/utils'
 import { NumberingCheck } from './dialogs'
 import {
+  actionLabel,
   importOf,
   isEarlier,
   keptGroups,
   localToday,
+  pending,
   questionCount,
   reviewOf,
   shownGroups,
@@ -34,10 +39,16 @@ import {
 /**
  * Import an assignment: the professor's PDF, a photo of it, the course's
  * homework page, or its text pasted in, read out into due dates and
- * lines. Nothing is added until the student has looked: the review is an
- * editable list, a set a due date and a question a line, and only what
- * stays ticked is made. Spec: design/workspace.md, "Importing an
- * assignment".
+ * lines. Reading runs in the background: the dialog can close while it
+ * reads, and the read waits in the Homework list for its review. Nothing
+ * is added until the student has looked: the review is an editable list,
+ * a set a due date and a question a line, and only what stays ticked is
+ * made.
+ *
+ * The same dialog updates a set from a document ("Update from an
+ * assignment"): the review then shows what's new for that set, whose
+ * instructions changed, and what it no longer lists. Spec:
+ * design/workspace.md, "Importing an assignment".
  */
 
 type Mode = 'file' | 'page' | 'paste'
@@ -48,45 +59,49 @@ const modes = [
   { value: 'paste', label: 'Paste' },
 ] as const
 
-type Step =
-  { at: 'source' } | { at: 'reading'; what: string } | { at: 'review'; source: string; title: string }
-
 export function ImportAssignmentDialog({
   open,
   bookId,
+  readId,
+  update,
   onClose,
   onDone,
 }: {
   open: boolean
   bookId: string
+  /** Opens on a read already started: its review, or its wait. */
+  readId?: string | null
+  /** Reads the document as an update to this set. */
+  update?: { setId: string; title: string }
   onClose: () => void
-  /** The sets made, for landing in one when there's only one. */
+  /** The sets made or updated, for landing in one when there's only one. */
   onDone: (sets: Summary[]) => void
 }) {
   const remembered = useAssignmentSource(bookId).data ?? ''
-  const read = useReadAssignment(bookId)
+  const titles = Object.fromEntries((useBookHomework(bookId).data ?? []).map((h) => [h.id, h.title]))
+  const start = useStartRead(bookId)
+  const dismiss = useDismissRead()
   const make = useImportAssignment(bookId)
   const [mode, setMode] = useState<Mode>('file')
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
-  const [step, setStep] = useState<Step>({ at: 'source' })
-  const [groups, setGroups] = useState<ReviewGroup[]>([])
+  // The read this dialog is showing: one it started, or the one it opened on.
+  const [tracked, setTracked] = useState<string | null>(null)
+  const read = useAssignmentRead(tracked).data
+  // The review, seeded once per read when it's ready.
+  const [review, setReview] = useState<{ readId: string; groups: ReviewGroup[] } | null>(null)
   const [error, setError] = useState('')
   const picker = useRef<HTMLInputElement>(null)
-  // A read still running when the dialog closes, or is sent back, is
-  // dropped when it lands: only the latest one counts.
-  const reading = useRef(0)
 
   // A fresh start every time it opens, on the course page it last read
   // when there is one: checking it again is the common case.
   useEffect(() => {
     if (!open) return
-    reading.current++
     setMode(remembered ? 'page' : 'file')
     setUrl(remembered)
     setText('')
-    setStep({ at: 'source' })
-    setGroups([])
+    setTracked(readId ?? null)
+    setReview(null)
     setError('')
     make.reset()
     // Seeded on open only: the remembered page arriving later mustn't
@@ -94,38 +109,43 @@ export function ImportAssignmentDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  const start = (from: AssignmentFrom, what: string) => {
-    const mine = ++reading.current
+  // A read that failed goes back to where it was given, saying why.
+  useEffect(() => {
+    if (read?.state === 'failed') setError(read.error ?? "Couldn't read it.")
+    if (read?.state === 'ready' && read.assignment && review?.readId !== read.id)
+      setReview({ readId: read.id, groups: reviewOf(read.assignment, localToday()) })
+  }, [read, review?.readId])
+
+  const begin = (from: AssignmentFrom) => {
     setError('')
-    setStep({ at: 'reading', what })
-    read.mutate(from, {
-      onSuccess: (a) => {
-        if (mine !== reading.current) return
-        setGroups(reviewOf(a, localToday()))
-        setStep({ at: 'review', source: a.source, title: a.title })
+    // A failed read tried again from here replaces it.
+    if (read?.state === 'failed') dismiss.mutate(read)
+    start.mutate(
+      { from, setId: update?.setId },
+      {
+        onSuccess: (r) => setTracked(r.id),
+        onError: (e) => setError(e instanceof ApiError ? e.message : "Couldn't start reading it."),
       },
-      onError: (e) => {
-        if (mine !== reading.current) return
-        setError(e instanceof ApiError ? e.message : "Couldn't read it.")
-        setStep({ at: 'source' })
-      },
-    })
+    )
   }
 
-  const back = () => {
-    reading.current++
-    setStep({ at: 'source' })
-  }
-
+  const step =
+    !tracked || read?.state === 'failed'
+      ? 'source'
+      : read?.state === 'ready' && review?.readId === read.id
+        ? 'review'
+        : 'reading'
+  const groups = review?.groups ?? []
   const kept = keptGroups(groups)
-  const canRead = mode === 'file' || (mode === 'page' ? url.trim() !== '' : text.trim() !== '')
+  const canRead =
+    !start.isPending && (mode === 'file' || (mode === 'page' ? url.trim() !== '' : text.trim() !== ''))
 
   const primary =
-    step.at === 'review' ? (
+    step === 'review' && read ? (
       <Button
         disabled={kept.length === 0 || make.isPending}
         onClick={() =>
-          make.mutate(importOf(step.source, groups), {
+          make.mutate(importOf(read.id, read.assignment?.source ?? read.source, groups), {
             onSuccess: (sets) => {
               onDone(sets)
               onClose()
@@ -134,46 +154,44 @@ export function ImportAssignmentDialog({
         }
       >
         {make.isPending && <Spinner className="size-3" />}
-        {kept.length === 0 ? 'Add sets' : kept.length === 1 ? 'Add 1 set' : `Add ${kept.length} sets`}
+        {actionLabel(groups)}
       </Button>
-    ) : (
+    ) : step === 'source' ? (
       <Button
-        disabled={step.at === 'reading' || !canRead}
+        disabled={!canRead}
         onClick={() => {
           if (mode === 'file') picker.current?.click()
-          else if (mode === 'page') start({ url: url.trim() }, 'the page')
-          else start({ text }, 'the assignment')
+          else if (mode === 'page') begin({ url: url.trim() })
+          else begin({ text })
         }}
       >
         {mode === 'file' ? 'Choose a file' : 'Read it'}
       </Button>
-    )
+    ) : null
 
   return (
     <Dialog
       open={open}
-      onClose={() => {
-        reading.current++
-        onClose()
-      }}
-      title="Import an assignment"
+      onClose={onClose}
+      title={update ? 'Update from an assignment' : 'Import an assignment'}
       width="wide"
       footer={
         <>
-          {step.at === 'review' && (
-            <Button variant="ghost" className="mr-auto -ml-2" onClick={back}>
+          {step === 'review' && read && !readId && (
+            <Button
+              variant="ghost"
+              className="mr-auto -ml-2"
+              onClick={() => {
+                dismiss.mutate(read)
+                setTracked(null)
+              }}
+            >
               <ArrowLeft />
               Back
             </Button>
           )}
-          <Button
-            variant="ghost"
-            onClick={() => {
-              reading.current++
-              onClose()
-            }}
-          >
-            Cancel
+          <Button variant="ghost" onClick={onClose}>
+            {step === 'reading' ? 'Close' : 'Cancel'}
           </Button>
           {primary}
         </>
@@ -187,22 +205,20 @@ export function ImportAssignmentDialog({
         onChange={(e) => {
           const file = e.target.files?.[0]
           e.target.value = ''
-          if (file) start({ file }, file.name)
+          if (file) begin({ file })
         }}
       />
-      {step.at === 'reading' ? (
-        <ReadingNote what={step.what} />
-      ) : step.at === 'review' ? (
+      {step === 'reading' ? (
+        <ReadingNote what={read?.source ?? ''} />
+      ) : step === 'review' && read?.assignment ? (
         <AssignmentReview
-          source={step.source}
-          title={step.title}
+          source={read.assignment.source}
+          title={read.assignment.title}
           groups={groups}
-          onChange={setGroups}
+          titles={titles}
+          onChange={(next) => setReview({ readId: read.id, groups: next })}
           error={make.error instanceof ApiError ? make.error.message : make.error ? "Couldn't add them." : ''}
-          onLeave={() => {
-            reading.current++
-            onClose()
-          }}
+          onLeave={onClose}
         />
       ) : (
         <AssignmentSourceFields
@@ -214,13 +230,14 @@ export function ImportAssignmentDialog({
           url={url}
           onUrl={setUrl}
           remembered={remembered !== '' && url.trim() === remembered}
+          updating={update?.title}
           text={text}
           onText={setText}
           error={error}
           onSubmit={() => {
             if (!canRead) return
-            if (mode === 'page') start({ url: url.trim() }, 'the page')
-            else if (mode === 'paste') start({ text }, 'the assignment')
+            if (mode === 'page') begin({ url: url.trim() })
+            else if (mode === 'paste') begin({ text })
           }}
         />
       )}
@@ -235,6 +252,7 @@ export function AssignmentSourceFields({
   url,
   onUrl,
   remembered,
+  updating,
   text,
   onText,
   error,
@@ -246,6 +264,8 @@ export function AssignmentSourceFields({
   onUrl: (url: string) => void
   /** The address is the page this book's homework was last read from. */
   remembered: boolean
+  /** The title of the set it will update, when it's an update. */
+  updating?: string
   text: string
   onText: (text: string) => void
   /** Why the last read failed, said under the way it was tried. */
@@ -260,6 +280,13 @@ export function AssignmentSourceFields({
         onSubmit()
       }}
     >
+      {updating && (
+        <p className="text-sm">
+          A newer version of the assignment behind <span className="font-medium">{updating}</span>. PSet
+          compares it with the set: what's new, whose instructions changed, and what it no longer lists.
+          Nothing already there is redone.
+        </p>
+      )}
       <SegmentedControl label="Where the assignment is" options={modes} value={mode} onChange={onMode} />
       {mode === 'file' && (
         <div className="space-y-1">
@@ -277,7 +304,7 @@ export function AssignmentSourceFields({
           error={error}
           hint={
             remembered
-              ? "Where this book's homework came from last time. Reading it again offers only the due dates not added yet."
+              ? "Where this book's homework came from last time. Reading it again marks what's already added, and what changed."
               : 'A public page, like a semester table of problems. PSet remembers it, for checking again. A page behind a login can be pasted or photographed instead.'
           }
         >
@@ -315,17 +342,18 @@ export function AssignmentSourceFields({
   )
 }
 
-/** The wait while the model reads it: seconds for a one-date sheet, a few
- *  minutes for a semester's table on a slow model (the 202 page took
- *  three and a half on a flash model). */
+/** The wait while the model reads it, which needn't be watched: seconds
+ *  for a one-date sheet, minutes for a semester's table on a slow model
+ *  (the 202 page took three and a half on a flash model). */
 function ReadingNote({ what }: { what: string }) {
   return (
     <div className="flex items-center gap-3 py-6">
       <Spinner className="text-muted-foreground" label="Reading" />
       <div className="min-w-0 space-y-1">
-        <p className="truncate text-sm">Reading {what}…</p>
+        <p className="truncate text-sm">Reading {sourceName(what)}…</p>
         <p className="text-xs text-muted-foreground">
-          A one-page sheet takes seconds; a whole semester's page, or a scan, can take a few minutes.
+          A one-page sheet takes seconds; a whole semester's page, or a scan, can take a few minutes. You can
+          close this: it keeps reading, and waits in Homework for you to look it over.
         </p>
       </div>
     </div>
@@ -333,15 +361,16 @@ function ReadingNote({ what }: { what: string }) {
 }
 
 /**
- * The review: a block per due date, each a set if ticked, its lines
- * below it, each a question if ticked. Titles, dates and lines are all
- * editable; a date that isn't ticked folds to its header, and the dates
- * gone by or already added fold away behind one button.
+ * The review: a block per due date, each a new set if ticked, or the
+ * changes to the set it updates; its lines below it, each a question if
+ * ticked. A date that isn't ticked folds to its header, and the dates
+ * gone by or already added with nothing new fold away behind one button.
  */
 export function AssignmentReview({
   source,
   title,
   groups,
+  titles,
   onChange,
   error,
   onLeave,
@@ -349,6 +378,8 @@ export function AssignmentReview({
   source: string
   title: string
   groups: ReviewGroup[]
+  /** Each set's title, by id, for naming the sets updated. */
+  titles: Record<string, string>
   onChange: (groups: ReviewGroup[]) => void
   error?: string
   /** Leaves the dialog, for checking the book's numbering. */
@@ -368,8 +399,8 @@ export function AssignmentReview({
       <NumberingCheck onLeave={onLeave} />
       <p className="text-xs text-muted-foreground">
         {title ? <>{title}, read from </> : <>Read from </>}
-        <span className="break-all">{sourceName(source)}</span>. Each ticked due date becomes a set, and each
-        ticked line a question.
+        <span className="break-all">{sourceName(source)}</span>. Each ticked due date becomes a set, or
+        updates the set it matches, and each ticked line a question.
       </p>
       {error && <p className="text-xs text-destructive">{error}</p>}
       {earlier > 0 && earlier < groups.length && (
@@ -381,45 +412,49 @@ export function AssignmentReview({
         </Button>
       )}
       <div className="divide-y divide-border-muted">
-        {shown.map((g) => (
-          <ReviewGroupBlock
-            key={g.id}
-            g={g}
-            onGroup={(change) => setGroup(g.id, change)}
-            onRow={(id, change) => setRow(g, id, change)}
-          />
-        ))}
+        {shown.map((g) =>
+          g.setId ? (
+            <UpdateGroupBlock
+              key={g.id}
+              g={g}
+              setTitle={titles[g.setId] ?? g.title}
+              onGroup={(change) => setGroup(g.id, change)}
+              onRow={(id, change) => setRow(g, id, change)}
+            />
+          ) : (
+            <NewGroupBlock
+              key={g.id}
+              g={g}
+              onGroup={(change) => setGroup(g.id, change)}
+              onRow={(id, change) => setRow(g, id, change)}
+            />
+          ),
+        )}
       </div>
     </div>
   )
 }
 
-function ReviewGroupBlock({
-  g,
-  onGroup,
-  onRow,
-}: {
+type GroupProps = {
   g: ReviewGroup
   onGroup: (change: Partial<ReviewGroup>) => void
   onRow: (id: number, change: Partial<ReviewRow>) => void
-}) {
-  const open = g.keep && !g.imported
+}
+
+/** A date that becomes a new set: its title and date editable, its lines
+ *  below. */
+function NewGroupBlock({ g, onGroup, onRow }: GroupProps) {
   const count = questionCount(g)
   return (
     <section className="space-y-2 py-3 first:pt-0 last:pb-0">
       <div className="flex items-center gap-1">
-        <Checkbox
-          checked={open}
-          disabled={g.imported}
-          onChange={() => onGroup({ keep: !g.keep })}
-          className="-ml-2"
-        >
+        <Checkbox checked={g.keep} onChange={() => onGroup({ keep: !g.keep })} className="-ml-2">
           <span className="sr-only">Add {g.title || 'this due date'}</span>
         </Checkbox>
         <Input
           aria-label="Set title"
           value={g.title}
-          disabled={!open}
+          disabled={!g.keep}
           onChange={(e) => onGroup({ title: e.target.value })}
           className="min-w-0 flex-1"
         />
@@ -427,15 +462,13 @@ function ReviewGroupBlock({
           aria-label="Due date"
           type="date"
           value={g.due}
-          disabled={!open}
+          disabled={!g.keep}
           onChange={(e) => onGroup({ due: e.target.value })}
           className="ml-1 w-40"
         />
       </div>
       <div className="flex items-center gap-2 pl-7 text-xs text-muted-foreground">
-        {g.imported ? (
-          <Label>Already added</Label>
-        ) : open ? (
+        {g.keep ? (
           <span>{count === 0 ? 'No lines ticked' : plural(count, 'question')}</span>
         ) : (
           <span>
@@ -443,9 +476,9 @@ function ReviewGroupBlock({
             {plural(g.rows.length, 'line')}; tick it to add them.
           </span>
         )}
-        {open && !g.title.trim() && <span className="text-destructive">Give it a title.</span>}
+        {g.keep && !g.title.trim() && <span className="text-destructive">Give it a title.</span>}
       </div>
-      {open && (
+      {g.keep && (
         <div className="space-y-3 pt-1 pl-7">
           {g.rows.map((r) => (
             <ReviewRowItem key={r.id} r={r} onChange={(change) => onRow(r.id, change)} />
@@ -453,6 +486,128 @@ function ReviewGroupBlock({
         </div>
       )}
     </section>
+  )
+}
+
+/** A date that updates a set: what's new in it, whose instructions
+ *  changed, and what the set has that it no longer lists. */
+function UpdateGroupBlock({ g, setTitle, onGroup, onRow }: GroupProps & { setTitle: string }) {
+  const something = pending(g)
+  const open = g.keep && something
+  const fresh = g.rows.filter((r) => r.kind !== 'other' && !r.added)
+  const changed = g.rows.flatMap((r) => r.changes.filter((c) => c.now.length > 0))
+  const summary = [
+    fresh.length > 0 &&
+      `${plural(questionCount({ ...g, rows: fresh.map((r) => ({ ...r, keep: true })) }), 'new question')}`,
+    changed.length > 0 && `${plural(changed.length, 'instruction')} changed`,
+    g.gone.length > 0 && `${g.gone.length} no longer listed`,
+  ].filter(Boolean)
+  return (
+    <section className="space-y-2 py-3 first:pt-0 last:pb-0">
+      <div className="flex min-h-control items-center gap-1">
+        <Checkbox
+          checked={open}
+          disabled={!something}
+          onChange={() => onGroup({ keep: !g.keep })}
+          className="-ml-2"
+        >
+          <span className="sr-only">Update {setTitle}</span>
+        </Checkbox>
+        <p className="min-w-0 flex-1 truncate text-sm font-medium">Update {setTitle}</p>
+        {g.due && <span className="shrink-0 text-xs text-muted-foreground">{shortDate(g.due)}</span>}
+      </div>
+      <div className="flex items-center gap-2 pl-7 text-xs text-muted-foreground">
+        {something ? <span>{summary.join(' · ')}</span> : <Label>Already added</Label>}
+      </div>
+      {open && (
+        <div className="space-y-3 pt-1 pl-7">
+          {g.rows.map((r) =>
+            r.kind !== 'other' && r.added ? (
+              <AddedRow key={r.id} r={r} onChange={(change) => onRow(r.id, change)} />
+            ) : (
+              <ReviewRowItem key={r.id} r={r} onChange={(change) => onRow(r.id, change)} />
+            ),
+          )}
+          {g.gone.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">
+                In the set, but not in this version. Tick one to take it out of the set.
+              </p>
+              {g.gone.map((q) => (
+                <Checkbox
+                  key={q.questionId}
+                  checked={q.remove}
+                  onChange={() =>
+                    onGroup({
+                      gone: g.gone.map((x) =>
+                        x.questionId === q.questionId ? { ...x, remove: !x.remove } : x,
+                      ),
+                    })
+                  }
+                  className="-ml-2 text-muted-foreground"
+                >
+                  Remove <span className="font-mono">{q.label}</span>
+                </Checkbox>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
+/** "Sep 4", for a date beside a set's name. */
+function shortDate(due: string) {
+  const [y, m, d] = due.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+/** A line the set already has: one quiet line, with its changed
+ *  instructions under it to take or leave. */
+function AddedRow({ r, onChange }: { r: ReviewRow; onChange: (change: Partial<ReviewRow>) => void }) {
+  return (
+    <div className="space-y-1">
+      <p className="truncate text-sm text-muted-foreground">
+        {r.text}
+        <span className="text-xs"> · already in the set</span>
+      </p>
+      <Changes r={r} onChange={onChange} />
+    </div>
+  )
+}
+
+/** A problem's instructions as this version gives them, ticked to take
+ *  them: its guide is written again, and nothing else is redone. */
+function Changes({ r, onChange }: { r: ReviewRow; onChange: (change: Partial<ReviewRow>) => void }) {
+  if (r.changes.length === 0) return null
+  return (
+    <div className="space-y-1">
+      {r.changes.map((c) => (
+        <div key={c.questionId}>
+          <Checkbox
+            checked={c.apply}
+            onChange={() =>
+              onChange({
+                changes: r.changes.map((x) =>
+                  x.questionId === c.questionId ? { ...x, apply: !x.apply } : x,
+                ),
+              })
+            }
+            className="-ml-2"
+          >
+            <span>
+              <span className="font-mono">{c.label}</span>:{' '}
+              {c.now.length ? <>now &ldquo;{c.now.join('; ')}&rdquo;</> : 'no instructions now'}
+            </span>
+          </Checkbox>
+          <p className="pl-6 text-xs text-muted-foreground">
+            {c.was.length ? <>Was &ldquo;{c.was.join('; ')}&rdquo;. </> : 'Had none. '}
+            Its guide is written again.
+          </p>
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -494,6 +649,7 @@ function ReviewRowItem({ r, onChange }: { r: ReviewRow; onChange: (change: Parti
           </Checkbox>
           <RowReading r={r} />
         </div>
+        <Changes r={r} onChange={onChange} />
       </div>
     </div>
   )
@@ -516,9 +672,18 @@ function RowReading({ r }: { r: ReviewRow }) {
   // A note that's most of the line (the professor's changes to a book
   // problem, a paragraph after it) is already there to read above.
   const notes = r.notes.join('; ')
+  const adds = r.labels.filter((l) => !r.present.includes(l))
   return (
     <span className="min-w-0 text-xs text-muted-foreground">
-      <span className="font-mono">{r.labels.join(', ')}</span>
+      {r.present.length > 0 ? (
+        <>
+          adds <span className="font-mono">{adds.join(', ')}</span> (
+          <span className="font-mono">{r.present.join(', ')}</span> {r.present.length === 1 ? 'is' : 'are'} in
+          the set)
+        </>
+      ) : (
+        <span className="font-mono">{r.labels.join(', ')}</span>
+      )}
       {notes && (
         <>
           {' '}
