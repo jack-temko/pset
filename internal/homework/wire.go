@@ -110,6 +110,10 @@ type Question struct {
 	Reading []string `json:"reading"`
 	// ReadingEdited is true once the student has corrected the reading.
 	ReadingEdited bool `json:"readingEdited"`
+	// Notes are the professor's instructions for the problem ("do c",
+	// "no PSpice or MultiSim", "for 500 packets"), which the guide
+	// follows over the book.
+	Notes []string `json:"notes"`
 	// Boxes are what the student drew around the problem on the scan,
 	// when they showed where it is rather than having it found.
 	Boxes []Box `json:"boxes"`
@@ -176,7 +180,10 @@ type QuestionPatch struct {
 	Done     *bool     `json:"done,omitempty"`
 	Position *int      `json:"position,omitempty"`
 	Reading  *[]string `json:"reading,omitempty"`
-	Reread   bool      `json:"reread,omitempty"`
+	// Notes replaces the professor's instructions, and writes the guide
+	// again when there is one.
+	Notes  *[]string `json:"notes,omitempty"`
+	Reread bool      `json:"reread,omitempty"`
 }
 
 // BoxKind is what a box around a problem holds.

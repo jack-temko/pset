@@ -23,3 +23,7 @@ branch of its own. Move one into its own file if it grows.
 - **`TestDigitalBookImportsToReady` failed once in about twenty runs**
   (2026-09-25), while a scratch server was busy on the same machine.
   Probably a race in the upload reply's queued state; not chased yet.
+- **Figure crops can cut the figure off.** 4.27's crop stops at "40"
+  on the right: the figure box the finder's model gave is too tight.
+  Boxing it by hand fixes one question; the padding could grow for
+  figures near a column's edge.

@@ -633,6 +633,7 @@ func (s *Service) guideUser(ctx context.Context, book Book, q row) (llm.Message,
 		fmt.Fprintf(&b, " (%s)", q.Label)
 	}
 	fmt.Fprintf(&b, ":\n\n%s\n", q.Statement)
+	b.WriteString(notesText(q))
 	if !q.InBook {
 		b.WriteString("\nIt isn't from the book: the student typed it in. Solve it from its own statement.\n")
 	}
@@ -667,6 +668,17 @@ func (s *Service) guideUser(ctx context.Context, book Book, q row) (llm.Message,
 		content.AppendPart(p)
 	}
 	return llm.Message{Role: "user", Content: content}, shown, nil
+}
+
+// notesText is the professor's instructions, for the writer: first, and
+// over the book.
+func notesText(q row) string {
+	if len(q.Notes) == 0 {
+		return ""
+	}
+	return "\nYour professor's instructions for this problem, which come before the book wherever they differ:\n" +
+		bullets(q.Notes) +
+		"Follow them: work only the parts they name, use their numbers in place of the book's, leave out what they rule out, and do what they add. Open the walkthrough by saying which of them you followed.\n"
 }
 
 // readingText is how the figures read, for the writer, which works from

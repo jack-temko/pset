@@ -49,6 +49,7 @@ import { Spinner } from '@/components/spinner'
 import { AddQuestionsDialog, BookDialog, HomeworkDialog } from './dialogs'
 import { MemoryDialog, MemoryLines, MemoryUndo } from './memory'
 import { FigureReading } from './reading'
+import { ProfessorNotes } from './notes'
 import { BoxingBar, BoxingProvider, PageBoxes } from './boxing'
 import { useBoxing } from './boxing-state'
 import { BookHereContext } from './book-here'
@@ -1249,6 +1250,9 @@ function Walkthrough({
             </button>
           </p>
         )}
+
+        {/* The professor's say on the problem, over the book's. */}
+        <ProfessorNotes key={q.id} q={q} onSave={(notes) => update.mutate({ id: q.id, patch: { notes } })} />
 
         {/* The words the guide is written from, once there are any: a
             question still being found or read has none to check yet. */}

@@ -328,9 +328,9 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 				// Its own words are its statement; nothing to find.
 				statement = d.Text
 			}
-			if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, state, created_at, updated_at)
-				VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
-				id, homeworkID, last+i+1, d.Text, d.InBook, label, statement, now, now); err != nil {
+			if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, notes, state, created_at, updated_at)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
+				id, homeworkID, last+i+1, d.Text, d.InBook, label, statement, mustJSON(orEmpty(d.notes)), now, now); err != nil {
 				return err
 			}
 			if _, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, d.InBook)); err != nil {
@@ -359,10 +359,12 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 	return out, nil
 }
 
-// splitRow is one question a draft becomes, with its label.
+// splitRow is one question a draft becomes, with its label and the
+// professor's notes it carries.
 type splitRow struct {
 	Draft
 	label string
+	notes []string
 }
 
 // splitDraft reads a draft as the book references it names, in the
@@ -372,10 +374,10 @@ func splitDraft(d Draft, style probnum.Style) []splitRow {
 	type draft = splitRow
 	refs, ok := ParseRefs(d.Text, style)
 	if !d.InBook || !ok {
-		return []draft{{d, labelFromText(d.Text)}}
+		return []draft{{d, labelFromText(d.Text), nil}}
 	}
 	if len(refs) == 1 {
-		return []draft{{d, refs[0].Label(style)}}
+		return []draft{{d, refs[0].Label(style), notesOf(refs[0])}}
 	}
 	out := make([]draft, 0, len(refs))
 	for _, r := range refs {
@@ -386,7 +388,7 @@ func splitDraft(d Draft, style probnum.Style) []splitRow {
 		if r.Note != "" {
 			text += " (" + r.Note + ")"
 		}
-		out = append(out, draft{Draft{Text: text, InBook: true}, r.Label(style)})
+		out = append(out, draft{Draft{Text: text, InBook: true}, r.Label(style), notesOf(r)})
 	}
 	return out
 }
@@ -413,6 +415,9 @@ func (s *Service) UpdateQuestion(ctx context.Context, id string, p QuestionPatch
 	}
 	if p.Reading != nil || p.Reread {
 		return s.redoReading(ctx, q, p.Reading)
+	}
+	if p.Notes != nil {
+		return s.setNotes(ctx, q, *p.Notes)
 	}
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if p.Reveal != nil {
@@ -505,28 +510,11 @@ func (s *Service) redoReading(ctx context.Context, q row, corrected *[]string) (
 			return s.publishQuestion(ctx, q.ID)
 		}
 	}
-	s.c.Queue.StopSubject(ctx, q.ID)
 	next, edited := readStep(q.ID), 0
 	if corrected != nil {
 		next, edited = nextStep(q.ID, false), 1
 	}
-	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
-		// Memory lines go with the guide they came from, but for the
-		// one that found the problem; the new guide starts its own.
-		if _, err := tx.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = ?, hint = '[]', walkthrough = '[]', rounds = '[]',
-			memory = coalesce((SELECT json_group_array(json(value)) FROM json_each(memory) WHERE json_extract(value, '$.use') = ?), '[]'),
-			state = ?, failure = '', reason = '', activity = '', updated_at = ? WHERE id = ?`,
-			mustJSON(orEmpty(lines)), edited, MemoryUseFound, StateLocated, db.Now(), q.ID); err != nil {
-			return err
-		}
-		_, err := s.c.Queue.Enqueue(ctx, tx, next)
-		return err
-	})
-	if err != nil {
-		return Question{}, err
-	}
-	s.c.Queue.Wake()
-	return s.publishQuestion(ctx, q.ID)
+	return s.rewrite(ctx, q, next, `reading = ?, reading_edited = ?`, mustJSON(orEmpty(lines)), edited)
 }
 
 // move puts a question at position to (1-based), shifting the ones in

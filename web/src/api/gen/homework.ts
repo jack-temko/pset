@@ -143,6 +143,12 @@ export interface Question {
    */
   readingEdited: boolean;
   /**
+   * Notes are the professor's instructions for the problem ("do c",
+   * "no PSpice or MultiSim", "for 500 packets"), which the guide
+   * follows over the book.
+   */
+  notes: string[];
+  /**
    * Boxes are what the student drew around the problem on the scan,
    * when they showed where it is rather than having it found.
    */
@@ -218,6 +224,11 @@ export interface QuestionPatch {
   done?: boolean;
   position?: number /* int */;
   reading?: string[];
+  /**
+   * Notes replaces the professor's instructions, and writes the guide
+   * again when there is one.
+   */
+  notes?: string[];
   reread?: boolean;
 }
 /**

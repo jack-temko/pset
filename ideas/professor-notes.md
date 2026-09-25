@@ -2,9 +2,9 @@
 
 ## Status
 
-**Planned** · phase 3, with [importing](importing-assignments.md). It
-could go earlier on its own: typed text already carries notes ("3.24
-(use matlab)"), which the parser accepts and then throws away.
+**Done** (branch `professor-notes`, 2026-09-25), ahead of importing,
+for typed references; the importer will fill the same notes. Spec in
+`design/workspace.md`, "The professor's notes".
 
 ## Information
 

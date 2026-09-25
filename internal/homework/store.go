@@ -77,6 +77,9 @@ ALTER TABLE questions ADD COLUMN reading_edited INTEGER NOT NULL DEFAULT 0`},
 		// The boxes the student drew around the problem on the page scan,
 		// which it's read from instead of being looked for.
 		{Name: "homework/8", SQL: `ALTER TABLE questions ADD COLUMN boxes TEXT NOT NULL DEFAULT '[]'`},
+		// The professor's instructions for the problem ("do c", "no
+		// PSpice"), which the guide follows over the book.
+		{Name: "homework/9", SQL: `ALTER TABLE questions ADD COLUMN notes TEXT NOT NULL DEFAULT '[]'`},
 	}
 }
 
@@ -152,14 +155,14 @@ func (f figure) on(q row) int {
 }
 
 const questionCols = `q.id, q.homework_id, q.position, q.text, q.in_book, q.label, q.statement, q.page, q.pinned_page,
-	q.rect, q.figures, q.hint, q.walkthrough, q.state, q.reason, q.revealed, q.done_at, q.activity, q.memory, q.failure, q.reading, q.reading_edited, q.boxes, q.updated_at, q.rev, h.book_id`
+	q.rect, q.figures, q.hint, q.walkthrough, q.state, q.reason, q.revealed, q.done_at, q.activity, q.memory, q.failure, q.reading, q.reading_edited, q.boxes, q.notes, q.updated_at, q.rev, h.book_id`
 
 func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	var r row
 	var page, pinned sql.NullInt64
-	var rect, figs, hint, walk, revealed, doneAt, memory, reading, boxes string
+	var rect, figs, hint, walk, revealed, doneAt, memory, reading, boxes, notes string
 	err := s.Scan(&r.ID, &r.HomeworkID, &r.Position, &r.Text, &r.InBook, &r.Label, &r.Statement, &page, &pinned,
-		&rect, &figs, &hint, &walk, &r.State, &r.Reason, &revealed, &doneAt, &r.Activity, &memory, &r.Failure, &reading, &r.ReadingEdited, &boxes, &r.UpdatedAt, &r.Rev, &r.BookID)
+		&rect, &figs, &hint, &walk, &r.State, &r.Reason, &revealed, &doneAt, &r.Activity, &memory, &r.Failure, &reading, &r.ReadingEdited, &boxes, &notes, &r.UpdatedAt, &r.Rev, &r.BookID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
 	}
@@ -190,6 +193,8 @@ func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	json.Unmarshal([]byte(reading), &r.Reading)
 	r.Boxes = []Box{}
 	json.Unmarshal([]byte(boxes), &r.Boxes)
+	r.Notes = []string{}
+	json.Unmarshal([]byte(notes), &r.Notes)
 	r.Done = doneAt != ""
 	return r, nil
 }
