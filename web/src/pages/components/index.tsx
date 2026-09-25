@@ -34,6 +34,7 @@ import { Spinner } from '@/components/spinner'
 import { Skeleton } from '@/components/skeleton'
 import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
 import { ConfirmPopover } from '@/components/confirm'
+import { RadioRows } from '@/components/radio-rows'
 import { SegmentedControl } from '@/components/segmented-control'
 import { Checkbox } from '@/components/checkbox'
 import { Dialog } from '@/components/dialog'
@@ -358,6 +359,27 @@ function ResetDemo() {
         )}
       </BoxBody>
     </Box>
+  )
+}
+
+/** Radio rows, live: a choice that needs explaining, and one not made
+ *  yet. The Book dialog's numbering is the real one, above. */
+function RadioRowsDemo({ start }: { start: 'section' | 'chapter' | '' }) {
+  const [v, setV] = useState<'section' | 'chapter' | ''>(start)
+  return (
+    <RadioRows
+      label="Where the problems are"
+      value={v}
+      onChange={setV}
+      options={[
+        { value: 'section', label: 'After each section', hint: 'A short Problems list closes every section.' },
+        {
+          value: 'chapter',
+          label: "At the chapter's end",
+          hint: "One long list after the chapter's last section, headed by section.",
+        },
+      ]}
+    />
   )
 }
 
@@ -832,6 +854,16 @@ export function Components() {
           <Shelf label="problems, unknown">
             <div className="w-dialog">
               <ProblemStyleDemo style={undefined} />
+            </div>
+          </Shelf>
+          <Shelf label="radio rows">
+            <div className="w-dialog">
+              <RadioRowsDemo start="section" />
+            </div>
+          </Shelf>
+          <Shelf label="radio rows, unanswered">
+            <div className="w-dialog">
+              <RadioRowsDemo start="" />
             </div>
           </Shelf>
           <Shelf label="segmented">
