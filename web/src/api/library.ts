@@ -161,7 +161,7 @@ export function useRemoveBook() {
   })
 }
 
-/** Title, author and offset apply at once, and roll back if the server
+/** Title, author, page numbers and colour apply at once, and roll back if the server
  *  refuses. */
 export function useUpdateBook(id: string) {
   const qc = useQueryClient()

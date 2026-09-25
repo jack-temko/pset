@@ -41,8 +41,9 @@ export function Statement({
   kind: string
   number: string
   name?: string
+  /** The PDF page it's on. */
   page: number
-  onJump?: (page: number) => void
+  onJump?: (pdf: number) => void
   children: ReactNode
 }) {
   return (
@@ -54,7 +55,7 @@ export function Statement({
           </span>
           {name && <span className="text-muted-foreground">: {name}</span>}
         </span>
-        <PageRef page={page} onJump={onJump} />
+        <PageRef pdf={page} onJump={onJump} />
       </figcaption>
       <div className="space-y-2 p-card text-base">{children}</div>
     </figure>

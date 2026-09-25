@@ -7,6 +7,9 @@ import { Checkbox } from '@/components/checkbox'
 import { Dialog } from '@/components/dialog'
 import { AutoTextarea, Field, Input } from '@/components/input'
 import type { CoverHue } from '@/lib/covers'
+import type { Run } from '@/api/gen/pagenum'
+import { PageMap } from '@/lib/pages'
+import { anchorsOf, PageNumbersField, runsOf, type PageAnchor } from './page-numbers'
 
 /**
  * The workspace's dialogs. Making a homework set and filling it are
@@ -105,9 +108,10 @@ export function HomeworkDialog({
 }
 
 /**
- * The book: its name, and the one number every page number in the app
- * hangs on. Title and author start as the PDF's metadata; the offset as
- * whatever the engine read at import. Both are yours to correct.
+ * The book: its name, and how its printed page numbers line up with the
+ * PDF, which every page number in the app hangs on. Title and author
+ * start as the PDF's metadata; the numbering as the engine read it at
+ * import, a row per run. Both are yours to correct.
  *
  * It only edits: removing the book is in the book's menu in the top bar.
  */
@@ -118,13 +122,13 @@ export function BookDialog({
   onSave,
 }: {
   open: boolean
-  book: { title: string; author: string; offset: number; cover: CoverHue; pages: number; imported: string }
+  book: { title: string; author: string; runs: Run[]; cover: CoverHue; pages: number; imported: string }
   onClose: () => void
-  onSave: (next: { title: string; author: string; offset: number; cover: CoverHue }) => void
+  onSave: (next: { title: string; author: string; runs: Run[]; cover: CoverHue }) => void
 }) {
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
-  const [firstPage, setFirstPage] = useState('')
+  const [anchors, setAnchors] = useState<PageAnchor[]>(() => anchorsOf(book.runs))
   const [cover, setCover] = useState<CoverHue>(book.cover)
 
   useEffect(() => {
@@ -132,18 +136,22 @@ export function BookDialog({
       setTitle(book.title)
       setAuthor(book.author)
       // Asked the way a person checks it: find printed page 1 in the scan
-      // and read off its PDF page. The offset is that minus one.
-      setFirstPage(String(book.offset + 1))
+      // and read off its PDF page, then the same where the numbers jump.
+      setAnchors(anchorsOf(book.runs))
       setCover(book.cover)
     }
     // Seeded on open only, for the same reason as HomeworkDialog.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  const pdfOfFirst = Number(firstPage.match(/\d+/)?.[0] ?? 0)
-  const valid = title.trim() && pdfOfFirst >= 1 && pdfOfFirst <= book.pages
+  const parsed = runsOf(anchors, book.pages)
+  const runs = 'runs' in parsed ? parsed.runs : null
+  const valid = title.trim() && runs !== null
   const unchanged =
-    title === book.title && author === book.author && pdfOfFirst === book.offset + 1 && cover === book.cover
+    title === book.title &&
+    author === book.author &&
+    JSON.stringify(runs) === JSON.stringify(new PageMap(book.runs).runs) &&
+    cover === book.cover
 
   return (
     <Dialog
@@ -158,7 +166,7 @@ export function BookDialog({
           <Button
             disabled={!valid || unchanged}
             onClick={() => {
-              onSave({ title: title.trim(), author: author.trim(), offset: pdfOfFirst - 1, cover })
+              if (runs) onSave({ title: title.trim(), author: author.trim(), runs, cover })
               onClose()
             }}
           >
@@ -174,17 +182,7 @@ export function BookDialog({
         <Field label="Author">
           <Input value={author} onChange={(e) => setAuthor(e.target.value)} />
         </Field>
-        <Field
-          label="Printed page 1 is PDF page"
-          hint="Every page number in the app counts from this. Found at import. Fix it here if the numbers are off."
-        >
-          <Input
-            inputMode="numeric"
-            value={firstPage}
-            onChange={(e) => setFirstPage(e.target.value)}
-            className="w-24 font-mono"
-          />
-        </Field>
+        <PageNumbersField anchors={anchors} pageCount={book.pages} onChange={setAnchors} />
         <Field label="Cover">
           <CoverPicker value={cover} onChange={setCover} />
         </Field>

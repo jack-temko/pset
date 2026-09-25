@@ -9,15 +9,32 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/pagenum"
 )
 
 // Book is what the tools need to know about the book: page numbers the
-// model sees are printed ones, the library's are PDF pages.
+// model sees are printed ones, the library's are PDF pages, and Pages
+// turns one into the other.
 type Book struct {
-	ID         string
-	Title      string
-	PageCount  int
-	PageOffset int
+	ID        string
+	Title     string
+	PageCount int
+	Pages     pagenum.Map
+}
+
+// pdf is the PDF page of a printed number the model gave, or why there
+// isn't one: a page the book doesn't have, or one the scan lost.
+func (b Book) pdf(printed int) (int, string) {
+	pdf, ok := b.Pages.PDF(printed)
+	if ok && pdf >= 1 && pdf <= b.PageCount {
+		return pdf, ""
+	}
+	// A number inside the book's printed range that no page carries was
+	// lost from the scan.
+	if last, _ := b.Pages.Printed(b.PageCount); printed >= 1 && printed < last {
+		return 0, fmt.Sprintf("p. %d is missing from this scan of the book.", printed)
+	}
+	return 0, fmt.Sprintf("The book has no p. %d.", printed)
 }
 
 // Library is the book, as the tools read it. Pages are PDF pages.
@@ -99,7 +116,9 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			if c.Function.Name == "view_page" {
 				var a struct{ Page int }
 				if json.Unmarshal([]byte(c.Function.Arguments), &a) == nil {
-					l.seen[a.Page+l.Book.PageOffset] = true
+					if pdf, bad := l.Book.pdf(a.Page); bad == "" {
+						l.seen[pdf] = true
+					}
 				}
 			}
 		}

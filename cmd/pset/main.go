@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/jackt/pset/internal/pagenum"
 	"log/slog"
 	"net"
 	"net/http"
@@ -207,14 +208,14 @@ type homeworkLibrary struct{ *library.Service }
 
 func (l homeworkLibrary) Book(ctx context.Context, id string) (homework.Book, error) {
 	b, err := l.Get(ctx, id)
-	return homework.Book{ID: b.ID, Title: b.Title, PageCount: b.PageCount, PageOffset: b.PageOffset}, err
+	return homework.Book{ID: b.ID, Title: b.Title, PageCount: b.PageCount, Pages: pagenum.New(b.PageRuns)}, err
 }
 
 type askLibrary struct{ *library.Service }
 
 func (l askLibrary) Book(ctx context.Context, id string) (ask.Book, error) {
 	b, err := l.Get(ctx, id)
-	return ask.Book{ID: b.ID, Title: b.Title, PageCount: b.PageCount, PageOffset: b.PageOffset}, err
+	return ask.Book{ID: b.ID, Title: b.Title, PageCount: b.PageCount, Pages: pagenum.New(b.PageRuns)}, err
 }
 
 // agentMemory is the book's memory as the tutor's loop reads and writes

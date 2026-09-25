@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/mathx"
+	"github.com/jackt/pset/internal/pagenum"
 )
 
 // The tools: as few as cover what a student needs. Pages are the printed
@@ -71,7 +72,7 @@ func (l *Loop) tool(ctx context.Context, call llm.ToolCall) (string, []llm.Part)
 		fmt.Fprintf(&out, "Pages matching %q, best first:\n", q)
 		for _, p := range hits {
 			text, _ := l.Library.PageText(ctx, b.ID, p)
-			fmt.Fprintf(&out, "\n%s:\n%s\n", pageName(p, b.PageOffset), snippet(text, q))
+			fmt.Fprintf(&out, "\n%s:\n%s\n", pageName(p, b.Pages), snippet(text, q))
 		}
 		l.step(fmt.Sprintf("Searched ‘%s’ · %s", q, plural(len(hits), "page")), false)
 		return out.String(), nil
@@ -89,9 +90,9 @@ func (l *Loop) tool(ctx context.Context, call llm.ToolCall) (string, []llm.Part)
 		l.step("Reading "+label+"…", true)
 		var out strings.Builder
 		for p := from; p <= to; p++ {
-			pdf := p + b.PageOffset
-			if pdf < 1 || pdf > b.PageCount {
-				fmt.Fprintf(&out, "p. %d: the book has no such page.\n", p)
+			pdf, bad := b.pdf(p)
+			if bad != "" {
+				fmt.Fprintf(&out, "p. %d: %s\n", p, bad)
 				continue
 			}
 			text, _ := l.Library.PageText(ctx, b.ID, pdf)
@@ -103,10 +104,10 @@ func (l *Loop) tool(ctx context.Context, call llm.ToolCall) (string, []llm.Part)
 	case "view_page":
 		p := args.Page
 		l.step(fmt.Sprintf("Looking at p. %d…", p), true)
-		pdf := p + b.PageOffset
-		if pdf < 1 || pdf > b.PageCount {
+		pdf, bad := b.pdf(p)
+		if bad != "" {
 			l.step(fmt.Sprintf("Looked for p. %d · not in the book", p), false)
-			return fmt.Sprintf("The book has no p. %d.", p), nil
+			return bad, nil
 		}
 		if l.seen[pdf] {
 			// The same image again would add nothing but another look.
@@ -155,8 +156,8 @@ func (l *Loop) tool(ctx context.Context, call llm.ToolCall) (string, []llm.Part)
 	return "Error: there's no tool called " + call.Function.Name + ".", nil
 }
 
-func pageName(pdf, offset int) string {
-	if p := pdf - offset; p >= 1 {
+func pageName(pdf int, m pagenum.Map) string {
+	if p, ok := m.Printed(pdf); ok {
 		return fmt.Sprintf("p. %d", p)
 	}
 	return fmt.Sprintf("front matter (not citable, PDF page %d)", pdf)

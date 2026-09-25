@@ -7,7 +7,7 @@ import { Button } from '@/components/button'
 import { ConfirmPopover } from '@/components/confirm'
 import { Spinner } from '@/components/spinner'
 import { Tooltip } from '@/components/tooltip'
-import { pdfOf, printedLabel, usePageOffset } from '@/lib/pages'
+import { usePages } from '@/lib/pages'
 import { cn } from '@/lib/utils'
 
 /**
@@ -172,18 +172,19 @@ export function AssistantTurn({ children }: { children: ReactNode }) {
 }
 
 /** An inline citation: a small mono chip that reads as an object in the
- *  prose. Click scrolls the scan to the page and flashes its edge. */
-export function PageRef({ page, onJump }: { page: number; onJump?: (page: number) => void }) {
+ *  prose. Click scrolls the scan to the page and flashes its edge. It
+ *  takes the PDF page, as every page travels. */
+export function PageRef({ pdf, onJump }: { pdf: number; onJump?: (pdf: number) => void }) {
   // The chip says the printed page; the PDF page is one hover away.
-  const offset = usePageOffset()
+  const pages = usePages()
   return (
-    <Tooltip label={`PDF page ${pdfOf(page, offset)}`}>
+    <Tooltip label={`PDF page ${pdf}`}>
       <button
         type="button"
-        onClick={() => onJump?.(page)}
+        onClick={() => onJump?.(pdf)}
         className="mx-px inline-flex shrink-0 translate-y-px items-center rounded-sm bg-primary-soft px-1 font-mono text-xs whitespace-nowrap text-primary transition-colors duration-150 ease-out hover:bg-primary hover:text-primary-foreground motion-reduce:transition-none"
       >
-        p.&thinsp;{printedLabel(pdfOf(page, offset), offset)}
+        p.&thinsp;{pages.label(pdf)}
       </button>
     </Tooltip>
   )

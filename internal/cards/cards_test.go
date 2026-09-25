@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/jackt/pset/internal/pagenum"
 	"strings"
 	"testing"
 )
@@ -39,7 +40,7 @@ const answer = "The span comes first [p. 28].\n\n```steps\n{\"steps\":[{\"math\"
 func TestProseAndCardSurviveAnyChunking(t *testing.T) {
 	for _, n := range []int{1, 2, 3, 7, 64, 4096} {
 		var l log
-		p := NewParser(context.Background(), Options{Offset: 16}, l.handler())
+		p := NewParser(context.Background(), Options{Pages: pagenum.Single(16)}, l.handler())
 		feedIn(p, answer, n)
 		segs := p.Segments()
 		if len(segs) != 3 || segs[0].Type != SegmentProse || segs[1].Type != SegmentCard || segs[2].Type != SegmentProse {
@@ -145,7 +146,7 @@ func TestSectionsSplitTheAnswer(t *testing.T) {
 
 func TestPlotExpressionsAreSampled(t *testing.T) {
 	card, err := Validate(KindPlot, `{"title":"Decay","x":{"label":"t"},"y":{"label":"N"},
-		"series":[{"label":"N(t)","expr":"100exp(-x/2)","domain":[0,10]},{"label":"data","points":[[0,100],[2,37]]}]}`, 0)
+		"series":[{"label":"N(t)","expr":"100exp(-x/2)","domain":[0,10]},{"label":"data","points":[[0,100],[2,37]]}]}`, pagenum.Map{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,14 +164,14 @@ func TestPlotExpressionsAreSampled(t *testing.T) {
 	}
 	for name, raw := range cases {
 		var bad *Invalid
-		if _, err := Validate(KindPlot, raw, 0); !errors.As(err, &bad) {
+		if _, err := Validate(KindPlot, raw, pagenum.Map{}); !errors.As(err, &bad) {
 			t.Errorf("%s: %v", name, err)
 		}
 	}
 }
 
 func TestStatementPageMovesToPDF(t *testing.T) {
-	card, err := Validate(KindStatement, `{"kind":"Theorem","number":"5.22","page":143,"text":"Suppose [p. 140] says so."}`, 16)
+	card, err := Validate(KindStatement, `{"kind":"Theorem","number":"5.22","page":143,"text":"Suppose [p. 140] says so."}`, pagenum.Single(16))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,8 +188,24 @@ func TestCite(t *testing.T) {
 		"see [p.4] and [pp. 4-6]": "see [p. 20] and [pp. 20–22]",
 		"[p. x]":                  "[p. x]",
 	} {
-		if got := Cite(in, 16); got != want {
+		if got := Cite(in, pagenum.Single(16)); got != want {
 			t.Errorf("Cite(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+// In a scan that lost a page, citations after the gap land one page
+// sooner than a single offset would put them, and a citation of the lost
+// page lands beside where it would be.
+func TestCiteAcrossALostPage(t *testing.T) {
+	boyce := pagenum.New([]pagenum.Run{{From: 1, Offset: 12}, {From: 97, Offset: 11}})
+	if got := Cite("[p. 33] and [pp. 84–86] and [p. 112]", boyce); got != "[p. 45] and [pp. 96–97] and [p. 123]" {
+		t.Fatalf("Cite = %q", got)
+	}
+	if got := Cite("[p. 85]", boyce); got != "[p. 97]" {
+		t.Fatalf("lost page cited as %q", got)
+	}
+	if got := Uncite("[p. 45] and [p. 123] and [p. 3]", boyce); got != "[p. 33] and [p. 112] and [p. 3]" {
+		t.Fatalf("Uncite = %q", got)
 	}
 }

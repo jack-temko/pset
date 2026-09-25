@@ -421,15 +421,6 @@ func (s *Service) pageImage(ctx context.Context, bookID string, page, width int)
 	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
-// printedName is how a PDF page is named to the model: by its printed
-// number, which is what the page itself says and what citations use.
-func printedName(page, offset int) string {
-	if p := page - offset; p >= 1 {
-		return fmt.Sprintf("p. %d", p)
-	}
-	return fmt.Sprintf("a front-matter page (PDF page %d)", page)
-}
-
 // ---------------------------------------------------------------- guide
 
 // Stage names, as the model writes them and the walkthrough shows them.
@@ -463,7 +454,7 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 		msgs := append([]llm.Message{user}, rounds...)
 		var parser *cards.Parser
 		parser = cards.NewParser(ctx, cards.Options{
-			Offset:   book.PageOffset,
+			Pages:    book.Pages,
 			Repair:   m.repair,
 			Sections: []string{stageHint, stageWalkthrough},
 		}, cards.Handler{
@@ -478,7 +469,7 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 		})
 		loop := &agent.Loop{
 			Client: m.client, Model: m.name, Library: s.c.Library,
-			Book:   agent.Book{ID: book.ID, Title: book.Title, PageCount: book.PageCount, PageOffset: book.PageOffset},
+			Book:   agent.Book{ID: book.ID, Title: book.Title, PageCount: book.PageCount, Pages: book.Pages},
 			Rounds: guideRounds,
 			System: guideSystem(),
 			Memory: s.memory(),
@@ -586,7 +577,7 @@ func (s *Service) sawProblem(ctx context.Context, book Book, q row, loc location
 	if !ok {
 		return
 	}
-	if err := s.c.Memory.SawProblem(ctx, book.ID, book.PageOffset, chapter, label, loc.Page); err != nil {
+	if err := s.c.Memory.SawProblem(ctx, book.ID, book.Pages, chapter, label, loc.Page); err != nil {
 		slog.Warn("question: remember problem", "question", q.ID, "err", err)
 	}
 }
@@ -646,7 +637,7 @@ func (s *Service) guideUser(ctx context.Context, book Book, q row) (llm.Message,
 	var parts []llm.Part
 	var shown []int
 	if q.Page != nil {
-		page := printedName(*q.Page, book.PageOffset)
+		page := book.Pages.Name(*q.Page)
 		if figs := s.figureParts(ctx, book, q); len(figs) > 0 {
 			fmt.Fprintf(&b, "\nThe problem is on %s of %q. Its figures follow, cut from the page; view_page shows the whole page.\n", page, book.Title)
 			b.WriteString(readingText(q))
@@ -765,7 +756,7 @@ func (s *Service) theory(ctx context.Context, book Book, q row) string {
 		if err != nil || strings.TrimSpace(text) == "" {
 			continue
 		}
-		fmt.Fprintf(&b, "\n%s:\n%s\n", printedName(p, book.PageOffset), clip(text, 5000))
+		fmt.Fprintf(&b, "\n%s:\n%s\n", book.Pages.Name(p), clip(text, 5000))
 		if n++; n == theoryPages {
 			break
 		}
@@ -806,7 +797,7 @@ func (s *Service) locate(ctx context.Context, m model, book Book, q row) (locati
 			return location{}, err
 		}
 		if !ok {
-			return location{}, fail(FailureNotFound, nil, "It isn't on %s either. Check the page number, or paste the problem below.", printedName(*q.Pinned, book.PageOffset))
+			return location{}, fail(FailureNotFound, nil, "It isn't on %s either. Check the page number, or paste the problem below.", book.Pages.Name(*q.Pinned))
 		}
 		return loc, nil
 	}
@@ -902,8 +893,13 @@ func (s *Service) candidates(ctx context.Context, book Book, text string, k int,
 		}
 	}
 	if printed, ok := printedPageOf(text); ok {
-		exact[printed+book.PageOffset] = true
-		add(printed + book.PageOffset)
+		// The page cited, then the pages either side: a problem runs over
+		// onto the next page, and a student's page number can be one off.
+		at := book.Pages.Nearest(printed)
+		exact[at] = true
+		add(at)
+		add(at + 1)
+		add(at - 1)
 	}
 	if label, ok := questionLabel(text); ok {
 		texts, err := s.c.Library.PageTexts(ctx, book.ID)

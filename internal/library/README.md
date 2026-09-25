@@ -11,8 +11,11 @@ status: text, blank or failed) with the `pages_fts` index kept by
 triggers, `sections` (the contents, in order, with levels), and
 `embeddings` (one vector per page, in one model's space).
 
-`edited` is set when the student changes title, author or offset, and a
-retried import never writes over those again.
+`edited` is set when the student changes title or author, and
+`pages_edited` when they change the page numbering; a retried import
+never writes over either again. `page_runs` holds the numbering as
+`pagenum.Run`s; books from before it get theirs worked out from their
+stored text on startup (`pageruns.go`).
 
 ## Import
 
@@ -42,8 +45,8 @@ runs. The phases:
    the tools choke on fails the import with the list; a blank page doesn't.
 3. **index**: the contents (the outline, else headings inferred from font
    sizes, else line shapes in OCR text; always at least one section) and
-   the **page offset**, from printed numbers in running heads and feet
-   (`offset.go`).
+   the **page numbering**, runs of one offset each from printed numbers in
+   running heads and feet (`pageruns.go`, `internal/pagenum`).
 4. **search**: a vector per page with text, in batches, counted. Vectors
    from another model are dropped first; the count is checked at the end.
 
@@ -55,7 +58,7 @@ puts a running import back to `queued` and it resumes.
 ## Reading
 
 - `GET /api/books`, `GET /api/books/{id}`, `PATCH` (title, author,
-  pageOffset, which must land inside the book).
+  pageRuns, each run starting inside the book, and cover).
 - `GET /api/books/{id}/contents`: top-level entries as chapters, one
   level down as sections; a book whose only section is the whole-book
   fallback gets none, and so no rail.

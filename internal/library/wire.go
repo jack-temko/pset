@@ -1,5 +1,7 @@
 package library
 
+import "github.com/jackt/pset/internal/pagenum"
+
 // State is where a book is on its way to the shelf.
 type State string
 
@@ -59,16 +61,17 @@ const (
 )
 
 // Book is a book as every screen sees it. Cover is its cloth colour;
-// PageOffset turns a PDF page into the printed one (PDF = printed +
-// offset). Page numbers on the wire are always PDF pages.
+// PageRuns is how its printed numbers run (PDF page = printed page +
+// offset, run by run), never empty. Page numbers on the wire are always
+// PDF pages.
 type Book struct {
-	ID         string `json:"id"`
-	SHA256     string `json:"sha256"`
-	Title      string `json:"title"`
-	Author     string `json:"author"`
-	PageCount  int    `json:"pageCount"`
-	PageOffset int    `json:"pageOffset"`
-	Cover      Cover  `json:"cover"`
+	ID        string        `json:"id"`
+	SHA256    string        `json:"sha256"`
+	Title     string        `json:"title"`
+	Author    string        `json:"author"`
+	PageCount int           `json:"pageCount"`
+	PageRuns  []pagenum.Run `json:"pageRuns"`
+	Cover     Cover         `json:"cover"`
 	// Aspect is page height over width, so a scan holds its box before the
 	// image arrives.
 	Aspect float64 `json:"aspect"`
@@ -88,12 +91,13 @@ type Books struct {
 	Books []Book `json:"books"`
 }
 
-// BookPatch is PATCH /api/books/{id}: any subset of the four.
+// BookPatch is PATCH /api/books/{id}: any subset of the four. PageRuns
+// replaces the book's numbering whole.
 type BookPatch struct {
-	Title      *string `json:"title,omitempty"`
-	Author     *string `json:"author,omitempty"`
-	PageOffset *int    `json:"pageOffset,omitempty"`
-	Cover      *Cover  `json:"cover,omitempty"`
+	Title    *string       `json:"title,omitempty"`
+	Author   *string       `json:"author,omitempty"`
+	PageRuns []pagenum.Run `json:"pageRuns,omitempty"`
+	Cover    *Cover        `json:"cover,omitempty"`
 }
 
 // ContentsSection is a section of a chapter, at its PDF page.

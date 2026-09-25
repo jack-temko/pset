@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jackt/pset/internal/pagenum"
 	"math"
 	"regexp"
 	"strconv"
@@ -69,8 +70,8 @@ func (e *Invalid) Error() string { return strings.Join(e.Problems, "; ") }
 // Validate checks a card the model wrote and returns it as it goes on the
 // wire: citations and pages moved to PDF pages, a plot's expressions
 // sampled into points.
-func Validate(kind Kind, raw string, offset int) (json.RawMessage, error) {
-	raw = Cite(raw, offset)
+func Validate(kind Kind, raw string, pages pagenum.Map) (json.RawMessage, error) {
+	raw = Cite(raw, pages)
 	var value any
 	if err := json.Unmarshal([]byte(raw), &value); err != nil {
 		return nil, &Invalid{[]string{"not valid JSON: " + err.Error()}}
@@ -90,7 +91,7 @@ func Validate(kind Kind, raw string, offset int) (json.RawMessage, error) {
 	case KindStatement:
 		var c StatementCard
 		json.Unmarshal([]byte(raw), &c)
-		c.Page += offset
+		c.Page = pages.Nearest(c.Page)
 		return json.Marshal(c)
 	case KindPlot:
 		return samplePlot(raw)
@@ -195,19 +196,33 @@ func sample(expr string, a, b float64) ([][2]float64, error) {
 var citation = regexp.MustCompile(`\[(pp?)\.\s*(\d+)(?:\s*[–-]\s*(\d+))?\]`)
 
 // Cite moves citations from the printed page the model read ([p. 42]) to
-// the PDF page the wire speaks ([p. 58] at offset 16). A range keeps both
-// ends.
-func Cite(text string, offset int) string {
-	if offset == 0 {
-		return text
-	}
+// the PDF page the wire speaks ([p. 58] in a book printed 16 pages in). A
+// range keeps both ends. A page the scan lost lands beside where it would
+// be.
+func Cite(text string, pages pagenum.Map) string {
+	return recite(text, pages.Nearest)
+}
+
+// Uncite is Cite backwards: the wire's PDF pages as the printed ones the
+// model reads, for a conversation sent back to it. Front matter keeps its
+// PDF page, having no printed one.
+func Uncite(text string, pages pagenum.Map) string {
+	return recite(text, func(pdf int) int {
+		if n, ok := pages.Printed(pdf); ok {
+			return n
+		}
+		return pdf
+	})
+}
+
+func recite(text string, page func(int) int) string {
 	return citation.ReplaceAllStringFunc(text, func(m string) string {
 		g := citation.FindStringSubmatch(m)
 		a, _ := strconv.Atoi(g[2])
 		if g[3] == "" {
-			return fmt.Sprintf("[p. %d]", a+offset)
+			return fmt.Sprintf("[p. %d]", page(a))
 		}
 		b, _ := strconv.Atoi(g[3])
-		return fmt.Sprintf("[pp. %d–%d]", a+offset, b+offset)
+		return fmt.Sprintf("[pp. %d–%d]", page(a), page(b))
 	})
 }

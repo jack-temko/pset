@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jackt/pset/internal/pagenum"
 	"io"
 	"log/slog"
 	"maps"
@@ -236,8 +237,8 @@ func TestDigitalBookImportsToReady(t *testing.T) {
 	if b.Title != "Linear Maps" || b.Author != "A. Author" || b.PageCount != 15 {
 		t.Fatalf("metadata not applied: %+v", b)
 	}
-	if b.PageOffset != 3 {
-		t.Fatalf("offset = %d, want 3", b.PageOffset)
+	if len(b.PageRuns) != 1 || b.PageRuns[0].Offset != 3 {
+		t.Fatalf("page runs = %+v, want offset 3", b.PageRuns)
 	}
 	if b.Aspect < 1.2 || b.Aspect > 1.4 {
 		t.Fatalf("aspect %v", b.Aspect)
@@ -480,16 +481,16 @@ func TestEditRemoveAndScans(t *testing.T) {
 	b := e.waitFor(t, up.Book.ID, StateReady)
 
 	var er httpx.Error
-	if code := e.do(t, "PATCH", "/api/books/"+b.ID, map[string]any{"pageOffset": 99}, &er); code != 422 || er.Field != "pageOffset" {
-		t.Fatalf("offset out of range: %d %+v", code, er)
+	if code := e.do(t, "PATCH", "/api/books/"+b.ID, map[string]any{"pageRuns": []pagenum.Run{{From: 99, Offset: 1}}}, &er); code != 422 || er.Field != "pageRuns" {
+		t.Fatalf("run out of range: %d %+v", code, er)
 	}
 	if code := e.do(t, "PATCH", "/api/books/"+b.ID, map[string]any{"title": "  "}, &er); code != 422 || er.Field != "title" {
 		t.Fatalf("blank title: %d %+v", code, er)
 	}
 	var edited Book
-	e.do(t, "PATCH", "/api/books/"+b.ID, map[string]any{"title": "My Notes", "pageOffset": 1}, &edited)
-	if edited.Title != "My Notes" || edited.PageOffset != 1 {
-		t.Fatalf("edited %+v", edited)
+	code := e.do(t, "PATCH", "/api/books/"+b.ID, map[string]any{"title": "My Notes", "pageRuns": []pagenum.Run{{From: 1, Offset: 1}, {From: 3, Offset: 0}}}, &edited)
+	if edited.Title != "My Notes" || len(edited.PageRuns) != 2 || edited.PageRuns[1] != (pagenum.Run{From: 3, Offset: 0}) {
+		t.Fatalf("edited %d %+v", code, edited)
 	}
 
 	resp, err := http.Get(e.URL + "/api/books/" + b.ID + "/pages/2/image?w=500")

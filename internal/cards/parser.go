@@ -7,6 +7,7 @@ package cards
 import (
 	"context"
 	"errors"
+	"github.com/jackt/pset/internal/pagenum"
 	"regexp"
 	"strings"
 )
@@ -31,8 +32,8 @@ type Handler struct {
 type Repair func(ctx context.Context, k Kind, raw string, problems []string, schema string) (string, error)
 
 type Options struct {
-	// Offset moves printed-page citations onto PDF pages.
-	Offset int
+	// Pages moves printed-page citations onto PDF pages.
+	Pages pagenum.Map
 	// Repair, if set, gets one try at an invalid card.
 	Repair Repair
 	// Sections are the headings ("## Hint") that split the answer into
@@ -63,9 +64,9 @@ type Parser struct {
 	kind  Kind
 	body  []string
 
-	line string // the line in progress
-	sent int    // how much of line has gone out as prose already
-	broke bool // a tool ran: the next prose starts its own segment
+	line  string // the line in progress
+	sent  int    // how much of line has gone out as prose already
+	broke bool   // a tool ran: the next prose starts its own segment
 }
 
 func NewParser(ctx context.Context, opt Options, h Handler) *Parser {
@@ -223,7 +224,7 @@ func (p *Parser) prose(text string) {
 		return
 	}
 	if p.state == inProse {
-		text = Cite(text, p.opt.Offset)
+		text = Cite(text, p.opt.Pages)
 	}
 	if p.h.Delta != nil {
 		p.h.Delta(text)
@@ -243,14 +244,14 @@ func (p *Parser) add(s Segment) {
 
 func (p *Parser) closeCard() {
 	raw := strings.Join(p.body, "\n")
-	card, err := Validate(p.kind, raw, p.opt.Offset)
+	card, err := Validate(p.kind, raw, p.opt.Pages)
 	var bad *Invalid
 	if errors.As(err, &bad) && p.opt.Repair != nil && p.ctx.Err() == nil {
 		if p.h.Repairing != nil {
 			p.h.Repairing(p.kind)
 		}
 		if fixed, rerr := p.opt.Repair(p.ctx, p.kind, raw, bad.Problems, Schema(p.kind)); rerr == nil {
-			card, err = Validate(p.kind, unwrapFences(fixed), p.opt.Offset)
+			card, err = Validate(p.kind, unwrapFences(fixed), p.opt.Pages)
 		}
 	}
 	if err != nil {

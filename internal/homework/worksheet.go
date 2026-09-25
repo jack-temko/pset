@@ -135,7 +135,7 @@ func (s *Service) questionBlock(ctx context.Context, sheet *pdf.Sheet, book Book
 	head := fmt.Sprintf("%d.  %s", q.Position, q.Label)
 	sheet.Text(margin, y, 11, true, 0, head)
 	if q.Page != nil {
-		sheet.Text(sheetW-margin-60, y+1.5, 8, false, 0.45, printedName(*q.Page, book.PageOffset))
+		sheet.Text(sheetW-margin-60, y+1.5, 8, false, 0.45, book.Pages.Name(*q.Page))
 	}
 	y += 20
 

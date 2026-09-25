@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jackt/pset/internal/pagenum"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -340,9 +341,9 @@ func (s *Service) ProblemsSeen(ctx context.Context, bookID string, chapter int) 
 }
 
 // SawProblem records where a problem is, in the chapter's one PSet
-// memory, and rewrites its sentence to the range seen so far. offset
+// memory, and rewrites its sentence to the range seen so far. pages
 // turns PDF pages into the printed ones the sentence names.
-func (s *Service) SawProblem(ctx context.Context, bookID string, offset, chapter int, label string, page int) error {
+func (s *Service) SawProblem(ctx context.Context, bookID string, pages pagenum.Map, chapter int, label string, page int) error {
 	if chapter < 1 || label == "" || page < 1 {
 		return nil
 	}
@@ -369,7 +370,7 @@ func (s *Service) SawProblem(ctx context.Context, bookID string, offset, chapter
 		lo, hi = min(lo, p.Page), max(hi, p.Page)
 	}
 	// What's been seen, not a claim about the whole chapter.
-	text := fmt.Sprintf("Chapter %d has problems on %s.", chapter, printedRange(lo, hi, offset))
+	text := fmt.Sprintf("Chapter %d has problems on %s.", chapter, printedRange(lo, hi, pages))
 	detail, _ := json.Marshal(seen)
 	now := db.Now()
 	// The range is PSet's, so a matching sentence of the tutor's doesn't
@@ -391,9 +392,9 @@ func (s *Service) SawProblem(ctx context.Context, bookID string, offset, chapter
 	return nil
 }
 
-func printedRange(lo, hi, offset int) string {
+func printedRange(lo, hi int, pages pagenum.Map) string {
 	name := func(p int) string {
-		if n := p - offset; n >= 1 {
+		if n, ok := pages.Printed(p); ok {
 			return fmt.Sprint(n)
 		}
 		return fmt.Sprintf("PDF page %d", p)

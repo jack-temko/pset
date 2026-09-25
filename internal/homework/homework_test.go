@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jackt/pset/internal/pagenum"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -44,7 +45,7 @@ func (library) Book(_ context.Context, id string) (Book, error) {
 	if id != "b1" {
 		return Book{}, httpx.NotFound("book")
 	}
-	return Book{ID: "b1", Title: "Circuits", PageCount: len(pages), PageOffset: 2}, nil
+	return Book{ID: "b1", Title: "Circuits", PageCount: len(pages), Pages: pagenum.Single(2)}, nil
 }
 
 func (library) Search(_ context.Context, _, query string, k int) ([]int, error) {
@@ -588,7 +589,7 @@ func (m *memory) ProblemsSeen(_ context.Context, _ string, chapter int) (Problem
 	return Problems{MemoryID: "range3", Text: "Chapter 3's problems include one on p. 1.", Seen: m.seen[chapter]}, nil
 }
 
-func (m *memory) SawProblem(_ context.Context, _ string, _, chapter int, label string, page int) error {
+func (m *memory) SawProblem(_ context.Context, _ string, _ pagenum.Map, chapter int, label string, page int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.seen[chapter] = append(m.seen[chapter], Seen{Label: label, Page: page})

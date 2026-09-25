@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"github.com/jackt/pset/internal/pagenum"
 	"strings"
 	"sync"
 	"testing"
@@ -13,8 +14,8 @@ import (
 
 type book struct{}
 
-func (book) Search(context.Context, string, string, int) ([]int, error)  { return nil, nil }
-func (book) PageText(context.Context, string, int) (string, error)       { return "", nil }
+func (book) Search(context.Context, string, string, int) ([]int, error) { return nil, nil }
+func (book) PageText(context.Context, string, int) (string, error)      { return "", nil }
 func (book) PageJPEG(context.Context, string, int, int) ([]byte, error) { return nil, nil }
 
 // notes is a memory in a slice. Another loop can save into it mid-run.
@@ -64,7 +65,7 @@ func TestRememberReachesTheNextRound(t *testing.T) {
 	var saved []Note
 	l := &Loop{
 		Client: llm.Open(fake.Config()), Model: "fake-chat", Library: book{},
-		Book:   Book{ID: "b1", PageCount: 100, PageOffset: 10},
+		Book:   Book{ID: "b1", PageCount: 100, Pages: pagenum.Single(10)},
 		System: "You are a tutor.", Memory: mem,
 		Step:       func(label string, running bool) { steps = append(steps, label) },
 		Remembered: func(n Note, _ string) { saved = append(saved, n) },

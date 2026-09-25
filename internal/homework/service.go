@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/jackt/pset/internal/pagenum"
 	"slices"
 	"strings"
 	"time"
@@ -23,10 +24,10 @@ import (
 
 // Book is what homework needs to know about a book.
 type Book struct {
-	ID         string
-	Title      string
-	PageCount  int
-	PageOffset int
+	ID        string
+	Title     string
+	PageCount int
+	Pages     pagenum.Map
 }
 
 // Library is what homework reads from books. Page numbers are PDF pages.
@@ -50,7 +51,7 @@ type Settings interface {
 type Memory interface {
 	agent.Memory
 	ProblemsSeen(ctx context.Context, bookID string, chapter int) (Problems, error)
-	SawProblem(ctx context.Context, bookID string, offset, chapter int, label string, page int) error
+	SawProblem(ctx context.Context, bookID string, pages pagenum.Map, chapter int, label string, page int) error
 }
 
 // Problems is where a chapter's problems have been found, and the memory

@@ -25,6 +25,7 @@ import (
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/pagenum"
 )
 
 // Models is where the saved model connections come from (settings).
@@ -94,6 +95,9 @@ func New(c Config) *Service {
 	c.Queue.Resumable(JobPrepare)
 	if err := fillCovers(context.Background(), c.DB); err != nil {
 		slog.Error("library: giving books their colours", "err", err)
+	}
+	if err := fillPageRuns(context.Background(), c.DB); err != nil {
+		slog.Error("library: working out books' page numbers", "err", err)
 	}
 	return s
 }
@@ -217,8 +221,9 @@ func filenameTitle(name string) string {
 	return t
 }
 
-// Update edits title, author or offset. Any edit marks the book as the
-// student's: a retried import never overwrites it.
+// Update edits title, author, numbering or colour. An edit to the name or
+// the numbering marks it as the student's: a retried import never
+// overwrites it.
 func (s *Service) Update(ctx context.Context, id string, p BookPatch) (Book, error) {
 	cur, err := s.Get(ctx, id)
 	if err != nil {
@@ -234,11 +239,11 @@ func (s *Service) Update(ctx context.Context, id string, p BookPatch) (Book, err
 	if p.Author != nil {
 		cur.Author = strings.TrimSpace(*p.Author)
 	}
-	if p.PageOffset != nil {
-		if *p.PageOffset < 0 || (cur.PageCount > 0 && *p.PageOffset >= cur.PageCount) {
-			return Book{}, httpx.Invalid("pageOffset", "The offset has to land inside the book: 0 to %d.", max(cur.PageCount-1, 0))
+	if p.PageRuns != nil {
+		if err := checkRuns(p.PageRuns, cur.PageCount); err != nil {
+			return Book{}, err
 		}
-		cur.PageOffset = *p.PageOffset
+		cur.PageRuns = pagenum.New(p.PageRuns).Runs()
 	}
 	if p.Cover != nil {
 		if !validCover(*p.Cover) {
@@ -246,11 +251,14 @@ func (s *Service) Update(ctx context.Context, id string, p BookPatch) (Book, err
 		}
 		cur.Cover = *p.Cover
 	}
-	// Only the name and the offset are the student's to guard: a retried
-	// import never writes over them. A colour is never rewritten anyway.
-	named := p.Title != nil || p.Author != nil || p.PageOffset != nil
-	if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET title = ?, author = ?, page_offset = ?, cover = ?, edited = edited OR ?, updated_at = ? WHERE id = ?`,
-		cur.Title, cur.Author, cur.PageOffset, cur.Cover, named, db.Now(), id); err != nil {
+	// Only the name and the numbering are the student's to guard: a
+	// retried import never writes over them. A colour is never rewritten
+	// anyway.
+	named := p.Title != nil || p.Author != nil
+	numbered := p.PageRuns != nil
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET title = ?, author = ?, page_runs = ?, page_offset = ?, cover = ?,
+		edited = edited OR ?, pages_edited = pages_edited OR ?, updated_at = ? WHERE id = ?`,
+		cur.Title, cur.Author, runsJSON(cur.PageRuns), cur.PageRuns[0].Offset, cur.Cover, named, numbered, db.Now(), id); err != nil {
 		return Book{}, err
 	}
 	return s.publish(ctx, id)

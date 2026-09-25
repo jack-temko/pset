@@ -30,7 +30,7 @@ pointing, then importing, because the importer feeds the same finder.
 | Group | Status | Phase | In a line |
 |---|---|---|---|
 | [Finder test set](finder-tests.md) | Planned | 1 | Lookalike assignments and known answers, so every change to finding is measured. |
-| [Book structure](book-structure.md) | Planned | 1 | Printed page ranges and each book's problem numbering, detected at import. |
+| [Book structure](book-structure.md) | In progress | 1 | Printed page ranges (done) and each book's problem numbering, detected at import. |
 | [Finding problems](finding-problems.md) | Planned | 1 | Read a reference into its parts, look where the book keeps it, and check the pick. |
 | [Boxing a problem on the page](boxing-on-the-page.md) | Planned | 2 | Drag a box (or several) on the scan: to add a question, or to show a failed find where it is. |
 | [Importing assignments](importing-assignments.md) | Planned | 3 | PDFs, a course web page, a photo or text, read into rows you review before they're added. |

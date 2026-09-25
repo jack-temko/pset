@@ -102,7 +102,8 @@ it; the pages already read are kept, so OCR isn't repeated.
 A fifth phase, **Read the contents**, between *Read the pages* and
 *Index the sections* (design/import.md). It covers naming, the outline,
 the model calls and the check; *Index the sections* saves them and finds
-the page offset.
+how the printed page numbers run (design/workspace.md, "Page
+numbers").
 
 ## The rail (design/workspace.md)
 
@@ -115,8 +116,3 @@ the page offset.
 GLM-5.3-Flash at list price ($0.15/M in, $0.50/M out): reading the
 contents pages is a fraction of a cent; the fallback's calls are about
 $0.005 a book.
-
-## Out of scope
-
-- A page offset that changes partway through a book:
-  `ideas/book-structure.md`.

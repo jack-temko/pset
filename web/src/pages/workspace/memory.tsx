@@ -18,7 +18,7 @@ import {
   type MemoryKind,
   type Source,
 } from '@/api/memory'
-import { pdfOf, printedLabel, usePageOffset } from '@/lib/pages'
+import { usePages, type PageMap } from '@/lib/pages'
 
 /**
  * The book's memory in the workspace: the Undo on a save, the lines under
@@ -37,17 +37,17 @@ export function MemoryUndo({ bookId, memoryId }: { bookId: string; memoryId: str
 
 /** The page a memory names, after its sentence, unless the sentence
  *  already says it (a problem range does). */
-function withPage(text: string, page: number | undefined, offset: number): string {
+function withPage(text: string, page: number | undefined, pages: PageMap): string {
   if (!page || /\bp\. ?\d/.test(text)) return text
-  return `${text.replace(/\.$/, '')} · p. ${printedLabel(page, offset)}`
+  return `${text.replace(/\.$/, '')} · p. ${pages.label(page)}`
 }
 
 /** What writing a guide did with memory, as step lines under it. */
 export function MemoryLines({ bookId, lines }: { bookId: string; lines: MemoryLine[] }) {
-  const offset = usePageOffset()
+  const pages = usePages()
   if (lines.length === 0) return null
   const steps: StepLine[] = lines.map((l) => {
-    const text = withPage(l.text, l.page, offset)
+    const text = withPage(l.text, l.page, pages)
     if (l.use === 'found') return `Found from memory · ${text}`
     return {
       label: `${l.use === 'updated' ? 'Updated a memory' : 'Remembered'} · ${text}`,
@@ -80,9 +80,9 @@ export function MemoryDialog({
   open: boolean
   bookId: string
   onClose: () => void
-  onJump: (printed: number) => void
+  onJump: (pdf: number) => void
 }) {
-  const offset = usePageOffset()
+  const pages = usePages()
   const memories = useMemories(bookId)
   const add = useAddMemory(bookId)
   const remove = useRemoveMemory(bookId)
@@ -114,7 +114,7 @@ export function MemoryDialog({
       {
         kind,
         text: text.trim(),
-        page: kind === 'book' && printed !== undefined ? pdfOf(printed, offset) : undefined,
+        page: kind === 'book' && printed !== undefined ? pages.nearest(printed) : undefined,
       },
       {
         onSuccess: (m) => {
@@ -239,9 +239,8 @@ function MemoryRow({
   m: Memory
   showKind: boolean
   onDelete: () => void
-  onJump: (printed: number) => void
+  onJump: (pdf: number) => void
 }) {
-  const offset = usePageOffset()
   const meta = [
     showKind && (m.kind === 'book' ? 'Book' : 'Preference'),
     SOURCE[m.source],
@@ -253,7 +252,7 @@ function MemoryRow({
         <p className="text-sm">{m.text}</p>
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           {meta.join(' · ')}
-          {m.page !== undefined && <PageRef page={m.page - offset} onJump={onJump} />}
+          {m.page !== undefined && <PageRef pdf={m.page} onJump={onJump} />}
         </p>
       </div>
       <IconButton variant="ghost" size="sm" aria-label="Delete this memory" onClick={onDelete}>
