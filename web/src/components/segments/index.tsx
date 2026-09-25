@@ -6,15 +6,14 @@ import remarkMath from 'remark-math'
 import type { CodeCard, PlotCard, Segment, StatementCard, StepsCard, TableCard } from '@/api/gen/cards'
 import { AnswerTable, CodeBlock, PageRef, Plot, Statement, WorkedSteps } from '@/components/transcript'
 import { Skeleton } from '@/components/skeleton'
-import { usePageOffset } from '@/lib/pages'
 
 /**
  * What the engine wrote, rendered: prose as markdown with KaTeX math and
  * page chips, cards as the transcript's cards. The engine never sends a
  * fence; the segments are already typed. Citations arrive as [p. N], N a
- * PDF page, and become chips that jump the scan (they take printed pages).
+ * PDF page, and become chips that jump the scan there.
  */
-type Jump = (printed: number) => void
+type Jump = (pdf: number) => void
 
 const citation = /\[(pp?)\.\s*(\d+)(?:\s*[–-]\s*\d+)?\]/g
 
@@ -42,7 +41,6 @@ export function escapeBlockStart(text: string): string {
 }
 
 export function Prose({ text, onJump, inline }: { text: string; onJump?: Jump; inline?: boolean }) {
-  const offset = usePageOffset()
   const md = normalizeMath(inline ? escapeBlockStart(text) : text).replace(citation, (_m, _pp, n) => `[p. ${n}](#pdf-${n})`)
   return (
     <ReactMarkdown
@@ -77,7 +75,7 @@ export function Prose({ text, onJump, inline }: { text: string; onJump?: Jump; i
         ),
         a: ({ href, children }) => {
           const m = href?.match(/^#pdf-(\d+)$/)
-          if (m) return <PageRef page={Number(m[1]) - offset} onJump={onJump} />
+          if (m) return <PageRef pdf={Number(m[1])} onJump={onJump} />
           return (
             <a href={href} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2">
               {children}
@@ -92,12 +90,11 @@ export function Prose({ text, onJump, inline }: { text: string; onJump?: Jump; i
 }
 
 function Card({ s, onJump }: { s: Segment; onJump?: Jump }) {
-  const offset = usePageOffset()
   switch (s.kind) {
     case 'statement': {
       const c = s.card as StatementCard
       return (
-        <Statement kind={c.kind} number={c.number} name={c.name} page={c.page - offset} onJump={onJump}>
+        <Statement kind={c.kind} number={c.number} name={c.name} page={c.page} onJump={onJump}>
           <Prose text={c.text} onJump={onJump} />
         </Statement>
       )

@@ -2,9 +2,13 @@
 
 ## Status
 
-**Planned** · phase 1. Nothing blocks it. [Finding
-problems](finding-problems.md) builds on it: a reference can't be read
-until the book's numbering is known.
+**In progress** · phase 1.
+
+- **1. Printed page numbers, in ranges: Done** (branch `page-ranges`,
+  2026-09-25). The spec is in `design/workspace.md`, "Page numbers".
+- **2. How a book numbers its problems: Planned**, next. [Finding
+  problems](finding-problems.md) builds on it: a reference can't be read
+  until the book's numbering is known.
 
 ## Information
 
@@ -12,7 +16,16 @@ Two things the app assumes about every book, both detected at import:
 how printed page numbers map to PDF pages, and how the book numbers its
 problems. Both are wrong or missing today for some books.
 
-### 1. Printed page numbers, in ranges
+### 1. Printed page numbers, in ranges (done)
+
+Built as `internal/pagenum` (the map and its detection) and
+`web/src/lib/pages.ts` (the same map for the UI); every page travels as
+its PDF page and only those two turn it into a printed one. Detection on
+Jack's three books: Boyce gets runs at offset 12 and 11 with printed 85
+missing, the other two one run each, matching what they had. Books from
+before get their runs from stored text on startup, keeping a
+hand-set offset unless detection agrees with it somewhere. The Book
+dialog edits the runs as rows. What follows is the plan as written.
 
 **Why.** A book has one offset (`books.page_offset`, PDF page = printed
 page + offset). A scan can drop or duplicate a page, and then the offset

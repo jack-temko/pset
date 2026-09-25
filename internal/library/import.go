@@ -398,9 +398,10 @@ func (s *Service) index(ctx context.Context, b row, path, kind string, pages []s
 	if err := saveSections(ctx, s.c.DB, b.ID, secs); err != nil {
 		return err
 	}
-	if offset, ok := detectOffset(pages); ok {
-		// Never over the student's own number.
-		if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET page_offset = ? WHERE id = ? AND edited = 0`, offset, b.ID); err != nil {
+	if runs, ok := detectRuns(pages); ok {
+		// Never over the student's own numbering.
+		if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET page_runs = ?, page_offset = ? WHERE id = ? AND pages_edited = 0`,
+			runsJSON(runs), runs[0].Offset, b.ID); err != nil {
 			return err
 		}
 	}

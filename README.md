@@ -127,8 +127,9 @@ the page scan in the middle, and the panel on the right. Pinch or
 Ctrl+scroll to zoom the scan; the floating bar at the bottom shows the
 page and zoom, and clicking the zoom resets to fit. Page numbers are the
 ones printed in the book; hover one to see the PDF page. If the printed
-numbers are off, fix the offset in **Edit book**, in the menu beside the
-book's title. The same menu opens **Memory** and removes the book.
+numbers are off, fix them under **Page numbers** in **Edit book**, in the
+menu beside the book's title; a scan that lost a page gets a row for the
+jump. The same menu opens **Memory** and removes the book.
 **Focus** (top right of the panel) folds the contents away to widen the
 panel.
 

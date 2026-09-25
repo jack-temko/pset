@@ -4,10 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"math"
 
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/pagenum"
 )
 
 // Migrations: books and everything read out of them. Every child row
@@ -74,7 +76,14 @@ CREATE TABLE embeddings (
 );`}, {Name: "library/2", SQL: `
 -- The cloth colour, picked when the book is added and kept (covers.go).
 -- Empty until picked: books from before are given one at startup.
-ALTER TABLE books ADD COLUMN cover TEXT NOT NULL DEFAULT '';`}}
+ALTER TABLE books ADD COLUMN cover TEXT NOT NULL DEFAULT '';`},
+		// How printed numbers run through the book (pagenum.Run, as JSON),
+		// which replaces page_offset: '' until worked out. pages_edited
+		// guards the student's own numbering from a retried import, apart
+		// from the title and author, which edited guards.
+		{Name: "library/3", SQL: `
+ALTER TABLE books ADD COLUMN page_runs TEXT NOT NULL DEFAULT '';
+ALTER TABLE books ADD COLUMN pages_edited INTEGER NOT NULL DEFAULT 0;`}}
 }
 
 var errNotFound = errors.New("not found")
@@ -85,15 +94,23 @@ type row struct {
 	Width  float64
 	Height float64
 	Edited bool
+	// Offset is the old single offset, kept for books whose runs haven't
+	// been worked out yet.
+	Offset      int
+	PagesEdited bool
 }
 
-const bookCols = `id, sha256, title, author, page_count, page_width, page_height, page_offset, kind, edited, state, phase, done, total, reason, created_at, updated_at, cover`
+// Pages is the book's printed numbering.
+func (r row) Pages() pagenum.Map { return pagenum.New(r.PageRuns) }
+
+const bookCols = `id, sha256, title, author, page_count, page_width, page_height, page_offset, page_runs, pages_edited, kind, edited, state, phase, done, total, reason, created_at, updated_at, cover`
 
 func scanBook(s interface{ Scan(...any) error }) (row, error) {
 	var r row
 	var done, total sql.NullInt64
+	var runs string
 	err := s.Scan(&r.ID, &r.SHA256, &r.Title, &r.Author, &r.PageCount, &r.Width, &r.Height,
-		&r.PageOffset, &r.Kind, &r.Edited, &r.State.Kind, &r.State.Phase, &done, &total, &r.State.Reason, &r.AddedAt, &r.UpdatedAt, &r.Cover)
+		&r.Offset, &runs, &r.PagesEdited, &r.Kind, &r.Edited, &r.State.Kind, &r.State.Phase, &done, &total, &r.State.Reason, &r.AddedAt, &r.UpdatedAt, &r.Cover)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
 	}
@@ -108,6 +125,11 @@ func scanBook(s interface{ Scan(...any) error }) (row, error) {
 	if r.Width > 0 {
 		r.Aspect = r.Height / r.Width
 	}
+	var rs []pagenum.Run
+	if runs == "" || json.Unmarshal([]byte(runs), &rs) != nil {
+		rs = []pagenum.Run{{From: 1, Offset: r.Offset}}
+	}
+	r.PageRuns = pagenum.New(rs).Runs()
 	return r, err
 }
 

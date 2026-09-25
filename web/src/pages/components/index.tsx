@@ -43,7 +43,9 @@ import { observe } from '@/lib/eta'
 import type { CoverHue } from '@/lib/covers'
 import { BOOKS, DUE, SEGMENTS, sampleBook } from '@/components/fixtures'
 import { CardSkeleton, Segments } from '@/components/segments'
-import { PageOffset } from '@/lib/pages'
+import { PageMap, Pages } from '@/lib/pages'
+import type { Run } from '@/api/gen/pagenum'
+import { anchorsOf, PageNumbersField } from '@/pages/workspace/page-numbers'
 import { BookTile } from '@/components/book-tile'
 import { cn } from '@/lib/utils'
 
@@ -87,6 +89,13 @@ function Shelf({ label, children }: { label: string; children: ReactNode }) {
       <div className="flex flex-wrap items-center gap-3">{children}</div>
     </div>
   )
+}
+
+/** The Book dialog's page numbers, live: one run, or a scan that lost a
+ *  page (Boyce's printed 85). */
+function PageNumbersDemo({ runs }: { runs: Run[] }) {
+  const [anchors, setAnchors] = useState(() => anchorsOf(runs))
+  return <PageNumbersField anchors={anchors} pageCount={640} onChange={setAnchors} />
 }
 
 /** The Door needs state to be worth looking at, so it gets a live demo. */
@@ -701,6 +710,21 @@ export function Components() {
               </Field>
             </div>
           </Shelf>
+          <Shelf label="page numbers">
+            <div className="w-dialog">
+              <PageNumbersDemo runs={[{ from: 1, offset: 16 }]} />
+            </div>
+          </Shelf>
+          <Shelf label="lost page">
+            <div className="w-dialog">
+              <PageNumbersDemo
+                runs={[
+                  { from: 1, offset: 12 },
+                  { from: 97, offset: 11 },
+                ]}
+              />
+            </div>
+          </Shelf>
           <Shelf label="segmented">
             <SegmentedDemo />
           </Shelf>
@@ -726,7 +750,7 @@ export function Components() {
               <AssistantTurn>
                 <p>
                   Because powers of <MathInline tex="T" /> cannot stay independent forever{' '}
-                  <PageRef page={142} />: the space has dimension <MathInline tex="n^2" />.
+                  <PageRef pdf={142} />: the space has dimension <MathInline tex="n^2" />.
                 </p>
                 <MathDisplay tex="I,\;T,\;T^2,\;\dots,\;T^{n^2}" />
               </AssistantTurn>
@@ -842,13 +866,13 @@ export function Components() {
           title="Segments"
           note="An answer as the engine sends it: prose and every card kind, at the panel's width, with the book's page offset of 16. The raw block is a card that couldn't be repaired."
         >
-          <PageOffset value={16}>
+          <Pages value={PageMap.single(16)}>
             <div id="segments" className="w-panel space-y-3 rounded-md border bg-rail p-card text-base">
               <Segments segments={SEGMENTS} onJump={() => {}} />
               <CardSkeleton kind="plot" repairing={false} />
               <CardSkeleton kind="steps" repairing />
             </div>
-          </PageOffset>
+          </Pages>
         </Section>
 
         <Section title="Brand" note="The mark is fixed-color and never recolored for a theme.">

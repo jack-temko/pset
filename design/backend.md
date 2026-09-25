@@ -16,7 +16,7 @@ screen needs; this file says how the engine is shaped to give it.
   from (the locate ladder, OCR, structure extraction, embeddings, the
   worksheet writer, the repair loop), never as a shape to keep.
 - **Fresh schema.** Migration 1 is the new schema; the old database is
-  ignored. Books are re-imported (which also computes their page offset);
+  ignored. Books are re-imported (which also works out their page numbering);
   old homework and conversations are gone.
 
 ## Layers and modules
@@ -108,7 +108,7 @@ GET    /api/about     GET /api/events
 id opens the workspace without waiting on the homework.
 
 Page numbers on the wire are **PDF indexes**. The UI converts to printed
-numbers with the book's offset, as it already does.
+numbers with the book's page runs (`internal/pagenum`, `lib/pages.ts`).
 
 ## The contract with the UI
 
@@ -126,7 +126,7 @@ with its query keys and hooks (`useBooks`, `useHomework`, ...), mirroring
 the Go packages one to one. TanStack Query owns fetching and caching.
 
 **Optimistic** for local toggles and order: reveal, got it, turned in,
-reorder, remove a question, title and offset edits. They apply at once
+reorder, remove a question, title and page-number edits. They apply at once
 and roll back on failure. Anything that **starts work** (import, add
 questions, retry, ask) waits for the server, then shows its real state.
 

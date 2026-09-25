@@ -97,7 +97,7 @@ func (l *Loop) system(ctx context.Context) string {
 		}
 		fmt.Fprintf(&b, "- [%s] %s: %s", shortID(n.ID), who, n.Text)
 		if n.Page > 0 && !strings.Contains(n.Text, "p. ") {
-			fmt.Fprintf(&b, " (%s)", pageName(n.Page, l.Book.PageOffset))
+			fmt.Fprintf(&b, " (%s)", pageName(n.Page, l.Book.Pages))
 		}
 		b.WriteByte('\n')
 	}
@@ -144,10 +144,10 @@ func (l *Loop) remember(ctx context.Context, raw string) string {
 		}
 	}
 	if args.Page != 0 {
-		pdf := args.Page + l.Book.PageOffset
-		if pdf < 1 || pdf > l.Book.PageCount {
+		pdf, bad := l.Book.pdf(args.Page)
+		if bad != "" {
 			l.step("Didn't remember · no such page", false)
-			return fmt.Sprintf("Error: the book has no p. %d.", args.Page)
+			return "Error: " + bad
 		}
 		n.Page = pdf
 	}
@@ -158,7 +158,7 @@ func (l *Loop) remember(ctx context.Context, raw string) string {
 	}
 	label := clip(note.Text, 80)
 	if note.Page > 0 && !strings.Contains(note.Text, "p. ") {
-		label = strings.TrimRight(label, ".") + " · " + pageName(note.Page, l.Book.PageOffset)
+		label = strings.TrimRight(label, ".") + " · " + pageName(note.Page, l.Book.Pages)
 	}
 	switch outcome {
 	case Duplicate:

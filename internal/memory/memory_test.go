@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/jackt/pset/internal/pagenum"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -136,11 +137,11 @@ func TestSawProblemKeepsOneRangePerChapter(t *testing.T) {
 	ctx := context.Background()
 	s, ev := newService(t)
 	// Offset 10: PDF 160 is printed 150.
-	if err := s.SawProblem(ctx, "b1", 10, 3, "3.10", 160); err != nil {
+	if err := s.SawProblem(ctx, "b1", pagenum.Single(10), 3, "3.10", 160); err != nil {
 		t.Fatal(err)
 	}
-	s.SawProblem(ctx, "b1", 10, 3, "3.30", 164)
-	s.SawProblem(ctx, "b1", 10, 4, "4.2", 200)
+	s.SawProblem(ctx, "b1", pagenum.Single(10), 3, "3.30", 164)
+	s.SawProblem(ctx, "b1", pagenum.Single(10), 4, "4.2", 200)
 	ms, _ := s.List(ctx, "b1")
 	if len(ms) != 2 {
 		t.Fatalf("%d memories", len(ms))
@@ -156,7 +157,7 @@ func TestSawProblemKeepsOneRangePerChapter(t *testing.T) {
 	}
 	// Seeing the same problem on the same page again changes nothing.
 	n := len(ev.events)
-	s.SawProblem(ctx, "b1", 10, 3, "3.30", 164)
+	s.SawProblem(ctx, "b1", pagenum.Single(10), 3, "3.30", 164)
 	if len(ev.events) != n {
 		t.Error("a repeat published")
 	}
@@ -170,7 +171,7 @@ func TestSawProblemKeepsOneRangePerChapter(t *testing.T) {
 		t.Fatal("points outlived their memory")
 	}
 	// The tutor saying the same sentence doesn't collide with PSet's.
-	s.SawProblem(ctx, "b1", 10, 4, "4.9", 202)
+	s.SawProblem(ctx, "b1", pagenum.Single(10), 4, "4.9", 202)
 	if _, out, _ := s.Save(ctx, "b1", Save{Kind: KindBook, Text: "Chapter 4 has problems on p. 190–192.", Source: SourceTutor}); out != OutcomeSaved {
 		t.Errorf("tutor's twin: %v", out)
 	}

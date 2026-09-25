@@ -23,10 +23,14 @@ the PDF page** in a Tooltip; the PDF index never appears otherwise.
 Front matter before printed page 1 shows its roman numerals, as the book
 does.
 
-One number per book connects the two, the **offset** (PDF page = printed
-page + offset). The engine **works it out at import**, from the PDF's page
-labels or the numbers printed in headers and footers, and the book dialog
-can correct it.
+**The numbering runs in stretches** (2026-09-25): from a PDF page on,
+PDF page = printed page + offset, until the next stretch. Most books
+have one; a scan that lost a page has two, one apart (Boyce's
+*Differential Equations* is missing printed page 85). The engine **works
+the runs out at import** from the numbers printed in heads and feet, and
+the Book dialog can correct them. Every page travels as its PDF page;
+only `lib/pages.ts` (and `internal/pagenum` on the server) turns one into
+the other, so a chip, a jump, a citation and a typed page all agree.
 
 ## Page scan
 
@@ -53,9 +57,11 @@ replacing a pencil and a memory icon) holds what you do to the book:
 
 - **Edit book** opens the Book dialog: title and author, editable (they
   start as the title page reads, design/contents.md); the cover colour,
-  one of six swatches (design/import.md); "Printed page 1 is PDF page
-  ___", the offset, correctable; the page count and import date. It only
-  edits.
+  one of six swatches (design/import.md); **Page numbers**, a row
+  "Printed page 1 is PDF page ___" and one "PDF page ___ is printed page
+  ___" wherever the numbering jumps, with the jump named under them
+  ("Printed page 85 is missing from the scan.") and **Add a jump** to add
+  one; the page count and import date. It only edits.
 - **Memory** opens what the tutor remembers about the book
   (design/memory.md).
 - **Remove book**, last, below a divider, in destructive ink. It asks

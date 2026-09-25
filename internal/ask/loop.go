@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jackt/pset/internal/pagenum"
 	"log/slog"
 	"strings"
 	"sync"
@@ -110,7 +111,7 @@ func (r *run) loop(ctx context.Context) error {
 		return &failure{msg: noChatModel}
 	}
 	r.llm, r.model = llm.Open(cfg), cfg.ChatModel
-	r.parser = cards.NewParser(ctx, cards.Options{Offset: r.book.PageOffset, Repair: r.repair}, cards.Handler{
+	r.parser = cards.NewParser(ctx, cards.Options{Pages: r.book.Pages, Repair: r.repair}, cards.Handler{
 		Delta: func(text string) {
 			s.c.Events.Publish(EventTurnDelta, TurnDelta{TurnID: r.t.ID, Text: text})
 			r.save(ctx, false)
@@ -173,7 +174,7 @@ func (r *run) messages(ctx context.Context) ([]llm.Message, error) {
 		done = done[len(done)-historyTurns:]
 	}
 	for _, t := range done {
-		msgs = append(msgs, llm.TextMessage("user", questionText(t)), llm.TextMessage("assistant", flatten(t.Answer, r.book.PageOffset)))
+		msgs = append(msgs, llm.TextMessage("user", questionText(t)), llm.TextMessage("assistant", flatten(t.Answer, r.book.Pages)))
 	}
 	return append(msgs, llm.TextMessage("user", questionText(r.t))), nil
 }
@@ -187,12 +188,12 @@ func questionText(t row) string {
 
 // flatten turns a stored answer back into what the model wrote, with
 // citations on printed pages again.
-func flatten(segs []cards.Segment, offset int) string {
+func flatten(segs []cards.Segment, pages pagenum.Map) string {
 	var b strings.Builder
 	for _, s := range segs {
 		switch s.Type {
 		case cards.SegmentProse:
-			b.WriteString(cards.Cite(s.Text, -offset))
+			b.WriteString(cards.Uncite(s.Text, pages))
 		case cards.SegmentCard:
 			if s.Kind == cards.KindPlot {
 				var p cards.PlotCard

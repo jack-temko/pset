@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/jackt/pset/internal/pagenum"
 	"io"
 	"log/slog"
 	"net/http"
@@ -31,7 +32,7 @@ func (library) Book(_ context.Context, id string) (Book, error) {
 	if id != "b1" {
 		return Book{}, httpx.NotFound("book")
 	}
-	return Book{ID: "b1", Title: "Linear Algebra", PageCount: len(pages), PageOffset: 2}, nil
+	return Book{ID: "b1", Title: "Linear Algebra", PageCount: len(pages), Pages: pagenum.Single(2)}, nil
 }
 func (library) Search(context.Context, string, string, int) ([]int, error)  { return []int{3}, nil }
 func (library) PageText(_ context.Context, _ string, n int) (string, error) { return pages[n-1], nil }

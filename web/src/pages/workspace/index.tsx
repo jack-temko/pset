@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowUp,
@@ -84,7 +84,7 @@ import { useHeartbeat, type Kind as ActivityKind } from '@/api/activity'
 import { useAsk, useClearTurns, useStopTurn, useTurns, type About, type LiveTurn } from '@/api/ask'
 import { dueLine, dueStatus } from '@/lib/due'
 import { useTimeLeft } from '@/lib/eta'
-import { PageOffset, pdfOf, printedLabel, usePageOffset } from '@/lib/pages'
+import { PageMap, Pages, usePages } from '@/lib/pages'
 import { useSettled } from '@/lib/settled'
 import { cn, plural } from '@/lib/utils'
 
@@ -135,7 +135,7 @@ function Rail({
   page: number
   onJump: (pdfPage: number) => void
 }) {
-  const offset = usePageOffset()
+  const pages = usePages()
   const rail = useRef<HTMLElement>(null)
   // The current heading is the last one, chapter or section, that starts
   // at or before the page the scan is showing.
@@ -163,7 +163,7 @@ function Rail({
 
   const pageLabel = (pdfPage: number) => (
     <Tooltip label={`PDF page ${pdfPage}`} side="left">
-      <span className="shrink-0 font-mono text-xs tabular-nums">{printedLabel(pdfPage, offset)}</span>
+      <span className="shrink-0 font-mono text-xs tabular-nums">{pages.label(pdfPage)}</span>
     </Tooltip>
   )
 
@@ -274,7 +274,7 @@ function Scan({
   scrollRef: React.RefObject<HTMLDivElement | null>
   pageRefs: React.RefObject<Map<number, HTMLDivElement>>
 }) {
-  const offset = usePageOffset()
+  const pages = usePages()
   // Awake on arrival, asleep shortly after; scroll, hover or focus wake
   // it again.
   const [pillAwake, setPillAwake] = useState(true)
@@ -433,12 +433,12 @@ function Scan({
               style={{ aspectRatio: `1 / ${aspect || 11 / 8.5}` }}
             >
               <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                {printedLabel(n, offset)}
+                {pages.label(n)}
               </span>
               {width > 0 && (
                 <img
                   src={pageImageURL(bookId, n, width)}
-                  alt={`Page ${printedLabel(n, offset)}`}
+                  alt={`Page ${pages.label(n)}`}
                   loading="lazy"
                   decoding="async"
                   draggable={false}
@@ -470,7 +470,7 @@ function Scan({
       >
         <Tooltip label={`PDF page ${currentPage} of ${pageCount}`}>
           <span tabIndex={0} className="flex h-control-sm items-center rounded-md px-2 font-mono tabular-nums">
-            p. {printedLabel(currentPage, offset)}
+            p. {pages.label(currentPage)}
           </span>
         </Tooltip>
         <span aria-hidden className="h-4 w-px bg-border-muted" />
@@ -766,7 +766,7 @@ function Stage({
  * with nothing to go on says what it needs.
  */
 function FailedQuestion({ q, onRetry }: { q: Question; onRetry: (r: Retry) => void }) {
-  const offset = usePageOffset()
+  const pages = usePages()
   const navigate = useNavigate()
   const [page, setPage] = useState('')
   const [text, setText] = useState('')
@@ -821,7 +821,7 @@ function FailedQuestion({ q, onRetry }: { q: Question; onRetry: (r: Retry) => vo
             className="flex items-start gap-2"
             onSubmit={(e) => {
               e.preventDefault()
-              if (pageNumber > 0) onRetry({ page: pdfOf(pageNumber, offset) })
+              if (pageNumber > 0) onRetry({ page: pages.nearest(pageNumber) })
               else setPageError('Type the page number first.')
             }}
           >
@@ -934,12 +934,12 @@ function WorkingLine({ q, text }: { q: Question; text: string }) {
  *  any guide is written, so one still to be found waits only on the finds
  *  ahead of it, and a guide waits on every find in the set, then on the
  *  questions ahead of it. */
-function waitingLine(q: Question, questions: Question[], offset: number): string {
+function waitingLine(q: Question, questions: Question[], pages: PageMap): string {
   const ahead = questions.filter((x) => x.position < q.position)
   if (toFind(q)) {
     return ahead.some(toFind) ? 'Queued: it starts when the questions ahead of it are found.' : 'Queued: it starts in a moment.'
   }
-  const lead = q.page !== undefined ? `Found on p. ${printedLabel(q.page, offset)}. Its guide starts` : 'Queued: it starts'
+  const lead = q.page !== undefined ? `Found on p. ${pages.label(q.page)}. Its guide starts` : 'Queued: it starts'
   if (questions.some((x) => x.id !== q.id && toFind(x))) return `${lead} once every question is found.`
   if (ahead.some(outstanding)) return `${lead} once the questions ahead of it are written.`
   return `${lead} in a moment.`
@@ -963,7 +963,7 @@ function Walkthrough({
   onJump: (page: number) => void
   onAskAbout: (about: About) => void
 }) {
-  const pageOffset = usePageOffset()
+  const pages = usePages()
   const detail = useHomeworkSet(setId)
   const updateSet = useUpdateHomework(setId)
   const update = useUpdateQuestion(setId)
@@ -1133,7 +1133,7 @@ function Walkthrough({
         <div className="flex items-center gap-2">
           <span className="min-w-0 flex-1 truncate text-lg font-semibold">{q.label}</span>
           {/* A question that isn't in this book has nothing to jump to. */}
-          {q.page !== undefined && <PageRef page={q.page - pageOffset} onJump={onJump} />}
+          {q.page !== undefined && <PageRef pdf={q.page} onJump={onJump} />}
           {q.done && <Check aria-label="Done" className="size-4 text-success" />}
           {/* Order and removal, inline and quiet: the set is editable from
               the question you are looking at. */}
@@ -1222,7 +1222,7 @@ function Walkthrough({
             {/* Queued is a word and no motion: nothing is happening to it
                 yet. Working gets the spinner and the shimmer. */}
             {queued ? (
-              <p className="text-xs text-muted-foreground">{waitingLine(q, questions, pageOffset)}</p>
+              <p className="text-xs text-muted-foreground">{waitingLine(q, questions, pages)}</p>
             ) : working ? (
               <WorkingLine q={q} text={working} />
             ) : (
@@ -1511,7 +1511,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const pageRefs = useRef(new Map<number, HTMLDivElement>())
 
-  const offset = book.pageOffset
+  const pages = useMemo(() => new PageMap(book.pageRuns), [book.pageRuns])
   // The jump's own scroll lands a frame later and mustn't unpin it: near
   // the end of the book, or with short pages, the page it settles on
   // isn't the destination.
@@ -1522,9 +1522,9 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
     pageRefs.current.get(pdf)?.scrollIntoView()
     requestAnimationFrame(() => requestAnimationFrame(() => (jumping.current = false)))
   }
-  // Everything outside the scan and the rail speaks printed pages; the
-  // scan is indexed by PDF page, so a jump converts once, here.
-  const jump = (printed: number) => jumpPdf(pdfOf(printed, offset))
+  // Every page travels as its PDF page, and only a label says the
+  // printed one (lib/pages): a jump is one.
+  const jump = jumpPdf
   const settlePage = (p: number) => {
     setCurrentPage(p)
     if (p !== pinnedPage && !jumping.current) setPinnedPage(null)
@@ -1537,7 +1537,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   useHeartbeat(book.id, () => activity.current)
 
   return (
-    <PageOffset value={offset}>
+    <Pages value={pages}>
       <AppShell
         scroll="fill"
         middle={
@@ -1605,7 +1605,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
         book={{
           title: book.title,
           author: book.author,
-          offset,
+          runs: book.pageRuns,
           cover: book.cover,
           pages: book.pageCount,
           imported: new Date(book.addedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
@@ -1613,13 +1613,15 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
         onClose={() => setEditingBook(false)}
         onSave={(next) => {
           // Only what changed: a colour alone isn't an edit to the name.
-          const named = next.title !== book.title || next.author !== book.author || next.offset !== offset
+          const named = next.title !== book.title || next.author !== book.author
+          const numbered = JSON.stringify(next.runs) !== JSON.stringify(pages.runs)
           update.mutate({
-            ...(named && { title: next.title, author: next.author, pageOffset: next.offset }),
+            ...(named && { title: next.title, author: next.author }),
+            ...(numbered && { pageRuns: next.runs }),
             ...(next.cover !== book.cover && { cover: next.cover }),
           })
         }}
       />
-    </PageOffset>
+    </Pages>
   )
 }
