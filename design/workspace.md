@@ -250,6 +250,16 @@ built.
   440px is one problem's screenful; focus is the point.
 - **Statement = extracted text + figure crops** (math rendered), never a
   flat page image.
+- **The professor's notes** (2026-09-25): what the professor said
+  about the problem, in a Box headed **From your professor**, under the
+  statement and its figures: parts to do ("do c"), what not to use ("no
+  PSpice or MultiSim"), changed numbers ("for 500 packets"). They come
+  from the reference as it was added ("4.25 (no PSpice or MulitSim)"),
+  leaving out points and page hints, and **Edit** changes them; the
+  guide follows them over the book, so a change writes it again. A
+  question without notes shows a quiet **Add your professor's
+  instructions**. The Box is the same one as the figure's reading
+  (`EditableLines`).
 - **The figure, as read** (2026-09-24): a question with a figure shows,
   under it, the words its guide is written from, in a Box: every node,
   then every part between two of them, with its value and which way its

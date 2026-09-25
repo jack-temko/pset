@@ -186,6 +186,7 @@ export function useUpdateQuestion(homeworkId: string) {
           const n = { ...q }
           if (p.reveal && !n.revealed.includes(p.reveal)) n.revealed = [...n.revealed, p.reveal]
           if (p.done !== undefined) n.done = p.done
+          if (p.notes) n.notes = p.notes
           return n
         })
         if (p.position !== undefined) {

@@ -118,6 +118,14 @@ func ParseRefs(text string, style probnum.Style) (refs []Ref, ok bool) {
 	var dotted []string
 	expectSection := false
 	words := strings.FieldsFunc(rest, func(r rune) bool { return r == ' ' || r == ',' || r == ';' || r == '\t' })
+	// Where each word starts in rest, so a note keeps its own commas.
+	cursor := 0
+	starts := make([]int, len(words))
+	for i, w := range words {
+		at := strings.Index(rest[cursor:], w)
+		starts[i] = cursor + max(at, 0)
+		cursor = starts[i] + len(w)
+	}
 words:
 	for i, w := range words {
 		w = strings.Trim(w, ":.")
@@ -150,7 +158,7 @@ words:
 			if len(numbers)+len(dotted) == 0 && section == "" {
 				return nil, false
 			}
-			notes = append(notes, strings.Join(words[i:], " "))
+			notes = append(notes, strings.TrimSpace(strings.TrimRight(strings.TrimSpace(rest[starts[i]:]), ".")))
 			break words
 		}
 	}
