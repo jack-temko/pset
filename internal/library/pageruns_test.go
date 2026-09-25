@@ -39,7 +39,7 @@ func lostPageBook(pages int) []string {
 
 func TestDetectRunsFromScanText(t *testing.T) {
 	runs, ok := detectRuns(lostPageBook(200))
-	if want := []pagenum.Run{{1, 12}, {97, 11}}; !ok || !reflect.DeepEqual(runs, want) {
+	if want := []pagenum.Run{{From: 1, Offset: 12}, {From: 97, Offset: 11}}; !ok || !reflect.DeepEqual(runs, want) {
 		t.Fatalf("runs %+v %v, want %+v", runs, ok, want)
 	}
 }
@@ -75,9 +75,9 @@ func TestFillPageRuns(t *testing.T) {
 		t.Fatal(err)
 	}
 	for id, want := range map[string][]pagenum.Run{
-		"lost":  {{1, 12}, {97, 11}},
-		"mine":  {{1, 3}},
-		"plain": {{1, 12}, {97, 11}},
+		"lost":  {{From: 1, Offset: 12}, {From: 97, Offset: 11}},
+		"mine":  {{From: 1, Offset: 3}},
+		"plain": {{From: 1, Offset: 12}, {From: 97, Offset: 11}},
 	} {
 		b, err := getBook(ctx, d, id)
 		if err != nil || !reflect.DeepEqual(b.PageRuns, want) {
