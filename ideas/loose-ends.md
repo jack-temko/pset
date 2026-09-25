@@ -20,3 +20,6 @@ branch of its own. Move one into its own file if it grows.
   problem's answer".
 - **Figure crops take in text around the figure.** 4.62's crop includes
   its caption and the next problem's first line.
+- **`TestDigitalBookImportsToReady` failed once in about twenty runs**
+  (2026-09-25), while a scratch server was busy on the same machine.
+  Probably a race in the upload reply's queued state; not chased yet.
