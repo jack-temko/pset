@@ -212,6 +212,9 @@ func (l homeworkLibrary) Book(ctx context.Context, id string) (homework.Book, er
 	if b.Problems != nil {
 		hb.Problems = *b.Problems
 	}
+	if err == nil {
+		hb.Parts, err = l.Parts(ctx, id)
+	}
 	return hb, err
 }
 

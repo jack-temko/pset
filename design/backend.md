@@ -261,6 +261,24 @@ the walkthrough are each validated and pushed as `question.stage` as soon
 as they are done, so a student can open the hint while the walkthrough
 is still being written.
 
+**Finding a problem starts from its reference** (2026-09-25). A
+question is read as the book problems it names, in the book's own
+numbering (`reference.go`; the numbering is `internal/probnum`, detected
+at import). When the numbering and the contents can place it, it is
+looked for there and only there (`scope.go`): a section's pages from its
+Problems heading to its end, a chapter's problems, or a cited page and
+its neighbours. The page whose text has the problem's own line ("7."
+after the section's heading, "4.25 ...", "2.1.4 ...") comes first, then
+the pages memory points to, then the rest of the span, a few at a time.
+Each page shown to the model carries its printed page and section, and
+the model is told how the book prints the number, since a problems page
+rarely prints its section. A pick outside the span is another problem
+with the same number and doesn't count; a reference that can't be found
+there fails as "Looked through Section 3.1 (p. 106 to p. 112)...", rather
+than landing on a wrong page. References that name no numbers, and
+books without contents, keep the older ladder: exact tiers, search,
+memory, then a sweep of the chapter.
+
 **Figures are read out before the guide** (2026-09-24). A misread
 figure was the likeliest way for a guide to be wrong: the 4.25 guide had
 its 2 A source backwards. Three things fixed it:

@@ -191,6 +191,12 @@ built.
     row. Enter adds a row below and moves into it; Cmd/Ctrl+Enter
     submits. Submit adds every non-empty row at once, drops the blanks
     silently, and closes.
+  - **A row is read in the book's numbering** (2026-09-25): "Chapter
+    3.1 Problem 7", "3.1 #7", "Problem 2.1.4, p. 57", "4.25 (no PSpice)"
+    and "Page 33 Problem 7" all work, and a row naming several problems
+    ("1.1: 1, 7") becomes a question each. Each question is labelled the
+    book's way ("3.1 #7", "4.27", "2.1.4", "p. 33 #7"), which is what its
+    header shows.
   - Both leave the same way: **Cancel in the footer, or Esc**. No X in
     the corner: one job, one control.
 - **Not every question is in the book.** A professor's own problem still

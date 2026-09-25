@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/jackt/pset/internal/pagenum"
+	"github.com/jackt/pset/internal/probnum"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -45,7 +46,8 @@ func (library) Book(_ context.Context, id string) (Book, error) {
 	if id != "b1" {
 		return Book{}, httpx.NotFound("book")
 	}
-	return Book{ID: "b1", Title: "Circuits", PageCount: len(pages), Pages: pagenum.Single(2)}, nil
+	return Book{ID: "b1", Title: "Circuits", PageCount: len(pages), Pages: pagenum.Single(2),
+		Parts: []probnum.Part{{Number: "3", Title: "3 Methods of Analysis", Start: 2, End: 4}}}, nil
 }
 
 func (library) Search(_ context.Context, _, query string, k int) ([]int, error) {
@@ -63,9 +65,6 @@ func (library) Search(_ context.Context, _, query string, k int) ([]int, error) 
 
 func (library) PageText(_ context.Context, _ string, n int) (string, error) { return pages[n-1], nil }
 func (library) PageTexts(context.Context, string) ([]string, error)         { return pages, nil }
-func (library) ChapterSpan(context.Context, string, int) (int, int, bool, error) {
-	return 2, 4, true, nil
-}
 
 var blank = sync.OnceValue(func() []byte {
 	img := image.NewGray(image.Rect(0, 0, 170, 220))

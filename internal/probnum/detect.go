@@ -18,6 +18,7 @@ import (
 // pages Start to End.
 type Part struct {
 	Number     string
+	Title      string
 	Start, End int
 }
 

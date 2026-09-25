@@ -17,7 +17,11 @@ Reply with only JSON, no prose and no code fence:
 - Coordinates are fractions of the image, in [0, 1], y from the top.
 - An assignment means the problems at the end of a chapter or section. If one image shows that
   problem and another shows a worked example or practice problem with the same number, pick the
-  end-of-chapter problem.`
+  end-of-chapter problem.
+- Each image is labelled with its printed page and the part of the book it's in. A problems page
+  often doesn't print its section's number: go by the label. When you're told where the problem
+  is and how the book prints its number, a problem with that number on a page from that part of
+  the book is the one.`
 
 const repairPrompt = `You fix one malformed card for a rendering pipeline. You get its kind, the
 card as written, what is wrong with it, and the JSON schema it must satisfy. Reply with only the
