@@ -61,12 +61,15 @@ replacing a pencil and a memory icon) holds what you do to the book:
   "Printed page 1 is PDF page ___" and one "PDF page ___ is printed page
   ___" wherever the numbering jumps, with the jump named under them
   ("Printed page 85 is missing from the scan.") and **Add a jump** to add
-  one; **Problems are numbered like** (2026-09-25), a segmented control
-  of the three ways books do it, `4.27` (through each chapter), `2.1.4`
-  (by section, with where the book keeps them) and `3.1 #7` (starting
-  again in each section), with a sentence saying what a reference means
-  in the chosen one and an example from the book ("In this book: 1.1 #7,
-  on p. 8."); the page count and import date. It only edits.
+  one; **Problems are numbered like** (2026-09-25), radio rows of the
+  three ways books do it, each with a sentence saying what it means:
+  `4.27` (through each chapter), `2.1.4` (by section, with a segmented
+  control under the rows for where the book keeps them) and `3.1 #7`
+  (starting again in each section). The row import found carries an
+  example from the book ("In this book: 1.1 #7, on p. 8."). Was a
+  segmented control, whose three bare labels needed a sentence each
+  anyway (Jack, 2026-09-25). Then the page count and import date. It
+  only edits.
 - **How problems are numbered is detected at import** from the book's
   text and contents. When the text didn't make it plain, the field says
   so in warning ink with **It's right** beside it, and **Add questions**
