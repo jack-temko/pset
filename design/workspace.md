@@ -272,6 +272,21 @@ built.
   - A guide written before figures were read shows the Box with a
     sentence saying so and **Read the figure**, which reads it and
     writes the guide again from the reading.
+- **Boxing a problem on the page** (2026-09-25): the way to show where
+  a problem is when finding can't. Two ways in, one tool: **Box one on
+  the page** in the set's menu adds a question, and **Show me where it
+  is** (a failed find's first way out, and a quiet "Not the right
+  problem?" line under a found one) shows where an existing question
+  really is. The scan then draws instead of panning: drag a box around
+  the problem's words, then around each figure, as many as it takes for
+  a problem over two pages or columns. Words are a solid primary box,
+  a figure a dashed one, each numbered in the order it's read, with its
+  kind (click to switch) and a remove button at its corner. A bar takes
+  the scan pill's place: what the boxes are for, which kind the next box
+  is (Words or Figure), **Cancel** and **Done**, and a line counting the
+  boxes. Esc cancels. Done reads the words from the boxes (the statement
+  and the number), keeps the figures from their own pages, and carries
+  on as any found question does; a new one opens in the walkthrough.
 - **Scan jumps on demand**: a page chip in the question header; opening a
   question never moves the scan by itself.
 - **Two stages, both veiled**: *hint* and *walkthrough*: the walkthrough
@@ -313,7 +328,8 @@ built.
   - **setup**, "The chat model needs setting up" (none set up, or the
     provider refused: a bad key, an unknown model, with its HTTP status):
     **Open Settings** at Connections, then Try again.
-  - **not_found**, "Couldn't find 4.44 in this book": a **Printed page**
+  - **not_found**, "Couldn't find 4.44 in this book": **Show me where it
+    is** first (boxing it on the page, below), then a **Printed page**
     field and **Look there**, then "Not from this book?" to paste it and
     have the guide written from your text alone.
   Every action is enabled; one with nothing to go on says what it needs

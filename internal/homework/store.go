@@ -74,6 +74,9 @@ END;`},
 		// has corrected it: the guide is written from it.
 		{Name: "homework/7", SQL: `ALTER TABLE questions ADD COLUMN reading TEXT NOT NULL DEFAULT '[]';
 ALTER TABLE questions ADD COLUMN reading_edited INTEGER NOT NULL DEFAULT 0`},
+		// The boxes the student drew around the problem on the page scan,
+		// which it's read from instead of being looked for.
+		{Name: "homework/8", SQL: `ALTER TABLE questions ADD COLUMN boxes TEXT NOT NULL DEFAULT '[]'`},
 	}
 }
 
@@ -132,17 +135,31 @@ type row struct {
 type figure struct {
 	Label string   `json:"label"`
 	Rect  pdf.Rect `json:"rect"`
+	// Page is the PDF page the figure is on, when it isn't the
+	// question's own: a figure boxed on another page.
+	Page int `json:"page,omitempty"`
+}
+
+// on is the page a figure is on: its own, else the question's.
+func (f figure) on(q row) int {
+	if f.Page > 0 {
+		return f.Page
+	}
+	if q.Page != nil {
+		return *q.Page
+	}
+	return 0
 }
 
 const questionCols = `q.id, q.homework_id, q.position, q.text, q.in_book, q.label, q.statement, q.page, q.pinned_page,
-	q.rect, q.figures, q.hint, q.walkthrough, q.state, q.reason, q.revealed, q.done_at, q.activity, q.memory, q.failure, q.reading, q.reading_edited, q.updated_at, q.rev, h.book_id`
+	q.rect, q.figures, q.hint, q.walkthrough, q.state, q.reason, q.revealed, q.done_at, q.activity, q.memory, q.failure, q.reading, q.reading_edited, q.boxes, q.updated_at, q.rev, h.book_id`
 
 func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	var r row
 	var page, pinned sql.NullInt64
-	var rect, figs, hint, walk, revealed, doneAt, memory, reading string
+	var rect, figs, hint, walk, revealed, doneAt, memory, reading, boxes string
 	err := s.Scan(&r.ID, &r.HomeworkID, &r.Position, &r.Text, &r.InBook, &r.Label, &r.Statement, &page, &pinned,
-		&rect, &figs, &hint, &walk, &r.State, &r.Reason, &revealed, &doneAt, &r.Activity, &memory, &r.Failure, &reading, &r.ReadingEdited, &r.UpdatedAt, &r.Rev, &r.BookID)
+		&rect, &figs, &hint, &walk, &r.State, &r.Reason, &revealed, &doneAt, &r.Activity, &memory, &r.Failure, &reading, &r.ReadingEdited, &boxes, &r.UpdatedAt, &r.Rev, &r.BookID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
 	}
@@ -171,6 +188,8 @@ func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	json.Unmarshal([]byte(memory), &r.Memory)
 	r.Reading = []string{}
 	json.Unmarshal([]byte(reading), &r.Reading)
+	r.Boxes = []Box{}
+	json.Unmarshal([]byte(boxes), &r.Boxes)
 	r.Done = doneAt != ""
 	return r, nil
 }

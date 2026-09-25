@@ -611,7 +611,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 		if len(text) > maxDraftText {
 			return Question{}, httpx.Invalid("text", "That's too long for a single question.")
 		}
-		set += `, text = ?, in_book = 0, statement = ?, label = ?, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]', rounds = '[]', reading = '[]', reading_edited = 0`
+		set += `, text = ?, in_book = 0, statement = ?, label = ?, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]', rounds = '[]', reading = '[]', reading_edited = 0, boxes = '[]'`
 		args = append(args, text, text, labelFromText(text))
 		st, find = StatePending, false
 	case r.Page != nil:
@@ -625,7 +625,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 		if *r.Page < 1 || *r.Page > b.PageCount {
 			return Question{}, httpx.Invalid("page", "The book doesn't have that page.")
 		}
-		set += `, pinned_page = ?, page = NULL, rounds = '[]'`
+		set += `, pinned_page = ?, page = NULL, rounds = '[]', boxes = '[]'`
 		args = append(args, *r.Page)
 		st, find = StatePending, true
 	default:

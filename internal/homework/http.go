@@ -71,6 +71,29 @@ func (s *Service) Routes(mux *http.ServeMux) {
 		httpx.JSON(w, http.StatusCreated, Questions{Questions: qs})
 		return nil
 	}))
+	mux.HandleFunc("POST /api/homework/{id}/boxed", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
+		var in Boxes
+		if err := httpx.Decode(r, &in); err != nil {
+			return err
+		}
+		q, err := s.AddBoxed(r.Context(), r.PathValue("id"), in.Boxes)
+		if err != nil {
+			return err
+		}
+		httpx.JSON(w, http.StatusCreated, q)
+		return nil
+	}))
+	mux.HandleFunc("POST /api/questions/{id}/boxes", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
+		var in Boxes
+		if err := httpx.Decode(r, &in); err != nil {
+			return err
+		}
+		q, err := s.PointOut(r.Context(), r.PathValue("id"), in.Boxes)
+		if err != nil {
+			return err
+		}
+		return httpx.OK(w, q)
+	}))
 	mux.HandleFunc("GET /api/homework/{id}/worksheet", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
 		data, err := s.Worksheet(r.Context(), r.PathValue("id"))
 		if err != nil {

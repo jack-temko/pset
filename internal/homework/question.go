@@ -190,7 +190,12 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 		return err
 	}
 	s.setState(ctx, q.ID, StateLocating, "")
-	loc, err := s.locate(ctx, m, book, q)
+	// Boxed by the student: read where they showed, nothing to look for.
+	locate := s.locate
+	if len(q.Boxes) > 0 {
+		locate = s.fromBoxes
+	}
+	loc, err := locate(ctx, m, book, q)
 	if err != nil {
 		return err
 	}
@@ -686,7 +691,7 @@ func readingText(q row) string {
 func (s *Service) figureParts(ctx context.Context, book Book, q row) []llm.Part {
 	var parts []llm.Part
 	for _, f := range q.FigRect {
-		img, err := s.crop(ctx, book.ID, *q.Page, f.Rect, modelCropWidth)
+		img, err := s.crop(ctx, book.ID, f.on(q), f.Rect, modelCropWidth)
 		if err != nil {
 			slog.Warn("guide: figure crop", "question", q.ID, "figure", f.Label, "err", err)
 			return nil
