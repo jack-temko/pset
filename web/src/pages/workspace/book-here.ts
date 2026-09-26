@@ -5,6 +5,8 @@ import type { Style } from '@/api/gen/probnum'
 /** The book the workspace is showing, for what's deep inside it: how it
  *  numbers its problems, and a way to open its dialog. */
 export interface BookHere {
+  /** Unset outside a workspace (the components page). */
+  bookId?: string
   problems?: Style
   editBook: () => void
 }

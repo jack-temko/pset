@@ -379,6 +379,27 @@ type AssignmentSource struct {
 	URL string `json:"url"`
 }
 
+// ReferenceLines is POST /api/books/{id}/references: lines as the
+// student types them, to read in the book's numbering before they're
+// added.
+type ReferenceLines struct {
+	Lines []string `json:"lines"`
+}
+
+// LineReading is what one line reads as: the problems it names, in the
+// book's labels, and the professor's notes it carries; Unread when it
+// isn't a reference PSet reads.
+type LineReading struct {
+	Labels []string `json:"labels"`
+	Notes  []string `json:"notes"`
+	Unread bool     `json:"unread,omitempty"`
+}
+
+// LineReadings answers ReferenceLines, a reading a line, in order.
+type LineReadings struct {
+	Lines []LineReading `json:"lines"`
+}
+
 // Event types this feature publishes.
 const (
 	EventHomeworkChanged = "homework.changed"

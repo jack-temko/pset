@@ -198,7 +198,16 @@ built.
     3.1 Problem 7", "3.1 #7", "Problem 2.1.4, p. 57", "4.25 (no PSpice)"
     and "Page 33 Problem 7" all work, and a row naming several problems
     ("1.1: 1, 7") becomes a question each, ranges included ("3.2: 1-15
-    odd", "4.27–4.30", "2.3 #2 to 6 even"; at most 40 from one range). Each question is labelled the
+    odd", "4.27–4.30", "2.3 #2 to 6 even"; at most 40 from one range).
+  - **Each row says what it reads as, while it's typed** (2026-09-25):
+    beside In this book, "3 questions: 2.1 #1, 2.1 #4, 2.1 #6 · From
+    your professor: do c", or, in warning ink, "Not a reference PSet
+    reads: write it like the book does, as in "1.1 #7", or untick In
+    this book." It's the server's own reading (the one Add uses), asked
+    once typing pauses (300ms) and kept until the next lands, so it
+    changes rather than blinks. The primary counts questions, not rows.
+    The import review uses the same caption, and reads a changed line
+    again the same way. Each question is labelled the
     book's way ("3.1 #7", "4.27", "2.1.4", "p. 33 #7"), which is what its
     header shows.
   - Both leave the same way: **Cancel in the footer, or Esc**. No X in

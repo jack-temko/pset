@@ -98,6 +98,17 @@ func (s *Service) Routes(mux *http.ServeMux) {
 		}
 		return httpx.OK(w, src)
 	}))
+	mux.HandleFunc("POST /api/books/{id}/references", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
+		var in ReferenceLines
+		if err := httpx.Decode(r, &in); err != nil {
+			return err
+		}
+		out, err := s.ReadLines(r.Context(), r.PathValue("id"), in.Lines)
+		if err != nil {
+			return err
+		}
+		return httpx.OK(w, out)
+	}))
 	mux.HandleFunc("GET /api/due", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
 		list, err := s.Due(r.Context())
 		if err != nil {

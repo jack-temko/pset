@@ -17,10 +17,12 @@ import {
   useImportAssignment,
   useStartRead,
   type AssignmentFrom,
+  type LineReading,
   type Summary,
 } from '@/api/homework'
 import { cn, plural } from '@/lib/utils'
 import { NumberingCheck } from './dialogs'
+import { ReadsAs, useLiveReadings } from './reads-as'
 import {
   actionLabel,
   importOf,
@@ -390,6 +392,11 @@ export function AssignmentReview({
     onChange(groups.map((g) => (g.id === id ? { ...g, ...change } : g)))
   const setRow = (g: ReviewGroup, id: number, change: Partial<ReviewRow>) =>
     setGroup(g.id, { rows: g.rows.map((r) => (r.id === id ? { ...r, ...change } : r)) })
+  const readingOf = useLiveReadings(
+    groups.flatMap((g) =>
+      g.rows.filter((r) => r.edited).map((r) => ({ id: r.id, text: r.text, inBook: r.inBook })),
+    ),
+  )
   const earlier = groups.filter(isEarlier).length
   // Nothing to come (an old sheet read again): everything shows.
   const shown = shownGroups(groups, showEarlier || earlier === groups.length)
@@ -420,6 +427,7 @@ export function AssignmentReview({
               setTitle={titles[g.setId] ?? g.title}
               onGroup={(change) => setGroup(g.id, change)}
               onRow={(id, change) => setRow(g, id, change)}
+              readingOf={readingOf}
             />
           ) : (
             <NewGroupBlock
@@ -427,6 +435,7 @@ export function AssignmentReview({
               g={g}
               onGroup={(change) => setGroup(g.id, change)}
               onRow={(id, change) => setRow(g, id, change)}
+              readingOf={readingOf}
             />
           ),
         )}
@@ -439,11 +448,13 @@ type GroupProps = {
   g: ReviewGroup
   onGroup: (change: Partial<ReviewGroup>) => void
   onRow: (id: number, change: Partial<ReviewRow>) => void
+  /** A changed line's reading now, by row id. */
+  readingOf: (id: number) => LineReading | undefined
 }
 
 /** A date that becomes a new set: its title and date editable, its lines
  *  below. */
-function NewGroupBlock({ g, onGroup, onRow }: GroupProps) {
+function NewGroupBlock({ g, onGroup, onRow, readingOf }: GroupProps) {
   const count = questionCount(g)
   return (
     <section className="space-y-2 py-3 first:pt-0 last:pb-0">
@@ -481,7 +492,12 @@ function NewGroupBlock({ g, onGroup, onRow }: GroupProps) {
       {g.keep && (
         <div className="space-y-3 pt-1 pl-7">
           {g.rows.map((r) => (
-            <ReviewRowItem key={r.id} r={r} onChange={(change) => onRow(r.id, change)} />
+            <ReviewRowItem
+              key={r.id}
+              r={r}
+              live={readingOf(r.id)}
+              onChange={(change) => onRow(r.id, change)}
+            />
           ))}
         </div>
       )}
@@ -491,7 +507,7 @@ function NewGroupBlock({ g, onGroup, onRow }: GroupProps) {
 
 /** A date that updates a set: what's new in it, whose instructions
  *  changed, and what the set has that it no longer lists. */
-function UpdateGroupBlock({ g, setTitle, onGroup, onRow }: GroupProps & { setTitle: string }) {
+function UpdateGroupBlock({ g, setTitle, onGroup, onRow, readingOf }: GroupProps & { setTitle: string }) {
   const something = pending(g)
   const open = g.keep && something
   const fresh = g.rows.filter((r) => r.kind !== 'other' && !r.added)
@@ -525,7 +541,12 @@ function UpdateGroupBlock({ g, setTitle, onGroup, onRow }: GroupProps & { setTit
             r.kind !== 'other' && r.added ? (
               <AddedRow key={r.id} r={r} onChange={(change) => onRow(r.id, change)} />
             ) : (
-              <ReviewRowItem key={r.id} r={r} onChange={(change) => onRow(r.id, change)} />
+              <ReviewRowItem
+                key={r.id}
+                r={r}
+                live={readingOf(r.id)}
+                onChange={(change) => onRow(r.id, change)}
+              />
             ),
           )}
           {g.gone.length > 0 && (
@@ -613,7 +634,15 @@ function Changes({ r, onChange }: { r: ReviewRow; onChange: (change: Partial<Rev
 
 /** A line: editable while ticked; left out, it's one quiet line, so the
  *  reading and quizzes a sheet lists don't crowd the homework. */
-function ReviewRowItem({ r, onChange }: { r: ReviewRow; onChange: (change: Partial<ReviewRow>) => void }) {
+function ReviewRowItem({
+  r,
+  live,
+  onChange,
+}: {
+  r: ReviewRow
+  live?: LineReading
+  onChange: (change: Partial<ReviewRow>) => void
+}) {
   const toggle = (
     <Checkbox checked={r.keep} onChange={() => onChange({ keep: !r.keep })} className="-ml-2">
       <span className="sr-only">Add this line</span>
@@ -647,7 +676,7 @@ function ReviewRowItem({ r, onChange }: { r: ReviewRow; onChange: (change: Parti
           >
             In this book
           </Checkbox>
-          <RowReading r={r} />
+          <RowReading r={r} live={live} />
         </div>
         <Changes r={r} onChange={onChange} />
       </div>
@@ -655,44 +684,12 @@ function ReviewRowItem({ r, onChange }: { r: ReviewRow; onChange: (change: Parti
   )
 }
 
-/** What a kept line becomes, as far as the review knows. */
-function RowReading({ r }: { r: ReviewRow }) {
+/** What a kept line becomes: as it was read, or, once it's changed, as
+ *  it reads now. */
+function RowReading({ r, live }: { r: ReviewRow; live?: LineReading }) {
   if (!r.inBook)
     return <span className="text-xs text-muted-foreground">Its guide is written from this text alone.</span>
-  if (r.edited)
-    return (
-      <span className="text-xs text-muted-foreground">Read in the book's numbering when it's added.</span>
-    )
-  if (r.unread)
-    return (
-      <span className="text-xs text-warning">
-        Not a reference PSet can read. Write it like the book does, or untick In this book.
-      </span>
-    )
-  // A note that's most of the line (the professor's changes to a book
-  // problem, a paragraph after it) is already there to read above.
-  const notes = r.notes.join('; ')
-  const adds = r.labels.filter((l) => !r.present.includes(l))
-  return (
-    <span className="min-w-0 text-xs text-muted-foreground">
-      {r.present.length > 0 ? (
-        <>
-          adds <span className="font-mono">{adds.join(', ')}</span> (
-          <span className="font-mono">{r.present.join(', ')}</span> {r.present.length === 1 ? 'is' : 'are'} in
-          the set)
-        </>
-      ) : (
-        <span className="font-mono">{r.labels.join(', ')}</span>
-      )}
-      {notes && (
-        <>
-          {' '}
-          ·{' '}
-          {notes.length > 60
-            ? "The rest of the line is your professor's instructions"
-            : `From your professor: ${notes}`}
-        </>
-      )}
-    </span>
-  )
+  const reading = r.edited ? live : r
+  if (!reading) return null
+  return <ReadsAs reading={reading} present={r.edited ? [] : r.present} />
 }
