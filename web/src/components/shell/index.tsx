@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
  * stream is down, so a dead server never looks like a healthy app.
  *
  * The window itself never scrolls. The shell is exactly the viewport, the
- * bar takes its 56px, and what's left is the scroll region, so a scrollbar
+ * bar takes its 64px, and what's left is the scroll region, so a scrollbar
  * begins under the bar rather than running past it.
  *
  * Two kinds of screen:

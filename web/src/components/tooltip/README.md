@@ -2,7 +2,7 @@
 
 A short label that explains a target: on hover after 300ms, on keyboard
 focus at once. `foreground` ground and `background` text, so it inverts
-with the theme and reads as ink on paper turned over. 14px, the floor.
+with the theme and reads as ink on paper turned over. 15px, the floor.
 
 - **A description, never the name.** The target keeps its own label and
   the tooltip is wired with `aria-describedby`, so nothing that matters

@@ -66,24 +66,24 @@ counts, page numbers.
 **What a person reads is never mono** (2026-09-25). A book's problem
 labels ("3.1 #7", "4.27", "2.1.4"), a box's kind ("Words"), anything said
 in words is Inter, with `tabular-nums` where figures should line up. Mono
-had crept onto them, and at 14px in a pill its wide, round letterforms
-read as toy-like (Jack: "the font you use for stuff like that looks a bit
-cartoony").
+had crept onto them, and at the floor size in a pill its wide, round
+letterforms read as toy-like (Jack: "the font you use for stuff like that
+looks a bit cartoony").
 
-Nine steps, and no others. **14px is the floor**; nothing in the product is
+Nine steps, and no others. **15px is the floor**; nothing in the product is
 smaller, chips and counters included.
 
 | Step | Size / line | Role |
 |---|---|---|
-| `text-xs` | 14 / 20 | Labels, badges, timestamps, hints. The floor. |
-| `text-sm` | 15 / 22 | Buttons, rail rows, tabs, table cells. |
-| `text-base` | 16 / 24 | Default UI copy. |
-| `text-reading` | 17 / 28 | Long-form text a student reads. |
-| `text-lg` | 18 / 28 | Card titles (sans 600) and leads (serif italic). |
-| `text-xl` | 20 / 28 | Section heads. |
-| `text-2xl` | 24 / 32 | Panel and dialog titles. |
-| `text-3xl` | 30 / 36 | The one `h1` on a page-shell page. |
-| `text-4xl` | 36 / 40 | The dashboard greeting and empty-state heroes. |
+| `text-xs` | 15 / 22 | Labels, badges, timestamps, hints. The floor. |
+| `text-sm` | 16 / 24 | Buttons, rail rows, tabs, table cells. |
+| `text-base` | 17 / 26 | Default UI copy. |
+| `text-reading` | 18 / 30 | Long-form text a student reads. |
+| `text-lg` | 19 / 28 | Card titles (sans 600) and leads (serif italic). |
+| `text-xl` | 21 / 30 | Section heads. |
+| `text-2xl` | 25 / 32 | Panel and dialog titles. |
+| `text-3xl` | 31 / 36 | The one `h1` on a page-shell page. |
+| `text-4xl` | 37 / 40 | The dashboard greeting and empty-state heroes. |
 
 Each step carries its own weight and tracking, so a call site sets size
 alone. `text-lg` is the exception and stays weightless: it is the one step
@@ -98,8 +98,8 @@ that is a design question: add a named token, never an arbitrary value.
 
 Semantic tokens own page rhythm: `page` (40px gutters), `section` (40px
 between sections), `card` (16px Box interior). The shell's fixed dimensions
-are tokens too: `topbar` 56, `rail` 256, `panel` 440, `control` 32 (`-sm`
-28, `-lg` 40), `row` 40, `mark` 30, `dialog` 400 (`-wide` 560).
+are tokens too: `topbar` 64, `rail` 256, `panel` 440, `control` 32 (`-sm`
+28, `-lg` 40), `row` 40, `mark` 36, `dialog` 400 (`-wide` 560).
 
 Radius: `sm` 4, **`md` 6: the default for controls and containers alike**,
 `lg` 12 for large floating surfaces, `full` for pills.
@@ -120,7 +120,7 @@ page already says. **Once the h1 scrolls out of sight, the bar picks up
 the page's name**, fading in, so you always know where you are.
 
 **The shell is fixed chrome.** The window itself never scrolls: the shell
-is exactly the viewport, the top bar takes its 56px, and what remains is
+is exactly the viewport, the top bar takes its 64px, and what remains is
 the scroll region. A scrollbar therefore starts *below* the bar rather than
 running past it, and the bar cannot drift.
 
@@ -238,7 +238,7 @@ en dash stays for ranges, as in "p. 142–145".)
 ## Rules the code enforces
 
 - Semantic tokens only. No raw colour values in components.
-- No type below 14px, and no size outside the nine steps.
+- No type below 15px, and no size outside the nine steps.
 - No fractional or arbitrary spacing: the scale is the scale.
 - One focus ring, defined once in the base layer, on everything.
 - A component never sets its own outer margin; the parent's stack does.
@@ -251,8 +251,9 @@ not silently disagree.
 | Change | Why |
 |---|---|
 | `muted` and `secondary` darkened: light 0.945 → **0.88**, dark 0.262 → **0.34** | At the baseline values they measured 1.06–1.16:1 against every surface, so ghost hover, skeletons, roundels and the secondary button were near-invisible. The new values are capped by text, not taste: `muted-foreground` on `muted` lands at 4.56:1 light and 4.75:1 dark, and one more step fails 4.5. |
-| The mark is **30px**, the wordmark 16px | The baseline's 28px mark with an 18px name let the lockup dominate a 56px bar against 20px icons opposite. The name coming down was the actual fix; 30px is where the mark settled. |
-| Counters and chips sit at **14px** | The baseline's Box and ActionList previews set them at 12px, which contradicts the system's own type floor. The floor wins. |
+| The bar is **64px**, the mark **36px**, the wordmark 21px, the icons 24px on 40px buttons | Jack found the whole product read small, so the bar grew with the type. At the old 56px the baseline's 28px mark and 18px name dominated against 20px icons; the icons growing with the lockup keeps the two ends in balance. |
+| The scale is **one step bigger than the baseline's**: 15px floor, 16 for controls, 17 for UI copy | Jack found everything too small to read comfortably. The small steps grew most (+1px on 14–16px is 6–7%), the display steps least (+1px on 30–36px), since the small ones were the ones that needed it. |
+| Counters and chips sit at **15px** | The baseline's Box and ActionList previews set them at 12px, which contradicts the system's own type floor. The floor wins. |
 | The Counter's fill is translucent ink, not `muted` | It sits on `card-header`, the surface where `muted` is weakest even after the correction (1.24:1). Ink at 20% gives it 1.50:1 and inverts with the theme for free. |
 | The date field is the browser's native `<input type="date">` | It is the one control in the app we don't draw. A correct, keyboard-reachable, locale-aware calendar is a large component to build and an easy one to build slightly wrong, and the value it carries is a date, not a brand moment. |
 | Blur has **two** meanings, and they never share a layer | The Veil blurs content *you could read*, to say "not yet". A dialog's scrim blurs a *screen you are no longer on*, to say "not here". One is 6px on the content itself, the other 2px on a backdrop behind a card. |

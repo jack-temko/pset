@@ -14,7 +14,7 @@ type Handlers = {
 /**
  * A short label that explains a target, on hover after a beat and on
  * keyboard focus at once. Ink on paper, inverted: `foreground` ground,
- * `background` text, at the 14px floor.
+ * `background` text, at the 15px floor.
  *
  * It renders into the body with fixed positioning, so no scrolling pane
  * can clip it: the workspace is all scrolling panes, and a page chip at
