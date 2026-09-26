@@ -583,12 +583,27 @@ func htmlText(page string) string {
 // year a sheet leaves out, and how this book numbers its problems, for
 // keeping its references whole.
 func assignmentBrief(book Book, now time.Time) string {
-	style := "problems are numbered like 4.27"
-	switch book.Problems.Form {
+	return fmt.Sprintf(assignmentPrompt, now.Format("Monday, January 2, 2006"), book.Title, styleSentence(book.Problems))
+}
+
+// styleSentence says how a book numbers its problems, for a prompt.
+func styleSentence(style probnum.Style) string {
+	switch style.Form {
 	case probnum.FormLocal:
-		style = `problems start again in each section, so a reference names the section and the number ("2.1: 1, 4" or "3.1 #7")`
+		return `problems start again in each section, so a reference names the section and the number ("2.1: 1, 4" or "3.1 #7")`
 	case probnum.FormSection:
-		style = `problems are numbered like 2.1.4 (section, then problem)`
+		return `problems are numbered like 2.1.4 (section, then problem)`
 	}
-	return fmt.Sprintf(assignmentPrompt, now.Format("Monday, January 2, 2006"), book.Title, style)
+	return "problems are numbered like 4.27 (chapter, then problem)"
+}
+
+// styleExample is a reference in the book's own form.
+func styleExample(style probnum.Style) string {
+	switch style.Form {
+	case probnum.FormLocal:
+		return "3.1 #7"
+	case probnum.FormSection:
+		return "2.1.4"
+	}
+	return "4.27"
 }

@@ -321,29 +321,8 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 		if err := tx.QueryRowContext(ctx, `SELECT coalesce(max(position), 0) FROM questions WHERE homework_id = ?`, homeworkID).Scan(&last); err != nil {
 			return err
 		}
-		now := db.Now()
-		for i, d := range keep {
-			id := uuid.NewString()
-			label, statement := d.label, ""
-			if !d.InBook {
-				// Its own words are its statement; nothing to find.
-				statement = d.Text
-			}
-			if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, notes, state, created_at, updated_at)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
-				id, homeworkID, last+i+1, d.Text, d.InBook, label, statement, mustJSON(orEmpty(d.notes)), now, now); err != nil {
-				return err
-			}
-			if _, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, d.InBook)); err != nil {
-				return err
-			}
-			q, err := getQuestion(ctx, tx, id)
-			if err != nil {
-				return err
-			}
-			out = append(out, q.Question)
-		}
-		return nil
+		out, err = s.insertQuestions(ctx, tx, homeworkID, last, keep)
+		return err
 	})
 	if err != nil {
 		return nil, err
@@ -366,6 +345,39 @@ type splitRow struct {
 	Draft
 	label string
 	notes []string
+}
+
+// insertQuestions adds questions after position `after` in a set, moving
+// any that follow down, each queued for its first step. Inside tx.
+func (s *Service) insertQuestions(ctx context.Context, tx *sql.Tx, homeworkID string, after int, keep []splitRow) ([]Question, error) {
+	if _, err := tx.ExecContext(ctx, `UPDATE questions SET position = position + ? WHERE homework_id = ? AND position > ?`,
+		len(keep), homeworkID, after); err != nil {
+		return nil, err
+	}
+	now := db.Now()
+	var out []Question
+	for i, d := range keep {
+		id := uuid.NewString()
+		label, statement := d.label, ""
+		if !d.InBook {
+			// Its own words are its statement; nothing to find.
+			statement = d.Text
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, notes, state, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
+			id, homeworkID, after+i+1, d.Text, d.InBook, label, statement, mustJSON(orEmpty(d.notes)), now, now); err != nil {
+			return nil, err
+		}
+		if _, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, d.InBook)); err != nil {
+			return nil, err
+		}
+		q, err := getQuestion(ctx, tx, id)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, q.Question)
+	}
+	return out, nil
 }
 
 // splitDraft reads a draft as the book references it names, in the
