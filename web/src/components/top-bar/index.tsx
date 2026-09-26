@@ -7,7 +7,7 @@ import { buttonVariants } from '@/components/button'
 import { cn } from '@/lib/utils'
 
 /**
- * The one piece of chrome on every screen: 56px on `background` with a
+ * The one piece of chrome on every screen: 64px on `background` with a
  * hairline beneath, in three zones: brand, where-you-are, status.
  *
  * The middle is the caller's: the book on the workspace, and nothing on a
@@ -28,11 +28,11 @@ function ComponentsToggle() {
       aria-label={there ? 'Back to the app' : 'Components'}
       className={cn(
         buttonVariants({ variant: 'ghost' }),
-        'w-control px-0',
+        'size-control-lg px-0',
         there && 'bg-muted/50 text-foreground',
       )}
     >
-      <SwatchBook className="size-5" />
+      <SwatchBook className="size-6" />
     </Link>
   )
 }
@@ -40,23 +40,23 @@ function ComponentsToggle() {
 export function TopBar({ middle }: { middle?: ReactNode }) {
   return (
     <header className="h-topbar shrink-0 border-b bg-background">
-      <div className="grid h-full grid-cols-[1fr_auto_1fr] items-center px-4">
+      <div className="grid h-full grid-cols-[1fr_auto_1fr] items-center px-5">
         <div className="flex items-center">
           <Link to="/" className="rounded-md" aria-label="PSet home">
             <BrandLockup />
           </Link>
         </div>
 
-        <div className="flex items-center gap-2 text-base">{middle}</div>
+        <div className="flex items-center gap-2 text-lg">{middle}</div>
 
         <div className="flex items-center justify-end gap-2 text-muted-foreground">
           {import.meta.env.DEV && <ComponentsToggle />}
           <Link
             to="/settings"
             aria-label="Settings"
-            className={cn(buttonVariants({ variant: 'ghost' }), 'w-control px-0')}
+            className={cn(buttonVariants({ variant: 'ghost' }), 'size-control-lg px-0')}
           >
-            <Settings className="size-5" />
+            <Settings className="size-6" />
           </Link>
         </div>
       </div>

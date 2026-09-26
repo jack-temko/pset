@@ -51,9 +51,9 @@ export function Mark({ className }: { className?: string }) {
  *  braced wordmark is for outside the product, never in here. */
 export function BrandLockup() {
   return (
-    <span className="flex items-center gap-2">
+    <span className="flex items-center gap-3">
       <Mark />
-      <span className="font-heading text-base font-semibold tracking-tight">PSet</span>
+      <span className="font-heading text-xl font-semibold tracking-tight">PSet</span>
     </span>
   )
 }

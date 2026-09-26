@@ -33,7 +33,7 @@ is what identifies.
 
 ## Changes from baseline
 
-- **Plate type sits at the 14px floor**: the author line, the stamp. This
+- **Plate type sits at the 15px floor**: the author line, the stamp. This
   is the baseline's own correction to v1 (which used 8–10px here), carried
   through.
 - **Colours come from `--cover-*` tokens**, not from literals in

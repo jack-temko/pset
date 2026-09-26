@@ -1140,7 +1140,7 @@ export function Components() {
           </Shelf>
         </Section>
 
-        <Section title="Type" note="Nine steps. 14px is the floor. Nothing in the product is smaller.">
+        <Section title="Type" note="Nine steps. 15px is the floor. Nothing in the product is smaller.">
           <Shelf label="display">
             <div className="space-y-2">
               <p className="font-heading text-4xl">Good evening, Jack.</p>

@@ -39,7 +39,7 @@ border; pad a row by hand.
   dark) and inverts with the theme without a second token. This held even
   after `muted` was corrected system-wide, because the header band is where
   `muted` is still weakest (1.24:1).
-- **`Counter` and `RowValue` sit at 14px, not 12px.** The baseline's
+- **`Counter` and `RowValue` sit at the 15px floor, not 12px.** The baseline's
   preview uses 12px, which contradicts the system's own type floor.
 - **Rows own their description spacing.** The baseline's row grows to 56px
   with a description; ours is 59px, because the line-heights already supply

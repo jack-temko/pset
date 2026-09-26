@@ -4,7 +4,7 @@ Two wrappers, both layout and nothing else.
 
 **`AppShell`** is every screen: the top bar as fixed chrome, then the screen
 below it. The window never scrolls: the shell is exactly the viewport, the
-bar takes its 56px, and what's left is the scroll region, so a scrollbar
+bar takes its 64px, and what's left is the scroll region, so a scrollbar
 begins under the bar instead of running past it.
 
 It takes two kinds of screen, and the screen decides how scrolling works,
