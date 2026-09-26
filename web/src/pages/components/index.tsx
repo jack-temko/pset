@@ -955,6 +955,13 @@ export function Components() {
               <DrawnBox box={{ page: 1, x: 0.25, y: 0.62, w: 0.5, h: 0.3, kind: 'figure' }} n={2} />
             </div>
           </Shelf>
+          <Shelf label="narrow, right, top">
+            <div className="relative h-64 w-dialog overflow-hidden rounded-sm border bg-card">
+              <DrawnBox box={{ page: 1, x: 0.06, y: 0.45, w: 0.1, h: 0.3, kind: 'text' }} n={3} />
+              <DrawnBox box={{ page: 1, x: 0.82, y: 0.35, w: 0.12, h: 0.3, kind: 'figure' }} n={4} />
+              <DrawnBox box={{ page: 1, x: 0.3, y: 0.01, w: 0.3, h: 0.2, kind: 'text' }} n={5} />
+            </div>
+          </Shelf>
           <Shelf label="bar">
             <div className="relative h-40 w-panel">
               <BoxingDemo />

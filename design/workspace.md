@@ -393,8 +393,15 @@ built.
   really is. The scan then draws instead of panning: drag a box around
   the problem's words, then around each figure, as many as it takes for
   a problem over two pages or columns. Words are a solid primary box,
-  a figure a dashed one, each numbered in the order it's read, with its
-  kind (click to switch) and a remove button at its corner. A bar takes
+  a figure a dashed one, each numbered in the order it's read. At its
+  corner, a small floating toolbar in the Menu's card (2026-09-25): the
+  number in a primary dot, the kind with its icon (Words, Figure; click
+  to switch), a hairline, and ✕. It keeps its own width on a narrow box,
+  sits inside the box's top when the box starts at the page's top, and
+  hangs from the box's right edge on the page's right half, so the page
+  never clips it. The box can also be reached from **Add questions**,
+  under the rows: "Easier to show than to name? Box it on the page",
+  which closes the dialog and starts it. A bar takes
   the scan pill's place: what the boxes are for, which kind the next box
   is (Words or Figure), **Cancel** and **Done**, and a line counting the
   boxes. Esc cancels. Done reads the words from the boxes (the statement

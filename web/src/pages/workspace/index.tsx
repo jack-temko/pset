@@ -1041,6 +1041,7 @@ function Walkthrough({
       open={adding}
       bookId={bookId}
       set={{ id: setId, title: detail.data?.homework.title ?? '' }}
+      onBox={() => boxing.start({ kind: 'add', setId })}
       onClose={() => setAdding(false)}
       onDone={(_, wrote) => {
         if (wrote) setIndex(questions.length)
@@ -1170,7 +1171,12 @@ function Walkthrough({
     <div className="flex min-h-0 flex-1 flex-col">
       {header}
 
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-card">
+      {/* Keyed by the question: moving to another starts its body fresh
+          (its notes, its reading, its failure's fields, the scroll), in
+          one place. Keys scattered on the parts inside, beside the
+          conditional parts and the figures, left stale copies behind
+          (three "Add your professor's instructions" under one question). */}
+      <div key={q.id} className="min-h-0 flex-1 space-y-5 overflow-y-auto p-card">
         <div className="flex items-center gap-2">
           <span className="min-w-0 flex-1 truncate text-lg font-semibold">{q.label}</span>
           {/* A question that isn't in this book has nothing to jump to. */}
@@ -1256,7 +1262,7 @@ function Walkthrough({
         )}
 
         {/* The professor's say on the problem, over the book's. */}
-        <ProfessorNotes key={q.id} q={q} onSave={(notes) => update.mutate({ id: q.id, patch: { notes } })} />
+        <ProfessorNotes q={q} onSave={(notes) => update.mutate({ id: q.id, patch: { notes } })} />
 
         {/* The words the guide is written from, once there are any: a
             question still being found or read has none to check yet. */}
@@ -1266,7 +1272,6 @@ function Walkthrough({
           q.state !== 'locating' &&
           q.state !== 'reading' && (
             <FigureReading
-              key={q.id}
               q={q}
               onCorrect={(lines) => redoReading.mutate({ id: q.id, lines })}
               onReread={() => redoReading.mutate({ id: q.id })}
@@ -1274,7 +1279,7 @@ function Walkthrough({
           )}
 
         {q.state === 'failed' ? (
-          <FailedQuestion key={q.id} q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} />
+          <FailedQuestion q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} />
         ) : (
           <>
             {/* Queued is a word and no motion: nothing is happening to it

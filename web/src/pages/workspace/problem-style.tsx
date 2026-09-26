@@ -55,7 +55,7 @@ export function ProblemStyleField({
         label="How problems are numbered"
         options={FORMS.map((f) => ({
           ...f,
-          label: <span className="font-mono">{f.label}</span>,
+          label: <span className="tabular-nums">{f.label}</span>,
           // What import found, shown on the option it found.
           hint:
             example && f.value === style?.form ? (
