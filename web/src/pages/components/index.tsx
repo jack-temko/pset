@@ -30,6 +30,7 @@ import {
   WorkedSteps,
 } from '@/components/transcript'
 import { Veil } from '@/components/veil'
+import { ResizeHandle } from '@/components/resize-handle'
 import { Spinner } from '@/components/spinner'
 import { Skeleton } from '@/components/skeleton'
 import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
@@ -98,6 +99,31 @@ function Shelf({ label, children }: { label: string; children: ReactNode }) {
     <div className="grid grid-cols-[10rem_1fr] items-start gap-6">
       <div className="pt-2 font-mono text-xs text-muted-foreground">{label}</div>
       <div className="flex flex-wrap items-center gap-3">{children}</div>
+    </div>
+  )
+}
+
+/** Two panes and the seam between them, live: the left one sizes. */
+function ResizeDemo() {
+  const [width, setWidth] = useState(200)
+  return (
+    <div className="flex h-40 w-full max-w-layout-reading overflow-hidden rounded-md border">
+      <div style={{ width }} className="shrink-0 border-r bg-rail p-card text-sm text-muted-foreground">
+        {width}px
+      </div>
+      <ResizeHandle
+        label="Resize the demo pane"
+        pane="before"
+        value={width}
+        min={120}
+        max={400}
+        onChange={setWidth}
+        onCommit={() => {}}
+        onReset={() => setWidth(200)}
+      />
+      <div className="min-w-0 flex-1 bg-background p-card text-sm text-muted-foreground">
+        Drag the grip, or tab to it and use the arrows. Double-click or Enter puts it back.
+      </div>
     </div>
   )
 }
@@ -723,6 +749,15 @@ export function Components() {
               <p><Skeleton className="h-3 w-full" /></p>
               <p><Skeleton className="h-3 w-2/3" /></p>
             </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="ResizeHandle"
+          note="The seam between two panes, made draggable. A grip at its middle says the edge moves; hover, a drag or focus turn it to ring."
+        >
+          <Shelf label="pane before">
+            <ResizeDemo />
           </Shelf>
         </Section>
 

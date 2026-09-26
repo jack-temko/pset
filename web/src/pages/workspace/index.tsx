@@ -44,6 +44,7 @@ import { Veil } from '@/components/veil'
 import { Label } from '@/components/label'
 import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
 import { ConfirmPopover } from '@/components/confirm'
+import { ResizeHandle } from '@/components/resize-handle'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
 import { BookDialog, HomeworkDialog } from './dialogs'
@@ -94,6 +95,7 @@ import { dueLine, dueStatus } from '@/lib/due'
 import { useTimeLeft } from '@/lib/eta'
 import { PageMap, Pages, usePages } from '@/lib/pages'
 import { useSettled } from '@/lib/settled'
+import { layout, usePanes } from '@/lib/panes'
 import { cn, plural } from '@/lib/utils'
 
 /**
@@ -137,8 +139,11 @@ function Rail({
   toc,
   page,
   onJump,
+  width,
 }: {
   toc: ContentsEntry[]
+  /** Pixels, from the pane layout; the token until it's measured. */
+  width?: number
   /** The page the rail highlights: the reader's page, or a jump's
    *  destination until the next scroll moves the page. */
   page: number
@@ -238,7 +243,7 @@ function Rail({
   }
 
   return (
-    <aside ref={rail} className="w-rail shrink-0 overflow-y-auto border-r bg-rail py-4">
+    <aside ref={rail} style={{ width }} className="w-rail shrink-0 overflow-y-auto border-r bg-rail py-4">
       <nav aria-label="Contents">{toc.map((e) => row(e, 0))}</nav>
     </aside>
   )
@@ -253,9 +258,9 @@ const RAIL_INDENT = ['pl-4', 'pl-8', 'pl-12', 'pl-16', 'pl-20']
 const RAIL_CHEVRON = ['left-0', 'left-2', 'left-6', 'left-10', 'left-14']
 
 /** The rail before the contents arrive: rows at their real height. */
-function RailSkeleton() {
+function RailSkeleton({ width }: { width?: number }) {
   return (
-    <aside className="w-rail shrink-0 overflow-hidden border-r bg-rail py-4" aria-hidden>
+    <aside style={{ width }} className="w-rail shrink-0 overflow-hidden border-r bg-rail py-4" aria-hidden>
       {[3, 4, 2].map((n, i) => (
         <div key={i}>
           <div className="px-4 py-2 text-sm">
@@ -1511,6 +1516,7 @@ function Panel({
   focus,
   onFocusToggle,
   onJump,
+  width,
 }: {
   bookId: string
   bookTitle: string
@@ -1521,6 +1527,8 @@ function Panel({
   focus: boolean
   onFocusToggle: () => void
   onJump: (page: number) => void
+  /** Pixels, from the pane layout; the token until it's measured. */
+  width?: number
 }) {
   const [tab, setTab] = useState<Tab>(() => (homework ? 'homework' : readTab(bookId)))
   const [about, setAbout] = useState<About | null>(null)
@@ -1533,6 +1541,7 @@ function Panel({
     <aside
       onPointerDownCapture={() => onActive(tab === 'ask' ? 'asking' : 'homework')}
       onKeyDownCapture={() => onActive(tab === 'ask' ? 'asking' : 'homework')}
+      style={{ width }}
       className={cn(
         'flex shrink-0 flex-col border-l bg-rail',
         focus ? 'w-panel-wide' : 'w-panel',
@@ -1609,6 +1618,8 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   const pointOut = usePointOut()
 
   const [focus, setFocus] = useState(false)
+  // The panes' widths, as fractions of the frame, held to their limits.
+  const panes = usePanes()
   // A PDF index: the scan is the one place that counts in those.
   const [currentPage, setCurrentPage] = useState(1)
   // The page a jump landed on holds the rail's highlight until a scroll
@@ -1638,6 +1649,11 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
     if (p !== pinnedPage && !jumping.current) setPinnedPage(null)
   }
   const entries = contents.data?.entries
+  // The rail holds its place while the contents load, and goes for good
+  // when a book has none.
+  const showRail = !focus && (entries === undefined || entries.length > 0)
+  const panelKey = focus ? 'panelFocus' : 'panel'
+  const widths = panes.total > 0 ? layout(panes.total, panes.ratios, focus, showRail) : undefined
   const homeworkCount = useBookHomework(book.id).data?.length ?? 0
   // Time counts toward what you last touched: the panel's tab, or the
   // book itself.
@@ -1686,13 +1702,28 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
             }
           >
             <div className="flex h-full min-h-0 flex-col">
-              <div className="flex min-h-0 flex-1" onPointerDownCapture={() => (activity.current = 'reading')}>
-              {!focus &&
-                (entries === undefined ? (
-                  <RailSkeleton />
-                ) : (
-                  entries.length > 0 && <Rail toc={entries} page={pinnedPage ?? currentPage} onJump={jumpPdf} />
-                ))}
+              <div ref={panes.frame} className="flex min-h-0 flex-1" onPointerDownCapture={() => (activity.current = 'reading')}>
+              {showRail && (
+                <>
+                  {entries === undefined ? (
+                    <RailSkeleton width={widths?.rail} />
+                  ) : (
+                    <Rail toc={entries} page={pinnedPage ?? currentPage} onJump={jumpPdf} width={widths?.rail} />
+                  )}
+                  {widths && (
+                    <ResizeHandle
+                      label="Resize the contents"
+                      pane="before"
+                      value={widths.rail}
+                      min={widths.railRange[0]}
+                      max={widths.railRange[1]}
+                      onChange={(px) => panes.set('rail', px)}
+                      onCommit={panes.commit}
+                      onReset={() => panes.reset('rail')}
+                    />
+                  )}
+                </>
+              )}
               <Scan
                 bookId={book.id}
                 aspect={book.aspect}
@@ -1702,6 +1733,18 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                 scrollRef={scrollRef}
                 pageRefs={pageRefs}
               />
+              {widths && (
+                <ResizeHandle
+                  label={focus ? 'Resize the panel in Focus' : 'Resize the panel'}
+                  pane="after"
+                  value={widths.panel}
+                  min={widths.panelRange[0]}
+                  max={widths.panelRange[1]}
+                  onChange={(px) => panes.set(panelKey, px)}
+                  onCommit={panes.commit}
+                  onReset={() => panes.reset(panelKey)}
+                />
+              )}
               <Panel
                 bookId={book.id}
                 bookTitle={book.title}
@@ -1710,6 +1753,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                 focus={focus}
                 onFocusToggle={() => setFocus((f) => !f)}
                 onJump={jump}
+                width={widths?.panel}
               />
               </div>
             </div>

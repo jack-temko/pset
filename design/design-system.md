@@ -98,7 +98,7 @@ that is a design question: add a named token, never an arbitrary value.
 
 Semantic tokens own page rhythm: `page` (40px gutters), `section` (40px
 between sections), `card` (16px Box interior). The shell's fixed dimensions
-are tokens too: `topbar` 64, `rail` 320, `panel` 440 (`-wide` 800 in Focus), `control` 32 (`-sm`
+are tokens too: `topbar` 64, `rail` 320, `panel` 440 (`-wide` 800 in Focus) as the workspace's default widths, `control` 32 (`-sm`
 28, `-lg` 40), `row` 40, `mark` 36, `dialog` 400 (`-wide` 560).
 
 Radius: `sm` 4, **`md` 6: the default for controls and containers alike**,
