@@ -63,7 +63,7 @@ import {
   useRemoveBook,
   useUpdateBook,
   type Book,
-  type ContentsChapter,
+  type ContentsEntry,
 } from '@/api/library'
 import { ApiError } from '@/api/client'
 import {
@@ -125,19 +125,20 @@ function writeTab(bookId: string, tab: Tab) {
 
 // ---------------------------------------------------------------- rail
 
-/** The book's contents as a tree of quiet rows; the reader's position
- *  highlights the section or chapter it is inside, and the rail keeps that
- *  row in view. A jump puts the destination there at once, until the next
- *  scroll moves the page. A book with no contents has no rail. Pages here
- *  are PDF pages, as the engine sends them; each row shows its printed
- *  number, with the PDF page on hover. Rows touch, so the hover runs
- *  unbroken from one to the next. */
+/** The book's contents as a tree of quiet rows, every level the book
+ *  gives. The top two show; anything deeper opens under its parent's
+ *  chevron. The reader's position highlights the deepest row on show that
+ *  it is inside, and the rail keeps that row in view. A jump puts the
+ *  destination there at once, until the next scroll moves the page. A book
+ *  with no contents has no rail. Pages here are PDF pages, as the engine
+ *  sends them; each row shows its printed number, with the PDF page on
+ *  hover. Rows touch, so the hover runs unbroken from one to the next. */
 function Rail({
   toc,
   page,
   onJump,
 }: {
-  toc: ContentsChapter[]
+  toc: ContentsEntry[]
   /** The page the rail highlights: the reader's page, or a jump's
    *  destination until the next scroll moves the page. */
   page: number
@@ -145,14 +146,28 @@ function Rail({
 }) {
   const pages = usePages()
   const rail = useRef<HTMLElement>(null)
-  // The current heading is the last one, chapter or section, that starts
-  // at or before the page the scan is showing.
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set())
+  const shows = (depth: number, parent?: ContentsEntry) =>
+    depth < RAIL_LEVELS || (parent !== undefined && open.has(parent.id))
+  const toggle = (id: string) =>
+    setOpen((o) => {
+      const next = new Set(o)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
+
+  // The current row is the last one on show, in reading order, that
+  // starts at or before the page the scan is showing: a closed section
+  // stands in for the rows folded inside it.
   const currentId = (() => {
     let id: string | undefined
-    for (const c of toc) {
-      if (c.page <= page) id = c.id
-      for (const s of c.sections) if (s.page <= page) id = s.id
+    const walk = (entries: ContentsEntry[], depth: number) => {
+      for (const e of entries) {
+        if (e.page <= page) id = e.id
+        if (e.children.length > 0 && shows(depth + 1, e)) walk(e.children, depth + 1)
+      }
     }
+    walk(toc, 0)
     return id
   })()
 
@@ -175,54 +190,67 @@ function Rail({
     </Tooltip>
   )
 
+  const row = (e: ContentsEntry, depth: number): ReactNode => {
+    const current = e.id === currentId
+    // Below the top level, a row with rows under it folds them away. The
+    // chevron sits in the row's indent, so titles stay aligned either way.
+    const folds = depth >= RAIL_LEVELS - 1 && e.children.length > 0
+    const isOpen = open.has(e.id)
+    return (
+      <div key={e.id}>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => onJump(e.page)}
+            aria-current={current || undefined}
+            className={cn(
+              'flex w-full items-center gap-2 pr-4 text-left text-sm',
+              RAIL_INDENT[Math.min(depth, RAIL_INDENT.length - 1)],
+              depth === 0 ? 'py-2 font-medium' : 'py-1',
+              current
+                ? 'bg-primary-soft text-primary'
+                : depth === 0
+                  ? 'text-foreground hover:bg-muted/50'
+                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+            )}
+          >
+            <span className="min-w-0 flex-1 truncate">{e.title}</span>
+            {pageLabel(e.page)}
+          </button>
+          {folds && (
+            <button
+              type="button"
+              onClick={() => toggle(e.id)}
+              aria-expanded={isOpen}
+              aria-label={`${isOpen ? 'Hide' : 'Show'} what's in ${e.title}`}
+              className={cn(
+                'absolute top-0 bottom-0 flex w-6 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground',
+                RAIL_CHEVRON[Math.min(depth, RAIL_CHEVRON.length - 1)],
+              )}
+            >
+              <ChevronRight className={cn('size-4 transition-transform duration-150 motion-reduce:transition-none', isOpen && 'rotate-90')} />
+            </button>
+          )}
+        </div>
+        {e.children.length > 0 && shows(depth + 1, e) && e.children.map((c) => row(c, depth + 1))}
+      </div>
+    )
+  }
+
   return (
     <aside ref={rail} className="w-rail shrink-0 overflow-y-auto border-r bg-rail py-4">
-      <nav aria-label="Contents">
-        {toc.map((c) => {
-          const current = c.id === currentId
-          return (
-            <div key={c.id}>
-              <button
-                type="button"
-                onClick={() => onJump(c.page)}
-                aria-current={current || undefined}
-                className={cn(
-                  'flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-medium',
-                  current
-                    ? 'bg-primary-soft text-primary'
-                    : 'text-foreground hover:bg-muted/50',
-                )}
-              >
-                <span className="min-w-0 flex-1 truncate">{c.title}</span>
-                {pageLabel(c.page)}
-              </button>
-              {c.sections.map((s) => {
-                const current = s.id === currentId
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => onJump(s.page)}
-                    aria-current={current || undefined}
-                    className={cn(
-                      'flex w-full items-center gap-2 py-1 pr-4 pl-8 text-left text-sm',
-                      current
-                        ? 'bg-primary-soft text-primary'
-                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
-                    )}
-                  >
-                    <span className="min-w-0 flex-1 truncate">{s.title}</span>
-                    {pageLabel(s.page)}
-                  </button>
-                )
-              })}
-            </div>
-          )
-        })}
-      </nav>
+      <nav aria-label="Contents">{toc.map((e) => row(e, 0))}</nav>
     </aside>
   )
 }
+
+/** How many levels of the contents show before any are opened. */
+const RAIL_LEVELS = 2
+/** Each level's indent, 16px a step after the top's; deeper than the
+ *  last holds there, so a very deep book doesn't walk off the rail. */
+const RAIL_INDENT = ['pl-4', 'pl-8', 'pl-12', 'pl-16', 'pl-20']
+/** The chevron sits in the 24px just before its row's title. */
+const RAIL_CHEVRON = ['left-0', 'left-2', 'left-6', 'left-10', 'left-14']
 
 /** The rail before the contents arrive: rows at their real height. */
 function RailSkeleton() {
@@ -1609,7 +1637,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
     setCurrentPage(p)
     if (p !== pinnedPage && !jumping.current) setPinnedPage(null)
   }
-  const chapters = contents.data?.chapters
+  const entries = contents.data?.entries
   const homeworkCount = useBookHomework(book.id).data?.length ?? 0
   // Time counts toward what you last touched: the panel's tab, or the
   // book itself.
@@ -1660,10 +1688,10 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
             <div className="flex h-full min-h-0 flex-col">
               <div className="flex min-h-0 flex-1" onPointerDownCapture={() => (activity.current = 'reading')}>
               {!focus &&
-                (chapters === undefined ? (
+                (entries === undefined ? (
                   <RailSkeleton />
                 ) : (
-                  chapters.length > 0 && <Rail toc={chapters} page={pinnedPage ?? currentPage} onJump={jumpPdf} />
+                  entries.length > 0 && <Rail toc={entries} page={pinnedPage ?? currentPage} onJump={jumpPdf} />
                 ))}
               <Scan
                 bookId={book.id}

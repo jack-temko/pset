@@ -106,10 +106,11 @@
 
     /* The shell's fixed dimensions. */
     --spacing-topbar: 4rem;
-    --spacing-rail: 16rem;
+    --spacing-rail: 20rem;
     --spacing-panel: 27.5rem;
-    /* Focus mode: the rail's width moves into the panel (440 + 256). */
-    --spacing-panel-wide: 43.5rem;
+    /* Focus mode: the rail's width moves into the panel, and the scan
+       gives up a little more (440 + 320 + 40). */
+    --spacing-panel-wide: 50rem;
     --spacing-control: 2rem;
     --spacing-control-sm: 1.75rem;
     --spacing-control-lg: 2.5rem;

@@ -260,9 +260,9 @@ func TestScannedBookContentsFromThePrintedContents(t *testing.T) {
 	var c Contents
 	e.do(t, "GET", "/api/books/"+b.ID+"/contents", nil, &c)
 	var got []string
-	for _, ch := range c.Chapters {
+	for _, ch := range c.Entries {
 		got = append(got, fmt.Sprintf("%s@%d", ch.Title, ch.Page))
-		for _, s := range ch.Sections {
+		for _, s := range ch.Children {
 			got = append(got, fmt.Sprintf("  %s@%d", s.Title, s.Page))
 		}
 	}
@@ -326,8 +326,8 @@ func TestScannedBookWithoutContentsPagesHasTheModelPick(t *testing.T) {
 
 	var c Contents
 	e.do(t, "GET", "/api/books/"+b.ID+"/contents", nil, &c)
-	if len(c.Chapters) != 2 || c.Chapters[0].Title != "CHAPTER 1" || c.Chapters[0].Page != 3 ||
-		len(c.Chapters[0].Sections) != 2 || c.Chapters[1].Sections[0].Title != "2.2 Karsts" || c.Chapters[1].Sections[0].Page != 12 {
+	if len(c.Entries) != 2 || c.Entries[0].Title != "CHAPTER 1" || c.Entries[0].Page != 3 ||
+		len(c.Entries[0].Children) != 2 || c.Entries[1].Children[0].Title != "2.2 Karsts" || c.Entries[1].Children[0].Page != 12 {
 		t.Fatalf("contents %+v", c)
 	}
 	prompt := e.llm.Requests()[1].Chat.Messages[1].Content.Text()
@@ -346,7 +346,7 @@ func TestScannedBookWithTooFewPicksHasNoRail(t *testing.T) {
 	b := e.waitFor(t, up.Book.ID, StateReady)
 	var c Contents
 	e.do(t, "GET", "/api/books/"+b.ID+"/contents", nil, &c)
-	if len(c.Chapters) != 0 {
+	if len(c.Entries) != 0 {
 		t.Fatalf("contents %+v", c)
 	}
 }

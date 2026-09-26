@@ -246,8 +246,8 @@ func TestDigitalBookImportsToReady(t *testing.T) {
 
 	var c Contents
 	e.do(t, "GET", "/api/books/"+b.ID+"/contents", nil, &c)
-	if len(c.Chapters) != 3 || c.Chapters[0].Title != "Chapter 1" || c.Chapters[0].Page != 4 ||
-		len(c.Chapters[0].Sections) != 1 || c.Chapters[1].Page != 8 {
+	if len(c.Entries) != 3 || c.Entries[0].Title != "Chapter 1" || c.Entries[0].Page != 4 ||
+		len(c.Entries[0].Children) != 1 || c.Entries[1].Page != 8 {
 		t.Fatalf("contents %+v", c)
 	}
 
@@ -532,12 +532,22 @@ func TestBuildContents(t *testing.T) {
 		{Level: 1, Title: "Part I", StartPage: 1},
 		{Level: 2, Title: "Ch 1", StartPage: 2},
 		{Level: 3, Title: "1.1", StartPage: 3},
+		{Level: 4, Title: "1.1.1", StartPage: 4},
 		{Level: 2, Title: "Ch 2", StartPage: 9},
+		{Level: 4, Title: "2.0.1", StartPage: 10},
+		{Level: 1, Title: "Part II", StartPage: 20},
 	})
-	if len(c.Chapters) != 1 || len(c.Chapters[0].Sections) != 2 {
+	if len(c.Entries) != 2 || len(c.Entries[0].Children) != 2 || len(c.Entries[1].Children) != 0 {
 		t.Fatalf("%+v", c)
 	}
-	if c := buildContents([]section{{Level: 1, Title: "Whole book", StartPage: 1}}); len(c.Chapters) != 0 {
+	ch1, ch2 := c.Entries[0].Children[0], c.Entries[0].Children[1]
+	if len(ch1.Children) != 1 || ch1.Children[0].Title != "1.1" || len(ch1.Children[0].Children) != 1 || ch1.Children[0].Children[0].Title != "1.1.1" {
+		t.Fatalf("every level kept: %+v", ch1)
+	}
+	if len(ch2.Children) != 1 || ch2.Children[0].Title != "2.0.1" {
+		t.Fatalf("a skipped level still nests: %+v", ch2)
+	}
+	if c := buildContents([]section{{Level: 1, Title: "Whole book", StartPage: 1}}); len(c.Entries) != 0 {
 		t.Fatalf("fallback section made a rail: %+v", c)
 	}
 }

@@ -128,28 +128,22 @@ export interface ProblemsPatch {
   where: Where;
 }
 /**
- * ContentsSection is a section of a chapter, at its PDF page.
+ * ContentsEntry is one heading of the contents, at its PDF page, and
+ * the headings under it, however deep the book goes.
  */
-export interface ContentsSection {
+export interface ContentsEntry {
   id: string;
   title: string;
   page: number /* int */;
+  children: ContentsEntry[];
 }
 /**
- * ContentsChapter is a top-level entry and the sections under it.
- */
-export interface ContentsChapter {
-  id: string;
-  title: string;
-  page: number /* int */;
-  sections: ContentsSection[];
-}
-/**
- * Contents is GET /api/books/{id}/contents. Empty when the book's
- * structure couldn't be read, and then the workspace has no rail.
+ * Contents is GET /api/books/{id}/contents: the top-level entries.
+ * Empty when the book's structure couldn't be read, and then the
+ * workspace has no rail.
  */
 export interface Contents {
-  chapters: ContentsChapter[];
+  entries: ContentsEntry[];
 }
 export const EventBookChanged = "book.changed";
 export const EventBookRemoved = "book.removed";

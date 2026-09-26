@@ -32,7 +32,8 @@ the contents pages themselves. A model now reads the contents instead.
    glossary, reference tables, index. No front matter (preface, to the
    student, acknowledgments, the contents itself), no bibliography, no
    credits. **Every level** the contents gives is stored (2.3.1 and
-   deeper); the rail still shows two.
+   deeper), and the rail carries them all, two on show and the rest
+   folded under their parents.
 4. **Levels come from the numbering**: "2.3" sits under chapter 2. An
    unnumbered entry takes the level the model gives it.
 5. **Titles are the model's reading**, with the number in front ("2.3
@@ -107,6 +108,8 @@ numbers").
 
 ## The rail (design/workspace.md)
 
+- Every level is in the tree; the top two show, deeper ones open under
+  a chevron.
 - Chapter rows show their printed page, like section rows.
 - The highlighted row scrolls into view as you read.
 - Hover and highlight run edge to edge with no gaps between rows.
