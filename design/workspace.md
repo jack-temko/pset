@@ -198,7 +198,14 @@ built.
     3.1 Problem 7", "3.1 #7", "Problem 2.1.4, p. 57", "4.25 (no PSpice)"
     and "Page 33 Problem 7" all work, and a row naming several problems
     ("1.1: 1, 7") becomes a question each, ranges included ("3.2: 1-15
-    odd", "4.27–4.30", "2.3 #2 to 6 even"; at most 40 from one range).
+    odd", "4.27–4.30", "2.3 #2 to 6 even"; at most 40 from one range),
+    two sections on one line ("1.1 #1, 1.2 #3", "1.1: 1, 7; 1.2: 3"),
+    parts ("7abc", "7(a),(b)", "7a-c", read as "Only parts (a), (b) and
+    (c)."), prefixes run into the number ("P4.27", "p45 #12" for page
+    45), and numbers in words after a word that expects one ("problem
+    seven"). A problem from a set the book numbers on its own
+    ("Supplementary problem 3.5", "Review question 4.3") is never read
+    as the chapter's problem of that number.
   - **Each row says what it reads as, while it's typed** (2026-09-25):
     beside In this book, "3 questions: 2.1 #1, 2.1 #4, 2.1 #6 · From
     your professor: do c", or, in warning ink, "Not a reference PSet

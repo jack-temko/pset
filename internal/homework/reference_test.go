@@ -71,6 +71,24 @@ func TestParseRefs(t *testing.T) {
 		{"4.27 - 29", perChapter, []Ref{{Chapter: "4", Number: "27"}, {Chapter: "4", Number: "28"}, {Chapter: "4", Number: "29"}}},
 		{"2.1.3-2.1.5", bySection, []Ref{
 			{Chapter: "2", Section: "2.1", Number: "3"}, {Chapter: "2", Section: "2.1", Number: "4"}, {Chapter: "2", Section: "2.1", Number: "5"}}},
+		// Two sections on one line, each with its own list.
+		{"1.1 #1, 1.2 #3", perSection, []Ref{{Chapter: "1", Section: "1.1", Number: "1"}, {Chapter: "1", Section: "1.2", Number: "3"}}},
+		{"1.1: 1, 7; 1.2: 3", perSection, []Ref{
+			{Chapter: "1", Section: "1.1", Number: "1"}, {Chapter: "1", Section: "1.1", Number: "7"}, {Chapter: "1", Section: "1.2", Number: "3"}}},
+		{"Section 1.1 #1, section 1.2 #3", perSection, []Ref{{Chapter: "1", Section: "1.1", Number: "1"}, {Chapter: "1", Section: "1.2", Number: "3"}}},
+		// Several parts of one problem.
+		{"3.1 #7abc", perSection, []Ref{{Chapter: "3", Section: "3.1", Number: "7", Part: "abc"}}},
+		{"3.1 #7(a),(b)", perSection, []Ref{{Chapter: "3", Section: "3.1", Number: "7", Part: "ab"}}},
+		{"3.1 #7a-c", perSection, []Ref{{Chapter: "3", Section: "3.1", Number: "7", Part: "abc"}}},
+		{"3.1 #7 (a-c)", perSection, []Ref{{Chapter: "3", Section: "3.1", Number: "7", Part: "abc"}}},
+		{"4.27(a and c)", perChapter, []Ref{{Chapter: "4", Number: "27", Part: "ac"}}},
+		// Prefixes run into the number, a page run into its "p".
+		{"P4.27", perChapter, []Ref{{Chapter: "4", Number: "27"}}},
+		{"Prob4.27", perChapter, []Ref{{Chapter: "4", Number: "27"}}},
+		{"p45 #12", perSection, []Ref{{Number: "12", Page: 45}}},
+		// Numbers in words, after a word that expects one.
+		{"Problem one in 2.1", perSection, []Ref{{Chapter: "2", Section: "2.1", Number: "1"}}},
+		{"Chapter four, problem twenty", perChapter, []Ref{{Chapter: "4", Number: "20"}}},
 		// And a book problem in the professor's own words.
 		{"Use MATLAB or any other computer language/platform to do problem 2.5.2 on p. 61, augmented as below. HOWEVER, use 500 packets.",
 			bySection, []Ref{{Chapter: "2", Section: "2.5", Number: "2", Page: 61,
@@ -92,6 +110,13 @@ func TestParseRefsLeavesProseAlone(t *testing.T) {
 		// that names two problems.
 		"3 resistors of 4, 6 and 12 ohms are in parallel across a 24 V source. Find the current through each one and the power the source delivers.",
 		"Compare your answers to problem 2.1.4 and problem 2.2.4, and explain the difference.",
+		// Problems from a set the book numbers on its own: not the
+		// chapter's problems of the same number.
+		"Supplementary problem 3.5",
+		"Review question 4.3",
+		"Review problem 4 in chapter 2",
+		// "one" not after a word that expects a number.
+		"the one with the tank",
 		// A range too long to be meant, and one backwards.
 		"1.1: 1-500",
 		"3.1: 9-2",
