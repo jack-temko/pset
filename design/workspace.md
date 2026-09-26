@@ -182,13 +182,25 @@ built.
 - **List → walkthrough**, both in the panel: the book's assignments as
   rows (Box + Door), opening one fills the panel with its walkthrough,
   back link at top.
-- **Creation is two acts, not one** (2026-09-20 grill). Making a set and
-  filling it are different decisions, so they are different dialogs:
-  - **New homework**: title (required, because an unnamed set still
-    shows up in the list and on Home) and an optional due date, a
-    native `<input type="date">`. Nothing about questions. Creating
-    lands you in the set's empty walkthrough.
-  - **Add questions**: a stack of rows, one question each, with a field
+- **Adding homework is one dialog** (2026-09-25, Jack: "collapse the
+  add questions after the fact to being the same style as starting a
+  homework... why are there two buttons for adding a homework. Make them
+  one"). It reverses the 2026-09-20 grill's two acts (New homework made
+  an empty set, Add questions filled it) and the separate Import an
+  assignment beside them. **New homework**, the list's one DoorAction,
+  and **Add questions**, in a set's menu, open the same wide dialog,
+  titled so, with four ways in on a segmented control: **Write · File ·
+  Web page · Paste**. Write is where it opens.
+  - **Write**, for a new set: its title (required, because an unnamed set
+    still shows up in the list and on Home) and an optional due date, a
+    native `<input type="date">`, side by side; then the questions. The
+    questions can wait: **Create** makes an empty set, **Create with 3
+    questions** a filled one, and either lands you in its walkthrough.
+    What the two acts were for survives: a set still exists the moment
+    it's named.
+  - **Write**, for a set that exists: the questions alone, **Add 3
+    questions**, landing on the first of them.
+  - The questions are a stack of rows, one question each, with a field
     that grows as you type, a **"In this book" checkbox per row**, and
     a remove button that is always visible and disabled on the only
     row. Enter adds a row below and moves into it; Cmd/Ctrl+Enter
@@ -226,12 +238,12 @@ built.
     again the same way. Each question is labelled the
     book's way ("3.1 #7", "4.27", "2.1.4", "p. 33 #7"), which is what its
     header shows.
-  - Both leave the same way: **Cancel in the footer, or Esc**. No X in
+  - It leaves the same way: **Cancel in the footer, or Esc**. No X in
     the corner: one job, one control.
 - **Importing an assignment** (2026-09-25): the professor's own
-  document, read into sets. "Import an assignment" is the list's second
-  DoorAction, under New homework. One wide dialog, three steps:
-  - **Where it is**: a segmented control, File · Web page · Paste. File
+  document, read into sets: the File, Web page and Paste ways into the
+  same dialog, in three steps:
+  - **Where it is**: File
     is the professor's PDF or a photo (a printout, a slide, the board),
     picked with the footer's **Choose a file**, which starts reading at
     once: no drop zone, one gesture. Web page is a public course page's
@@ -279,11 +291,13 @@ built.
     folds away with the dates gone by. Only the questions added or whose
     instructions changed are found or written; nothing else is redone.
     The primary says it: **Update 1 set**, **Add 2 sets, update 1**.
-  - **Update from an assignment**, in a set's "⋯" menu, is the same
-    dialog titled so, reading any document against that set whatever it
-    came from: a revised sheet, a corrected page, a pasted email. The
-    review is the same update. A set updated from a document it didn't
-    come from remembers that document from then on.
+  - **Add questions on a set, by File, Web page or Paste**, reads any
+    document against that set whatever it came from: a revised sheet, a
+    corrected page, a pasted email ("The professor's assignment for Set
+    3, or a newer version of it."). The review is the same update. A set
+    updated from a document it didn't come from remembers that document
+    from then on. (It was its own menu item, Update from an assignment,
+    until the one dialog took it in.)
   - A set's title is the document's own name ("Assignment #3") for a
     one-date sheet, and "Homework due Sep 25" for a semester's table,
     whose dates would all share one name.
@@ -323,7 +337,7 @@ built.
   saving happen there.
 - **The walkthrough header** (2026-09-21) keeps what you read: back, the
   set's title, "3 of 8", and a **"⋯" menu** for what you do to the set:
-  Add questions, Box one on the page, Update from an assignment, Edit
+  Add questions, Box one on the page, Edit
   homework, Print worksheet, then **Turn in** below a
   divider, which reads **Turned in** with a check once done, then
   **Delete homework** below another. While a set is turned in, a success

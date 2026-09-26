@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
 
 import { Button } from '@/components/button'
@@ -15,13 +15,15 @@ import {
   useBookHomework,
   useDismissRead,
   useImportAssignment,
+  useAddQuestions,
+  useNewHomework,
   useStartRead,
   type AssignmentFrom,
   type LineReading,
   type Summary,
 } from '@/api/homework'
 import { cn, plural } from '@/lib/utils'
-import { NumberingCheck } from './dialogs'
+import { NumberingCheck, QuestionRows, draftsOf, emptyRow, rowsCount } from './dialogs'
 import { ReadsAs, useLiveReadings } from './reads-as'
 import {
   actionLabel,
@@ -39,33 +41,38 @@ import {
 } from './import-state'
 
 /**
- * Import an assignment: the professor's PDF, a photo of it, the course's
- * homework page, or its text pasted in, read out into due dates and
- * lines. Reading runs in the background: the dialog can close while it
- * reads, and the read waits in the Homework list for its review. Nothing
- * is added until the student has looked: the review is an editable list,
- * a set a due date and a question a line, and only what stays ticked is
- * made.
+ * New homework and Add questions: one dialog, four ways in (2026-09-25,
+ * Jack: "collapse the add questions after the fact to being the same
+ * style as starting a homework... Make them one"). **Write** the
+ * questions yourself, a row each, each saying what it reads as; or give
+ * the professor's own document, a **File** (PDF or photo), the course's
+ * **Web page**, or its text **Pasted** in, which is read out into due
+ * dates and lines. Reading runs in the background: the dialog can close
+ * while it reads, and the read waits in the Homework list for its review.
+ * Nothing is added from a document until the student has looked: the
+ * review is an editable list, a set a due date and a question a line.
  *
- * The same dialog updates a set from a document ("Update from an
- * assignment"): the review then shows what's new for that set, whose
+ * For a new set, Write asks its title and due date too, so a set is
+ * started and filled in one step (the questions can wait). For a set
+ * that exists, a document is read as an update to it: what's new, whose
  * instructions changed, and what it no longer lists. Spec:
- * design/workspace.md, "Importing an assignment".
+ * design/workspace.md, "Adding homework".
  */
 
-type Mode = 'file' | 'page' | 'paste'
+type Mode = 'write' | 'file' | 'page' | 'paste'
 
 const modes = [
+  { value: 'write', label: 'Write' },
   { value: 'file', label: 'File' },
   { value: 'page', label: 'Web page' },
   { value: 'paste', label: 'Paste' },
 ] as const
 
-export function ImportAssignmentDialog({
+export function AddHomeworkDialog({
   open,
   bookId,
   readId,
-  update,
+  set,
   onClose,
   onDone,
 }: {
@@ -73,20 +80,27 @@ export function ImportAssignmentDialog({
   bookId: string
   /** Opens on a read already started: its review, or its wait. */
   readId?: string | null
-  /** Reads the document as an update to this set. */
-  update?: { setId: string; title: string }
+  /** The set it adds to; a new one when absent. */
+  set?: { id: string; title: string }
   onClose: () => void
-  /** The sets made or updated, for landing in one when there's only one. */
-  onDone: (sets: Summary[]) => void
+  /** The sets made or updated, and whether they were written here (a
+   *  new set, or questions added to this one) rather than read. */
+  onDone: (sets: Summary[], wrote: boolean) => void
 }) {
   const remembered = useAssignmentSource(bookId).data ?? ''
   const titles = Object.fromEntries((useBookHomework(bookId).data ?? []).map((h) => [h.id, h.title]))
   const start = useStartRead(bookId)
   const dismiss = useDismissRead()
   const make = useImportAssignment(bookId)
-  const [mode, setMode] = useState<Mode>('file')
+  const newSet = useNewHomework(bookId)
+  const addTo = useAddQuestions(set?.id ?? '')
+  const [mode, setMode] = useState<Mode>('write')
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
+  const [title, setTitle] = useState('')
+  const [due, setDue] = useState('')
+  const [rows, setRows] = useState(() => [emptyRow()])
+  const readingOf = useLiveReadings(rows)
   // The read this dialog is showing: one it started, or the one it opened on.
   const [tracked, setTracked] = useState<string | null>(null)
   const read = useAssignmentRead(tracked).data
@@ -95,17 +109,22 @@ export function ImportAssignmentDialog({
   const [error, setError] = useState('')
   const picker = useRef<HTMLInputElement>(null)
 
-  // A fresh start every time it opens, on the course page it last read
-  // when there is one: checking it again is the common case.
+  // A fresh start every time it opens, never a resumed draft; the course
+  // page last read is filled in, for checking it again.
   useEffect(() => {
     if (!open) return
-    setMode(remembered ? 'page' : 'file')
+    setMode('write')
     setUrl(remembered)
     setText('')
+    setTitle('')
+    setDue('')
+    setRows([emptyRow()])
     setTracked(readId ?? null)
     setReview(null)
     setError('')
     make.reset()
+    newSet.reset()
+    addTo.reset()
     // Seeded on open only: the remembered page arriving later mustn't
     // reset what you've started.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -123,13 +142,44 @@ export function ImportAssignmentDialog({
     // A failed read tried again from here replaces it.
     if (read?.state === 'failed') dismiss.mutate(read)
     start.mutate(
-      { from, setId: update?.setId },
+      { from, setId: set?.id },
       {
         onSuccess: (r) => setTracked(r.id),
         onError: (e) => setError(e instanceof ApiError ? e.message : "Couldn't start reading it."),
       },
     )
   }
+
+  // Written: a new set with its questions, or questions added to this one.
+  const drafts = draftsOf(rows)
+  const count = rowsCount(rows, readingOf)
+  const writing = newSet.isPending || addTo.isPending
+  const canWrite = !writing && (set ? drafts.length > 0 : title.trim() !== '')
+  const write = () => {
+    if (!canWrite) return
+    const done = (sets: Summary[]) => {
+      onDone(sets, true)
+      onClose()
+    }
+    const failed = (e: Error) => setError(e instanceof ApiError ? e.message : "Couldn't add them.")
+    if (set) addTo.mutate(drafts, { onSuccess: () => done([]), onError: failed })
+    else
+      newSet.mutate(
+        { title: title.trim(), dueDate: due, drafts },
+        { onSuccess: (h) => done([h]), onError: failed },
+      )
+  }
+  const writeLabel = set
+    ? count === 0
+      ? 'Add questions'
+      : count === 1
+        ? 'Add 1 question'
+        : `Add ${count} questions`
+    : count === 0
+      ? 'Create'
+      : count === 1
+        ? 'Create with 1 question'
+        : `Create with ${count} questions`
 
   const step =
     !tracked || read?.state === 'failed'
@@ -149,7 +199,7 @@ export function ImportAssignmentDialog({
         onClick={() =>
           make.mutate(importOf(read.id, read.assignment?.source ?? read.source, groups), {
             onSuccess: (sets) => {
-              onDone(sets)
+              onDone(sets, false)
               onClose()
             },
           })
@@ -157,6 +207,11 @@ export function ImportAssignmentDialog({
       >
         {make.isPending && <Spinner className="size-3" />}
         {actionLabel(groups)}
+      </Button>
+    ) : step === 'source' && mode === 'write' ? (
+      <Button disabled={!canWrite} onClick={write}>
+        {writing && <Spinner className="size-3" />}
+        {writeLabel}
       </Button>
     ) : step === 'source' ? (
       <Button
@@ -175,7 +230,7 @@ export function ImportAssignmentDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title={update ? 'Update from an assignment' : 'Import an assignment'}
+      title={set ? 'Add questions' : 'New homework'}
       width="wide"
       footer={
         <>
@@ -232,22 +287,50 @@ export function ImportAssignmentDialog({
           url={url}
           onUrl={setUrl}
           remembered={remembered !== '' && url.trim() === remembered}
-          updating={update?.title}
+          updating={set?.title}
           text={text}
           onText={setText}
           error={error}
+          onLeave={onClose}
           onSubmit={() => {
+            if (mode === 'write') return write()
             if (!canRead) return
             if (mode === 'page') begin({ url: url.trim() })
             else if (mode === 'paste') begin({ text })
           }}
+          write={
+            <div className="space-y-4">
+              {!set && (
+                <div className="flex items-start gap-2">
+                  <Field label="Title" className="min-w-0 flex-1">
+                    <Input
+                      autoFocus
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Problem set 4"
+                    />
+                  </Field>
+                  <Field label="Due date" className="w-40">
+                    <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+                  </Field>
+                </div>
+              )}
+              <QuestionRows
+                rows={rows}
+                onRows={setRows}
+                readingOf={readingOf}
+                onSubmit={write}
+                autoFocus={!!set}
+              />
+            </div>
+          }
         />
       )}
     </Dialog>
   )
 }
 
-/** Where the assignment comes from: three ways in, one shown at a time. */
+/** Where the homework comes from: four ways in, one shown at a time. */
 export function AssignmentSourceFields({
   mode,
   onMode,
@@ -259,9 +342,15 @@ export function AssignmentSourceFields({
   onText,
   error,
   onSubmit,
+  onLeave,
+  write,
 }: {
   mode: Mode
   onMode: (m: Mode) => void
+  /** Leaves the dialog, for checking the book's numbering. */
+  onLeave: () => void
+  /** The Write way's fields: the questions typed, a row each. */
+  write: ReactNode
   url: string
   onUrl: (url: string) => void
   /** The address is the page this book's homework was last read from. */
@@ -282,14 +371,21 @@ export function AssignmentSourceFields({
         onSubmit()
       }}
     >
-      {updating && (
+      <SegmentedControl label="Where the homework is" options={modes} value={mode} onChange={onMode} />
+      {mode === 'write' && (
+        <>
+          <NumberingCheck onLeave={onLeave} />
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          {write}
+        </>
+      )}
+      {updating && mode !== 'write' && (
         <p className="text-sm">
-          A newer version of the assignment behind <span className="font-medium">{updating}</span>. PSet
-          compares it with the set: what's new, whose instructions changed, and what it no longer lists.
-          Nothing already there is redone.
+          The professor's assignment for <span className="font-medium">{updating}</span>, or a newer version
+          of it. PSet compares it with the set: what's new, whose instructions changed, and what it no longer
+          lists. Nothing already there is redone.
         </p>
       )}
-      <SegmentedControl label="Where the assignment is" options={modes} value={mode} onChange={onMode} />
       {mode === 'file' && (
         <div className="space-y-1">
           <p className="text-sm">

@@ -13,13 +13,14 @@ import { PageNumbersField } from './page-numbers'
 import { ProblemStyleField } from './problem-style'
 import { anchorsOf, choiceOf, runsOf, settled, type PageAnchor, type StyleChoice } from './book-numbering'
 import { numberingUnsure, useBookHere } from './book-here'
-import { ReadsAs, useLiveReadings } from './reads-as'
+import { ReadsAs } from './reads-as'
+import type { LineReading } from '@/api/homework'
 import type { Form, Style, Where } from '@/api/gen/probnum'
 
 /**
- * The workspace's dialogs. Making a homework set and filling it are
- * deliberately separate steps (pretending otherwise made one dialog
- * that did both badly) and the book has its own.
+ * The workspace's dialogs: editing a set, the questions you type (the
+ * Write way into New homework and Add questions, in add-homework.tsx),
+ * and the book's own.
  *
  * Spec: design/workspace.md.
  */
@@ -28,10 +29,9 @@ import type { Form, Style, Where } from '@/api/gen/probnum'
 export type QuestionDraft = { text: string; inBook: boolean }
 
 /**
- * New homework, and the same dialog again for editing one. A title and,
- * if you like, a due date; nothing about questions: the set is a
- * container, and it exists the moment you name it. The title is required
+ * Edit homework: a set's title and due date. The title is required
  * because an unnamed set would still appear in the list and on Home.
+ * Making one is New homework (add-homework.tsx).
  *
  * It only edits: deleting a set is in the walkthrough's menu, with the
  * set's other actions.
@@ -43,8 +43,8 @@ export function HomeworkDialog({
   onSave,
 }: {
   open: boolean
-  /** Present when editing: the set's current values. */
-  editing?: { title: string; due: string }
+  /** The set's current values. */
+  editing: { title: string; due: string }
   onClose: () => void
   onSave: (title: string, due: string) => void
 }) {
@@ -54,15 +54,15 @@ export function HomeworkDialog({
   // A dialog is a fresh start every time it opens, never a resumed draft.
   useEffect(() => {
     if (open) {
-      setTitle(editing?.title ?? '')
-      setDue(editing?.due ?? '')
+      setTitle(editing.title)
+      setDue(editing.due)
     }
     // Seeded on open only: `editing` is a fresh object every render, and
     // re-seeding on it would wipe what you're typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  const unchanged = !!editing && title === editing.title && due === editing.due
+  const unchanged = title === editing.title && due === editing.due
 
   const submit = () => {
     if (!title.trim() || unchanged) return
@@ -74,14 +74,14 @@ export function HomeworkDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title={editing ? 'Edit homework' : 'New homework'}
+      title="Edit homework"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
           <Button onClick={submit} disabled={!title.trim() || unchanged}>
-            {editing ? 'Save' : 'Create'}
+            Save
           </Button>
         </>
       }
@@ -93,10 +93,7 @@ export function HomeworkDialog({
           submit()
         }}
       >
-        <Field
-          label="Title"
-          hint={editing ? undefined : title ? undefined : 'Give it a name, anything like Problem set 4.'}
-        >
+        <Field label="Title">
           <Input
             autoFocus
             value={title}
@@ -224,40 +221,58 @@ export function BookDialog({
 }
 
 let nextRowId = 0
-const emptyRow = (): QuestionDraft & { id: number } => ({
+
+/** A row of the questions stack: one question, or a line naming several. */
+export type QuestionRow = QuestionDraft & { id: number }
+
+export const emptyRow = (): QuestionRow => ({
   id: nextRowId++,
   text: '',
   inBook: true,
 })
 
+/** The rows with something in them, as drafts. */
+export const draftsOf = (rows: QuestionRow[]): QuestionDraft[] =>
+  rows.filter((r) => r.text.trim()).map(({ text, inBook }) => ({ text: text.trim(), inBook }))
+
+/** How many questions the rows make: a line naming several problems is
+ *  several. */
+export const rowsCount = (rows: QuestionRow[], readingOf: (id: number) => LineReading | undefined) =>
+  rows
+    .filter((r) => r.text.trim())
+    .reduce((n, r) => n + Math.max(readingOf(r.id)?.labels.length ?? 1, 1), 0)
+
 /**
- * Add questions: a stack of rows, one question each. Every row carries
- * its own "In this book" checkbox, because a set is often mixed (a
- * problem lifted from the textbook and one the professor wrote) and both
- * need a walkthrough. An unchecked row simply skips the locate stage: it
- * gets no page chip and nothing to jump to, and is otherwise identical.
+ * The questions you type: a stack of rows, one question each (or a line
+ * naming several). Every row carries its own "In this book" checkbox,
+ * because a set is often mixed (a problem lifted from the textbook and
+ * one the professor wrote) and both need a walkthrough. An unchecked row
+ * simply skips the locate stage: it gets no page chip and nothing to jump
+ * to, and is otherwise identical. Each row says what it reads as while
+ * it's typed.
  *
  * Enter adds a row below and moves into it, so a whole set is typed
- * without the mouse. Cmd/Ctrl+Enter submits.
+ * without the mouse. Cmd/Ctrl+Enter submits. The Write way into New
+ * homework and Add questions.
  */
-export function AddQuestionsDialog({
-  open,
-  onClose,
-  onAdd,
+export function QuestionRows({
+  rows,
+  onRows,
+  readingOf,
+  onSubmit,
+  autoFocus,
 }: {
-  open: boolean
-  onClose: () => void
-  onAdd: (drafts: QuestionDraft[]) => void
+  rows: QuestionRow[]
+  onRows: (update: (rows: QuestionRow[]) => QuestionRow[]) => void
+  readingOf: (id: number) => LineReading | undefined
+  onSubmit: () => void
+  autoFocus?: boolean
 }) {
-  const [rows, setRows] = useState(() => [emptyRow()])
   // The row to put the caret in once React has actually rendered it.
   // Focusing inside the state updater is a frame too early, and the next
   // keystrokes land in the row you just left.
   const [focusRow, setFocusRow] = useState<number | null>(null)
-
-  useEffect(() => {
-    if (open) setRows([emptyRow()])
-  }, [open])
+  const here = useBookHere()
 
   useLayoutEffect(() => {
     if (focusRow === null) return
@@ -265,20 +280,8 @@ export function AddQuestionsDialog({
     setFocusRow(null)
   }, [focusRow])
 
-  const filled = rows.filter((r) => r.text.trim())
-  const here = useBookHere()
-  const readingOf = useLiveReadings(rows)
-  // A line naming several problems is several questions.
-  const count = filled.reduce((n, r) => n + Math.max(readingOf(r.id)?.labels.length ?? 1, 1), 0)
-
-  const submit = () => {
-    if (!filled.length) return
-    onAdd(filled.map(({ text, inBook }) => ({ text: text.trim(), inBook })))
-    onClose()
-  }
-
   const addRow = (after?: number) =>
-    setRows((rs) => {
+    onRows((rs) => {
       const row = emptyRow()
       const at = after === undefined ? rs.length : rs.findIndex((r) => r.id === after) + 1
       const next = [...rs]
@@ -289,83 +292,63 @@ export function AddQuestionsDialog({
     })
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Add questions"
-      width="wide"
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={submit} disabled={!filled.length}>
-            {count === 0 ? 'Add questions' : count === 1 ? 'Add 1 question' : `Add ${count} questions`}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-3">
-        <NumberingCheck onLeave={onClose} />
-        <p className="text-xs text-muted-foreground">
-          One question per row. Untick In this book if a question isn't from this scan, and the guide
-          is written from your text alone.
-        </p>
-        <div className="divide-y divide-border-muted">
-          {rows.map((row) => (
-            <div key={row.id} className="space-y-2 py-3 first:pt-0 last:pb-0">
-              <div className="flex items-start gap-2">
-                <AutoTextarea
-                  data-row={row.id}
-                  autoFocus={rows.length === 1}
-                  value={row.text}
-                  placeholder={`A reference like ${here.problems?.example?.label ?? '3.B.4'}, or paste the question`}
-                  onChange={(e) =>
-                    setRows((rs) =>
-                      rs.map((r) => (r.id === row.id ? { ...r, text: e.target.value } : r)),
-                    )
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key !== 'Enter') return
-                    e.preventDefault()
-                    if (e.metaKey || e.ctrlKey) submit()
-                    else addRow(row.id)
-                  }}
-                />
-                {/* Always there, and disabled on the only row: the dialog is
-                    never empty, and the control never has to be hunted for. */}
-                <IconButton
-                  variant="ghost"
-                  aria-label="Remove this question"
-                  disabled={rows.length === 1}
-                  onClick={() => setRows((rs) => rs.filter((r) => r.id !== row.id))}
-                >
-                  <Trash2 />
-                </IconButton>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-2">
-                <Checkbox
-                  checked={row.inBook}
-                  onChange={() =>
-                    setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, inBook: !r.inBook } : r)))
-                  }
-                  className="-ml-2 text-muted-foreground"
-                >
-                  In this book
-                </Checkbox>
-                {/* What it becomes, read as it's typed. */}
-                {readingOf(row.id) && <ReadsAs reading={readingOf(row.id)!} />}
-              </div>
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        One question per row. Untick In this book if a question isn't from this scan, and the guide is
+        written from your text alone.
+      </p>
+      <div className="divide-y divide-border-muted">
+        {rows.map((row) => (
+          <div key={row.id} className="space-y-2 py-3 first:pt-0 last:pb-0">
+            <div className="flex items-start gap-2">
+              <AutoTextarea
+                data-row={row.id}
+                autoFocus={autoFocus && rows.length === 1}
+                value={row.text}
+                placeholder={`A reference like ${here.problems?.example?.label ?? '3.B.4'}, or paste the question`}
+                onChange={(e) =>
+                  onRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, text: e.target.value } : r)))
+                }
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') return
+                  e.preventDefault()
+                  if (e.metaKey || e.ctrlKey) onSubmit()
+                  else addRow(row.id)
+                }}
+              />
+              {/* Always there, and disabled on the only row: the stack is
+                  never empty, and the control never has to be hunted for. */}
+              <IconButton
+                variant="ghost"
+                aria-label="Remove this question"
+                disabled={rows.length === 1}
+                onClick={() => onRows((rs) => rs.filter((r) => r.id !== row.id))}
+              >
+                <Trash2 />
+              </IconButton>
             </div>
-          ))}
-        </div>
-
-        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => addRow()}>
-          <Plus />
-          Add row
-        </Button>
+            <div className="flex flex-wrap items-center gap-x-2">
+              <Checkbox
+                checked={row.inBook}
+                onChange={() =>
+                  onRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, inBook: !r.inBook } : r)))
+                }
+                className="-ml-2 text-muted-foreground"
+              >
+                In this book
+              </Checkbox>
+              {/* What it becomes, read as it's typed. */}
+              {readingOf(row.id) && <ReadsAs reading={readingOf(row.id)!} />}
+            </div>
+          </div>
+        ))}
       </div>
-    </Dialog>
+
+      <Button variant="ghost" size="sm" className="-ml-2" onClick={() => addRow()}>
+        <Plus />
+        Add row
+      </Button>
+    </div>
   )
 }
 

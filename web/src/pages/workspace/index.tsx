@@ -10,11 +10,9 @@ import {
   ChevronUp,
   CircleAlert,
   Focus,
-  Import,
   Pencil,
   Plus,
   Printer,
-  RefreshCw,
   RotateCcw,
   Square,
   SquareDashedMousePointer,
@@ -48,8 +46,9 @@ import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/c
 import { ConfirmPopover } from '@/components/confirm'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
-import { AddQuestionsDialog, BookDialog, HomeworkDialog } from './dialogs'
-import { ImportAssignmentDialog } from './import-assignment'
+import { BookDialog, HomeworkDialog } from './dialogs'
+import { AddHomeworkDialog } from './add-homework'
+import { useBookHere } from './book-here'
 import { AssignmentReads } from './assignment-reads'
 import { MemoryDialog, MemoryLines, MemoryUndo } from './memory'
 import { FigureReading } from './reading'
@@ -72,9 +71,7 @@ import {
   outstanding,
   questionStep,
   toFind,
-  useAddQuestions,
   useBookHomework,
-  useCreateHomework,
   useDeleteHomework,
   useHomeworkSet,
   useRemoveQuestion,
@@ -976,7 +973,6 @@ function waitingLine(q: Question, questions: Question[], pages: PageMap): string
 function Walkthrough({
   setId,
   onEdit,
-  onUpdate,
   onDelete,
   onBack,
   onJump,
@@ -984,8 +980,6 @@ function Walkthrough({
 }: {
   setId: string
   onEdit: () => void
-  /** Reads a newer version of its assignment against it. */
-  onUpdate: () => void
   onDelete: () => void
   onBack: () => void
   onJump: (page: number) => void
@@ -998,7 +992,7 @@ function Walkthrough({
   const removeQ = useRemoveQuestion(setId)
   const retryQ = useRetryQuestion()
   const redoReading = useRedoReading()
-  const addQ = useAddQuestions(setId)
+  const { bookId } = useBookHere()
   const boxing = useBoxing()
   const [adding, setAdding] = useState(false)
   const [index, setIndex] = useState<number | null>(null)
@@ -1040,13 +1034,16 @@ function Walkthrough({
   const shownState = useSettled(q?.state, waitSince, q?.id)
   const shownActivity = useSettled(q?.activity, waitSince, q?.id)
 
-  const dialog = (
-    <AddQuestionsDialog
+  // Add questions: typed, or from the professor's document, read as an
+  // update to the set. Typed ones land you on the first of them.
+  const dialog = bookId && (
+    <AddHomeworkDialog
       open={adding}
+      bookId={bookId}
+      set={{ id: setId, title: detail.data?.homework.title ?? '' }}
       onClose={() => setAdding(false)}
-      onAdd={(drafts) => {
-        const first = questions.length
-        addQ.mutate(drafts, { onSuccess: () => setIndex(first) })
+      onDone={(_, wrote) => {
+        if (wrote) setIndex(questions.length)
       }}
     />
   )
@@ -1076,11 +1073,6 @@ function Walkthrough({
             any book, however it numbers its problems. */}
         <MenuItem icon={<SquareDashedMousePointer />} onSelect={() => boxing.start({ kind: 'add', setId })}>
           Box one on the page
-        </MenuItem>
-        {/* A newer version of the professor's sheet or page: what's new,
-            whose instructions changed, what it no longer lists. */}
-        <MenuItem icon={<RefreshCw />} onSelect={onUpdate}>
-          Update from an assignment
         </MenuItem>
         <MenuItem icon={<Pencil />} onSelect={onEdit}>
           Edit homework
@@ -1375,15 +1367,11 @@ function HomeworkTab({
   onAskAbout: (about: About) => void
 }) {
   const list = useBookHomework(bookId)
-  const create = useCreateHomework(bookId)
   const remove = useDeleteHomework()
   const [openId, setOpenId] = useState<string | null>(initialSet ?? null)
-  const [creating, setCreating] = useState(false)
-  const [importing, setImporting] = useState(false)
-  // The read the import dialog opens on, from the list; or the set it
-  // updates, from the walkthrough's menu.
+  // New homework, opened fresh or on a read waiting in the list.
+  const [adding, setAdding] = useState(false)
   const [reviewing, setReviewing] = useState<string | null>(null)
-  const [updating, setUpdating] = useState(false)
   const [editing, setEditing] = useState(false)
   const openSet = useHomeworkSet(openId).data?.homework
   const updateOpen = useUpdateHomework(openId ?? '')
@@ -1398,7 +1386,6 @@ function HomeworkTab({
           key={openId}
           setId={openId}
           onEdit={() => setEditing(true)}
-          onUpdate={() => setUpdating(true)}
           onDelete={() => openSet && remove.mutate(openSet, { onSuccess: () => setOpenId(null) })}
           onBack={() => setOpenId(null)}
           onJump={onJump}
@@ -1410,15 +1397,6 @@ function HomeworkTab({
             editing={{ title: openSet.title, due: openSet.dueDate }}
             onClose={() => setEditing(false)}
             onSave={(title, due) => updateOpen.mutate({ title, dueDate: due })}
-          />
-        )}
-        {openSet && (
-          <ImportAssignmentDialog
-            open={updating}
-            bookId={bookId}
-            update={{ setId: openSet.id, title: openSet.title }}
-            onClose={() => setUpdating(false)}
-            onDone={() => {}}
           />
         )}
       </>
@@ -1435,8 +1413,8 @@ function HomeworkTab({
     >
       {sets?.length === 0 && (
         <p className="text-center text-sm text-muted-foreground">
-          No homework here yet. Import your professor's assignment, or make a set with New homework and
-          add the questions you want walked through.
+          No homework here yet. New homework takes your professor's assignment (a file, a web page or
+          pasted text), or the questions you type.
         </p>
       )}
       {/* Assignments reading in the background, or read and waiting to
@@ -1445,7 +1423,7 @@ function HomeworkTab({
         bookId={bookId}
         onReview={(id) => {
           setReviewing(id)
-          setImporting(true)
+          setAdding(true)
         }}
       />
       {/* No header: the tab already says Homework, and a second label on
@@ -1459,18 +1437,10 @@ function HomeworkTab({
           : active.map((h) => <SetRow key={h.id} h={h} onOpen={() => setOpenId(h.id)} />)}
         <DoorAction
           icon={<Plus aria-hidden />}
-          onClick={() => setCreating(true)}
+          onClick={() => setAdding(true)}
           className={cn((sets === undefined || active.length > 0) && 'border-t border-border-muted')}
         >
           New homework
-        </DoorAction>
-        {/* Its twin: the professor's own document, read into sets. */}
-        <DoorAction
-          icon={<Import aria-hidden />}
-          onClick={() => setImporting(true)}
-          className="border-t border-border-muted"
-        >
-          Import an assignment
         </DoorAction>
       </Box>
       {turnedIn.length > 0 && (
@@ -1484,21 +1454,14 @@ function HomeworkTab({
         </>
       )}
 
-      {/* A new set is a container and nothing else: it exists the moment
-          you name it, and you land in its empty walkthrough to fill it. */}
-      <HomeworkDialog
-        open={creating}
-        onClose={() => setCreating(false)}
-        onSave={(title, due) => create.mutate({ title, dueDate: due }, { onSuccess: (h) => setOpenId(h.id) })}
-      />
-      {/* One set made lands you in it, as New homework does; several stay
-          on the list, where they all are. */}
-      <ImportAssignmentDialog
-        open={importing}
+      {/* One set made lands you in it; several stay on the list, where
+          they all are. */}
+      <AddHomeworkDialog
+        open={adding}
         bookId={bookId}
         readId={reviewing}
         onClose={() => {
-          setImporting(false)
+          setAdding(false)
           setReviewing(null)
         }}
         onDone={(made) => made.length === 1 && setOpenId(made[0].id)}
