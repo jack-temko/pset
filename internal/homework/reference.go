@@ -64,13 +64,29 @@ func (r Ref) Name(style probnum.Style) string {
 }
 
 var (
-	refPage    = regexp.MustCompile(`(?i)\b(?:page|pg\.?|p\.)\s*(\d{1,4})\b`)
-	refPart    = regexp.MustCompile(`(?i)^(\d{1,3})\s*(?:\(([a-h])\)|([a-h]))$`)
-	refNote    = regexp.MustCompile(`\(([^()]*)\)`)
-	refDotted  = regexp.MustCompile(`^\d{1,2}(?:\.\d{1,3}){1,2}[a-h]?$`)
-	refPlain   = regexp.MustCompile(`^\d{1,3}[a-h]?$`)
-	refSection = regexp.MustCompile(`(?i)^(?:chapter|chap\.?|ch\.?|section|sect?\.?|§)$`)
-	refProblem = regexp.MustCompile(`(?i)^(?:problems?|probs?\.?|exercises?|ex\.?|questions?|q\.?|no\.?|numbers?|nos?\.?|#)$`)
+	// A page: "page 33", "pg. 33", "p. 33", "pp. 33", or "p33" run
+	// together (lower case: "P33" is a problem).
+	refPage = regexp.MustCompile(`(?i:\b(?:page|pg\.?|pp?\.))\s*(\d{1,4})\b|\bp(\d{1,4})\b`)
+	// A problem's number with the parts it names: "7c", "7abc", "7a-c".
+	refPart   = regexp.MustCompile(`(?i)^(\d{1,3})\s*([a-h](?:-[a-h]|[a-h])*)$`)
+	refNote   = regexp.MustCompile(`\(([^()]*)\)`)
+	refDotted = regexp.MustCompile(`^\d{1,2}(?:\.\d{1,3}){1,2}(?:[a-h](?:-[a-h]|[a-h])*)?$`)
+	refPlain  = regexp.MustCompile(`^\d{1,3}(?:[a-h](?:-[a-h]|[a-h])*)?$`)
+	// Parts in parentheses: "(c)", "(a-c)", "(a, b)", "(a and c)".
+	refParts = regexp.MustCompile(`^\s*[a-h](?:\s*(?:-|–|,|and|&)\s*[a-h])*\s*$`)
+	// A part standing alone after a list's comma: the "(b)" of "7(a),(b)".
+	refLonePart = regexp.MustCompile(`^\(([a-h])\)$`)
+	// A problem number run into its prefix: "P4.27", "Prob4.27", "Q3",
+	// "E3.1", "Ex3.1".
+	refPrefixed = regexp.MustCompile(`^(?:P|Pr|Prob|Q|E|Ex)\.?(\d{1,3}(?:\.\d{1,3}){0,2}(?:[a-h]+)?)$`)
+	// Problems from a set the book numbers on its own (review questions,
+	// supplementary problems): their numbers aren't the chapter's
+	// problems', so they're never read as those.
+	refOwnSet = regexp.MustCompile(`(?i)\b(?:supplementar\w*|review|challenge|additional|extra|conceptual|practice|self[- ]?test|checkpoint|computer|comprehensive|chapter[- ]end|quiz\w*|exam)\s+(?:problems?|exercises?|questions?)\b`)
+	// A section marker starting a list of its own: "1.2:" or "1.2 #".
+	refSectionStart = regexp.MustCompile(`(?:^|[\s,;.])(\d{1,2}\.\d{1,3})\s*(?::|#)`)
+	refSection      = regexp.MustCompile(`(?i)^(?:chapter|chap\.?|ch\.?|section|sect?\.?|§)$`)
+	refProblem      = regexp.MustCompile(`(?i)^(?:problems?|probs?\.?|exercises?|ex\.?|questions?|q\.?|no\.?|numbers?|nos?\.?|#)$`)
 	// The words that join a reference's parts and mean nothing alone.
 	refFiller = regexp.MustCompile(`(?i)^(?:in|on|of|from|at|and|the|do|hw|homework|from|book|text(?:book)?)$`)
 	// A book problem named inside the professor's own words: "Use MATLAB
@@ -159,20 +175,76 @@ const (
 	refLongHead = 60
 )
 
+// numberWords reads "problem seven" as problem 7.
+var numberWords = map[string]string{
+	"one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8",
+	"nine": "9", "ten": "10", "eleven": "11", "twelve": "12", "thirteen": "13", "fourteen": "14",
+	"fifteen": "15", "sixteen": "16", "seventeen": "17", "eighteen": "18", "nineteen": "19", "twenty": "20",
+}
+
 // ParseRefs reads a question as book references, in the book's style.
-// One question can name several ("1.1: 1, 7" is two). ok is false when
-// it isn't a reference at all: a problem written out, which the finder
-// searches for by its words.
+// One question can name several ("1.1: 1, 7" is two, and "1.1 #1, 1.2
+// #3" two from two sections). ok is false when it isn't a reference at
+// all: a problem written out, which the finder searches for by its
+// words.
 func ParseRefs(text string, style probnum.Style) (refs []Ref, ok bool) {
 	text = strings.TrimSpace(text)
-	if text == "" {
+	if text == "" || refOwnSet.MatchString(text) {
 		return nil, false
 	}
+	// Several sections, each with its own list: read one at a time.
+	if starts := refSectionStart.FindAllStringSubmatchIndex(text, -1); len(starts) > 1 {
+		var all []Ref
+		from := 0
+		for i := range starts {
+			end := len(text)
+			if i+1 < len(starts) {
+				end = starts[i+1][2]
+			}
+			part, ok := parseOne(strings.Trim(text[from:end], " ,;."), style)
+			if !ok {
+				all = nil
+				break
+			}
+			all = append(all, part...)
+			from = end
+		}
+		if all != nil {
+			return all, true
+		}
+	}
+	return parseOne(text, style)
+}
+
+// partLetters is a parts list as its letters: "a-c" is "abc", "a, b" and
+// "a and c" are "ab" and "ac".
+func partLetters(p string) string {
+	p = strings.NewReplacer("–", "-", "and", "", "&", "", ",", "", " ", "").Replace(strings.ToLower(p))
+	var out []byte
+	add := func(c byte) {
+		if c >= 'a' && c <= 'h' && !strings.ContainsRune(string(out), rune(c)) {
+			out = append(out, c)
+		}
+	}
+	for i := 0; i < len(p); i++ {
+		if i+2 < len(p) && p[i+1] == '-' && p[i+2] >= p[i] {
+			for c := p[i]; c <= p[i+2]; c++ {
+				add(c)
+			}
+			i += 2
+			continue
+		}
+		add(p[i])
+	}
+	return string(out)
+}
+
+func parseOne(text string, style probnum.Style) (refs []Ref, ok bool) {
 	var notes []string
 	for _, m := range refNote.FindAllStringSubmatch(text, -1) {
-		// A part in parentheses ("7(c)") belongs to the number, not the
-		// notes.
-		if len(m[1]) == 1 && m[1][0] >= 'a' && m[1][0] <= 'h' {
+		// Parts in parentheses ("7(c)", "7(a-c)") belong to the number,
+		// not the notes.
+		if refParts.MatchString(m[1]) {
 			continue
 		}
 		if n := strings.TrimSpace(m[1]); n != "" {
@@ -180,21 +252,26 @@ func ParseRefs(text string, style probnum.Style) (refs []Ref, ok bool) {
 		}
 	}
 	rest := refNote.ReplaceAllStringFunc(text, func(m string) string {
-		if len(m) == 3 && m[1] >= 'a' && m[1] <= 'h' {
-			return m
+		if refParts.MatchString(m[1 : len(m)-1]) {
+			return "(" + partLetters(m[1:len(m)-1]) + ")"
 		}
 		return " "
 	})
 	page := 0
+	pageOf := func(m []string) int {
+		n, _ := strconv.Atoi(m[1] + m[2])
+		return n
+	}
 	if m := refPage.FindStringSubmatch(rest); m != nil {
-		page, _ = strconv.Atoi(m[1])
+		page = pageOf(m)
 		rest = refPage.ReplaceAllString(rest, " ")
 	} else if m := refPage.FindStringSubmatch(text); m != nil {
 		// A page in a note still says where: "(all on page 24)".
-		page, _ = strconv.Atoi(m[1])
+		page = pageOf(m)
 	}
-	// "7(c)" and "7 (c)" stay one token.
-	rest = regexp.MustCompile(`(\d)\s*\(([a-h])\)`).ReplaceAllString(rest, "$1$2")
+	// "7(c)", "7 (c)" and "7(a)(b)" stay one token.
+	rest = regexp.MustCompile(`\)\s*\(`).ReplaceAllString(rest, "")
+	rest = regexp.MustCompile(`(\d)\s*\(([a-h]+)\)`).ReplaceAllString(rest, "$1$2")
 
 	// Words, with the punctuation that separates them stripped; a
 	// trailing sentence of prose ends the reference, and becomes its note.
@@ -217,6 +294,7 @@ func ParseRefs(text string, style probnum.Style) (refs []Ref, ok bool) {
 	// The words a range took past its first, and the range just read,
 	// for an "odd" or "even" after it.
 	skip := 0
+	lastWasNumber := false
 	var ranged []string
 	rangedDotted := false
 words:
@@ -251,9 +329,29 @@ words:
 			continue
 		}
 		ranged = nil
+		if m := refPrefixed.FindStringSubmatch(w); m != nil {
+			w, plain = m[1], true
+		}
+		if m := refLonePart.FindStringSubmatch(w); m != nil && (len(numbers) > 0 || len(dotted) > 0) {
+			// Another part of the number before: "7(a),(b)".
+			if len(numbers) > 0 && lastWasNumber {
+				numbers[len(numbers)-1] += m[1]
+			} else {
+				dotted[len(dotted)-1] += m[1]
+			}
+			continue
+		}
+		if n, ok := numberWords[strings.ToLower(w)]; ok && i > 0 {
+			// Only as a number right after a word that expects one:
+			// "problem seven", "chapter three"; "the one with" stays prose.
+			prev := strings.Trim(words[i-1], ":.")
+			if refSection.MatchString(prev) || refProblem.MatchString(prev) {
+				w = n
+			}
+		}
 		if strings.HasPrefix(w, "#") && len(w) > 1 {
 			numbers = append(numbers, w[1:])
-			plain = true
+			plain, lastWasNumber = true, true
 			continue
 		}
 		if strings.HasPrefix(w, "§") && len(w) > len("§") {
@@ -273,13 +371,14 @@ words:
 			expectSection = false
 		case refDotted.MatchString(w):
 			dotted = append(dotted, w)
-			plain = true
+			plain, lastWasNumber = true, false
 		case refPlain.MatchString(w) && expectSection && section == "":
 			// "Chapter 3 Problem 12": a chapter, the problem to follow.
 			section = w
 			expectSection = false
 		case refPlain.MatchString(w):
 			numbers = append(numbers, w)
+			lastWasNumber = true
 		default:
 			// Prose: the rest is a note, if a reference came before it.
 			if len(numbers)+len(dotted) == 0 && section == "" {
@@ -296,7 +395,7 @@ words:
 	mk := func(chapter, sec, num string) Ref {
 		r := Ref{Chapter: chapter, Section: sec, Page: page, Note: note}
 		if m := refPart.FindStringSubmatch(num); m != nil {
-			r.Number, r.Part = m[1], m[2]+m[3]
+			r.Number, r.Part = m[1], partLetters(m[2])
 		} else {
 			r.Number = num
 		}

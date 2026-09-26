@@ -70,3 +70,15 @@ func TestNotesReachTheGuideAndRewriteIt(t *testing.T) {
 		t.Fatalf("unchanged notes rewrote it: %s", q.State)
 	}
 }
+
+// A reference naming parts says which, as an instruction.
+func TestNotesSayWhichParts(t *testing.T) {
+	for _, c := range []struct {
+		part string
+		want string
+	}{{"c", "Only part (c)."}, {"ac", "Only parts (a) and (c)."}, {"abc", "Only parts (a), (b) and (c)."}} {
+		if got := notesOf(Ref{Number: "7", Part: c.part}); len(got) != 1 || got[0] != c.want {
+			t.Errorf("%q: %q", c.part, got)
+		}
+	}
+}

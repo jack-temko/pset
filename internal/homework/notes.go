@@ -36,8 +36,15 @@ const (
 // reference names ("7c") said plainly.
 func notesOf(ref Ref) []string {
 	var out []string
-	if ref.Part != "" {
+	switch parts := strings.Split(ref.Part, ""); {
+	case ref.Part == "":
+	case len(parts) == 1:
 		out = append(out, "Only part ("+ref.Part+").")
+	default:
+		for i, p := range parts {
+			parts[i] = "(" + p + ")"
+		}
+		out = append(out, "Only parts "+strings.Join(parts[:len(parts)-1], ", ")+" and "+parts[len(parts)-1]+".")
 	}
 	for _, chunk := range strings.Split(ref.Note, ";") {
 		pieces := strings.Split(chunk, ",")
