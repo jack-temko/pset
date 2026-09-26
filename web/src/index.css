@@ -8,7 +8,7 @@
 /* ── Ink & Paper v2 ───────────────────────────────────────────────────────
    Tokens are the design system's, not this file's: values come from the
    Ink & Paper v2 system and are measured for contrast. Geometry is Primer's
-   (6px default radius, 32px controls, 40px rows); type floor is 14px.
+   (6px default radius, 32px controls, 40px rows); type floor is 15px.
    ──────────────────────────────────────────────────────────────────────── */
 
 @theme inline {
@@ -65,7 +65,7 @@
 /* ── Lockdown ─────────────────────────────────────────────────────────────
    The bare --spacing multiplier is removed, so fractional utilities
    (p-2.5, gap-1.5) don't compile. The nine type steps below are the only
-   ones; 14px is the floor.
+   ones; 15px is the floor.
    ──────────────────────────────────────────────────────────────────────── */
 @theme {
     --spacing: initial;
@@ -99,13 +99,13 @@
     --spacing-section: 2.5rem;
     --spacing-card: 1rem;
 
-    /* The mark in the top-bar lockup. Off the 4px grid deliberately: a brand
-       size tuned against the bar and the icons opposite, not a layout step.
-       28px sat a touch small, 32px (size-8) reads as a step too far. */
-    --spacing-mark: 1.875rem;
+    /* The mark in the top-bar lockup: a brand size tuned against the 64px
+       bar and the 24px icons opposite, not a layout step, so it keeps its
+       own name even though 36px happens to sit on the grid. */
+    --spacing-mark: 2.25rem;
 
     /* The shell's fixed dimensions. */
-    --spacing-topbar: 3.5rem;
+    --spacing-topbar: 4rem;
     --spacing-rail: 16rem;
     --spacing-panel: 27.5rem;
     /* Focus mode: the rail's width moves into the panel (440 + 256). */
@@ -124,39 +124,39 @@
        (font-heading); text-lg is the one shared step (card-title is sans 600,
        the lead is serif 400 italic) so it stays weightless on purpose. */
     --text-*: initial;
-    /* 14px: THE FLOOR. Labels, badges, timestamps, hints. */
-    --text-xs: 0.875rem;
-    --text-xs--line-height: calc(1.25 / 0.875);
+    /* 15px: THE FLOOR. Labels, badges, timestamps, hints. */
+    --text-xs: 0.9375rem;
+    --text-xs--line-height: calc(1.375 / 0.9375);
     --text-xs--font-weight: 500;
-    /* 15px: buttons, rail rows, tabs, table cells. */
-    --text-sm: 0.9375rem;
-    --text-sm--line-height: calc(1.375 / 0.9375);
-    /* 16px: default UI copy. */
-    --text-base: 1rem;
-    --text-base--line-height: calc(1.5 / 1);
-    /* 17px/28px: long-form text a student reads. */
-    --text-reading: 1.0625rem;
-    --text-reading--line-height: calc(1.75 / 1.0625);
-    /* 18px: card titles (sans 600) and leads (serif italic). */
-    --text-lg: 1.125rem;
-    --text-lg--line-height: calc(1.75 / 1.125);
-    /* 20px: section heads. */
-    --text-xl: 1.25rem;
-    --text-xl--line-height: calc(1.75 / 1.25);
+    /* 16px: buttons, rail rows, tabs, table cells. */
+    --text-sm: 1rem;
+    --text-sm--line-height: calc(1.5 / 1);
+    /* 17px: default UI copy. */
+    --text-base: 1.0625rem;
+    --text-base--line-height: calc(1.625 / 1.0625);
+    /* 18px/30px: long-form text a student reads. */
+    --text-reading: 1.125rem;
+    --text-reading--line-height: calc(1.875 / 1.125);
+    /* 19px: card titles (sans 600) and leads (serif italic). */
+    --text-lg: 1.1875rem;
+    --text-lg--line-height: calc(1.75 / 1.1875);
+    /* 21px: section heads. */
+    --text-xl: 1.3125rem;
+    --text-xl--line-height: calc(1.875 / 1.3125);
     --text-xl--font-weight: 500;
-    /* 24px: panel titles, dialog titles. */
-    --text-2xl: 1.5rem;
-    --text-2xl--line-height: calc(2 / 1.5);
+    /* 25px: panel titles, dialog titles. */
+    --text-2xl: 1.5625rem;
+    --text-2xl--line-height: calc(2 / 1.5625);
     --text-2xl--font-weight: 500;
     --text-2xl--letter-spacing: -0.01em;
-    /* 30px: the one h1 on a page-shell page. */
-    --text-3xl: 1.875rem;
-    --text-3xl--line-height: calc(2.25 / 1.875);
+    /* 31px: the one h1 on a page-shell page. */
+    --text-3xl: 1.9375rem;
+    --text-3xl--line-height: calc(2.25 / 1.9375);
     --text-3xl--font-weight: 500;
     --text-3xl--letter-spacing: -0.02em;
-    /* 36px: the dashboard greeting and empty-state heroes. */
-    --text-4xl: 2.25rem;
-    --text-4xl--line-height: calc(2.5 / 2.25);
+    /* 37px: the dashboard greeting and empty-state heroes. */
+    --text-4xl: 2.3125rem;
+    --text-4xl--line-height: calc(2.5 / 2.3125);
     --text-4xl--font-weight: 500;
     --text-4xl--letter-spacing: -0.02em;
 }
@@ -329,20 +329,20 @@
 #pset-gate h1 {
     margin: 0;
     font-family: var(--font-heading);
-    font-size: 1.5rem;
+    font-size: 1.5625rem;
     font-weight: 500;
     letter-spacing: -0.01em;
 }
 #pset-gate p {
     margin: 0;
     font-family: var(--font-sans);
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     color: var(--muted-foreground);
     max-width: 28rem;
 }
 #pset-gate .pset-gate-mark {
     font-family: var(--font-heading);
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     font-weight: 600;
     letter-spacing: 0.22em;
     color: var(--primary);

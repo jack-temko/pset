@@ -69,7 +69,7 @@ export function DurationValue({ minutes }: { minutes: number }) {
       {h > 0 && (
         <>
           {h}
-          {/* The space lives inside the small so it advances at 14px, not a
+          {/* The space lives inside the small so it advances at 15px, not a
           full 24px mono cell. */}
           <small>h </small>
         </>

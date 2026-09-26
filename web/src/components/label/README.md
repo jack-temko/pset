@@ -30,8 +30,8 @@ by default; invent a sixth ink.
 
 ## Changes from baseline
 
-- **24px tall with 14px text**, not the baseline's 20px with 12px. The
-  system's type floor is 14px and the baseline's own Label spec is the
+- **24px tall with 15px text**, not the baseline's 20px with 12px. The
+  system's type floor is 15px and the baseline's own Label spec is the
   one place it breaks its floor: the floor wins, as it did for the
   Counter, and the pill grows a step to hold the larger text.
 - **`filled` works for every tone**, not just danger. The tints all
