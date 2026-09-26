@@ -10,6 +10,15 @@ Three panes under the top bar: contents rail (320) · page scan (flex) ·
 panel (440). Each scrolls independently; the frame never moves. The top
 bar's middle names the book.
 
+- **The panes are adjustable** (2026-09-26): a ResizeHandle on each
+  seam, the rail's right edge and the panel's left. Widths are kept as
+  fractions of the workspace, so a layout survives a resized screen, and
+  saved in the browser (`pset-panes`), per PSet. The panel keeps a
+  separate width for Focus. Limits: the rail 200 to 35% of the width,
+  the panel 360 to 50% (70% in Focus), and the scan never below 320; on a
+  screen too narrow for all three, the panel gives way first, then the
+  rail. A double-click or Enter on a seam puts that pane's default back.
+  The sizes below are the defaults.
 - **Focus** widens the panel to 800 by collapsing the rail and taking a
   little of the scan (2026-09-26: 440 + 320 read cramped for a
   walkthrough); the scan shrinks but stays visible. The toggle sits right of the panel's tabs.
