@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, SquareDashedMousePointer } from 'lucide-react'
 
 import { Button } from '@/components/button'
 import { Checkbox } from '@/components/checkbox'
@@ -73,6 +73,7 @@ export function AddHomeworkDialog({
   bookId,
   readId,
   set,
+  onBox,
   onClose,
   onDone,
 }: {
@@ -82,6 +83,8 @@ export function AddHomeworkDialog({
   readId?: string | null
   /** The set it adds to; a new one when absent. */
   set?: { id: string; title: string }
+  /** Leaves for the page, to box a problem there instead (a set's). */
+  onBox?: () => void
   onClose: () => void
   /** The sets made or updated, and whether they were written here (a
    *  new set, or questions added to this one) rather than read. */
@@ -322,6 +325,26 @@ export function AddHomeworkDialog({
                 onSubmit={write}
                 autoFocus={!!set}
               />
+              {/* The page is the other way in, for a problem that's easier
+                  shown than named. It can't happen in here: the dialog
+                  holds everything behind it still, the scan included. */}
+              {onBox && (
+                <p className="flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">
+                  Easier to show than to name?
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="-ml-1"
+                    onClick={() => {
+                      onClose()
+                      onBox()
+                    }}
+                  >
+                    <SquareDashedMousePointer />
+                    Box it on the page
+                  </Button>
+                </p>
+              )}
             </div>
           }
         />
@@ -663,7 +686,7 @@ function UpdateGroupBlock({ g, setTitle, onGroup, onRow, readingOf }: GroupProps
                   }
                   className="-ml-2 text-muted-foreground"
                 >
-                  Remove <span className="font-mono">{q.label}</span>
+                  Remove <span className="font-medium text-foreground tabular-nums">{q.label}</span>
                 </Checkbox>
               ))}
             </div>
@@ -714,7 +737,7 @@ function Changes({ r, onChange }: { r: ReviewRow; onChange: (change: Partial<Rev
             className="-ml-2"
           >
             <span>
-              <span className="font-mono">{c.label}</span>:{' '}
+              <span className="font-medium text-foreground tabular-nums">{c.label}</span>:{' '}
               {c.now.length ? <>now &ldquo;{c.now.join('; ')}&rdquo;</> : 'no instructions now'}
             </span>
           </Checkbox>

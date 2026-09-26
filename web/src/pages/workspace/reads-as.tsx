@@ -30,14 +30,14 @@ export function ReadsAs({ reading, present = [] }: { reading: LineReading; prese
     <span className="min-w-0 text-xs text-muted-foreground">
       {present.length > 0 ? (
         <>
-          adds <span className="font-mono">{adds.join(', ')}</span> (
-          <span className="font-mono">{present.join(', ')}</span> {present.length === 1 ? 'is' : 'are'} in the
-          set)
+          adds <span className="font-medium text-foreground tabular-nums">{adds.join(', ')}</span> (
+          <span className="font-medium text-foreground tabular-nums">{present.join(', ')}</span>{' '}
+          {present.length === 1 ? 'is' : 'are'} in the set)
         </>
       ) : (
         <>
           {reading.labels.length > 1 ? `${reading.labels.length} questions: ` : ''}
-          <span className="font-mono">{reading.labels.join(', ')}</span>
+          <span className="font-medium text-foreground tabular-nums">{reading.labels.join(', ')}</span>
         </>
       )}
       {notes && (

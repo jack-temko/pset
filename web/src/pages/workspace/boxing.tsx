@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { X } from 'lucide-react'
+import { Image as ImageIcon, Type, X } from 'lucide-react'
 
 import type { Box, BoxKind } from '@/api/homework'
-import { Button, IconButton } from '@/components/button'
+import { Button } from '@/components/button'
 import { SegmentedControl } from '@/components/segmented-control'
 import { usePages } from '@/lib/pages'
 import { cn } from '@/lib/utils'
@@ -187,23 +187,41 @@ export function DrawnBox({
       }}
     >
       {n !== undefined && (
-        <div data-box-control className="absolute -top-8 left-0 flex items-center gap-1">
+        // One small floating toolbar, shaped like the Menu's card: the
+        // box's number, its kind (click to switch), and a way to take it
+        // back. Its own width, whatever the box's (a narrow box squeezed
+        // the label onto two lines); above the box, or inside its top
+        // when the box starts at the page's top, where the page would
+        // clip it; and toward the page, from the right half.
+        <div
+          data-box-control
+          className={cn(
+            'absolute flex h-control-sm w-max items-center gap-1 rounded-md border bg-card pr-1 pl-1 whitespace-nowrap text-foreground shadow-floating',
+            box.y < 0.05 ? 'top-1' : '-top-9',
+            box.x + box.w / 2 > 0.6 ? 'right-0' : 'left-0',
+          )}
+        >
+          <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary text-xs font-medium text-primary-foreground tabular-nums">
+            {n}
+          </span>
           <button
             type="button"
             onClick={onFlip}
-            className="flex h-control-sm items-center gap-1 rounded-md bg-primary px-2 font-mono text-xs text-primary-foreground shadow-floating"
+            aria-label={`Box ${n} is ${box.kind === 'text' ? 'words' : 'a figure'}; switch it`}
+            className="flex h-full items-center gap-1 rounded-sm px-2 text-xs font-medium hover:bg-muted/50"
           >
-            {n} · {box.kind === 'text' ? 'Words' : 'Figure'}
+            {box.kind === 'text' ? <Type className="size-4" /> : <ImageIcon className="size-4" />}
+            {box.kind === 'text' ? 'Words' : 'Figure'}
           </button>
-          <IconButton
-            variant="ghost"
-            size="sm"
+          <span aria-hidden className="h-4 w-px bg-border" />
+          <button
+            type="button"
             aria-label={`Remove box ${n}`}
             onClick={onRemove}
-            className="bg-card shadow-floating"
+            className="grid size-6 place-items-center rounded-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground"
           >
-            <X />
-          </IconButton>
+            <X className="size-4" />
+          </button>
         </div>
       )}
     </div>
