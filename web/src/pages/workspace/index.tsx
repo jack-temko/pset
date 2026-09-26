@@ -1656,7 +1656,9 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           await pointOut.mutateAsync({ id: target.questionId, boxes })
         }}
       >
-        <BookHereContext value={{ problems: book.problems, editBook: () => setEditingBook(true) }}>
+        <BookHereContext
+          value={{ bookId: book.id, problems: book.problems, editBook: () => setEditingBook(true) }}
+        >
           <AppShell
             scroll="fill"
             middle={

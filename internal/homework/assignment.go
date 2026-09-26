@@ -321,6 +321,28 @@ func readLine(text string, style probnum.Style) (labels, notes []string, unread 
 	return labels, notes, false
 }
 
+// ReadLines reads lines as Add would, in the book's numbering, so the
+// student sees what each becomes while typing it.
+func (s *Service) ReadLines(ctx context.Context, bookID string, lines []string) (LineReadings, error) {
+	book, err := s.c.Library.Book(ctx, bookID)
+	if err != nil {
+		return LineReadings{}, err
+	}
+	if len(lines) > maxDrafts {
+		return LineReadings{}, httpx.Invalid("lines", "That's more than %d lines at once.", maxDrafts)
+	}
+	out := LineReadings{Lines: make([]LineReading, len(lines))}
+	for i, l := range lines {
+		if len(l) > maxDraftText {
+			out.Lines[i] = LineReading{Labels: []string{}, Notes: []string{}, Unread: true}
+			continue
+		}
+		labels, notes, unread := readLine(strings.TrimSpace(l), book.Problems)
+		out.Lines[i] = LineReading{Labels: labels, Notes: notes, Unread: unread}
+	}
+	return out, nil
+}
+
 // defaultTitle names a set without a title of its own. One date's sheet
 // is the document's name ("Assignment #3"); a semester's table names
 // every date the same, so there it's when it's due, which is what tells

@@ -95,6 +95,7 @@ POST   /api/books/{id}/assignments       (the kept due dates: new sets, and upda
 GET    /api/books/{id}/assignments/source (the course page last read)
 GET    /api/homework/{id}                PATCH, DELETE
 POST   /api/homework/{id}/questions      (batch of drafts)
+POST   /api/books/{id}/references        (lines read in the book's numbering, as Add reads them)
 GET    /api/homework/{id}/worksheet      (PDF)
 PATCH  /api/questions/{id}               DELETE
 POST   /api/questions/{id}/retry         {page} or {text}

@@ -475,6 +475,30 @@ export interface AssignmentReads {
 export interface AssignmentSource {
   url: string;
 }
+/**
+ * ReferenceLines is POST /api/books/{id}/references: lines as the
+ * student types them, to read in the book's numbering before they're
+ * added.
+ */
+export interface ReferenceLines {
+  lines: string[];
+}
+/**
+ * LineReading is what one line reads as: the problems it names, in the
+ * book's labels, and the professor's notes it carries; Unread when it
+ * isn't a reference PSet reads.
+ */
+export interface LineReading {
+  labels: string[];
+  notes: string[];
+  unread?: boolean;
+}
+/**
+ * LineReadings answers ReferenceLines, a reading a line, in order.
+ */
+export interface LineReadings {
+  lines: LineReading[];
+}
 export const EventHomeworkChanged = "homework.changed";
 export const EventHomeworkRemoved = "homework.removed";
 export const EventQuestionChanged = "question.changed";

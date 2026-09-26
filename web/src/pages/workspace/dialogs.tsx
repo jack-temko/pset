@@ -13,6 +13,7 @@ import { PageNumbersField } from './page-numbers'
 import { ProblemStyleField } from './problem-style'
 import { anchorsOf, choiceOf, runsOf, settled, type PageAnchor, type StyleChoice } from './book-numbering'
 import { numberingUnsure, useBookHere } from './book-here'
+import { ReadsAs, useLiveReadings } from './reads-as'
 import type { Form, Style, Where } from '@/api/gen/probnum'
 
 /**
@@ -266,6 +267,9 @@ export function AddQuestionsDialog({
 
   const filled = rows.filter((r) => r.text.trim())
   const here = useBookHere()
+  const readingOf = useLiveReadings(rows)
+  // A line naming several problems is several questions.
+  const count = filled.reduce((n, r) => n + Math.max(readingOf(r.id)?.labels.length ?? 1, 1), 0)
 
   const submit = () => {
     if (!filled.length) return
@@ -296,7 +300,7 @@ export function AddQuestionsDialog({
             Cancel
           </Button>
           <Button onClick={submit} disabled={!filled.length}>
-            {filled.length === 0 ? 'Add questions' : filled.length === 1 ? 'Add 1 question' : `Add ${filled.length} questions`}
+            {count === 0 ? 'Add questions' : count === 1 ? 'Add 1 question' : `Add ${count} questions`}
           </Button>
         </>
       }
@@ -339,15 +343,19 @@ export function AddQuestionsDialog({
                   <Trash2 />
                 </IconButton>
               </div>
-              <Checkbox
-                checked={row.inBook}
-                onChange={() =>
-                  setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, inBook: !r.inBook } : r)))
-                }
-                className="-ml-2 text-muted-foreground"
-              >
-                In this book
-              </Checkbox>
+              <div className="flex flex-wrap items-center gap-x-2">
+                <Checkbox
+                  checked={row.inBook}
+                  onChange={() =>
+                    setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, inBook: !r.inBook } : r)))
+                  }
+                  className="-ml-2 text-muted-foreground"
+                >
+                  In this book
+                </Checkbox>
+                {/* What it becomes, read as it's typed. */}
+                {readingOf(row.id) && <ReadsAs reading={readingOf(row.id)!} />}
+              </div>
             </div>
           ))}
         </div>

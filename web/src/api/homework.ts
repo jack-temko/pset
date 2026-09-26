@@ -19,6 +19,8 @@ import type {
   Question,
   QuestionChanged,
   QuestionPatch,
+  LineReading,
+  LineReadings,
   QuestionRemoved,
   Questions,
   ReadChanged,
@@ -441,4 +443,19 @@ export const useAssignmentSource = (bookId: string) =>
   useQuery({
     queryKey: homeworkKeys.assignmentSource(bookId),
     queryFn: () => get<AssignmentSource>(`/api/books/${bookId}/assignments/source`).then((r) => r.url),
+  })
+
+// ---------------------------------------------------------------- references
+
+/** What lines read as in the book's numbering, by their text: the same
+ *  reading Add gives them, asked while they're typed. */
+export const useLineReadings = (bookId: string | undefined, lines: string[]) =>
+  useQuery({
+    queryKey: ['homework', 'references', bookId, lines] as const,
+    queryFn: () =>
+      post<LineReadings>(`/api/books/${bookId}/references`, { lines }).then(
+        (r) => new Map(lines.map((l, i): [string, LineReading] => [l, r.lines[i]])),
+      ),
+    enabled: !!bookId && lines.length > 0,
+    staleTime: Infinity,
   })

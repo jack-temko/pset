@@ -485,3 +485,19 @@ func TestUpdatingAnySetFromADocument(t *testing.T) {
 		t.Fatalf("another set's question went: %v", err)
 	}
 }
+
+// Lines read as they're typed, the way Add will read them.
+func TestReadingLinesAsTheyreTyped(t *testing.T) {
+	e := newEnv(t)
+	var out LineReadings
+	if code := e.do(t, "POST", "/api/books/b1/references", ReferenceLines{Lines: []string{"3.35, 3.36 (no PSpice)", "", "the ladder one"}}, &out); code != 200 {
+		t.Fatalf("read %d", code)
+	}
+	if len(out.Lines) != 3 || !slices.Equal(out.Lines[0].Labels, []string{"3.35", "3.36"}) ||
+		!slices.Equal(out.Lines[0].Notes, []string{"no PSpice"}) || out.Lines[0].Unread || !out.Lines[2].Unread {
+		t.Fatalf("readings %+v", out)
+	}
+	if code := e.do(t, "POST", "/api/books/nope/references", ReferenceLines{Lines: []string{"3.36"}}, nil); code != 404 {
+		t.Fatalf("no book %d", code)
+	}
+}
