@@ -63,6 +63,13 @@ Three faces: **Newsreader** for display and leads, **Inter** for everything
 else, **JetBrains Mono** for machine strings: hashes, paths, versions,
 counts, page numbers.
 
+**What a person reads is never mono** (2026-09-25). A book's problem
+labels ("3.1 #7", "4.27", "2.1.4"), a box's kind ("Words"), anything said
+in words is Inter, with `tabular-nums` where figures should line up. Mono
+had crept onto them, and at the floor size in a pill its wide, round
+letterforms read as toy-like (Jack: "the font you use for stuff like that
+looks a bit cartoony").
+
 Nine steps, and no others. **15px is the floor**; nothing in the product is
 smaller, chips and counters included.
 
