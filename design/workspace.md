@@ -6,12 +6,13 @@ settled, not open.
 
 ## Frame
 
-Three panes under the top bar: contents rail (256) · page scan (flex) ·
+Three panes under the top bar: contents rail (320) · page scan (flex) ·
 panel (440). Each scrolls independently; the frame never moves. The top
 bar's middle names the book.
 
-- **Focus** widens the panel by collapsing the rail; the scan shrinks but
-  stays visible. The toggle sits right of the panel's tabs.
+- **Focus** widens the panel to 800 by collapsing the rail and taking a
+  little of the scan (2026-09-26: 440 + 320 read cramped for a
+  walkthrough); the scan shrinks but stays visible. The toggle sits right of the panel's tabs.
 - The panel is always open, and remembers **per book** which tab it showed.
 
 ## Page numbers
@@ -90,9 +91,15 @@ stays covers.
 
 ## Contents rail
 
-- **TOC only**: the chapter/section tree as an ActionList, current
-  section highlighted, page numbers in mono on the right, chapters' as
-  well as sections'. Where the contents come from: design/contents.md.
+- **TOC only**: the contents tree as an ActionList, current row
+  highlighted, page numbers in mono on the right, on every row.
+- **Every level, two on show** (2026-09-26): the rail carries every
+  level the contents gives, but only the top two show at first. A row
+  below the top with rows under it has a chevron in its indent that
+  folds them open, and each level indents 16px further. Opening is the
+  student's alone: the scan moving on never opens a row, and the
+  highlight falls on the deepest row on show, so a closed section stands
+  in for what's folded inside it. Where the contents come from: design/contents.md.
 - **The current row stays in view**: as the scan moves on, the rail
   scrolls to keep the highlighted row on screen, with a row of room.
 - **Rows touch** (2026-09-22): no gap between chapter groups, so the

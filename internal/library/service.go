@@ -370,9 +370,8 @@ func (s *Service) Retry(ctx context.Context, id string) (Book, error) {
 	return s.publish(ctx, id)
 }
 
-// Contents is the book's structure as the rail shows it: top-level
-// entries as chapters, the next level down as their sections, anything
-// deeper left out.
+// Contents is the book's structure as the rail shows it: every level
+// the contents gives, as a tree.
 func (s *Service) Contents(ctx context.Context, id string) (Contents, error) {
 	if _, err := s.Get(ctx, id); err != nil {
 		return Contents{}, err
@@ -385,30 +384,30 @@ func (s *Service) Contents(ctx context.Context, id string) (Contents, error) {
 }
 
 func buildContents(secs []section) Contents {
-	out := Contents{Chapters: []ContentsChapter{}}
 	top := 0
 	for _, s := range secs {
 		if top == 0 || s.Level < top {
 			top = s.Level
 		}
 	}
-	for i, s := range secs {
-		switch s.Level {
-		case top:
-			out.Chapters = append(out.Chapters, ContentsChapter{
-				ID: fmt.Sprintf("c%d", i), Title: s.Title, Page: s.StartPage, Sections: []ContentsSection{},
-			})
-		case top + 1:
-			if len(out.Chapters) == 0 {
-				continue
-			}
-			c := &out.Chapters[len(out.Chapters)-1]
-			c.Sections = append(c.Sections, ContentsSection{ID: fmt.Sprintf("s%d", i), Title: s.Title, Page: s.StartPage})
-		}
-	}
+	i := 0
+	out := Contents{Entries: nestContents(secs, &i, top-1)}
 	// A book whose only structure is the whole-book fallback has no rail.
-	if len(out.Chapters) == 1 && len(out.Chapters[0].Sections) == 0 {
-		out.Chapters = []ContentsChapter{}
+	if len(out.Entries) == 1 && len(out.Entries[0].Children) == 0 {
+		out.Entries = []ContentsEntry{}
+	}
+	return out
+}
+
+// nestContents takes the entries from secs[*i] on that sit deeper than
+// parent: each one, with the deeper entries after it as its children. A
+// skipped level (a 1 followed by a 3) still nests under the 1.
+func nestContents(secs []section, i *int, parent int) []ContentsEntry {
+	out := []ContentsEntry{}
+	for *i < len(secs) && secs[*i].Level > parent {
+		s, id := secs[*i], fmt.Sprintf("e%d", *i)
+		*i++
+		out = append(out, ContentsEntry{ID: id, Title: s.Title, Page: s.StartPage, Children: nestContents(secs, i, s.Level)})
 	}
 	return out
 }

@@ -115,25 +115,20 @@ type ProblemsPatch struct {
 	Where probnum.Where `json:"where"`
 }
 
-// ContentsSection is a section of a chapter, at its PDF page.
-type ContentsSection struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
-	Page  int    `json:"page"`
+// ContentsEntry is one heading of the contents, at its PDF page, and
+// the headings under it, however deep the book goes.
+type ContentsEntry struct {
+	ID       string          `json:"id"`
+	Title    string          `json:"title"`
+	Page     int             `json:"page"`
+	Children []ContentsEntry `json:"children"`
 }
 
-// ContentsChapter is a top-level entry and the sections under it.
-type ContentsChapter struct {
-	ID       string            `json:"id"`
-	Title    string            `json:"title"`
-	Page     int               `json:"page"`
-	Sections []ContentsSection `json:"sections"`
-}
-
-// Contents is GET /api/books/{id}/contents. Empty when the book's
-// structure couldn't be read, and then the workspace has no rail.
+// Contents is GET /api/books/{id}/contents: the top-level entries.
+// Empty when the book's structure couldn't be read, and then the
+// workspace has no rail.
 type Contents struct {
-	Chapters []ContentsChapter `json:"chapters"`
+	Entries []ContentsEntry `json:"entries"`
 }
 
 // Event types this feature publishes.
