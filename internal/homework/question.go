@@ -190,6 +190,15 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 		return err
 	}
 	s.setState(ctx, q.ID, StateLocating, "")
+	// A reference the parser couldn't read, rewritten by the model in the
+	// book's form first, if it can be.
+	next, err := s.rewriteReference(ctx, m, book, q)
+	if err != nil {
+		return err
+	}
+	if next != nil {
+		q = *next
+	}
 	// Boxed by the student: read where they showed, nothing to look for.
 	locate := s.locate
 	if len(q.Boxes) > 0 {

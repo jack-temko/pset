@@ -206,6 +206,15 @@ built.
     seven"). A problem from a set the book numbers on its own
     ("Supplementary problem 3.5", "Review question 4.3") is never read
     as the chapter's problem of that number.
+  - **What the parser can't read, the model rewrites** (2026-09-25):
+    a line from the book the parser doesn't read, short and naming a
+    number ("problems seven and nine from section three point one",
+    "the 12th exercise of 2.2, skip part b"), is rewritten by the model
+    in the book's own form as the question's first step, and the parser
+    reads the rewrite: the model only proposes. One naming several
+    problems becomes several questions in its place. What it can't place
+    (a description, a problem written out) is looked for by its words,
+    as before. The live caption says so while it's typed.
   - **Each row says what it reads as, while it's typed** (2026-09-25):
     beside In this book, "3 questions: 2.1 #1, 2.1 #4, 2.1 #6 · From
     your professor: do c", or, in warning ink, "Not a reference PSet

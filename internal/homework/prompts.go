@@ -53,6 +53,21 @@ Reply with only JSON, no prose and no code fence:
     lecture notes, links.
 - Leave out headings, footers, copyright lines and page numbers.`
 
+// referencePrompt rewrites a reference the parser couldn't read in the
+// book's own form, for the parser to read. Filled with the book's title,
+// how it numbers its problems, and an example of its form.
+const referencePrompt = `You rewrite one homework reference a student typed, for the textbook %q, in which
+%s. Write each book problem it names in the book's own form, like %q, one per line, with
+any parts after the number (7c, 7abc) and the professor's instructions for it in parentheses after it.
+A problem known only by its page is "p. 33 #7".
+
+Reply with only JSON, no prose and no code fence: {"lines": ["3.1 #7 (skip part d)", "3.2 #1"]}
+
+- Only problems the text names by number. Don't guess a number it doesn't give: a description ("the odd
+  ones in 2.3", "the one about the tank") or a problem written out in full is {"lines": []}.
+- Problems from a set the book numbers on its own (review questions, supplementary problems) are
+  {"lines": []}.`
+
 // boxedPrompt reads a problem from the boxes a student drew around it.
 const boxedPrompt = `You read one homework problem from pictures of its text, cut from a textbook in the order
 it runs (it may continue from one picture to the next).

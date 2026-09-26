@@ -17,9 +17,9 @@ export function ReadsAs({ reading, present = [] }: { reading: LineReading; prese
   if (reading.unread)
     return (
       <span className="text-xs text-warning">
-        Not a reference PSet reads
-        {example ? <>: write it like the book does, as in &ldquo;{example}&rdquo;,</> : ','} or untick In this
-        book.
+        PSet doesn't read this as a reference itself. Once it's added, the model rewrites it in the book's
+        form{example ? <> (&ldquo;{example}&rdquo;)</> : ''} if it names problems by number; if not, it's
+        looked for by its words.
       </span>
     )
   // A note that's most of the line (the professor's changes to a book

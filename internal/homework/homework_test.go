@@ -134,6 +134,15 @@ func fakeModel(req llm.ChatRequest) llmtest.Reply {
 		return llmtest.Reply{Text: "- Node A: top of $R_1$.\n- 2 A current source from A to B (its arrow points to B)."}
 	case strings.Contains(sys, "You read one homework problem from pictures"):
 		return llmtest.Reply{Text: `{"label": "7", "statement": "Find the general solution of $y'' + 5y' + 6y = 0$."}`}
+	case strings.Contains(sys, "You rewrite one homework reference"):
+		user := req.Messages[1].Content.Text()
+		switch {
+		case strings.Contains(user, "thirty-fifth"):
+			return llmtest.Reply{Text: `{"lines": ["3.35 (no PSpice)", "3.36"]}`}
+		case strings.Contains(user, "made up"):
+			return llmtest.Reply{Text: `{"lines": ["banana 12"]}`}
+		}
+		return llmtest.Reply{Text: `{"lines": []}`}
 	case strings.Contains(sys, "You write the guide"):
 		return llmtest.Reply{Text: guide}
 	}
