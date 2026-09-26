@@ -51,8 +51,9 @@ import { anchorsOf, choiceOf } from '@/pages/workspace/book-numbering'
 import { ProblemStyleField } from '@/pages/workspace/problem-style'
 import { BoxingBar, BoxingProvider, DrawnBox } from '@/pages/workspace/boxing'
 import { useBoxing } from '@/pages/workspace/boxing-state'
-import { AssignmentReview, AssignmentSourceFields } from '@/pages/workspace/import-assignment'
+import { AssignmentReview, AssignmentSourceFields } from '@/pages/workspace/add-homework'
 import { AssignmentReadRow } from '@/pages/workspace/assignment-reads'
+import { QuestionRows, emptyRow, type QuestionRow } from '@/pages/workspace/dialogs'
 import { reviewOf } from '@/pages/workspace/import-state'
 import type { Style } from '@/api/gen/probnum'
 import type { AssignmentRead } from '@/api/homework'
@@ -206,10 +207,14 @@ function AssignmentReviewDemo() {
 }
 
 /** Where an assignment comes from, each way in, with a failed read. */
-function AssignmentSourceDemo({ failed }: { failed?: boolean }) {
-  const [mode, setMode] = useState<'file' | 'page' | 'paste'>(failed ? 'page' : 'file')
+function AssignmentSourceDemo({ failed, toSet }: { failed?: boolean; toSet?: boolean }) {
+  const [mode, setMode] = useState<'write' | 'file' | 'page' | 'paste'>(failed ? 'page' : 'write')
   const [url, setUrl] = useState(failed ? 'https://canvas.example.edu/courses/461/assignments' : '')
   const [text, setText] = useState('')
+  const [rows, setRows] = useState<QuestionRow[]>(() => [
+    { ...emptyRow(), text: '2.1: 1, 4, 6 (do c)' },
+    { ...emptyRow(), text: 'A tank holds 100 L of brine…', inBook: false },
+  ])
   return (
     <div className="w-dialog-wide rounded-lg border bg-card p-card">
       <AssignmentSourceFields
@@ -218,10 +223,27 @@ function AssignmentSourceDemo({ failed }: { failed?: boolean }) {
         url={url}
         onUrl={setUrl}
         remembered={false}
+        updating={toSet ? 'Homework due Sep 11' : undefined}
         text={text}
         onText={setText}
         error={failed ? 'That page answered 401. A page behind a login can be pasted or photographed instead.' : ''}
         onSubmit={() => {}}
+        onLeave={() => {}}
+        write={
+          <div className="space-y-4">
+            {!toSet && (
+              <div className="flex items-start gap-2">
+                <Field label="Title" className="min-w-0 flex-1">
+                  <Input placeholder="Problem set 4" />
+                </Field>
+                <Field label="Due date" className="w-40">
+                  <Input type="date" />
+                </Field>
+              </div>
+            )}
+            <QuestionRows rows={rows} onRows={setRows} readingOf={() => undefined} onSubmit={() => {}} />
+          </div>
+        }
       />
     </div>
   )
@@ -941,11 +963,14 @@ export function Components() {
         </Section>
 
         <Section
-          title="Importing an assignment"
-          note="Where it comes from: a file, a course web page, or pasted text. Then the review: a block a due date, ticked to become a set; its lines below, ticked to become questions, each saying what it reads as. Dates gone by or already added fold away behind one button; a line that isn't homework shows as one quiet line, unticked. A date matching a set made before is an update: what's new, whose instructions changed, what it no longer lists. In the list, a read waits: reading, ready to review, or failed with why."
+          title="Adding homework"
+          note="New homework and Add questions are one dialog with four ways in: Write (for a new set its title and due date, then the questions, a row each, each saying what it reads as), a file, a course web page, or pasted text. For a document, the review: a block a due date, ticked to become a set; its lines below, ticked to become questions, each saying what it reads as. Dates gone by or already added fold away behind one button; a line that isn't homework shows as one quiet line, unticked. A date matching a set made before is an update: what's new, whose instructions changed, what it no longer lists. In the list, a read waits: reading, ready to review, or failed with why."
         >
           <Shelf label="source">
             <AssignmentSourceDemo />
+          </Shelf>
+          <Shelf label="adding to a set">
+            <AssignmentSourceDemo toSet />
           </Shelf>
           <Shelf label="failed read">
             <AssignmentSourceDemo failed />

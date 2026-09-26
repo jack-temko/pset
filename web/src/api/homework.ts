@@ -144,6 +144,22 @@ export function useCreateHomework(bookId: string) {
   })
 }
 
+/** A new set with its questions, in one go: made, then filled. */
+export function useNewHomework(bookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ drafts, ...in_ }: Input & { drafts: Draft[] }) => {
+      const h = await post<Summary>(`/api/books/${bookId}/homework`, in_)
+      putSummary(qc, h)
+      if (drafts.length === 0) return h
+      const added = await post<Questions>(`/api/homework/${h.id}/questions`, { drafts })
+      added.questions.forEach((q) => putQuestion(qc, q))
+      return { ...h, total: added.questions.length }
+    },
+    onSuccess: (h) => putSummary(qc, h),
+  })
+}
+
 /** Title, date and turned in apply at once and roll back on refusal. */
 export function useUpdateHomework(id: string) {
   const qc = useQueryClient()
