@@ -71,3 +71,31 @@ func TestUpToDateClientGetsNoReset(t *testing.T) {
 		t.Fatalf("got %d events", len(got))
 	}
 }
+
+// A server that restarted numbers events from 1 again, so the id a tab
+// reconnects with is one this bus never issued: everything that happened
+// while the server was down is missed, and the tab must refetch.
+func TestIDFromAnEarlierRunSendsReset(t *testing.T) {
+	b := NewBus()
+	b.Publish("x", nil)
+	ch, cancel := b.Subscribe(5000)
+	defer cancel()
+	got := drain(ch)
+	if len(got) != 1 || got[0].Type != Reset || got[0].ID != 1 {
+		t.Fatalf("got %+v, want one reset that moves the cursor to id 1", got)
+	}
+	b.Publish("y", nil)
+	if got := drain(ch); len(got) != 1 || got[0].Type != "y" || got[0].ID != 2 {
+		t.Fatalf("live after reset = %+v", got)
+	}
+}
+
+func TestLastIDOfTheNewestEventReplaysNothing(t *testing.T) {
+	b := NewBus()
+	b.Publish("x", nil)
+	ch, cancel := b.Subscribe(1)
+	defer cancel()
+	if got := drain(ch); len(got) != 0 {
+		t.Fatalf("got %+v", got)
+	}
+}
