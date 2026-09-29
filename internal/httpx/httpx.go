@@ -23,6 +23,8 @@ func (e *Error) Status() int {
 	switch e.Code {
 	case CodeNotFound:
 		return http.StatusNotFound
+	case CodeForbidden:
+		return http.StatusForbidden
 	case CodeDuplicateBook, CodeBusy:
 		return http.StatusConflict
 	case CodeInternal:

@@ -12,6 +12,7 @@ const (
 	CodeBadKey        Code = "bad_key"
 	CodeBadModel      Code = "bad_model"
 	CodeBusy          Code = "busy"
+	CodeForbidden     Code = "forbidden"
 	CodeInternal      Code = "internal"
 )
 
