@@ -22,7 +22,7 @@ import (
 // Defaults a fresh install shows. Showing isn't saving: a side counts as
 // ready only once a Save has tested it.
 var (
-	DefaultChat  = ChatConnection{Endpoint: "https://api.z.ai/api/paas/v4", Model: "glm-5.3-flash"}
+	DefaultChat  = ChatConnection{Endpoint: "https://openrouter.ai/api/v1", Model: "z-ai/glm-5.3-flash"}
 	DefaultEmbed = EmbedConnection{Endpoint: "http://localhost:11434/v1", Model: "nomic-embed-text"}
 )
 

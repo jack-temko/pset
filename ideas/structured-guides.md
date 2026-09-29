@@ -313,9 +313,10 @@ this is from its docs, not experience):
   setting; use `low` for repairs.
 - Z.ai recommends `temperature: 1` and `top_p: 0.95`. Tune one at a
   time, if at all.
-- Keep `clear_thinking: false` in the tool loop (Z.ai's advice for
-  agentic use, and what `llm.shape` does), and return reasoning with
-  tool results in order.
+- Return the model's reasoning with its turns, in order, so it carries
+  on from its own thinking (Z.ai's advice for agentic use). PSet reaches
+  it through OpenRouter since 2026-09-29, where `llm.shape` sends it back
+  as `reasoning`.
 - Context caching is automatic and implicit. So the prompt's **static
   part comes first** (writing guide, example, tool rules), and the
   per-question material last, so the long prefix is cached on every
@@ -326,8 +327,10 @@ this is from its docs, not experience):
   content.
 - Examples anchor it better than rules, hence the worked example. Keep
   instructions and the problem's material apart with clear tags.
-- 1M context and 128K output; $0.045 per million input tokens and $0.14
-  per million output, so the example's cost is negligible.
+- 1M context and 128K output. $0.15 per million input tokens ($0.03
+  cached) and $0.50 per million output at Z.ai's list price, which
+  OpenRouter passes through (a first figure here, $0.045 / $0.14, was one
+  cheap host's 4-bit price); the example's cost is negligible.
 
 Sources: [Z.ai GLM-5.3-Flash docs](https://docs.z.ai/guides/vlm/glm-5.3-flash),
 [Z.ai structured output](https://docs.z.ai/guides/capabilities/struct-output),

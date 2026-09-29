@@ -120,6 +120,9 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 	if err := j.Decode(&p); err != nil {
 		return err
 	}
+	// One session per step of a question, so a guide's rounds and repairs
+	// read as one conversation on OpenRouter.
+	ctx = llm.WithSession(ctx, fmt.Sprintf("question-%s-%s", p.QuestionID, j.Kind))
 	q, err := getQuestion(ctx, s.c.DB, p.QuestionID)
 	if errors.Is(err, errNotFound) {
 		return nil

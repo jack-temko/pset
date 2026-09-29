@@ -169,7 +169,7 @@ func TestFieldErrors(t *testing.T) {
 		code  httpx.Code
 		field string
 	}{
-		{"not a url", ChatConnection{"api.z.ai", "k", "m"}, nil, httpx.CodeInvalid, "endpoint"},
+		{"not a url", ChatConnection{"openrouter.ai", "k", "m"}, nil, httpx.CodeInvalid, "endpoint"},
 		{"no model", ChatConnection{"https://x", "k", " "}, nil, httpx.CodeInvalid, "model"},
 		{"refused key", goodChat, &llm.LLMError{Status: 403}, httpx.CodeBadKey, "apiKey"},
 		{"unknown model", goodChat, &llm.LLMError{Status: 400, Body: `{"error":"Model not found"}`}, httpx.CodeBadModel, "model"},

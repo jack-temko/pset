@@ -1,7 +1,7 @@
 // Package llm is a dependency-free OpenAI-compatible client: streaming chat
 // completions (with multimodal text/image content) and embeddings, over
-// plain net/http. It speaks enough of the wire format for the Z.ai API,
-// OpenRouter, and OpenAI-shaped local endpoints such as ollama.
+// plain net/http. PSet's chat goes through OpenRouter; the client also
+// speaks to any OpenAI-shaped endpoint, local ones such as ollama included.
 package llm
 
 import (
@@ -114,13 +114,10 @@ type Message struct {
 	Content    Content    `json:"content"`
 	ToolCallID string     `json:"tool_call_id,omitempty"`
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
-	// ReasoningContent is what a thinking model reasoned before this
-	// assistant turn. Sent back, it lets the model carry on from its own
-	// thinking instead of redoing it after every tool call; the client
-	// only sends it to endpoints that take it (see keepsReasoning).
-	ReasoningContent string `json:"reasoning_content,omitempty"`
-	// Reasoning is the same thinking under OpenRouter's name for it; shape
-	// moves ReasoningContent here for OpenRouter.
+	// Reasoning is what a thinking model reasoned before this assistant
+	// turn. Sent back, it lets the model carry on from its own thinking
+	// instead of redoing it after every tool call. Only OpenRouter gets it
+	// (see shape); the field is its name for it.
 	Reasoning string `json:"reasoning,omitempty"`
 }
 
@@ -261,27 +258,22 @@ type ChatRequest struct {
 	MaxTokens   int       `json:"max_tokens,omitempty"`
 	Temperature *float64  `json:"temperature,omitempty"`
 	Tools       []Tool    `json:"tools,omitempty"`
-	// Thinking is Z.ai's thinking switch. The client sets it itself when
-	// the conversation carries reasoning back; see keepsReasoning.
-	Thinking *Thinking `json:"thinking,omitempty"`
 	// ReasoningEffort is how hard a thinking model thinks: "low",
-	// "high" or "max". Z.ai takes it as is, OpenRouter as Reasoning's
-	// effort, and no other endpoint gets it; see shape.
-	ReasoningEffort string `json:"reasoning_effort,omitempty"`
+	// "high" or "max". OpenRouter gets it as Reasoning's effort, and no
+	// other endpoint gets it; see shape. Never sent as is.
+	ReasoningEffort string `json:"-"`
 	// Reasoning is OpenRouter's thinking switch, and Provider which of a
 	// model's hosts may serve it. shape sets both for OpenRouter only.
 	Reasoning *ReasoningOptions `json:"reasoning,omitempty"`
 	Provider  *ProviderOptions  `json:"provider,omitempty"`
+	// SessionID groups a job's calls on OpenRouter, where a guide's
+	// rounds and repairs, or a book's whole conversation, read as one
+	// session; it also keeps them on one host, which keeps its cache warm.
+	// Left empty, it comes from the context (WithSession).
+	SessionID string `json:"session_id,omitempty"`
 	// OnReasoning, if set, receives a thinking model's reasoning as it
 	// streams: the part it writes before, and apart from, its answer.
 	OnReasoning func(text string) `json:"-"`
-}
-
-// Thinking asks a GLM model to think, and with ClearThinking false to
-// read the reasoning_content of earlier turns ("preserved thinking").
-type Thinking struct {
-	Type          string `json:"type"`
-	ClearThinking *bool  `json:"clear_thinking,omitempty"`
 }
 
 // ReasoningOptions is OpenRouter's reasoning object: an effort, or just
@@ -302,6 +294,25 @@ type ProviderOptions struct {
 // hosts, which don't say.
 var fullPrecision = []string{"fp8", "fp16", "bf16", "fp32", "unknown"}
 
+type sessionKey struct{}
+
+// WithSession names the session every model call made under ctx belongs
+// to: a job sets it once, and the calls it makes, however deep, join it.
+func WithSession(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, sessionKey{}, id)
+}
+
+// maxSession is OpenRouter's limit on a session id.
+const maxSession = 256
+
+func sessionOf(ctx context.Context) string {
+	id, _ := ctx.Value(sessionKey{}).(string)
+	if len(id) > maxSession {
+		id = id[:maxSession]
+	}
+	return id
+}
+
 // ToolMessage is the result turn for one tool call.
 func ToolMessage(callID, content string) Message {
 	return Message{Role: "tool", ToolCallID: callID, Content: TextContent(content)}
@@ -311,56 +322,32 @@ func ToolMessage(callID, content string) Message {
 // the transcript replays exactly as the exchange happened, reasoning
 // included.
 func AssistantToolMessage(reply Reply) Message {
-	return Message{Role: "assistant", Content: TextContent(reply.Content), ToolCalls: reply.ToolCalls, ReasoningContent: reply.Reasoning}
+	return Message{Role: "assistant", Content: TextContent(reply.Content), ToolCalls: reply.ToolCalls, Reasoning: reply.Reasoning}
 }
 
-// keepsReasoning reports whether the endpoint takes reasoning_content back
-// on assistant turns. Z.ai's GLM models do, and think far less for it: a
-// model that gets its reasoning back carries on from it, one that doesn't
-// works the whole problem out again after every tool call. Other
-// endpoints may refuse the field (DeepSeek answers 400), so it only goes
-// to Z.ai. OpenRouter takes the same thinking under its own name.
-func (c *Client) keepsReasoning() bool { return c.hostIs("z.ai", "bigmodel.cn") }
-
-// openRouter reports whether the endpoint is OpenRouter, which reaches
-// many models through one key and has its own reasoning and host options.
-func (c *Client) openRouter() bool { return c.hostIs("openrouter.ai") }
-
-func (c *Client) hostIs(domains ...string) bool {
+// openRouter reports whether the endpoint is OpenRouter, the provider
+// PSet's chat goes through: one key for many models, with its own
+// reasoning and host options.
+func (c *Client) openRouter() bool {
 	u, err := url.Parse(c.apiBaseURL)
 	if err != nil {
 		return false
 	}
 	host := u.Hostname()
-	for _, h := range domains {
-		if host == h || strings.HasSuffix(host, "."+h) {
-			return true
-		}
-	}
-	return false
+	return host == "openrouter.ai" || strings.HasSuffix(host, ".openrouter.ai")
 }
 
-// shape fits a request to the endpoint. Z.ai gets its reasoning effort,
-// and reasoning goes back with preserved thinking switched on. OpenRouter
-// gets its reasoning object, the reasoning back under its own name, and
-// full-precision hosts only. Any other endpoint gets neither the effort
-// nor the reasoning.
-func (c *Client) shape(req ChatRequest) ChatRequest {
-	carries := false
-	for _, m := range req.Messages {
-		if m.ReasoningContent != "" {
-			carries = true
-			break
+// shape fits a request to the endpoint. OpenRouter gets its reasoning
+// object (the effort, or reasoning switched on), the model's earlier
+// reasoning back on its assistant turns, and full-precision hosts only.
+// Any other endpoint gets neither the reasoning nor the effort: some
+// refuse the fields (DeepSeek's own API answers 400), and a model that
+// isn't sent its thinking back simply thinks again.
+func (c *Client) shape(ctx context.Context, req ChatRequest) ChatRequest {
+	if c.openRouter() {
+		if req.SessionID == "" {
+			req.SessionID = sessionOf(ctx)
 		}
-	}
-	switch {
-	case c.keepsReasoning():
-		if carries && req.Thinking == nil {
-			keep := false
-			req.Thinking = &Thinking{Type: "enabled", ClearThinking: &keep}
-		}
-		return req
-	case c.openRouter():
 		if req.Reasoning == nil {
 			if req.ReasoningEffort != "" {
 				req.Reasoning = &ReasoningOptions{Effort: req.ReasoningEffort}
@@ -368,22 +355,25 @@ func (c *Client) shape(req ChatRequest) ChatRequest {
 				req.Reasoning = &ReasoningOptions{Enabled: true}
 			}
 		}
-		req.ReasoningEffort = ""
 		if req.Provider == nil {
 			req.Provider = &ProviderOptions{Quantizations: fullPrecision}
 		}
-	default:
-		req.ReasoningEffort = ""
+		return req
+	}
+	req.Reasoning, req.Provider, req.SessionID = nil, nil, ""
+	carries := false
+	for _, m := range req.Messages {
+		if m.Reasoning != "" {
+			carries = true
+			break
+		}
 	}
 	if !carries {
 		return req
 	}
 	msgs := make([]Message, len(req.Messages))
 	for i, m := range req.Messages {
-		if c.openRouter() {
-			m.Reasoning = m.ReasoningContent
-		}
-		m.ReasoningContent = ""
+		m.Reasoning = ""
 		msgs[i] = m
 	}
 	req.Messages = msgs
@@ -418,7 +408,7 @@ func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (reply Reply
 	start := time.Now()
 	defer func() { logCall(req, start, reply, err) }()
 	req.Stream = false
-	req = c.shape(req)
+	req = c.shape(ctx, req)
 	var payload struct {
 		Choices []struct {
 			Message struct {
@@ -456,7 +446,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 	start := time.Now()
 	defer func() { logCall(req, start, reply, err) }()
 	req.Stream = true
-	req = c.shape(req)
+	req = c.shape(ctx, req)
 
 	resp, err := c.doWithRetry(ctx, c.apiBaseURL+"/chat/completions", req)
 	if err != nil {
@@ -551,8 +541,9 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 			if choice.FinishReason != "" {
 				finished = true
 			}
-			// Z.ai names the thinking reasoning_content, OpenRouter
-			// reasoning; a provider that sent both would send it twice.
+			// OpenRouter names the thinking reasoning; other
+			// OpenAI-shaped servers (vLLM, DeepSeek) reasoning_content. A
+			// server that sent both would send it twice.
 			if r := firstOf(choice.Delta.ReasoningContent, choice.Delta.Reasoning); r != "" {
 				reasoning.WriteString(r)
 				if req.OnReasoning != nil {
@@ -743,8 +734,8 @@ func readErrorBody(status int, body []byte) error {
 	return &LLMError{Status: status, Body: string(body)}
 }
 
-// doWithRetry POSTs a JSON body and returns a 200 response. Coding-plan
-// endpoints shed load with 429 and occasional 5xx, so failed attempts are
+// doWithRetry POSTs a JSON body and returns a 200 response. Providers
+// shed load with 429 and occasional 5xx, so failed attempts are
 // retried with a growing pause (honouring Retry-After) before the error
 // reaches the caller.
 func (c *Client) doWithRetry(ctx context.Context, url string, body any) (*http.Response, error) {
@@ -804,16 +795,15 @@ const (
 )
 
 // OutOfCredit reports whether a failed call means the account has run out
-// of money. OpenRouter answers 402. Z.ai answers 429, the status it also
-// sheds load with, and says which in its body: code 1113, "Insufficient
-// balance or no resource package".
+// of money: OpenRouter answers 402. Other providers say it in words, some
+// under a status they also shed load with (429), so the body counts too.
 func OutOfCredit(status int, body string) bool {
 	if status == http.StatusPaymentRequired {
 		return true
 	}
 	b := strings.ToLower(body)
-	return strings.Contains(b, `"1113"`) || strings.Contains(b, "insufficient balance") ||
-		strings.Contains(b, "insufficient credits") || strings.Contains(b, "more credits")
+	return strings.Contains(b, "insufficient balance") || strings.Contains(b, "insufficient credits") ||
+		strings.Contains(b, "more credits")
 }
 
 // NoCredit says it in words, for the person waiting on the call.

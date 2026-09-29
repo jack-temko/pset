@@ -69,7 +69,8 @@ func (s *Service) runTurn(ctx context.Context, j jobs.Job) error {
 		return err
 	}
 	r := &run{s: s, t: t}
-	err = r.loop(ctx)
+	// A book's conversation is one session, turn after turn.
+	err = r.loop(llm.WithSession(ctx, "ask-"+t.BookID))
 	settle := context.WithoutCancel(ctx)
 	switch {
 	case err == nil:

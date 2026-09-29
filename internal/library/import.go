@@ -122,6 +122,7 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 	if err := j.Decode(&p); err != nil {
 		return err
 	}
+	ctx = llm.WithSession(ctx, fmt.Sprintf("book-%s-%s", p.BookID, j.Kind))
 	b, err := getBook(ctx, s.c.DB, p.BookID)
 	if errors.Is(err, errNotFound) {
 		return nil

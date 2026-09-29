@@ -30,14 +30,18 @@ Two Boxes side by side, because they fail and get fixed independently:
 
 - **Chat**: **provider**, endpoint, API key, **model**.
 - **Provider** (2026-09-29): a segmented control above the endpoint,
-  **Z.ai · OpenRouter · Other**. Picking one fills in its endpoint and
-  model (a model named for the other provider follows the switch,
-  `glm-5.3-flash` becoming `z-ai/glm-5.3-flash`; one typed by hand
-  stays), and the hints say where its key comes from. It isn't stored:
-  it's read off the endpoint's host, as the server does, so typing an
-  endpoint picks its provider, and **Other** is any OpenAI-compatible
-  endpoint typed by hand. Through OpenRouter, the model hint says PSet
-  skips hosts running 4-bit weights.
+  **OpenRouter · Other**. PSet's chat goes through OpenRouter, the
+  default for a fresh install (`z-ai/glm-5.3-flash`); direct Z.ai
+  support was dropped. A line under the choice says why: OpenRouter is
+  **recommended**, PSet is built and tested on it, one key reaches every
+  model, and guides keep their thinking from step to step. **Other** is
+  any OpenAI-compatible endpoint typed by hand (a local ollama), and its
+  line says what's given up: the model thinks each step over, so guides
+  take longer. Picking OpenRouter fills in its endpoint (and its model,
+  when none is typed); the hints say where its key comes from and that
+  PSet skips hosts running 4-bit weights. The choice isn't stored: it's
+  read off the endpoint's host, as the server does, so typing an
+  endpoint picks its provider.
 - **Embeddings**: endpoint, model.
 
 Every value is mono. **The API key is plain text**: a local app, and you
@@ -59,7 +63,7 @@ need to see which key you pasted.
   that field's hint (unreachable → endpoint, 401 → key, out of credit →
   key, unknown model → model). Editing that field clears it.
 - **Out of credit** (2026-09-29): an account with no money left
-  (OpenRouter's 402, Z.ai's 429 with code 1113) says so on the key, and a
+  (OpenRouter's 402, or a provider saying the balance is gone) says so on the key, and a
   guide or Ask answer that fails on it says so too, with the way to
   Settings, rather than "busy, try again in a minute".
 - The Box footer says what the last Test or Save found: a spinner while

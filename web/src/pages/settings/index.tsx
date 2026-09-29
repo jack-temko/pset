@@ -41,29 +41,33 @@ import { useClearActivity } from '@/api/activity'
 type FieldSpec = { key: string; label: string; hint?: string; mono?: boolean }
 
 /**
- * A chat provider PSet knows by its endpoint's host, as the server does:
- * picking one fills in the endpoint and a model, and the hints say where
- * its key comes from. Anything else is Other, any OpenAI-compatible
- * endpoint typed by hand.
+ * Where the chat model is reached. PSet is built for OpenRouter: one key
+ * reaches every model, and the server keeps a model's thinking between a
+ * guide's steps there and skips hosts running 4-bit weights. Other is any
+ * OpenAI-compatible endpoint typed by hand (a local ollama, say), which
+ * works without those. The choice isn't stored: it's read off the
+ * endpoint's host, as the server does.
  */
-type ProviderId = 'zai' | 'openrouter' | 'other'
-type Provider = { value: ProviderId; label: string; endpoint: string; model: string; hints: Record<string, string> }
+type ProviderId = 'openrouter' | 'other'
+type Provider = {
+  value: ProviderId
+  label: string
+  endpoint: string
+  model: string
+  /** Under the choice: why, or what's given up. */
+  note: string
+  hints: Record<string, string>
+}
 
 const PROVIDERS: readonly Provider[] = [
-  {
-    value: 'zai',
-    label: 'Z.ai',
-    endpoint: 'https://api.z.ai/api/paas/v4',
-    model: 'glm-5.3-flash',
-    hints: { apiKey: 'From your Z.ai account, under API keys.' },
-  },
   {
     value: 'openrouter',
     label: 'OpenRouter',
     endpoint: 'https://openrouter.ai/api/v1',
     model: 'z-ai/glm-5.3-flash',
+    note: 'Recommended. PSet is built and tested on it: one key reaches every model, and guides keep their thinking from step to step.',
     hints: {
-      apiKey: 'From openrouter.ai/keys. One key reaches every model OpenRouter serves.',
+      apiKey: 'From openrouter.ai/keys.',
       model: 'The maker, then the model. PSet skips hosts that run 4-bit weights.',
     },
   },
@@ -72,21 +76,18 @@ const PROVIDERS: readonly Provider[] = [
     label: 'Other',
     endpoint: '',
     model: '',
-    hints: { endpoint: 'Any OpenAI-compatible chat endpoint. It has to take images.' },
+    note: 'Any OpenAI-compatible endpoint that takes images. The model thinks each step over from the start here, so guides take longer; OpenRouter is recommended.',
+    hints: {},
   },
 ]
 
 function providerOf(endpoint: string): ProviderId {
-  let host = ''
   try {
-    host = new URL(endpoint).hostname
+    const host = new URL(endpoint).hostname
+    return host === 'openrouter.ai' || host.endsWith('.openrouter.ai') ? 'openrouter' : 'other'
   } catch {
     return 'other'
   }
-  const on = (d: string) => host === d || host.endsWith('.' + d)
-  if (on('z.ai') || on('bigmodel.cn')) return 'zai'
-  if (on('openrouter.ai')) return 'openrouter'
-  return 'other'
 }
 
 type Status =
@@ -140,7 +141,8 @@ function ConnectionBox({
   // until it's typed over, and the choice shouldn't jump back meanwhile.
   const [pickedOther, setPickedOther] = useState(false)
   const provider = providers ? (pickedOther ? 'other' : providerOf(values.endpoint)) : null
-  const hints = PROVIDERS.find((p) => p.value === provider)?.hints ?? {}
+  const chosen = PROVIDERS.find((p) => p.value === provider)
+  const hints = chosen?.hints ?? {}
   const pick = (id: ProviderId) => {
     const p = PROVIDERS.find((x) => x.value === id)!
     setPickedOther(id === 'other')
@@ -150,11 +152,8 @@ function ConnectionBox({
       if (providerOf(values.endpoint) !== 'other') setValues((v) => ({ ...v, endpoint: '' }))
       return
     }
-    // A model named for another provider (glm-5.3-flash is
-    // z-ai/glm-5.3-flash on OpenRouter) follows the switch; one typed by
-    // hand stays.
-    const known = values.model === '' || PROVIDERS.some((x) => x.model === values.model)
-    setValues((v) => ({ ...v, endpoint: p.endpoint, model: known ? p.model : v.model }))
+    // An empty model takes OpenRouter's default; one typed by hand stays.
+    setValues((v) => ({ ...v, endpoint: p.endpoint, model: v.model === '' ? p.model : v.model }))
   }
 
   const test = useTestConnection()
@@ -202,6 +201,7 @@ function ConnectionBox({
           <div className="space-y-1">
             <span className="block text-xs text-muted-foreground">Provider</span>
             <SegmentedControl label="Provider" options={providers} value={provider} onChange={pick} />
+            {chosen && <span className="block text-xs text-muted-foreground">{chosen.note}</span>}
           </div>
         )}
         {fields.map((f) => (

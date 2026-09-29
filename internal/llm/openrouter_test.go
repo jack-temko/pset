@@ -32,7 +32,7 @@ func (f roundTrip) RoundTrip(r *http.Request) (*http.Response, error) { return f
 
 // TestOpenRouterShape: OpenRouter gets its reasoning object with the
 // effort, full-precision hosts only, and the earlier reasoning back under
-// its own name; Z.ai's fields don't go.
+// its own name; no other provider's fields go.
 func TestOpenRouterShape(t *testing.T) {
 	var got map[string]any
 	c := hostedAt(t, "https://openrouter.ai/api/v1", func(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +55,7 @@ func TestOpenRouterShape(t *testing.T) {
 		t.Error("reasoning_effort went to OpenRouter")
 	}
 	if _, ok := got["thinking"]; ok {
-		t.Error("Z.ai's thinking switch went to OpenRouter")
+		t.Error("another provider's thinking switch went to OpenRouter")
 	}
 	q, _ := got["provider"].(map[string]any)["quantizations"].([]any)
 	if len(q) == 0 || strings.Contains(strings.ToLower(jsonOf(q)), "fp4") {
@@ -87,27 +87,59 @@ func TestOpenRouterWithoutEffort(t *testing.T) {
 	}
 }
 
-// TestZaiShapeUnchanged: Z.ai keeps its own fields and gets none of
-// OpenRouter's.
-func TestZaiShapeUnchanged(t *testing.T) {
+// TestOtherEndpointsGetNoneOfIt: an endpoint that isn't OpenRouter gets
+// no reasoning, host options, effort or session, and no thinking back.
+func TestOtherEndpointsGetNoneOfIt(t *testing.T) {
 	var got map[string]any
-	c := hostedAt(t, "https://api.z.ai/api/paas/v4", func(w http.ResponseWriter, r *http.Request) {
+	c := hostedAt(t, "https://api.deepseek.com", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		json.Unmarshal(body, &got)
 		io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)
 	})
-	_, err := c.ChatOnce(context.Background(), ChatRequest{Model: "glm-5.3-flash", ReasoningEffort: "max", Messages: []Message{
+	ctx := WithSession(context.Background(), "question-1-guide")
+	_, err := c.ChatOnce(ctx, ChatRequest{Model: "m", ReasoningEffort: "max", Messages: []Message{
 		TextMessage("user", "hi"),
 		AssistantToolMessage(Reply{Reasoning: "earlier"}),
 	}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got["reasoning_effort"] != "max" || got["reasoning"] != nil || got["provider"] != nil {
-		t.Errorf("request = %v", got)
+	for _, k := range []string{"reasoning", "reasoning_effort", "provider", "session_id", "thinking"} {
+		if _, ok := got[k]; ok {
+			t.Errorf("%s went to a plain endpoint: %v", k, got)
+		}
 	}
-	if msg := got["messages"].([]any)[1].(map[string]any); msg["reasoning_content"] != "earlier" {
-		t.Errorf("assistant turn = %v, want reasoning_content", msg)
+	if msg := got["messages"].([]any)[1].(map[string]any); msg["reasoning"] != nil {
+		t.Errorf("assistant turn = %v, want no reasoning", msg)
+	}
+}
+
+// TestSessionFromContext: a job's session reaches OpenRouter on every call
+// made under it, capped at OpenRouter's 256 characters.
+func TestSessionFromContext(t *testing.T) {
+	var got map[string]any
+	c := hostedAt(t, "https://openrouter.ai/api/v1", func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		got = nil
+		json.Unmarshal(body, &got)
+		io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)
+	})
+	for _, tc := range []struct{ id, want string }{
+		{"question-63da-guide", "question-63da-guide"},
+		{strings.Repeat("x", 300), strings.Repeat("x", 256)},
+	} {
+		if _, err := c.ChatOnce(WithSession(context.Background(), tc.id), ChatRequest{Model: "m", Messages: []Message{TextMessage("user", "hi")}}); err != nil {
+			t.Fatal(err)
+		}
+		if got["session_id"] != tc.want {
+			t.Errorf("session_id = %v, want %q", got["session_id"], tc.want)
+		}
+	}
+	if _, err := c.ChatOnce(context.Background(), ChatRequest{Model: "m", Messages: []Message{TextMessage("user", "hi")}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := got["session_id"]; ok {
+		t.Error("a call outside any job sent a session")
 	}
 }
 
@@ -130,14 +162,15 @@ func TestStreamReadsOpenRouterReasoningAndUsage(t *testing.T) {
 	}
 }
 
-// TestOutOfCredit: Z.ai's 429 with code 1113 and OpenRouter's 402 are an
-// empty account, not a busy one, and aren't retried.
+// TestOutOfCredit: OpenRouter's 402, and a provider's 429 that says the
+// balance is gone, are an empty account, not a busy one, and aren't
+// retried.
 func TestOutOfCredit(t *testing.T) {
 	for _, tc := range []struct {
 		base, body string
 		status     int
 	}{
-		{"https://api.z.ai/api/paas/v4", `{"error":{"code":"1113","message":"Insufficient balance or no resource package. Please recharge."}}`, 429},
+		{"https://api.example.com/v1", `{"error":{"code":"1113","message":"Insufficient balance or no resource package. Please recharge."}}`, 429},
 		{"https://openrouter.ai/api/v1", `{"error":{"code":402,"message":"This request requires more credits"}}`, 402},
 	} {
 		calls := 0
@@ -154,7 +187,7 @@ func TestOutOfCredit(t *testing.T) {
 			t.Errorf("%s: %d calls, want 1: an empty account isn't retried", tc.base, calls)
 		}
 	}
-	// Z.ai shedding load is still busy, and still retried.
+	// A provider shedding load is still busy, and still retried.
 	if !(!OutOfCredit(429, `{"error":{"code":"1302","message":"rate limit"}}`)) {
 		t.Error("a plain rate limit read as out of credit")
 	}

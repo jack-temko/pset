@@ -146,6 +146,7 @@ func (s *Service) runAssignmentRead(ctx context.Context, j jobs.Job) error {
 	if err := j.Decode(&p); err != nil {
 		return err
 	}
+	ctx = llm.WithSession(ctx, "assignment-"+p.ReadID)
 	var bookID, source, pageURL, text string
 	var data []byte
 	err := s.c.DB.QueryRowContext(ctx, `SELECT book_id, source, url, text, file FROM assignment_reads WHERE id = ?`, p.ReadID).

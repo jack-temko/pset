@@ -145,7 +145,7 @@ func TestAGuideCarriesOnAfterARestart(t *testing.T) {
 		t.Fatalf("stopped question kept a hint %v", q.Hint)
 	}
 	saved, err := savedRounds(context.Background(), e.svc.c.DB, id)
-	if err != nil || len(saved) != 2 || saved[0].ReasoningContent != "Ohm's law, then arithmetic." {
+	if err != nil || len(saved) != 2 || saved[0].Reasoning != "Ohm's law, then arithmetic." {
 		t.Fatalf("saved rounds %+v, %v", saved, err)
 	}
 

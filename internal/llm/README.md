@@ -18,8 +18,8 @@ images as `image_url` parts.
 
 ## Wire shapes
 
-OpenAI-compatible, as spoken by `https://api.z.ai/api/paas/v4` and OpenAI-
-shaped local servers (ollama's `/v1`):
+OpenAI-compatible, as spoken by OpenRouter (`https://openrouter.ai/api/v1`,
+PSet's chat provider) and OpenAI-shaped local servers (ollama's `/v1`):
 
 - `POST {apiBase}/chat/completions` — body `{"model","messages","stream",
   "max_tokens?"}`; `messages[i].content` is either a plain JSON string or an
@@ -35,25 +35,32 @@ Auth is `Authorization: Bearer <key>` on every request.
 
 ## Providers
 
-`shape` fits each request to the endpoint, known by its host:
+PSet's chat goes through **OpenRouter** (2026-09-29; direct Z.ai support
+was dropped then). `shape` fits each request to the endpoint, known by its
+host:
 
-- **Z.ai** (`api.z.ai`, `bigmodel.cn`): `reasoning_effort` as given, and
-  the model's reasoning sent back on its assistant turns as
-  `reasoning_content`, with `thinking: {type: enabled, clear_thinking:
-  false}` ("preserved thinking").
 - **OpenRouter** (`openrouter.ai`): `reasoning: {effort}` (or `{enabled:
-  true}` when no effort is asked for), the reasoning sent back as
-  `reasoning`, and `provider: {quantizations: [fp8, fp16, bf16, fp32,
-  unknown]}`, so no host running 4-bit weights serves PSet. Its streamed
-  thinking arrives as `delta.reasoning`, and every reply carries `usage`
-  with the call's `cost`.
-- **Anything else** gets neither the effort nor the reasoning: some
-  endpoints refuse the fields (DeepSeek's own API answers 400).
+  true}` when no effort is asked for); the model's reasoning sent back on
+  its assistant turns as `reasoning`, so it carries on from its own
+  thinking after each tool call; `provider: {quantizations: [fp8, fp16,
+  bf16, fp32, unknown]}`, so no host running 4-bit weights serves PSet;
+  and `session_id` from the context (`WithSession`), which groups a job's
+  calls (a guide's rounds and repairs, a book's Ask conversation) on
+  OpenRouter and keeps them on one host. Its streamed thinking arrives as
+  `delta.reasoning`, and every reply carries `usage` with the call's
+  `cost`.
+- **Anything else** (a local ollama, say) gets none of that: some
+  endpoints refuse the fields (DeepSeek's own API answers 400). A model
+  there thinks each step over from the start. Its thinking is still read
+  if it streams it, as `reasoning_content` or `reasoning`.
+
+Sessions: `question-<id>-<step>` (finding, reading, the guide),
+`ask-<book>`, `assignment-<id>`, `book-<id>-<step>`.
 
 A reply's `usage`, when the provider sends one, is kept on `Reply.Usage`
 and written to the call log. `Classify` names a failure: cut, busy,
-rejected, or **credit**, an account with no money left (OpenRouter's 402,
-Z.ai's 429 with code 1113), which is never retried.
+rejected, or **credit**, an account with no money left (OpenRouter's
+402, or a body saying the balance is gone), which is never retried.
 
 ## Contracts
 
