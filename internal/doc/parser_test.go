@@ -462,6 +462,13 @@ func TestAFormFeedAndSingleEscapedDelimitersAreRestored(t *testing.T) {
 	if m.Tex != `\frac{1}{2} + \nu + \beta` || m.Raw {
 		t.Fatalf("tex %q", m.Tex)
 	}
+	// A newline in an aligned environment is a newline: "\nv_1" is no command.
+	p = NewParser(context.Background(), Options{Mode: Ask, Model: noModel(t)}, Handler{})
+	feedIn(p, "{\"type\":\"math\",\"tex\":\"\\begin{aligned}\nv_1 &= 2\\\\\nx &= 3 \\end{aligned}\"}\n", 100)
+	json.Unmarshal(p.Blocks()[0], &m)
+	if m.Raw || !strings.HasPrefix(m.Tex, "\\begin{aligned}\nv_1") {
+		t.Fatalf("aligned %q raw=%v", m.Tex, m.Raw)
+	}
 	if len(para.Text) != 5 || para.Text[1].M != `\frac{a}{b}` || para.Text[3].M != `\theta` {
 		t.Fatalf("%s", runsJSON(para.Text))
 	}

@@ -120,12 +120,37 @@ func restoreAll(s string) string {
 	var b strings.Builder
 	for i, r := range rs {
 		if bs, ok := controls[r]; ok && i+1 < len(rs) && unicode.IsLetter(rs[i+1]) {
-			b.WriteString(bs)
-			continue
+			// A form feed, tab, backspace or carriage return before a letter is
+			// always a command. A newline is a command only when it makes a
+			// known one (\nu, \neq): a newline in an aligned environment is
+			// just a newline.
+			if r != '\n' || isNCommand(rs[i+1:]) {
+				b.WriteString(bs)
+				continue
+			}
 		}
 		b.WriteRune(r)
 	}
 	return b.String()
+}
+
+// nCommands are the TeX commands that begin with n, which a JSON \n
+// escape eats the backslash of.
+var nCommands = map[string]bool{
+	"nu": true, "ne": true, "neq": true, "nabla": true, "not": true, "notin": true, "neg": true, "ni": true,
+	"nleq": true, "ngeq": true, "nless": true, "ngtr": true, "nmid": true, "nsim": true, "ncong": true,
+	"nparallel": true, "nexists": true, "nrightarrow": true, "nleftarrow": true, "newline": true,
+	"normalsize": true, "nolimits": true, "nonumber": true, "natural": true, "nwarrow": true, "nearrow": true,
+}
+
+// isNCommand says the letters that follow a newline, with an n in front,
+// are a TeX command.
+func isNCommand(rest []rune) bool {
+	n := 0
+	for n < len(rest) && unicode.IsLetter(rest[n]) {
+		n++
+	}
+	return nCommands["n"+string(rest[:n])]
 }
 
 func restoreInMath(s string) string {
