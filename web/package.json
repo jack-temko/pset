@@ -24,11 +24,7 @@
     "lucide-react": "^1.43.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.3",
-    "rehype-katex": "^7.0.1",
-    "remark-gfm": "^4.0.1",
-    "remark-math": "^6.0.0",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {

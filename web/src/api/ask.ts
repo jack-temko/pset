@@ -2,14 +2,25 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 
 import { del, get, post } from './client'
 import { on } from './events'
-import type { Kind, Segment } from './gen/cards'
-import type { Question, Turn, TurnCard, TurnCardStart, TurnChanged, TurnDelta, Turns, TurnsCleared } from './gen/ask'
+import type { Block, Run } from './gen/doc'
+import type {
+  Question,
+  Turn,
+  TurnBlock,
+  TurnBlockRepairing,
+  TurnBlockStart,
+  TurnBlockText,
+  TurnChanged,
+  Turns,
+  TurnsCleared,
+} from './gen/ask'
 
 export type * from './gen/ask'
 
 /** A turn as the transcript holds it: what the server saved, plus what's
- *  streamed since, and the card being written right now, if any. */
-export type LiveTurn = Turn & { pending?: { kind: Kind; repairing: boolean } }
+ *  streamed since, and the block being written right now, if any: its
+ *  type, the runs of its text so far, and whether it is being repaired. */
+export type LiveTurn = Turn & { pending?: { type: string; runs: Run[]; repairing: boolean } }
 
 export const askKeys = { turns: (bookId: string) => ['turns', bookId] as const }
 
@@ -45,28 +56,31 @@ function patchTurn(qc: QueryClient, id: string, fn: (t: LiveTurn) => LiveTurn) {
   }
 }
 
-/** Streamed prose joins the paragraph in progress, unless a tool call
- *  ended it: a step sitting at the end of the answer (`after` is the
- *  segment count it ran at) means what comes next is its own paragraph,
- *  the way the server stored it. */
-function appendProse(t: LiveTurn, text: string): Segment[] {
-  const answer = t.answer
-  const last = answer[answer.length - 1]
-  const broke = t.steps.some((s) => s.after === answer.length)
-  if (last?.type === 'prose' && !broke)
-    return [...answer.slice(0, -1), { ...last, text: (last.text ?? '') + text }]
-  return [...answer, { type: 'prose', text }]
+/** What each block event does to a turn. Pure, so the streaming can be
+ *  tested without a stream. */
+export const stream = {
+  /** A block's type has arrived: its skeleton. */
+  start: (t: LiveTurn, type: string): LiveTurn => ({ ...t, pending: { type, runs: [], repairing: false } }),
+  /** The open text block's new runs join the ones already there. */
+  text: (t: LiveTurn, runs: Run[]): LiveTurn => ({
+    ...t,
+    pending: { type: t.pending?.type ?? 'para', repairing: false, runs: [...(t.pending?.runs ?? []), ...runs] },
+  }),
+  /** The block is being repaired: "Tidying". */
+  repairing: (t: LiveTurn, type: string): LiveTurn => ({
+    ...t,
+    pending: { type: t.pending?.type || type, runs: t.pending?.runs ?? [], repairing: true },
+  }),
+  /** A finished block, valid or raw, takes the skeleton's place. */
+  block: (t: LiveTurn, block: Block): LiveTurn => ({ ...t, pending: undefined, answer: [...t.answer, block] }),
 }
 
 on<TurnChanged>('turn.changed', (d, qc) => putTurn(qc, d.turn))
-on<TurnDelta>('turn.delta', (d, qc) => patchTurn(qc, d.turnId, (t) => ({ ...t, answer: appendProse(t, d.text) })))
-on<TurnCardStart>('turn.card.start', (d, qc) => patchTurn(qc, d.turnId, (t) => ({ ...t, pending: { kind: d.kind, repairing: false } })))
-on<TurnCardStart>('turn.card.repairing', (d, qc) =>
-  patchTurn(qc, d.turnId, (t) => ({ ...t, pending: { kind: d.kind, repairing: true } })),
-)
-on<TurnCard>('turn.card', (d, qc) =>
-  patchTurn(qc, d.turnId, (t) => ({ ...t, pending: undefined, answer: [...t.answer, d.segment] })),
-)
+on<TurnBlockStart>('turn.block.start', (d, qc) => patchTurn(qc, d.turnId, (t) => stream.start(t, d.type)))
+on<TurnBlockText>('turn.block.text', (d, qc) => patchTurn(qc, d.turnId, (t) => stream.text(t, d.runs)))
+on<TurnBlockRepairing>('turn.block.repairing', (d, qc) => patchTurn(qc, d.turnId, (t) => stream.repairing(t, d.type)))
+on<TurnBlock>('turn.block', (d, qc) => patchTurn(qc, d.turnId, (t) => stream.block(t, d.block)))
+on<TurnBlock>('turn.block.failed', (d, qc) => patchTurn(qc, d.turnId, (t) => stream.block(t, d.block)))
 on<TurnsCleared>('turns.cleared', (d, qc) => qc.setQueryData(askKeys.turns(d.bookId), []))
 
 // ---------------------------------------------------------------- mutations

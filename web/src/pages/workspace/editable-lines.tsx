@@ -6,10 +6,12 @@ import { Button } from '@/components/button'
 import { Door } from '@/components/door'
 import { AutoTextarea } from '@/components/input'
 import { Label } from '@/components/label'
-import { Prose } from '@/components/segments'
+import type { Run } from '@/api/gen/doc'
+import { Runs, runsSource } from '@/components/document'
 
 /** A value keeps its unit on its line: "9 Ω" never breaks after the 9. */
-const keepUnits = (line: string) => line.replace(/(\d) (?=[kmMµ]?(Ω|A|V|W|F|H|s)\b|[kmMµ]?Ω)/g, '$1 ')
+const keepUnits = (runs: Run[]): Run[] =>
+  runs.map((r) => (r.t === undefined ? r : { ...r, t: r.t.replace(/(\d) (?=[kmMµ]?(Ω|A|V|W|F|H|s)\b|[kmMµ]?Ω)/g, '$1 ') }))
 
 /**
  * A question's lines that the guide is written from and the student can
@@ -33,7 +35,8 @@ export function EditableLines({
   onCancel,
 }: {
   title: string
-  lines: string[]
+  /** Each line as runs; editing shows their source, and saving sends it back as text. */
+  lines: Run[][]
   /** How many lines show before the Door. */
   closed?: number
   /** A Label in the header, saying the student changed them. */
@@ -118,7 +121,7 @@ export function EditableLines({
         </span>
         {/* Each line keeps its dash in the box, so a line that wraps still
             reads as one. */}
-        <Button variant="ghost" size="sm" onClick={() => setDraft(lines.map((l) => `- ${l}`).join('\n'))}>
+        <Button variant="ghost" size="sm" onClick={() => setDraft(lines.map((l) => `- ${runsSource(l)}`).join('\n'))}>
           <Pencil />
           {editLabel}
         </Button>
@@ -127,7 +130,7 @@ export function EditableLines({
         <ul className="list-disc space-y-1 pl-5">
           {shown.map((l, i) => (
             <li key={i}>
-              <Prose text={keepUnits(l)} inline />
+              <Runs runs={keepUnits(l)} />
             </li>
           ))}
         </ul>

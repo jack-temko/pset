@@ -49,8 +49,9 @@ import { AutoTextarea, Field, Input } from '@/components/input'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { observe } from '@/lib/eta'
 import type { CoverHue } from '@/lib/covers'
-import { ASSIGNMENT, ASSIGNMENT_SETS, BOOKS, DUE, SEGMENTS, sampleBook } from '@/components/fixtures'
-import { CardSkeleton, Prose, Segments } from '@/components/segments'
+import { ASSIGNMENT, ASSIGNMENT_SETS, BLOCKS, BOOKS, DUE, GUIDE, GUIDE_HINT, sampleBook } from '@/components/fixtures'
+import { AnswersOf, BlockSkeleton, Document } from '@/components/document'
+import type { Block } from '@/api/gen/doc'
 import { PageMap, Pages } from '@/lib/pages'
 import type { Run } from '@/api/gen/pagenum'
 import { PageNumbersField } from '@/pages/workspace/page-numbers'
@@ -66,6 +67,24 @@ import type { Style } from '@/api/gen/probnum'
 import type { AssignmentRead } from '@/api/homework'
 import { BookTile } from '@/components/book-tile'
 import { cn } from '@/lib/utils'
+
+/** A paragraph of the phone-plan guide, as the server splits it. */
+const PLAN_PARA: Block = {
+  type: 'para',
+  text: [
+    { t: 'The plan charges 15 dollars a month plus 1 dollar a minute, so a month with ' },
+    { m: 'M' },
+    { t: ' minutes costs ' },
+    { m: 'C = 15 + M' },
+    { t: '. If each minute ends the call with probability ' },
+    { m: 'p' },
+    { t: ', then ' },
+    { m: 'E[M] = 1/p' },
+    { t: ' ' },
+    { cite: 108 },
+    { t: '.' },
+  ],
+}
 
 // The reading row has a minute of pace behind it, so it shows its time
 // left as a real import would (40 pages a minute, 172 to go).
@@ -1298,17 +1317,16 @@ export function Components() {
           </Shelf>
           <Shelf label="prose: reading">
             <div className="w-panel space-y-3 rounded-md border bg-rail p-card">
-              <Prose
-                reading
-                text={String.raw`The plan charges 15 dollars a month plus 1 dollar a minute, so a month with \(M\) minutes costs \(C = 15 + M\). If each minute ends the call with probability \(p\), then \(E[M] = 1/p\) [p. 108].`}
-              />
+              <Pages value={PageMap.single(16)}>
+                <Document reading blocks={[PLAN_PARA]} />
+              </Pages>
             </div>
           </Shelf>
           <Shelf label="prose: ask (unchanged)">
             <div className="w-panel space-y-3 rounded-md border bg-rail p-card text-base">
-              <Prose
-                text={String.raw`The plan charges 15 dollars a month plus 1 dollar a minute, so a month with \(M\) minutes costs \(C = 15 + M\). If each minute ends the call with probability \(p\), then \(E[M] = 1/p\) [p. 108].`}
-              />
+              <Pages value={PageMap.single(16)}>
+                <Document blocks={[PLAN_PARA]} />
+              </Pages>
             </div>
           </Shelf>
           <Pages value={PageMap.single(16)}>
@@ -1419,15 +1437,44 @@ export function Components() {
         </Section>
 
         <Section
-          title="Segments"
-          note="An answer as the engine sends it: prose and every card kind, at the panel's width, with the book's page offset of 16. The raw block is a card that couldn't be repaired."
+          title="Document"
+          note="What the engine writes, as the page draws it: a document of blocks, text split into runs by the server (math, marks, citations), so nothing here parses anything. Ask's answer is compact at the panel's width; a guide reads at the reading size, with its hint, walkthrough and answers as three veiled stages, the tree built from its part and step markers (steps number from 1 in each part), and each answer in place at the end of its part. Math that would not parse, and a block that could not be made valid, show as their source, muted, never red. Pages are PDF pages, with the book's offset of 16."
         >
           <Pages value={PageMap.single(16)}>
-            <div id="segments" className="w-panel space-y-3 rounded-md border bg-rail p-card text-base">
-              <Segments segments={SEGMENTS} onJump={() => {}} />
-              <CardSkeleton kind="plot" repairing={false} />
-              <CardSkeleton kind="steps" repairing />
-            </div>
+            <Shelf label="Ask's answer: every block type">
+              <div id="document" className="w-panel space-y-3 rounded-md border bg-rail p-card text-base">
+                <Document blocks={BLOCKS} onJump={() => {}} />
+              </div>
+            </Shelf>
+            <Shelf label="a guide: the hint, the walkthrough, the answers">
+              <div className="w-panel-wide space-y-5 rounded-md border bg-rail p-card text-base">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase">hint</p>
+                  <Document reading blocks={GUIDE_HINT} onJump={() => {}} />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase">walkthrough</p>
+                  <Document reading blocks={GUIDE} onJump={() => {}} />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase">answers</p>
+                  <AnswersOf blocks={GUIDE} onJump={() => {}} />
+                </div>
+              </div>
+            </Shelf>
+            <Shelf label="blocks being written: a paragraph streaming, a plot, worked steps, tidying">
+              <div className="w-panel space-y-3 rounded-md border bg-rail p-card text-base">
+                <BlockSkeleton
+                  type="para"
+                  runs={[{ t: 'Each minute a caller talks ends the call with probability ' }, { m: 'p' }, { t: ', so the length' }]}
+                  repairing={false}
+                />
+                <BlockSkeleton type="para" repairing={false} />
+                <BlockSkeleton type="step" repairing={false} />
+                <BlockSkeleton type="plot" repairing={false} />
+                <BlockSkeleton type="derivation" repairing />
+              </div>
+            </Shelf>
           </Pages>
         </Section>
 

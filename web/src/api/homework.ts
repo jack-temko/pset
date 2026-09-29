@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 
 import { del, get, patch, post, postForm } from './client'
 import { on } from './events'
+import type { Run } from './gen/doc'
 import { forget, observe } from '@/lib/eta'
 import type {
   AssignmentImport,
@@ -30,6 +31,10 @@ import type {
 } from './gen/homework'
 
 export type * from './gen/homework'
+
+/** A line of text as runs, before the server has split it: the guess an
+ *  optimistic update shows until the reply, with the real runs, replaces it. */
+const plainRuns = (line: string): Run[] => [{ t: line }]
 
 export const homeworkKeys = {
   forBook: (bookId: string) => ['homework', 'book', bookId] as const,
@@ -213,7 +218,7 @@ export function useUpdateQuestion(homeworkId: string) {
           const n = { ...q }
           if (p.reveal && !n.revealed.includes(p.reveal)) n.revealed = [...n.revealed, p.reveal]
           if (p.done !== undefined) n.done = p.done
-          if (p.notes) n.notes = p.notes
+          if (p.notes) n.notes = p.notes.map(plainRuns)
           return n
         })
         if (p.position !== undefined) {
@@ -244,6 +249,28 @@ export function useRemoveQuestion(homeworkId: string) {
       return { before }
     },
     onError: (_e, _v, ctx) => ctx?.before && qc.setQueryData(homeworkKeys.set(homeworkId), ctx.before),
+  })
+}
+
+/** "Write the guide" for a question that has none: the guides deleted when
+ *  documents arrived, and nothing writes one until it's asked for. */
+export function useWriteGuide() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => post<Question>(`/api/questions/${id}/guide`),
+    // The click is the student's own act, and shows at once: the question
+    // waits for its guide like any other found one.
+    onMutate: (id) => {
+      for (const [, d] of qc.getQueriesData<Detail>({ queryKey: ['homework', 'set'] })) {
+        const old = d?.questions.find((x) => x.id === id)
+        if (old) {
+          putQuestion(qc, { ...old, state: 'located', updatedAt: new Date().toISOString() }, true)
+          return { old }
+        }
+      }
+    },
+    onError: (_e, _v, ctx) => ctx?.old && putQuestion(qc, ctx.old, true),
+    onSuccess: (q) => putQuestion(qc, q),
   })
 }
 
@@ -287,7 +314,7 @@ export function useRedoReading() {
         if (old) {
           const next: Question = {
             ...old,
-            reading: lines ?? [],
+            reading: (lines ?? []).map(plainRuns),
             readingEdited: !!lines,
             state: 'located',
             hint: [],

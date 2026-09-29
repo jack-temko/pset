@@ -23,7 +23,7 @@ export function FigureReading({
   const lines = q.reading ?? []
   // Saving rewrites a guide that's there or on its way; a guide that
   // hasn't started just waits for the new lines.
-  const rewrites = q.state !== 'located'
+  const rewrites = q.state !== 'located' && q.state !== 'unwritten'
 
   if (lines.length === 0) {
     // Only a guide already written without one offers a reading: while a

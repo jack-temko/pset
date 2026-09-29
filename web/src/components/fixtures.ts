@@ -6,7 +6,7 @@
 
 import type { Assignment } from '@/api/homework'
 import type { Book } from '@/api/library'
-import type { Segment } from '@/api/gen/cards'
+import type { Block, Run } from '@/api/gen/doc'
 import type { HomeworkStatus } from '@/components/homework-status'
 import { COVERS } from '@/lib/covers'
 
@@ -183,70 +183,98 @@ export const DUE: Due[] = [
 /** How many of the due list Home shows before its door. */
 
 
-/** An answer as a model really writes one: every card kind, and the
- *  prose around them (lists, display math, citations, inline code). Pages
- *  are PDF pages; the components page renders with offset 16. */
-export const SEGMENTS: Segment[] = [
+// Runs the way the server splits them, without the string writing.
+const t = (text: string): Run => ({ t: text })
+const bold = (text: string): Run => ({ t: text, b: true })
+const italic = (text: string): Run => ({ t: text, i: true })
+const m = (tex: string): Run => ({ m: tex })
+const cite = (pdf: number, to?: number): Run => ({ cite: pdf, citeTo: to })
+
+/** An answer as the engine sends it: every block type, and the runs
+ *  inside them (math, marks, citations, math that failed and shows as its
+ *  source). Pages are PDF pages; the components page renders with offset
+ *  16. */
+export const BLOCKS: Block[] = [
   {
-    type: 'prose',
-    text: 'The **key idea** is Kirchhoff\'s voltage law [p. 58]: around any closed loop, the voltage rises equal the drops. Here that gives\n\n$$\\sum_k v_k = 0 \\quad\\Longrightarrow\\quad -\\frac{600}{13} + \\frac{150}{13}i + 10i - 5i_x + 40i = 0$$\n\nTwo things to keep straight:\n\n- the dependent source $5i_x$ is a *rise* in the direction of travel;\n- $v_1$ comes from the node equation at A, not the loop.\n\n### Solving',
+    type: 'para',
+    text: [t('The '), bold('key idea'), t(" is Kirchhoff's voltage law "), cite(58), t(': around any closed loop, the voltage rises equal the drops. Here that gives')],
+  },
+  { type: 'math', tex: '\\sum_k v_k = 0 \\quad\\Longrightarrow\\quad -\\frac{600}{13} + \\frac{150}{13}i + 10i - 5i_x + 40i = 0' },
+  { type: 'para', text: [t('Two things to keep straight: the dependent source '), m('5i_x'), t(' is a '), italic('rise'), t(' in the direction of travel, and '), m('v_1'), t(' comes from the node equation at A, not the loop.')] },
+  { type: 'step', title: [t('Solve for the loop current')] },
+  {
+    type: 'derivation',
+    steps: [
+      { tex: '-\\frac{600}{13} + \\frac{150}{13}i + 10i - 5i_x + 40i = 0', why: [t('KVL clockwise; the '), m('5i_x'), t(' source enters as a negative drop.')] },
+      { tex: '\\frac{800}{13}i = \\frac{600}{13} + 5i_x', why: [t('Collect the resistances: '), m('\\tfrac{150}{13} + 10 + 40 = \\tfrac{800}{13}')] },
+      { tex: 'i_x = 4 - \\frac{v_1}{15} = \\frac{12 + 10i}{13}', why: [t('From the node equation at A '), cite(60), t('.')] },
+      { tex: '800i = 660 + 50i \\;\\Rightarrow\\; i = \\frac{660}{750} = 0.88\\ \\text{A}' },
+      { tex: '\\frac{1}{', why: [t('TeX that would not parse, even after repair, shows as its source.')], raw: true },
+    ],
+  },
+  { type: 'note', text: [t('A quick check: '), m('0.88 \\times 800/13 \\approx 54.15'), t(', and the right side is '), m('600/13 + 8 \\approx 54.15'), t('.')] },
+  {
+    type: 'statement',
+    kind: 'Theorem',
+    number: '3.2',
+    name: 'Kirchhoff’s voltage law',
+    page: 58,
+    text: [t('The algebraic sum of the voltages around any closed path in a circuit is zero: '), m('\\sum_{k=1}^{n} v_k = 0'), t('.')],
   },
   {
-    type: 'card',
-    kind: 'steps',
-    card: {
-      steps: [
-        { math: '-\\frac{600}{13} + \\frac{150}{13}i + 10i - 5i_x + 40i = 0', why: 'KVL clockwise; the $5i_x$ source enters as a negative drop.' },
-        { math: '\\frac{800}{13}i = \\frac{600}{13} + 5i_x', why: 'Collect the resistances: $\\tfrac{150}{13} + 10 + 40 = \\tfrac{800}{13}$.' },
-        { math: 'i_x = 4 - \\frac{v_1}{15} = \\frac{12 + 10i}{13}', why: 'From the node equation at A [p. 60].' },
-        { math: '800i = 660 + 50i \\;\\Rightarrow\\; i = \\frac{660}{750} = 0.88\\ \\text{A}' },
-      ],
-    },
+    type: 'table',
+    columns: [[t('Element')], [t('Voltage')], [t('Direction')]],
+    rows: [
+      [[m('R_1')], [m('\\tfrac{150}{13}i')], [t('drop')]],
+      [[m('5i_x'), t(' source')], [m('5i_x')], [t('rise')]],
+      [[m('R_2'), t(' (40 Ω)')], [m('40i')], [t('drop')]],
+    ],
   },
   {
-    type: 'card',
-    kind: 'statement',
-    card: {
-      kind: 'Theorem',
-      number: '3.2',
-      name: 'Kirchhoff’s voltage law',
-      page: 58,
-      text: 'The algebraic sum of the voltages around any closed path in a circuit is zero: $\\sum_{k=1}^{n} v_k = 0$.',
-    },
+    type: 'plot',
+    title: 'Capacitor voltage after the switch closes',
+    x: { label: 't (ms)' },
+    y: { label: 'v (V)' },
+    series: [
+      { label: 'v_C(t)', points: Array.from({ length: 60 }, (_, i) => [i / 5, 12 * (1 - Math.exp(-i / 15))] as [number, number]) },
+      { label: 'v_R(t)', points: Array.from({ length: 60 }, (_, i) => [i / 5, 12 * Math.exp(-i / 15)] as [number, number]) },
+    ],
+    marks: [{ x: 3, y: 12 * (1 - Math.exp(-1)), label: 'one time constant' }],
   },
+  { type: 'callout', tone: 'caveat', title: [t('A common slip')], text: [t('Reading '), m('5i_x'), t(' as a drop when the loop enters it at the minus end.')] },
+  { type: 'para', text: [t('To check it numerically, '), { t: 'numpy', code: true }, t(' solves the same system:')] },
+  { type: 'code', language: 'python', code: 'import numpy as np\nA = np.array([[800/13, -5], [-10/13, 1]])\nb = np.array([600/13, 12/13])\nprint(np.linalg.solve(A, b))  # [0.88, 1.6]' },
+  { type: 'raw', of: 'plot', text: '{"title":"Broken","series":[{"label":"x","expr":"x^^2"' },
+  { type: 'para', text: [t('So '), m('i = 0.88'), t(' A and '), m('i_x = 1.6'), t(' A, as the answers at the back agree '), cite(402, 403), t('. The dollars are plain text: $25.42 a month.')] },
+]
+
+/** A guide as the walkthrough draws it: the hint apart, then parts with
+ *  steps and answers. The eigenvalue example of the writing guide. */
+export const GUIDE_HINT: Block[] = [
+  { type: 'hint', text: [t('An eigenvalue is a number '), m('\\lambda'), t(' that makes '), m('A - \\lambda I'), t(' singular, so start from its determinant.')] },
+]
+
+export const GUIDE: Block[] = [
+  { type: 'part', label: '(a)', title: [t('The eigenvalues of '), m('A')] },
+  { type: 'step', title: [t('Turn eigenvalues into a determinant')] },
+  { type: 'para', text: [t('A nonzero '), m('v'), t(' with '), m('Av = \\lambda v'), t(' exists exactly when '), m('A - \\lambda I'), t(' sends some nonzero vector to zero, that is, when it is '), bold('singular'), t(' '), cite(132), t('. So we need')] },
+  { type: 'math', tex: '\\det(A - \\lambda I) = 0' },
+  { type: 'step', title: [t('Solve the characteristic equation')] },
   {
-    type: 'card',
-    kind: 'table',
-    card: {
-      columns: ['Element', 'Voltage', 'Direction'],
-      rows: [
-        ['$R_1$', '$\\tfrac{150}{13}i$', 'drop'],
-        ['$5i_x$ source', '$5i_x$', 'rise'],
-        ['$R_2$ (40 Ω)', '$40i$', 'drop'],
-      ],
-    },
+    type: 'derivation',
+    steps: [
+      { tex: '\\det\\begin{pmatrix} 2-\\lambda & 1 \\\\ 1 & 2-\\lambda \\end{pmatrix} = (2-\\lambda)^2 - 1', why: [t('The determinant of a 2 by 2 matrix is '), m('ad - bc'), t('.')] },
+      { tex: '(2-\\lambda)^2 - 1 = (\\lambda - 1)(\\lambda - 3)', why: [t('A difference of squares.')] },
+      { tex: '\\lambda = 1 \\quad\\text{or}\\quad \\lambda = 3', why: [t('A product is zero when a factor is.')] },
+    ],
   },
-  {
-    type: 'card',
-    kind: 'plot',
-    card: {
-      title: 'Capacitor voltage after the switch closes',
-      x: { label: 't (ms)' },
-      y: { label: 'v (V)' },
-      series: [
-        { label: 'v_C(t)', points: Array.from({ length: 60 }, (_, i) => [i / 5, 12 * (1 - Math.exp(-i / 15))] as [number, number]) },
-        { label: 'v_R(t)', points: Array.from({ length: 60 }, (_, i) => [i / 5, 12 * Math.exp(-i / 15)] as [number, number]) },
-      ],
-    },
-  },
-  { type: 'prose', text: 'To check it numerically, `numpy` solves the same system:' },
-  {
-    type: 'card',
-    kind: 'code',
-    card: { language: 'python', code: 'import numpy as np\nA = np.array([[800/13, -5], [-10/13, 1]])\nb = np.array([600/13, 12/13])\nprint(np.linalg.solve(A, b))  # [0.88, 1.6]' },
-  },
-  { type: 'raw', kind: 'plot', text: '{"title":"Broken","series":[{"label":"x","expr":"x^^2"' },
-  { type: 'prose', text: 'So $i = 0.88$ A and $i_x = 1.6$ A, as the answers at the back agree [pp. 402–403].' },
+  { type: 'note', text: [t('A quick check: the eigenvalues add to the trace, '), m('2 + 2 = 4'), t(', and multiply to the determinant, '), m('4 - 1 = 3'), t('.')] },
+  { type: 'answer', label: '(a)', text: [m('\\lambda_1 = 1'), t(' and '), m('\\lambda_2 = 3'), t('.')] },
+  { type: 'part', label: '(b)', title: [t('An eigenvector for each')] },
+  { type: 'step', title: [t('Find what each shifted matrix sends to zero')] },
+  { type: 'para', text: [t('For each '), m('\\lambda'), t(', an eigenvector is any nonzero solution of '), m('(A - \\lambda I)v = 0'), t('. For '), m('\\lambda = 3'), t(' the rows of '), m('A - 3I'), t(' are both '), m('(-1, 1)'), t(', so '), m('v'), t(' needs equal entries.')] },
+  { type: 'callout', tone: 'insight', title: [t("Why they're perpendicular")], text: [m('A'), t(' is symmetric, and a symmetric matrix always has perpendicular eigenvectors for different eigenvalues.')] },
+  { type: 'answer', label: '(b)', text: [m('\\lambda = 3'), t(': '), m('v = (1, 1)'), t('. '), m('\\lambda = 1'), t(': '), m('v = (1, -1)'), t('.')] },
 ]
 
 /** An assignment as read for review, like a course's semester table

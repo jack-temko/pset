@@ -435,7 +435,7 @@ func (s *Service) UpdateQuestion(ctx context.Context, id string, p QuestionPatch
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if p.Reveal != nil {
 			stage := *p.Reveal
-			if stage != "hint" && stage != "walkthrough" {
+			if stage != "hint" && stage != "walkthrough" && stage != "answers" {
 				return httpx.Invalid("reveal", "There's no stage called %q.", stage)
 			}
 			if !slices.Contains(q.Revealed, stage) {
