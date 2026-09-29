@@ -2,11 +2,21 @@
 
 ## Status
 
-**In progress** on branch `guide-blocks` (backend and renderer; the look
-shipped on `guide-look`). Grilled 2026-09-28, prompt evaluated 2026-09-29.
-Replaces the envelope format (design/backend.md, "The document") for Ask
-answers and homework guides alike. When it ships, design/backend.md and
-design/workspace.md take the spec and this file is marked Done.
+**Done** (branch `guide-blocks`, merged 2026-09-29 with `openrouter`;
+the look shipped on `guide-look`). The spec lives in design/backend.md
+("The document") and design/workspace.md. This file stays for the prompt
+evaluation and the tested guide prompt, and for two follow-ups the last
+real-model run (2026-09-29, through OpenRouter) turned up:
+
+- **Ask's prompt is untested.** GLM-5.3-Flash answered an Ask partly in
+  plain prose between tool calls and reached for guide-only blocks (hint,
+  answer): the repair loop rewrote it in four calls, and a first sentence
+  still showed as a raw block. The guide prompt got an A/B; Ask's needs
+  one. DeepSeek V4.1 Flash's Ask came out clean.
+- **Gemini through OpenRouter stops mid-guide.** Gemini 3.8 Flash wrote
+  two of four guides and stopped without an answer on the other two,
+  nudge included: likely its tool loop wants `reasoning_details` handed
+  back, not the plain `reasoning` PSet sends.
 
 ## Information
 
