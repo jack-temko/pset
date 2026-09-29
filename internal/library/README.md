@@ -8,7 +8,8 @@ search over it. Specs: `design/import.md`, `design/workspace.md`.
 `books` (one row per PDF, keyed by a UUID, `sha256` unique), and
 everything read out of a book, all cascading from it: `pages` (text and a
 status: text, blank or failed) with the `pages_fts` index kept by
-triggers, `sections` (the contents, in order, with levels), and
+triggers (book id and page number are indexed columns, so a search and a
+removal are lookups, and a search names the text column), `sections` (the contents, in order, with levels), and
 `embeddings` (one vector per page, in one model's space).
 
 `edited` is set when the student changes title or author, and
