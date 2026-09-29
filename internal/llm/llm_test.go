@@ -8,8 +8,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func testClient(t *testing.T, chatBase, embedBase string) *Client {
@@ -400,5 +402,24 @@ func TestReasoningEffortGoesOnlyToOpenRouter(t *testing.T) {
 	}
 	if b, _ := json.Marshal(req); strings.Contains(string(b), "reasoning_effort") {
 		t.Fatal("reasoning_effort would go on the wire under its own name")
+	}
+}
+
+// TestClientsShareConnections: clients are built per call, so a Transport
+// of their own each leaked its idle connections and their goroutines.
+func TestClientsShareConnections(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"data":[{"index":0,"embedding":[0.1,0.2]}]}`))
+	}))
+	defer srv.Close()
+	before := runtime.NumGoroutine()
+	for range 100 {
+		if _, err := New("", "k", srv.URL, "m").Embed(context.Background(), []string{"q"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	time.Sleep(100 * time.Millisecond)
+	if grew := runtime.NumGoroutine() - before; grew > 20 {
+		t.Errorf("100 clients left %d more goroutines running: each kept its own idle connections", grew)
 	}
 }
