@@ -288,11 +288,20 @@ type ReasoningOptions struct {
 }
 
 // ProviderOptions is OpenRouter's say in which hosts serve a model: which
-// to try first (Order, falling back to the rest), and at what precision.
+// to try first (Order, falling back to the rest), at what precision, and
+// how to rank the rest (Sort).
 type ProviderOptions struct {
 	Order         []string `json:"order,omitempty"`
 	Quantizations []string `json:"quantizations,omitempty"`
+	Sort          string   `json:"sort,omitempty"`
 }
+
+// fastestFirst ranks a model's hosts by speed. Hosts of one model differ
+// several times over: an assignment read that took 157s on the host
+// OpenRouter chose took 28s on the fastest, reading the same rows, for
+// about half a cent more (DeepSeek V4.1 Flash, 2026-09-29). A session's
+// later calls still ask first for the host that served its first.
+const fastestFirst = "throughput"
 
 // fullPrecision is the weights OpenRouter may serve PSet's models at. The
 // cheapest hosts run 4-bit weights (fp4, int4), which can reason worse;
@@ -405,7 +414,7 @@ func (c *Client) shape(ctx context.Context, req ChatRequest) ChatRequest {
 			}
 		}
 		if req.Provider == nil {
-			req.Provider = &ProviderOptions{Quantizations: fullPrecision}
+			req.Provider = &ProviderOptions{Quantizations: fullPrecision, Sort: fastestFirst}
 			if h := hostFor(req.SessionID); h != "" {
 				req.Provider.Order = []string{h}
 			}

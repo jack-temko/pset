@@ -404,8 +404,18 @@ const dropRead = (qc: QueryClient, id: string, bookId: string) => {
   qc.removeQueries({ queryKey: homeworkKeys.read(id) })
 }
 
-on<ReadChanged>('assignment.changed', (d, qc) => putRead(qc, d.read))
-on<ReadRemoved>('assignment.removed', (d, qc) => dropRead(qc, d.id, d.bookId))
+/** The step a read is in, for its time left (lib/eta): reading, or none.
+ *  One model call, so it's estimated from how long past reads took. */
+export const readStep = (r: Pick<AssignmentRead, 'state'>) => (r.state === 'reading' ? 'assignment:reading' : undefined)
+
+on<ReadChanged>('assignment.changed', (d, qc) => {
+  observe(`read:${d.read.id}`, readStep(d.read))
+  putRead(qc, d.read)
+})
+on<ReadRemoved>('assignment.removed', (d, qc) => {
+  forget(`read:${d.id}`)
+  dropRead(qc, d.id, d.bookId)
+})
 
 /** The book's assignments being read or waiting for review. */
 export const useAssignmentReads = (bookId: string) =>

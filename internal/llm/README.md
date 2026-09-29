@@ -43,7 +43,9 @@ host:
   true}` when no effort is asked for); the model's reasoning sent back on
   its assistant turns as `reasoning`, so it carries on from its own
   thinking after each tool call; `provider: {quantizations: [fp8, fp16,
-  bf16, fp32, unknown]}`, so no host running 4-bit weights serves PSet;
+  bf16, fp32, unknown], sort: "throughput"}`, so no host running 4-bit
+  weights serves PSet and the fastest host comes first (a model's hosts
+  differ several times over in speed);
   and `session_id` from the context (`WithSession`), which groups a job's
   calls (a guide's rounds and repairs, a book's Ask conversation) on
   OpenRouter and keeps them on one host. Its streamed thinking arrives as

@@ -113,6 +113,9 @@ CREATE INDEX assignment_reads_book ON assignment_reads (book_id, created_at);`},
 		// guide"); one still waiting for its guide writes it in the new
 		// format when its turn comes.
 		{Name: "homework/12", Do: structuredGuides},
+		// What a read is doing while it reads: thinking, then the lines
+		// found so far.
+		{Name: "homework/13", SQL: `ALTER TABLE assignment_reads ADD COLUMN activity TEXT NOT NULL DEFAULT ''`},
 	}
 }
 

@@ -19,11 +19,13 @@ import {
   useNewHomework,
   useStartRead,
   type AssignmentFrom,
+  type AssignmentRead,
   type LineReading,
   type Summary,
 } from '@/api/homework'
 import { cn, plural } from '@/lib/utils'
 import { NumberingCheck, QuestionRows, draftsOf, emptyRow, rowsCount } from './dialogs'
+import { ReadWorking } from './assignment-reads'
 import { ReadsAs, useLiveReadings } from './reads-as'
 import {
   actionLabel,
@@ -269,7 +271,7 @@ export function AddHomeworkDialog({
         }}
       />
       {step === 'reading' ? (
-        <ReadingNote what={read?.source ?? ''} />
+        <ReadingNote read={read} />
       ) : step === 'review' && read?.assignment ? (
         <AssignmentReview
           source={read.assignment.source}
@@ -466,12 +468,17 @@ export function AssignmentSourceFields({
 /** The wait while the model reads it, which needn't be watched: seconds
  *  for a one-date sheet, minutes for a semester's table on a slow model
  *  (the 202 page took three and a half on a flash model). */
-function ReadingNote({ what }: { what: string }) {
+function ReadingNote({ read }: { read?: AssignmentRead }) {
   return (
     <div className="flex items-center gap-3 py-6">
       <Spinner className="text-muted-foreground" label="Reading" />
       <div className="min-w-0 space-y-1">
-        <p className="truncate text-sm">Reading {sourceName(what)}…</p>
+        <p className="truncate text-sm">Reading {sourceName(read?.source ?? '')}…</p>
+        {read && (
+          <p className="text-xs text-muted-foreground">
+            <ReadWorking r={read} />
+          </p>
+        )}
         <p className="text-xs text-muted-foreground">
           A one-page sheet takes seconds; a whole semester's page, or a scan, can take a few minutes. You can
           close this: it keeps reading, and waits in Homework for you to look it over.

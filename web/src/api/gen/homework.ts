@@ -460,6 +460,11 @@ export interface AssignmentRead {
    */
   error?: string;
   /**
+   * Activity is what a read under way is doing: "Thinking it over…",
+   * then "Found 12 lines so far…" as the lines come in. Empty otherwise.
+   */
+  activity?: string;
+  /**
    * Assignment is what was read, once it's ready, marked against the
    * sets already made from the same source.
    */

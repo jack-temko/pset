@@ -206,13 +206,24 @@ function StartBoxing() {
   return null
 }
 
-/** Reads in the Homework list: reading, read, an update read, failed. */
+/** Reads in the Homework list: reading (still thinking, then finding
+ *  lines), read, an update read, failed. */
 const READS: AssignmentRead[] = [
   {
     id: 'r1',
     bookId: 'b',
     source: 'https://people.example.edu/~prof/202/homework.htm',
     state: 'reading',
+    activity: 'Thinking it over…',
+    createdAt: '',
+    updatedAt: '',
+  },
+  {
+    id: 'r0',
+    bookId: 'b',
+    source: 'Syllabus and homework.pdf',
+    state: 'reading',
+    activity: 'Found 12 lines so far…',
     createdAt: '',
     updatedAt: '',
   },

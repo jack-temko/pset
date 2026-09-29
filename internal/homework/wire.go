@@ -366,6 +366,9 @@ type AssignmentRead struct {
 	State ReadState `json:"state"`
 	// Error says why it couldn't be read, when it failed.
 	Error string `json:"error,omitempty"`
+	// Activity is what a read under way is doing: "Thinking it over…",
+	// then "Found 12 lines so far…" as the lines come in. Empty otherwise.
+	Activity string `json:"activity,omitempty"`
 	// Assignment is what was read, once it's ready, marked against the
 	// sets already made from the same source.
 	Assignment *Assignment `json:"assignment,omitempty"`
