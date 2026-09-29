@@ -118,31 +118,17 @@ func minutes(beats int) int {
 }
 
 func (s *Service) Routes(mux *http.ServeMux) {
-	mux.HandleFunc("POST /api/heartbeat", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var h Heartbeat
-		if err := httpx.Decode(r, &h); err != nil {
-			return err
-		}
-		if err := s.Record(r.Context(), h); err != nil {
-			return err
-		}
-		return httpx.NoContent(w)
+	mux.HandleFunc("POST /api/heartbeat", httpx.Take(func(r *http.Request, h Heartbeat) error {
+		return s.Record(r.Context(), h)
 	}))
-	mux.HandleFunc("DELETE /api/heartbeats", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		if err := s.Clear(r.Context()); err != nil {
-			return err
-		}
-		return httpx.NoContent(w)
+	mux.HandleFunc("DELETE /api/heartbeats", httpx.Act(func(r *http.Request) error {
+		return s.Clear(r.Context())
 	}))
-	mux.HandleFunc("GET /api/week", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleFunc("GET /api/week", httpx.Reply(func(r *http.Request) (Week, error) {
 		since, err := time.Parse(time.RFC3339, r.URL.Query().Get("since"))
 		if err != nil {
-			return httpx.Invalid("since", "Say when the week starts, as an RFC 3339 time.")
+			return Week{}, httpx.Invalid("since", "Say when the week starts, as an RFC 3339 time.")
 		}
-		wk, err := s.Week(r.Context(), since)
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, wk)
+		return s.Week(r.Context(), since)
 	}))
 }

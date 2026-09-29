@@ -15,71 +15,32 @@ import (
 
 // Routes mounts the Settings endpoints.
 func (s *Service) Routes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/settings", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		v, err := s.Get(r.Context())
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, v)
+	mux.HandleFunc("GET /api/settings", httpx.Reply(func(r *http.Request) (Settings, error) {
+		return s.Get(r.Context())
 	}))
-	mux.HandleFunc("PUT /api/settings", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var in KeyInput
-		if err := httpx.Decode(r, &in); err != nil {
-			return err
-		}
-		v, err := s.Save(r.Context(), in)
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, v)
+	mux.HandleFunc("PUT /api/settings", httpx.Send(http.StatusOK, func(r *http.Request, in KeyInput) (SaveResult, error) {
+		return s.Save(r.Context(), in)
 	}))
-	mux.HandleFunc("PUT /api/settings/profile", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var p Profile
-		if err := httpx.Decode(r, &p); err != nil {
-			return err
-		}
-		v, err := s.SaveProfile(r.Context(), p)
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, v)
+	mux.HandleFunc("PUT /api/settings/profile", httpx.Send(http.StatusOK, func(r *http.Request, p Profile) (Profile, error) {
+		return s.SaveProfile(r.Context(), p)
 	}))
-	mux.HandleFunc("POST /api/settings/test", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var in KeyInput
-		if err := httpx.Decode(r, &in); err != nil {
-			return err
-		}
-		v, err := s.Test(r.Context(), in)
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, v)
+	mux.HandleFunc("POST /api/settings/test", httpx.Send(http.StatusOK, func(r *http.Request, in KeyInput) (TestResult, error) {
+		return s.Test(r.Context(), in)
 	}))
-	mux.HandleFunc("GET /api/health", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		return httpx.OK(w, s.Health(r.Context()))
+	mux.HandleFunc("GET /api/health", httpx.Reply(func(r *http.Request) (Health, error) {
+		return s.Health(r.Context()), nil
 	}))
-	mux.HandleFunc("POST /api/health/{check}/fix", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		v, err := s.Fix(r.Context(), r.PathValue("check"))
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, v)
+	mux.HandleFunc("POST /api/health/{check}/fix", httpx.Reply(func(r *http.Request) (HealthCheck, error) {
+		return s.Fix(r.Context(), r.PathValue("check"))
 	}))
-	mux.HandleFunc("GET /api/reset", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		v, err := s.ResetCounts(r.Context())
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, v)
+	mux.HandleFunc("GET /api/reset", httpx.Reply(func(r *http.Request) (ResetCounts, error) {
+		return s.ResetCounts(r.Context())
 	}))
-	mux.HandleFunc("POST /api/reset", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		if err := s.Reset(r.Context()); err != nil {
-			return err
-		}
-		return httpx.NoContent(w)
+	mux.HandleFunc("POST /api/reset", httpx.Act(func(r *http.Request) error {
+		return s.Reset(r.Context())
 	}))
-	mux.HandleFunc("GET /api/about", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		return httpx.OK(w, s.About())
+	mux.HandleFunc("GET /api/about", httpx.Reply(func(r *http.Request) (About, error) {
+		return s.About(), nil
 	}))
 }
 

@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 )
@@ -105,11 +104,16 @@ func NoContent(w http.ResponseWriter) error {
 const maxBody = 1 << 20
 
 // Decode reads a JSON body into v, refusing unknown fields: a misspelt
-// field is a bug on the client, and silently ignoring it hides the bug.
+// field is a bug on the client, and silently ignoring it hides the bug. A
+// body over maxBody is refused as too large, not read as far as it goes.
 func Decode(r *http.Request, v any) error {
-	dec := json.NewDecoder(io.LimitReader(r.Body, maxBody))
+	dec := json.NewDecoder(http.MaxBytesReader(nil, r.Body, maxBody))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			return Errorf(CodeInvalid, "That's too much to send in one request (over %d MB).", maxBody>>20)
+		}
 		return Errorf(CodeInvalid, "The request couldn't be read: %v", err)
 	}
 	return nil
