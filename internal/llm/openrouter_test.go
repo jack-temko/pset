@@ -57,6 +57,9 @@ func TestOpenRouterShape(t *testing.T) {
 	if _, ok := got["thinking"]; ok {
 		t.Error("another provider's thinking switch went to OpenRouter")
 	}
+	if s := got["provider"].(map[string]any)["sort"]; s != "throughput" {
+		t.Errorf("provider sort = %v, want throughput: the fastest host first", s)
+	}
 	q, _ := got["provider"].(map[string]any)["quantizations"].([]any)
 	if len(q) == 0 || strings.Contains(strings.ToLower(jsonOf(q)), "fp4") {
 		t.Errorf("quantizations = %v, want full precision only", q)

@@ -170,7 +170,7 @@ func (s *Service) runAssignmentRead(ctx context.Context, j jobs.Job) error {
 	}
 	var a Assignment
 	if err == nil {
-		a, err = s.readOut(ctx, bookID, source, content)
+		a, err = s.readOut(ctx, p.ReadID, bookID, source, content)
 	}
 	if err != nil {
 		if ctx.Err() != nil {
@@ -203,7 +203,7 @@ func (s *Service) settleRead(id string, state ReadState, msg string, a *Assignme
 	}
 	// The input is done with once it's read: a PDF needn't sit in the
 	// database until the review. A failed one keeps it, to try again.
-	res, err := s.c.DB.ExecContext(ctx, `UPDATE assignment_reads SET state = ?, error = ?, result = ?,
+	res, err := s.c.DB.ExecContext(ctx, `UPDATE assignment_reads SET state = ?, error = ?, activity = '', result = ?,
 		file = CASE WHEN ? = 'ready' THEN NULL ELSE file END, updated_at = ? WHERE id = ?`,
 		state, msg, result, state, db.Now(), id)
 	if err != nil {
@@ -217,8 +217,10 @@ func (s *Service) settleRead(id string, state ReadState, msg string, a *Assignme
 }
 
 // readOut is the model's pass over an assignment: due dates, and each
-// line as the book's numbering reads it.
-func (s *Service) readOut(ctx context.Context, bookID, source string, content []llm.Part) (Assignment, error) {
+// line as the book's numbering reads it. It streams, so the read can say
+// how it's going (a whole semester's page is minutes of thinking, then a
+// line at a time): see readProgress.
+func (s *Service) readOut(ctx context.Context, readID, bookID, source string, content []llm.Part) (Assignment, error) {
 	book, err := s.c.Library.Book(ctx, bookID)
 	if err != nil {
 		return Assignment{}, err
@@ -235,10 +237,11 @@ func (s *Service) readOut(ctx context.Context, bookID, source string, content []
 	for _, p := range content {
 		msg.AppendPart(p)
 	}
-	reply, err := m.client.ChatOnce(ctx, llm.ChatRequest{Model: m.name, Messages: []llm.Message{
+	progress := s.readProgress(ctx, readID)
+	reply, err := m.client.ChatStream(ctx, llm.ChatRequest{Model: m.name, Messages: []llm.Message{
 		llm.TextMessage("system", assignmentBrief(book, time.Now())),
 		{Role: "user", Content: msg},
-	}})
+	}, OnReasoning: progress.thinking}, progress.writing)
 	if err != nil {
 		if ctx.Err() != nil {
 			return Assignment{}, ctx.Err()
@@ -610,4 +613,62 @@ func styleExample(style probnum.Style) string {
 		return "2.1.4"
 	}
 	return "4.27"
+}
+
+// readProgressEvery is how often a read under way says how it's going: an
+// event a second at most, however fast the lines come.
+const readProgressEvery = time.Second
+
+// readProgressing is a read's progress as it streams: thinking first, then
+// the lines found so far, counted by the "text" of each row in the reply.
+type readProgressing struct {
+	s       *Service
+	ctx     context.Context
+	id      string
+	thought bool
+	reply   strings.Builder
+	shown   string
+	last    time.Time
+}
+
+func (s *Service) readProgress(ctx context.Context, id string) *readProgressing {
+	return &readProgressing{s: s, ctx: ctx, id: id}
+}
+
+func (p *readProgressing) thinking(string) {
+	if !p.thought {
+		p.thought = true
+		p.say("Thinking it over…", true)
+	}
+}
+
+func (p *readProgressing) writing(text string) error {
+	p.reply.WriteString(text)
+	lines := strings.Count(p.reply.String(), `"text"`)
+	msg := "Writing out what it found…"
+	if lines == 1 {
+		msg = "Found 1 line so far…"
+	} else if lines > 1 {
+		msg = fmt.Sprintf("Found %d lines so far…", lines)
+	}
+	p.say(msg, false)
+	return nil
+}
+
+// say records and announces the read's activity, when it changed and the
+// last announcement is a second old (or now matters, as the first word
+// does).
+func (p *readProgressing) say(msg string, now bool) {
+	if msg == p.shown || (!now && time.Since(p.last) < readProgressEvery) {
+		return
+	}
+	p.shown, p.last = msg, time.Now()
+	res, err := p.s.c.DB.ExecContext(p.ctx, `UPDATE assignment_reads SET activity = ? WHERE id = ? AND state = ?`, msg, p.id, ReadStateReading)
+	if err != nil {
+		slog.Warn("assignment: progress", "read", p.id, "err", err)
+		return
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		p.s.publishRead(p.ctx, p.id)
+	}
 }

@@ -275,9 +275,14 @@ built.
     wait said plainly (seconds for a one-page sheet, minutes for a
     semester's page or a scan on a slow model: the 202 page took three
     and a half on a flash model) and that it needn't be watched. The
-    footer's **Close** leaves it reading. A read waits at the top of the
-    Homework list, above the sets: reading (with a spinner and ✕ to
-    stop), read ("1 due date to look over", **Review**, ✕ to dismiss),
+    footer's **Close** leaves it reading. **How it's going**
+    (2026-09-29): the read streams, so a line under it says what it's
+    doing, "Thinking it over…" while the model thinks, then "Found 12
+    lines so far…" as the lines come in, with the time left once past
+    reads in this browser give an estimate (lib/eta, as a question's
+    working line). A read waits at the top of the
+    Homework list, above the sets: reading (with a spinner, that line,
+    and ✕ to stop), read ("1 due date to look over", **Review**, ✕ to dismiss),
     or failed (why, in warning ink, **Try again**, ✕). Review opens this
     dialog on its review; staying in the dialog moves to the review by
     itself when it's read. A read is gone once it's imported or

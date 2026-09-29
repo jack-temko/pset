@@ -15,12 +15,12 @@ import (
 // its dates and lines are already in the student's sets is worked out
 // each time it's shown, so it's never stale.
 
-const readColumns = `id, book_id, source, set_id, state, error, result, created_at, updated_at`
+const readColumns = `id, book_id, source, set_id, state, error, activity, result, created_at, updated_at`
 
 func scanRead(row interface{ Scan(...any) error }) (AssignmentRead, error) {
 	var r AssignmentRead
 	var result string
-	if err := row.Scan(&r.ID, &r.BookID, &r.Source, &r.SetID, &r.State, &r.Error, &result, &r.CreatedAt, &r.UpdatedAt); err != nil {
+	if err := row.Scan(&r.ID, &r.BookID, &r.Source, &r.SetID, &r.State, &r.Error, &r.Activity, &result, &r.CreatedAt, &r.UpdatedAt); err != nil {
 		return r, err
 	}
 	if result != "" {

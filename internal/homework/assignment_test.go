@@ -118,6 +118,8 @@ type reader struct {
 	got   []string
 	// hold, when set, keeps it from answering until closed.
 	hold chan struct{}
+	// reasoning, when set, streams first, as a thinking model's does.
+	reasoning string
 }
 
 func (m *reader) answer(req llm.ChatRequest) llmtest.Reply {
@@ -136,7 +138,7 @@ func (m *reader) answer(req llm.ChatRequest) llmtest.Reply {
 		}
 		m.got = append(m.got, p.Text)
 	}
-	return llmtest.Reply{Text: m.reply}
+	return llmtest.Reply{Text: m.reply, Reasoning: m.reasoning}
 }
 
 func (m *reader) shown() string {
@@ -499,5 +501,26 @@ func TestReadingLinesAsTheyreTyped(t *testing.T) {
 	}
 	if code := e.do(t, "POST", "/api/books/nope/references", ReferenceLines{Lines: []string{"3.36"}}, nil); code != 404 {
 		t.Fatalf("no book %d", code)
+	}
+}
+
+// TestAReadSaysHowItsGoing: a read streams, says it's thinking while the
+// model thinks, and carries no activity once it's done.
+func TestAReadSaysHowItsGoing(t *testing.T) {
+	e := newEnv(t)
+	m := newReader(e)
+	m.reasoning = "Week 3 lists 2.1 #4 and 2.1 #9."
+	r := e.read(t, AssignmentText{Text: "ECE 313 Assignment #3, due September 15\n1. Problem 2.1.4, p. 57.\n"})
+	if r.State != ReadStateReady || r.Activity != "" {
+		t.Fatalf("read %+v: want ready, with no activity left", r)
+	}
+	thinking := false
+	for _, ev := range e.events.all() {
+		if strings.HasPrefix(ev, EventReadChanged) && strings.Contains(ev, `"activity":"Thinking it over…"`) {
+			thinking = true
+		}
+	}
+	if !thinking {
+		t.Fatalf("no event said it was thinking: %v", e.events.all())
 	}
 }

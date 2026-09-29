@@ -3,6 +3,7 @@ package homework
 import (
 	"context"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -101,7 +102,9 @@ func TestGuidesAreWipedAndTextBecomesRuns(t *testing.T) {
 	defer d.Close()
 	migs := append(jobs.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
 	all := Migrations()
-	if err := db.Migrate(ctx, d, append(migs, all[:len(all)-1]...)); err != nil {
+	// Everything before the wipe, whatever comes after it.
+	wipe := slices.IndexFunc(all, func(m db.Migration) bool { return m.Name == "homework/12" })
+	if err := db.Migrate(ctx, d, append(migs, all[:wipe]...)); err != nil {
 		t.Fatal(err)
 	}
 	d.Exec(`INSERT INTO books VALUES ('b1')`)
