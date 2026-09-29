@@ -66,6 +66,42 @@ A step line can carry **one action** after a middle dot, drawn with
 hover. It exists for the remember step's **Undo** ("Remembered ·
 Theorem 1.5 · p. 22 · Undo"), and a line never gets two.
 
+## Guide pieces (`guide.tsx`)
+
+What a structured guide (ideas/structured-guides.md, "Look") is made of
+beyond prose, math and the cards above. All take plain props, not wire
+types: the renderer maps blocks onto them.
+
+- **`PartHeader`** `{label, title, first?}`: an Inter eyebrow in `primary`
+  (`text-xs`, tracked) over the title in Newsreader at `text-2xl`, with a
+  hairline above. The guide's first part passes `first` and has no rule.
+- **`StepHeading`** `{number, title}`: the number in Inter, `primary`,
+  `tabular-nums`, before a Newsreader `text-xl` title. The renderer
+  numbers steps, restarting in each part.
+- **`GuidePara`**: a paragraph at `text-reading` (18/30) whose inline math
+  is 1.1em (the `.guide-prose` class in `index.css`, which a run renderer
+  can put on any wrapper). `Prose` takes the same look with `reading`;
+  its default is unchanged.
+- **`Note`**: `text-xs`, `muted-foreground`, for an aside.
+- **`Callout`** `{tone: 'insight' | 'caveat' | 'check', title?, children}`:
+  a 2px left rule on the tone's ground. Insight is success ink on
+  `success-soft`, caveat warning on `warning-soft`; check is muted, with a
+  hairline frame. The title is in the tone's ink, the text in foreground.
+- **`AnswersCard`** `{title?, answers: {label?, children}[]}`: a Box, a row
+  per part, the label in `primary` in a 48px column and the answer beside
+  it. It wraps rather than breaking at a width: on a panel too narrow for
+  both, the answer drops under its label. An answer with no label takes the
+  whole row.
+
+**`Plot` marks**: `marks?: {x, y?, label?}[]`. With `y`, a dot with its
+label; without, a dashed vertical guide with its label at the top. The
+axes make room for every mark. Each label tries the corners around its
+dot (then the sides) and takes the first spot that stays inside the plot
+and touches no series line, dot, guide or earlier label, so a label never
+sits on a curve or leaves the plot. If nothing is free the least-crowded
+spot is used. Label ink is text, in foreground, with a card halo across the
+grid.
+
 ## Changes from baseline
 
 - The baseline has no transcript components: the old app's chat was part
@@ -76,5 +112,5 @@ Theorem 1.5 · p. 22 · Undo"), and a line never gets two.
 
 - Streaming states (Send→Stop, the "stopped" note, steps ticking in) are
   specced but need the loop backend's events to exist.
-- Answers here are JSX; the real backend will emit markdown/structured
-  content that needs a renderer mapping onto these pieces.
+- Answers here are JSX; the structured-guides renderer maps a guide's
+  blocks onto these pieces (ideas/structured-guides.md).

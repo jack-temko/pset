@@ -372,6 +372,14 @@
     }
 }
 
+/* A guide's prose is read, not skimmed: inline math a touch larger than the
+   18px text around it, but under KaTeX's own 1.21em, which is tall enough to
+   push a line of the 30px leading apart. Not global: Ask answers keep KaTeX's
+   default. */
+.guide-prose .katex {
+  font-size: 1.1em;
+}
+
 /* Display math that can't fit the panel scrolls sideways inside itself:
    the one inner scroll the system allows, for content that can't reflow.
    The block padding keeps an integral's tall glyphs from being clipped by

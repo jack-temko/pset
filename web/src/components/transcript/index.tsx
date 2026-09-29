@@ -311,3 +311,4 @@ export function FailedTurn({
 }
 
 export { AnswerTable, CodeBlock, Plot, Statement, WorkedSteps } from './cards'
+export { AnswersCard, Callout, GuidePara, Note, PartHeader, StepHeading, type CalloutTone } from './guide'

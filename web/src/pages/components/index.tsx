@@ -12,17 +12,23 @@ import { Flash } from '@/components/flash'
 import { HomeworkStatusLabel } from '@/components/homework-status'
 import { Label } from '@/components/label'
 import {
+  AnswersCard,
   AssistantTurn,
+  Callout,
   ConversationStart,
   DayDivider,
   FailedTurn,
+  GuidePara,
   MathDisplay,
   MathInline,
   AnswerTable,
   CodeBlock,
+  Note,
   PageRef,
+  PartHeader,
   Plot,
   Statement,
+  StepHeading,
   Steps,
   StoppedNote,
   Thinking,
@@ -44,7 +50,7 @@ import { DurationValue, StatTile } from '@/components/stat-tile'
 import { observe } from '@/lib/eta'
 import type { CoverHue } from '@/lib/covers'
 import { ASSIGNMENT, ASSIGNMENT_SETS, BOOKS, DUE, SEGMENTS, sampleBook } from '@/components/fixtures'
-import { CardSkeleton, Segments } from '@/components/segments'
+import { CardSkeleton, Prose, Segments } from '@/components/segments'
 import { PageMap, Pages } from '@/lib/pages'
 import type { Run } from '@/api/gen/pagenum'
 import { PageNumbersField } from '@/pages/workspace/page-numbers'
@@ -71,6 +77,14 @@ observe('book:b89d3b72', 'import:read', { done: 140, total: 312 }, Date.now())
  *  against the exponential it starts out as. */
 const EXP: [number, number][] = [[0.0, 10.0], [0.5, 12.84], [1.0, 16.49], [1.5, 21.17], [2.0, 27.18], [2.5, 34.9], [3.0, 44.82], [3.5, 57.55], [4.0, 73.89], [4.5, 94.88]]
 const LOGISTIC: [number, number][] = [[0.0, 10.0], [0.5, 12.49], [1.0, 15.48], [1.5, 19.04], [2.0, 23.2], [2.5, 27.94], [3.0, 33.24], [3.5, 39.0], [4.0, 45.09], [4.5, 51.32], [5.0, 57.51], [5.5, 63.48], [6.0, 69.06], [6.5, 74.13], [7.0, 78.63], [7.5, 82.53], [8.0, 85.85]]
+
+/** The guide's plot: a phone plan's expected monthly cost, 15 + 1/p, against
+ *  the flat $25.42 of the plan it is compared with. They cross at p = 0.0959. */
+const COST: [number, number][] = Array.from({ length: 37 }, (_, i) => {
+  const p = 0.05 + i * 0.0125
+  return [+p.toFixed(4), +(15 + 1 / p).toFixed(2)]
+})
+const OLD_PLAN: [number, number][] = [[0.05, 25.42], [0.5, 25.42]]
 
 /**
  * Every component and every variant, on one page, in the app itself.
@@ -1154,6 +1168,251 @@ export function Components() {
               <CodeBlock
                 language="scheme"
                 code={`(define (fib n)\n  (if (< n 2)\n      n\n      (+ (fib (- n 1)) (fib (- n 2)))))`}
+              />
+            </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Guide"
+          note="What a structured guide is made of, at the panel's width: a part's eyebrow over a serif title, numbered serif steps, prose at 18/30 with the math a little larger, small muted notes, callouts on their status tints, plots with marks, and the answers card. Content from the phone-plan and eigenvalue examples in ideas/structured-guides.md."
+        >
+          <Shelf label="part header">
+            <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
+              <PartHeader first label="Problem 3.6.6" title="What a month of calls costs" />
+              <GuidePara>The first part of a guide has no hairline above it. Every later part does.</GuidePara>
+              <PartHeader label="(b)" title="Which caller the old plan is priced at" />
+            </div>
+          </Shelf>
+          <Shelf label="step heading">
+            <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
+              <StepHeading number={1} title="Where the sum from 31 comes from" />
+              <StepHeading number={2} title="Collect the probability onto each cost" />
+              <StepHeading number={12} title="Numbers stay in a column of their own width" />
+            </div>
+          </Shelf>
+          <Shelf label="note">
+            <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
+              <Note>
+                A quick check: the eigenvalues add to the trace, <MathInline tex="2 + 2 = 4" />, and multiply to the
+                determinant, <MathInline tex="4 - 1 = 3" />.
+              </Note>
+            </div>
+          </Shelf>
+          <Shelf label="callout">
+            <div className="w-panel space-y-4 rounded-md border bg-rail p-card">
+              <Callout tone="insight" title="Why the 15 doesn't move">
+                <p>
+                  The flat fee is paid whatever you say, so it can only shift the answer, never change how it grows
+                  with <MathInline tex="p" />.
+                </p>
+              </Callout>
+              <Callout tone="caveat" title="A common slip">
+                <p>
+                  <MathInline tex="E[1/X]" /> is not <MathInline tex="1/E[X]" />. Here it works only because the
+                  minutes are the geometric variable itself.
+                </p>
+              </Callout>
+              <Callout tone="check" title="Check your answer">
+                <p>
+                  Put <MathInline tex="p = 0.2" /> back in: <MathInline tex="15 + 1/0.2 = 20" /> dollars a month.
+                </p>
+              </Callout>
+              <Callout tone="insight">
+                <p>Without a title, the text stands alone.</p>
+              </Callout>
+            </div>
+          </Shelf>
+          <Shelf label="answers card">
+            <div className="w-panel space-y-4 rounded-md border bg-rail p-card">
+              <AnswersCard
+                title="Answers"
+                answers={[
+                  {
+                    label: '(a)',
+                    children: (
+                      <p>
+                        <MathInline tex="E[C] = 15 + 1/p" />
+                      </p>
+                    ),
+                  },
+                  {
+                    label: '(b)',
+                    children: (
+                      <p>
+                        <MathInline tex="p \ge 0.2" /> keeps the new plan the cheaper one.
+                      </p>
+                    ),
+                  },
+                  { label: '3.6.6', children: <p>The caller pays $25.42 a month on the old plan.</p> },
+                ]}
+              />
+              <AnswersCard
+                answers={[
+                  { children: <p>No, <MathInline tex="F_T" /> is not a valid CDF: it falls after <MathInline tex="t = 1 + \sqrt{2}" />.</p> },
+                ]}
+              />
+            </div>
+          </Shelf>
+          <Shelf label="answers card, narrow">
+            <div className="w-48 rounded-md border bg-rail p-card">
+              <AnswersCard
+                answers={[
+                  { label: '(a)', children: <p><MathInline tex="\lambda_1 = 1" /> and <MathInline tex="\lambda_2 = 3" />.</p> },
+                  { label: '(b)', children: <p>Eigenvectors <MathInline tex="(1, -1)" /> and <MathInline tex="(1, 1)" />.</p> },
+                ]}
+              />
+            </div>
+          </Shelf>
+          <Shelf label="plot with marks">
+            <div className="w-panel">
+              <Plot
+                title="Expected monthly cost against p"
+                x={{ label: 'p' }}
+                y={{ label: 'dollars' }}
+                series={[
+                  { label: 'New plan, 15 + 1/p', points: COST },
+                  { label: 'Old plan', points: OLD_PLAN },
+                ]}
+                marks={[
+                  { x: 0.0959, y: 25.42, label: 'p = 0.0959' },
+                  { x: 0.2, label: 'p = 0.2' },
+                ]}
+              />
+            </div>
+          </Shelf>
+          <Shelf label="plot with marks, wide">
+            <div className="w-panel-wide">
+              <Plot
+                title="Expected monthly cost against p"
+                x={{ label: 'p' }}
+                y={{ label: 'dollars' }}
+                series={[{ label: 'New plan, 15 + 1/p', points: COST }]}
+                marks={[
+                  { x: 0.1, y: 25, label: 'One call in ten ends each minute' },
+                  { x: 0.25, y: 19, label: 'p = 0.25' },
+                  { x: 0.4, y: 17.5 },
+                ]}
+              />
+            </div>
+          </Shelf>
+          <Shelf label="prose: reading">
+            <div className="w-panel space-y-3 rounded-md border bg-rail p-card">
+              <Prose
+                reading
+                text={String.raw`The plan charges 15 dollars a month plus 1 dollar a minute, so a month with \(M\) minutes costs \(C = 15 + M\). If each minute ends the call with probability \(p\), then \(E[M] = 1/p\) [p. 108].`}
+              />
+            </div>
+          </Shelf>
+          <Shelf label="prose: ask (unchanged)">
+            <div className="w-panel space-y-3 rounded-md border bg-rail p-card text-base">
+              <Prose
+                text={String.raw`The plan charges 15 dollars a month plus 1 dollar a minute, so a month with \(M\) minutes costs \(C = 15 + M\). If each minute ends the call with probability \(p\), then \(E[M] = 1/p\) [p. 108].`}
+              />
+            </div>
+          </Shelf>
+          <Pages value={PageMap.single(16)}>
+            <Shelf label="a guide: phone plan">
+              <div className="w-panel space-y-4 rounded-md border bg-rail p-card">
+                <PartHeader first label="Problem 3.6.6" title="What a month of calls costs" />
+                <StepHeading number={1} title="What one minute is worth" />
+                <GuidePara>
+                  Each minute a caller talks ends the call with probability <MathInline tex="p" />, so the length{' '}
+                  <MathInline tex="M" /> of a call is geometric and <MathInline tex="E[M] = 1/p" />{' '}
+                  <PageRef pdf={108} />. At $1 a minute, <MathInline tex="1/p" /> minutes is <MathInline tex="1/p" />{' '}
+                  dollars.
+                </GuidePara>
+                <StepHeading number={2} title="Add the flat fee" />
+                <GuidePara>The $15 is paid whatever the caller says, so it simply adds on:</GuidePara>
+                <MathDisplay tex="E[C] = 15 + \frac{1}{p}" />
+                <Callout tone="insight" title="Why it is obviously right">
+                  <p>
+                    Talkative callers (small <MathInline tex="p" />) cost a lot; a caller who hangs up at once costs
+                    just the $15 plus a dollar.
+                  </p>
+                </Callout>
+                <Note>
+                  Reading: I take $1 a minute as billed to the second, so a call is never rounded up. Rounding up
+                  would add about half a dollar a call.
+                </Note>
+                <PartHeader label="(b)" title="Which caller the old plan is priced at" />
+                <StepHeading number={1} title="Where the sum from 31 comes from" />
+                <WorkedSteps
+                  steps={[
+                    { math: '15 + \\frac{1}{p} = 25.42', why: 'Set the new plan equal to the old plan.' },
+                    { math: '\\frac{1}{p} = 10.42' },
+                    { math: 'p \\approx 0.0959', why: 'Take the reciprocal of both sides.' },
+                  ]}
+                />
+                <Plot
+                  title="Expected monthly cost against p"
+                  x={{ label: 'p' }}
+                  y={{ label: 'dollars' }}
+                  series={[
+                    { label: 'New plan', points: COST },
+                    { label: 'Old plan', points: OLD_PLAN },
+                  ]}
+                  marks={[{ x: 0.0959, y: 25.42, label: 'p = 0.0959' }]}
+                />
+                <Callout tone="caveat" title="A common slip">
+                  <p>
+                    Don't compare the plans at one caller's <MathInline tex="p" /> and then quote the answer for all
+                    callers.
+                  </p>
+                </Callout>
+                <AnswersCard
+                  title="Answers"
+                  answers={[
+                    { label: '(a)', children: <p><MathInline tex="E[C] = 15 + 1/p" /></p> },
+                    { label: '(b)', children: <p><MathInline tex="p \approx 0.0959" /></p> },
+                  ]}
+                />
+              </div>
+            </Shelf>
+          </Pages>
+          <Shelf label="a guide: eigenvalues, wide">
+            <div className="w-panel-wide space-y-4 rounded-md border bg-rail p-card">
+              <PartHeader first label="(a)" title="The eigenvalues of A" />
+              <StepHeading number={1} title="Turn eigenvalues into a determinant" />
+              <GuidePara>
+                A nonzero <MathInline tex="v" /> with <MathInline tex="Av = \lambda v" /> exists exactly when{' '}
+                <MathInline tex="A - \lambda I" /> sends some nonzero vector to zero, that is, when it is{' '}
+                <strong>singular</strong>. So we need
+              </GuidePara>
+              <MathDisplay tex="\det(A - \lambda I) = 0" />
+              <StepHeading number={2} title="Solve the characteristic equation" />
+              <WorkedSteps
+                steps={[
+                  {
+                    math: '\\det\\begin{pmatrix} 2-\\lambda & 1 \\\\ 1 & 2-\\lambda \\end{pmatrix} = (2-\\lambda)^2 - 1',
+                    why: 'The determinant of a 2 by 2 matrix is ad - bc.',
+                  },
+                  { math: '(2-\\lambda)^2 - 1 = (\\lambda - 1)(\\lambda - 3)', why: 'A difference of squares.' },
+                  { math: '\\lambda = 1 \\quad\\text{or}\\quad \\lambda = 3', why: 'A product is zero when a factor is.' },
+                ]}
+              />
+              <Note>
+                A quick check: the eigenvalues add to the trace, <MathInline tex="2 + 2 = 4" />, and multiply to the
+                determinant, <MathInline tex="4 - 1 = 3" />.
+              </Note>
+              <PartHeader label="(b)" title="An eigenvector for each" />
+              <StepHeading number={1} title="Find what each shifted matrix sends to zero" />
+              <GuidePara>
+                For each <MathInline tex="\lambda" />, an eigenvector is any nonzero solution of{' '}
+                <MathInline tex="(A - \lambda I)v = 0" />.
+              </GuidePara>
+              <Callout tone="insight" title="Why they're perpendicular">
+                <p>
+                  <MathInline tex="A" /> is symmetric, and a symmetric matrix always has perpendicular eigenvectors for
+                  different eigenvalues.
+                </p>
+              </Callout>
+              <AnswersCard
+                title="Answers"
+                answers={[
+                  { label: '(a)', children: <p><MathInline tex="\lambda_1 = 1" /> and <MathInline tex="\lambda_2 = 3" />.</p> },
+                  { label: '(b)', children: <p><MathInline tex="\lambda = 3" />: <MathInline tex="v = (1, 1)" />. <MathInline tex="\lambda = 1" />: <MathInline tex="v = (1, -1)" />.</p> },
+                ]}
               />
             </div>
           </Shelf>
