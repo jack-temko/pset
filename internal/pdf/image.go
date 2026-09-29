@@ -4,40 +4,44 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/jackt/pset/internal/execx"
 )
 
 // PageImage rasterizes page n (1-based) of pdfPath to JPEG bytes at the
-// given DPI via a single-page pdftoppm run into a temp directory.
+// given DPI, for looking at.
 func PageImage(ctx context.Context, pdfPath string, n int, dpi int) ([]byte, error) {
-	if _, err := exec.LookPath("pdftoppm"); err != nil {
-		return nil, fmt.Errorf("%w: pdftoppm", ErrNotInstalled)
-	}
+	return rasterize(ctx, pdfPath, n, dpi, "jpg", "-jpeg", "-jpegopt", "quality=85")
+}
+
+// PagePNG rasterizes page n (1-based) of pdfPath to PNG bytes at the given
+// DPI: lossless, for reading text off a scan.
+func PagePNG(ctx context.Context, pdfPath string, n int, dpi int) ([]byte, error) {
+	return rasterize(ctx, pdfPath, n, dpi, "png", "-png")
+}
+
+// rasterize runs a single-page pdftoppm into a temp directory and returns
+// the one file it wrote, of extension ext.
+func rasterize(ctx context.Context, pdfPath string, n, dpi int, ext string, format ...string) ([]byte, error) {
 	dir, err := os.MkdirTemp("", "pset-page-*")
 	if err != nil {
 		return nil, fmt.Errorf("create temp dir: %w", err)
 	}
 	defer os.RemoveAll(dir)
 
-	prefix := filepath.Join(dir, "page")
-	cmd := exec.CommandContext(ctx, "pdftoppm",
-		"-f", strconv.Itoa(n), "-l", strconv.Itoa(n),
-		"-r", strconv.Itoa(dpi), "-jpeg", "-jpegopt", "quality=85", pdfPath, prefix)
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("rasterize page %d: %w: %s", n, err, strings.TrimSpace(stderr.String()))
+	args := append([]string{"-f", strconv.Itoa(n), "-l", strconv.Itoa(n), "-r", strconv.Itoa(dpi)}, format...)
+	if _, err := execx.Run(ctx, "pdftoppm", append(args, pdfPath, filepath.Join(dir, "page"))...); err != nil {
+		return nil, fmt.Errorf("rasterize page %d: %w", n, err)
 	}
-
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("read rasterized page: %w", err)
 	}
 	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".jpg") {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), "."+ext) {
 			return os.ReadFile(filepath.Join(dir, entry.Name()))
 		}
 	}

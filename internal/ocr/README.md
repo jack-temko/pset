@@ -1,9 +1,9 @@
 # ocr
 
 Thin exec wrapper around the local OCR pipeline: `pdftoppm` (poppler)
-rasterizes one page at a time, `tesseract` turns it into text. Mirrors the
-`internal/pdf` layer; the engine depends on this surface, not on the
-binaries.
+rasterizes one page at a time (through `pdf.PagePNG`), `tesseract` turns it
+into text. Programs are run through `internal/execx`, shared with
+`internal/pdf`; the library depends on this surface, not on the binaries.
 
 ## Dependencies
 
@@ -11,7 +11,7 @@ binaries.
   tesseract-ocr-eng) and `pdftoppm` (poppler-utils) on PATH. No cgo, no
   Python, no network.
 - When a tool is absent, calls return an error wrapping `ErrNotInstalled`
-  (check with `errors.Is`).
+  (the same error as `pdf.ErrNotInstalled`; check with `errors.Is`).
 
 ## API
 
@@ -23,7 +23,7 @@ still a successful result; the engine stores it as the page's done-marker.
 
 ## Contracts
 
-- Per-page only: the engine owns batching, progress, and resume semantics
+- Per-page only: the library owns batching, progress, and resume semantics
   (page rows in the store are the done-marker).
 - Pure adapter: no caching, no fallbacks, context-aware (cancelling kills
   the child process).

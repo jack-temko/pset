@@ -225,7 +225,7 @@ func TestOutOfCredit(t *testing.T) {
 		}
 	}
 	// A provider shedding load is still busy, and still retried.
-	if !(!OutOfCredit(429, `{"error":{"code":"1302","message":"rate limit"}}`)) {
+	if OutOfCredit(429, `{"error":{"code":"1302","message":"rate limit"}}`) {
 		t.Error("a plain rate limit read as out of credit")
 	}
 }
