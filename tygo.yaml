@@ -44,6 +44,11 @@ packages:
       export type Point = [number, number]
       /** One block of a document: the JSON of one of the block types below. */
       export type Block = HintBlock | PartBlock | StepBlock | ParaBlock | NoteBlock | MathBlock | DerivationBlock | CalloutBlock | StatementBlock | TableBlock | PlotBlock | CodeBlock | AnswerBlock | RawBlock
+  - path: github.com/jackt/pset/internal/usage
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/usage.ts
+    frontmatter: "// Generated from internal/usage/wire.go by tygo. Do not edit."
   - path: github.com/jackt/pset/internal/homework
     include_files: [wire.go]
     enum_style: union
@@ -51,9 +56,11 @@ packages:
     type_mappings:
       doc.Block: "Block"
       doc.Run: "Run"
+      usage.Usage: "Usage"
     frontmatter: |
       // Generated from internal/homework/wire.go by tygo. Do not edit.
       import type { Block, Run } from './doc'
+      import type { Usage } from './usage'
   - path: github.com/jackt/pset/internal/ask
     include_files: [wire.go]
     enum_style: union
@@ -61,9 +68,11 @@ packages:
     type_mappings:
       doc.Block: "Block"
       doc.Run: "Run"
+      usage.Usage: "Usage"
     frontmatter: |
       // Generated from internal/ask/wire.go by tygo. Do not edit.
       import type { Block, Run } from './doc'
+      import type { Usage } from './usage'
   - path: github.com/jackt/pset/internal/memory
     include_files: [wire.go]
     enum_style: union

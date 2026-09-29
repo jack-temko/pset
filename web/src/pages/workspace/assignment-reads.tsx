@@ -3,6 +3,7 @@ import { CircleAlert, FileCheck, X } from 'lucide-react'
 import { Box, BoxRow } from '@/components/box'
 import { Button, IconButton } from '@/components/button'
 import { Spinner } from '@/components/spinner'
+import { UsageLine } from '@/components/usage'
 import {
   readStep,
   useAssignmentReads,
@@ -99,7 +100,13 @@ export function AssignmentReadRow({
       <BoxRow
         leading={<CircleAlert className="text-warning" />}
         title={`Couldn't read ${sourceName(r.source)}`}
-        description={<span className="text-warning">{r.error}</span>}
+        wrapDescription={!!r.usage}
+        description={
+          <>
+            <span className="text-warning">{r.error}</span>
+            {r.usage && <>{'\u00A0·'} <UsageLine usage={r.usage} /></>}
+          </>
+        }
         trailing={
           <span className="flex items-center gap-1">
             <Button variant="ghost" size="sm" disabled={retry.isPending} onClick={() => retry.mutate(r.id)}>
@@ -116,8 +123,12 @@ export function AssignmentReadRow({
     <BoxRow
       leading={<FileCheck className="text-primary" />}
       title={name}
+      wrapDescription={!!r.usage}
       description={
-        setTitle ? `An update for ${setTitle}` : `${plural(groups.length, 'due date')} to look over`
+        <>
+          {setTitle ? `An update for ${setTitle}` : `${plural(groups.length, 'due date')} to look over`}
+          {r.usage && <>{'\u00A0·'} <UsageLine usage={r.usage} /></>}
+        </>
       }
       trailing={
         <span className="flex items-center gap-1">

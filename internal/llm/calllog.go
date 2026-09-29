@@ -19,6 +19,34 @@ const logMax = 20 << 20
 var callLog struct {
 	sync.Mutex
 	path string
+	// sink, when set, is handed every finished call: the usage store's
+	// writer, supplied by the db side (main.go). Nil stops it. The JSONL
+	// log keeps writing either way.
+	sink func(Call)
+}
+
+// OnCall sets the sink every finished call is handed to; nil stops it.
+func OnCall(fn func(Call)) {
+	callLog.Lock()
+	defer callLog.Unlock()
+	callLog.sink = fn
+}
+
+// Call is one finished model call, as the usage store records it: what it
+// was for (the job's Subject), who answered, and what the provider said
+// it cost. Usage is nil when the provider reported none, which is also
+// how a call that failed before a reply reads.
+type Call struct {
+	At          string
+	SubjectType string
+	SubjectID   string
+	Model       string
+	Answered    string
+	Ms          int64
+	Usage       *Usage
+	Host        string
+	Session     string
+	Error       string
 }
 
 // LogCallsTo starts the call log at path. Empty stops it.
@@ -58,14 +86,30 @@ type logMsg struct {
 }
 
 func logCall(req ChatRequest, start time.Time, reply Reply, err error) {
+	at := start.UTC().Format(time.RFC3339)
+	ms := time.Since(start).Milliseconds()
+	errText := ""
+	if err != nil {
+		errText = err.Error()
+	}
+	call := Call{
+		At: at, SubjectType: req.Subject.Type, SubjectID: req.Subject.ID,
+		Model: req.Model, Answered: reply.Model, Ms: ms, Usage: reply.Usage,
+		Host: reply.Host, Session: req.SessionID, Error: errText,
+	}
+
 	callLog.Lock()
-	defer callLog.Unlock()
-	if callLog.path == "" {
+	path, sink := callLog.path, callLog.sink
+	callLog.Unlock()
+	if path == "" {
+		if sink != nil {
+			sink(call)
+		}
 		return
 	}
 	rec := callRecord{
-		At: start.UTC().Format(time.RFC3339), Model: req.Model,
-		Millis: time.Since(start).Milliseconds(), Reply: reply.Content, Calls: reply.ToolCalls, Reasoned: len(reply.Reasoning), Reasoning: reply.Reasoning, Usage: reply.Usage,
+		At: at, Model: req.Model,
+		Millis: ms, Reply: reply.Content, Calls: reply.ToolCalls, Reasoned: len(reply.Reasoning), Reasoning: reply.Reasoning, Usage: reply.Usage,
 		Session: req.SessionID, Host: reply.Host, Answered: reply.Model,
 	}
 	for _, t := range req.Tools {
@@ -87,17 +131,21 @@ func logCall(req ChatRequest, start time.Time, reply Reply, err error) {
 		}
 		rec.Messages = append(rec.Messages, logMsg{m.Role, text})
 	}
-	if err != nil {
-		rec.Error = err.Error()
-	}
+	rec.Error = errText
 	line, _ := json.Marshal(rec)
-	if st, e := os.Stat(callLog.path); e == nil && st.Size() > logMax {
-		os.Rename(callLog.path, callLog.path+".1")
+	if st, e := os.Stat(path); e == nil && st.Size() > logMax {
+		os.Rename(path, path+".1")
 	}
-	f, e := os.OpenFile(callLog.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	f, e := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if e != nil {
+		if sink != nil {
+			sink(call)
+		}
 		return
 	}
 	f.Write(append(line, '\n'))
 	f.Close()
+	if sink != nil {
+		sink(call)
+	}
 }

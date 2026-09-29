@@ -283,6 +283,11 @@ type ChatRequest struct {
 	// session; it also keeps them on one host, which keeps its cache warm.
 	// Left empty, it comes from the context (WithSession).
 	SessionID string `json:"session_id,omitempty"`
+	// Subject is what this call was for, the thing its cost lands on.
+	// Left empty it comes from the context (WithSubject), which the job
+	// sets where it sets its session; the call log and the usage sink
+	// read it.
+	Subject Subject `json:"-"`
 	// OnReasoning, if set, receives a thinking model's reasoning as it
 	// streams: the part it writes before, and apart from, its answer.
 	OnReasoning func(text string) `json:"-"`
@@ -363,6 +368,27 @@ func keepHost(session, host string) {
 // to: a job sets it once, and the calls it makes, however deep, join it.
 func WithSession(ctx context.Context, id string) context.Context {
 	return context.WithValue(ctx, sessionKey{}, id)
+}
+
+// Subject is what a call was for: the kind of thing that spent it
+// ("question", "read", "turn", "book" — usage names them) and its id. A
+// call with no subject has an empty type.
+type Subject struct {
+	Type string
+	ID   string
+}
+
+type subjectKey struct{}
+
+// WithSubject names what every model call made under ctx was for: a job
+// sets it once, and the calls it makes, however deep, record it.
+func WithSubject(ctx context.Context, s Subject) context.Context {
+	return context.WithValue(ctx, subjectKey{}, s)
+}
+
+func subjectOf(ctx context.Context) Subject {
+	s, _ := ctx.Value(subjectKey{}).(Subject)
+	return s
 }
 
 // maxSession is OpenRouter's limit on a session id.
@@ -478,6 +504,9 @@ func (c *Client) Mechanical(model string) func(ctx context.Context, system, user
 // ChatOnceFull is ChatOnce with any requested tool calls visible.
 func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (reply Reply, err error) {
 	start := time.Now()
+	if req.Subject.Type == "" {
+		req.Subject = subjectOf(ctx)
+	}
 	defer func() { logCall(req, start, reply, err) }()
 	req.Stream = false
 	req = c.shape(ctx, req)
@@ -519,6 +548,9 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest, delta func(tex
 // [DONE] sentinel; a cancelled ctx aborts mid-stream.
 func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func(text string) error) (reply Reply, err error) {
 	start := time.Now()
+	if req.Subject.Type == "" {
+		req.Subject = subjectOf(ctx)
+	}
 	defer func() { logCall(req, start, reply, err) }()
 	req.Stream = true
 	req = c.shape(ctx, req)

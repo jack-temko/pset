@@ -183,6 +183,18 @@ delete asks first. Two rules keep that consistent:
   once, since each is one sentence and the tutor's own saves have Undo;
   and Dismiss on a failed import, which holds nothing of yours yet.
 
+**Informing, not asking** (2026-09-29). The same geometry serves the
+opposite job: a quiet line ("gpt-6-luna · 14s") may open a light popover
+that informs rather than asks — what a finished job spent, one row per
+model, time, tokens, dollars. It is the ConfirmPopover's card (`w-80`,
+under the control, over it when there's no room, portal to the body)
+with none of its ceremony: no buttons, no focus move, Esc and an outside
+press close it, a press inside only selects so the numbers copy. Where
+the ConfirmPopover detaches when the page scrolls, this one follows its
+line on scroll and resize, because the thing it describes keeps moving
+under it. Opening it moves nothing else. Component:
+`web/src/components/usage`.
+
 A scrolling flex child must set `min-h-0`. Flex items default to
 `min-height: auto` and refuse to shrink below their content, so a pane
 without it silently pushes the layout taller instead of scrolling.

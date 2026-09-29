@@ -14,6 +14,7 @@ import (
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pdf"
+	"github.com/jackt/pset/internal/usage"
 )
 
 type importPayload struct {
@@ -123,6 +124,7 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 		return err
 	}
 	ctx = llm.WithSession(ctx, fmt.Sprintf("book-%s-%s", p.BookID, j.Kind))
+	ctx = llm.WithSubject(ctx, llm.Subject{Type: usage.SubjectBook, ID: p.BookID})
 	b, err := getBook(ctx, s.c.DB, p.BookID)
 	if errors.Is(err, errNotFound) {
 		return nil

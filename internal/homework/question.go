@@ -16,6 +16,7 @@ import (
 	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/usage"
 )
 
 type questionPayload struct {
@@ -124,8 +125,10 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 		return err
 	}
 	// One session per step of a question, so a guide's rounds and repairs
-	// read as one conversation on OpenRouter.
+	// read as one conversation on OpenRouter. Every call the step makes
+	// was spent on this question.
 	ctx = llm.WithSession(ctx, fmt.Sprintf("question-%s-%s", p.QuestionID, j.Kind))
+	ctx = llm.WithSubject(ctx, llm.Subject{Type: usage.SubjectQuestion, ID: p.QuestionID})
 	q, err := getQuestion(ctx, s.c.DB, p.QuestionID)
 	if errors.Is(err, errNotFound) {
 		return nil
