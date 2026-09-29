@@ -91,6 +91,89 @@ export function WorkedSteps({ steps }: { steps: { math: string; why?: ReactNode 
   )
 }
 
+/** A mark on a plot: a labeled dot at (x, y), or, with no y, a vertical
+ *  guide line at x. */
+export type PlotMark = { x: number; y?: number; label?: string }
+
+type Box = { x: number; y: number; w: number; h: number }
+
+const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+
+/** Inter at the label size averages a little under 8px a character; 8.4
+ *  errs on the wide side, so a label never runs out of its room. */
+const LABEL_H = 20
+const labelW = (text: string) => Math.ceil(text.length * 8.4) + 8
+
+/**
+ * Where a mark's label goes: the first spot around its dot (above and to
+ * the right, then the other corners, then the sides) that stays inside the
+ * plot area and touches nothing drawn already, whether a series' line, a
+ * dot, a guide line or another label. `taken` grows as marks are placed, so
+ * later labels also keep clear of earlier ones. When nothing is free, the
+ * spot with the least overlap wins, so a label is always drawn.
+ *
+ * A guide line's label sits beside the line's top, then works down it.
+ */
+function placeLabels(
+  marks: PlotMark[],
+  at: (m: PlotMark) => { px: number; py?: number },
+  area: Box,
+  lines: [number, number][][],
+): (Box | null)[] {
+  // The series as obstacles: their segments sampled every 2px.
+  const obstacles: Box[] = []
+  for (const pts of lines)
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, ay] = pts[i - 1]
+      const [bx, by] = pts[i]
+      const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 2))
+      for (let k = 0; k <= n; k++)
+        obstacles.push({ x: ax + ((bx - ax) * k) / n - 1, y: ay + ((by - ay) * k) / n - 1, w: 2, h: 2 })
+    }
+  // Every mark's own dot or line is an obstacle for every label.
+  const own = marks.map((m): Box => {
+    const { px, py } = at(m)
+    return py === undefined
+      ? { x: px - 1, y: area.y, w: 2, h: area.h }
+      : { x: px - 6, y: py - 6, w: 12, h: 12 }
+  })
+  const taken: Box[] = []
+  return marks.map((m, i) => {
+    if (!m.label) return null
+    const { px, py } = at(m)
+    const w = labelW(m.label)
+    const h = LABEL_H
+    const gap = 8
+    const spots: Box[] =
+      py === undefined
+        ? [gap, ...Array.from({ length: 6 }, (_, k) => gap + (k + 1) * 28)].flatMap((dy) => [
+            { x: px + gap, y: area.y + dy - gap, w, h },
+            { x: px - gap - w, y: area.y + dy - gap, w, h },
+          ])
+        : [
+            { x: px + gap, y: py - gap - h, w, h },
+            { x: px - gap - w, y: py - gap - h, w, h },
+            { x: px + gap, y: py + gap, w, h },
+            { x: px - gap - w, y: py + gap, w, h },
+            { x: px + gap + 4, y: py - h / 2, w, h },
+            { x: px - gap - 4 - w, y: py - h / 2, w, h },
+            { x: px - w / 2, y: py - gap - h - 4, w, h },
+            { x: px - w / 2, y: py + gap + 4, w, h },
+          ]
+    const inside = (b: Box) => b.x >= area.x && b.y >= area.y && b.x + b.w <= area.x + area.w && b.y + b.h <= area.y + area.h
+    // What a spot collides with: how many samples of a line, and whether
+    // it hits another mark or label (which count for much more).
+    const cost = (b: Box) =>
+      (inside(b) ? 0 : 1e6) +
+      obstacles.filter((o) => overlaps(b, o)).length +
+      1e3 * own.filter((o, j) => j !== i && overlaps(b, o)).length +
+      1e3 * taken.filter((t) => overlaps(b, t)).length
+    const best = spots.reduce((a, b) => (cost(b) < cost(a) ? b : a), spots[0])
+    taken.push(best)
+    return best
+  })
+}
+
 /** Round, readable ticks: 1, 2 or 5 times a power of ten. */
 function ticks(min: number, max: number, count = 5): number[] {
   const span = max - min || 1
@@ -127,12 +210,15 @@ export function Plot({
   x,
   y,
   series,
+  marks = [],
 }: {
   title: string
   x: { label: string }
   y: { label: string }
   /** At most two. A third belongs in a second plot. */
   series: { label: string; points: [number, number][] }[]
+  /** Labeled points and vertical guides the axes always make room for. */
+  marks?: PlotMark[]
 }) {
   const wrap = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
@@ -151,12 +237,14 @@ export function Plot({
   const H = 200
   const m = { top: 12, right: 12, bottom: 28, left: 40 }
   const all = series.flatMap((s) => s.points)
-  const xs = all.map((p) => p[0])
-  const ys = all.map((p) => p[1])
+  // The axes make room for the marks too, so none is ever off the plot.
+  const xs = [...all.map((p) => p[0]), ...marks.map((k) => k.x)]
+  const ys = [...all.map((p) => p[1]), ...marks.flatMap((k) => (k.y === undefined ? [] : [k.y]))]
   const [x0, x1] = [Math.min(...xs), Math.max(...xs)]
   const yt = ticks(Math.min(0, ...ys), Math.max(...ys))
   const [y0, y1] = [yt[0], yt[yt.length - 1]]
-  const xt = ticks(x0, x1)
+  // Ticks past the data's ends would hang off the axis, so only those in it.
+  const xt = ticks(x0, x1).filter((v) => v >= x0 - 1e-9 && v <= x1 + 1e-9)
   const iw = Math.max(width - m.left - m.right, 0)
   const ih = H - m.top - m.bottom
   const sx = (v: number) => m.left + ((v - x0) / (x1 - x0 || 1)) * iw
@@ -168,6 +256,13 @@ export function Plot({
   // has nothing to say, rather than repeating its end.
   const at = (pts: [number, number][], vx: number) =>
     vx < pts[0][0] - 1e-9 || vx > pts[pts.length - 1][0] + 1e-9 ? null : nearest(pts, vx)
+  const area = { x: m.left, y: m.top, w: iw, h: ih }
+  const labels = placeLabels(
+    marks,
+    (k) => ({ px: sx(k.x), py: k.y === undefined ? undefined : sy(k.y) }),
+    area,
+    series.map((s) => s.points.map((p): [number, number] => [sx(p[0]), sy(p[1])])),
+  )
   // Snap the crosshair to the densest series' sample nearest the pointer.
   const base = series.reduce((a, s) => (s.points.length > a.length ? s.points : a), [] as [number, number][])
   const hx = hover === null ? null : nearest(base, hover)[0]
@@ -240,6 +335,42 @@ export function Plot({
                 strokeLinejoin="round"
               />
             ))}
+
+            {marks.map((k, i) => {
+              const box = labels[i]
+              return (
+                <g key={i}>
+                  {k.y === undefined ? (
+                    <line
+                      x1={sx(k.x)}
+                      x2={sx(k.x)}
+                      y1={m.top}
+                      y2={H - m.bottom}
+                      className="stroke-muted-foreground"
+                      strokeWidth={1}
+                      strokeDasharray="4 4"
+                    />
+                  ) : (
+                    <circle cx={sx(k.x)} cy={sy(k.y)} r={5} className="fill-foreground stroke-card" strokeWidth={2} />
+                  )}
+                  {/* Label ink is text, never the series colour; the card
+                      halo keeps it legible across a grid line. */}
+                  {k.label && box && (
+                    <text
+                      x={box.x + 4}
+                      y={box.y + box.h / 2}
+                      dominantBaseline="middle"
+                      className="fill-foreground stroke-card text-xs"
+                      strokeWidth={4}
+                      strokeLinejoin="round"
+                      paintOrder="stroke"
+                    >
+                      {k.label}
+                    </text>
+                  )}
+                </g>
+              )
+            })}
 
             {hx !== null && (
               <g>
@@ -315,6 +446,17 @@ export function Plot({
           1px height and grows to fit its rows, and hidden that way a long
           series left thousands of pixels of empty scroll under the answer. */}
       <div className="sr-only">
+        {marks.length > 0 && (
+          <ul>
+            {marks.map((k, i) => (
+              <li key={i}>
+                {k.label ? `${k.label}: ` : ''}
+                {x.label} = {fmt(k.x)}
+                {k.y === undefined ? '' : `, ${y.label} = ${fmt(k.y)}`}
+              </li>
+            ))}
+          </ul>
+        )}
         <table>
           <caption>{title}</caption>
           <thead>

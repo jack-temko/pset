@@ -40,14 +40,30 @@ export function escapeBlockStart(text: string): string {
     .replace(/^(\s*\d+)([.)])(?=\s|$)/, '$1\\$2')
 }
 
-export function Prose({ text, onJump, inline }: { text: string; onJump?: Jump; inline?: boolean }) {
+/**
+ * `reading` is the guide's prose: paragraphs at `text-reading` (18/30) with
+ * inline math a touch larger than the text (`.guide-prose` in index.css).
+ * The default stays the Ask panel's compact answer text.
+ */
+export function Prose({
+  text,
+  onJump,
+  inline,
+  reading,
+}: {
+  text: string
+  onJump?: Jump
+  inline?: boolean
+  reading?: boolean
+}) {
   const md = normalizeMath(inline ? escapeBlockStart(text) : text).replace(citation, (_m, _pp, n) => `[p. ${n}](#pdf-${n})`)
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={[rehypeKatex]}
       components={{
-        p: ({ children }) => (inline ? <>{children}</> : <p>{children}</p>),
+        p: ({ children }) =>
+          inline ? <>{children}</> : reading ? <p className="text-reading guide-prose">{children}</p> : <p>{children}</p>,
         // The reset strips list markers and heading sizes; prose wants a
         // quiet version of each back. Headings stay small: an answer in a
         // 440px panel has no room for a hierarchy, only for emphasis.
