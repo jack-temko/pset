@@ -289,9 +289,10 @@ func TestUploadRefusedWithoutEmbeddingsOrChat(t *testing.T) {
 		cfg  llm.Config
 		want string
 	}{
-		{llm.Config{}, "a chat model and an embeddings server"},
-		{llm.Config{EmbedEndpoint: full.EmbedEndpoint, EmbedModel: full.EmbedModel}, "Set up a chat model"},
-		{llm.Config{ChatEndpoint: full.ChatEndpoint, APIKey: full.APIKey, ChatModel: full.ChatModel}, "Set up an embeddings server"},
+		{llm.Config{}, "OpenRouter key"},
+		{llm.Config{EmbedEndpoint: full.EmbedEndpoint, EmbedModel: full.EmbedModel}, "OpenRouter key"},
+		{llm.Config{ChatEndpoint: full.ChatEndpoint, APIKey: full.APIKey, ChatModel: full.ChatModel}, "can't reach Ollama"},
+		{llm.Config{ChatEndpoint: full.ChatEndpoint, APIKey: full.APIKey, ChatModel: full.ChatModel, EmbedEndpoint: "http://127.0.0.1:1", EmbedModel: full.EmbedModel}, "can't reach Ollama"},
 	} {
 		e.models.cfg = c.cfg
 		var er httpx.Error
@@ -330,11 +331,11 @@ func TestScannedBookFailsOnUnreadPagesThenRetries(t *testing.T) {
 
 func TestEmbeddingFailureIsAReadableReason(t *testing.T) {
 	e := newEnv(t)
-	e.llm.FailEmbeddings(400)
+	e.llm.FailEmbeddingsAfter(1, 400)
 	var up BookChanged
 	e.upload(t, "a.pdf", fixturePDF(t, 0, 4, "E"), &up)
 	b := e.waitFor(t, up.Book.ID, StateFailed)
-	if !strings.Contains(b.State.Reason, "embeddings server stopped answering") {
+	if !strings.Contains(b.State.Reason, "Ollama stopped answering") {
 		t.Fatalf("reason %q", b.State.Reason)
 	}
 	e.llm.FailEmbeddings(0)

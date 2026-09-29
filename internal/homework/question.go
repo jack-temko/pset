@@ -47,18 +47,18 @@ func fail(kind Failure, err error, format string, args ...any) error {
 // question it was for: the page names the kind, this says what happened.
 func modelDown(err error, q row) error {
 	if errors.Is(err, agent.ErrNoAnswer) {
-		return fail(FailureGeneration, err, "The chat model stopped without writing the guide for %s. Trying again usually works.", problemName(q))
+		return fail(FailureGeneration, err, "The model stopped without writing the guide for %s. Trying again usually works.", problemName(q))
 	}
 	trouble, status := llm.Classify(err)
 	switch trouble {
 	case llm.TroubleCut:
-		return fail(FailureGeneration, err, "The walkthrough for %s stopped partway: the connection to the chat model dropped. Trying again usually works.", problemName(q))
+		return fail(FailureGeneration, err, "The walkthrough for %s stopped partway: the connection to the model dropped. Trying again usually works.", problemName(q))
 	case llm.TroubleRejected:
-		return fail(FailureSetup, err, "%s Check the chat connection in Settings, then try again.", llm.Refusal(status))
+		return fail(FailureSetup, err, "%s Check the key in Settings, then try again.", llm.Refusal(status))
 	case llm.TroubleCredit:
 		return fail(FailureSetup, err, "%s", llm.NoCredit)
 	}
-	return fail(FailureUnavailable, err, "Your chat model provider didn't answer, or is busy right now. Nothing is wrong with %s: try again in a minute.", problemName(q))
+	return fail(FailureUnavailable, err, "OpenRouter didn't answer, or is busy right now. Nothing is wrong with %s: try again in a minute.", problemName(q))
 }
 
 // problemName is a question as a sentence names it: "problem 4.44", or
@@ -184,7 +184,7 @@ func (s *Service) withModel(ctx context.Context, q row, step func(context.Contex
 		return err
 	}
 	if !cfg.ChatReady() {
-		return fail(FailureSetup, nil, "There's no chat model set up yet. Add one in Settings, under Connections, then try again.")
+		return fail(FailureSetup, nil, "There's no OpenRouter key yet. Add yours in Settings, under Connections, then try again.")
 	}
 	return step(ctx, model{client: llm.Open(cfg), name: cfg.ChatModel}, book, q)
 }
@@ -275,9 +275,9 @@ func (s *Service) read(ctx context.Context, m model, book Book, q row) error {
 	return nil
 }
 
-// readFigures is a reading of a question's figures, one fact a line:
-// read three times, quickly and at once, then settled into one with more
-// thought. On the nine circuits of a real problem set a single quick
+// readFigures is a reading of a question's figures, one fact a line, by
+// the Reader: read three times, quickly and at once, then settled into
+// one with more thought. On the nine circuits of a real problem set a single quick
 // reading got a node or a direction wrong about one time in four, never
 // the same way twice; settled, the hardest five came out right ten times
 // in ten. A reading that fails is left out, and when the settling fails
@@ -295,10 +295,10 @@ func (s *Service) readFigures(ctx context.Context, m model, book Book, q row) ([
 		for _, p := range append(slices.Clone(figs), extra...) {
 			content.AppendPart(p)
 		}
-		return m.client.ChatOnce(ctx, llm.ChatRequest{Model: m.name, ReasoningEffort: effort, Messages: []llm.Message{
+		return m.client.ChatOnce(ctx, llm.Reader.Ask(llm.ChatRequest{ReasoningEffort: effort, Messages: []llm.Message{
 			llm.TextMessage("system", system),
 			{Role: "user", Content: content},
-		}})
+		}}))
 	}
 	replies := make([]string, readings)
 	errs := make([]error, readings)

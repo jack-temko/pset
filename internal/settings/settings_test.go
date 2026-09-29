@@ -18,13 +18,20 @@ import (
 )
 
 type fakeDialer struct {
-	chatErr  error
-	embedErr error
+	chatErr   error
+	ollama    []string
+	ollamaErr error
+	pulled    string
 }
 
-func (f fakeDialer) Chat(context.Context, ChatConnection) error { return f.chatErr }
-func (f fakeDialer) Embed(context.Context, EmbedConnection) (int, error) {
-	return 768, f.embedErr
+func (f *fakeDialer) Chat(context.Context, string) error { return f.chatErr }
+func (f *fakeDialer) Ollama(context.Context) ([]string, error) {
+	return f.ollama, f.ollamaErr
+}
+func (f *fakeDialer) Pull(_ context.Context, m string) error {
+	f.pulled = m
+	f.ollama = append(f.ollama, m+":latest")
+	return nil
 }
 
 type fakeLibrary struct{}
@@ -54,7 +61,7 @@ func newServer(t *testing.T) *server {
 	dial := &fakeDialer{}
 	svc := New(Config{
 		DB: d, DataDir: dir, DBPath: path, Version: "1.2.3", Migrations: migs,
-		Dialer: dialerFunc{dial}, Library: fakeLibrary{},
+		Dialer: dial, Library: fakeLibrary{},
 		LookPath: func(string) (string, error) { return "", errors.New("missing") },
 	})
 	mux := http.NewServeMux()
@@ -62,15 +69,6 @@ func newServer(t *testing.T) *server {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	return &server{srv, svc, dial, dir}
-}
-
-// dialerFunc reads the fake through a pointer, so a test can change its
-// answers after the server is built.
-type dialerFunc struct{ f *fakeDialer }
-
-func (d dialerFunc) Chat(ctx context.Context, c ChatConnection) error { return d.f.Chat(ctx, c) }
-func (d dialerFunc) Embed(ctx context.Context, c EmbedConnection) (int, error) {
-	return d.f.Embed(ctx, c)
 }
 
 func (s *server) do(t *testing.T, method, path string, body, out any) int {
@@ -91,41 +89,56 @@ func (s *server) do(t *testing.T, method, path string, body, out any) int {
 	return resp.StatusCode
 }
 
-var goodChat = ChatConnection{Endpoint: "https://example.test/v1", APIKey: "k", Model: "m"}
+var goodKey = KeyInput{APIKey: " sk-or-good "}
 
-func TestFreshInstallShowsDefaultsNotReady(t *testing.T) {
+func TestFreshInstallHasNoKeyAndNamesTheModels(t *testing.T) {
 	s := newServer(t)
 	var got Settings
 	s.do(t, "GET", "/api/settings", nil, &got)
-	if got.Chat != DefaultChat || got.Embeddings != DefaultEmbed || got.Ready.Chat || got.Ready.Embeddings {
+	if got.APIKey != "" || got.Ready.Key || len(got.Models) != len(llm.Jobs) || got.Models[0].Model != llm.Writer.Model {
 		t.Fatalf("got %+v", got)
 	}
 	cfg, _ := s.svc.LLM(context.Background())
-	if cfg.ChatReady() || cfg.EmbedReady() {
-		t.Fatalf("defaults leaked into LLM config: %+v", cfg)
+	if cfg.ChatReady() || !cfg.EmbedReady() {
+		t.Fatalf("no key, yet chat is ready, or embeddings aren't: %+v", cfg)
 	}
 }
 
 func TestSaveTestsThenWrites(t *testing.T) {
 	s := newServer(t)
 	var res SaveResult
-	if code := s.do(t, "PUT", "/api/settings", ConnectionInput{Chat: &goodChat}, &res); code != 200 {
+	if code := s.do(t, "PUT", "/api/settings", goodKey, &res); code != 200 {
 		t.Fatalf("status %d", code)
 	}
-	if !res.Settings.Ready.Chat || res.Settings.Chat != goodChat || res.Detail != "Connected" {
+	if !res.Settings.Ready.Key || res.Settings.APIKey != "sk-or-good" || res.Detail != "Connected" {
 		t.Fatalf("got %+v", res)
 	}
 	cfg, _ := s.svc.LLM(context.Background())
-	if cfg != (llm.Config{ChatEndpoint: goodChat.Endpoint, APIKey: "k", ChatModel: "m"}) {
+	want := llm.Config{ChatEndpoint: llm.OpenRouter, APIKey: "sk-or-good", ChatModel: llm.Writer.Model, EmbedEndpoint: llm.EmbedEndpoint, EmbedModel: llm.EmbedModel}
+	if cfg != want {
 		t.Fatalf("llm config %+v", cfg)
 	}
 }
 
-func TestFailedSaveWritesNothingAndNamesTheField(t *testing.T) {
+// A key saved before PSet chose its models, for an endpoint other than
+// OpenRouter, isn't one it can use.
+func TestAKeyForAnotherEndpointIsntReady(t *testing.T) {
+	s := newServer(t)
+	for endpoint, want := range map[string]bool{"https://openrouter.ai/api/v1/": true, "http://localhost:11434/v1": false} {
+		save(context.Background(), s.svc.c.DB, keyChat, map[string]string{"endpoint": endpoint, "apiKey": "k", "model": "m"})
+		var got Settings
+		s.do(t, "GET", "/api/settings", nil, &got)
+		if got.Ready.Key != want {
+			t.Errorf("%s: ready %v, want %v", endpoint, got.Ready.Key, want)
+		}
+	}
+}
+
+func TestFailedSaveWritesNothing(t *testing.T) {
 	s := newServer(t)
 	s.dial.chatErr = &llm.LLMError{Status: 401, Body: "unauthorized"}
 	var e httpx.Error
-	if code := s.do(t, "PUT", "/api/settings", ConnectionInput{Chat: &goodChat}, &e); code != 422 {
+	if code := s.do(t, "PUT", "/api/settings", goodKey, &e); code != 422 {
 		t.Fatalf("status %d", code)
 	}
 	if e.Code != httpx.CodeBadKey || e.Field != "apiKey" {
@@ -133,7 +146,7 @@ func TestFailedSaveWritesNothingAndNamesTheField(t *testing.T) {
 	}
 	var got Settings
 	s.do(t, "GET", "/api/settings", nil, &got)
-	if got.Ready.Chat {
+	if got.Ready.Key {
 		t.Fatal("a failed save was written")
 	}
 }
@@ -141,71 +154,41 @@ func TestFailedSaveWritesNothingAndNamesTheField(t *testing.T) {
 func TestTestNeverWrites(t *testing.T) {
 	s := newServer(t)
 	var r TestResult
-	s.do(t, "POST", "/api/settings/test", ConnectionInput{Embeddings: &EmbedConnection{"http://x/v1", "e"}}, &r)
-	if r.Detail != "Connected · 768 dimensions" {
+	s.do(t, "POST", "/api/settings/test", goodKey, &r)
+	if r.Detail != "Connected" {
 		t.Fatalf("detail %q", r.Detail)
 	}
 	var got Settings
 	s.do(t, "GET", "/api/settings", nil, &got)
-	if got.Ready.Embeddings {
+	if got.Ready.Key {
 		t.Fatal("test wrote")
 	}
 }
 
-func TestOneSideAtATime(t *testing.T) {
-	s := newServer(t)
-	var e httpx.Error
-	code := s.do(t, "POST", "/api/settings/test", ConnectionInput{Chat: &goodChat, Embeddings: &EmbedConnection{"http://x", "e"}}, &e)
-	if code != 422 || e.Code != httpx.CodeInvalid {
-		t.Fatalf("%d %+v", code, e)
-	}
-}
-
-func TestFieldErrors(t *testing.T) {
+func TestErrors(t *testing.T) {
 	cases := []struct {
 		name  string
-		in    ChatConnection
+		key   string
 		err   error
 		code  httpx.Code
 		field string
 	}{
-		{"not a url", ChatConnection{"openrouter.ai", "k", "m"}, nil, httpx.CodeInvalid, "endpoint"},
-		{"no model", ChatConnection{"https://x", "k", " "}, nil, httpx.CodeInvalid, "model"},
-		{"refused key", goodChat, &llm.LLMError{Status: 403}, httpx.CodeBadKey, "apiKey"},
-		{"unknown model", goodChat, &llm.LLMError{Status: 400, Body: `{"error":"Model not found"}`}, httpx.CodeBadModel, "model"},
-		{"wrong path", goodChat, &llm.LLMError{Status: 404, Body: "not found"}, httpx.CodeUnreachable, "endpoint"},
-		{"server error", goodChat, &llm.LLMError{Status: 500}, httpx.CodeUnreachable, "endpoint"},
-		{"timeout", goodChat, context.DeadlineExceeded, httpx.CodeUnreachable, "endpoint"},
+		{"no key", "  ", nil, httpx.CodeInvalid, "apiKey"},
+		{"refused key", "k", &llm.LLMError{Status: 403}, httpx.CodeBadKey, "apiKey"},
+		{"unknown model", "k", &llm.LLMError{Status: 400, Body: `{"error":"Model not found"}`}, httpx.CodeBadModel, ""},
+		{"server error", "k", &llm.LLMError{Status: 500}, httpx.CodeUnreachable, ""},
+		{"timeout", "k", context.DeadlineExceeded, httpx.CodeUnreachable, ""},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			s := newServer(t)
 			s.dial.chatErr = c.err
-			in := c.in
 			var e httpx.Error
-			s.do(t, "POST", "/api/settings/test", ConnectionInput{Chat: &in}, &e)
+			s.do(t, "POST", "/api/settings/test", KeyInput{APIKey: c.key}, &e)
 			if e.Code != c.code || e.Field != c.field {
 				t.Fatalf("got %s on %q, want %s on %q (%s)", e.Code, e.Field, c.code, c.field, e.Message)
 			}
 		})
-	}
-}
-
-// A 401 with no key typed isn't a refused key; the copy must not accuse
-// one.
-func TestEmptyKeyGetsItsOwnWords(t *testing.T) {
-	s := newServer(t)
-	s.dial.chatErr = &llm.LLMError{Status: 401, Body: "unauthorized"}
-	keyless := goodChat
-	keyless.APIKey = ""
-	var e httpx.Error
-	s.do(t, "POST", "/api/settings/test", ConnectionInput{Chat: &keyless}, &e)
-	if e.Code != httpx.CodeBadKey || e.Field != "apiKey" || e.Message != "This endpoint wants an API key and none is set (401)." {
-		t.Fatalf("empty key: %+v (%s)", e, e.Message)
-	}
-	s.do(t, "POST", "/api/settings/test", ConnectionInput{Chat: &goodChat}, &e)
-	if e.Code != httpx.CodeBadKey || e.Field != "apiKey" || e.Message != "The endpoint refused this key (401)" {
-		t.Fatalf("typed key: %+v (%s)", e, e.Message)
 	}
 }
 
@@ -217,7 +200,7 @@ func TestHealthAndFix(t *testing.T) {
 	for _, c := range h.Checks {
 		byID[c.ID] = c
 	}
-	if len(h.Checks) != 4 {
+	if len(h.Checks) != 5 {
 		t.Fatalf("checks %+v", h.Checks)
 	}
 	if dd := byID["data_dir"]; !dd.OK {
@@ -251,9 +234,32 @@ func TestHealthAndFix(t *testing.T) {
 	}
 }
 
+// Ollama down can't be fixed from here; Ollama without the model can,
+// by pulling it.
+func TestOllamaCheck(t *testing.T) {
+	s := newServer(t)
+	check := func() HealthCheck {
+		var h Health
+		s.do(t, "GET", "/api/health", nil, &h)
+		return h.Checks[len(h.Checks)-1]
+	}
+	s.dial.ollamaErr = errors.New("connection refused")
+	if c := check(); c.ID != "ollama" || c.OK || c.Fixable || !strings.Contains(c.Detail, "not running") {
+		t.Fatalf("down: %+v", c)
+	}
+	s.dial.ollamaErr, s.dial.ollama = nil, []string{"llama3:latest"}
+	if c := check(); c.OK || !c.Fixable {
+		t.Fatalf("no model: %+v", c)
+	}
+	var fixed HealthCheck
+	if code := s.do(t, "POST", "/api/health/ollama/fix", nil, &fixed); code != 200 || !fixed.OK || s.dial.pulled != llm.EmbedModel {
+		t.Fatalf("fix: %d %+v, pulled %q", code, fixed, s.dial.pulled)
+	}
+}
+
 func TestResetIsAFreshInstall(t *testing.T) {
 	s := newServer(t)
-	s.do(t, "PUT", "/api/settings", ConnectionInput{Chat: &goodChat}, nil)
+	s.do(t, "PUT", "/api/settings", goodKey, nil)
 	os.MkdirAll(filepath.Join(s.dir, "cache", "pages"), 0o700)
 	os.WriteFile(filepath.Join(s.dir, "cache", "pages", "1.jpg"), []byte("x"), 0o600)
 
@@ -267,7 +273,7 @@ func TestResetIsAFreshInstall(t *testing.T) {
 	}
 	var got Settings
 	s.do(t, "GET", "/api/settings", nil, &got)
-	if got.Ready.Chat {
+	if got.Ready.Key {
 		t.Fatal("settings survived reset")
 	}
 	if _, err := os.Stat(filepath.Join(s.dir, "cache")); !os.IsNotExist(err) {
@@ -316,7 +322,7 @@ func TestOutOfCreditPointsAtTheKey(t *testing.T) {
 		{Status: 402, Body: `{"error":{"code":402,"message":"This request requires more credits"}}`},
 	} {
 		var he *httpx.Error
-		if !errors.As(explain(le, true, true), &he) || he.Field != "apiKey" || !strings.Contains(he.Message, "out of credit") {
+		if !errors.As(explain(le), &he) || he.Field != "apiKey" || !strings.Contains(he.Message, "out of credit") {
 			t.Errorf("%d: got %+v, want out of credit on apiKey", le.Status, he)
 		}
 	}

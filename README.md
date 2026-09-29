@@ -30,15 +30,12 @@ asks you to come back on a bigger screen.
 - **poppler-utils** (`pdfinfo`, `pdftotext`, `pdftoppm`, `pdftohtml`), to read and
   render PDFs.
 - **Tesseract**, to read scanned books.
-- **A chat model** behind an OpenAI-compatible API, and it must accept
-  images: PSet shows the model page images when it locates a problem. The
-  chat goes through [OpenRouter](https://openrouter.ai), one key for
-  every model it serves; the default is `z-ai/glm-5.3-flash`. Get a key at
-  openrouter.ai/keys and paste it in Settings. Any vision-capable model on
-  another OpenAI-compatible endpoint also works, without the model
-  keeping its thinking between a guide's steps.
-- **An embeddings server**, for searching a book. The default is
-  [Ollama](https://ollama.com) on this machine with `nomic-embed-text`.
+- **An [OpenRouter](https://openrouter.ai) key**, from openrouter.ai/keys.
+  It pays for the models, and PSet picks them: DeepSeek V4.1 Flash writes
+  guides and answers, Perceptron Mk1.5 finds problems on the page, and
+  GPT-6 Luna reads their words and figures.
+- **[Ollama](https://ollama.com)** on this machine, which searches your
+  books with `nomic-embed-text`. Settings can download the model for you.
 
 On Debian or Ubuntu:
 
@@ -106,16 +103,13 @@ picks up where it left off on the next start.
 
 ## First run
 
-1. **Open Settings** (the gear, top right) and fill in **Connections**:
-   - **Chat**: the endpoint, your API key and the model.
-   - **Embeddings**: the endpoint and the model.
-
-   **Test** tries the values on screen without saving them. **Save** tests
-   first and only keeps values that work. A book can't be prepared until
-   both are saved: the chat model reads the book's contents, and the
-   embeddings build its search.
+1. **Open Settings** (the gear, top right) and paste your OpenRouter key
+   under **Connections**. **Test** tries it without saving it. **Save**
+   tests first and only keeps a key that works. A book can't be prepared
+   until one is saved: a model reads the book's contents.
 2. **Check Health** on the same page. It confirms the data folder, the
-   database, poppler and tesseract, and offers a fix where it can.
+   database, poppler, tesseract and Ollama, and offers a fix where it can,
+   Ollama's missing model included.
 3. Optionally, **add your name** under You. The greeting and the tutor
    use it.
 
@@ -161,7 +155,7 @@ note says who saved it: you, the tutor, or PSet.
 Everything is under the data folder (`~/.local/share/pset` by default):
 `pset.db` (SQLite, including your settings and API key), `books/` (your
 PDFs), `cache/` (rendered pages), and `logs/llm.jsonl`, which records
-every request made to the chat model, with the model's reply. Back up or
+every request made to the models, with the model's reply. Back up or
 move the folder to take your library with you. **Settings → Reset** erases
 all of it, settings included; **Clear history** beside it forgets only the
 time Home counts.

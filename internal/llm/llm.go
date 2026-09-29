@@ -236,6 +236,9 @@ type Reply struct {
 	// Host is who served the call, as OpenRouter names it ("Z.AI",
 	// "Parasail"): OpenRouter spreads a model over many hosts.
 	Host string
+	// Model is the model that answered, as the provider names it: a
+	// fallback's, when the one asked for failed or was rate limited.
+	Model string
 }
 
 // Usage is a call's token counts and, from OpenRouter, its cost in
@@ -264,8 +267,13 @@ type ChatRequest struct {
 	Tools       []Tool    `json:"tools,omitempty"`
 	// ReasoningEffort is how hard a thinking model thinks: "low",
 	// "high" or "max". OpenRouter gets it as Reasoning's effort, and no
-	// other endpoint gets it; see shape. Never sent as is.
+	// other endpoint gets it; see shape. Never sent as is. A plain Job
+	// sets it to send no reasoning at all.
 	ReasoningEffort string `json:"-"`
+	// Fallbacks are the models OpenRouter tries, in order, when Model
+	// fails or is rate limited: shape sends them, after Model, as Models.
+	Fallbacks []string `json:"-"`
+	Models    []string `json:"models,omitempty"`
 	// Reasoning is OpenRouter's thinking switch, and Provider which of a
 	// model's hosts may serve it. shape sets both for OpenRouter only.
 	Reasoning *ReasoningOptions `json:"reasoning,omitempty"`
@@ -406,7 +414,10 @@ func (c *Client) shape(ctx context.Context, req ChatRequest) ChatRequest {
 		if req.SessionID == "" {
 			req.SessionID = sessionOf(ctx)
 		}
-		if req.Reasoning == nil {
+		if len(req.Fallbacks) > 0 && len(req.Models) == 0 {
+			req.Models = append([]string{req.Model}, req.Fallbacks...)
+		}
+		if req.Reasoning == nil && req.ReasoningEffort != ownDefault {
 			if req.ReasoningEffort != "" {
 				req.Reasoning = &ReasoningOptions{Effort: req.ReasoningEffort}
 			} else {
@@ -421,7 +432,7 @@ func (c *Client) shape(ctx context.Context, req ChatRequest) ChatRequest {
 		}
 		return req
 	}
-	req.Reasoning, req.Provider, req.SessionID = nil, nil, ""
+	req.Reasoning, req.Provider, req.SessionID, req.Models = nil, nil, "", nil
 	carries := false
 	for _, m := range req.Messages {
 		if m.Reasoning != "" {
@@ -481,6 +492,7 @@ func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (reply Reply
 		} `json:"choices"`
 		Usage *Usage `json:"usage"`
 		Host  string `json:"provider"`
+		Model string `json:"model"`
 	}
 	if err := c.post(ctx, c.apiBaseURL+"/chat/completions", req, &payload); err != nil {
 		return Reply{}, err
@@ -490,7 +502,7 @@ func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (reply Reply
 	}
 	msg := payload.Choices[0].Message
 	keepHost(req.SessionID, payload.Host)
-	return Reply{Content: msg.Content.text, ToolCalls: normalizeToolCalls(msg.ToolCalls), Reasoning: firstOf(msg.ReasoningContent, msg.Reasoning), Usage: payload.Usage, Host: payload.Host}, nil
+	return Reply{Content: msg.Content.text, ToolCalls: normalizeToolCalls(msg.ToolCalls), Reasoning: firstOf(msg.ReasoningContent, msg.Reasoning), Usage: payload.Usage, Host: payload.Host, Model: payload.Model}, nil
 }
 
 // ChatStream runs a streaming completion and returns the assembled reply
@@ -519,7 +531,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 
 	var full, reasoning strings.Builder
 	var usage *Usage
-	var host string
+	var host, answered string
 	// finished is the stream saying it's done, by [DONE] or a choice's
 	// finish_reason. A stream that just stops without either was cut, even
 	// when every event in it parsed.
@@ -587,6 +599,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 			} `json:"choices"`
 			Usage *Usage `json:"usage"`
 			Host  string `json:"provider"`
+			Model string `json:"model"`
 		}
 		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
 			if ctx.Err() != nil {
@@ -604,6 +617,9 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 		}
 		if chunk.Host != "" {
 			host = chunk.Host
+		}
+		if chunk.Model != "" {
+			answered = chunk.Model
 		}
 		for _, choice := range chunk.Choices {
 			if choice.FinishReason != "" {
@@ -642,7 +658,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 		return Reply{Content: full.String()}, fmt.Errorf("%w: the stream ended without finishing", ErrStreamCut)
 	}
 	keepHost(req.SessionID, host)
-	return Reply{Content: full.String(), ToolCalls: calls.finish(), Reasoning: reasoning.String(), Usage: usage, Host: host}, nil
+	return Reply{Content: full.String(), ToolCalls: calls.finish(), Reasoning: reasoning.String(), Usage: usage, Host: host, Model: answered}, nil
 }
 
 // firstOf is the first non-empty string.
@@ -876,7 +892,7 @@ func OutOfCredit(status int, body string) bool {
 }
 
 // NoCredit says it in words, for the person waiting on the call.
-const NoCredit = "Your chat model provider says the account is out of credit. Top it up on the provider's site, or switch provider in Settings, then try again."
+const NoCredit = "Your OpenRouter account is out of credit. Top it up at openrouter.ai, then try again."
 
 // Classify names a model call's failure, with the HTTP status when the
 // provider gave one.
@@ -901,11 +917,11 @@ func Classify(err error) (Trouble, int) {
 func Refusal(status int) string {
 	switch status {
 	case http.StatusUnauthorized, http.StatusForbidden:
-		return fmt.Sprintf("Your chat model provider turned the request down (HTTP %d): the API key may be wrong or expired.", status)
+		return fmt.Sprintf("OpenRouter turned the request down (HTTP %d): the API key in Settings may be wrong or expired.", status)
 	case http.StatusNotFound:
-		return "Your chat model provider doesn't recognise the endpoint or the model name (HTTP 404)."
+		return "OpenRouter doesn't know the model PSet asked for (HTTP 404)."
 	}
-	return fmt.Sprintf("Your chat model provider turned the request down (HTTP %d).", status)
+	return fmt.Sprintf("OpenRouter turned the request down (HTTP %d).", status)
 }
 
 // Unfence tolerates JSON wrapped in a code fence.

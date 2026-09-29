@@ -107,7 +107,7 @@ func (r *run) loop(ctx context.Context) error {
 		return err
 	}
 	if !cfg.ChatReady() {
-		return &failure{msg: noChatModel}
+		return &failure{msg: noKey}
 	}
 	r.llm, r.model = llm.Open(cfg), cfg.ChatModel
 	r.parser = doc.NewParser(ctx, doc.Options{
@@ -154,17 +154,17 @@ func (r *run) loop(ctx context.Context) error {
 			return ctx.Err()
 		}
 		if errors.Is(err, agent.ErrNoAnswer) {
-			return &failure{msg: "The chat model stopped without answering. Asking again usually works.", err: err}
+			return &failure{msg: "The model stopped without answering. Asking again usually works.", err: err}
 		}
 		switch trouble, status := llm.Classify(err); trouble {
 		case llm.TroubleCut:
-			return &failure{msg: "The answer stopped partway: the connection to the chat model dropped. Asking again usually works.", err: err}
+			return &failure{msg: "The answer stopped partway: the connection to the model dropped. Asking again usually works.", err: err}
 		case llm.TroubleRejected:
-			return &failure{msg: llm.Refusal(status) + " Check the chat connection in Settings, then ask again.", err: err}
+			return &failure{msg: llm.Refusal(status) + " Check the key in Settings, then ask again.", err: err}
 		case llm.TroubleCredit:
 			return &failure{msg: llm.NoCredit, err: err}
 		}
-		return &failure{msg: "Your chat model provider didn't answer, or is busy right now. Ask again in a minute.", err: err}
+		return &failure{msg: "OpenRouter didn't answer, or is busy right now. Ask again in a minute.", err: err}
 	}
 	return nil
 }

@@ -24,8 +24,8 @@ older books on startup (`problems.go`); the student's word is
 
 `POST /api/books` (multipart, field `file`) stages the upload while
 hashing it, refuses a non-PDF (`invalid` on `file`), a duplicate
-(`duplicate_book` with the existing id) and a missing embeddings server
-(`not_configured`), then inserts the book `queued` and enqueues its first job in
+(`duplicate_book` with the existing id), and a missing OpenRouter key or an
+Ollama that doesn't answer (`not_configured`), then inserts the book `queued` and enqueues its first job in
 one transaction.
 
 Two jobs in the `import` lane, one at a time, publishing `book.changed`

@@ -201,9 +201,10 @@ func pinnedHint(book Book, q row) string {
 	return ""
 }
 
-// locateOnce shows the model a handful of pages as images and asks which
-// one holds the problem. ok is false when none does, or the answer isn't
-// usable; an error is a call that failed.
+// locateOnce shows the Finder a handful of pages as images and asks which
+// one holds the problem, and where; the Reader then writes the problem
+// out. ok is false when no page does, or the answer isn't usable; an
+// error is a call that failed.
 func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pages []int, hint string) (location, bool, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "The problem, as the student gave it:\n\n%s\n", q.Text)
@@ -214,8 +215,9 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 	content := llm.PartsContent(llm.TextPart(b.String()))
 	shown := 0
 	var order []int
+	var urls []string
 	for _, p := range pages {
-		url, err := s.pageImage(ctx, book.ID, p, 1100)
+		url, err := s.pageImage(ctx, book.ID, p, locateWidth)
 		if err != nil {
 			if ctx.Err() != nil {
 				return location{}, false, ctx.Err()
@@ -223,17 +225,17 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 			continue
 		}
 		shown++
-		order = append(order, p)
+		order, urls = append(order, p), append(urls, url)
 		content.AppendPart(llm.TextPart(imageLabel(book, shown, p)))
 		content.AppendPart(llm.ImagePart(url))
 	}
 	if shown == 0 {
 		return location{}, false, nil
 	}
-	reply, err := m.client.ChatOnce(ctx, llm.ChatRequest{Model: m.name, Messages: []llm.Message{
+	reply, err := m.client.ChatOnce(ctx, llm.Finder.Ask(llm.ChatRequest{Messages: []llm.Message{
 		llm.TextMessage("system", locatePrompt),
 		{Role: "user", Content: content},
-	}})
+	}}))
 	if err != nil {
 		if ctx.Err() != nil {
 			return location{}, false, ctx.Err()
@@ -241,11 +243,10 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 		return location{}, false, modelDown(err, q)
 	}
 	var pin struct {
-		Image     int       `json:"image"`
-		Label     string    `json:"label"`
-		Statement string    `json:"statement"`
-		Rect      *pdf.Rect `json:"question_rect"`
-		Figures   []struct {
+		Image   int       `json:"image"`
+		Label   string    `json:"label"`
+		Rect    *pdf.Rect `json:"question_rect"`
+		Figures []struct {
 			Label string    `json:"label"`
 			Rect  *pdf.Rect `json:"rect"`
 		} `json:"figures"`
@@ -257,16 +258,73 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 	if pin.Image < 1 || pin.Image > len(order) {
 		return location{}, false, nil
 	}
-	loc := location{Page: order[pin.Image-1], Label: strings.TrimSpace(pin.Label), Statement: strings.TrimSpace(pin.Statement)}
-	if pin.Rect != nil && pin.Rect.Valid() {
-		loc.Rect = pin.Rect
+	loc := location{Page: order[pin.Image-1], Label: strings.TrimSpace(pin.Label)}
+	// The boxes fit to what's printed, on the page as the model saw it.
+	page, err := s.c.Library.PageJPEG(ctx, book.ID, loc.Page, locateWidth)
+	if err != nil {
+		return location{}, false, err
+	}
+	fit := func(r *pdf.Rect) (pdf.Rect, bool) {
+		if r == nil {
+			return pdf.Rect{}, false
+		}
+		f := fractions(*r)
+		if !f.Valid() {
+			return pdf.Rect{}, false
+		}
+		return pdf.SnapToBlocks(page, f), true
+	}
+	if r, ok := fit(pin.Rect); ok {
+		loc.Rect = &r
 	}
 	for _, f := range pin.Figures {
-		if f.Rect != nil && f.Rect.Valid() && len(loc.Figures) < maxFigures {
-			loc.Figures = append(loc.Figures, figure{Label: strings.TrimSpace(f.Label), Rect: *f.Rect})
+		if r, ok := fit(f.Rect); ok && len(loc.Figures) < maxFigures {
+			loc.Figures = append(loc.Figures, figure{Label: strings.TrimSpace(f.Label), Rect: r})
 		}
 	}
+	if loc.Statement, err = s.writeOut(ctx, m, book, loc, urls[pin.Image-1], q); err != nil {
+		return location{}, false, err
+	}
 	return loc, true, nil
+}
+
+// locateWidth is how wide the pages are shown to the Finder.
+const locateWidth = 1100
+
+// fractions is a box in fractions of the page. A model now and then gives
+// thousandths, as some are trained to, in all four or only some: any
+// number over 1 is taken as one.
+func fractions(r pdf.Rect) pdf.Rect {
+	f := func(v float64) float64 {
+		if v > 1 {
+			return v / 1000
+		}
+		return v
+	}
+	return pdf.Rect{X: f(r.X), Y: f(r.Y), W: f(r.W), H: f(r.H)}
+}
+
+// writeOut is a found problem's words, read off its page by the Reader.
+func (s *Service) writeOut(ctx context.Context, m model, book Book, loc location, pageURL string, q row) (string, error) {
+	name := loc.Label
+	if name == "" {
+		name = problemName(q)
+	}
+	content := llm.PartsContent(
+		llm.TextPart(fmt.Sprintf("Problem %s, on %s:", name, book.Pages.Name(loc.Page))),
+		llm.ImagePart(pageURL),
+	)
+	reply, err := m.client.ChatOnce(ctx, llm.Reader.Ask(llm.ChatRequest{ReasoningEffort: "low", Messages: []llm.Message{
+		llm.TextMessage("system", statementPrompt),
+		{Role: "user", Content: content},
+	}}))
+	if err != nil {
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
+		return "", modelDown(err, q)
+	}
+	return strings.TrimSpace(llm.Unfence(reply)), nil
 }
 
 // maxFigures caps the figures one question shows.

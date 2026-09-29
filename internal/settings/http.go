@@ -1,8 +1,13 @@
 package settings
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"strings"
 
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/llm"
@@ -18,7 +23,7 @@ func (s *Service) Routes(mux *http.ServeMux) {
 		return httpx.OK(w, v)
 	}))
 	mux.HandleFunc("PUT /api/settings", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var in ConnectionInput
+		var in KeyInput
 		if err := httpx.Decode(r, &in); err != nil {
 			return err
 		}
@@ -40,7 +45,7 @@ func (s *Service) Routes(mux *http.ServeMux) {
 		return httpx.OK(w, v)
 	}))
 	mux.HandleFunc("POST /api/settings/test", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var in ConnectionInput
+		var in KeyInput
 		if err := httpx.Decode(r, &in); err != nil {
 			return err
 		}
@@ -78,24 +83,65 @@ func (s *Service) Routes(mux *http.ServeMux) {
 	}))
 }
 
-// LiveDialer dials the real endpoints.
+// LiveDialer dials OpenRouter and the local Ollama.
 type LiveDialer struct{}
 
-func (LiveDialer) Chat(ctx context.Context, c ChatConnection) error {
-	client := llm.Open(llm.Config{ChatEndpoint: c.Endpoint, APIKey: c.APIKey, ChatModel: c.Model})
+func (LiveDialer) Chat(ctx context.Context, apiKey string) error {
+	client := llm.Open(llm.Config{ChatEndpoint: llm.OpenRouter, APIKey: apiKey, ChatModel: llm.Writer.Model})
 	_, err := client.ChatOnce(ctx, llm.ChatRequest{
-		Model:     c.Model,
+		Model:     llm.Writer.Model,
 		Messages:  []llm.Message{llm.TextMessage("user", "Reply with the word ok.")},
 		MaxTokens: 1,
 	})
 	return err
 }
 
-func (LiveDialer) Embed(ctx context.Context, c EmbedConnection) (int, error) {
-	client := llm.Open(llm.Config{EmbedEndpoint: c.Endpoint, EmbedModel: c.Model})
-	v, err := client.Embed(ctx, []string{"probe"})
+// ollamaAPI is Ollama's own API, beside the OpenAI-shaped one PSet embeds
+// with: it says which models are pulled, and pulls one.
+var ollamaAPI = strings.TrimSuffix(llm.EmbedEndpoint, "/v1") + "/api"
+
+func (LiveDialer) Ollama(ctx context.Context) ([]string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ollamaAPI+"/tags", nil)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return len(v[0]), nil
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ollama answered %d", resp.StatusCode)
+	}
+	var tags struct {
+		Models []struct {
+			Name string `json:"name"`
+		} `json:"models"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tags); err != nil {
+		return nil, err
+	}
+	out := make([]string, len(tags.Models))
+	for i, m := range tags.Models {
+		out[i] = m.Name
+	}
+	return out, nil
+}
+
+func (LiveDialer) Pull(ctx context.Context, model string) error {
+	body, _ := json.Marshal(map[string]any{"model": model, "stream": false})
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ollamaAPI+"/pull", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return fmt.Errorf("ollama answered %d: %s", resp.StatusCode, strings.TrimSpace(string(msg)))
+	}
+	return nil
 }

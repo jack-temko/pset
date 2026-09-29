@@ -61,7 +61,7 @@ func TestBookNamedFromItsFirstPages(t *testing.T) {
 	}
 	// The pages before the contents (PDF 3), as images.
 	var images int
-	for _, p := range e.llm.Requests()[0].Chat.Messages[1].Content.Parts() {
+	for _, p := range e.llm.Chats()[0].Messages[1].Content.Parts() {
 		if p.Type == "image_url" {
 			images++
 		}

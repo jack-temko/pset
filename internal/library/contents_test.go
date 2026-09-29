@@ -330,7 +330,7 @@ func TestScannedBookWithoutContentsPagesHasTheModelPick(t *testing.T) {
 		len(c.Entries[0].Children) != 2 || c.Entries[1].Children[0].Title != "2.2 Karsts" || c.Entries[1].Children[0].Page != 12 {
 		t.Fatalf("contents %+v", c)
 	}
-	prompt := e.llm.Requests()[1].Chat.Messages[1].Content.Text()
+	prompt := e.llm.Chats()[1].Messages[1].Content.Text()
 	if !strings.Contains(prompt, "page 3 | 1.1 Collars") || strings.Contains(prompt, "y' =") {
 		t.Fatalf("candidate list:\n%s", prompt)
 	}

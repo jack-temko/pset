@@ -90,10 +90,12 @@ put everything a click away), and a one-line summary that opens down
 
 ## The two refusals
 
-- **No chat model or no embeddings endpoint.** The `+` is disabled and a
-  warning-tone Box sits above the shelf with one line naming what's
-  missing and a link to Settings. You never get to choose a file you
-  can't import. (The chat model reads the contents, since 2026-09-22.)
+- **No OpenRouter key.** The `+` is disabled and a warning-tone Box sits
+  above the shelf with one line saying so and a link to Settings. You
+  never get to choose a file you can't import. (A model reads the
+  contents, since 2026-09-22.) **Ollama not answering** can't be known
+  before you ask, so the upload asks it (2026-09-29): a refusal names it
+  and points at Settings' Health, which says how to start it.
 - **A book you already have.** Nothing is enqueued and nothing is said:
   you go **straight to that book's workspace**. You asked for this book;
   here it is.

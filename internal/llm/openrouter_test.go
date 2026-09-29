@@ -90,6 +90,40 @@ func TestOpenRouterWithoutEffort(t *testing.T) {
 	}
 }
 
+// TestJobsAskForTheirModels: a job's request names its model and its
+// fallbacks, in order, and a plain job sends no reasoning at all; the
+// reply says which model answered.
+func TestJobsAskForTheirModels(t *testing.T) {
+	var got map[string]any
+	c := hostedAt(t, "https://openrouter.ai/api/v1", func(w http.ResponseWriter, r *http.Request) {
+		got = nil
+		body, _ := io.ReadAll(r.Body)
+		json.Unmarshal(body, &got)
+		io.WriteString(w, `{"model":"z-ai/glm-5.3-flash","choices":[{"message":{"content":"ok"}}]}`)
+	})
+	plain := Job{Model: "a/boxes", Fallbacks: []string{"b/backup"}, Plain: true}
+	reply, err := c.ChatOnceFull(context.Background(), plain.Ask(ChatRequest{Messages: []Message{TextMessage("user", "hi")}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got["model"] != "a/boxes" || jsonOf(got["models"]) != `["a/boxes","b/backup"]` {
+		t.Errorf("model %v, models %v", got["model"], got["models"])
+	}
+	if _, ok := got["reasoning"]; ok {
+		t.Errorf("a plain job sent reasoning %v", got["reasoning"])
+	}
+	if reply.Model != "z-ai/glm-5.3-flash" {
+		t.Errorf("answered by %q", reply.Model)
+	}
+	thinking := Job{Model: "c/reads"}
+	if _, err := c.ChatOnce(context.Background(), thinking.Ask(ChatRequest{ReasoningEffort: "low", Messages: []Message{TextMessage("user", "hi")}})); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := got["models"]; ok || jsonOf(got["reasoning"]) != `{"effort":"low"}` {
+		t.Errorf("models %v, reasoning %v", got["models"], got["reasoning"])
+	}
+}
+
 // TestOtherEndpointsGetNoneOfIt: an endpoint that isn't OpenRouter gets
 // no reasoning, host options, effort or session, and no thinking back.
 func TestOtherEndpointsGetNoneOfIt(t *testing.T) {

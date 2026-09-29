@@ -1105,7 +1105,7 @@ export function Components() {
           <Shelf label="failed: setup">
             <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
               <FailedTurn
-                reason="There's no chat model set up yet. Add one in Settings, under Connections, then try again."
+                reason="There's no OpenRouter key yet. Add yours in Settings, under Connections, then try again."
                 onSetup={() => {}}
               />
             </div>

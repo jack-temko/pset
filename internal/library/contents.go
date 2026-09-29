@@ -37,7 +37,7 @@ func (s *Service) chatModel(ctx context.Context) (model, error) {
 		return model{}, err
 	}
 	if !cfg.ChatReady() {
-		return model{}, fail(nil, "There's no chat model set up. Add one in Settings, under Connections, then try again.")
+		return model{}, fail(nil, "There's no OpenRouter key yet. Add yours in Settings, under Connections, then try again.")
 	}
 	return model{client: llm.Open(cfg), name: cfg.ChatModel}, nil
 }
@@ -185,7 +185,7 @@ func (m model) askJSON(ctx context.Context, system string, user llm.Content, out
 		case err != nil && stalled && try == 0:
 			continue
 		case err != nil && stalled:
-			return fail(err, "Your chat model stopped answering while PSet read the book's contents. Try again in a minute.")
+			return fail(err, "The model stopped answering while PSet read the book's contents. Try again in a minute.")
 		case err != nil:
 			return modelDown(err)
 		}
@@ -194,7 +194,7 @@ func (m model) askJSON(ctx context.Context, system string, user llm.Content, out
 			return nil
 		}
 		if try == 1 {
-			return fail(err, "Your chat model's answer about the book's contents couldn't be read. Try again, or try another model in Settings.")
+			return fail(err, "The model's answer about the book's contents couldn't be read. Try again.")
 		}
 	}
 }
@@ -206,9 +206,9 @@ func modelDown(err error) error {
 		return fail(err, "%s", llm.NoCredit)
 	}
 	if trouble == llm.TroubleRejected {
-		return fail(err, "%s Check the chat connection in Settings, then try again.", llm.Refusal(status))
+		return fail(err, "%s Check the key in Settings, then try again.", llm.Refusal(status))
 	}
-	return fail(err, "Your chat model provider didn't answer while PSet read the book's contents. Try again in a minute.")
+	return fail(err, "OpenRouter didn't answer while PSet read the book's contents. Try again in a minute.")
 }
 
 // ---------------------------------------------------------------- checking

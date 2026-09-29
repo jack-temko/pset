@@ -414,7 +414,7 @@ func (s *Service) index(ctx context.Context, b row, path, kind string, pages []s
 	return nil
 }
 
-// embedBatch is how many pages go to the embeddings server at once.
+// embedBatch is how many pages go to Ollama at once.
 const embedBatch = 32
 
 // buildSearch embeds every page with text that doesn't have a vector in
@@ -427,7 +427,7 @@ func (s *Service) buildSearch(ctx context.Context, bookID string) error {
 		return err
 	}
 	if !cfg.EmbedReady() {
-		return fail(nil, "Set up an embeddings server in Settings, then try again.")
+		return fail(nil, noOllama)
 	}
 	pages, err := loadPages(ctx, s.c.DB, bookID)
 	if err != nil {
@@ -466,7 +466,7 @@ func (s *Service) buildSearch(ctx context.Context, bookID string) error {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			return fail(err, "The embeddings server stopped answering. Check it in Settings, then try again.")
+			return fail(err, "Ollama stopped answering while PSet built the book's search. Settings, under Health, says how to check it, then try again.")
 		}
 		err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 			for i, p := range batch {

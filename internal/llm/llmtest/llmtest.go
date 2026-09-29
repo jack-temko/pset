@@ -56,11 +56,12 @@ type Request struct {
 type Server struct {
 	*httptest.Server
 
-	mu       sync.Mutex
-	replies  []Reply
-	fallback func(llm.ChatRequest) Reply
-	requests []Request
-	embedErr int
+	mu        sync.Mutex
+	replies   []Reply
+	fallback  func(llm.ChatRequest) Reply
+	requests  []Request
+	embedErr  int
+	embedPass int
 }
 
 // New starts a server that closes with the test.
@@ -97,9 +98,15 @@ func (s *Server) Fallback(fn func(llm.ChatRequest) Reply) {
 
 // FailEmbeddings makes every embeddings call answer status (0 to stop).
 func (s *Server) FailEmbeddings(status int) {
+	s.FailEmbeddingsAfter(0, status)
+}
+
+// FailEmbeddingsAfter lets n embeddings calls through, then fails the
+// rest with status: an upload's probe passes, the import's search fails.
+func (s *Server) FailEmbeddingsAfter(n, status int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.embedErr = status
+	s.embedErr, s.embedPass = status, n
 }
 
 // Requests returns every request so far.
@@ -107,6 +114,18 @@ func (s *Server) Requests() []Request {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return append([]Request(nil), s.requests...)
+}
+
+// Chats is the chat requests alone, in order: what Requests holds less
+// the embeddings calls.
+func (s *Server) Chats() []llm.ChatRequest {
+	var out []llm.ChatRequest
+	for _, r := range s.Requests() {
+		if r.Path != "/embeddings" {
+			out = append(out, r.Chat)
+		}
+	}
+	return out
 }
 
 func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
@@ -126,6 +145,10 @@ func (s *Server) embeddings(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	s.requests = append(s.requests, Request{Path: "/embeddings"})
 	status := s.embedErr
+	if s.embedPass > 0 {
+		s.embedPass--
+		status = 0
+	}
 	s.mu.Unlock()
 	if status != 0 {
 		http.Error(w, `{"error":"embeddings failed"}`, status)

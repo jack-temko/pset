@@ -71,7 +71,7 @@ const (
 	// FailureUnavailable: the provider didn't answer or was busy. Try
 	// again later.
 	FailureUnavailable Failure = "unavailable"
-	// FailureSetup: there's no chat model, the provider refused it, or
+	// FailureSetup: there's no OpenRouter key, OpenRouter refused it, or
 	// the account is out of credit.
 	// Fix it in Settings.
 	FailureSetup Failure = "setup"

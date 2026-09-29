@@ -230,7 +230,7 @@ func (s *Service) readOut(ctx context.Context, readID, bookID, source string, co
 		return Assignment{}, err
 	}
 	if !cfg.ChatReady() {
-		return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "There's no chat model set up yet. Add one in Settings, under Connections, then try again.")
+		return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "There's no OpenRouter key yet. Add yours in Settings, under Connections, then try again.")
 	}
 	m := model{client: llm.Open(cfg), name: cfg.ChatModel}
 	msg := llm.PartsContent(llm.TextPart("The assignment:"))
@@ -251,9 +251,9 @@ func (s *Service) readOut(ctx context.Context, readID, bookID, source string, co
 			return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "%s", llm.NoCredit)
 		}
 		if trouble == llm.TroubleRejected {
-			return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "%s Check the chat connection in Settings, then try again.", llm.Refusal(status))
+			return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "%s Check the key in Settings, then try again.", llm.Refusal(status))
 		}
-		return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "Your chat model provider didn't answer while reading the assignment. Try again in a minute.")
+		return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "OpenRouter didn't answer while PSet read the assignment. Try again in a minute.")
 	}
 	var read struct {
 		Title  string `json:"title"`

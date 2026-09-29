@@ -94,7 +94,7 @@ export const FailureGeneration = "generation";
  */
 export const FailureUnavailable = "unavailable";
 /**
- * FailureSetup: there's no chat model, the provider refused it, or
+ * FailureSetup: there's no OpenRouter key, OpenRouter refused it, or
  * the account is out of credit.
  * Fix it in Settings.
  */

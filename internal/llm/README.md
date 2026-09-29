@@ -8,13 +8,30 @@ network at test time — httptest fakes cover it.
 
 - stdlib only (`net/http`, `encoding/json`, `bufio`)
 
-## Model choice
+## Models
 
-The chat model, like the endpoints, key and embeddings model, is a
-setting (`internal/settings`, edited on the Settings screen) and arrives
-here in `Config`; this package holds no defaults of its own. The chat
-model must be vision-capable: locating a homework problem sends page
-images as `image_url` parts.
+PSet picks its models (2026-09-29): the student brings an OpenRouter key
+and nothing else. `models.go` gives each job the model that did it best
+when they were tested side by side (design/backend.md, "Models"):
+
+| Job | Model | Falls back to |
+|---|---|---|
+| `Writer`: guides, Ask, assignment reads, contents, repairs | `deepseek/deepseek-v4.1-flash` | |
+| `Finder`: finds a problem on its pages, boxes it and its figures | `perceptron/perceptron-mk1.5`, plain | `z-ai/glm-5.3-flash` |
+| `Reader`: writes out a problem's words and reads its figures | `openai/gpt-6-luna` | `z-ai/glm-5.3-flash` |
+
+`Job.Ask` fills a request in for its job. **Fallbacks** go to OpenRouter
+as `models`, after the model itself: OpenRouter tries the next when one
+fails or is rate limited. The Finder's model has one host, and a new
+OpenRouter account gets 20 calls a minute of the Reader's, which a
+problem set's readings go over. A **plain** job sends no `reasoning` at
+all: Perceptron found 8 figures of 23 thinking, and all 23 at its own
+default, in a twentieth of the time. The reply says which model answered
+(`Reply.Model`), and the call log keeps it as `answered`.
+
+The Writer's model arrives in `Config.ChatModel`, with the saved key;
+the embeddings are Ollama's `nomic-embed-text` on this machine
+(`EmbedEndpoint`, `EmbedModel`).
 
 ## Wire shapes
 
@@ -36,7 +53,7 @@ Auth is `Authorization: Bearer <key>` on every request.
 ## Providers
 
 PSet's chat goes through **OpenRouter** (2026-09-29; direct Z.ai support
-was dropped then). `shape` fits each request to the endpoint, known by its
+was dropped then, and choosing a model went the same day). `shape` fits each request to the endpoint, known by its
 host:
 
 - **OpenRouter** (`openrouter.ai`): `reasoning: {effort}` (or `{enabled:

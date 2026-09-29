@@ -4,27 +4,21 @@
 // source: wire.go
 
 /**
- * ChatConnection is the chat side, as the Settings form holds it.
- */
-export interface ChatConnection {
-  endpoint: string;
-  apiKey: string;
-  model: string;
-}
-/**
- * EmbedConnection is the embeddings side.
- */
-export interface EmbedConnection {
-  endpoint: string;
-  model: string;
-}
-/**
- * Ready says which sides have been saved, which means tested: Save only
- * writes what passed. Home disables adding books until embeddings are.
+ * Ready says what's been set up. Home refuses a book until the key is:
+ * preparing one needs it.
  */
 export interface Ready {
-  chat: boolean;
-  embeddings: boolean;
+  /**
+   * Key: an OpenRouter key was saved, which means tested.
+   */
+  key: boolean;
+}
+/**
+ * ModelUse is one job and the model PSet does it with.
+ */
+export interface ModelUse {
+  job: string;
+  model: string;
 }
 /**
  * Profile is who's studying. The name greets them on Home and is how the
@@ -34,25 +28,27 @@ export interface Profile {
   name: string;
 }
 /**
- * Settings is GET /api/settings. A side never saved shows its defaults.
+ * Settings is GET /api/settings.
  */
 export interface Settings {
   profile: Profile;
-  chat: ChatConnection;
-  embeddings: EmbedConnection;
+  /**
+   * APIKey is the saved OpenRouter key: the one connection a student
+   * sets up. PSet picks the models; Models says which.
+   */
+  apiKey: string;
+  models: ModelUse[];
   ready: Ready;
 }
 /**
- * ConnectionInput is the body of Test and Save: exactly one side.
+ * KeyInput is the body of Test and Save.
  */
-export interface ConnectionInput {
-  chat?: ChatConnection;
-  embeddings?: EmbedConnection;
+export interface KeyInput {
+  apiKey: string;
 }
 /**
- * TestResult is what a passing Test found: "Connected", plus the vector
- * size for embeddings. The model is already in the field above it, so it
- * isn't repeated. A failing Test is an error naming the field.
+ * TestResult is what a passing Test found: "Connected". A failing Test
+ * is an error, on the key's field when the key is the trouble.
  */
 export interface TestResult {
   detail: string;
