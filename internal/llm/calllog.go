@@ -42,6 +42,8 @@ type callRecord struct {
 	Reasoning string     `json:"reasoning,omitempty"`
 	Calls     []ToolCall `json:"toolCalls,omitempty"`
 	Error     string     `json:"error,omitempty"`
+	// Usage is the provider's own count and, from OpenRouter, the cost.
+	Usage *Usage `json:"usage,omitempty"`
 }
 
 type logMsg struct {
@@ -57,7 +59,7 @@ func logCall(req ChatRequest, start time.Time, reply Reply, err error) {
 	}
 	rec := callRecord{
 		At: start.UTC().Format(time.RFC3339), Model: req.Model,
-		Millis: time.Since(start).Milliseconds(), Reply: reply.Content, Calls: reply.ToolCalls, Reasoned: len(reply.Reasoning), Reasoning: reply.Reasoning,
+		Millis: time.Since(start).Milliseconds(), Reply: reply.Content, Calls: reply.ToolCalls, Reasoned: len(reply.Reasoning), Reasoning: reply.Reasoning, Usage: reply.Usage,
 	}
 	for _, t := range req.Tools {
 		rec.Tools = append(rec.Tools, t.Function.Name)

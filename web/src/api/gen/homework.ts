@@ -94,7 +94,8 @@ export const FailureGeneration = "generation";
  */
 export const FailureUnavailable = "unavailable";
 /**
- * FailureSetup: there's no chat model, or the provider refused it.
+ * FailureSetup: there's no chat model, the provider refused it, or
+ * the account is out of credit.
  * Fix it in Settings.
  */
 export const FailureSetup = "setup";

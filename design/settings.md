@@ -28,8 +28,16 @@ there's nothing to test, so it writes straight away.
 
 Two Boxes side by side, because they fail and get fixed independently:
 
-- **Chat**: endpoint, API key, **model** (new: the engine hard-codes it
-  today).
+- **Chat**: **provider**, endpoint, API key, **model**.
+- **Provider** (2026-09-29): a segmented control above the endpoint,
+  **Z.ai · OpenRouter · Other**. Picking one fills in its endpoint and
+  model (a model named for the other provider follows the switch,
+  `glm-5.3-flash` becoming `z-ai/glm-5.3-flash`; one typed by hand
+  stays), and the hints say where its key comes from. It isn't stored:
+  it's read off the endpoint's host, as the server does, so typing an
+  endpoint picks its provider, and **Other** is any OpenAI-compatible
+  endpoint typed by hand. Through OpenRouter, the model hint says PSet
+  skips hosts running 4-bit weights.
 - **Embeddings**: endpoint, model.
 
 Every value is mono. **The API key is plain text**: a local app, and you
@@ -48,8 +56,12 @@ need to see which key you pasted.
   **tests first and writes only if the test passes**: what's on disk
   always works. A failed Save writes nothing.
 - A failure names **the field that caused it**, and the error replaces
-  that field's hint (unreachable → endpoint, 401 → key, unknown model →
-  model). Editing that field clears it.
+  that field's hint (unreachable → endpoint, 401 → key, out of credit →
+  key, unknown model → model). Editing that field clears it.
+- **Out of credit** (2026-09-29): an account with no money left
+  (OpenRouter's 402, Z.ai's 429 with code 1113) says so on the key, and a
+  guide or Ask answer that fails on it says so too, with the way to
+  Settings, rather than "busy, try again in a minute".
 - The Box footer says what the last Test or Save found: a spinner while
   it works, then "Connected" (with the vector size for embeddings; the model is already in the field) in success ink, or "Not saved:
   the test failed".

@@ -33,6 +33,28 @@ shaped local servers (ollama's `/v1`):
 
 Auth is `Authorization: Bearer <key>` on every request.
 
+## Providers
+
+`shape` fits each request to the endpoint, known by its host:
+
+- **Z.ai** (`api.z.ai`, `bigmodel.cn`): `reasoning_effort` as given, and
+  the model's reasoning sent back on its assistant turns as
+  `reasoning_content`, with `thinking: {type: enabled, clear_thinking:
+  false}` ("preserved thinking").
+- **OpenRouter** (`openrouter.ai`): `reasoning: {effort}` (or `{enabled:
+  true}` when no effort is asked for), the reasoning sent back as
+  `reasoning`, and `provider: {quantizations: [fp8, fp16, bf16, fp32,
+  unknown]}`, so no host running 4-bit weights serves PSet. Its streamed
+  thinking arrives as `delta.reasoning`, and every reply carries `usage`
+  with the call's `cost`.
+- **Anything else** gets neither the effort nor the reasoning: some
+  endpoints refuse the fields (DeepSeek's own API answers 400).
+
+A reply's `usage`, when the provider sends one, is kept on `Reply.Usage`
+and written to the call log. `Classify` names a failure: cut, busy,
+rejected, or **credit**, an account with no money left (OpenRouter's 402,
+Z.ai's 429 with code 1113), which is never retried.
+
 ## Contracts
 
 - `New(apiBaseURL, apiKey, embedBaseURL, embedModel)`; `ChatConfigured` /

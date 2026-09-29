@@ -52,6 +52,8 @@ func modelDown(err error, q row) error {
 		return fail(FailureGeneration, err, "The walkthrough for %s stopped partway: the connection to the chat model dropped. Trying again usually works.", problemName(q))
 	case llm.TroubleRejected:
 		return fail(FailureSetup, err, "%s Check the chat connection in Settings, then try again.", llm.Refusal(status))
+	case llm.TroubleCredit:
+		return fail(FailureSetup, err, "%s", llm.NoCredit)
 	}
 	return fail(FailureUnavailable, err, "Your chat model provider didn't answer, or is busy right now. Nothing is wrong with %s: try again in a minute.", problemName(q))
 }

@@ -204,6 +204,8 @@ func explain(err error, chat bool, hasKey bool) error {
 	if errors.As(err, &le) {
 		body := strings.ToLower(le.Body)
 		switch {
+		case chat && llm.OutOfCredit(le.Status, le.Body):
+			return httpx.Errorf(httpx.CodeBadKey, "This account is out of credit (%d). Top it up on the provider's site, then test again.", le.Status).OnField("apiKey")
 		case chat && (le.Status == 401 || le.Status == 403):
 			if !hasKey {
 				return httpx.Errorf(httpx.CodeBadKey, "This endpoint wants an API key and none is set (%d).", le.Status).OnField("apiKey")

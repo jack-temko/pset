@@ -243,6 +243,9 @@ func (s *Service) readOut(ctx context.Context, bookID, source string, content []
 			return Assignment{}, ctx.Err()
 		}
 		trouble, status := llm.Classify(err)
+		if trouble == llm.TroubleCredit {
+			return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "%s", llm.NoCredit)
+		}
 		if trouble == llm.TroubleRejected {
 			return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "%s Check the chat connection in Settings, then try again.", llm.Refusal(status))
 		}

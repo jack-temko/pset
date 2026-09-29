@@ -1,7 +1,7 @@
 // Package llm is a dependency-free OpenAI-compatible client: streaming chat
 // completions (with multimodal text/image content) and embeddings, over
-// plain net/http. It speaks enough of the wire format for the Z.ai API and
-// OpenAI-shaped local endpoints such as ollama.
+// plain net/http. It speaks enough of the wire format for the Z.ai API,
+// OpenRouter, and OpenAI-shaped local endpoints such as ollama.
 package llm
 
 import (
@@ -119,6 +119,9 @@ type Message struct {
 	// thinking instead of redoing it after every tool call; the client
 	// only sends it to endpoints that take it (see keepsReasoning).
 	ReasoningContent string `json:"reasoning_content,omitempty"`
+	// Reasoning is the same thinking under OpenRouter's name for it; shape
+	// moves ReasoningContent here for OpenRouter.
+	Reasoning string `json:"reasoning,omitempty"`
 }
 
 // TextMessage is a plain-text chat turn.
@@ -229,6 +232,23 @@ type Reply struct {
 	ToolCalls []ToolCall
 	// Reasoning is what a thinking model reasoned before answering.
 	Reasoning string
+	// Usage is what the call cost, when the provider says (OpenRouter
+	// always does; others when they send it).
+	Usage *Usage
+}
+
+// Usage is a call's token counts and, from OpenRouter, its cost in
+// dollars.
+type Usage struct {
+	PromptTokens     int     `json:"prompt_tokens"`
+	CompletionTokens int     `json:"completion_tokens"`
+	Cost             float64 `json:"cost,omitempty"`
+	PromptDetails    struct {
+		CachedTokens int `json:"cached_tokens"`
+	} `json:"prompt_tokens_details"`
+	CompletionDetails struct {
+		ReasoningTokens int `json:"reasoning_tokens"`
+	} `json:"completion_tokens_details"`
 }
 
 // ChatRequest is one chat completion call. Model is required; MaxTokens
@@ -245,8 +265,13 @@ type ChatRequest struct {
 	// the conversation carries reasoning back; see keepsReasoning.
 	Thinking *Thinking `json:"thinking,omitempty"`
 	// ReasoningEffort is how hard a thinking model thinks: "low",
-	// "high" or "max" on Z.ai. Only Z.ai gets it; see shape.
+	// "high" or "max". Z.ai takes it as is, OpenRouter as Reasoning's
+	// effort, and no other endpoint gets it; see shape.
 	ReasoningEffort string `json:"reasoning_effort,omitempty"`
+	// Reasoning is OpenRouter's thinking switch, and Provider which of a
+	// model's hosts may serve it. shape sets both for OpenRouter only.
+	Reasoning *ReasoningOptions `json:"reasoning,omitempty"`
+	Provider  *ProviderOptions  `json:"provider,omitempty"`
 	// OnReasoning, if set, receives a thinking model's reasoning as it
 	// streams: the part it writes before, and apart from, its answer.
 	OnReasoning func(text string) `json:"-"`
@@ -258,6 +283,24 @@ type Thinking struct {
 	Type          string `json:"type"`
 	ClearThinking *bool  `json:"clear_thinking,omitempty"`
 }
+
+// ReasoningOptions is OpenRouter's reasoning object: an effort, or just
+// switched on at the model's own default.
+type ReasoningOptions struct {
+	Effort  string `json:"effort,omitempty"`
+	Enabled bool   `json:"enabled,omitempty"`
+}
+
+// ProviderOptions is OpenRouter's say in which hosts serve a model.
+type ProviderOptions struct {
+	Quantizations []string `json:"quantizations,omitempty"`
+}
+
+// fullPrecision is the weights OpenRouter may serve PSet's models at. The
+// cheapest hosts run 4-bit weights (fp4, int4), which can reason worse;
+// the saving isn't worth a wrong walkthrough. "unknown" keeps first-party
+// hosts, which don't say.
+var fullPrecision = []string{"fp8", "fp16", "bf16", "fp32", "unknown"}
 
 // ToolMessage is the result turn for one tool call.
 func ToolMessage(callID, content string) Message {
@@ -276,14 +319,20 @@ func AssistantToolMessage(reply Reply) Message {
 // model that gets its reasoning back carries on from it, one that doesn't
 // works the whole problem out again after every tool call. Other
 // endpoints may refuse the field (DeepSeek answers 400), so it only goes
-// to Z.ai.
-func (c *Client) keepsReasoning() bool {
+// to Z.ai. OpenRouter takes the same thinking under its own name.
+func (c *Client) keepsReasoning() bool { return c.hostIs("z.ai", "bigmodel.cn") }
+
+// openRouter reports whether the endpoint is OpenRouter, which reaches
+// many models through one key and has its own reasoning and host options.
+func (c *Client) openRouter() bool { return c.hostIs("openrouter.ai") }
+
+func (c *Client) hostIs(domains ...string) bool {
 	u, err := url.Parse(c.apiBaseURL)
 	if err != nil {
 		return false
 	}
 	host := u.Hostname()
-	for _, h := range []string{"z.ai", "bigmodel.cn"} {
+	for _, h := range domains {
 		if host == h || strings.HasSuffix(host, "."+h) {
 			return true
 		}
@@ -291,13 +340,12 @@ func (c *Client) keepsReasoning() bool {
 	return false
 }
 
-// shape fits a request to the endpoint: reasoning goes back to one that
-// keeps it, with preserved thinking switched on, and is dropped for any
-// other, as is a reasoning effort.
+// shape fits a request to the endpoint. Z.ai gets its reasoning effort,
+// and reasoning goes back with preserved thinking switched on. OpenRouter
+// gets its reasoning object, the reasoning back under its own name, and
+// full-precision hosts only. Any other endpoint gets neither the effort
+// nor the reasoning.
 func (c *Client) shape(req ChatRequest) ChatRequest {
-	if !c.keepsReasoning() {
-		req.ReasoningEffort = ""
-	}
 	carries := false
 	for _, m := range req.Messages {
 		if m.ReasoningContent != "" {
@@ -305,18 +353,36 @@ func (c *Client) shape(req ChatRequest) ChatRequest {
 			break
 		}
 	}
-	if !carries {
-		return req
-	}
-	if c.keepsReasoning() {
-		if req.Thinking == nil {
+	switch {
+	case c.keepsReasoning():
+		if carries && req.Thinking == nil {
 			keep := false
 			req.Thinking = &Thinking{Type: "enabled", ClearThinking: &keep}
 		}
 		return req
+	case c.openRouter():
+		if req.Reasoning == nil {
+			if req.ReasoningEffort != "" {
+				req.Reasoning = &ReasoningOptions{Effort: req.ReasoningEffort}
+			} else {
+				req.Reasoning = &ReasoningOptions{Enabled: true}
+			}
+		}
+		req.ReasoningEffort = ""
+		if req.Provider == nil {
+			req.Provider = &ProviderOptions{Quantizations: fullPrecision}
+		}
+	default:
+		req.ReasoningEffort = ""
+	}
+	if !carries {
+		return req
 	}
 	msgs := make([]Message, len(req.Messages))
 	for i, m := range req.Messages {
+		if c.openRouter() {
+			m.Reasoning = m.ReasoningContent
+		}
 		m.ReasoningContent = ""
 		msgs[i] = m
 	}
@@ -356,10 +422,13 @@ func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (reply Reply
 	var payload struct {
 		Choices []struct {
 			Message struct {
-				Content   Content    `json:"content"`
-				ToolCalls []ToolCall `json:"tool_calls"`
+				Content          Content    `json:"content"`
+				ToolCalls        []ToolCall `json:"tool_calls"`
+				ReasoningContent string     `json:"reasoning_content"`
+				Reasoning        string     `json:"reasoning"`
 			} `json:"message"`
 		} `json:"choices"`
+		Usage *Usage `json:"usage"`
 	}
 	if err := c.post(ctx, c.apiBaseURL+"/chat/completions", req, &payload); err != nil {
 		return Reply{}, err
@@ -368,7 +437,7 @@ func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (reply Reply
 		return Reply{}, fmt.Errorf("model reply had no choices")
 	}
 	msg := payload.Choices[0].Message
-	return Reply{Content: msg.Content.text, ToolCalls: normalizeToolCalls(msg.ToolCalls)}, nil
+	return Reply{Content: msg.Content.text, ToolCalls: normalizeToolCalls(msg.ToolCalls), Reasoning: firstOf(msg.ReasoningContent, msg.Reasoning), Usage: payload.Usage}, nil
 }
 
 // ChatStream runs a streaming completion and returns the assembled reply
@@ -396,6 +465,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 	defer resp.Body.Close()
 
 	var full, reasoning strings.Builder
+	var usage *Usage
 	// finished is the stream saying it's done, by [DONE] or a choice's
 	// finish_reason. A stream that just stops without either was cut, even
 	// when every event in it parsed.
@@ -448,8 +518,9 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 			Choices []struct {
 				FinishReason string `json:"finish_reason"`
 				Delta        struct {
-					Content   Content `json:"content"`
-					Reasoning string  `json:"reasoning_content"`
+					Content          Content `json:"content"`
+					ReasoningContent string  `json:"reasoning_content"`
+					Reasoning        string  `json:"reasoning"`
 					ToolCalls []struct {
 						Index    int    `json:"index"`
 						ID       string `json:"id"`
@@ -460,6 +531,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 					} `json:"tool_calls"`
 				} `json:"delta"`
 			} `json:"choices"`
+			Usage *Usage `json:"usage"`
 		}
 		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
 			if ctx.Err() != nil {
@@ -472,11 +544,16 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 			}
 			return Reply{}, fmt.Errorf("decode stream chunk: %w", err)
 		}
+		if chunk.Usage != nil {
+			usage = chunk.Usage
+		}
 		for _, choice := range chunk.Choices {
 			if choice.FinishReason != "" {
 				finished = true
 			}
-			if r := choice.Delta.Reasoning; r != "" {
+			// Z.ai names the thinking reasoning_content, OpenRouter
+			// reasoning; a provider that sent both would send it twice.
+			if r := firstOf(choice.Delta.ReasoningContent, choice.Delta.Reasoning); r != "" {
 				reasoning.WriteString(r)
 				if req.OnReasoning != nil {
 					req.OnReasoning(r)
@@ -505,7 +582,15 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 	if !finished {
 		return Reply{Content: full.String()}, fmt.Errorf("%w: the stream ended without finishing", ErrStreamCut)
 	}
-	return Reply{Content: full.String(), ToolCalls: calls.finish(), Reasoning: reasoning.String()}, nil
+	return Reply{Content: full.String(), ToolCalls: calls.finish(), Reasoning: reasoning.String(), Usage: usage}, nil
+}
+
+// firstOf is the first non-empty string.
+func firstOf(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
 }
 
 // ErrStreamCut is a streamed reply that ended partway: the connection
@@ -683,7 +768,7 @@ func (c *Client) doWithRetry(ctx context.Context, url string, body any) (*http.R
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		if (resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500) && attempt < 2 {
+		if (resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500) && attempt < 2 && !OutOfCredit(resp.StatusCode, string(data)) {
 			delay := time.Duration(attempt+1) * 2 * time.Second
 			if ra := resp.Header.Get("Retry-After"); ra != "" {
 				if secs, perr := strconv.Atoi(ra); perr == nil && secs >= 0 && secs <= 120 {
@@ -713,7 +798,26 @@ const (
 	// TroubleRejected: the provider refused the request (a bad key, an
 	// unknown model): something in the connection's settings is wrong.
 	TroubleRejected Trouble = "rejected"
+	// TroubleCredit: the account has no money left. Asking again can't
+	// help until it's topped up; switching provider in Settings can.
+	TroubleCredit Trouble = "credit"
 )
+
+// OutOfCredit reports whether a failed call means the account has run out
+// of money. OpenRouter answers 402. Z.ai answers 429, the status it also
+// sheds load with, and says which in its body: code 1113, "Insufficient
+// balance or no resource package".
+func OutOfCredit(status int, body string) bool {
+	if status == http.StatusPaymentRequired {
+		return true
+	}
+	b := strings.ToLower(body)
+	return strings.Contains(b, `"1113"`) || strings.Contains(b, "insufficient balance") ||
+		strings.Contains(b, "insufficient credits") || strings.Contains(b, "more credits")
+}
+
+// NoCredit says it in words, for the person waiting on the call.
+const NoCredit = "Your chat model provider says the account is out of credit. Top it up on the provider's site, or switch provider in Settings, then try again."
 
 // Classify names a model call's failure, with the HTTP status when the
 // provider gave one.
@@ -723,6 +827,9 @@ func Classify(err error) (Trouble, int) {
 	}
 	var e *LLMError
 	if errors.As(err, &e) {
+		if OutOfCredit(e.Status, e.Body) {
+			return TroubleCredit, e.Status
+		}
 		if e.Status == http.StatusTooManyRequests || e.Status >= 500 {
 			return TroubleBusy, e.Status
 		}

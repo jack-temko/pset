@@ -386,8 +386,10 @@ for the problem also finds open the guide too, so the writer doesn't
 spend a round reading them. Each tool round is saved on the question as
 it finishes, so a restart, or a retry of the same problem, carries on
 from the last round instead of starting over. A model's reasoning goes
-back with its turn to endpoints that keep it (Z.ai), so it carries on
-from its own thinking rather than redoing it after every tool call.
+back with its turn to endpoints that keep it (Z.ai, and OpenRouter under
+its own field name), so it carries on from its own thinking rather than
+redoing it after every tool call. Through OpenRouter, only hosts serving
+full-precision weights are used (internal/llm/README.md, "Providers").
 The writer's brief is a short rule list, how to work before what to
 write: set the problem up as equations and let `compute` and
 `solve_linear` do every number in the guide, checks included.

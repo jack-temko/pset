@@ -32,8 +32,10 @@ asks you to come back on a bigger screen.
 - **Tesseract**, to read scanned books.
 - **A chat model** behind an OpenAI-compatible API, and it must accept
   images: PSet shows the model page images when it locates a problem. The
-  default is Z.ai's `glm-5.3-flash`; any vision-capable model on an
-  OpenAI-compatible endpoint works.
+  default is Z.ai's `glm-5.3-flash`. [OpenRouter](https://openrouter.ai)
+  works too, with one key for every model it serves (the same model is
+  `z-ai/glm-5.3-flash` there); so does any vision-capable model on an
+  OpenAI-compatible endpoint.
 - **An embeddings server**, for searching a book. The default is
   [Ollama](https://ollama.com) on this machine with `nomic-embed-text`.
 

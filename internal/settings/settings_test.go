@@ -307,3 +307,17 @@ func TestProfileNameIsTidiedAndSurvivesUntilReset(t *testing.T) {
 		t.Fatal("name survived reset")
 	}
 }
+
+// TestOutOfCreditPointsAtTheKey: an account with no money left is said on
+// the key's field, not as an unreachable endpoint.
+func TestOutOfCreditPointsAtTheKey(t *testing.T) {
+	for _, le := range []*llm.LLMError{
+		{Status: 429, Body: `{"error":{"code":"1113","message":"Insufficient balance or no resource package. Please recharge."}}`},
+		{Status: 402, Body: `{"error":{"code":402,"message":"This request requires more credits"}}`},
+	} {
+		var he *httpx.Error
+		if !errors.As(explain(le, true, true), &he) || he.Field != "apiKey" || !strings.Contains(he.Message, "out of credit") {
+			t.Errorf("%d: got %+v, want out of credit on apiKey", le.Status, he)
+		}
+	}
+}
