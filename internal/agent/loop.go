@@ -71,6 +71,10 @@ type Loop struct {
 	Step func(label string, running bool)
 	// Delta is the answer as it streams.
 	Delta func(text string)
+	// Aside fires when a round that wrote text goes on to call tools: what
+	// it wrote was said on the way, not the answer. A guide drops it; Ask,
+	// whose blocks may come between tool calls, leaves it nil.
+	Aside func()
 	// Writing fires when a round's answer text starts: the thinking and
 	// the tools are done, and the words are coming.
 	Writing func()
@@ -184,6 +188,10 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			// Whatever it said before reaching for a tool ends its line.
 			l.Delta("\n")
 		}
+		finished := onlyRemembers(reply.ToolCalls) && l.Complete != nil && l.Complete()
+		if wrote && l.Aside != nil && !finished {
+			l.Aside()
+		}
 		msgs = append(msgs, llm.AssistantToolMessage(reply))
 		var images []llm.Part
 		for _, call := range reply.ToolCalls {
@@ -203,7 +211,7 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			}
 			msgs = append(msgs, llm.Message{Role: "user", Content: content})
 		}
-		if wrote && l.Complete != nil && onlyRemembers(reply.ToolCalls) && l.Complete() {
+		if wrote && finished {
 			return nil
 		}
 		if l.Round != nil {

@@ -334,6 +334,19 @@ func (c *Client) ChatOnce(ctx context.Context, req ChatRequest) (string, error) 
 	return reply.Content, nil
 }
 
+// Mechanical is a small one-shot call: a system prompt and a message in,
+// the reply out, at low reasoning effort. It is what the document's
+// repairs are made with: small, mechanical work that needs no long
+// thought. Its type is the document's Model, which llm does not import.
+func (c *Client) Mechanical(model string) func(ctx context.Context, system, user string) (string, error) {
+	return func(ctx context.Context, system, user string) (string, error) {
+		return c.ChatOnce(ctx, ChatRequest{Model: model, ReasoningEffort: "low", Messages: []Message{
+			TextMessage("system", system),
+			TextMessage("user", user),
+		}})
+	}
+}
+
 // ChatOnceFull is ChatOnce with any requested tool calls visible.
 func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (reply Reply, err error) {
 	start := time.Now()

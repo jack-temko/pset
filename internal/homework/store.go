@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"strings"
 
-	"github.com/jackt/pset/internal/cards"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/pdf"
 )
 
@@ -102,7 +104,50 @@ CREATE TABLE assignment_reads (
 	updated_at TEXT NOT NULL
 );
 CREATE INDEX assignment_reads_book ON assignment_reads (book_id, created_at);`},
+		// Structured guides (ideas/structured-guides.md): a guide is a
+		// document of blocks, and a statement, a professor's note and a
+		// line of a figure's reading are runs. The old guides are deleted,
+		// not converted: most were broken in some way, and the students'
+		// questions, sets, due dates and Complete marks stay. A question
+		// that had a guide has none until it is asked for ("Write the
+		// guide"); one still waiting for its guide writes it in the new
+		// format when its turn comes.
+		{Name: "homework/12", Do: structuredGuides},
 	}
+}
+
+// structuredGuides is homework/12: the guides go, and the text fields that
+// were strings become runs.
+func structuredGuides(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, `UPDATE questions SET
+		state = CASE WHEN state = 'ready' THEN 'unwritten' ELSE state END,
+		hint = '[]', walkthrough = '[]', revealed = '[]', rounds = '[]'`); err != nil {
+		return err
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT id, statement, notes, reading FROM questions`)
+	if err != nil {
+		return err
+	}
+	type text struct{ id, statement, notes, reading string }
+	var all []text
+	for rows.Next() {
+		var t text
+		if err := rows.Scan(&t.id, &t.statement, &t.notes, &t.reading); err != nil {
+			rows.Close()
+			return err
+		}
+		all = append(all, t)
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	for _, t := range all {
+		if _, err := tx.ExecContext(ctx, `UPDATE questions SET statement = ?, notes = ?, reading = ? WHERE id = ?`,
+			mustJSON(decodeRuns(t.statement)), mustJSON(decodeRunLists(t.notes)), mustJSON(decodeRunLists(t.reading)), t.id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 var errNotFound = errors.New("not found")
@@ -182,8 +227,8 @@ const questionCols = `q.id, q.homework_id, q.position, q.text, q.in_book, q.labe
 func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	var r row
 	var page, pinned sql.NullInt64
-	var rect, figs, hint, walk, revealed, doneAt, memory, reading, boxes, notes string
-	err := s.Scan(&r.ID, &r.HomeworkID, &r.Position, &r.Text, &r.InBook, &r.Label, &r.Statement, &page, &pinned,
+	var rect, figs, statement, hint, walk, revealed, doneAt, memory, reading, boxes, notes string
+	err := s.Scan(&r.ID, &r.HomeworkID, &r.Position, &r.Text, &r.InBook, &r.Label, &statement, &page, &pinned,
 		&rect, &figs, &hint, &walk, &r.State, &r.Reason, &revealed, &doneAt, &r.Activity, &memory, &r.Failure, &reading, &r.ReadingEdited, &boxes, &notes, &r.UpdatedAt, &r.Rev, &r.BookID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
@@ -205,18 +250,17 @@ func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	for i, f := range r.FigRect {
 		r.Figures[i] = Figure{Label: f.Label}
 	}
-	r.Hint, r.Walkthrough, r.Revealed = []cards.Segment{}, []cards.Segment{}, []string{}
+	r.Statement = decodeRuns(statement)
+	r.Hint, r.Walkthrough, r.Revealed = []doc.Block{}, []doc.Block{}, []string{}
 	json.Unmarshal([]byte(hint), &r.Hint)
 	json.Unmarshal([]byte(walk), &r.Walkthrough)
 	json.Unmarshal([]byte(revealed), &r.Revealed)
 	r.Memory = []MemoryLine{}
 	json.Unmarshal([]byte(memory), &r.Memory)
-	r.Reading = []string{}
-	json.Unmarshal([]byte(reading), &r.Reading)
+	r.Reading = decodeRunLists(reading)
 	r.Boxes = []Box{}
 	json.Unmarshal([]byte(boxes), &r.Boxes)
-	r.Notes = []string{}
-	json.Unmarshal([]byte(notes), &r.Notes)
+	r.Notes = decodeRunLists(notes)
 	r.Done = doneAt != ""
 	return r, nil
 }
@@ -271,4 +315,65 @@ func renumber(ctx context.Context, q queryer, homeworkID string) error {
 		AND (o.position < questions.position OR (o.position = questions.position AND o.created_at < questions.created_at))
 	) + 1 WHERE homework_id = ?`, homeworkID)
 	return err
+}
+
+// Text as runs, and back. A statement, a professor's note and a line of a
+// figure's reading are stored as runs, split once when they are written;
+// what the model reads, and what the student edits, is the source form,
+// with math in \(..\).
+
+// runsOf is a string as stored runs: split, with math KaTeX can't parse
+// marked raw.
+func runsOf(s string) []doc.Run {
+	runs := doc.Text(strings.TrimSpace(s), pagenum.Map{})
+	if runs == nil {
+		runs = []doc.Run{}
+	}
+	return runs
+}
+
+// runLists is lines as a list of runs, a line each.
+func runLists(lines []string) [][]doc.Run {
+	out := make([][]doc.Run, len(lines))
+	for i, l := range lines {
+		out[i] = runsOf(l)
+	}
+	return out
+}
+
+// sources is a list of runs as its lines of source.
+func sources(list [][]doc.Run) []string {
+	out := make([]string, len(list))
+	for i, runs := range list {
+		out[i] = doc.Source(runs, pagenum.Map{})
+	}
+	return out
+}
+
+func source(runs []doc.Run) string { return doc.Source(runs, pagenum.Map{}) }
+
+// decodeRuns reads stored runs. Text that isn't a list of runs (a row
+// written before statements were runs) is split as it stands.
+func decodeRuns(s string) []doc.Run {
+	var runs []doc.Run
+	if strings.HasPrefix(s, "[") && json.Unmarshal([]byte(s), &runs) == nil {
+		return runs
+	}
+	if t := strings.TrimSpace(s); t == "" || t == "null" {
+		return []doc.Run{}
+	}
+	return runsOf(s)
+}
+
+func decodeRunLists(s string) [][]doc.Run {
+	var list [][]doc.Run
+	if json.Unmarshal([]byte(s), &list) == nil && list != nil {
+		return list
+	}
+	// A list of plain lines, as they were stored before runs.
+	var lines []string
+	if json.Unmarshal([]byte(s), &lines) == nil {
+		return runLists(lines)
+	}
+	return [][]doc.Run{}
 }

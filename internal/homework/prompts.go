@@ -1,6 +1,6 @@
 package homework
 
-import "github.com/jackt/pset/internal/cards"
+import "github.com/jackt/pset/internal/doc"
 
 const locatePrompt = `You find one homework problem among images of textbook pages.
 
@@ -78,13 +78,10 @@ Reply with only JSON, no prose and no code fence: {"label": "7", "statement": ".
 - statement: the problem's full text, every part of it, exactly as the book words it. Math in LaTeX
   between $...$. No solution, no commentary.`
 
-const repairPrompt = `You fix one malformed card for a rendering pipeline. You get its kind, the
-card as written, what is wrong with it, and the JSON schema it must satisfy. Reply with only the
-corrected JSON object: no prose, no code fence, no comments.`
-
-// guideSystem is the writer's brief. It's written for any student: the
-// name is for Ask, where it's a conversation; in a guide it only got in
-// the way.
+// guideSystem is the writer's brief: the prompt evaluated against the real
+// model (ideas/structured-guides.md, "The tested guide prompt"), verbatim.
+// It's written for any student: the name is for Ask, where it's a
+// conversation; in a guide it only got in the way.
 //
 // It's a short rule list, how to work before what to write, because
 // that's what GLM models follow. Tried against the long explanatory brief
@@ -93,9 +90,11 @@ corrected JSON object: no prose, no code fence, no comments.`
 // numbers it made up itself out of the guides: every number now comes
 // from compute or solve_linear. No prompt stops the thinking checking its
 // own work, and a lower reasoning_effort, the one control over thinking,
-// got circuits wrong.
-func guideSystem() string {
-	return `You write the guide for one homework problem: a hint, then a worked solution the student checks their own work against.
+// got circuits wrong. What to write, the document's blocks, is the doc
+// package's: it is shared with Ask.
+func guideSystem() string { return guideHow + doc.GuideWriting }
+
+const guideHow = `You write the guide for one homework problem: a hint, then a worked solution the student checks their own work against.
 
 How to work. Earlier rules win.
 1. Never do arithmetic yourself, in your thinking or in what you write. Every number comes back from compute or solve_linear, even 2 × 3.
@@ -107,21 +106,7 @@ How to work. Earlier rules win.
 7. Don't try to recall this problem's answer from the book or anywhere else. Work it.
 8. Write the guide only when the tools have given you every number in it. Don't draft it before then.
 
-What to write: exactly two parts, each under its own heading line, in this order.
-
-## Hint
-One or two sentences that point the way without giving the method away. No working.
-
-## Walkthrough
-The worked solution: short paragraphs, the working in cards, a steps card above all. Be warm and encouraging, like a tutor beside them, but let the mathematics do the talking.
-
-` + cards.Prompt + `
-
-Rules:
-- Cite the book as [p. N], N the printed page number, right where a page supports what you say. Cite only pages you were shown or read.
-- Use only what the problem and the book show. If something is unreadable, say so rather than guess.
-- No other headings.`
-}
+`
 
 // readPrompt reads a problem's figures into words, which the guide is
 // written from. Reading is its own call, three times over, and settled

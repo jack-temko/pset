@@ -1,6 +1,6 @@
 package ask
 
-import "github.com/jackt/pset/internal/cards"
+import "github.com/jackt/pset/internal/doc"
 
 // TurnState is where a turn is.
 type TurnState string
@@ -17,9 +17,9 @@ const (
 type Step struct {
 	Label   string `json:"label"`
 	Running bool   `json:"running"`
-	// After is how many answer segments were written when the call ran:
+	// After is how many answer blocks were written when the call ran:
 	// the feed is interleaved, not stacked at the top, so each step sits
-	// between the paragraphs it happened between.
+	// between the blocks it happened between.
 	After int `json:"after"`
 	// MemoryID is the memory a remember step saved, for its Undo.
 	MemoryID string `json:"memoryId,omitempty"`
@@ -32,15 +32,16 @@ type About struct {
 	Text  string `json:"text"`
 }
 
-// Turn is one question and its answer. Answer holds what's been saved so
-// far; while running, turn.delta and the card events carry the rest.
+// Turn is one question and its answer, a document of blocks. Answer holds
+// what's been saved so far; while running, the turn.block events carry the
+// rest.
 type Turn struct {
 	ID        string          `json:"id"`
 	BookID    string          `json:"bookId"`
 	Question  string          `json:"question"`
 	About     string          `json:"about,omitempty"`
 	Steps     []Step          `json:"steps"`
-	Answer    []cards.Segment `json:"answer"`
+	Answer    []doc.Block     `json:"answer"`
 	State     TurnState       `json:"state" tstype:"'running' | 'done' | 'stopped' | 'failed'"`
 	Reason    string          `json:"reason,omitempty"`
 	CreatedAt string          `json:"createdAt"`
@@ -61,34 +62,46 @@ type Question struct {
 
 // Event types this feature publishes.
 const (
-	EventTurnChanged   = "turn.changed"
-	EventTurnDelta     = "turn.delta"
-	EventTurnCardStart = "turn.card.start"
-	EventTurnRepairing = "turn.card.repairing"
-	EventTurnCard      = "turn.card"
-	EventTurnsCleared  = "turns.cleared"
+	EventTurnChanged = "turn.changed"
+	// The blocks of an answer as they are written: a skeleton when a
+	// block's type has arrived, its text as it streams, a "Tidying" label
+	// while it is repaired, and the finished block in the skeleton's place.
+	EventTurnBlockStart     = "turn.block.start"
+	EventTurnBlockText      = "turn.block.text"
+	EventTurnBlockRepairing = "turn.block.repairing"
+	EventTurnBlock          = "turn.block"
+	EventTurnBlockFailed    = "turn.block.failed"
+	EventTurnsCleared       = "turns.cleared"
 )
 
 type TurnChanged struct {
 	Turn Turn `json:"turn"`
 }
 
-// TurnDelta is prose as it streams, citations already on PDF pages.
-type TurnDelta struct {
+// TurnBlockStart says a block is being written: draw its skeleton.
+type TurnBlockStart struct {
 	TurnID string `json:"turnId"`
-	Text   string `json:"text"`
+	Type   string `json:"type"`
 }
 
-// TurnCardStart says a card is being written: draw its skeleton.
-type TurnCardStart struct {
-	TurnID string     `json:"turnId"`
-	Kind   cards.Kind `json:"kind"`
+// TurnBlockText is the open text block's new runs, citations already on
+// PDF pages.
+type TurnBlockText struct {
+	TurnID string    `json:"turnId"`
+	Runs   []doc.Run `json:"runs"`
 }
 
-// TurnCard is a finished card (valid or raw), replacing the skeleton.
-type TurnCard struct {
-	TurnID  string        `json:"turnId"`
-	Segment cards.Segment `json:"segment"`
+// TurnBlockRepairing says the block being written is being repaired.
+type TurnBlockRepairing struct {
+	TurnID string `json:"turnId"`
+	Type   string `json:"type"`
+}
+
+// TurnBlock is a finished block, replacing the skeleton. For
+// turn.block.failed it is a raw block: repair could not make it valid.
+type TurnBlock struct {
+	TurnID string    `json:"turnId"`
+	Block  doc.Block `json:"block"`
 }
 
 type TurnsCleared struct {

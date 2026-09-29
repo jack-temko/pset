@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/agent"
-	"github.com/jackt/pset/internal/cards"
+	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/jobs"
@@ -113,7 +113,13 @@ type env struct {
 	queue  *jobs.Queue
 }
 
-const guide = "## Hint\nStart from Ohm's law [p. 1].\n\n## Walkthrough\nGood work getting here, Jack.\n```steps\n{\"steps\":[{\"math\":\"V = IR\",\"why\":\"Ohm's law.\"},{\"math\":\"V = 2 \\\\cdot 3 = 6\"}]}\n```\nSo $V = 6$ volts.\n"
+const guide = `{"type":"hint","text":"Start from Ohm's law [p. 1]."}
+{"type":"part","label":"(a)","title":"Find the voltage"}
+{"type":"para","text":"Good work getting here, Jack."}
+{"type":"derivation","steps":[{"tex":"V = IR","why":"Ohm's law."},{"tex":"V = 2 \\cdot 3 = 6"}]}
+{"type":"para","text":"So \\(V = 6\\) volts."}
+{"type":"answer","label":"(a)","text":"\\(V = 6\\) volts."}
+`
 
 // fakeModel answers like a well-behaved model: it finds any problem but
 // 3.99 on the first image it's shown, and writes a guide in two parts.
@@ -290,14 +296,14 @@ func TestInBookQuestionIsLocatedThenGuided(t *testing.T) {
 		t.Fatalf("added %+v", qs)
 	}
 	q := e.wait(t, qs[0].ID, StateReady)
-	if q.Page == nil || *q.Page != 3 || q.Statement != "Find the voltage across $R_2$." || len(q.Figures) != 1 {
+	if q.Page == nil || *q.Page != 3 || source(q.Statement) != `Find the voltage across \(R_2\).` || len(q.Figures) != 1 {
 		t.Fatalf("located %+v", q)
 	}
-	if len(q.Hint) != 1 || q.Hint[0].Text != "Start from Ohm's law [p. 3]." {
-		t.Fatalf("hint %+v (citation should move to PDF page 3)", q.Hint)
+	if len(q.Hint) != 1 || doc.TypeOf(q.Hint[0]) != doc.TypeHint || !strings.Contains(string(q.Hint[0]), `"cite":3`) {
+		t.Fatalf("hint %s (citation should move to PDF page 3)", q.Hint)
 	}
-	if len(q.Walkthrough) != 3 || q.Walkthrough[1].Type != cards.SegmentCard || q.Walkthrough[1].Kind != cards.KindSteps {
-		t.Fatalf("walkthrough %+v", q.Walkthrough)
+	if len(q.Walkthrough) != 5 || doc.TypeOf(q.Walkthrough[0]) != doc.TypePart || doc.TypeOf(q.Walkthrough[2]) != doc.TypeDerivation || len(doc.Answers(q.Walkthrough)) != 1 {
+		t.Fatalf("walkthrough %s", q.Walkthrough)
 	}
 
 	// The hint went out on its own before the question was ready.
@@ -371,7 +377,7 @@ func TestEveryQuestionIsFoundBeforeAnyGuideIsWritten(t *testing.T) {
 	states := map[State]int{}
 	for _, q := range first {
 		got, _ := getQuestion(context.Background(), e.svc.c.DB, q.ID)
-		if got.Page == nil || got.Statement == "" {
+		if got.Page == nil || len(got.Statement) == 0 {
 			t.Fatalf("%s: a guide started before it was found (%s)", got.Text, got.State)
 		}
 		states[got.State]++
@@ -400,7 +406,7 @@ func TestOffBookQuestionSkipsLocating(t *testing.T) {
 	h := e.newSet(t)
 	qs := e.add(t, h.ID, Draft{Text: "A 2 ohm resistor carries 3 A. What is the voltage?", InBook: false})
 	q := e.wait(t, qs[0].ID, StateReady)
-	if q.Page != nil || q.Statement != "A 2 ohm resistor carries 3 A. What is the voltage?" {
+	if q.Page != nil || source(q.Statement) != "A 2 ohm resistor carries 3 A. What is the voltage?" {
 		t.Fatalf("%+v", q)
 	}
 	for _, r := range e.llm.Requests() {
@@ -432,7 +438,7 @@ func TestNotFoundThenPinnedPageThenPastedText(t *testing.T) {
 	text := "Find the voltage across R2 when I = 3 A."
 	e.do(t, "POST", "/api/questions/"+q.ID+"/retry", Retry{Text: &text}, nil)
 	q = e.wait(t, q.ID, StateReady)
-	if q.InBook || q.Statement != text || q.Page != nil {
+	if q.InBook || source(q.Statement) != text || q.Page != nil {
 		t.Fatalf("pasted: %+v", q)
 	}
 	if code := e.do(t, "POST", "/api/questions/"+q.ID+"/retry", Retry{}, &er); code != 422 {

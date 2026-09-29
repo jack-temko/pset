@@ -2,20 +2,18 @@ package ask
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jackt/pset/internal/pagenum"
 	"log/slog"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/jackt/pset/internal/agent"
-	"github.com/jackt/pset/internal/cards"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/pagenum"
 )
 
 type turnPayload struct {
@@ -54,7 +52,7 @@ type run struct {
 
 	mu     sync.Mutex
 	steps  []Step
-	parser *cards.Parser
+	parser *doc.Parser
 	saved  time.Time
 }
 
@@ -111,19 +109,24 @@ func (r *run) loop(ctx context.Context) error {
 		return &failure{msg: noChatModel}
 	}
 	r.llm, r.model = llm.Open(cfg), cfg.ChatModel
-	r.parser = cards.NewParser(ctx, cards.Options{Pages: r.book.Pages, Repair: r.repair}, cards.Handler{
-		Delta: func(text string) {
-			s.c.Events.Publish(EventTurnDelta, TurnDelta{TurnID: r.t.ID, Text: text})
-			r.save(ctx, false)
+	r.parser = doc.NewParser(ctx, doc.Options{
+		Mode: doc.Ask, Pages: r.book.Pages, PageCount: r.book.PageCount, Model: r.llm.Mechanical(r.model),
+	}, doc.Handler{
+		BlockStart: func(typ string) {
+			s.c.Events.Publish(EventTurnBlockStart, TurnBlockStart{TurnID: r.t.ID, Type: typ})
 		},
-		CardStart: func(k cards.Kind) {
-			s.c.Events.Publish(EventTurnCardStart, TurnCardStart{TurnID: r.t.ID, Kind: k})
+		Text: func(runs []doc.Run) {
+			s.c.Events.Publish(EventTurnBlockText, TurnBlockText{TurnID: r.t.ID, Runs: runs})
 		},
-		Repairing: func(k cards.Kind) {
-			s.c.Events.Publish(EventTurnRepairing, TurnCardStart{TurnID: r.t.ID, Kind: k})
+		Repairing: func(typ string) {
+			s.c.Events.Publish(EventTurnBlockRepairing, TurnBlockRepairing{TurnID: r.t.ID, Type: typ})
 		},
-		Card: func(seg cards.Segment) {
-			s.c.Events.Publish(EventTurnCard, TurnCard{TurnID: r.t.ID, Segment: seg})
+		Block: func(b doc.Block, failed bool) {
+			event := EventTurnBlock
+			if failed {
+				event = EventTurnBlockFailed
+			}
+			s.c.Events.Publish(event, TurnBlock{TurnID: r.t.ID, Block: b})
 			r.save(ctx, true)
 		},
 	})
@@ -138,7 +141,10 @@ func (r *run) loop(ctx context.Context) error {
 		Memory: s.c.Memory, Student: true,
 		Step:       func(label string, running bool) { r.step(ctx, label, running) },
 		Remembered: func(n agent.Note, _ string) { r.remembered(ctx, n.ID) },
-		Delta:      r.parser.Feed,
+		Delta: func(chunk string) {
+			r.parser.Feed(chunk)
+			r.save(ctx, false)
+		},
 	}
 	err = loop.Run(ctx, msgs)
 	r.parser.Finish()
@@ -186,36 +192,10 @@ func questionText(t row) string {
 	return fmt.Sprintf("%s\n\n(This is about the homework problem %s: %s)", t.Question, t.About, t.AboutText)
 }
 
-// flatten turns a stored answer back into what the model wrote, with
-// citations on printed pages again.
-func flatten(segs []cards.Segment, pages pagenum.Map) string {
-	var b strings.Builder
-	for _, s := range segs {
-		switch s.Type {
-		case cards.SegmentProse:
-			b.WriteString(cards.Uncite(s.Text, pages))
-		case cards.SegmentCard:
-			if s.Kind == cards.KindPlot {
-				var p cards.PlotCard
-				json.Unmarshal(s.Card, &p)
-				fmt.Fprintf(&b, "[a plot: %s]", p.Title)
-			} else {
-				fmt.Fprintf(&b, "```%s\n%s\n```", s.Kind, s.Card)
-			}
-		default:
-			b.WriteString(s.Text)
-		}
-		b.WriteString("\n\n")
-	}
-	return strings.TrimSpace(b.String())
-}
-
-func (r *run) repair(ctx context.Context, k cards.Kind, raw string, problems []string, schema string) (string, error) {
-	return r.llm.ChatOnce(ctx, llm.ChatRequest{Model: r.model, Messages: []llm.Message{
-		llm.TextMessage("system", repairPrompt),
-		llm.TextMessage("user", fmt.Sprintf("Kind: %s\n\nThe card:\n%s\n\nWhat's wrong:\n- %s\n\nIts schema:\n%s",
-			k, raw, strings.Join(problems, "\n- "), schema)),
-	}})
+// flatten turns a stored answer back into what the model wrote: the
+// blocks as JSON lines, math in \(..\), citations on printed pages again.
+func flatten(blocks []doc.Block, pages pagenum.Map) string {
+	return doc.ModelLines(blocks, pages)
 }
 
 // ---------------------------------------------------------------- state
@@ -232,7 +212,7 @@ func (r *run) save(ctx context.Context, force bool) {
 	}
 	r.saved = time.Now()
 	r.s.c.DB.ExecContext(ctx, `UPDATE turns SET answer = ?, steps = ?, updated_at = ? WHERE id = ?`,
-		mustJSON(r.parser.Segments()), mustJSON(r.steps), db.Now(), r.t.ID)
+		mustJSON(r.parser.Blocks()), mustJSON(r.steps), db.Now(), r.t.ID)
 }
 
 // step puts a call on the feed, or finishes the last one.
@@ -242,12 +222,10 @@ func (r *run) step(ctx context.Context, label string, running bool) {
 		last := r.steps[len(r.steps)-1]
 		r.steps[len(r.steps)-1] = Step{Label: label, After: last.After}
 	} else {
-		// The prose so far ends here: the step goes after it, and what the
-		// model writes next starts a paragraph of its own.
-		r.parser.Break()
-		r.steps = append(r.steps, Step{Label: label, Running: running, After: len(r.parser.Segments())})
+		// The blocks so far end here: the step goes after them.
+		r.steps = append(r.steps, Step{Label: label, Running: running, After: len(r.parser.Blocks())})
 	}
-	answer := r.parser.Segments()
+	answer := r.parser.Blocks()
 	r.mu.Unlock()
 	r.s.c.DB.ExecContext(ctx, `UPDATE turns SET steps = ?, answer = ?, updated_at = ? WHERE id = ?`,
 		mustJSON(r.steps), mustJSON(answer), db.Now(), r.t.ID)
@@ -266,10 +244,10 @@ func (r *run) remembered(ctx context.Context, id string) {
 }
 
 func (r *run) finish(ctx context.Context, st TurnState, reason string) {
-	var answer []cards.Segment
+	var answer []doc.Block
 	steps := []Step{}
 	if r.parser != nil {
-		answer = r.parser.Segments()
+		answer = r.parser.Blocks()
 	}
 	r.mu.Lock()
 	for _, s := range r.steps {
@@ -279,26 +257,22 @@ func (r *run) finish(ctx context.Context, st TurnState, reason string) {
 	}
 	r.mu.Unlock()
 	if answer == nil {
-		answer = []cards.Segment{}
+		answer = []doc.Block{}
 	}
 	r.s.c.DB.ExecContext(ctx, `UPDATE turns SET state = ?, reason = ?, answer = ?, steps = ?, updated_at = ? WHERE id = ?`,
 		st, reason, mustJSON(answer), mustJSON(steps), db.Now(), r.t.ID)
 	r.s.publish(ctx, r.t.ID)
 }
 
-const repairPrompt = `You fix one malformed card for a rendering pipeline. You get its kind, the
-card as written, what is wrong with it, and the JSON schema it must satisfy. Reply with only the
-corrected JSON object: no prose, no code fence, no comments.`
-
+// systemPrompt puts what never changes first (the tools, the document
+// format, the rules), and the book and the student last: the endpoint
+// caches a long shared prefix, so every turn on every book reuses it.
 func systemPrompt(title, name string) string {
 	who := "Be warm and encouraging, like a good tutor sitting beside the student."
 	if name != "" {
 		who = fmt.Sprintf("You're talking with %s. Be warm and encouraging, like a good tutor sitting beside them, and use their name now and then where it's natural, never in every reply.", name)
 	}
-	return fmt.Sprintf(`You are the tutor for the textbook %q, answering a student's questions about it. %s
-
-Answer focused, in short paragraphs, the way the book would put it, and no longer than the
-question needs.
+	return fmt.Sprintf(`You are a tutor answering a student's questions about a textbook. Answer focused, in short paragraphs, the way the book would put it, and no longer than the question needs.
 
 %s
 
@@ -307,5 +281,7 @@ question needs.
 - If the book doesn't cover something, say so, then answer from general knowledge and say that's
   what you did.
 
-%s`, title, who, agent.Prompt, cards.Prompt)
+%s
+
+The textbook is %q. %s`, agent.Prompt, doc.AskWriting, title, who)
 }

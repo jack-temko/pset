@@ -98,25 +98,25 @@ func (s *Service) setNotes(ctx context.Context, q row, lines []string) (Question
 	if err != nil {
 		return Question{}, err
 	}
-	if slices.Equal(notes, q.Notes) {
+	if slices.Equal(sources(runLists(notes)), sources(q.Notes)) {
 		return q.Question, nil
 	}
 	switch q.State {
-	case StatePending, StateLocating, StateLocated, StateReading:
+	case StatePending, StateLocating, StateLocated, StateReading, StateUnwritten:
 		// Nothing written from the old notes yet.
-		if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET notes = ?, updated_at = ? WHERE id = ?`, mustJSON(notes), db.Now(), q.ID); err != nil {
+		if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET notes = ?, updated_at = ? WHERE id = ?`, mustJSON(runLists(notes)), db.Now(), q.ID); err != nil {
 			return Question{}, err
 		}
 		return s.publishQuestion(ctx, q.ID)
 	}
 	if q.Page == nil && q.InBook {
 		// Failed before it was found: the notes wait for the find.
-		if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET notes = ?, updated_at = ? WHERE id = ?`, mustJSON(notes), db.Now(), q.ID); err != nil {
+		if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET notes = ?, updated_at = ? WHERE id = ?`, mustJSON(runLists(notes)), db.Now(), q.ID); err != nil {
 			return Question{}, err
 		}
 		return s.publishQuestion(ctx, q.ID)
 	}
-	return s.rewrite(ctx, q, nextStep(q.ID, false), `notes = ?`, mustJSON(notes))
+	return s.rewrite(ctx, q, nextStep(q.ID, false), `notes = ?`, mustJSON(runLists(notes)))
 }
 
 // rewrite changes a question and writes its guide again: whatever guide

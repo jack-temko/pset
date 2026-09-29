@@ -34,33 +34,36 @@ packages:
       import type { Run } from './pagenum'
       import type { Form, Style, Where } from './probnum'
 
-  - path: github.com/jackt/pset/internal/cards
+  - path: github.com/jackt/pset/internal/doc
     include_files: [wire.go]
     enum_style: union
-    output_path: web/src/api/gen/cards.ts
+    output_path: web/src/api/gen/doc.ts
     frontmatter: |
-      // Generated from internal/cards/wire.go by tygo. Do not edit.
+      // Generated from internal/doc/wire.go by tygo. Do not edit.
       /** One plotted point, [x, y]. */
       export type Point = [number, number]
+      /** One block of a document: the JSON of one of the block types below. */
+      export type Block = HintBlock | PartBlock | StepBlock | ParaBlock | NoteBlock | MathBlock | DerivationBlock | CalloutBlock | StatementBlock | TableBlock | PlotBlock | CodeBlock | AnswerBlock | RawBlock
   - path: github.com/jackt/pset/internal/homework
     include_files: [wire.go]
     enum_style: union
     output_path: web/src/api/gen/homework.ts
     type_mappings:
-      cards.Segment: "Segment"
+      doc.Block: "Block"
+      doc.Run: "Run"
     frontmatter: |
       // Generated from internal/homework/wire.go by tygo. Do not edit.
-      import type { Segment } from './cards'
+      import type { Block, Run } from './doc'
   - path: github.com/jackt/pset/internal/ask
     include_files: [wire.go]
     enum_style: union
     output_path: web/src/api/gen/ask.ts
     type_mappings:
-      cards.Segment: "Segment"
-      cards.Kind: "Kind"
+      doc.Block: "Block"
+      doc.Run: "Run"
     frontmatter: |
       // Generated from internal/ask/wire.go by tygo. Do not edit.
-      import type { Kind, Segment } from './cards'
+      import type { Block, Run } from './doc'
   - path: github.com/jackt/pset/internal/memory
     include_files: [wire.go]
     enum_style: union

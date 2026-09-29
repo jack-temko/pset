@@ -14,8 +14,8 @@ func TestMigrateIsIdempotentAndWipeStartsOver(t *testing.T) {
 	}
 	defer d.Close()
 	migs := []Migration{
-		{"a/1", `CREATE TABLE a (id INTEGER PRIMARY KEY)`},
-		{"b/1", `CREATE TABLE b (id INTEGER PRIMARY KEY, a INTEGER REFERENCES a(id) ON DELETE CASCADE)`},
+		{Name: "a/1", SQL: `CREATE TABLE a (id INTEGER PRIMARY KEY)`},
+		{Name: "b/1", SQL: `CREATE TABLE b (id INTEGER PRIMARY KEY, a INTEGER REFERENCES a(id) ON DELETE CASCADE)`},
 	}
 	for range 2 {
 		if err := Migrate(ctx, d, migs); err != nil {
@@ -51,9 +51,9 @@ func TestPendingNamesUnapplied(t *testing.T) {
 	ctx := context.Background()
 	d, _ := Open(filepath.Join(t.TempDir(), "pset.db"))
 	defer d.Close()
-	first := []Migration{{"a/1", `CREATE TABLE a (id INTEGER)`}}
+	first := []Migration{{Name: "a/1", SQL: `CREATE TABLE a (id INTEGER)`}}
 	Migrate(ctx, d, first)
-	p, err := Pending(ctx, d, append(first, Migration{"a/2", `ALTER TABLE a ADD COLUMN x TEXT`}))
+	p, err := Pending(ctx, d, append(first, Migration{Name: "a/2", SQL: `ALTER TABLE a ADD COLUMN x TEXT`}))
 	if err != nil || len(p) != 1 || p[0] != "a/2" {
 		t.Fatalf("pending = %v, %v", p, err)
 	}

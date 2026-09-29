@@ -27,7 +27,7 @@ func TestABoxedProblemIsReadFromItsBoxes(t *testing.T) {
 		t.Fatalf("label before reading %q", q.Label)
 	}
 	q = e.wait(t, q.ID, StateReady)
-	if q.Page == nil || *q.Page != 2 || !strings.Contains(q.Statement, "y'' + 5y'") || q.Label != "7" {
+	if q.Page == nil || *q.Page != 2 || !strings.Contains(source(q.Statement), "y'' + 5y'") || q.Label != "7" {
 		t.Fatalf("read %+v", q)
 	}
 	stored, _ := getQuestion(t.Context(), e.svc.c.DB, q.ID)

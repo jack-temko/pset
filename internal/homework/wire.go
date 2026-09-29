@@ -1,6 +1,6 @@
 package homework
 
-import "github.com/jackt/pset/internal/cards"
+import "github.com/jackt/pset/internal/doc"
 
 // Summary is a homework set as lists show it. DueDate is a calendar date
 // (YYYY-MM-DD) or empty; the client turns it into words ("Friday"), since
@@ -53,6 +53,10 @@ const (
 	StateWriting State = "writing"
 	StateReady   State = "ready"
 	StateFailed  State = "failed"
+	// StateUnwritten is found, with no guide: the guides written before
+	// documents were deleted, and nothing writes one until the student
+	// asks ("Write the guide").
+	StateUnwritten State = "unwritten"
 )
 
 // Failure is what kind of failure a failed question had.
@@ -79,9 +83,9 @@ type Figure struct {
 }
 
 // Question is one problem in a set. Text is what the student typed;
-// Statement is the problem as the book states it (markdown with $math$),
-// or the typed text for one that isn't in the book. Page is a PDF page.
-// Hint and Walkthrough fill in as they're written.
+// Statement is the problem as the book states it, or the typed text for
+// one that isn't in the book, as runs. Page is a PDF page. Hint and
+// Walkthrough are documents (blocks) and fill in as they're written.
 type Question struct {
 	ID          string          `json:"id"`
 	HomeworkID  string          `json:"homeworkId"`
@@ -89,11 +93,11 @@ type Question struct {
 	Text        string          `json:"text"`
 	InBook      bool            `json:"inBook"`
 	Label       string          `json:"label"`
-	Statement   string          `json:"statement"`
+	Statement   []doc.Run       `json:"statement"`
 	Page        *int            `json:"page,omitempty"`
 	Figures     []Figure        `json:"figures"`
-	Hint        []cards.Segment `json:"hint"`
-	Walkthrough []cards.Segment `json:"walkthrough"`
+	Hint        []doc.Block     `json:"hint"`
+	Walkthrough []doc.Block     `json:"walkthrough"`
 	State       State           `json:"state"`
 	// Failure is what kind of failure a failed question had, which picks
 	// its ways out; Reason says what happened, in a sentence.
@@ -104,23 +108,24 @@ type Question struct {
 	// guide…". Empty otherwise.
 	Activity string `json:"activity,omitempty"`
 	// Reading is how its figures read, one fact a line ("Node A: top of
-	// the 4 Ω, …", "2 A current source from A to B"): the guide is
-	// written from it, and the student can correct it. Empty for a
-	// question without figures, or one found before readings.
-	Reading []string `json:"reading"`
+	// the 4 Ω, …", "2 A current source from A to B"), each as runs: the
+	// guide is written from it, and the student can correct it. Empty for
+	// a question without figures, or one found before readings.
+	Reading [][]doc.Run `json:"reading"`
 	// ReadingEdited is true once the student has corrected the reading.
 	ReadingEdited bool `json:"readingEdited"`
 	// Notes are the professor's instructions for the problem ("do c",
 	// "no PSpice or MultiSim", "for 500 packets"), which the guide
 	// follows over the book.
-	Notes []string `json:"notes"`
+	Notes [][]doc.Run `json:"notes"`
 	// Boxes are what the student drew around the problem on the scan,
 	// when they showed where it is rather than having it found.
 	Boxes []Box `json:"boxes"`
 	// Memory is what writing this guide did with the book's memory: what
 	// it saved, and a remembered range that found the problem.
 	Memory []MemoryLine `json:"memory"`
-	// Revealed names the stages the student has lifted the veil on.
+	// Revealed names the stages the student has lifted the veil on: hint,
+	// walkthrough, answers.
 	Revealed []string `json:"revealed"`
 	Done     bool     `json:"done"`
 	// UpdatedAt is when its state (or its statement, or a stage) last
