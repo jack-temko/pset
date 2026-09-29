@@ -39,7 +39,7 @@ the semantic token, never a raw value; both themes then come free.
 | `muted-foreground` | Secondary text (leads, hints, meta lines) and icons at rest. |
 | `accent` / `accent-foreground` | Ochre highlight **fill** only. Never as text. |
 | `success` · `warning` · `destructive` | Status, as **ink**: text, icon, border. Never a solid fill. |
-| `*-soft` | The one tint of each status: badges, a failed row's ground. |
+| `*-soft` | The one tint of each status: badges, a failed row's ground, a guide callout's (insight is success, caveat is warning). |
 | `border` | The hairline that does the work of elevation. |
 | `border-muted` | A quieter divider between rows inside a Box. |
 | `input` | Control borders: fields, the outline button. Darker than `border` on purpose. |
@@ -59,8 +59,8 @@ a border to delineate it.
 
 ## Type
 
-Three faces: **Newsreader** for display and leads, **Inter** for everything
-else, **JetBrains Mono** for machine strings: hashes, paths, versions,
+Three faces: **Newsreader** for display, leads and a guide's headings (its
+parts and steps), **Inter** for everything else, **JetBrains Mono** for machine strings: hashes, paths, versions,
 counts, page numbers.
 
 **What a person reads is never mono** (2026-09-25). A book's problem
@@ -84,6 +84,15 @@ smaller, chips and counters included.
 | `text-2xl` | 25 / 32 | Panel and dialog titles. |
 | `text-3xl` | 31 / 36 | The one `h1` on a page-shell page. |
 | `text-4xl` | 37 / 40 | The dashboard greeting and empty-state heroes. |
+
+**A guide's headings** (2026-09-29) are the one place Newsreader heads
+text a person reads through rather than a screen's title. A part is an
+eyebrow in Inter (`text-xs`, `primary`, a little tracking: "Problem
+3.6.6", "(a)") over its title at `text-2xl`, with a hairline above to
+separate it from the part before. A step is its number in Inter
+(`primary`, `tabular-nums`) before its title at `text-xl`. Guide prose is
+`text-reading`, with inline math at 1.1em, a touch above the text. Asides
+are `text-xs` `muted-foreground`. Components: `web/src/components/transcript`.
 
 Each step carries its own weight and tracking, so a call site sets size
 alone. `text-lg` is the exception and stays weightless: it is the one step
