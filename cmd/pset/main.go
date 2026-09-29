@@ -4,6 +4,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -89,6 +91,7 @@ func serve(addr, dir string, log *slog.Logger) error {
 
 	// Every model request and reply, to trace a bad answer to its prompt.
 	llm.LogCallsTo(filepath.Join(dir, "logs", "llm.jsonl"))
+	llm.SetSessionPrefix(installTag(dir))
 
 	bus := events.NewBus()
 	queue := jobs.New(d, log)
@@ -287,4 +290,15 @@ func concat(lists ...[]db.Migration) []db.Migration {
 func fail(err error) {
 	fmt.Fprintln(os.Stderr, "pset:", err)
 	os.Exit(1)
+}
+
+// installTag names this install in OpenRouter sessions: a short hash of
+// the data directory, the same every run, and different for a copy of the
+// library kept elsewhere.
+func installTag(dir string) string {
+	if abs, err := filepath.Abs(dir); err == nil {
+		dir = abs
+	}
+	sum := sha256.Sum256([]byte(dir))
+	return "pset-" + hex.EncodeToString(sum[:4])
 }

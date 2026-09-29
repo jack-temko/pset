@@ -194,3 +194,48 @@ func TestOutOfCredit(t *testing.T) {
 }
 
 func jsonOf(v any) string { b, _ := json.Marshal(v); return string(b) }
+
+// TestSessionKeepsItsHost: a session's later calls ask OpenRouter for the
+// host that served its first, so its prompt cache is there; another
+// session is free to go anywhere.
+func TestSessionKeepsItsHost(t *testing.T) {
+	var got map[string]any
+	c := hostedAt(t, "https://openrouter.ai/api/v1", func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		got = nil
+		json.Unmarshal(body, &got)
+		io.WriteString(w, `{"provider":"Parasail","choices":[{"message":{"content":"ok"}}]}`)
+	})
+	order := func() any { return got["provider"].(map[string]any)["order"] }
+	guide := WithSession(context.Background(), "question-keeps-host-guide")
+	call := func(ctx context.Context) Reply {
+		reply, err := c.ChatOnceFull(ctx, ChatRequest{Model: "m", Messages: []Message{TextMessage("user", "hi")}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return reply
+	}
+	if r := call(guide); order() != nil || r.Host != "Parasail" {
+		t.Fatalf("first call: order %v, host %q", order(), r.Host)
+	}
+	call(guide)
+	if o, _ := order().([]any); len(o) != 1 || o[0] != "Parasail" {
+		t.Fatalf("second call: order %v, want [Parasail]", order())
+	}
+	call(WithSession(context.Background(), "question-another-guide"))
+	if order() != nil {
+		t.Fatalf("another session: order %v, want none", order())
+	}
+}
+
+// TestSessionPrefix: the install's tag leads every session id.
+func TestSessionPrefix(t *testing.T) {
+	SetSessionPrefix("pset-1a2b3c4d")
+	defer SetSessionPrefix("")
+	if got := sessionOf(WithSession(context.Background(), "ask-book")); got != "pset-1a2b3c4d-ask-book" {
+		t.Fatalf("session = %q", got)
+	}
+	if got := sessionOf(context.Background()); got != "" {
+		t.Fatalf("no session = %q, want none", got)
+	}
+}

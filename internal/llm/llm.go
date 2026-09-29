@@ -18,6 +18,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -232,6 +233,9 @@ type Reply struct {
 	// Usage is what the call cost, when the provider says (OpenRouter
 	// always does; others when they send it).
 	Usage *Usage
+	// Host is who served the call, as OpenRouter names it ("Z.AI",
+	// "Parasail"): OpenRouter spreads a model over many hosts.
+	Host string
 }
 
 // Usage is a call's token counts and, from OpenRouter, its cost in
@@ -283,8 +287,10 @@ type ReasoningOptions struct {
 	Enabled bool   `json:"enabled,omitempty"`
 }
 
-// ProviderOptions is OpenRouter's say in which hosts serve a model.
+// ProviderOptions is OpenRouter's say in which hosts serve a model: which
+// to try first (Order, falling back to the rest), and at what precision.
 type ProviderOptions struct {
+	Order         []string `json:"order,omitempty"`
 	Quantizations []string `json:"quantizations,omitempty"`
 }
 
@@ -295,6 +301,46 @@ type ProviderOptions struct {
 var fullPrecision = []string{"fp8", "fp16", "bf16", "fp32", "unknown"}
 
 type sessionKey struct{}
+
+// sessionPrefix makes this install's sessions its own: two copies of one
+// library (a test copy beside the real one) have the same question ids,
+// and would otherwise share sessions on one OpenRouter account. Set once
+// at startup, before any call.
+var sessionPrefix string
+
+// SetSessionPrefix sets the tag every session id starts with.
+func SetSessionPrefix(tag string) { sessionPrefix = tag }
+
+// hosts remembers the host that served each session's first call, so the
+// rest of the session asks it first: a host keeps its prompt cache to
+// itself, and a guide that hops between hosts pays for its whole prompt
+// again each round. Bounded: it starts over past maxHosts sessions.
+var hosts struct {
+	sync.Mutex
+	m map[string]string
+}
+
+const maxHosts = 1000
+
+func hostFor(session string) string {
+	hosts.Lock()
+	defer hosts.Unlock()
+	return hosts.m[session]
+}
+
+func keepHost(session, host string) {
+	if session == "" || host == "" {
+		return
+	}
+	hosts.Lock()
+	defer hosts.Unlock()
+	if hosts.m == nil || len(hosts.m) >= maxHosts {
+		hosts.m = map[string]string{}
+	}
+	if _, ok := hosts.m[session]; !ok {
+		hosts.m[session] = host
+	}
+}
 
 // WithSession names the session every model call made under ctx belongs
 // to: a job sets it once, and the calls it makes, however deep, join it.
@@ -307,6 +353,9 @@ const maxSession = 256
 
 func sessionOf(ctx context.Context) string {
 	id, _ := ctx.Value(sessionKey{}).(string)
+	if id != "" && sessionPrefix != "" {
+		id = sessionPrefix + "-" + id
+	}
 	if len(id) > maxSession {
 		id = id[:maxSession]
 	}
@@ -357,6 +406,9 @@ func (c *Client) shape(ctx context.Context, req ChatRequest) ChatRequest {
 		}
 		if req.Provider == nil {
 			req.Provider = &ProviderOptions{Quantizations: fullPrecision}
+			if h := hostFor(req.SessionID); h != "" {
+				req.Provider.Order = []string{h}
+			}
 		}
 		return req
 	}
@@ -419,6 +471,7 @@ func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (reply Reply
 			} `json:"message"`
 		} `json:"choices"`
 		Usage *Usage `json:"usage"`
+		Host  string `json:"provider"`
 	}
 	if err := c.post(ctx, c.apiBaseURL+"/chat/completions", req, &payload); err != nil {
 		return Reply{}, err
@@ -427,7 +480,8 @@ func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (reply Reply
 		return Reply{}, fmt.Errorf("model reply had no choices")
 	}
 	msg := payload.Choices[0].Message
-	return Reply{Content: msg.Content.text, ToolCalls: normalizeToolCalls(msg.ToolCalls), Reasoning: firstOf(msg.ReasoningContent, msg.Reasoning), Usage: payload.Usage}, nil
+	keepHost(req.SessionID, payload.Host)
+	return Reply{Content: msg.Content.text, ToolCalls: normalizeToolCalls(msg.ToolCalls), Reasoning: firstOf(msg.ReasoningContent, msg.Reasoning), Usage: payload.Usage, Host: payload.Host}, nil
 }
 
 // ChatStream runs a streaming completion and returns the assembled reply
@@ -456,6 +510,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 
 	var full, reasoning strings.Builder
 	var usage *Usage
+	var host string
 	// finished is the stream saying it's done, by [DONE] or a choice's
 	// finish_reason. A stream that just stops without either was cut, even
 	// when every event in it parsed.
@@ -511,7 +566,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 					Content          Content `json:"content"`
 					ReasoningContent string  `json:"reasoning_content"`
 					Reasoning        string  `json:"reasoning"`
-					ToolCalls []struct {
+					ToolCalls        []struct {
 						Index    int    `json:"index"`
 						ID       string `json:"id"`
 						Function struct {
@@ -522,6 +577,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 				} `json:"delta"`
 			} `json:"choices"`
 			Usage *Usage `json:"usage"`
+			Host  string `json:"provider"`
 		}
 		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
 			if ctx.Err() != nil {
@@ -536,6 +592,9 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 		}
 		if chunk.Usage != nil {
 			usage = chunk.Usage
+		}
+		if chunk.Host != "" {
+			host = chunk.Host
 		}
 		for _, choice := range chunk.Choices {
 			if choice.FinishReason != "" {
@@ -573,7 +632,8 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 	if !finished {
 		return Reply{Content: full.String()}, fmt.Errorf("%w: the stream ended without finishing", ErrStreamCut)
 	}
-	return Reply{Content: full.String(), ToolCalls: calls.finish(), Reasoning: reasoning.String(), Usage: usage}, nil
+	keepHost(req.SessionID, host)
+	return Reply{Content: full.String(), ToolCalls: calls.finish(), Reasoning: reasoning.String(), Usage: usage, Host: host}, nil
 }
 
 // firstOf is the first non-empty string.

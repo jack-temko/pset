@@ -55,7 +55,17 @@ host:
   if it streams it, as `reasoning_content` or `reasoning`.
 
 Sessions: `question-<id>-<step>` (finding, reading, the guide),
-`ask-<book>`, `assignment-<id>`, `book-<id>-<step>`.
+`ask-<book>`, `assignment-<id>`, `book-<id>-<step>`, each led by the
+install's tag (`pset-` and a hash of the data directory), so a copy of a
+library never shares sessions with the original.
+
+**A session keeps its host.** OpenRouter spreads a model over many hosts,
+and each keeps its prompt cache to itself: a guide that hops hosts pays
+for its whole prompt again every round (GLM's did, 0% cached on 30-50K
+token rounds, 2026-09-29). So the host that serves a session's first call
+(OpenRouter names it in the reply) is asked for first by the rest of the
+session (`provider.order`), falling back to others if it fails. The call
+log records the host of every call.
 
 A reply's `usage`, when the provider sends one, is kept on `Reply.Usage`
 and written to the call log. `Classify` names a failure: cut, busy,
