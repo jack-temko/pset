@@ -46,6 +46,9 @@ func fail(kind Failure, err error, format string, args ...any) error {
 // modelDown is what a failed model call means to the student, about the
 // question it was for: the page names the kind, this says what happened.
 func modelDown(err error, q row) error {
+	if errors.Is(err, agent.ErrNoAnswer) {
+		return fail(FailureGeneration, err, "The chat model stopped without writing the guide for %s. Trying again usually works.", problemName(q))
+	}
 	trouble, status := llm.Classify(err)
 	switch trouble {
 	case llm.TroubleCut:

@@ -131,6 +131,7 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 		}
 	}
 	retries := cutRetries
+	nudges := emptyNudges
 	for round := done; ; round++ {
 		sent := msgs
 		if sys := l.system(ctx); sys != "" {
@@ -182,7 +183,17 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			return err
 		}
 		if len(reply.ToolCalls) == 0 || req.Tools == nil {
-			return nil
+			if wrote {
+				return nil
+			}
+			// A round that only thought: no answer and no tool to call.
+			// It happens now and then; asked, the model writes it.
+			if nudges > 0 && ctx.Err() == nil {
+				nudges--
+				msgs = append(msgs, llm.AssistantToolMessage(reply), llm.TextMessage("user", "You stopped without writing your answer. Write it now."))
+				continue
+			}
+			return ErrNoAnswer
 		}
 		if wrote && l.Delta != nil {
 			// Whatever it said before reaching for a tool ends its line.
@@ -232,6 +243,14 @@ func onlyRemembers(calls []llm.ToolCall) bool {
 
 // cutRetries is how many cut-off rounds one run asks again.
 const cutRetries = 2
+
+// emptyNudges is how many times one run asks again after a round that
+// ended with neither an answer nor a tool call.
+const emptyNudges = 1
+
+// ErrNoAnswer is a run whose model stopped without writing anything, even
+// when asked again. Trying the whole thing again usually works.
+var ErrNoAnswer = errors.New("the model stopped without writing an answer")
 
 func (l *Loop) step(label string, running bool) {
 	if l.Step != nil {

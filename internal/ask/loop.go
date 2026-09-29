@@ -153,6 +153,9 @@ func (r *run) loop(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
+		if errors.Is(err, agent.ErrNoAnswer) {
+			return &failure{msg: "The chat model stopped without answering. Asking again usually works.", err: err}
+		}
 		switch trouble, status := llm.Classify(err); trouble {
 		case llm.TroubleCut:
 			return &failure{msg: "The answer stopped partway: the connection to the chat model dropped. Asking again usually works.", err: err}
