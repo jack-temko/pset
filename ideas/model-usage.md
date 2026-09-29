@@ -2,9 +2,14 @@
 
 ## Status
 
-**Planned** · any time. Decided 2026-09-29 by grill: what each finished
-model job cost, on one quiet line with a light popover behind it.
-Branch when started: `model-usage`.
+**Done** · shipped 2026-09-29, the day it was decided. The spec lives in
+`design/model-usage.md` now; the element is `web/src/components/usage/`.
+Two things came out different from the plan below: the rows' delete
+cleanup is explicit (`usage.Forget` at each subject's removal site, and a
+hook for books) rather than SQL triggers — triggers can't be created in
+the test envs that don't have every subject's table; and a read row that
+carries the line wraps its description rather than truncating, so the
+control at its end can't be clipped under an ellipsis.
 
 ## Information
 

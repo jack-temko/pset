@@ -21,6 +21,7 @@ import (
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // library: a book whose printed page 1 is PDF page 3.
@@ -74,6 +75,7 @@ type env struct {
 	llm    *llmtest.Server
 	events *recorder
 	cfg    *settings
+	svc    *Service
 }
 
 func call(id, name, args string) llm.ToolCall {
@@ -88,6 +90,7 @@ func newEnv(t *testing.T) *env {
 	}
 	t.Cleanup(func() { d.Close() })
 	migs := append(jobs.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
+	migs = append(migs, usage.Migrations()...)
 	if err := db.Migrate(context.Background(), d, append(migs, Migrations()...)); err != nil {
 		t.Fatal(err)
 	}
@@ -97,6 +100,7 @@ func newEnv(t *testing.T) *env {
 	q := jobs.New(d, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	q.Lane(LaneTurn, 4)
 	s := New(Config{DB: d, Events: e.events, Queue: q, Library: library{}, Settings: e.cfg})
+	e.svc = s
 	mux := http.NewServeMux()
 	s.Routes(mux)
 	e.Server = httptest.NewServer(mux)

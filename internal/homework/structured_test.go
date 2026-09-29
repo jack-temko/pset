@@ -13,6 +13,7 @@ import (
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // Text a writer says on its way to a tool call is narration, not the
@@ -101,7 +102,8 @@ func TestGuidesAreWipedAndTextBecomesRuns(t *testing.T) {
 	}
 	defer d.Close()
 	migs := append(jobs.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
-	all := Migrations()
+	all := usage.Migrations()
+	all = append(all, Migrations()...)
 	// Everything before the wipe, whatever comes after it.
 	wipe := slices.IndexFunc(all, func(m db.Migration) bool { return m.Name == "homework/12" })
 	if err := db.Migrate(ctx, d, append(migs, all[:wipe]...)); err != nil {

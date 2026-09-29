@@ -28,6 +28,7 @@ import (
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // ---------------------------------------------------------------- fixtures
@@ -134,7 +135,7 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { d.Close() })
-	if err := db.Migrate(context.Background(), d, append(jobs.Migrations(), Migrations()...)); err != nil {
+	if err := db.Migrate(context.Background(), d, append(append(jobs.Migrations(), usage.Migrations()...), Migrations()...)); err != nil {
 		t.Fatal(err)
 	}
 	e := &env{llm: llmtest.New(t), events: &recorder{}, dir: dir}

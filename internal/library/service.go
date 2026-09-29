@@ -28,6 +28,7 @@ import (
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pagenum"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // Models is where the saved model connections come from (settings).
@@ -52,6 +53,11 @@ type Config struct {
 	Queue   Queue
 	Models  Models
 	Tools   Tools
+	// ForgetCalls, if set, runs as a book is removed, while its questions
+	// and turns can still be named: the usage rows spent on them are
+	// deleted with it. Their tables belong to other features, which
+	// supply this.
+	ForgetCalls func(ctx context.Context, bookID string) error
 }
 
 type Service struct {
@@ -292,6 +298,16 @@ func (s *Service) Remove(ctx context.Context, id string) error {
 	}
 	if err := s.c.Queue.StopSubject(ctx, id); err != nil {
 		return err
+	}
+	// The import's own calls, and, through the hook, the ones the book's
+	// questions and turns owe — all before the rows they hang off go.
+	if err := usage.Forget(ctx, s.c.DB, usage.SubjectBook, id); err != nil {
+		return err
+	}
+	if s.c.ForgetCalls != nil {
+		if err := s.c.ForgetCalls(ctx, id); err != nil {
+			return err
+		}
 	}
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM books WHERE id = ?`, id); err != nil {
 		return err

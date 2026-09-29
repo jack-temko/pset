@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/probnum"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // An assignment read in the background waits here until it's imported
@@ -61,6 +62,17 @@ func (s *Service) Reads(ctx context.Context, bookID string) ([]AssignmentRead, e
 			return nil, err
 		}
 	}
+	ids := make([]string, len(out))
+	for i, r := range out {
+		ids[i] = r.ID
+	}
+	uses, err := usage.ForSubjects(ctx, s.c.DB, usage.SubjectRead, ids)
+	if err != nil {
+		return nil, err
+	}
+	for i, r := range out {
+		out[i].Usage = uses[r.ID]
+	}
 	return out, nil
 }
 
@@ -74,6 +86,9 @@ func (s *Service) Read(ctx context.Context, id string) (AssignmentRead, error) {
 	}
 	book, err := s.c.Library.Book(ctx, r.BookID)
 	if err != nil {
+		return r, err
+	}
+	if r.Usage, err = usage.For(ctx, s.c.DB, usage.SubjectRead, id); err != nil {
 		return r, err
 	}
 	return r, s.mark(ctx, book.Problems, r)
@@ -92,6 +107,9 @@ func (s *Service) DismissRead(ctx context.Context, id string) error {
 		return err
 	}
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM assignment_reads WHERE id = ?`, id); err != nil {
+		return err
+	}
+	if err := usage.Forget(ctx, s.c.DB, usage.SubjectRead, id); err != nil {
 		return err
 	}
 	s.c.Events.Publish(EventReadRemoved, ReadRemoved{ID: id, BookID: bookID})
