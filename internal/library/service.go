@@ -457,14 +457,21 @@ func (s *Service) Search(ctx context.Context, bookID, query string, k int) ([]in
 	}
 	if cfg.EmbedReady() {
 		q, err := llm.Open(cfg).Embed(ctx, []string{query})
-		if err != nil {
-			return nil, err
+		switch {
+		case ctx.Err() != nil:
+			return nil, ctx.Err()
+		case err != nil:
+			// Ollama stopped or is slow: the text ranking still answers, and
+			// a tutor that can't search at all is worse than one that
+			// searches by words.
+			slog.Warn("search: embedding the query failed; ranking by text alone", "book", bookID, "err", err)
+		default:
+			rows, err := vectors(ctx, s.c.DB, bookID, cfg.EmbedModel)
+			if err != nil {
+				return nil, err
+			}
+			vec = rankByVector(q[0], rows, searchDepth)
 		}
-		rows, err := vectors(ctx, s.c.DB, bookID, cfg.EmbedModel)
-		if err != nil {
-			return nil, err
-		}
-		vec = rankByVector(q[0], rows, searchDepth)
 	}
 	return rrfMerge(fts, vec, k), nil
 }

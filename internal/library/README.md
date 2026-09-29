@@ -74,7 +74,7 @@ puts a running import back to `queued` and it resumes.
 
 Primitives only, so a consumer's interface needs no library types:
 `Search(ctx, book, query, k) []int` (full text and vectors fused by
-reciprocal rank), `PageText(ctx, book, page)`, `PageJPEG(ctx, book, page,
+reciprocal rank; by text alone when the query can't be embedded), `PageText(ctx, book, page)`, `PageJPEG(ctx, book, page,
 width)`, `PDFPath(book)`, and `Count` for Reset.
 
 Page numbers are PDF pages everywhere in this package and on the wire.
