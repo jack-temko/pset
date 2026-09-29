@@ -38,8 +38,8 @@ model's writing) and shown to the model, or to the student to edit, as
 the string form again (`doc.Source`).
 
 **Streaming.** The model's reply is JSON lines in plain content, after
-its tool calls (a final "write" tool call arrives all at once, and
-Z.ai's `tool_choice` only takes `auto`). The parser reads leniently
+its tool calls (a final "write" tool call would arrive all at once, so
+the writing is plain content instead). The parser reads leniently
 first: a backslash that starts no JSON escape is doubled (`\(`), a
 control character before letters in a `tex` field or a math run is the
 backslash a JSON escape ate (`\frac` read as a form feed), a raw newline
