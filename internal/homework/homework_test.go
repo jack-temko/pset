@@ -775,3 +775,28 @@ func TestEveryUpdateBumpsRev(t *testing.T) {
 		t.Fatalf("shift: q1 %d q2 %d q3 %d, want 4 1 1", rev("q1"), rev("q2"), rev("q3"))
 	}
 }
+
+// Two patches of different fields, sent together (a title edited as a set
+// is ticked off), must both hold: each used to read the set as it was and
+// write all of it back, undoing the other.
+func TestPatchesOfDifferentFieldsDontUndoEachOther(t *testing.T) {
+	e := newEnv(t)
+	for i := range 40 {
+		h := e.newSet(t)
+		title, yes := fmt.Sprintf("Renamed %d", i), true
+		var wg sync.WaitGroup
+		for _, p := range []Patch{{Title: &title}, {TurnedIn: &yes}} {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				e.do(t, "PATCH", "/api/homework/"+h.ID, p, nil)
+			}()
+		}
+		wg.Wait()
+		var got Detail
+		e.do(t, "GET", "/api/homework/"+h.ID, nil, &got)
+		if got.Homework.Title != title || got.Homework.TurnedInAt == "" {
+			t.Fatalf("round %d: title %q, turned in %q: one patch undid the other", i, got.Homework.Title, got.Homework.TurnedInAt)
+		}
+	}
+}

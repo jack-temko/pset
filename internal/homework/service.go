@@ -223,33 +223,40 @@ func (s *Service) Get(ctx context.Context, id string) (Detail, error) {
 }
 
 func (s *Service) Update(ctx context.Context, id string, p Patch) (Summary, error) {
-	h, err := getSummary(ctx, s.c.DB, id)
-	if errors.Is(err, errNotFound) {
-		return Summary{}, httpx.NotFound("homework set")
-	}
+	// Read and write in one transaction, which holds the write lock from
+	// its start: two patches of different fields each read the set as it
+	// was, and the second write put the first one's field back.
+	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		h, err := getSummary(ctx, tx, id)
+		if errors.Is(err, errNotFound) {
+			return httpx.NotFound("homework set")
+		}
+		if err != nil {
+			return err
+		}
+		if p.Title != nil {
+			if h.Title, err = cleanTitle(*p.Title); err != nil {
+				return err
+			}
+		}
+		if p.DueDate != nil {
+			if h.DueDate, err = cleanDate(*p.DueDate); err != nil {
+				return err
+			}
+		}
+		if p.TurnedIn != nil {
+			switch {
+			case *p.TurnedIn && h.TurnedInAt == "":
+				h.TurnedInAt = db.Now()
+			case !*p.TurnedIn:
+				h.TurnedInAt = ""
+			}
+		}
+		_, err = tx.ExecContext(ctx, `UPDATE homework SET title = ?, due_date = ?, turned_in_at = ?, updated_at = ? WHERE id = ?`,
+			h.Title, h.DueDate, h.TurnedInAt, db.Now(), id)
+		return err
+	})
 	if err != nil {
-		return Summary{}, err
-	}
-	if p.Title != nil {
-		if h.Title, err = cleanTitle(*p.Title); err != nil {
-			return Summary{}, err
-		}
-	}
-	if p.DueDate != nil {
-		if h.DueDate, err = cleanDate(*p.DueDate); err != nil {
-			return Summary{}, err
-		}
-	}
-	if p.TurnedIn != nil {
-		switch {
-		case *p.TurnedIn && h.TurnedInAt == "":
-			h.TurnedInAt = db.Now()
-		case !*p.TurnedIn:
-			h.TurnedInAt = ""
-		}
-	}
-	if _, err := s.c.DB.ExecContext(ctx, `UPDATE homework SET title = ?, due_date = ?, turned_in_at = ?, updated_at = ? WHERE id = ?`,
-		h.Title, h.DueDate, h.TurnedInAt, db.Now(), id); err != nil {
 		return Summary{}, err
 	}
 	return s.publishSet(ctx, id)
