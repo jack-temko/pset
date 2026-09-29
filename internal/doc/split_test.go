@@ -34,6 +34,8 @@ func TestSplit(t *testing.T) {
 		{"math the model wrote in dollars anyway", `then $x^2 + 1$ is positive`, []Run{{T: "then "}, {M: "x^2 + 1"}, {T: " is positive"}}},
 		{"a dollar inside dollar math does not close it", `at $p \ge \$5 + x$ we stop`, []Run{{T: "at "}, {M: `p \ge \$5 + x`}, {T: " we stop"}}},
 		{"a closing dollar before a digit is money", "between $5 and $10 dollars", []Run{{T: "between $5 and $10 dollars"}}},
+		{"money, then math, in one sentence", "costs $20 per month with a geometric variable $M$ and more", []Run{{T: "costs $20 per month with a geometric variable "}, {M: "M"}, {T: " and more"}}},
+		{"a dollar amount then a dollar-math with a digit", "$5 for each of $x$ and $1/p$ minutes", []Run{{T: "$5 for each of "}, {M: "x"}, {T: " and "}, {M: "1/p"}, {T: " minutes"}}},
 		{"a mistyped close of display math", "so $$P(X \\le 1) = 0.1.$ ok", []Run{{T: "so "}, {M: `P(X \le 1) = 0.1.`, D: true}, {T: " ok"}}},
 		{"display in double dollars", "$$Y = \\frac{X}{2}.$$", []Run{{M: `Y = \frac{X}{2}.`, D: true}}},
 		{"textit and textbf outside math", `runs in \textit{PSpice} and \textbf{Multisim}`, []Run{{T: "runs in "}, {T: "PSpice", I: true}, {T: " and "}, {T: "Multisim", B: true}}},

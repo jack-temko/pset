@@ -38,13 +38,26 @@ type Jump = (pdf: number) => void
 
 /** Runs, inline: text with its marks, math, citation chips. */
 export function Runs({ runs, onJump }: { runs: Run[]; onJump?: Jump }) {
-  return (
-    <>
-      {runs.map((r, i) => (
-        <RunView key={i} r={r} onJump={onJump} />
-      ))}
-    </>
-  )
+  // Punctuation right after inline math stays with it: a line may not
+  // begin with the comma that follows a formula.
+  const out: ReactNode[] = []
+  for (let i = 0; i < runs.length; i++) {
+    const r = runs[i]
+    const next = runs[i + 1]
+    const glue = r.m !== undefined && !r.d && !r.raw && next?.t !== undefined && !next.code ? /^[,.;:!?)\]]+/.exec(next.t) : null
+    if (glue) {
+      out.push(
+        <span key={i} className="whitespace-nowrap">
+          <RunView r={r} onJump={onJump} />
+          {glue[0]}
+        </span>,
+      )
+      runs = [...runs.slice(0, i + 1), { ...next, t: next.t!.slice(glue[0].length) }, ...runs.slice(i + 2)]
+      continue
+    }
+    out.push(<RunView key={i} r={r} onJump={onJump} />)
+  }
+  return <>{out}</>
 }
 
 function RunView({ r, onJump }: { r: Run; onJump?: Jump }) {
@@ -124,7 +137,7 @@ export function BlockView({ block, look }: { block: Block; look: Look }) {
       )
     case 'statement':
       return (
-        <Statement kind={block.kind} number={block.number} name={block.name} page={block.page} onJump={jump}>
+        <Statement kind={block.kind.charAt(0).toUpperCase() + block.kind.slice(1)} number={block.number} name={block.name} page={block.page} onJump={jump}>
           <Para runs={block.text} look={{ ...look, reading: false }} />
         </Statement>
       )

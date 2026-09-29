@@ -35,5 +35,5 @@ pointing, then importing, because the importer feeds the same finder.
 | [Boxing a problem on the page](boxing-on-the-page.md) | Done | 2 | Drag a box (or several) on the scan: to add a question, or to show a failed find where it is. |
 | [Importing assignments](importing-assignments.md) | Done | 3 | PDFs, a course web page, a photo or text, read into rows you review before they're added. |
 | [Professor's notes](professor-notes.md) | Done | 3 | "do c", "no PSpice", "500 packets": kept with the question and followed by the guide. |
-| [Structured guides](structured-guides.md) | Planned | any | Ask answers and guides as typed blocks the server checks and repairs: math as runs, no red, three veils. |
+| [Structured guides](structured-guides.md) | In progress | any | Ask answers and guides as typed blocks the server checks and repairs: math as runs, no red, three veils. |
 | [Loose ends](loose-ends.md) | Idea | any | Small things noticed along the way. |

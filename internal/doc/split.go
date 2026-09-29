@@ -221,7 +221,10 @@ func singleDollar(s string, i int) (string, int, bool) {
 			j++
 		case s[j] == '$':
 			if isSpace(s[j-1]) || (j+1 < len(s) && s[j+1] >= '0' && s[j+1] <= '9') {
-				continue
+				// A dollar sign that can't close the math is one it can't
+				// hold either: math has no bare $ ("costs $20 ... $M$" is
+				// money, then math).
+				return "", 0, false
 			}
 			return s[i+1 : j], j - i + 1, true
 		}

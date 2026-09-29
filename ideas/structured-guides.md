@@ -2,9 +2,10 @@
 
 ## Status
 
-**Planned** (grilled 2026-09-28), not started. Replaces the envelope
-format (design/backend.md, "Cards (envelopes)") for Ask answers and
-homework guides alike. When it ships, design/backend.md and
+**In progress** on branch `guide-blocks` (backend and renderer; the look
+shipped on `guide-look`). Grilled 2026-09-28, prompt evaluated 2026-09-29.
+Replaces the envelope format (design/backend.md, "The document") for Ask
+answers and homework guides alike. When it ships, design/backend.md and
 design/workspace.md take the spec and this file is marked Done.
 
 ## Information

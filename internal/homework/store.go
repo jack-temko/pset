@@ -121,7 +121,8 @@ CREATE INDEX assignment_reads_book ON assignment_reads (book_id, created_at);`},
 func structuredGuides(ctx context.Context, tx *sql.Tx) error {
 	if _, err := tx.ExecContext(ctx, `UPDATE questions SET
 		state = CASE WHEN state = 'ready' THEN 'unwritten' ELSE state END,
-		hint = '[]', walkthrough = '[]', revealed = '[]', rounds = '[]'`); err != nil {
+		hint = '[]', walkthrough = '[]', revealed = '[]', rounds = '[]',
+		memory = coalesce((SELECT json_group_array(json(value)) FROM json_each(memory) WHERE json_extract(value, '$.use') = 'found'), '[]')`); err != nil {
 		return err
 	}
 	rows, err := tx.QueryContext(ctx, `SELECT id, statement, notes, reading FROM questions`)
