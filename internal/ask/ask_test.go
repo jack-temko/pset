@@ -249,6 +249,10 @@ func TestModelOutageFailsReadablyAndClearEmpties(t *testing.T) {
 	if !strings.Contains(got.Reason, "turned the request down (HTTP 400)") || !strings.Contains(got.Reason, "Settings") {
 		t.Fatalf("reason %q", got.Reason)
 	}
+	// ...which the page reads from the kind, not from those words.
+	if got.Failure != FailureSetup {
+		t.Fatalf("failure %q, want setup", got.Failure)
+	}
 	var er httpx.Error
 	if code := e.do(t, "POST", "/api/books/b1/turns", Question{Question: "  "}, &er); code != 422 || er.Field != "question" {
 		t.Fatalf("blank: %d", code)
@@ -262,5 +266,57 @@ func TestModelOutageFailsReadablyAndClearEmpties(t *testing.T) {
 	e.do(t, "GET", "/api/books/b1/turns", nil, &ts)
 	if len(ts.Turns) != 0 || e.events.count(EventTurnsCleared) != 1 {
 		t.Fatalf("after clear: %d", len(ts.Turns))
+	}
+}
+
+func TestAnOutOfCreditAccountIsASetupFailure(t *testing.T) {
+	e := newEnv(t)
+	e.llm.Script(llmtest.Reply{Status: 402, Text: `{"error":{"message":"insufficient credits"}}`})
+	var turn Turn
+	e.do(t, "POST", "/api/books/b1/turns", Question{Question: "Hi"}, &turn)
+	got := e.wait(t, turn.ID, TurnFailed)
+	if got.Reason != llm.NoCredit || got.Failure != FailureSetup {
+		t.Fatalf("reason %q failure %q", got.Reason, got.Failure)
+	}
+}
+
+// Turns that failed before turns said their kind get the one their
+// sentence names, so an old failed turn still offers Settings.
+func TestOldFailedTurnsGetTheirKind(t *testing.T) {
+	ctx := context.Background()
+	d, err := db.Open(filepath.Join(t.TempDir(), "pset.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	d.SetMaxOpenConns(1)
+	for _, q := range []string{`PRAGMA foreign_keys = OFF`, `CREATE TABLE books (id TEXT PRIMARY KEY)`} {
+		if _, err := d.ExecContext(ctx, q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	migs := Migrations()
+	if err := db.Migrate(ctx, d, migs[:2]); err != nil {
+		t.Fatal(err)
+	}
+	for id, reason := range map[string]string{
+		"key":    llm.NoKey,
+		"credit": llm.NoCredit,
+		"refuse": llm.Refusal(401) + " Check the key in Settings, then ask again.",
+		"busy":   "OpenRouter didn't answer, or is busy right now. Ask again in a minute.",
+		"cut":    "The answer stopped partway: the connection to the model dropped. Asking again usually works.",
+	} {
+		if _, err := d.ExecContext(ctx, `INSERT INTO turns (id, book_id, question, state, reason, created_at, updated_at) VALUES (?, 'b', 'q', 'failed', ?, '', '')`, id, reason); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Migrate(ctx, d, migs); err != nil {
+		t.Fatal(err)
+	}
+	for id, want := range map[string]Failure{"key": FailureSetup, "credit": FailureSetup, "refuse": FailureSetup, "busy": FailureUnavailable, "cut": FailureGeneration} {
+		var got Failure
+		if err := d.QueryRowContext(ctx, `SELECT failure FROM turns WHERE id = ?`, id).Scan(&got); err != nil || got != want {
+			t.Errorf("%s: failure %q (%v), want %q", id, got, err, want)
+		}
 	}
 }

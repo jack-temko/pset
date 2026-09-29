@@ -68,11 +68,6 @@ func New(c Config) *Service {
 
 const maxQuestion = 8000
 
-// What a turn says wherever the OpenRouter key is missing. Homework's failed
-// questions (internal/homework) say it too: it is the one canonical
-// sentence.
-const noKey = "There's no OpenRouter key yet. Add yours in Settings, under Connections, then try again."
-
 // Turns is a book's conversation, oldest first.
 func (s *Service) Turns(ctx context.Context, bookID string) ([]Turn, error) {
 	if _, err := s.c.Library.Book(ctx, bookID); err != nil {
@@ -104,7 +99,7 @@ func (s *Service) Ask(ctx context.Context, bookID string, q Question) (Turn, err
 		return Turn{}, err
 	}
 	if !cfg.ChatReady() {
-		return Turn{}, httpx.Errorf(httpx.CodeNotConfigured, "%s", noKey)
+		return Turn{}, httpx.Errorf(httpx.CodeNotConfigured, "%s", llm.NoKey)
 	}
 	about, aboutText := "", ""
 	if q.About != nil {

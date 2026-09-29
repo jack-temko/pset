@@ -550,12 +550,6 @@ function Scan({
 
 // ---------------------------------------------------------------- panel
 
-/** Mid-turn and preflight setup failures share one sentence (ask's
- *  noKey const), so a model that vanished mid-answer gets Open
- *  Settings too. */
-// A turn that failed on the connection, not the question: Settings is the way out.
-const isSetupReason = (reason?: string | null) => !!reason && (reason.includes('no OpenRouter key yet') || reason.includes('out of credit'))
-
 /** A day as a divider says it: "Today", "Yesterday", "Sep 12". */
 function dayLabel(iso: string, now = new Date()): string {
   const d = new Date(iso)
@@ -622,7 +616,7 @@ function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) 
         <FailedTurn
           reason={t.reason ?? ''}
           onRetry={onRetry}
-          onSetup={isSetupReason(t.reason) ? () => navigate('/settings#connections') : undefined}
+          onSetup={t.failure === 'setup' ? () => navigate('/settings#connections') : undefined}
         />
       )}
     </>

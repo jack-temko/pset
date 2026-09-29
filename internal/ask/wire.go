@@ -12,6 +12,22 @@ const (
 	TurnFailed  TurnState = "failed"
 )
 
+// Failure is what kind of failure a failed turn had, which picks what the
+// page offers beside its reason: Settings for a setup failure.
+type Failure string
+
+const (
+	// FailureSetup: there's no OpenRouter key, OpenRouter refused it, or
+	// the account is out of credit. Fix it in Settings.
+	FailureSetup Failure = "setup"
+	// FailureUnavailable: the provider didn't answer or was busy. Ask again
+	// later.
+	FailureUnavailable Failure = "unavailable"
+	// FailureGeneration: the answer didn't finish (cut off, or the model
+	// stopped without one). Ask again.
+	FailureGeneration Failure = "generation"
+)
+
 // Step is one tool call on the feed: present tense while it runs
 // ("Searching 'eigenvalue'…"), past tense with its count when done.
 type Step struct {
@@ -36,15 +52,17 @@ type About struct {
 // what's been saved so far; while running, the turn.block events carry the
 // rest.
 type Turn struct {
-	ID        string      `json:"id"`
-	BookID    string      `json:"bookId"`
-	Question  string      `json:"question"`
-	About     string      `json:"about,omitempty"`
-	Steps     []Step      `json:"steps"`
-	Answer    []doc.Block `json:"answer"`
-	State     TurnState   `json:"state" tstype:"'running' | 'done' | 'stopped' | 'failed'"`
-	Reason    string      `json:"reason,omitempty"`
-	CreatedAt string      `json:"createdAt"`
+	ID       string      `json:"id"`
+	BookID   string      `json:"bookId"`
+	Question string      `json:"question"`
+	About    string      `json:"about,omitempty"`
+	Steps    []Step      `json:"steps"`
+	Answer   []doc.Block `json:"answer"`
+	State    TurnState   `json:"state" tstype:"'running' | 'done' | 'stopped' | 'failed'"`
+	Reason   string      `json:"reason,omitempty"`
+	// Failure is what kind of failure a failed turn had.
+	Failure   Failure `json:"failure,omitempty"`
+	CreatedAt string  `json:"createdAt"`
 	// UpdatedAt orders copies of the turn: a reply that arrives after a
 	// newer event must not win.
 	UpdatedAt string `json:"updatedAt"`

@@ -27,10 +27,11 @@ const maxRounds = 8
 // historyTurns is how much of the conversation the model sees.
 const historyTurns = 6
 
-// failure is a turn failure in words for the student.
+// failure is a turn failure in words for the student, and its kind.
 type failure struct {
-	msg string
-	err error
+	kind Failure
+	msg  string
+	err  error
 }
 
 func (f *failure) Error() string {
@@ -74,10 +75,10 @@ func (s *Service) runTurn(ctx context.Context, j jobs.Job) error {
 	settle := context.WithoutCancel(ctx)
 	switch {
 	case err == nil:
-		r.finish(settle, TurnDone, "")
+		r.finish(settle, TurnDone, "", "")
 		return nil
 	case jobs.Stopped(ctx):
-		r.finish(settle, TurnStopped, "")
+		r.finish(settle, TurnStopped, "", "")
 		return err
 	case ctx.Err() != nil:
 		// Shutting down: the job runs again on the next start, from the
@@ -86,13 +87,13 @@ func (s *Service) runTurn(ctx context.Context, j jobs.Job) error {
 		s.publish(settle, t.ID)
 		return err
 	}
-	reason := "Something went wrong answering this. The details are in the log."
+	reason, kind := "Something went wrong answering this. The details are in the log.", FailureGeneration
 	var f *failure
 	if errors.As(err, &f) {
-		reason = f.msg
+		reason, kind = f.msg, f.kind
 	}
 	slog.Warn("turn failed", "turn", t.ID, "err", err)
-	r.finish(settle, TurnFailed, reason)
+	r.finish(settle, TurnFailed, reason, kind)
 	return err
 }
 
@@ -107,7 +108,7 @@ func (r *run) loop(ctx context.Context) error {
 		return err
 	}
 	if !cfg.ChatReady() {
-		return &failure{msg: noKey}
+		return &failure{kind: FailureSetup, msg: llm.NoKey}
 	}
 	r.llm, r.model = llm.Open(cfg), cfg.ChatModel
 	r.parser = doc.NewParser(ctx, doc.Options{
@@ -154,17 +155,17 @@ func (r *run) loop(ctx context.Context) error {
 			return ctx.Err()
 		}
 		if errors.Is(err, agent.ErrNoAnswer) {
-			return &failure{msg: "The model stopped without answering. Asking again usually works.", err: err}
+			return &failure{kind: FailureGeneration, msg: "The model stopped without answering. Asking again usually works.", err: err}
 		}
 		switch trouble, status := llm.Classify(err); trouble {
 		case llm.TroubleCut:
-			return &failure{msg: "The answer stopped partway: the connection to the model dropped. Asking again usually works.", err: err}
+			return &failure{kind: FailureGeneration, msg: "The answer stopped partway: the connection to the model dropped. Asking again usually works.", err: err}
 		case llm.TroubleRejected:
-			return &failure{msg: llm.Refusal(status) + " Check the key in Settings, then ask again.", err: err}
+			return &failure{kind: FailureSetup, msg: llm.Refusal(status) + " Check the key in Settings, then ask again.", err: err}
 		case llm.TroubleCredit:
-			return &failure{msg: llm.NoCredit, err: err}
+			return &failure{kind: FailureSetup, msg: llm.NoCredit, err: err}
 		}
-		return &failure{msg: "OpenRouter didn't answer, or is busy right now. Ask again in a minute.", err: err}
+		return &failure{kind: FailureUnavailable, msg: "OpenRouter didn't answer, or is busy right now. Ask again in a minute.", err: err}
 	}
 	return nil
 }
@@ -249,7 +250,7 @@ func (r *run) remembered(ctx context.Context, id string) {
 	r.s.publish(ctx, r.t.ID)
 }
 
-func (r *run) finish(ctx context.Context, st TurnState, reason string) {
+func (r *run) finish(ctx context.Context, st TurnState, reason string, kind Failure) {
 	var answer []doc.Block
 	steps := []Step{}
 	if r.parser != nil {
@@ -265,8 +266,8 @@ func (r *run) finish(ctx context.Context, st TurnState, reason string) {
 	if answer == nil {
 		answer = []doc.Block{}
 	}
-	r.s.c.DB.ExecContext(ctx, `UPDATE turns SET state = ?, reason = ?, answer = ?, steps = ?, updated_at = ? WHERE id = ?`,
-		st, reason, mustJSON(answer), mustJSON(steps), db.Now(), r.t.ID)
+	r.s.c.DB.ExecContext(ctx, `UPDATE turns SET state = ?, reason = ?, failure = ?, answer = ?, steps = ?, updated_at = ? WHERE id = ?`,
+		st, reason, kind, mustJSON(answer), mustJSON(steps), db.Now(), r.t.ID)
 	r.s.publish(ctx, r.t.ID)
 }
 

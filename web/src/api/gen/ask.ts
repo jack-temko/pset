@@ -14,6 +14,26 @@ export const TurnDone: TurnState = "done";
 export const TurnStopped: TurnState = "stopped";
 export const TurnFailed: TurnState = "failed";
 /**
+ * Failure is what kind of failure a failed turn had, which picks what the
+ * page offers beside its reason: Settings for a setup failure.
+ */
+/**
+ * FailureSetup: there's no OpenRouter key, OpenRouter refused it, or
+ * the account is out of credit. Fix it in Settings.
+ */
+export const FailureSetup = "setup";
+/**
+ * FailureUnavailable: the provider didn't answer or was busy. Ask again
+ * later.
+ */
+export const FailureUnavailable = "unavailable";
+/**
+ * FailureGeneration: the answer didn't finish (cut off, or the model
+ * stopped without one). Ask again.
+ */
+export const FailureGeneration = "generation";
+export type Failure = typeof FailureSetup | typeof FailureUnavailable | typeof FailureGeneration;
+/**
  * Step is one tool call on the feed: present tense while it runs
  * ("Searching 'eigenvalue'…"), past tense with its count when done.
  */
@@ -53,6 +73,10 @@ export interface Turn {
   answer: Block[];
   state: 'running' | 'done' | 'stopped' | 'failed';
   reason?: string;
+  /**
+   * Failure is what kind of failure a failed turn had.
+   */
+  failure?: Failure;
   createdAt: string;
   /**
    * UpdatedAt orders copies of the turn: a reply that arrives after a

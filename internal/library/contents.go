@@ -37,7 +37,7 @@ func (s *Service) chatModel(ctx context.Context) (model, error) {
 		return model{}, err
 	}
 	if !cfg.ChatReady() {
-		return model{}, fail(nil, "There's no OpenRouter key yet. Add yours in Settings, under Connections, then try again.")
+		return model{}, fail(nil, llm.NoKey)
 	}
 	return model{client: llm.Open(cfg), name: cfg.ChatModel}, nil
 }
