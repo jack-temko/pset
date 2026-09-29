@@ -87,18 +87,18 @@ type Figure struct {
 // one that isn't in the book, as runs. Page is a PDF page. Hint and
 // Walkthrough are documents (blocks) and fill in as they're written.
 type Question struct {
-	ID          string          `json:"id"`
-	HomeworkID  string          `json:"homeworkId"`
-	Position    int             `json:"position"`
-	Text        string          `json:"text"`
-	InBook      bool            `json:"inBook"`
-	Label       string          `json:"label"`
-	Statement   []doc.Run       `json:"statement"`
-	Page        *int            `json:"page,omitempty"`
-	Figures     []Figure        `json:"figures"`
-	Hint        []doc.Block     `json:"hint"`
-	Walkthrough []doc.Block     `json:"walkthrough"`
-	State       State           `json:"state"`
+	ID          string      `json:"id"`
+	HomeworkID  string      `json:"homeworkId"`
+	Position    int         `json:"position"`
+	Text        string      `json:"text"`
+	InBook      bool        `json:"inBook"`
+	Label       string      `json:"label"`
+	Statement   []doc.Run   `json:"statement"`
+	Page        *int        `json:"page,omitempty"`
+	Figures     []Figure    `json:"figures"`
+	Hint        []doc.Block `json:"hint"`
+	Walkthrough []doc.Block `json:"walkthrough"`
+	State       State       `json:"state"`
 	// Failure is what kind of failure a failed question had, which picks
 	// its ways out; Reason says what happened, in a sentence.
 	Failure Failure `json:"failure,omitempty"`

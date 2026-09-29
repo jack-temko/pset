@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/doc"
 )
 
 // Migrations: one conversation per book, as its turns.

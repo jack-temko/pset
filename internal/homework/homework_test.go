@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/agent"
-	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"

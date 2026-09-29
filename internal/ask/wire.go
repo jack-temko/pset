@@ -36,15 +36,15 @@ type About struct {
 // what's been saved so far; while running, the turn.block events carry the
 // rest.
 type Turn struct {
-	ID        string          `json:"id"`
-	BookID    string          `json:"bookId"`
-	Question  string          `json:"question"`
-	About     string          `json:"about,omitempty"`
-	Steps     []Step          `json:"steps"`
-	Answer    []doc.Block     `json:"answer"`
-	State     TurnState       `json:"state" tstype:"'running' | 'done' | 'stopped' | 'failed'"`
-	Reason    string          `json:"reason,omitempty"`
-	CreatedAt string          `json:"createdAt"`
+	ID        string      `json:"id"`
+	BookID    string      `json:"bookId"`
+	Question  string      `json:"question"`
+	About     string      `json:"about,omitempty"`
+	Steps     []Step      `json:"steps"`
+	Answer    []doc.Block `json:"answer"`
+	State     TurnState   `json:"state" tstype:"'running' | 'done' | 'stopped' | 'failed'"`
+	Reason    string      `json:"reason,omitempty"`
+	CreatedAt string      `json:"createdAt"`
 	// UpdatedAt orders copies of the turn: a reply that arrives after a
 	// newer event must not win.
 	UpdatedAt string `json:"updatedAt"`

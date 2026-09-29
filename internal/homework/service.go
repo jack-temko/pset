@@ -513,9 +513,9 @@ func (s *Service) redoReading(ctx context.Context, q row, corrected *[]string) (
 		if slices.Equal(sources(runLists(lines)), sources(q.Reading)) {
 			return q.Question, nil
 		}
-		// A guide that hasn't started reads the reading when it does.
-		res, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = 1, updated_at = ? WHERE id = ? AND state = ?`,
-			mustJSON(runLists(lines)), db.Now(), q.ID, StateLocated)
+		// A guide that hasn't started, or isn't asked for, reads the reading when it does.
+		res, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = 1, updated_at = ? WHERE id = ? AND state IN (?, ?)`,
+			mustJSON(runLists(lines)), db.Now(), q.ID, StateLocated, StateUnwritten)
 		if err != nil {
 			return Question{}, err
 		}
