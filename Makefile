@@ -2,7 +2,7 @@
 # Vite with /api proxied. Go lives in /usr/local/go/bin, nvm's node first.
 export PATH := $(HOME)/.nvm/versions/node/v24.18.0/bin:$(PATH):/usr/local/go/bin
 
-.PHONY: dev gen check-gen katex-check test build release
+.PHONY: dev gen check-gen katex-check test check build release
 
 dev:
 	go run ./tools/dev
@@ -20,9 +20,19 @@ check-gen: gen
 katex-check:
 	cd web && npm run build:check
 
+# Every check that runs without a browser or a model: the Go tests, the
+# web's types, unit tests and lint. Tests that need poppler or tesseract
+# skip without them, so install both (README) for the whole suite.
 test:
 	go test ./...
 	cd web && npx tsc -b
+	cd web && npx vitest run
+	cd web && npx oxlint
+
+# What CI runs: test, the Go tests again under the race detector, and the
+# generated TypeScript against Go's wire types.
+check: test check-gen
+	go test -race ./...
 
 build:
 	cd web && npm run build

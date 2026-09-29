@@ -26,7 +26,7 @@ asks you to come back on a bigger screen.
 
 ## What you need
 
-- **Go 1.26** or newer, and **Node.js 24** with npm, to build it.
+- **Go 1.26.8** or newer, and **Node.js 24** with npm, to build it.
 - **poppler-utils** (`pdfinfo`, `pdftotext`, `pdftoppm`, `pdftohtml`), to read and
   render PDFs.
 - **Tesseract**, to read scanned books.
