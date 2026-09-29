@@ -419,13 +419,25 @@ and the probability book, through the eval key:
   right, 5 s to 2.5 min, $0.14; Luna 5 right, 20 s to 2 min, $0.04; GLM 6
   right but 4 to 13 minutes, $0.13. DeepSeek's teach best: the book's
   theorems cited, notes where a student trips, checks. Luna's are plainer,
-  and a new OpenRouter account gets only 20 calls a minute of it, which
-  six guides at once went over.
+  and OpenRouter held a new account to 20 calls a minute of it (not
+  published; its 429 said so), which six guides at once went over.
 
 A self-reported confidence was tried on the readings and doesn't tell:
 wrong readings claimed 88 to 96 out of 100, right ones 78 to 100. Three
 readings that agree do: every circuit whose readings agreed was right,
-and every one whose readings differed had a wrong one.
+and every one whose readings differed had a wrong one. So the settling
+says where they differed (2026-09-29), and the student sees those points
+to check (design/workspace.md, "The figure, as read"). Asked of three
+Luna readings of 14 circuits, it named a point on 2: 4.72, where one
+reading had the 2 A arrow backwards and another the 20 V's + on the wrong
+end, both settled right, and 4.70, whose crossing has no dot. With one
+reading changed on purpose, it named the change 6 times in 7, the
+seventh a change that contradicted itself.
+
+Three readings, not one, are why (2026-09-24, and still true with the
+Reader): in PSet's prose, two of Luna's three single readings of 4.72
+had a mistake. They add about $0.0012 and 7 s to a question with a
+figure, $0.0015 for all four calls.
 
 ## Ask's agent loop
 

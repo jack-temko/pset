@@ -27,6 +27,8 @@ export function EditableLines({
   lines,
   closed = 4,
   edited,
+  flag,
+  note,
   editLabel,
   editHint,
   saveLabel,
@@ -42,6 +44,11 @@ export function EditableLines({
   closed?: number
   /** A Label in the header, saying the student changed them. */
   edited?: string
+  /** A Label in the header, saying the lines want a look. */
+  flag?: ReactNode
+  /** Above the lines, and above the text box while editing: what the
+   *  flag is about. */
+  note?: ReactNode
   /** The header button that starts editing ("Correct", "Edit"). */
   editLabel: string
   /** A line above the text box, saying what saving does. */
@@ -81,6 +88,7 @@ export function EditableLines({
       <Box>
         <BoxHeader>{title}</BoxHeader>
         <BoxBody className="space-y-3">
+          {note}
           <p className="text-xs text-muted-foreground">{editHint}</p>
           <AutoTextarea
             aria-label={title}
@@ -119,6 +127,7 @@ export function EditableLines({
         <span className="flex items-center gap-2">
           {title}
           {edited && <Label>{edited}</Label>}
+          {flag}
         </span>
         {/* Each line keeps its dash in the box, so a line that wraps still
             reads as one. */}
@@ -127,7 +136,8 @@ export function EditableLines({
           {editLabel}
         </Button>
       </BoxHeader>
-      <BoxBody className="text-sm">
+      <BoxBody className="space-y-3 text-sm">
+        {note}
         <ul className="list-disc space-y-1 pl-5">
           {shown.map((l, i) => (
             <li key={i}>

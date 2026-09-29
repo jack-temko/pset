@@ -404,6 +404,17 @@ built.
     guide that hasn't started yet just waits for the new lines, and the
     button says **Save**. **Read it again**, at the row's other end,
     throws the lines away for a fresh reading, and the guide with them.
+  - **Check it** (2026-09-29): where the figure's three readings
+    disagreed, the Box's header carries a warning Label, **Check it**,
+    and above the lines a warning-tinted note says how many points and
+    names each, with what the readings said and what was settled ("The
+    2 A source: two readings have its arrow pointing to a, one to N; it
+    points to a."), then that the guide follows the reading and to
+    correct it if the figure shows otherwise. The note stays while
+    correcting. Readings that agree are nearly always right and ones
+    that don't nearly always hold a wrong one (design/backend.md,
+    "Models"), so this is the one reading worth a look. Correcting it,
+    or reading it again, clears it.
   - The engine reads every figure as the question is found, before any
     guide is written, so a set's readings are there to check while its
     guides wait: the working line says "Reading the figure…", then

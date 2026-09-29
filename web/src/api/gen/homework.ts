@@ -150,6 +150,13 @@ export interface Question {
    */
   readingEdited: boolean;
   /**
+   * ReadingDoubts are the points where the figure's readings disagreed,
+   * each with what they said and what was settled on: the lines worth
+   * checking against the figure. None when they agreed, and none once
+   * the student has corrected the reading or it was read again.
+   */
+  readingDoubts: Run[][];
+  /**
    * Notes are the professor's instructions for the problem ("do c",
    * "no PSpice or MultiSim", "for 500 packets"), which the guide
    * follows over the book.

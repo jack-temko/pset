@@ -18,6 +18,7 @@ const q = (over: Partial<Question> = {}): Question => ({
   memory: [],
   reading: [],
   readingEdited: false,
+  readingDoubts: [],
   boxes: [],
   notes: [],
   revealed: [],

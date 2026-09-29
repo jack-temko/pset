@@ -39,8 +39,10 @@ var (
 		Fallbacks: []string{"z-ai/glm-5.3-flash"}, Plain: true}
 	// Reader writes out what a page shows: a problem's words, and its
 	// figures as facts. It read every circuit right, for a tenth of the
-	// Writer's price. A new OpenRouter account gets 20 calls a minute of
-	// it, which a problem set's readings go over.
+	// Writer's price. OpenRouter held the eval key's account, a new one,
+	// to 20 calls a minute of it ("new accounts are limited to 20
+	// requests per minute for this model", its 429 said; it isn't
+	// published), which a problem set's readings go over.
 	Reader = Job{Name: "Reading figures", Model: "openai/gpt-6-luna",
 		Fallbacks: []string{"z-ai/glm-5.3-flash"}}
 )

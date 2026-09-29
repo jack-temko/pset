@@ -157,4 +157,10 @@ joined by bare wire is one node, and look at the arrow or the + sign itself.
 Give back the whole reading, in the same form: the nodes first, then one line per element between
 two of them, then any marked voltage or current. One fact per line, each starting "- ", and nothing
 else. One set of node names throughout, the figure's own labels where it has them. Only what the
-figures show: not their captions or text around them.`
+figures show: not their captions or text around them.
+
+Then a line "Differed:", and under it one line per point where the readings disagreed about the
+circuit itself: what joins to what, a value, which way an arrow points, which end is +, an element
+one has and another hasn't. Say what the readings said and what you settled on: "- The 2 A source:
+two readings have its arrow pointing to B, one to A; it points to B." Different node names or
+wording for the same thing is not a disagreement. If they agreed on everything, write "- None."`
