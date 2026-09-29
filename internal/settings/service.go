@@ -22,7 +22,7 @@ import (
 // Defaults a fresh install shows. Showing isn't saving: a side counts as
 // ready only once a Save has tested it.
 var (
-	DefaultChat  = ChatConnection{Endpoint: "https://api.z.ai/api/paas/v4", Model: "glm-5.3-flash"}
+	DefaultChat  = ChatConnection{Endpoint: "https://openrouter.ai/api/v1", Model: "z-ai/glm-5.3-flash"}
 	DefaultEmbed = EmbedConnection{Endpoint: "http://localhost:11434/v1", Model: "nomic-embed-text"}
 )
 
@@ -204,6 +204,8 @@ func explain(err error, chat bool, hasKey bool) error {
 	if errors.As(err, &le) {
 		body := strings.ToLower(le.Body)
 		switch {
+		case chat && llm.OutOfCredit(le.Status, le.Body):
+			return httpx.Errorf(httpx.CodeBadKey, "This account is out of credit (%d). Top it up on the provider's site, then test again.", le.Status).OnField("apiKey")
 		case chat && (le.Status == 401 || le.Status == 403):
 			if !hasKey {
 				return httpx.Errorf(httpx.CodeBadKey, "This endpoint wants an API key and none is set (%d).", le.Status).OnField("apiKey")

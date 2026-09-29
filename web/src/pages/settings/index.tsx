@@ -40,6 +40,56 @@ import { useClearActivity } from '@/api/activity'
 
 type FieldSpec = { key: string; label: string; hint?: string; mono?: boolean }
 
+/**
+ * Where the chat model is reached. PSet is built for OpenRouter: one key
+ * reaches every model, and the server keeps a model's thinking between a
+ * guide's steps there and skips hosts running 4-bit weights. Other is any
+ * OpenAI-compatible endpoint typed by hand (a local ollama, say), which
+ * works without those. The choice isn't stored: it's read off the
+ * endpoint's host, as the server does.
+ */
+type ProviderId = 'openrouter' | 'other'
+type Provider = {
+  value: ProviderId
+  label: string
+  endpoint: string
+  model: string
+  /** Under the choice: why, or what's given up. */
+  note: string
+  hints: Record<string, string>
+}
+
+const PROVIDERS: readonly Provider[] = [
+  {
+    value: 'openrouter',
+    label: 'OpenRouter',
+    endpoint: 'https://openrouter.ai/api/v1',
+    model: 'z-ai/glm-5.3-flash',
+    note: 'Recommended. PSet is built and tested on it: one key reaches every model, and guides keep their thinking from step to step.',
+    hints: {
+      apiKey: 'From openrouter.ai/keys.',
+      model: 'The maker, then the model. PSet skips hosts that run 4-bit weights.',
+    },
+  },
+  {
+    value: 'other',
+    label: 'Other',
+    endpoint: '',
+    model: '',
+    note: 'Any OpenAI-compatible endpoint that takes images. The model thinks each step over from the start here, so guides take longer; OpenRouter is recommended.',
+    hints: {},
+  },
+]
+
+function providerOf(endpoint: string): ProviderId {
+  try {
+    const host = new URL(endpoint).hostname
+    return host === 'openrouter.ai' || host.endsWith('.openrouter.ai') ? 'openrouter' : 'other'
+  } catch {
+    return 'other'
+  }
+}
+
 type Status =
   | { kind: 'idle' }
   | { kind: 'working'; verb: 'Testing' | 'Saving'; since: number }
@@ -60,11 +110,14 @@ function ConnectionBox({
   fields,
   initial,
   ready,
+  providers,
 }: {
   kind: 'chat' | 'embeddings'
   title: string
   fields: FieldSpec[]
   initial: Record<string, string>
+  /** The providers to pick from, above the fields. */
+  providers?: readonly Provider[]
   /** Saved (and so tested) before. A side never saved shows defaults that
    *  still need a Save, even untouched. */
   ready: boolean
@@ -83,6 +136,25 @@ function ConnectionBox({
   // verdict stays.
   const shown = useSettled(status, working ? status.since : null) ?? { kind: 'idle' }
   const looksWorking = shown.kind === 'working'
+
+  // Other is picked, not only inferred: a known endpoint stays on screen
+  // until it's typed over, and the choice shouldn't jump back meanwhile.
+  const [pickedOther, setPickedOther] = useState(false)
+  const provider = providers ? (pickedOther ? 'other' : providerOf(values.endpoint)) : null
+  const chosen = PROVIDERS.find((p) => p.value === provider)
+  const hints = chosen?.hints ?? {}
+  const pick = (id: ProviderId) => {
+    const p = PROVIDERS.find((x) => x.value === id)!
+    setPickedOther(id === 'other')
+    setError(null)
+    if (status.kind !== 'working') setStatus({ kind: 'idle' })
+    if (id === 'other') {
+      if (providerOf(values.endpoint) !== 'other') setValues((v) => ({ ...v, endpoint: '' }))
+      return
+    }
+    // An empty model takes OpenRouter's default; one typed by hand stays.
+    setValues((v) => ({ ...v, endpoint: p.endpoint, model: v.model === '' ? p.model : v.model }))
+  }
 
   const test = useTestConnection()
   const saveConnection = useSaveConnection()
@@ -125,11 +197,18 @@ function ConnectionBox({
     <Box className="flex flex-col">
       <BoxHeader>{title}</BoxHeader>
       <BoxBody className="flex-1 space-y-4">
+        {providers && provider && (
+          <div className="space-y-1">
+            <span className="block text-xs text-muted-foreground">Provider</span>
+            <SegmentedControl label="Provider" options={providers} value={provider} onChange={pick} />
+            {chosen && <span className="block text-xs text-muted-foreground">{chosen.note}</span>}
+          </div>
+        )}
         {fields.map((f) => (
           <div key={f.key} ref={(el) => { rows.current[f.key] = el }}>
             <Field
               label={f.label}
-              hint={f.hint}
+              hint={hints[f.key] ?? f.hint}
               error={error?.field === f.key ? error.text : undefined}
             >
               <Input
@@ -139,6 +218,8 @@ function ConnectionBox({
                 aria-invalid={error?.field === f.key || undefined}
                 onChange={(e) => {
                   setValues((v) => ({ ...v, [f.key]: e.target.value }))
+                  // A typed endpoint says its own provider.
+                  if (f.key === 'endpoint') setPickedOther(false)
                   // Editing the field that failed is the fix in progress.
                   if (error?.field === f.key) setError(null)
                   if (status.kind !== 'working') setStatus({ kind: 'idle' })
@@ -165,11 +246,17 @@ function ConnectionBox({
 
 /** A connection Box before the settings arrive: the same fields at their
  *  real height, so the values land without moving anything. */
-function ConnectionSkeleton({ title, fields }: { title: string; fields: FieldSpec[] }) {
+function ConnectionSkeleton({ title, fields, providers }: { title: string; fields: FieldSpec[]; providers?: boolean }) {
   return (
     <Box className="flex flex-col">
       <BoxHeader>{title}</BoxHeader>
       <BoxBody className="flex-1 space-y-4">
+        {providers && (
+          <div className="space-y-1">
+            <span className="block text-xs text-muted-foreground">Provider</span>
+            <Skeleton className="block h-control w-64 rounded-md" />
+          </div>
+        )}
         {fields.map((f) => (
           <Field key={f.key} label={f.label} hint={f.hint}>
             <Skeleton className="block h-control w-full rounded-md" />
@@ -549,13 +636,20 @@ function Connections() {
   if (!data)
     return (
       <div className="grid grid-cols-2 gap-6">
-        <ConnectionSkeleton title="Chat" fields={CHAT_FIELDS} />
+        <ConnectionSkeleton title="Chat" fields={CHAT_FIELDS} providers />
         <ConnectionSkeleton title="Embeddings" fields={EMBED_FIELDS} />
       </div>
     )
   return (
     <div className="grid grid-cols-2 gap-6">
-      <ConnectionBox kind="chat" title="Chat" initial={{ ...data.chat }} ready={data.ready.chat} fields={CHAT_FIELDS} />
+      <ConnectionBox
+        kind="chat"
+        title="Chat"
+        initial={{ ...data.chat }}
+        ready={data.ready.chat}
+        fields={CHAT_FIELDS}
+        providers={PROVIDERS}
+      />
       <ConnectionBox
         kind="embeddings"
         title="Embeddings"

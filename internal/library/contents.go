@@ -201,7 +201,11 @@ func (m model) askJSON(ctx context.Context, system string, user llm.Content, out
 
 // modelDown words a failed call as the failed row's reason.
 func modelDown(err error) error {
-	if trouble, status := llm.Classify(err); trouble == llm.TroubleRejected {
+	trouble, status := llm.Classify(err)
+	if trouble == llm.TroubleCredit {
+		return fail(err, "%s", llm.NoCredit)
+	}
+	if trouble == llm.TroubleRejected {
 		return fail(err, "%s Check the chat connection in Settings, then try again.", llm.Refusal(status))
 	}
 	return fail(err, "Your chat model provider didn't answer while PSet read the book's contents. Try again in a minute.")

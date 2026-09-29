@@ -42,7 +42,7 @@ type Reply struct {
 	// allows and some endpoints do.
 	Split bool
 	// Unfinished ends the stream after the reasoning on a whole event,
-	// with no finish_reason and no [DONE]: Z.ai drops long streams so.
+	// with no finish_reason and no [DONE]: providers drop long streams so.
 	Unfinished bool
 }
 

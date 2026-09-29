@@ -46,12 +46,17 @@ func fail(kind Failure, err error, format string, args ...any) error {
 // modelDown is what a failed model call means to the student, about the
 // question it was for: the page names the kind, this says what happened.
 func modelDown(err error, q row) error {
+	if errors.Is(err, agent.ErrNoAnswer) {
+		return fail(FailureGeneration, err, "The chat model stopped without writing the guide for %s. Trying again usually works.", problemName(q))
+	}
 	trouble, status := llm.Classify(err)
 	switch trouble {
 	case llm.TroubleCut:
 		return fail(FailureGeneration, err, "The walkthrough for %s stopped partway: the connection to the chat model dropped. Trying again usually works.", problemName(q))
 	case llm.TroubleRejected:
 		return fail(FailureSetup, err, "%s Check the chat connection in Settings, then try again.", llm.Refusal(status))
+	case llm.TroubleCredit:
+		return fail(FailureSetup, err, "%s", llm.NoCredit)
 	}
 	return fail(FailureUnavailable, err, "Your chat model provider didn't answer, or is busy right now. Nothing is wrong with %s: try again in a minute.", problemName(q))
 }
@@ -118,6 +123,9 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 	if err := j.Decode(&p); err != nil {
 		return err
 	}
+	// One session per step of a question, so a guide's rounds and repairs
+	// read as one conversation on OpenRouter.
+	ctx = llm.WithSession(ctx, fmt.Sprintf("question-%s-%s", p.QuestionID, j.Kind))
 	q, err := getQuestion(ctx, s.c.DB, p.QuestionID)
 	if errors.Is(err, errNotFound) {
 		return nil

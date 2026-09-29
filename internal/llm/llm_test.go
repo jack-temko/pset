@@ -365,42 +365,40 @@ func TestAStreamStoppedByUsIsNotCut(t *testing.T) {
 	}
 }
 
-func TestReasoningGoesBackOnlyToZai(t *testing.T) {
+func TestReasoningGoesBackOnlyToOpenRouter(t *testing.T) {
 	turn := AssistantToolMessage(Reply{Reasoning: "The source points right.", ToolCalls: []ToolCall{{ID: "c1", Type: "function"}}})
 	req := ChatRequest{Model: "glm", Messages: []Message{TextMessage("user", "4.32"), turn}}
+	ctx := context.Background()
 
-	for _, base := range []string{"https://api.z.ai/api/paas/v4", "https://api.z.ai/api/coding/paas/v4", "https://open.bigmodel.cn/api/paas/v4"} {
-		got := New(base, "k", "", "").shape(req)
-		if got.Messages[1].ReasoningContent != "The source points right." {
-			t.Fatalf("%s: reasoning dropped", base)
-		}
-		if got.Thinking == nil || got.Thinking.Type != "enabled" || got.Thinking.ClearThinking == nil || *got.Thinking.ClearThinking {
-			t.Fatalf("%s: thinking %+v, want preserved", base, got.Thinking)
-		}
+	if got := New("https://openrouter.ai/api/v1", "k", "", "").shape(ctx, req); got.Messages[1].Reasoning != "The source points right." {
+		t.Fatal("OpenRouter: reasoning dropped")
 	}
-	for _, base := range []string{"https://api.deepseek.com", "http://localhost:11434/v1", "https://notz.ai.example.com/v1"} {
-		got := New(base, "k", "", "").shape(req)
-		if got.Messages[1].ReasoningContent != "" || got.Thinking != nil {
+	for _, base := range []string{"https://api.z.ai/api/paas/v4", "https://api.deepseek.com", "http://localhost:11434/v1", "https://notopenrouter.ai.example.com/v1"} {
+		got := New(base, "k", "", "").shape(ctx, req)
+		if got.Messages[1].Reasoning != "" || got.Reasoning != nil || got.Provider != nil {
 			t.Fatalf("%s: sent %+v", base, got)
 		}
 	}
-	if req.Messages[1].ReasoningContent == "" {
+	if req.Messages[1].Reasoning == "" {
 		t.Fatal("shape changed the caller's messages")
-	}
-	plain := ChatRequest{Model: "glm", Messages: []Message{TextMessage("user", "hi")}}
-	if New("https://api.z.ai/api/paas/v4", "k", "", "").shape(plain).Thinking != nil {
-		t.Fatal("thinking set on a conversation with no reasoning to keep")
 	}
 }
 
-// A reasoning effort goes to Z.ai, which takes it, and no one else, since
-// a model that doesn't think may refuse it.
-func TestReasoningEffortGoesOnlyToZai(t *testing.T) {
+// A reasoning effort goes to OpenRouter, as its reasoning object's
+// effort, and to no one else, since a model that doesn't think may refuse
+// it. It is never sent under its own name.
+func TestReasoningEffortGoesOnlyToOpenRouter(t *testing.T) {
 	req := ChatRequest{Model: "glm", ReasoningEffort: "low", Messages: []Message{TextMessage("user", "hi")}}
-	if got := New("https://api.z.ai/api/coding/paas/v4", "k", "", "").shape(req); got.ReasoningEffort != "low" {
-		t.Fatalf("Z.ai lost the effort: %q", got.ReasoningEffort)
+	ctx := context.Background()
+	if got := New("https://openrouter.ai/api/v1", "k", "", "").shape(ctx, req); got.Reasoning == nil || got.Reasoning.Effort != "low" {
+		t.Fatalf("OpenRouter lost the effort: %+v", got.Reasoning)
 	}
-	if got := New("https://api.openai.com/v1", "k", "", "").shape(req); got.ReasoningEffort != "" {
-		t.Fatalf("sent %q to OpenAI", got.ReasoningEffort)
+	for _, base := range []string{"https://api.openai.com/v1", "https://api.z.ai/api/paas/v4"} {
+		if got := New(base, "k", "", "").shape(ctx, req); got.Reasoning != nil {
+			t.Fatalf("sent %+v to %s", got.Reasoning, base)
+		}
+	}
+	if b, _ := json.Marshal(req); strings.Contains(string(b), "reasoning_effort") {
+		t.Fatal("reasoning_effort would go on the wire under its own name")
 	}
 }

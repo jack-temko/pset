@@ -169,7 +169,7 @@ func TestFieldErrors(t *testing.T) {
 		code  httpx.Code
 		field string
 	}{
-		{"not a url", ChatConnection{"api.z.ai", "k", "m"}, nil, httpx.CodeInvalid, "endpoint"},
+		{"not a url", ChatConnection{"openrouter.ai", "k", "m"}, nil, httpx.CodeInvalid, "endpoint"},
 		{"no model", ChatConnection{"https://x", "k", " "}, nil, httpx.CodeInvalid, "model"},
 		{"refused key", goodChat, &llm.LLMError{Status: 403}, httpx.CodeBadKey, "apiKey"},
 		{"unknown model", goodChat, &llm.LLMError{Status: 400, Body: `{"error":"Model not found"}`}, httpx.CodeBadModel, "model"},
@@ -305,5 +305,19 @@ func TestProfileNameIsTidiedAndSurvivesUntilReset(t *testing.T) {
 	s.do(t, "POST", "/api/reset", nil, nil)
 	if s.svc.Name(context.Background()) != "" {
 		t.Fatal("name survived reset")
+	}
+}
+
+// TestOutOfCreditPointsAtTheKey: an account with no money left is said on
+// the key's field, not as an unreachable endpoint.
+func TestOutOfCreditPointsAtTheKey(t *testing.T) {
+	for _, le := range []*llm.LLMError{
+		{Status: 429, Body: `{"error":{"code":"1113","message":"Insufficient balance or no resource package. Please recharge."}}`},
+		{Status: 402, Body: `{"error":{"code":402,"message":"This request requires more credits"}}`},
+	} {
+		var he *httpx.Error
+		if !errors.As(explain(le, true, true), &he) || he.Field != "apiKey" || !strings.Contains(he.Message, "out of credit") {
+			t.Errorf("%d: got %+v, want out of credit on apiKey", le.Status, he)
+		}
 	}
 }

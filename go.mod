@@ -3,6 +3,7 @@ module github.com/jackt/pset
 go 1.26.5
 
 require (
+	github.com/dop251/goja v0.0.0-20260926152631-39ec2650adc9
 	github.com/go-pdf/fpdf v0.9.0
 	github.com/google/uuid v1.6.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
@@ -12,7 +13,6 @@ require (
 
 require (
 	github.com/dlclark/regexp2/v2 v2.5.2 // indirect
-	github.com/dop251/goja v0.0.0-20260926152631-39ec2650adc9 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect

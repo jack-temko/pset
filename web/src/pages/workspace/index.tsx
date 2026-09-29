@@ -553,7 +553,8 @@ function Scan({
 /** Mid-turn and preflight setup failures share one sentence (ask's
  *  noChatModel const), so a model that vanished mid-answer gets Open
  *  Settings too. */
-const isSetupReason = (reason?: string | null) => !!reason?.includes('no chat model set up yet')
+// A turn that failed on the connection, not the question: Settings is the way out.
+const isSetupReason = (reason?: string | null) => !!reason && (reason.includes('no chat model set up yet') || reason.includes('out of credit'))
 
 /** A day as a divider says it: "Today", "Yesterday", "Sep 12". */
 function dayLabel(iso: string, now = new Date()): string {

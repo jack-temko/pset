@@ -146,3 +146,38 @@ func TestACutRoundIsAskedAgain(t *testing.T) {
 		t.Fatalf("err %v", err)
 	}
 }
+
+// TestAnEmptyRoundIsAskedAgain: a round that only thinks, with no answer
+// and no tool call, is asked once more rather than ending the run with
+// nothing written.
+func TestAnEmptyRoundIsAskedAgain(t *testing.T) {
+	fake := llmtest.New(t)
+	fake.Script(llmtest.Reply{Reasoning: "I'll save a note, then answer."}, llmtest.Reply{Text: "The tail is (1-p)^30."})
+	var got strings.Builder
+	l := &Loop{Client: llm.Open(fake.Config()), Model: "fake-chat", Library: book{}, Book: Book{ID: "b1"}, System: "Tutor.",
+		Delta: func(s string) { got.WriteString(s) }}
+	if err := l.Run(context.Background(), []llm.Message{llm.TextMessage("user", "Why?")}); err != nil {
+		t.Fatal(err)
+	}
+	if got.String() != "The tail is (1-p)^30." {
+		t.Fatalf("answer = %q", got.String())
+	}
+	reqs := fake.Requests()
+	if len(reqs) != 2 {
+		t.Fatalf("%d requests, want 2", len(reqs))
+	}
+	if m := reqs[1].Chat.Messages; !strings.Contains(m[len(m)-1].Content.Text(), "You stopped without writing your answer") {
+		t.Fatalf("%d requests; the second should ask for the answer", len(reqs))
+	}
+}
+
+// TestStillEmptyIsNoAnswer: a model that stays silent when asked again
+// ends the run with ErrNoAnswer, not an empty answer taken as done.
+func TestStillEmptyIsNoAnswer(t *testing.T) {
+	fake := llmtest.New(t)
+	fake.Script(llmtest.Reply{Reasoning: "Hmm."}, llmtest.Reply{Reasoning: "Hmm again."})
+	l := &Loop{Client: llm.Open(fake.Config()), Model: "fake-chat", Library: book{}, Book: Book{ID: "b1"}, System: "Tutor."}
+	if err := l.Run(context.Background(), []llm.Message{llm.TextMessage("user", "Why?")}); !errors.Is(err, ErrNoAnswer) {
+		t.Fatalf("err = %v, want ErrNoAnswer", err)
+	}
+}

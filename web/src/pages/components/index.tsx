@@ -97,13 +97,12 @@ observe('book:b89d3b72', 'import:read', { done: 140, total: 312 }, Date.now())
 const EXP: [number, number][] = [[0.0, 10.0], [0.5, 12.84], [1.0, 16.49], [1.5, 21.17], [2.0, 27.18], [2.5, 34.9], [3.0, 44.82], [3.5, 57.55], [4.0, 73.89], [4.5, 94.88]]
 const LOGISTIC: [number, number][] = [[0.0, 10.0], [0.5, 12.49], [1.0, 15.48], [1.5, 19.04], [2.0, 23.2], [2.5, 27.94], [3.0, 33.24], [3.5, 39.0], [4.0, 45.09], [4.5, 51.32], [5.0, 57.51], [5.5, 63.48], [6.0, 69.06], [6.5, 74.13], [7.0, 78.63], [7.5, 82.53], [8.0, 85.85]]
 
-/** The guide's plot: a phone plan's expected monthly cost, 15 + 1/p, against
- *  the flat $25.42 of the plan it is compared with. They cross at p = 0.0959. */
-const COST: [number, number][] = Array.from({ length: 37 }, (_, i) => {
-  const p = 0.05 + i * 0.0125
-  return [+p.toFixed(4), +(15 + 1 / p).toFixed(2)]
-})
-const OLD_PLAN: [number, number][] = [[0.05, 25.42], [0.5, 25.42]]
+/** The guide's plot: problem 3.7.8's new phone plan, 15 + 1/p, against the
+ *  old one, 20 + (1-p)^30/(2p), for the same caller. They cross just under
+ *  p = 0.2, where a caller averages five minutes a month. */
+const PS = Array.from({ length: 37 }, (_, i) => 0.05 + i * 0.0125)
+const COST: [number, number][] = PS.map((p) => [+p.toFixed(4), +(15 + 1 / p).toFixed(2)])
+const OLD_PLAN: [number, number][] = PS.map((p) => [+p.toFixed(4), +(20 + (1 - p) ** 30 / (2 * p)).toFixed(2)])
 
 /**
  * Every component and every variant, on one page, in the app itself.
@@ -1198,9 +1197,9 @@ export function Components() {
         >
           <Shelf label="part header">
             <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
-              <PartHeader first label="Problem 3.6.6" title="What a month of calls costs" />
+              <PartHeader first label="Problem 3.7.8" title="What the new plan costs" />
               <GuidePara>The first part of a guide has no hairline above it. Every later part does.</GuidePara>
-              <PartHeader label="(b)" title="Which caller the old plan is priced at" />
+              <PartHeader label="(b)" title="When the new plan is cheaper" />
             </div>
           </Shelf>
           <Shelf label="step heading">
@@ -1263,7 +1262,7 @@ export function Components() {
                       </p>
                     ),
                   },
-                  { label: '3.6.6', children: <p>The caller pays $25.42 a month on the old plan.</p> },
+                  { label: '3.7.7', children: <p>The 3.6.6 caller pays $25.42 a month on the old plan.</p> },
                 ]}
               />
               <AnswersCard
@@ -1294,8 +1293,8 @@ export function Components() {
                   { label: 'Old plan', points: OLD_PLAN },
                 ]}
                 marks={[
-                  { x: 0.0959, y: 25.42, label: 'p = 0.0959' },
-                  { x: 0.2, label: 'p = 0.2' },
+                  { x: 0.2, y: 20, label: 'p ≈ 0.2' },
+                  { x: 1 / 30, label: 'p = 1/30' },
                 ]}
               />
             </div>
@@ -1332,7 +1331,7 @@ export function Components() {
           <Pages value={PageMap.single(16)}>
             <Shelf label="a guide: phone plan">
               <div className="w-panel space-y-4 rounded-md border bg-rail p-card">
-                <PartHeader first label="Problem 3.6.6" title="What a month of calls costs" />
+                <PartHeader first label="Problem 3.7.8" title="What the new plan costs" />
                 <StepHeading number={1} title="What one minute is worth" />
                 <GuidePara>
                   Each minute a caller talks ends the call with probability <MathInline tex="p" />, so the length{' '}
@@ -1350,16 +1349,16 @@ export function Components() {
                   </p>
                 </Callout>
                 <Note>
-                  Reading: I take $1 a minute as billed to the second, so a call is never rounded up. Rounding up
-                  would add about half a dollar a call.
+                  Reading: both plans are priced for the same caller. Pricing the old plan at the 3.6.6
+                  caller&apos;s $25.42 instead would give <MathInline tex="p > 0.0959" />.
                 </Note>
-                <PartHeader label="(b)" title="Which caller the old plan is priced at" />
-                <StepHeading number={1} title="Where the sum from 31 comes from" />
+                <PartHeader label="(b)" title="When the new plan is cheaper" />
+                <StepHeading number={1} title="Put the same caller on both plans" />
                 <WorkedSteps
                   steps={[
-                    { math: '15 + \\frac{1}{p} = 25.42', why: 'Set the new plan equal to the old plan.' },
-                    { math: '\\frac{1}{p} = 10.42' },
-                    { math: 'p \\approx 0.0959', why: 'Take the reciprocal of both sides.' },
+                    { math: '15 + \\frac{1}{p} < 20 + \\frac{(1-p)^{30}}{2p}', why: 'The new plan must cost less for this caller.' },
+                    { math: '15 + \\frac{1}{p} < 20', why: 'From p = 0.2 up, the overage term is under a cent.' },
+                    { math: 'p > 0.2', why: 'Subtract 15 and take reciprocals; the exact crossing is 0.1999.' },
                   ]}
                 />
                 <Plot
@@ -1370,7 +1369,7 @@ export function Components() {
                     { label: 'New plan', points: COST },
                     { label: 'Old plan', points: OLD_PLAN },
                   ]}
-                  marks={[{ x: 0.0959, y: 25.42, label: 'p = 0.0959' }]}
+                  marks={[{ x: 0.2, y: 20, label: 'p ≈ 0.2' }]}
                 />
                 <Callout tone="caveat" title="A common slip">
                   <p>
@@ -1382,7 +1381,7 @@ export function Components() {
                   title="Answers"
                   answers={[
                     { label: '(a)', children: <p><MathInline tex="E[C] = 15 + 1/p" /></p> },
-                    { label: '(b)', children: <p><MathInline tex="p \approx 0.0959" /></p> },
+                    { label: '(b)', children: <p><MathInline tex="p > 0.2" /> (exactly 0.1999): under five minutes a month</p> },
                   ]}
                 />
               </div>

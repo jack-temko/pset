@@ -69,7 +69,8 @@ func (s *Service) runTurn(ctx context.Context, j jobs.Job) error {
 		return err
 	}
 	r := &run{s: s, t: t}
-	err = r.loop(ctx)
+	// A book's conversation is one session, turn after turn.
+	err = r.loop(llm.WithSession(ctx, "ask-"+t.BookID))
 	settle := context.WithoutCancel(ctx)
 	switch {
 	case err == nil:
@@ -152,11 +153,16 @@ func (r *run) loop(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
+		if errors.Is(err, agent.ErrNoAnswer) {
+			return &failure{msg: "The chat model stopped without answering. Asking again usually works.", err: err}
+		}
 		switch trouble, status := llm.Classify(err); trouble {
 		case llm.TroubleCut:
 			return &failure{msg: "The answer stopped partway: the connection to the chat model dropped. Asking again usually works.", err: err}
 		case llm.TroubleRejected:
 			return &failure{msg: llm.Refusal(status) + " Check the chat connection in Settings, then ask again.", err: err}
+		case llm.TroubleCredit:
+			return &failure{msg: llm.NoCredit, err: err}
 		}
 		return &failure{msg: "Your chat model provider didn't answer, or is busy right now. Ask again in a minute.", err: err}
 	}

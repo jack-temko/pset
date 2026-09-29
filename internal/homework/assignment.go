@@ -146,6 +146,7 @@ func (s *Service) runAssignmentRead(ctx context.Context, j jobs.Job) error {
 	if err := j.Decode(&p); err != nil {
 		return err
 	}
+	ctx = llm.WithSession(ctx, "assignment-"+p.ReadID)
 	var bookID, source, pageURL, text string
 	var data []byte
 	err := s.c.DB.QueryRowContext(ctx, `SELECT book_id, source, url, text, file FROM assignment_reads WHERE id = ?`, p.ReadID).
@@ -243,6 +244,9 @@ func (s *Service) readOut(ctx context.Context, bookID, source string, content []
 			return Assignment{}, ctx.Err()
 		}
 		trouble, status := llm.Classify(err)
+		if trouble == llm.TroubleCredit {
+			return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "%s", llm.NoCredit)
+		}
 		if trouble == llm.TroubleRejected {
 			return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "%s Check the chat connection in Settings, then try again.", llm.Refusal(status))
 		}
