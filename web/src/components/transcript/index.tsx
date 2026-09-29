@@ -7,6 +7,7 @@ import { Button } from '@/components/button'
 import { ConfirmPopover } from '@/components/confirm'
 import { Spinner } from '@/components/spinner'
 import { Tooltip } from '@/components/tooltip'
+import { MATH_OPTIONS } from '@/lib/math'
 import { usePages } from '@/lib/pages'
 import { cn } from '@/lib/utils'
 
@@ -195,7 +196,7 @@ export function MathInline({ tex }: { tex: string }) {
   return (
     <span
       dangerouslySetInnerHTML={{
-        __html: katex.renderToString(tex, { throwOnError: false }),
+        __html: katex.renderToString(tex, { ...MATH_OPTIONS, throwOnError: false }),
       }}
     />
   )
@@ -207,7 +208,7 @@ export function MathDisplay({ tex }: { tex: string }) {
     <div
       className="overflow-x-auto py-1"
       dangerouslySetInnerHTML={{
-        __html: katex.renderToString(tex, { throwOnError: false, displayMode: true }),
+        __html: katex.renderToString(tex, { ...MATH_OPTIONS, throwOnError: false, displayMode: true }),
       }}
     />
   )

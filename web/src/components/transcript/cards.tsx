@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import katex from 'katex'
 
+import { MATH_OPTIONS } from '@/lib/math'
 import { cn } from '@/lib/utils'
 
 import { PageRef } from './index'
@@ -21,7 +22,7 @@ import { PageRef } from './index'
  */
 
 function tex(src: string) {
-  return katex.renderToString(src, { throwOnError: false })
+  return katex.renderToString(src, { ...MATH_OPTIONS, throwOnError: false })
 }
 
 /**
@@ -67,7 +68,7 @@ export function Statement({
  * each with a short note on why when the move isn't obvious. It's an
  * answer, not practice: the walkthrough is where things are hidden.
  */
-export function WorkedSteps({ steps }: { steps: { math: string; why?: ReactNode }[] }) {
+export function WorkedSteps({ steps }: { steps: { math: string; why?: ReactNode; raw?: boolean }[] }) {
   return (
     <ol className="divide-y divide-border-muted overflow-hidden rounded-md border bg-card">
       {steps.map((s, i) => (
@@ -82,7 +83,12 @@ export function WorkedSteps({ steps }: { steps: { math: string; why?: ReactNode 
             {/* No scroll wrapper: an overflow container clips tall glyphs
                 like an integral and shows a scrollbar. Inline KaTeX breaks
                 a long line at = and + instead. */}
-            <div className="min-w-0 flex-1" dangerouslySetInnerHTML={{ __html: tex(`\\displaystyle ${s.math}`) }} />
+            {s.raw ? (
+              // TeX that would not parse, even after repair: its source, quiet.
+              <code className="min-w-0 flex-1 font-mono text-xs break-words text-muted-foreground">{s.math}</code>
+            ) : (
+              <div className="min-w-0 flex-1" dangerouslySetInnerHTML={{ __html: tex(`\\displaystyle ${s.math}`) }} />
+            )}
           </div>
           {s.why && <p className="pl-7 text-xs text-muted-foreground">{s.why}</p>}
         </li>

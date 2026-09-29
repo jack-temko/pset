@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/pdf"
 )
@@ -140,7 +141,7 @@ func (s *Service) questionBlock(ctx context.Context, sheet *pdf.Sheet, book Book
 	y += 20
 
 	if q.Page == nil || q.Rect == nil {
-		wrap(sheet, y, 10.5, plainMath(q.Statement))
+		wrap(sheet, y, 10.5, doc.Plain(q.Statement))
 		return nil
 	}
 	figs := q.FigRect
@@ -194,10 +195,6 @@ func (s *Service) questionBlock(ctx context.Context, sheet *pdf.Sheet, book Book
 	}
 	return nil
 }
-
-// plainMath prints a statement's math as it's written, without the $
-// signs: the sheet has no TeX, and "x^2" reads better than "$x^2$".
-func plainMath(s string) string { return strings.ReplaceAll(s, "$", "") }
 
 // wrap lays a paragraph out at about half the font size per character.
 func wrap(sheet *pdf.Sheet, y, size float64, text string) float64 {

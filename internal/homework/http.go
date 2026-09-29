@@ -202,6 +202,13 @@ func (s *Service) Routes(mux *http.ServeMux) {
 		}
 		return httpx.NoContent(w)
 	}))
+	mux.HandleFunc("POST /api/questions/{id}/guide", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
+		q, err := s.WriteGuide(r.Context(), r.PathValue("id"))
+		if err != nil {
+			return err
+		}
+		return httpx.OK(w, q)
+	}))
 	mux.HandleFunc("POST /api/questions/{id}/retry", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
 		var in Retry
 		if err := httpx.Decode(r, &in); err != nil {

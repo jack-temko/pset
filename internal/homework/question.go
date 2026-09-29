@@ -12,8 +12,8 @@ import (
 	"sync"
 
 	"github.com/jackt/pset/internal/agent"
-	"github.com/jackt/pset/internal/cards"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 )
@@ -219,7 +219,7 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 	s.sawProblem(ctx, book, q, loc)
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET page = ?, label = ?, statement = ?, rect = ?, figures = ?, rounds = '[]', reading = '[]', reading_edited = 0, state = ?, activity = '', updated_at = ? WHERE id = ?`,
-			loc.Page, label, statement, mustJSON(loc.Rect), mustJSON(loc.Figures), StateLocated, db.Now(), q.ID); err != nil {
+			loc.Page, label, mustJSON(runsOf(statement)), mustJSON(loc.Rect), mustJSON(loc.Figures), StateLocated, db.Now(), q.ID); err != nil {
 			return err
 		}
 		next := nextStep(q.ID, false)
@@ -254,7 +254,7 @@ func (s *Service) read(ctx context.Context, m model, book Book, q row) error {
 	}
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = 0, state = ?, activity = '', updated_at = ? WHERE id = ?`,
-			mustJSON(orEmpty(lines)), StateLocated, db.Now(), q.ID); err != nil {
+			mustJSON(runLists(orEmpty(lines))), StateLocated, db.Now(), q.ID); err != nil {
 			return err
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(q.ID, false))
@@ -283,7 +283,7 @@ func (s *Service) readFigures(ctx context.Context, m model, book Book, q row) ([
 		return nil, nil
 	}
 	ask := func(system, effort string, extra ...llm.Part) (string, error) {
-		content := llm.PartsContent(llm.TextPart(fmt.Sprintf("The problem:\n\n%s\n\nIts figures follow.", q.Statement)))
+		content := llm.PartsContent(llm.TextPart(fmt.Sprintf("The problem:\n\n%s\n\nIts figures follow.", source(q.Statement))))
 		for _, p := range append(slices.Clone(figs), extra...) {
 			content.AppendPart(p)
 		}
@@ -415,15 +415,6 @@ type model struct {
 	name   string
 }
 
-// repair is the cards parser's one try at fixing an invalid card.
-func (m model) repair(ctx context.Context, k cards.Kind, raw string, problems []string, schema string) (string, error) {
-	return m.client.ChatOnce(ctx, llm.ChatRequest{Model: m.name, Messages: []llm.Message{
-		llm.TextMessage("system", repairPrompt),
-		llm.TextMessage("user", fmt.Sprintf("Kind: %s\n\nThe card:\n%s\n\nWhat's wrong:\n- %s\n\nIts schema:\n%s",
-			k, raw, strings.Join(problems, "\n- "), schema)),
-	}})
-}
-
 // pageImage is a page as a data URL for the model to look at.
 func (s *Service) pageImage(ctx context.Context, bookID string, page, width int) (string, error) {
 	data, err := s.c.Library.PageJPEG(ctx, bookID, page, width)
@@ -435,24 +426,22 @@ func (s *Service) pageImage(ctx context.Context, bookID string, page, width int)
 
 // ---------------------------------------------------------------- guide
 
-// Stage names, as the model writes them and the walkthrough shows them.
-const (
-	stageHint        = "Hint"
-	stageWalkthrough = "Walkthrough"
-)
-
-// guideAttempts: a guide missing a part is asked for once more.
+// guideAttempts: a guide missing its hint or its answers is asked for
+// once more.
 const guideAttempts = 2
 
-// writeGuide streams the hint and the walkthrough, with the same tools
-// Ask has: it searches and reads the book for the theory, looks at pages,
-// and does its arithmetic with compute. The hint is saved and published
-// the moment the walkthrough heading arrives, so the student can open it
-// while the rest is still being written.
+// writeGuide streams the guide, a document of blocks: a hint, then the
+// walkthrough. It has the same tools Ask has: it searches and reads the
+// book for the theory, looks at pages, and does its arithmetic with
+// compute. The hint is saved and published the moment the block after it
+// arrives, so the student can open it while the rest is still being
+// written; the walkthrough is saved once its parts all have answers.
 //
-// Each tool round is saved as it finishes. A guide the app stopped
-// partway, or one asked again after a failure, carries on from its last
-// round rather than thinking the whole problem through again.
+// Only the final round is the document: what the writer says on its way to
+// a tool call is narration, and the parser forgets it. Each tool round is
+// saved as it finishes. A guide the app stopped partway, or one asked
+// again after a failure, carries on from its last round rather than
+// thinking the whole problem through again.
 func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) error {
 	user, shown, err := s.guideUser(ctx, book, q)
 	if err != nil {
@@ -464,17 +453,19 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 	}
 	for attempt := 1; attempt <= guideAttempts; attempt++ {
 		msgs := append([]llm.Message{user}, rounds...)
-		var parser *cards.Parser
-		parser = cards.NewParser(ctx, cards.Options{
-			Pages:    book.Pages,
-			Repair:   m.repair,
-			Sections: []string{stageHint, stageWalkthrough},
-		}, cards.Handler{
-			Section: func(name string) {
-				if name != stageWalkthrough {
+		hintSaved := false
+		var parser *doc.Parser
+		parser = doc.NewParser(ctx, doc.Options{
+			Mode: doc.Guide, Pages: book.Pages, PageCount: book.PageCount, Model: m.client.Mechanical(m.name),
+		}, doc.Handler{
+			Block: func(doc.Block, bool) {
+				// The hint is whole once a block comes after it.
+				if hintSaved {
 					return
 				}
-				if hint := tidy(parser.Section(stageHint)); len(hint) > 0 {
+				hint, walk := doc.SplitGuide(parser.Blocks())
+				if len(hint) > 0 && len(walk) > 0 {
+					hintSaved = true
 					s.saveStage(ctx, q.ID, "hint", hint)
 				}
 			},
@@ -499,10 +490,12 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 			},
 			Writing: func() { s.setActivity(ctx, q.ID, "Writing the guide…") },
 			Delta:   parser.Feed,
-			Shown:   shown,
-			Complete: func() bool {
-				return len(parser.Section(stageHint)) > 0 && len(parser.Section(stageWalkthrough)) > 0
+			Aside: func() {
+				parser.Reset()
+				hintSaved = false
 			},
+			Shown:    shown,
+			Complete: parser.Complete,
 			Round: func(all []llm.Message) {
 				rounds = slices.Clone(all[1:])
 				if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET rounds = ? WHERE id = ?`, mustJSON(rounds), q.ID); err != nil {
@@ -518,11 +511,16 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 			}
 			return modelDown(err, q)
 		}
-		hint, walk := parser.Section(stageHint), parser.Section(stageWalkthrough)
-		if len(hint) == 0 || len(walk) == 0 {
-			slog.Warn("guide missing a part", "question", q.ID, "attempt", attempt, "hint", len(hint), "walkthrough", len(walk))
+		if len(parser.Blocks()) > 0 {
+			s.setActivity(ctx, q.ID, "Checking the guide…")
+			parser.Finalize()
+		}
+		hint, walk := doc.SplitGuide(parser.Blocks())
+		if len(hint) == 0 || len(doc.Answers(walk)) == 0 {
+			slog.Warn("guide missing a part", "question", q.ID, "attempt", attempt, "blocks", len(parser.Blocks()), "hint", len(hint), "answers", len(doc.Answers(walk)))
 			continue
 		}
+		slog.Info("guide written", "question", q.ID, "blocks", len(parser.Blocks()), "raw", parser.Failed(), "repairs", parser.RepairCalls())
 		_, err = s.c.DB.ExecContext(ctx, `UPDATE questions SET hint = ?, walkthrough = ?, state = 'ready', reason = '', activity = '', rounds = '[]', updated_at = ? WHERE id = ?`,
 			mustJSON(hint), mustJSON(walk), db.Now(), q.ID)
 		if err != nil {
@@ -603,30 +601,14 @@ func (s *Service) setActivity(ctx context.Context, id, label string) {
 	s.publishQuestion(ctx, id)
 }
 
-func (s *Service) saveStage(ctx context.Context, id, stage string, segs []cards.Segment) {
+func (s *Service) saveStage(ctx context.Context, id, stage string, blocks []doc.Block) {
 	col := map[string]string{"hint": "hint", "walkthrough": "walkthrough"}[stage]
 	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET `+col+` = ?, updated_at = ? WHERE id = ?`,
-		mustJSON(segs), db.Now(), id); err != nil {
+		mustJSON(blocks), db.Now(), id); err != nil {
 		slog.Error("question: save stage", "question", id, "err", err)
 		return
 	}
 	s.publishQuestion(ctx, id)
-}
-
-// tidy is a section mid-stream as it will be stored: prose trimmed, blank
-// prose dropped.
-func tidy(segs []cards.Segment) []cards.Segment {
-	var out []cards.Segment
-	for _, s := range segs {
-		if s.Type == cards.SegmentProse {
-			s.Text = strings.Trim(s.Text, "\n")
-			if strings.TrimSpace(s.Text) == "" {
-				continue
-			}
-		}
-		out = append(out, s)
-	}
-	return out
 }
 
 // guideUser is the writer's opening message, and the PDF pages it shows
@@ -638,10 +620,11 @@ func tidy(segs []cards.Segment) []cards.Segment {
 func (s *Service) guideUser(ctx context.Context, book Book, q row) (llm.Message, []int, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "The problem")
-	if q.Label != "" && q.Label != q.Statement {
+	statement := source(q.Statement)
+	if q.Label != "" && q.Label != statement {
 		fmt.Fprintf(&b, " (%s)", q.Label)
 	}
-	fmt.Fprintf(&b, ":\n\n%s\n", q.Statement)
+	fmt.Fprintf(&b, ":\n\n%s\n", statement)
 	b.WriteString(notesText(q))
 	if !q.InBook {
 		b.WriteString("\nIt isn't from the book: the student typed it in. Solve it from its own statement.\n")
@@ -686,8 +669,8 @@ func notesText(q row) string {
 		return ""
 	}
 	return "\nYour professor's instructions for this problem, which come before the book wherever they differ:\n" +
-		bullets(q.Notes) +
-		"Follow them: work only the parts they name, use their numbers in place of the book's, leave out what they rule out, and do what they add. Open the walkthrough by saying which of them you followed.\n"
+		bullets(sources(q.Notes)) +
+		"Follow them: work only the parts they name, use their numbers in place of the book's, leave out what they rule out, and do what they add. Say in a note, first in the walkthrough, which of them you followed.\n"
 }
 
 // readingText is how the figures read, for the writer, which works from
@@ -702,7 +685,7 @@ func readingText(q row) string {
 	if q.ReadingEdited {
 		lead = "How the figures read, as the student corrected it. Work from this reading: it is the problem, even where you would read the figures differently."
 	}
-	return "\n" + lead + "\n" + bullets(q.Reading)
+	return "\n" + lead + "\n" + bullets(sources(q.Reading))
 }
 
 // figureParts is a question's figures as images, each under its label,
@@ -741,7 +724,7 @@ const theoryDepth = 30
 // problem finds it: memory says the page is worth reading, the chapter
 // and the search that it's this problem's.
 func (s *Service) theory(ctx context.Context, book Book, q row) string {
-	if s.c.Memory == nil || strings.TrimSpace(q.Statement) == "" {
+	if s.c.Memory == nil || doc.Empty(q.Statement) {
 		return ""
 	}
 	_, chapter, ok := problemLabel(q.Label, q.Text)
@@ -765,7 +748,7 @@ func (s *Service) theory(ctx context.Context, book Book, q row) string {
 	if len(named) == 0 {
 		return ""
 	}
-	hits, err := s.c.Library.Search(ctx, book.ID, q.Statement, theoryDepth)
+	hits, err := s.c.Library.Search(ctx, book.ID, doc.Plain(q.Statement), theoryDepth)
 	if err != nil {
 		slog.Warn("guide: theory search", "question", q.ID, "err", err)
 		return ""

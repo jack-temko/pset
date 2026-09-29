@@ -2,7 +2,6 @@ package homework
 
 import (
 	"context"
-	"encoding/json"
 	"slices"
 	"strings"
 
@@ -57,8 +56,7 @@ func (s *Service) setHas(ctx context.Context, setID string, style probnum.Style)
 		if !inBook {
 			continue
 		}
-		q.notes = []string{}
-		json.Unmarshal([]byte(notes), &q.notes)
+		q.notes = sources(decodeRunLists(notes))
 		for _, sp := range splitDraft(Draft{Text: text, InBook: true}, style) {
 			q.labels = append(q.labels, sp.label)
 		}

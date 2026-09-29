@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { applyTurn, type LiveTurn, type Turn } from './ask'
+import { applyTurn, stream, type LiveTurn, type Turn } from './ask'
+import type { Block } from './gen/doc'
 
 const turn = (over: Partial<Turn> = {}): Turn => ({
   id: 't1',
@@ -34,5 +35,31 @@ describe('applyTurn', () => {
 
   it('adds a turn it has not seen', () => {
     expect(applyTurn([], turn())).toHaveLength(1)
+  })
+})
+
+describe('the block stream', () => {
+  const para: Block = { type: 'para', text: [{ t: 'Since ' }, { m: '1/p' }] }
+
+  it('draws a skeleton, fills it as the text streams, and replaces it with the block', () => {
+    let t: LiveTurn = turn()
+    t = stream.start(t, 'para')
+    expect(t.pending).toEqual({ type: 'para', runs: [], repairing: false })
+    t = stream.text(t, [{ t: 'Since ' }])
+    t = stream.text(t, [{ m: '1/p' }])
+    expect(t.pending?.runs).toEqual([{ t: 'Since ' }, { m: '1/p' }])
+    t = stream.block(t, para)
+    expect(t.pending).toBeUndefined()
+    expect(t.answer).toEqual([para])
+  })
+
+  it('says a block is being tidied, and keeps the words already there', () => {
+    let t = stream.text(stream.start(turn(), 'para'), [{ t: 'So' }])
+    t = stream.repairing(t, 'para')
+    expect(t.pending).toEqual({ type: 'para', runs: [{ t: 'So' }], repairing: true })
+  })
+
+  it('a block that repairs before its type was seen still gets a skeleton', () => {
+    expect(stream.repairing(turn(), 'derivation').pending?.type).toBe('derivation')
   })
 })

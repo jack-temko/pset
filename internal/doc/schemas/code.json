@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Code to read or run, kept verbatim.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "code"
+  ],
+  "properties": {
+    "type": {
+      "const": "code"
+    },
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8000
+    },
+    "language": {
+      "type": "string",
+      "maxLength": 30
+    }
+  }
+}

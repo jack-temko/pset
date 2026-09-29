@@ -120,7 +120,7 @@ stays covers.
 ## Ask (panel tab)
 
 The backend is an **agentic loop**: the model holds tools (searching
-pages, extracting text, solving math, rendering chat cards) and how a
+pages, extracting text, solving math) and how a
 question gets page context is deliberately left open until that loop is
 built.
 
@@ -130,9 +130,8 @@ built.
   **Interleaved, not stacked** (2026-09-22): a call sits where it
   happened, between the paragraph before it and the paragraph after,
   because that is what it was. The engine records with each step how
-  many answer segments were written when it ran, and a running tool
-  ends the paragraph in progress. Copy takes the answer alone: the feed
-  is the app talking, not the words.
+  many answer blocks were written when it ran. Copy takes the answer
+  alone: the feed is the app talking, not the words.
 - **The live line stands out** (2026-09-23): the call in flight is in
   full foreground ink with its Spinner; when the next call starts or the
   answer ends, it eases back (150ms) to the feed's muted ink.
@@ -147,8 +146,11 @@ built.
   shape is unknown, and a shimmer at a made-up size promises one. The
   wait is said by the feed (a step, or Thinking…) and by Stop in the
   composer.
-  Skeletons are for **cards**, where the envelope names the kind before
-  the card arrives, so the shape is known.
+  Skeletons are for **blocks**, where the type arrives before the block,
+  so the shape is known: a text block (paragraph, note, callout) is its
+  own text as the words come, math and bold phrases whole once they
+  have closed; a plot, derivation, table or code block is a labelled
+  skeleton ("Writing a plot"); "Tidying" says a block is being repaired.
 - **Citations are inline page chips**: a distinct small mono element
   ("p. 142") in the prose, not underlined text and not a card. Click
   scrolls the scan there and flashes the page's edge.
@@ -175,20 +177,21 @@ built.
   composer already says it's running. **Stopped** leaves the partial
   answer and a quiet "Stopped" line, with nothing to click; asking again
   is the retry.
-- **Answer cards, a short list on purpose** (2026-09-21), for the three
-  things prose does badly:
-  - **Statement**: a definition or theorem as the book numbers it
-    ("Theorem 5.22"), its name, and a page chip, in a Box-like frame.
-  - **Worked steps**: a numbered derivation, all shown (the walkthrough
-    is where things hide), one line of math per step with a short why.
-  - **Plot**: one or two functions on one y-axis, chart-1 then chart-2,
-    a legend and no labels on the lines, a hover crosshair with every
-    value, and a table behind it for screen readers.
-
-  Plus two plain blocks, a **table** and a **code block**, both
-  sideways-scrolling inside their own frame when wide. No page-excerpt
-  card: page chips already jump the scan to the real page. Everything
-  else is prose with math and chips.
+- **The answer is a document of blocks** (2026-09-29, replacing prose
+  with cards; design/backend.md, "The document"): paragraphs, notes,
+  display math, a **derivation** (numbered, one line of math per step
+  with a short why, all shown: the walkthrough is where things hide), a
+  **statement** (a definition or theorem as the book numbers it, its
+  name and a page chip, in a Box-like frame), a **plot** (one or two
+  functions on one y-axis, chart-1 then chart-2, a legend and no labels
+  on the lines, a hover crosshair with every value, labeled points and
+  vertical guides, a table behind it for screen readers), a **table**
+  and a **code block** (sideways-scrolling inside their own frame when
+  wide), and callouts. Parts and steps are for the long answers. Ask
+  has no hint and no answer, and no Answers veil. Math that could not be
+  parsed and a block that could not be made valid show as their source,
+  muted, never red. No page-excerpt card: page chips already jump the
+  scan to the real page.
 - Empty conversation: a prompt line plus one short sentence of what the
   agent can do. No generated suggestions.
 - One running conversation per book (locked earlier).
@@ -377,7 +380,9 @@ built.
   leaving out points and page hints, and **Edit** changes them; the
   guide follows them over the book, so a change writes it again. A
   question without notes shows a quiet **Add your professor's
-  instructions**. The Box is the same one as the figure's reading
+  instructions**. Notes, the reading and the statement are stored as
+  runs (math split out, KaTeX-checked); editing shows the string form,
+  math in `\(..\)`, and saving sends it back as text. The Box is the same one as the figure's reading
   (`EditableLines`).
 - **The figure, as read** (2026-09-24): a question with a figure shows,
   under it, the words its guide is written from, in a Box: every node,
@@ -425,13 +430,33 @@ built.
   on as any found question does; a new one opens in the walkthrough.
 - **Scan jumps on demand**: a page chip in the question header; opening a
   question never moves the scan by itself.
-- **Two stages, both veiled**: *hint* and *walkthrough*: the walkthrough
-  carries the solution, so there is no separate approach step. Each sits
-  behind frosted glass (the `Veil`) from the start: the content is laid
-  out at its true size, blurred, with "Show hint" / "Show walkthrough"
-  over it. One click lifts it. No sequence, no skip link: both are
-  always available, and the student is an adult. Stages reuse the
-  transcript's pieces (math, page chips).
+- **Three stages, all veiled**: *hint*, *walkthrough* and *answers*
+  (2026-09-29): the walkthrough carries the working, and the Answers
+  veil collects every part's `answer` block, so a student can check
+  paper work without seeing the working. Each sits behind frosted glass
+  (the `Veil`) from the start: the content is laid out at its true size,
+  blurred, with "Show hint" / "Show walkthrough" / "Show answers" over
+  it. One click lifts it. No sequence, no skip link: all are always
+  available, and the student is an adult. Answers is not a stage the
+  writer produces: it is derived from the walkthrough's answer blocks,
+  and each answer also shows in place, as a one-row Answers card at the
+  end of its part (the walkthrough does not repeat the whole card at
+  its end: the veil is that card).
+- **The walkthrough is a document** (2026-09-29): the renderer builds
+  the tree from the guide's `part` and `step` markers. A part is an
+  eyebrow in Inter over its title in Newsreader, with a hairline above
+  every part but the first; a step is its number (restarting in each
+  part) before its Newsreader title; paragraphs read at `text-reading`;
+  notes are small and muted; callouts (insight, caveat, check) sit on
+  their status's soft tint. Design-system.md has the look; the
+  components are in `web/src/components/transcript` and the renderer in
+  `web/src/components/document`, both on `/components`. A punctuation
+  mark after inline math never starts a line.
+- **A question with no guide** (2026-09-29): the guides written before
+  documents were deleted, so those questions say "This question has no
+  guide yet." with **Write the guide**, which queues it. Nothing writes
+  one unasked, and correcting the notes or the reading of such a
+  question only saves them.
 - **Complete is a checkbox**, not a button, and it does exactly one
   thing: marks the question done. It never advances: you move on when
   you decide to, not when the app decides for you, and unchecking is

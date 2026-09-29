@@ -28,9 +28,9 @@ func TestAFigureIsReadSettledAndTheGuideWrittenFromIt(t *testing.T) {
 	h := e.newSet(t)
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
 
-	want := []string{"Node A: top of $R_1$.", "2 A current source from A to B (its arrow points to B)."}
-	if strings.Join(q.Reading, "|") != strings.Join(want, "|") || q.ReadingEdited {
-		t.Fatalf("reading %q (edited %v), want the settled one", q.Reading, q.ReadingEdited)
+	want := []string{`Node A: top of \(R_1\).`, "2 A current source from A to B (its arrow points to B)."}
+	if strings.Join(sources(q.Reading), "|") != strings.Join(want, "|") || q.ReadingEdited {
+		t.Fatalf("reading %q (edited %v), want the settled one", sources(q.Reading), q.ReadingEdited)
 	}
 	if n := requestsTo(e, "You read the figures"); n != 3 {
 		t.Fatalf("read %d times, want 3", n)
@@ -56,7 +56,7 @@ func TestNoFigureNoReading(t *testing.T) {
 	h := e.newSet(t)
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "Find the voltage across a 2 Ω resistor carrying 3 A."})[0].ID, StateReady)
 	if len(q.Reading) != 0 || requestsTo(e, "You read the figures") != 0 {
-		t.Fatalf("read a question with no figure: %q", q.Reading)
+		t.Fatalf("read a question with no figure: %q", sources(q.Reading))
 	}
 }
 
@@ -73,7 +73,7 @@ func TestAFailedReadingStillGetsAGuide(t *testing.T) {
 	h := e.newSet(t)
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
 	if len(q.Reading) != 0 || strings.Contains(openingText(guideRequests(e)[0]), "How the figures read") {
-		t.Fatalf("reading %q after a failed read", q.Reading)
+		t.Fatalf("reading %q after a failed read", sources(q.Reading))
 	}
 }
 
@@ -94,7 +94,7 @@ func TestACorrectedReadingWritesTheGuideAgain(t *testing.T) {
 	if code := e.do(t, "PATCH", "/api/questions/"+id, QuestionPatch{Reading: &fixed}, &q); code != 200 {
 		t.Fatalf("correct: %d", code)
 	}
-	if len(q.Reading) != 2 || q.Reading[0] != "Node A: top of $R_1$." || !q.ReadingEdited || len(q.Hint) != 0 {
+	if len(q.Reading) != 2 || source(q.Reading[0]) != `Node A: top of \(R_1\).` || !q.ReadingEdited || len(q.Hint) != 0 {
 		t.Fatalf("after correcting: %+v", q)
 	}
 	q = e.wait(t, id, StateReady)
@@ -161,7 +161,7 @@ func TestAnUnsettledReadingKeepsTheFirst(t *testing.T) {
 	})
 	h := e.newSet(t)
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
-	if len(q.Reading) != 2 || !strings.Contains(q.Reading[1], "from B to A") {
-		t.Fatalf("reading %q, want the first one", q.Reading)
+	if len(q.Reading) != 2 || !strings.Contains(source(q.Reading[1]), "from B to A") {
+		t.Fatalf("reading %q, want the first one", sources(q.Reading))
 	}
 }

@@ -30,8 +30,8 @@ func TestAnUnreadReferenceIsRewrittenAndSplit(t *testing.T) {
 		d.Questions[1].Text != "3.36" || d.Questions[2].ID != qs[1].ID {
 		t.Fatalf("questions %q %+v", labels, d.Questions)
 	}
-	if !slices.Equal(d.Questions[0].Notes, []string{"no PSpice"}) {
-		t.Fatalf("notes %q", d.Questions[0].Notes)
+	if !slices.Equal(sources(d.Questions[0].Notes), []string{"no PSpice"}) {
+		t.Fatalf("notes %q", sources(d.Questions[0].Notes))
 	}
 	for i, q := range d.Questions {
 		if q.Position != i+1 {

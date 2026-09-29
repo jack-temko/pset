@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackt/pset/internal/cards"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
@@ -143,7 +143,10 @@ func (e *env) wait(t *testing.T, id string, st TurnState) Turn {
 	return Turn{}
 }
 
-const answer = "An eigenvalue is a scalar $\\lambda$ with $Tv = \\lambda v$ [p. 1].\n```steps\n{\"steps\":[{\"math\":\"2 + 2 = 4\",\"why\":\"Computed.\"}]}\n```\nHope that helps, Jack.\n"
+const answer = `{"type":"para","text":"An eigenvalue is a scalar \\(\\lambda\\) with \\(Tv = \\lambda v\\) [p. 1]."}
+{"type":"derivation","steps":[{"tex":"2 + 2 = 4","why":"Computed."}]}
+{"type":"para","text":"Hope that helps, Jack."}
+`
 
 func TestTurnSearchesComputesAndAnswers(t *testing.T) {
 	e := newEnv(t)
@@ -165,13 +168,13 @@ func TestTurnSearchesComputesAndAnswers(t *testing.T) {
 	if strings.Join(labels, " | ") != "Thought for 1s | Searched ‘eigenvalue’ · 1 page | Computed 2+2 = 4 | Looked at p. 1 | Solved 2 equations" {
 		t.Fatalf("steps %v", labels)
 	}
-	if len(got.Answer) != 3 || got.Answer[1].Type != cards.SegmentCard || !strings.Contains(got.Answer[0].Text, "[p. 3]") {
-		t.Fatalf("answer %+v", got.Answer)
+	if len(got.Answer) != 3 || doc.TypeOf(got.Answer[1]) != doc.TypeDerivation || !strings.Contains(string(got.Answer[0]), `"cite":3`) {
+		t.Fatalf("answer %s", got.Answer)
 	}
 	if got.About != "5.A.1" {
 		t.Fatalf("about %q", got.About)
 	}
-	if e.events.count(EventTurnDelta) == 0 || e.events.count(EventTurnCardStart) != 1 || e.events.count(EventTurnCard) != 1 {
+	if e.events.count(EventTurnBlockStart) != 3 || e.events.count(EventTurnBlockText) == 0 || e.events.count(EventTurnBlock) != 3 {
 		t.Fatalf("events %v", e.events.events)
 	}
 	// Steps come before any words: the answer is still a list, never null.
@@ -206,32 +209,33 @@ func TestTurnSearchesComputesAndAnswers(t *testing.T) {
 	}
 
 	// The next turn sees this one, with citations back on printed pages.
-	e.llm.Script(llmtest.Reply{Text: "Yes."})
+	e.llm.Script(llmtest.Reply{Text: `{"type":"para","text":"Yes."}`})
 	var next Turn
 	e.do(t, "POST", "/api/books/b1/turns", Question{Question: "And again?"}, &next)
 	e.wait(t, next.ID, TurnDone)
 	reqs = e.llm.Requests()
 	hist := reqs[len(reqs)-1].Chat.Messages
-	if len(hist) != 4 || !strings.Contains(hist[2].Content.Text(), "[p. 1]") {
+	if len(hist) != 4 || !strings.Contains(hist[2].Content.Text(), "[p. 1]") || !strings.Contains(hist[2].Content.Text(), `"type":"derivation"`) {
 		t.Fatalf("history %d messages: %q", len(hist), hist[2].Content.Text())
 	}
 }
 
-func TestStopKeepsThePartialAnswer(t *testing.T) {
+func TestStopKeepsTheBlocksWritten(t *testing.T) {
 	e := newEnv(t)
-	e.llm.Script(llmtest.Reply{Text: strings.Repeat("Slowly, word by word. ", 40), Pause: 20 * time.Millisecond})
+	line := `{"type":"para","text":"Slowly, block by block."}` + "\n"
+	e.llm.Script(llmtest.Reply{Text: strings.Repeat(line, 40), Pause: 20 * time.Millisecond})
 	var turn Turn
 	e.do(t, "POST", "/api/books/b1/turns", Question{Question: "Go slowly"}, &turn)
 	deadline := time.Now().Add(5 * time.Second)
-	for e.events.count(EventTurnDelta) < 3 && time.Now().Before(deadline) {
+	for e.events.count(EventTurnBlock) < 3 && time.Now().Before(deadline) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	e.do(t, "POST", "/api/turns/"+turn.ID+"/stop", nil, nil)
 	got := e.wait(t, turn.ID, TurnStopped)
 	time.Sleep(100 * time.Millisecond)
 	got = e.wait(t, turn.ID, TurnStopped)
-	if len(got.Answer) != 1 || !strings.HasPrefix(got.Answer[0].Text, "Slowly") || len(got.Answer[0].Text) > 800 {
-		t.Fatalf("partial answer %+v", got.Answer)
+	if len(got.Answer) < 3 || len(got.Answer) > 39 || doc.TypeOf(got.Answer[0]) != doc.TypePara {
+		t.Fatalf("partial answer: %d blocks", len(got.Answer))
 	}
 }
 

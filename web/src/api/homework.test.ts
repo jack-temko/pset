@@ -10,7 +10,7 @@ const q = (over: Partial<Question> = {}): Question => ({
   text: '3.1',
   inBook: true,
   label: '3.1',
-  statement: '',
+  statement: [],
   figures: [],
   hint: [],
   walkthrough: [],

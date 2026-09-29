@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
  * before, so a long guide has visible seams; the first part of a guide
  * passes `first` and has none, since nothing is above it to separate from.
  */
-export function PartHeader({ label, title, first }: { label: string; title: string; first?: boolean }) {
+export function PartHeader({ label, title, first }: { label: string; title: ReactNode; first?: boolean }) {
   return (
     <header className={cn('space-y-1', !first && 'border-t pt-6')}>
       <p className="text-xs tracking-wide text-primary">{label}</p>
@@ -33,7 +33,7 @@ export function PartHeader({ label, title, first }: { label: string; title: stri
  * in each part; the number is Inter in the primary ink and sits before the
  * serif title, on its baseline.
  */
-export function StepHeading({ number, title }: { number: number; title: string }) {
+export function StepHeading({ number, title }: { number: number; title: ReactNode }) {
   return (
     <h3 className="flex items-baseline gap-3 font-heading text-xl">
       <span className="font-sans text-xs text-primary tabular-nums">{number}</span>
@@ -76,7 +76,7 @@ const callouts: Record<CalloutTone, { frame: string; title: string }> = {
  * has one or two at most. The title is optional and reads as the callout's
  * first line, in the tone's ink; the text is in the foreground ink.
  */
-export function Callout({ tone, title, children }: { tone: CalloutTone; title?: string; children: ReactNode }) {
+export function Callout({ tone, title, children }: { tone: CalloutTone; title?: ReactNode; children: ReactNode }) {
   const c = callouts[tone]
   return (
     <aside className={cn('space-y-1 rounded-r-md px-card py-3 text-base', c.frame)} data-tone={tone}>

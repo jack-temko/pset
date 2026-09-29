@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowUp,
@@ -80,6 +80,7 @@ import {
   usePointOut,
   useRedoReading,
   useRetryQuestion,
+  useWriteGuide,
   useUpdateHomework,
   useUpdateQuestion,
   worksheetURL,
@@ -88,7 +89,9 @@ import {
   type Retry,
   type Summary,
 } from '@/api/homework'
-import { CardSkeleton, Prose, Segments } from '@/components/segments'
+import { AnswersOf, BlockSkeleton, Document, Runs } from '@/components/document'
+import { runsSource, runsText } from '@/components/document/runs'
+import { answersOf } from '@/components/document/tree'
 import { useHeartbeat, type Kind as ActivityKind } from '@/api/activity'
 import { useAsk, useClearTurns, useStopTurn, useTurns, type About, type LiveTurn } from '@/api/ask'
 import { dueLine, dueStatus } from '@/lib/due'
@@ -571,19 +574,19 @@ function dayLabel(iso: string, now = new Date()): string {
  *
  * Nothing draws a skeleton for the answer itself: its shape is unknown
  * until it arrives, so a shimmer would promise a size it may not take.
- * Skeletons belong to cards, where the envelope named the kind first.
+ * Skeletons belong to blocks, where the type arrives before the block.
  */
 function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) => void; onRetry: () => void }) {
   const navigate = useNavigate()
   const running = t.state === 'running'
   const last = t.steps[t.steps.length - 1]
   const lastRunning = !!last?.running
-  // Waiting on the model with nothing saying so: no call running, no card
+  // Waiting on the model with nothing saying so: no call running, no block
   // on its way, and no words since the last step (streaming words say it
   // themselves).
   const endsInStep = t.steps.some((s) => Math.min(s.after ?? 0, t.answer.length) === t.answer.length)
   const thinking = running && !lastRunning && !t.pending && (t.answer.length === 0 || endsInStep)
-  // Each step sits after the segments written when it ran. Turns saved
+  // Each step sits after the blocks written when it ran. Turns saved
   // before steps carried a position have none, and land at the top, as
   // they always did.
   const feed = (i: number) => {
@@ -604,15 +607,13 @@ function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) 
       <UserTurn about={t.about || undefined}>{t.question}</UserTurn>
       {(t.steps.length > 0 || t.answer.length > 0 || t.pending || thinking) && (
         <AssistantTurn>
-          {t.answer.map((seg, i) => (
-            <Fragment key={i}>
-              {feed(i)}
-              <Segments segments={[seg]} onJump={onJump} />
-            </Fragment>
-          ))}
-          {feed(t.answer.length)}
+          {/* The step feed sits where the calls ran: before the block
+              written when each one began. */}
+          <Document blocks={t.answer} onJump={onJump} before={feed} />
           {thinking && t.steps.length === 0 && <Thinking />}
-          {t.pending && <CardSkeleton kind={t.pending.kind} repairing={t.pending.repairing} />}
+          {t.pending && (
+            <BlockSkeleton type={t.pending.type} runs={t.pending.runs} repairing={t.pending.repairing} onJump={onJump} />
+          )}
         </AssistantTurn>
       )}
       {t.state === 'stopped' && <StoppedNote />}
@@ -936,13 +937,14 @@ function FailedQuestion({ q, onRetry }: { q: Question; onRetry: (r: Retry) => vo
   )
 }
 
-const STAGE_NAMES = ['hint', 'walkthrough'] as const
+const STAGE_NAMES = ['hint', 'walkthrough', 'answers'] as const
 
 /** A stage still being written: skeleton lines at a stage's usual size,
  *  so the guide lands in space already made for it. A hint runs two
- *  lines, a walkthrough about five; the last stops short, as prose does. */
+ *  lines, a walkthrough about five and the answers two; the last stops
+ *  short, as prose does. */
 function StageSkeleton({ name, still }: { name: (typeof STAGE_NAMES)[number]; still?: boolean }) {
-  const lines = name === 'hint' ? 2 : 5
+  const lines = name === 'walkthrough' ? 5 : 2
   return (
     <div className="space-y-1">
       <p className="text-xs text-muted-foreground uppercase">{name}</p>
@@ -1024,6 +1026,7 @@ function Walkthrough({
   const update = useUpdateQuestion(setId)
   const removeQ = useRemoveQuestion(setId)
   const retryQ = useRetryQuestion()
+  const writeGuide = useWriteGuide()
   const redoReading = useRedoReading()
   const { bookId } = useBookHere()
   const boxing = useBoxing()
@@ -1260,9 +1263,9 @@ function Walkthrough({
         {/* A bare reference ("3.C.14") is already the label; saying it
             twice isn't a statement. While it's still being found, the
             statement is a skeleton the book's text will replace. */}
-        {q.statement && q.statement !== q.label ? (
-          <div className="space-y-3 text-base">
-            <Prose text={q.statement} onJump={onJump} />
+        {q.statement.length > 0 && runsText(q.statement) !== q.label ? (
+          <div className="text-base">
+            <Runs runs={q.statement} onJump={onJump} />
           </div>
         ) : (
           q.inBook &&
@@ -1326,29 +1329,47 @@ function Walkthrough({
               // it: a blank at the line's height, so nothing moves.
               outstanding(q) && <p className="text-xs">{'\u00a0'}</p>
             )}
-            {STAGE_NAMES.map((name) => {
-              const segs = name === 'hint' ? q.hint : q.walkthrough
-              // Each stage fills in as it's written: the hint can be
-              // there while the walkthrough is still a skeleton.
-              if (segs.length === 0) return <StageSkeleton key={name} name={name} still={still} />
-              return (
-                <Stage
-                  key={name}
-                  label={name}
-                  revealed={q.revealed.includes(name)}
-                  onReveal={() => update.mutate({ id: q.id, patch: { reveal: name } })}
-                >
-                  <Segments segments={segs} onJump={onJump} />
-                </Stage>
-              )
-            })}
+            {q.state === 'unwritten' ? (
+              // No guide yet: the ones written before documents were
+              // deleted. Nothing writes one until it's asked for.
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">This question has no guide yet.</p>
+                <Button variant="outline" onClick={() => writeGuide.mutate(q.id)}>
+                  Write the guide
+                </Button>
+              </div>
+            ) : (
+              STAGE_NAMES.map((name) => {
+                const blocks = name === 'hint' ? q.hint : q.walkthrough
+                // Each stage fills in as it's written: the hint can be
+                // there while the walkthrough is still a skeleton. The
+                // answers are the walkthrough's answer blocks, so they
+                // arrive with it.
+                if (blocks.length === 0) return <StageSkeleton key={name} name={name} still={still} />
+                if (name === 'answers' && answersOf(blocks).length === 0) return null
+                return (
+                  <Stage
+                    key={name}
+                    label={name}
+                    revealed={q.revealed.includes(name)}
+                    onReveal={() => update.mutate({ id: q.id, patch: { reveal: name } })}
+                  >
+                    {name === 'answers' ? (
+                      <AnswersOf blocks={q.walkthrough} onJump={onJump} />
+                    ) : (
+                      <Document blocks={blocks} onJump={onJump} reading />
+                    )}
+                  </Stage>
+                )
+              })
+            )}
             {set && <MemoryLines bookId={set.bookId} lines={q.memory} />}
           </>
         )}
       </div>
 
       <div className="flex shrink-0 items-center justify-between border-t p-card">
-        <Button variant="ghost" size="sm" onClick={() => onAskAbout({ label: q.label, text: q.statement || q.text })}>
+        <Button variant="ghost" size="sm" onClick={() => onAskAbout({ label: q.label, text: runsSource(q.statement) || q.text })}>
           Ask about this
         </Button>
         <div className="flex items-center gap-2">

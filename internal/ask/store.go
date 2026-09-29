@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/jackt/pset/internal/cards"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/doc"
 )
 
 // Migrations: one conversation per book, as its turns.
@@ -26,7 +26,11 @@ CREATE TABLE turns (
 	created_at TEXT NOT NULL,
 	updated_at TEXT NOT NULL
 );
-CREATE INDEX turns_book ON turns (book_id, created_at);`}}
+CREATE INDEX turns_book ON turns (book_id, created_at);`},
+		// Structured guides: an answer is a document of blocks now, and the
+		// old conversations, written as prose and cards, are deleted.
+		{Name: "ask/2", SQL: `DELETE FROM turns`},
+	}
 }
 
 var errNotFound = errors.New("not found")
@@ -52,7 +56,7 @@ func scan(s interface{ Scan(...any) error }) (row, error) {
 		r.Steps = []Step{}
 	}
 	if r.Answer == nil {
-		r.Answer = []cards.Segment{}
+		r.Answer = []doc.Block{}
 	}
 	return r, err
 }

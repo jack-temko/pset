@@ -44,8 +44,8 @@ func TestNotesReachTheGuideAndRewriteIt(t *testing.T) {
 	e := newEnv(t)
 	h := e.newSet(t)
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36 (no PSpice or MultiSim)", InBook: true})[0].ID, StateReady)
-	if !reflect.DeepEqual(q.Notes, []string{"no PSpice or MultiSim"}) {
-		t.Fatalf("notes %q", q.Notes)
+	if !reflect.DeepEqual(sources(q.Notes), []string{"no PSpice or MultiSim"}) {
+		t.Fatalf("notes %q", sources(q.Notes))
 	}
 	text := openingText(guideRequests(e)[0])
 	if !strings.Contains(text, "Your professor's instructions") || !strings.Contains(text, "- no PSpice or MultiSim") {
@@ -56,7 +56,7 @@ func TestNotesReachTheGuideAndRewriteIt(t *testing.T) {
 	if code := e.do(t, "PATCH", "/api/questions/"+q.ID, QuestionPatch{Notes: &notes}, &q); code != 200 {
 		t.Fatalf("patch %d", code)
 	}
-	if len(q.Notes) != 2 || q.Notes[1] != "do it for R2 = 10 Ω" || len(q.Hint) != 0 {
+	if len(q.Notes) != 2 || source(q.Notes[1]) != "do it for R2 = 10 Ω" || len(q.Hint) != 0 {
 		t.Fatalf("after editing: %+v", q)
 	}
 	e.wait(t, q.ID, StateReady)

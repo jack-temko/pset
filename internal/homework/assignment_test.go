@@ -385,7 +385,7 @@ func TestImportingAnAssignmentMakesItsSets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(d.Questions[0].Notes, []string{"no PSpice"}) || d.Questions[1].InBook {
+	if !slices.Equal(sources(d.Questions[0].Notes), []string{"no PSpice"}) || d.Questions[1].InBook {
 		t.Fatalf("questions %+v", d.Questions)
 	}
 	// The read is done with once it's in.
@@ -426,7 +426,7 @@ func TestImportingAnAssignmentMakesItsSets(t *testing.T) {
 		t.Fatalf("update %d %+v", code, out.Homework)
 	}
 	d, _ = e.svc.Get(t.Context(), g2.SetID)
-	if !slices.Equal(d.Questions[0].Notes, []string{"use PSpice"}) || d.Questions[2].Label != "3.37" {
+	if !slices.Equal(sources(d.Questions[0].Notes), []string{"use PSpice"}) || d.Questions[2].Label != "3.37" {
 		t.Fatalf("updated set %+v", d.Questions)
 	}
 

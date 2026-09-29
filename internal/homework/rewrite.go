@@ -81,7 +81,7 @@ func (s *Service) rewriteReference(ctx context.Context, m model, book Book, q ro
 		}
 		for _, sp := range splitDraft(Draft{Text: l, InBook: true}, book.Problems) {
 			// The notes the student gave stay with every problem.
-			sp.notes = mergeNotes(q.Notes, sp.notes)
+			sp.notes = mergeNotes(sources(q.Notes), sp.notes)
 			rows = append(rows, sp)
 		}
 		if len(rows) >= maxDrafts {
@@ -96,7 +96,7 @@ func (s *Service) rewriteReference(ctx context.Context, m model, book Book, q ro
 	var added []Question
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET text = ?, label = ?, notes = ?, updated_at = ? WHERE id = ?`,
-			first.Text, first.label, mustJSON(orEmpty(first.notes)), db.Now(), q.ID); err != nil {
+			first.Text, first.label, mustJSON(runLists(orEmpty(first.notes))), db.Now(), q.ID); err != nil {
 			return err
 		}
 		added, err = s.insertQuestions(ctx, tx, q.HomeworkID, q.Position, rest)

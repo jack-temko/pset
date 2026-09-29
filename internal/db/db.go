@@ -42,6 +42,9 @@ func Open(path string) (*sql.DB, error) {
 type Migration struct {
 	Name string
 	SQL  string
+	// Do, if set, runs after SQL in the same transaction: for a change
+	// that needs code, like splitting stored text into runs.
+	Do func(ctx context.Context, tx *sql.Tx) error
 }
 
 const ledger = `CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -64,8 +67,15 @@ func Migrate(ctx context.Context, d *sql.DB, migs []Migration) error {
 			continue
 		}
 		err := Tx(ctx, d, func(tx *sql.Tx) error {
-			if _, err := tx.ExecContext(ctx, m.SQL); err != nil {
-				return err
+			if m.SQL != "" {
+				if _, err := tx.ExecContext(ctx, m.SQL); err != nil {
+					return err
+				}
+			}
+			if m.Do != nil {
+				if err := m.Do(ctx, tx); err != nil {
+					return err
+				}
 			}
 			_, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)`,
 				m.Name, time.Now().UTC().Format(time.RFC3339))

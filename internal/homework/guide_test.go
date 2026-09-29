@@ -188,9 +188,9 @@ func TestAGuideEndsWhenItsFinishedAndRemembers(t *testing.T) {
 	if n := len(guideRequests(e)); n != 1 {
 		t.Fatalf("asked the writer %d times", n)
 	}
-	for _, s := range q.Walkthrough {
-		if strings.Contains(s.Text, "good luck") {
-			t.Fatalf("sign-off in the walkthrough: %q", s.Text)
+	for _, b := range q.Walkthrough {
+		if strings.Contains(string(b), "good luck") {
+			t.Fatalf("sign-off in the walkthrough: %s", b)
 		}
 	}
 	if len(mem.notes) != 1 || len(q.Memory) != 1 {

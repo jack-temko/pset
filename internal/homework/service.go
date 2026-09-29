@@ -365,7 +365,7 @@ func (s *Service) insertQuestions(ctx context.Context, tx *sql.Tx, homeworkID st
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, notes, state, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
-			id, homeworkID, after+i+1, d.Text, d.InBook, label, statement, mustJSON(orEmpty(d.notes)), now, now); err != nil {
+			id, homeworkID, after+i+1, d.Text, d.InBook, label, mustJSON(runsOf(statement)), mustJSON(runLists(orEmpty(d.notes))), now, now); err != nil {
 			return nil, err
 		}
 		if _, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, d.InBook)); err != nil {
@@ -435,7 +435,7 @@ func (s *Service) UpdateQuestion(ctx context.Context, id string, p QuestionPatch
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if p.Reveal != nil {
 			stage := *p.Reveal
-			if stage != "hint" && stage != "walkthrough" {
+			if stage != "hint" && stage != "walkthrough" && stage != "answers" {
 				return httpx.Invalid("reveal", "There's no stage called %q.", stage)
 			}
 			if !slices.Contains(q.Revealed, stage) {
@@ -510,12 +510,12 @@ func (s *Service) redoReading(ctx context.Context, q row, corrected *[]string) (
 		if len(lines) > maxReadingLines {
 			return Question{}, httpx.Invalid("reading", "Keep it to %d lines.", maxReadingLines)
 		}
-		if slices.Equal(lines, q.Reading) {
+		if slices.Equal(sources(runLists(lines)), sources(q.Reading)) {
 			return q.Question, nil
 		}
-		// A guide that hasn't started reads the reading when it does.
-		res, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = 1, updated_at = ? WHERE id = ? AND state = ?`,
-			mustJSON(lines), db.Now(), q.ID, StateLocated)
+		// A guide that hasn't started, or isn't asked for, reads the reading when it does.
+		res, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = 1, updated_at = ? WHERE id = ? AND state IN (?, ?)`,
+			mustJSON(runLists(lines)), db.Now(), q.ID, StateLocated, StateUnwritten)
 		if err != nil {
 			return Question{}, err
 		}
@@ -527,7 +527,7 @@ func (s *Service) redoReading(ctx context.Context, q row, corrected *[]string) (
 	if corrected != nil {
 		next, edited = nextStep(q.ID, false), 1
 	}
-	return s.rewrite(ctx, q, next, `reading = ?, reading_edited = ?`, mustJSON(orEmpty(lines)), edited)
+	return s.rewrite(ctx, q, next, `reading = ?, reading_edited = ?`, mustJSON(runLists(orEmpty(lines))), edited)
 }
 
 // move puts a question at position to (1-based), shifting the ones in
@@ -613,7 +613,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 			return Question{}, httpx.Invalid("text", "That's too long for a single question.")
 		}
 		set += `, text = ?, in_book = 0, statement = ?, label = ?, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]', rounds = '[]', reading = '[]', reading_edited = 0, boxes = '[]'`
-		args = append(args, text, text, labelFromText(text))
+		args = append(args, text, mustJSON(runsOf(text)), labelFromText(text))
 		st, find = StatePending, false
 	case r.Page != nil:
 		if !q.InBook {
@@ -640,6 +640,35 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 			return err
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, find))
+		return err
+	})
+	if err != nil {
+		return Question{}, err
+	}
+	s.c.Queue.Wake()
+	return s.publishQuestion(ctx, id)
+}
+
+// WriteGuide writes the guide of a question that has none: the guides
+// written before documents were deleted, and nothing writes one until the
+// student asks.
+func (s *Service) WriteGuide(ctx context.Context, id string) (Question, error) {
+	q, err := getQuestion(ctx, s.c.DB, id)
+	if errors.Is(err, errNotFound) {
+		return Question{}, httpx.NotFound("question")
+	}
+	if err != nil {
+		return Question{}, err
+	}
+	if q.State != StateUnwritten {
+		return Question{}, httpx.Errorf(httpx.CodeInvalid, "This question already has a guide, or is being written.")
+	}
+	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `UPDATE questions SET state = ?, failure = '', reason = '', activity = '', updated_at = ? WHERE id = ?`,
+			StateLocated, db.Now(), id); err != nil {
+			return err
+		}
+		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, false))
 		return err
 	})
 	if err != nil {

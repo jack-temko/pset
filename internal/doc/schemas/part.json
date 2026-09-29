@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Starts a labeled part of the problem: label is the problem's own (\"(a)\", \"3.6.6\"), title says what it asks for.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "label",
+    "title"
+  ],
+  "properties": {
+    "type": {
+      "const": "part"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    }
+  }
+}
