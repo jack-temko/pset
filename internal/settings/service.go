@@ -1,5 +1,5 @@
-// Package settings is the Settings screen's engine: the two model
-// connections, the local health checks, Reset, and About.
+// Package settings is the Settings screen's engine: the OpenRouter key,
+// the local health checks, Reset, and About.
 package settings
 
 import (
@@ -19,20 +19,15 @@ import (
 	"github.com/jackt/pset/internal/llm"
 )
 
-// Defaults a fresh install shows. Showing isn't saving: a side counts as
-// ready only once a Save has tested it.
-var (
-	DefaultChat  = ChatConnection{Endpoint: "https://openrouter.ai/api/v1", Model: "z-ai/glm-5.3-flash"}
-	DefaultEmbed = EmbedConnection{Endpoint: "http://localhost:11434/v1", Model: "nomic-embed-text"}
-)
-
-// Dialer tries a connection for real. The live one speaks to the model
-// endpoints; tests swap in a fake.
+// Dialer tries the connections for real. The live one speaks to
+// OpenRouter and the local Ollama; tests swap in a fake.
 type Dialer interface {
-	// Chat sends a one-token request.
-	Chat(ctx context.Context, c ChatConnection) error
-	// Embed embeds one word and returns the vector's length.
-	Embed(ctx context.Context, c EmbedConnection) (int, error)
+	// Chat sends a one-token request to OpenRouter with this key.
+	Chat(ctx context.Context, apiKey string) error
+	// Ollama lists the models the local Ollama has pulled.
+	Ollama(ctx context.Context) ([]string, error)
+	// Pull has the local Ollama download a model.
+	Pull(ctx context.Context, model string) error
 }
 
 // Library is what Reset's dry run needs to count.
@@ -68,20 +63,41 @@ func New(c Config) *Service { return &Service{c} }
 // library is built after settings, because it reads its connections here.
 func (s *Service) SetLibrary(l Library) { s.c.Library = l }
 
-// Get returns what the form shows: saved values, or defaults.
+// Get returns what the page shows: the saved key, and the models PSet
+// uses with it.
 func (s *Service) Get(ctx context.Context) (Settings, error) {
-	out := Settings{Chat: DefaultChat, Embeddings: DefaultEmbed}
-	var err error
-	if out.Ready.Chat, err = load(ctx, s.c.DB, keyChat, &out.Chat); err != nil {
+	out := Settings{Models: models()}
+	var c chatRow
+	saved, err := load(ctx, s.c.DB, keyChat, &c)
+	if err != nil {
 		return Settings{}, err
 	}
-	if out.Ready.Embeddings, err = load(ctx, s.c.DB, keyEmbed, &out.Embeddings); err != nil {
-		return Settings{}, err
-	}
+	out.APIKey, out.Ready.Key = c.APIKey, saved && c.ready()
 	if _, err = load(ctx, s.c.DB, keyProfile, &out.Profile); err != nil {
 		return Settings{}, err
 	}
 	return out, nil
+}
+
+// chatRow is the saved key. An install from before PSet chose its models
+// saved an endpoint and a model with it: a key saved for anywhere but
+// OpenRouter isn't one it can use.
+type chatRow struct {
+	Endpoint string `json:"endpoint,omitempty"`
+	APIKey   string `json:"apiKey"`
+}
+
+func (c chatRow) ready() bool {
+	return c.APIKey != "" && (c.Endpoint == "" || strings.TrimRight(c.Endpoint, "/") == llm.OpenRouter)
+}
+
+// models is each job and its model, for the page to say.
+func models() []ModelUse {
+	out := make([]ModelUse, len(llm.Jobs))
+	for i, j := range llm.Jobs {
+		out[i] = ModelUse{Job: j.Name, Model: j.Model}
+	}
+	return out
 }
 
 // maxName keeps a name a name.
@@ -104,130 +120,79 @@ func (s *Service) Name(ctx context.Context) string {
 	return p.Name
 }
 
-// LLM is the saved connections, for the features that call models. A side
-// never saved is blank, so llm.Config's Ready methods say what can run.
+// LLM is the connections, for the features that call models: OpenRouter
+// with the saved key and the Writer's model, once a key is saved, and the
+// local Ollama always. Without a key the chat side is blank, so llm.Config's
+// Ready methods say what can run.
 func (s *Service) LLM(ctx context.Context) (llm.Config, error) {
 	cur, err := s.Get(ctx)
 	if err != nil {
 		return llm.Config{}, err
 	}
-	var c llm.Config
-	if cur.Ready.Chat {
-		c.ChatEndpoint, c.APIKey, c.ChatModel = cur.Chat.Endpoint, cur.Chat.APIKey, cur.Chat.Model
-	}
-	if cur.Ready.Embeddings {
-		c.EmbedEndpoint, c.EmbedModel = cur.Embeddings.Endpoint, cur.Embeddings.Model
+	c := llm.Config{EmbedEndpoint: llm.EmbedEndpoint, EmbedModel: llm.EmbedModel}
+	if cur.Ready.Key {
+		c.ChatEndpoint, c.APIKey, c.ChatModel = llm.OpenRouter, cur.APIKey, llm.Writer.Model
 	}
 	return c, nil
 }
 
-// probeTimeout keeps Test from hanging on an endpoint that accepts the
-// connection and then says nothing. Generous, because a local server
-// loading a model from disk for the first call takes most of a minute.
-const probeTimeout = 90 * time.Second
+// probeTimeout keeps Test from hanging on a connection that opens and
+// then says nothing.
+const probeTimeout = 60 * time.Second
 
-// Test dials one side as given and writes nothing.
-func (s *Service) Test(ctx context.Context, in ConnectionInput) (TestResult, error) {
+// Test tries a key and writes nothing.
+func (s *Service) Test(ctx context.Context, in KeyInput) (TestResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
-	switch {
-	case in.Chat != nil && in.Embeddings == nil:
-		c := trimChat(*in.Chat)
-		if err := validEndpoint(c.Endpoint); err != nil {
-			return TestResult{}, err
-		}
-		if c.Model == "" {
-			return TestResult{}, httpx.Invalid("model", "Name a model.")
-		}
-		if err := s.c.Dialer.Chat(ctx, c); err != nil {
-			return TestResult{}, explain(err, true, c.APIKey != "")
-		}
-		return TestResult{Detail: "Connected"}, nil
-	case in.Embeddings != nil && in.Chat == nil:
-		c := trimEmbed(*in.Embeddings)
-		if err := validEndpoint(c.Endpoint); err != nil {
-			return TestResult{}, err
-		}
-		if c.Model == "" {
-			return TestResult{}, httpx.Invalid("model", "Name a model.")
-		}
-		dims, err := s.c.Dialer.Embed(ctx, c)
-		if err != nil {
-			return TestResult{}, explain(err, false, false)
-		}
-		return TestResult{Detail: fmt.Sprintf("Connected · %d dimensions", dims)}, nil
+	key := strings.TrimSpace(in.APIKey)
+	if key == "" {
+		return TestResult{}, httpx.Invalid("apiKey", "Paste your OpenRouter key first.")
 	}
-	return TestResult{}, httpx.Errorf(httpx.CodeInvalid, "Send one side at a time: chat or embeddings.")
+	if err := s.c.Dialer.Chat(ctx, key); err != nil {
+		return TestResult{}, explain(err)
+	}
+	return TestResult{Detail: "Connected"}, nil
 }
 
-// Save tests one side, and writes it only if the test passes: what's
-// stored always worked when it was stored.
-func (s *Service) Save(ctx context.Context, in ConnectionInput) (SaveResult, error) {
+// Save tests a key, and writes it only if the test passes: what's stored
+// always worked when it was stored.
+func (s *Service) Save(ctx context.Context, in KeyInput) (SaveResult, error) {
 	r, err := s.Test(ctx, in)
 	if err != nil {
 		return SaveResult{}, err
 	}
-	if in.Chat != nil {
-		err = save(ctx, s.c.DB, keyChat, trimChat(*in.Chat))
-	} else {
-		err = save(ctx, s.c.DB, keyEmbed, trimEmbed(*in.Embeddings))
-	}
-	if err != nil {
+	if err := save(ctx, s.c.DB, keyChat, chatRow{APIKey: strings.TrimSpace(in.APIKey)}); err != nil {
 		return SaveResult{}, err
 	}
 	cur, err := s.Get(ctx)
 	return SaveResult{Settings: cur, Detail: r.Detail}, err
 }
 
-func trimChat(c ChatConnection) ChatConnection {
-	return ChatConnection{strings.TrimSpace(c.Endpoint), strings.TrimSpace(c.APIKey), strings.TrimSpace(c.Model)}
-}
-
-func trimEmbed(c EmbedConnection) EmbedConnection {
-	return EmbedConnection{strings.TrimSpace(c.Endpoint), strings.TrimSpace(c.Model)}
-}
-
-func validEndpoint(raw string) error {
-	u, err := url.Parse(raw)
-	if raw == "" || err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return httpx.Invalid("endpoint", "Not a URL. It should start with http:// or https://")
-	}
-	return nil
-}
-
-// explain turns a failed dial into the error for the field that caused
-// it: the endpoint when nothing answers, the key when it's refused (or
-// when there is none to refuse), the model when the server doesn't know
-// it.
-func explain(err error, chat bool, hasKey bool) error {
+// explain turns a failed test into what to do about it: on the key when
+// the key is the trouble, else said in general.
+func explain(err error) error {
 	var le *llm.LLMError
 	if errors.As(err, &le) {
-		body := strings.ToLower(le.Body)
 		switch {
-		case chat && llm.OutOfCredit(le.Status, le.Body):
-			return httpx.Errorf(httpx.CodeBadKey, "This account is out of credit (%d). Top it up on the provider's site, then test again.", le.Status).OnField("apiKey")
-		case chat && (le.Status == 401 || le.Status == 403):
-			if !hasKey {
-				return httpx.Errorf(httpx.CodeBadKey, "This endpoint wants an API key and none is set (%d).", le.Status).OnField("apiKey")
-			}
-			return httpx.Errorf(httpx.CodeBadKey, "The endpoint refused this key (%d)", le.Status).OnField("apiKey")
-		case strings.Contains(body, "model"):
-			return httpx.Errorf(httpx.CodeBadModel, "The endpoint doesn't know this model (%d)", le.Status).OnField("model")
-		case le.Status == 404:
-			return httpx.Errorf(httpx.CodeUnreachable, "Nothing answers at this path (404). Check the endpoint ends in /v1 or similar.").OnField("endpoint")
+		case llm.OutOfCredit(le.Status, le.Body):
+			return httpx.Errorf(httpx.CodeBadKey, "This account is out of credit (%d). Top it up at openrouter.ai, then test again.", le.Status).OnField("apiKey")
+		case le.Status == 401 || le.Status == 403:
+			return httpx.Errorf(httpx.CodeBadKey, "OpenRouter refused this key (%d).", le.Status).OnField("apiKey")
+		case le.Status == 404 || strings.Contains(strings.ToLower(le.Body), "model"):
+			return httpx.Errorf(httpx.CodeBadModel, "OpenRouter doesn't know a model PSet uses (%d). PSet needs an update.", le.Status)
 		default:
-			return httpx.Errorf(httpx.CodeUnreachable, "The endpoint answered with an error (%d)", le.Status).OnField("endpoint")
+			return httpx.Errorf(httpx.CodeUnreachable, "OpenRouter answered with an error (%d). Try again in a minute.", le.Status)
 		}
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
-		return httpx.Errorf(httpx.CodeUnreachable, "The endpoint didn't answer in time").OnField("endpoint")
+		return httpx.Errorf(httpx.CodeUnreachable, "OpenRouter didn't answer in time. Try again in a minute.")
 	}
 	var ne net.Error
 	var ue *url.Error
 	if errors.As(err, &ne) || errors.As(err, &ue) {
-		return httpx.Errorf(httpx.CodeUnreachable, "Can't reach this endpoint").OnField("endpoint")
+		return httpx.Errorf(httpx.CodeUnreachable, "Can't reach OpenRouter. Check the internet connection.")
 	}
-	return httpx.Errorf(httpx.CodeUnreachable, "The test failed: %v", err).OnField("endpoint")
+	return httpx.Errorf(httpx.CodeUnreachable, "The test failed: %v", err)
 }
 
 // About is the version and where the data lives.

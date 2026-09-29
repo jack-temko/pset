@@ -394,9 +394,42 @@ The writer's brief is a short rule list, how to work before what to
 write: set the problem up as equations and let `compute` and
 `solve_linear` do every number in the guide, checks included.
 
+## Models
+
+PSet picks its models; the student saves an OpenRouter key and Settings
+says which model does which job (2026-09-29). Each job went to the model
+that did it best when they were run side by side, on the circuits book
+and the probability book, through the eval key:
+
+- **Finder**, `perceptron/perceptron-mk1.5`, with GLM-5.3-Flash behind it.
+  On three pages of 23 problems, graded against the ink of each figure
+  and statement: every figure boxed right, and 17 statements of 23, in
+  2 s for $0.0005 a page. DeepSeek, the model before, got 7 figures and
+  3 statements right as PSet used it; GLM 22 and 22 once snapped, in 7 s. Its boxes fit to the page's blocks
+  (`pdf.SnapToBlocks`), which is most of any model's accuracy. Asked to
+  think, it did far worse, so it's asked plain. Its words are less clean
+  (the problem's number left in, math not always in `$`), so it writes
+  none: it finds, and the Reader writes.
+- **Reader**, `openai/gpt-6-luna`, with GLM-5.3-Flash behind it. Thirteen
+  circuits read into netlists and graded by solving them: 13 right of 13,
+  then 16 of 16, at $0.0004 a reading; DeepSeek got 11 and 36 of 39, at
+  nine times the price. It writes out each found problem, and reads the
+  figures, three times and then settled.
+- **Writer**, `deepseek/deepseek-v4.1-flash`. Six guides each: DeepSeek 5
+  right, 5 s to 2.5 min, $0.14; Luna 5 right, 20 s to 2 min, $0.04; GLM 6
+  right but 4 to 13 minutes, $0.13. DeepSeek's teach best: the book's
+  theorems cited, notes where a student trips, checks. Luna's are plainer,
+  and a new OpenRouter account gets only 20 calls a minute of it, which
+  six guides at once went over.
+
+A self-reported confidence was tried on the readings and doesn't tell:
+wrong readings claimed 88 to 96 out of 100, right ones 78 to 100. Three
+readings that agree do: every circuit whose readings agreed was right,
+and every one whose readings differed had a wrong one.
+
 ## Ask's agent loop
 
-The chat model is required to be a vision model. Four tools, as few as
+The Writer must take images (it looks at pages). Four tools, as few as
 cover what a student needs:
 
 | Tool | Does |

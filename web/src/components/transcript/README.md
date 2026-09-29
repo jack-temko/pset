@@ -28,7 +28,7 @@ chat where you ask, page where it answers. No bubbles.
   "Start of conversation · Clear". Clear asks first, in a
   ConfirmPopover under it.
 - **`FailedTurn`**: one destructive-ink line + Try again; the feed above
-  stays frozen, partial text stays. A setup failure (no chat model) passes
+  stays frozen, partial text stays. A setup failure (no OpenRouter key) passes
   `onSetup` and gains **Open Settings**, which leads (outline) while Try
   again steps back to ghost: retrying can't help until Settings is fixed.
   The two buttons take their own row under the sentence, which is too

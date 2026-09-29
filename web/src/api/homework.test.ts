@@ -44,7 +44,7 @@ describe('applyQuestion', () => {
   it('keeps a failed question failed when an older pending snapshot lands late', () => {
     // A mutation's response carries the question as it was at add time;
     // the failure event already applied is newer and must win.
-    const d = detail(q({ id: 'x', state: 'failed', failure: 'setup', reason: 'no chat model', rev: 2 }))
+    const d = detail(q({ id: 'x', state: 'failed', failure: 'setup', reason: 'no OpenRouter key', rev: 2 }))
     expect(applyQuestion(d, q({ id: 'x', state: 'pending', rev: 0 }))).toBe(d)
   })
 

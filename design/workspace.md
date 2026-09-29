@@ -160,7 +160,7 @@ built.
   and keeps the partial answer with a "stopped" note.
 - **A failed loop** freezes the feed, says what happened in one
   destructive-ink line, and offers Try again. Partial text stays. When
-  the cause is **setup** (no chat model), the line also offers **Open
+  the cause is **setup** (no OpenRouter key), the line also offers **Open
   Settings** at Connections, ahead of Try again, as a failed homework
   question does (2026-09-22). A question that never sent says so in the
   same line above the composer.
@@ -489,10 +489,10 @@ built.
     **Try again**, which writes it again without looking for it. Below,
     "Having trouble with this problem?" offers pasting it, for a
     statement read wrong.
-  - **unavailable**, "The chat model isn't responding" (no answer, busy,
+  - **unavailable**, "OpenRouter isn't responding" (no answer, busy,
     5xx): **Try again**, and "nothing is wrong with problem 4.44".
-  - **setup**, "The chat model needs setting up" (none set up, or the
-    provider refused: a bad key, an unknown model, with its HTTP status):
+  - **setup**, "OpenRouter needs setting up" (no key, or OpenRouter
+    refused: a bad key, an unknown model, with its HTTP status):
     **Open Settings** at Connections, then Try again.
   - **not_found**, "Couldn't find 4.44 in this book": **Show me where it
     is** first (boxing it on the page, below), then a **Printed page**

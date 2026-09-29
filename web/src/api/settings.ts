@@ -3,8 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { get, post, put } from './client'
 import type {
   About,
-  ConnectionInput,
   Health,
+  KeyInput,
   HealthCheck,
   Profile,
   ResetCounts,
@@ -34,15 +34,15 @@ export function useSaveProfile() {
   })
 }
 
-/** Dials what's on screen and writes nothing. */
-export const useTestConnection = () =>
-  useMutation({ mutationFn: (in_: ConnectionInput) => post<TestResult>('/api/settings/test', in_) })
+/** Tries the key on screen and writes nothing. */
+export const useTestKey = () =>
+  useMutation({ mutationFn: (in_: KeyInput) => post<TestResult>('/api/settings/test', in_) })
 
 /** Tests, then writes only if the test passed. */
-export function useSaveConnection() {
+export function useSaveKey() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (in_: ConnectionInput) => put<SaveResult>('/api/settings', in_),
+    mutationFn: (in_: KeyInput) => put<SaveResult>('/api/settings', in_),
     onSuccess: (r) => qc.setQueryData(settingsKeys.settings, r.settings),
   })
 }

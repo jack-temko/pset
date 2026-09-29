@@ -16,11 +16,11 @@ import {
   useHealth,
   useReset,
   useResetCounts,
-  useSaveConnection,
+  useSaveKey,
   useSaveProfile,
   useSettings,
-  useTestConnection,
-  type ConnectionInput,
+  useTestKey,
+  type ModelUse,
 } from '@/api/settings'
 import { useSettled, useShowPending } from '@/lib/settled'
 import { applyTheme, getTheme, type Theme } from '@/lib/theme'
@@ -29,66 +29,14 @@ import { ConfirmPopover } from '@/components/confirm'
 import { useClearActivity } from '@/api/activity'
 
 /**
- * Settings: one document page, stacked. Connections, Health, Appearance,
- * then the one destructive act in the app, then a line saying what this
- * is and where its files live.
+ * Settings: one document page, stacked. You, the OpenRouter key, Health,
+ * Appearance, then the one destructive act in the app, then a line saying
+ * what this is and where its files live.
  *
  * Spec: design/settings.md.
  */
 
 // ---------------------------------------------------------------- connections
-
-type FieldSpec = { key: string; label: string; hint?: string; mono?: boolean }
-
-/**
- * Where the chat model is reached. PSet is built for OpenRouter: one key
- * reaches every model, and the server keeps a model's thinking between a
- * guide's steps there and skips hosts running 4-bit weights. Other is any
- * OpenAI-compatible endpoint typed by hand (a local ollama, say), which
- * works without those. The choice isn't stored: it's read off the
- * endpoint's host, as the server does.
- */
-type ProviderId = 'openrouter' | 'other'
-type Provider = {
-  value: ProviderId
-  label: string
-  endpoint: string
-  model: string
-  /** Under the choice: why, or what's given up. */
-  note: string
-  hints: Record<string, string>
-}
-
-const PROVIDERS: readonly Provider[] = [
-  {
-    value: 'openrouter',
-    label: 'OpenRouter',
-    endpoint: 'https://openrouter.ai/api/v1',
-    model: 'z-ai/glm-5.3-flash',
-    note: 'Recommended. PSet is built and tested on it: one key reaches every model, and guides keep their thinking from step to step.',
-    hints: {
-      apiKey: 'From openrouter.ai/keys.',
-      model: 'The maker, then the model. PSet skips hosts that run 4-bit weights.',
-    },
-  },
-  {
-    value: 'other',
-    label: 'Other',
-    endpoint: '',
-    model: '',
-    note: 'Any OpenAI-compatible endpoint that takes images. The model thinks each step over from the start here, so guides take longer; OpenRouter is recommended.',
-    hints: {},
-  },
-]
-
-function providerOf(endpoint: string): ProviderId {
-  try {
-    const host = new URL(endpoint).hostname
-    return host === 'openrouter.ai' || host.endsWith('.openrouter.ai') ? 'openrouter' : 'other'
-  } catch {
-    return 'other'
-  }
-}
 
 type Status =
   | { kind: 'idle' }
@@ -96,138 +44,81 @@ type Status =
   | { kind: 'ok'; text: string }
   | { kind: 'failed'; text: string }
 
+const KEY_HINT = 'From openrouter.ai/keys. It pays for the models PSet uses.'
+
 /**
- * One endpoint's fields, with Test and Save.
+ * The OpenRouter key, with Test and Save. PSet picks its models; the key
+ * is the one thing to set up, and the line under it says which models it
+ * pays for.
  *
- * Test dials what's on screen and writes nothing: try a different key
+ * Test tries what's on screen and writes nothing: try a different key
  * without losing the one that works. Save tests first and writes only if
  * the test passes, so what's on disk always works. Both are always there;
  * Save sits disabled until there is something to save.
  */
-function ConnectionBox({
-  kind,
-  title,
-  fields,
-  initial,
-  ready,
-  providers,
-}: {
-  kind: 'chat' | 'embeddings'
-  title: string
-  fields: FieldSpec[]
-  initial: Record<string, string>
-  /** The providers to pick from, above the fields. */
-  providers?: readonly Provider[]
-  /** Saved (and so tested) before. A side never saved shows defaults that
-   *  still need a Save, even untouched. */
-  ready: boolean
-}) {
+function KeyBox({ initial, ready, models }: { initial: string; ready: boolean; models: ModelUse[] }) {
   const [saved, setSaved] = useState(initial)
-  const [values, setValues] = useState(initial)
-  const [error, setError] = useState<{ field: string; text: string } | null>(null)
+  const [value, setValue] = useState(initial)
+  const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
-  const rows = useRef<Record<string, HTMLDivElement | null>>({})
 
   const [savedOnce, setSavedOnce] = useState(ready)
-  const dirty = fields.some((f) => values[f.key] !== saved[f.key]) || !savedOnce
+  const dirty = value !== saved || !savedOnce
   const working = status.kind === 'working'
-  // A local endpoint answers in a blink: "Testing…" and the disabled
+  // OpenRouter often answers in a blink: "Testing…" and the disabled
   // buttons show only once the call has lasted; until then the last
   // verdict stays.
   const shown = useSettled(status, working ? status.since : null) ?? { kind: 'idle' }
   const looksWorking = shown.kind === 'working'
 
-  // Other is picked, not only inferred: a known endpoint stays on screen
-  // until it's typed over, and the choice shouldn't jump back meanwhile.
-  const [pickedOther, setPickedOther] = useState(false)
-  const provider = providers ? (pickedOther ? 'other' : providerOf(values.endpoint)) : null
-  const chosen = PROVIDERS.find((p) => p.value === provider)
-  const hints = chosen?.hints ?? {}
-  const pick = (id: ProviderId) => {
-    const p = PROVIDERS.find((x) => x.value === id)!
-    setPickedOther(id === 'other')
-    setError(null)
-    if (status.kind !== 'working') setStatus({ kind: 'idle' })
-    if (id === 'other') {
-      if (providerOf(values.endpoint) !== 'other') setValues((v) => ({ ...v, endpoint: '' }))
-      return
-    }
-    // An empty model takes OpenRouter's default; one typed by hand stays.
-    setValues((v) => ({ ...v, endpoint: p.endpoint, model: v.model === '' ? p.model : v.model }))
-  }
-
-  const test = useTestConnection()
-  const saveConnection = useSaveConnection()
+  const test = useTestKey()
+  const saveKey = useSaveKey()
 
   const run = async (save: boolean) => {
     if (working) return
     setError(null)
     setStatus({ kind: 'working', verb: save ? 'Saving' : 'Testing', since: Date.now() })
-    // Exactly one side per call: the values on screen, not the saved ones.
-    const body: ConnectionInput =
-      kind === 'chat'
-        ? { chat: { endpoint: values.endpoint, apiKey: values.apiKey, model: values.model } }
-        : { embeddings: { endpoint: values.endpoint, model: values.model } }
     try {
-      const r = save ? await saveConnection.mutateAsync(body) : await test.mutateAsync(body)
+      const r = save ? await saveKey.mutateAsync({ apiKey: value }) : await test.mutateAsync({ apiKey: value })
       if (save) {
-        setSaved(values)
+        setSaved(value.trim())
+        setValue(value.trim())
         setSavedOnce(true)
       }
       setStatus({ kind: 'ok', text: save ? `Saved · ${r.detail}` : r.detail })
     } catch (e) {
       const err = e instanceof ApiError ? e : null
-      // A failure that names a field lands under it; one that doesn't
-      // (the server itself is down) says so in the footer.
-      if (err?.field) setError({ field: err.field, text: err.message })
+      // A failure that's the key's lands under it; any other (OpenRouter
+      // down, the server itself down) says so in the footer.
+      if (err?.field) setError(err.message)
       const what = save ? 'Not saved: the test failed' : 'Test failed'
       setStatus({ kind: 'failed', text: err?.field ? what : (err?.message ?? what) })
     }
   }
 
-  // The reason lands under its field, a card's height above the footer's
-  // verdict: bring the field back into view.
-  useEffect(() => {
-    if (error) rows.current[error.field]?.scrollIntoView({ block: 'nearest' })
-  }, [error])
-
-  // A column, with the body taking the slack: side by side, both Boxes
-  // stretch to the taller one and their footers line up at the bottom.
   return (
-    <Box className="flex flex-col">
-      <BoxHeader>{title}</BoxHeader>
-      <BoxBody className="flex-1 space-y-4">
-        {providers && provider && (
-          <div className="space-y-1">
-            <span className="block text-xs text-muted-foreground">Provider</span>
-            <SegmentedControl label="Provider" options={providers} value={provider} onChange={pick} />
-            {chosen && <span className="block text-xs text-muted-foreground">{chosen.note}</span>}
-          </div>
-        )}
-        {fields.map((f) => (
-          <div key={f.key} ref={(el) => { rows.current[f.key] = el }}>
-            <Field
-              label={f.label}
-              hint={hints[f.key] ?? f.hint}
-              error={error?.field === f.key ? error.text : undefined}
-            >
-              <Input
-                value={values[f.key]}
-                spellCheck={false}
-                className={f.mono ? 'font-mono' : undefined}
-                aria-invalid={error?.field === f.key || undefined}
-                onChange={(e) => {
-                  setValues((v) => ({ ...v, [f.key]: e.target.value }))
-                  // A typed endpoint says its own provider.
-                  if (f.key === 'endpoint') setPickedOther(false)
-                  // Editing the field that failed is the fix in progress.
-                  if (error?.field === f.key) setError(null)
-                  if (status.kind !== 'working') setStatus({ kind: 'idle' })
-                }}
-              />
-            </Field>
-          </div>
-        ))}
+    <Box>
+      <BoxHeader>OpenRouter</BoxHeader>
+      <BoxBody className="space-y-4">
+        <Field label="API key" hint={KEY_HINT} error={error ?? undefined}>
+          <Input
+            value={value}
+            spellCheck={false}
+            autoComplete="off"
+            className="font-mono"
+            aria-invalid={error !== null || undefined}
+            onChange={(e) => {
+              setValue(e.target.value)
+              // Editing the key that failed is the fix in progress.
+              setError(null)
+              if (status.kind !== 'working') setStatus({ kind: 'idle' })
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && dirty && !looksWorking) run(true)
+            }}
+          />
+        </Field>
+        <ModelsLine models={models} />
       </BoxBody>
       <BoxFooter>
         <StatusLine status={shown} />
@@ -244,24 +135,34 @@ function ConnectionBox({
   )
 }
 
-/** A connection Box before the settings arrive: the same fields at their
- *  real height, so the values land without moving anything. */
-function ConnectionSkeleton({ title, fields, providers }: { title: string; fields: FieldSpec[]; providers?: boolean }) {
+/** Which model does which job: said, not chosen. */
+function ModelsLine({ models }: { models: ModelUse[] }) {
   return (
-    <Box className="flex flex-col">
-      <BoxHeader>{title}</BoxHeader>
-      <BoxBody className="flex-1 space-y-4">
-        {providers && (
-          <div className="space-y-1">
-            <span className="block text-xs text-muted-foreground">Provider</span>
-            <Skeleton className="block h-control w-64 rounded-md" />
-          </div>
-        )}
-        {fields.map((f) => (
-          <Field key={f.key} label={f.label} hint={f.hint}>
-            <Skeleton className="block h-control w-full rounded-md" />
-          </Field>
-        ))}
+    <p className="text-xs text-muted-foreground">
+      PSet picks the models.{' '}
+      {models.map((m, i) => (
+        <span key={m.job}>
+          {i > 0 && ' · '}
+          <span className="whitespace-nowrap">
+            {m.job}: <span className="font-mono">{m.model}</span>
+          </span>
+        </span>
+      ))}
+    </p>
+  )
+}
+
+/** The key Box before the settings arrive: the same rows at their real
+ *  height, so the values land without moving anything. */
+function KeySkeleton() {
+  return (
+    <Box>
+      <BoxHeader>OpenRouter</BoxHeader>
+      <BoxBody className="space-y-4">
+        <Field label="API key" hint={KEY_HINT}>
+          <Skeleton className="block h-control w-full rounded-md" />
+        </Field>
+        <Skeleton className="block h-3 w-3/4" />
       </BoxBody>
       <BoxFooter>
         <span />
@@ -365,17 +266,19 @@ function You() {
 
 // ---------------------------------------------------------------- health
 
-const HEALTH_NAMES = ['Data directory', 'Database', 'Poppler', 'Tesseract']
+const HEALTH_NAMES = ['Data directory', 'Database', 'Poppler', 'Tesseract', 'Ollama']
 
 /** The checks' details name plumbing ("pdftoppm 24.02.0"); the purpose is
  *  ours to say, keyed by check id. */
 const HEALTH_PURPOSE: Record<string, string> = {
   poppler: 'renders PDF pages',
   tesseract: 'reads scanned pages',
+  ollama: 'searches your books',
 }
 
-/** The local system, checked on open. The endpoints aren't here: their
- *  status lives beside their fields, so each fact is said once. */
+/** The local system, checked on open, Ollama included: it runs on this
+ *  machine. OpenRouter isn't here: its status lives beside the key, so
+ *  each fact is said once. */
 function Health() {
   const { data } = useHealth()
   const fix = useFixCheck()
@@ -386,9 +289,8 @@ function Health() {
   return (
     <Box>
       {checks === null ? (
-        // The four checks are always the same four, so draw four rows at
-        // their real height; the results then land without moving
-        // anything.
+        // The checks are always the same five, so draw five rows at their
+        // real height; the results then land without moving anything.
         HEALTH_NAMES.map((name) => (
           <BoxRow
             key={name}
@@ -615,50 +517,10 @@ function ResetEverything() {
 
 // ---------------------------------------------------------------- page
 
-const CHAT_FIELDS: FieldSpec[] = [
-  { key: 'endpoint', label: 'Endpoint', mono: true },
-  { key: 'apiKey', label: 'API key', mono: true },
-  { key: 'model', label: 'Model', mono: true },
-]
-
-const EMBED_FIELDS: FieldSpec[] = [
-  {
-    key: 'endpoint',
-    label: 'Endpoint',
-    mono: true,
-    hint: 'Any OpenAI-compatible embeddings server. Books need it to be prepared.',
-  },
-  { key: 'model', label: 'Model', mono: true },
-]
-
 function Connections() {
   const { data } = useSettings()
-  if (!data)
-    return (
-      <div className="grid grid-cols-2 gap-6">
-        <ConnectionSkeleton title="Chat" fields={CHAT_FIELDS} providers />
-        <ConnectionSkeleton title="Embeddings" fields={EMBED_FIELDS} />
-      </div>
-    )
-  return (
-    <div className="grid grid-cols-2 gap-6">
-      <ConnectionBox
-        kind="chat"
-        title="Chat"
-        initial={{ ...data.chat }}
-        ready={data.ready.chat}
-        fields={CHAT_FIELDS}
-        providers={PROVIDERS}
-      />
-      <ConnectionBox
-        kind="embeddings"
-        title="Embeddings"
-        initial={{ ...data.embeddings }}
-        ready={data.ready.embeddings}
-        fields={EMBED_FIELDS}
-      />
-    </div>
-  )
+  if (!data) return <KeySkeleton />
+  return <KeyBox initial={data.apiKey} ready={data.ready.key} models={data.models} />
 }
 
 function AboutLine() {
@@ -684,7 +546,7 @@ function Section({ id, title, children }: { id?: string; title: string; children
 }
 
 export function Settings() {
-  // /settings#connections, from a failure that needs the chat model fixed.
+  // /settings#connections, from a failure that needs the key fixed.
   // Scrolled to twice on purpose: once right away, and once after the
   // connection cards resolve, since their loading height shifts everything
   // below and would otherwise leave the target half off screen.

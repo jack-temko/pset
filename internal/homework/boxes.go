@@ -167,10 +167,10 @@ func (s *Service) fromBoxes(ctx context.Context, m model, book Book, q row) (loc
 		content.AppendPart(llm.TextPart(book.Pages.Name(b.Page) + ":"))
 		content.AppendPart(llm.ImagePart("data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(img)))
 	}
-	reply, err := m.client.ChatOnce(ctx, llm.ChatRequest{Model: m.name, Messages: []llm.Message{
+	reply, err := m.client.ChatOnce(ctx, llm.Reader.Ask(llm.ChatRequest{Messages: []llm.Message{
 		llm.TextMessage("system", boxedPrompt),
 		{Role: "user", Content: content},
-	}})
+	}}))
 	if err != nil {
 		if ctx.Err() != nil {
 			return location{}, ctx.Err()

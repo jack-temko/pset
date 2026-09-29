@@ -7,14 +7,17 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/llm"
 )
 
-// The local checks, in the order the screen lists them. The endpoints
-// aren't here: their status lives beside their fields.
-var checkOrder = []string{"data_dir", "database", "poppler", "tesseract"}
+// The local checks, in the order the screen lists them. OpenRouter isn't
+// here: its status lives beside the key. Ollama is, since it's a program
+// on this machine.
+var checkOrder = []string{"data_dir", "database", "poppler", "tesseract", "ollama"}
 
 // Health runs every check.
 func (s *Service) Health(ctx context.Context) Health {
@@ -46,6 +49,10 @@ func (s *Service) Fix(ctx context.Context, id string) (HealthCheck, error) {
 		if err := db.Migrate(ctx, s.c.DB, s.c.Migrations); err != nil {
 			return HealthCheck{}, httpx.Errorf(httpx.CodeInvalid, "The migration failed: %v", err)
 		}
+	case "ollama":
+		if err := s.c.Dialer.Pull(ctx, llm.EmbedModel); err != nil {
+			return HealthCheck{}, httpx.Errorf(httpx.CodeInvalid, "Ollama couldn't download %s: %v", llm.EmbedModel, err)
+		}
 	}
 	return s.check(ctx, id), nil
 }
@@ -60,8 +67,37 @@ func (s *Service) check(ctx context.Context, id string) HealthCheck {
 		return s.checkTool("poppler", "Poppler", "pdftoppm", installHint("poppler-utils", "poppler"))
 	case "tesseract":
 		return s.checkTool("tesseract", "Tesseract", "tesseract", installHint("tesseract-ocr", "tesseract"))
+	case "ollama":
+		return s.checkOllama(ctx)
 	}
 	return HealthCheck{}
+}
+
+// ollamaTimeout: Ollama is on this machine, so it answers at once or
+// isn't running.
+const ollamaTimeout = 3 * time.Second
+
+// checkOllama asks the local Ollama which models it has: it searches the
+// books with one. A missing model is fixable, since Ollama can download
+// it; Ollama itself can't be.
+func (s *Service) checkOllama(ctx context.Context) HealthCheck {
+	c := HealthCheck{ID: "ollama", Name: "Ollama"}
+	ctx, cancel := context.WithTimeout(ctx, ollamaTimeout)
+	defer cancel()
+	have, err := s.c.Dialer.Ollama(ctx)
+	if err != nil {
+		c.Detail = "not running. Install it from ollama.com and start it"
+		return c
+	}
+	for _, m := range have {
+		if m == llm.EmbedModel || strings.HasPrefix(m, llm.EmbedModel+":") {
+			c.OK, c.Detail = true, llm.EmbedModel
+			return c
+		}
+	}
+	c.Fixable = true
+	c.Detail = "running, without " + llm.EmbedModel + ". Fix downloads it (about 270 MB)"
+	return c
 }
 
 func (s *Service) checkDataDir() HealthCheck {

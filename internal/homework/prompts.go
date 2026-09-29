@@ -2,16 +2,16 @@ package homework
 
 import "github.com/jackt/pset/internal/doc"
 
+// locatePrompt finds a problem among pages, and boxes it and its
+// figures: the Finder's job. It writes nothing out; see statementPrompt.
 const locatePrompt = `You find one homework problem among images of textbook pages.
 
 Reply with only JSON, no prose and no code fence:
-{"image": 2, "label": "3.36", "statement": "...", "question_rect": {"x": 0.1, "y": 0.2, "w": 0.8, "h": 0.3},
+{"image": 2, "label": "3.36", "question_rect": {"x": 0.1, "y": 0.2, "w": 0.8, "h": 0.3},
  "figures": [{"label": "Figure 3.7", "rect": {"x": 0.1, "y": 0.5, "w": 0.3, "h": 0.2}}]}
 
 - image: the number of the image the problem is on, or 0 if none of them shows it.
 - label: the problem's number as the book prints it ("3.36", "2.A.4"), or "" if it has none.
-- statement: the problem's full text, every part of it, exactly as the book words it. Math in LaTeX
-  between $...$. No solution, no commentary.
 - question_rect tightly bounds the problem's text, all of its parts, and no figure.
 - figures lists each figure the problem refers to, tightly bounded, with the book's name for it.
 - Coordinates are fractions of the image, in [0, 1], y from the top.
@@ -22,6 +22,16 @@ Reply with only JSON, no prose and no code fence:
   often doesn't print its section's number: go by the label. When you're told where the problem
   is and how the book prints its number, a problem with that number on a page from that part of
   the book is the one.`
+
+// statementPrompt writes out a found problem's words, from its page.
+// Finding is the Finder's, which boxes well and words less cleanly;
+// the words are the Reader's.
+const statementPrompt = `You write out one homework problem from an image of a textbook page, for a tutor who can't see
+the page.
+
+Reply with only the problem's text: every part of it, exactly as the book words it, without its
+number. Math in LaTeX between $...$. No solution, no commentary, and nothing from any other
+problem or from a figure's caption.`
 
 // assignmentPrompt reads a homework assignment out into due dates and
 // lines. Filled with today's date, the book's title and how it numbers

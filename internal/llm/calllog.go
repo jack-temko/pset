@@ -48,6 +48,8 @@ type callRecord struct {
 	// and Host who served it.
 	Session string `json:"session,omitempty"`
 	Host    string `json:"host,omitempty"`
+	// Answered is the model that answered, as the provider names it.
+	Answered string `json:"answered,omitempty"`
 }
 
 type logMsg struct {
@@ -64,7 +66,7 @@ func logCall(req ChatRequest, start time.Time, reply Reply, err error) {
 	rec := callRecord{
 		At: start.UTC().Format(time.RFC3339), Model: req.Model,
 		Millis: time.Since(start).Milliseconds(), Reply: reply.Content, Calls: reply.ToolCalls, Reasoned: len(reply.Reasoning), Reasoning: reply.Reasoning, Usage: reply.Usage,
-		Session: req.SessionID, Host: reply.Host,
+		Session: req.SessionID, Host: reply.Host, Answered: reply.Model,
 	}
 	for _, t := range req.Tools {
 		rec.Tools = append(rec.Tools, t.Function.Name)

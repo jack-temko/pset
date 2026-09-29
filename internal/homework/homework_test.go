@@ -121,8 +121,9 @@ const guide = `{"type":"hint","text":"Start from Ohm's law [p. 1]."}
 {"type":"answer","label":"(a)","text":"\\(V = 6\\) volts."}
 `
 
-// fakeModel answers like a well-behaved model: it finds any problem but
-// 3.99 on the first image it's shown, and writes a guide in two parts.
+// fakeModel answers like well-behaved models: the Finder finds any
+// problem but 3.99 on the first image it's shown, the Reader writes it
+// out, and the Writer writes a guide in two parts.
 func fakeModel(req llm.ChatRequest) llmtest.Reply {
 	sys := req.Messages[0].Content.Text()
 	switch {
@@ -131,9 +132,11 @@ func fakeModel(req llm.ChatRequest) llmtest.Reply {
 		if strings.Contains(user[0].Text, "3.99") {
 			return llmtest.Reply{Text: `{"image": 0}`}
 		}
-		return llmtest.Reply{Text: `{"image": 1, "label": "3.36", "statement": "Find the voltage across $R_2$.",
+		return llmtest.Reply{Text: `{"image": 1, "label": "3.36",
 			"question_rect": {"x": 0.1, "y": 0.2, "w": 0.8, "h": 0.2},
 			"figures": [{"label": "Figure 3.7", "rect": {"x": 0.1, "y": 0.5, "w": 0.4, "h": 0.3}}]}`}
+	case strings.Contains(sys, "You write out one homework problem"):
+		return llmtest.Reply{Text: "Find the voltage across $R_2$."}
 	case strings.Contains(sys, "You read the figures"):
 		return llmtest.Reply{Text: "- Node A: top of $R_1$.\n- 2 A current source from B to A (its arrow points to A)."}
 	case strings.Contains(sys, "several readings"):
@@ -298,6 +301,23 @@ func TestInBookQuestionIsLocatedThenGuided(t *testing.T) {
 	q := e.wait(t, qs[0].ID, StateReady)
 	if q.Page == nil || *q.Page != 3 || source(q.Statement) != `Find the voltage across \(R_2\).` || len(q.Figures) != 1 {
 		t.Fatalf("located %+v", q)
+	}
+	// Each job went to its own model: finding to the Finder, the words
+	// and the figures to the Reader, the guide to the Writer.
+	for _, r := range e.llm.Chats() {
+		sys := r.Messages[0].Content.Text()
+		want := ""
+		switch {
+		case strings.Contains(sys, "You find one homework problem"):
+			want = llm.Finder.Model
+		case strings.Contains(sys, "You write out one homework problem"), strings.Contains(sys, "You read the figures"), strings.Contains(sys, "several readings"):
+			want = llm.Reader.Model
+		case strings.Contains(sys, "You write the guide"):
+			want = "fake-chat"
+		}
+		if want != "" && r.Model != want {
+			t.Errorf("%.40q went to %s, want %s", sys, r.Model, want)
+		}
 	}
 	if len(q.Hint) != 1 || doc.TypeOf(q.Hint[0]) != doc.TypeHint || !strings.Contains(string(q.Hint[0]), `"cite":3`) {
 		t.Fatalf("hint %s (citation should move to PDF page 3)", q.Hint)
@@ -471,7 +491,7 @@ func TestNoChatModelFailsReadably(t *testing.T) {
 	e.cfg.cfg.ChatEndpoint = ""
 	h := e.newSet(t)
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "Why?", InBook: false})[0].ID, StateFailed)
-	if q.Failure != FailureSetup || !strings.Contains(q.Reason, "no chat model") {
+	if q.Failure != FailureSetup || !strings.Contains(q.Reason, "no OpenRouter key") {
 		t.Fatalf("%q", q.Reason)
 	}
 }

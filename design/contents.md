@@ -12,8 +12,8 @@ the contents pages themselves. A model now reads the contents instead.
 
 - **Every book without a PDF outline**, scanned or digital. A PDF
   outline is still trusted as it is, with no model call.
-- **A chat model is required.** Import refuses up front when none is
-  configured, as it already does for embeddings, and Home's `+` says so.
+- **An OpenRouter key is required.** Import refuses up front when none is
+  saved, as it does when Ollama doesn't answer, and Home's `+` says so.
   There is no non-LLM path.
 - **No migration**: books already on the shelf keep their contents. A
   book gets the new contents by being imported again.

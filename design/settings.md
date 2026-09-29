@@ -14,7 +14,7 @@ Doctor runs six checks, and can fix two of them (data dir, schema).
 
 One page, stacked, in this order: **You · Connections · Health ·
 Appearance · Reset**, then one mono line: `pset 0.9.0 · /path/to/data`. No
-navigation: four fields and four checks don't need any. The top bar's
+navigation: two fields and five checks don't need any. The top bar's
 middle is empty; the h1 says where you are.
 
 ## You
@@ -26,61 +26,58 @@ there's nothing to test, so it writes straight away.
 
 ## Connections
 
-Two Boxes side by side, because they fail and get fixed independently:
+**One Box, OpenRouter, with one field: the API key** (2026-09-29). PSet
+picks its models, so there's nothing else to choose: no provider, no
+endpoint, no model. Under the key, a quiet line in muted ink says which
+model does which job ("PSet picks the models. Guides and Ask: `deepseek/…`
+· Finding problems: `perceptron/…` · Reading figures: `openai/…`"), each
+job kept whole on a line, the model names in mono. It's said, not
+chosen; design/backend.md, "Models", says why each. The key's hint says
+where it comes from and that it pays for those models.
 
-- **Chat**: **provider**, endpoint, API key, **model**.
-- **Provider** (2026-09-29): a segmented control above the endpoint,
-  **OpenRouter · Other**. PSet's chat goes through OpenRouter, the
-  default for a fresh install (`z-ai/glm-5.3-flash`); direct Z.ai
-  support was dropped. A line under the choice says why: OpenRouter is
-  **recommended**, PSet is built and tested on it, one key reaches every
-  model, and guides keep their thinking from step to step. **Other** is
-  any OpenAI-compatible endpoint typed by hand (a local ollama), and its
-  line says what's given up: the model thinks each step over, so guides
-  take longer. Picking OpenRouter fills in its endpoint (and its model,
-  when none is typed); the hints say where its key comes from and that
-  PSet skips hosts running 4-bit weights. The choice isn't stored: it's
-  read off the endpoint's host, as the server does, so typing an
-  endpoint picks its provider.
-- **Embeddings**: endpoint, model.
+Embeddings aren't a connection any more: Ollama with `nomic-embed-text`
+on this machine, fixed, and checked under Health, since it's a program
+here. A key saved before this, for an endpoint other than OpenRouter,
+doesn't count as saved.
 
-Every value is mono. **The API key is plain text**: a local app, and you
-need to see which key you pasted.
+The key is mono, and **plain text**: a local app, and you need to see
+which key you pasted.
 
 **Test and Save are two different acts:**
 
-- **Test** is always there. It dials the values on screen and writes
+- **Test** is always there. It tries the key on screen and writes
   nothing, so you can try a different key without losing the one that
   works.
-- **Save** is always there too, and **enabled** only once something in
-  the Box has changed, or while that side has never been saved: the
-  defaults a fresh install shows aren't saved until you Save them
-  (2026-09-22). A Save that never appeared left nothing to find; a
-  disabled one says the act exists and is waiting on you. It
-  **tests first and writes only if the test passes**: what's on disk
-  always works. A failed Save writes nothing.
-- A failure names **the field that caused it**, and the error replaces
-  that field's hint (unreachable → endpoint, 401 → key, out of credit →
-  key, unknown model → model). Editing that field clears it.
+- **Save** is always there too, and **enabled** only once the key has
+  changed, or while none has ever been saved (2026-09-22). A Save that
+  never appeared left nothing to find; a disabled one says the act
+  exists and is waiting on you. Enter in the field saves too. It **tests
+  first and writes only if the test passes**: what's on disk always
+  works. A failed Save writes nothing.
+- A failure that's the key's (refused, 401 or 403; out of credit)
+  replaces the key's hint, and editing the key clears it. Any other
+  (OpenRouter unreachable or slow, a model it doesn't know) is said in
+  the footer: the key can't fix it.
 - **Out of credit** (2026-09-29): an account with no money left
-  (OpenRouter's 402, or a provider saying the balance is gone) says so on the key, and a
-  guide or Ask answer that fails on it says so too, with the way to
-  Settings, rather than "busy, try again in a minute".
+  (OpenRouter's 402) says so on the key, and a guide or Ask answer that
+  fails on it says so too, with the way to Settings, rather than "busy,
+  try again in a minute".
 - The Box footer says what the last Test or Save found: a spinner while
-  it works, then "Connected" (with the vector size for embeddings; the model is already in the field) in success ink, or "Not saved:
-  the test failed".
+  it works, then "Connected" in success ink, or "Not saved: the test failed".
 - **Nothing is dialled on open.** Status appears only when you ask for
   it.
 
 ## Health
 
 The **local system only**, checked on open: data directory, database,
-poppler, tesseract. The endpoint checks aren't here: their status lives
-beside their fields, so each fact is said once.
+poppler, tesseract, and **Ollama** (2026-09-29), which searches the
+books. OpenRouter isn't here: its status lives beside the key, so each
+fact is said once.
 
-A check that fails and can be fixed (data dir, database) gets a **Fix**
-button, which is the doctor's `--fix`. One that can't (a missing tool)
-says how to install it.
+A check that fails and can be fixed (data dir, database, and Ollama
+running without its model, which Fix downloads) gets a **Fix** button,
+which is the doctor's `--fix`. One that can't (a missing tool, Ollama
+not running) says how to install or start it.
 
 ## Appearance
 

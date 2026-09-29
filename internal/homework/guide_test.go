@@ -60,8 +60,8 @@ func TestMemorysPagesOpenTheGuide(t *testing.T) {
 	}}
 	e := newEnvWith(t, mem)
 	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
-		if strings.Contains(req.Messages[0].Content.Text(), "You find one homework problem") {
-			return llmtest.Reply{Text: `{"image": 1, "label": "3.36", "statement": "Use Ohm's law to find the voltage across $R_2$."}`}
+		if strings.Contains(req.Messages[0].Content.Text(), "You write out one homework problem") {
+			return llmtest.Reply{Text: "Use Ohm's law to find the voltage across $R_2$."}
 		}
 		return fakeModel(req)
 	})

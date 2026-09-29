@@ -551,10 +551,10 @@ function Scan({
 // ---------------------------------------------------------------- panel
 
 /** Mid-turn and preflight setup failures share one sentence (ask's
- *  noChatModel const), so a model that vanished mid-answer gets Open
+ *  noKey const), so a model that vanished mid-answer gets Open
  *  Settings too. */
 // A turn that failed on the connection, not the question: Settings is the way out.
-const isSetupReason = (reason?: string | null) => !!reason && (reason.includes('no chat model set up yet') || reason.includes('out of credit'))
+const isSetupReason = (reason?: string | null) => !!reason && (reason.includes('no OpenRouter key yet') || reason.includes('out of credit'))
 
 /** A day as a divider says it: "Today", "Yesterday", "Sep 12". */
 function dayLabel(iso: string, now = new Date()): string {
@@ -832,8 +832,8 @@ function FailedQuestion({ q, onRetry }: { q: Question; onRetry: (r: Retry) => vo
 
   const title = {
     generation: "Couldn't write the guide",
-    unavailable: "The chat model isn't responding",
-    setup: 'The chat model needs setting up',
+    unavailable: "OpenRouter isn't responding",
+    setup: 'OpenRouter needs setting up',
     not_found: `Couldn't find ${name} in this book`,
   }[kind]
 

@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -130,10 +131,10 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 	if err != nil {
 		return Book{}, err
 	}
-	// Preparing needs the chat model (for the contents) and ends in search,
-	// which needs embeddings: refuse now, not forty minutes into reading
-	// the pages.
-	if err := preparable(cfg); err != nil {
+	// Preparing needs OpenRouter (for the contents) and ends in search,
+	// which needs Ollama: refuse now, not forty minutes into reading the
+	// pages.
+	if err := preparable(ctx, cfg); err != nil {
 		return Book{}, err
 	}
 	if err := os.MkdirAll(s.booksDir(), 0o700); err != nil {
@@ -325,19 +326,30 @@ func (s *Service) Stop(ctx context.Context, id string) (Book, error) {
 	return s.publish(ctx, id)
 }
 
-// preparable refuses when a book couldn't be prepared: it needs a chat
-// model and an embeddings server.
-func preparable(cfg llm.Config) error {
-	switch {
-	case !cfg.ChatReady() && !cfg.EmbedReady():
-		return httpx.Errorf(httpx.CodeNotConfigured, "Set up a chat model and an embeddings server in Settings first. Books need both to be prepared.")
-	case !cfg.ChatReady():
-		return httpx.Errorf(httpx.CodeNotConfigured, "Set up a chat model in Settings first. Books need it to be prepared.")
-	case !cfg.EmbedReady():
-		return httpx.Errorf(httpx.CodeNotConfigured, "Set up an embeddings server in Settings first. Books need it to be prepared.")
+// preparable refuses when a book couldn't be prepared: it needs an
+// OpenRouter key, and Ollama answering. Ollama is asked for real, since
+// it's a program on this machine that may not be running.
+func preparable(ctx context.Context, cfg llm.Config) error {
+	if !cfg.ChatReady() {
+		return httpx.Errorf(httpx.CodeNotConfigured, "Add your OpenRouter key in Settings first. Books need it to be prepared.")
+	}
+	if !cfg.EmbedReady() {
+		return httpx.Errorf(httpx.CodeNotConfigured, noOllama)
+	}
+	probe, cancel := context.WithTimeout(ctx, ollamaProbe)
+	defer cancel()
+	if _, err := llm.Open(cfg).Embed(probe, []string{"probe"}); err != nil {
+		return httpx.Errorf(httpx.CodeNotConfigured, noOllama)
 	}
 	return nil
 }
+
+// noOllama is what an import says when Ollama doesn't answer.
+const noOllama = "PSet can't reach Ollama, which searches your books. Settings, under Health, says how to start it."
+
+// ollamaProbe is how long an upload waits on Ollama: long enough for it
+// to load the model from disk on a first call.
+const ollamaProbe = 30 * time.Second
 
 // Retry queues a failed import again. Whatever the last run finished
 // (pages read, vectors built) is kept and skipped.
@@ -353,7 +365,7 @@ func (s *Service) Retry(ctx context.Context, id string) (Book, error) {
 	if err != nil {
 		return Book{}, err
 	}
-	if err := preparable(cfg); err != nil {
+	if err := preparable(ctx, cfg); err != nil {
 		return Book{}, err
 	}
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {

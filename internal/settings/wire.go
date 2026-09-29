@@ -1,23 +1,16 @@
 package settings
 
-// ChatConnection is the chat side, as the Settings form holds it.
-type ChatConnection struct {
-	Endpoint string `json:"endpoint"`
-	APIKey   string `json:"apiKey"`
-	Model    string `json:"model"`
-}
-
-// EmbedConnection is the embeddings side.
-type EmbedConnection struct {
-	Endpoint string `json:"endpoint"`
-	Model    string `json:"model"`
-}
-
-// Ready says which sides have been saved, which means tested: Save only
-// writes what passed. Home disables adding books until embeddings are.
+// Ready says what's been set up. Home refuses a book until the key is:
+// preparing one needs it.
 type Ready struct {
-	Chat       bool `json:"chat"`
-	Embeddings bool `json:"embeddings"`
+	// Key: an OpenRouter key was saved, which means tested.
+	Key bool `json:"key"`
+}
+
+// ModelUse is one job and the model PSet does it with.
+type ModelUse struct {
+	Job   string `json:"job"`
+	Model string `json:"model"`
 }
 
 // Profile is who's studying. The name greets them on Home and is how the
@@ -26,23 +19,23 @@ type Profile struct {
 	Name string `json:"name"`
 }
 
-// Settings is GET /api/settings. A side never saved shows its defaults.
+// Settings is GET /api/settings.
 type Settings struct {
-	Profile    Profile         `json:"profile"`
-	Chat       ChatConnection  `json:"chat"`
-	Embeddings EmbedConnection `json:"embeddings"`
-	Ready      Ready           `json:"ready"`
+	Profile Profile `json:"profile"`
+	// APIKey is the saved OpenRouter key: the one connection a student
+	// sets up. PSet picks the models; Models says which.
+	APIKey string     `json:"apiKey"`
+	Models []ModelUse `json:"models"`
+	Ready  Ready      `json:"ready"`
 }
 
-// ConnectionInput is the body of Test and Save: exactly one side.
-type ConnectionInput struct {
-	Chat       *ChatConnection  `json:"chat,omitempty"`
-	Embeddings *EmbedConnection `json:"embeddings,omitempty"`
+// KeyInput is the body of Test and Save.
+type KeyInput struct {
+	APIKey string `json:"apiKey"`
 }
 
-// TestResult is what a passing Test found: "Connected", plus the vector
-// size for embeddings. The model is already in the field above it, so it
-// isn't repeated. A failing Test is an error naming the field.
+// TestResult is what a passing Test found: "Connected". A failing Test
+// is an error, on the key's field when the key is the trouble.
 type TestResult struct {
 	Detail string `json:"detail"`
 }

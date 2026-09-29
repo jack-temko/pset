@@ -240,19 +240,12 @@ function Shelf({ books }: { books: Book[] | undefined }) {
   const retry = useRetryImport()
   const remove = useRemoveBook()
 
-  // The engine refuses an import without a chat model (it reads the
-  // contents) or embeddings (it builds search) rather than failing forty
-  // minutes into reading the pages, so the shelf refuses it too, before
-  // you've picked a file. Unknown until settings load: not blocked.
-  const chatReady = settings.data?.ready.chat ?? true
-  const embeddingsReady = settings.data?.ready.embeddings ?? true
-  const preparable = chatReady && embeddingsReady
-  const missing =
-    !chatReady && !embeddingsReady
-      ? 'a saved chat model and embeddings server'
-      : !chatReady
-        ? 'a saved chat model'
-        : 'a saved embeddings server'
+  // The engine refuses an import without an OpenRouter key (the model
+  // reads the contents) rather than failing forty minutes into reading
+  // the pages, so the shelf refuses it too, before you've picked a file.
+  // Ollama isn't known until an upload asks it: the engine says so then.
+  // Unknown until settings load: not blocked.
+  const preparable = settings.data?.ready.key ?? true
 
   const add = (files: File[]) => {
     if (files.length === 0) return
@@ -305,9 +298,9 @@ function Shelf({ books }: { books: Book[] | undefined }) {
       {!preparable && (
         <Box tone="warning">
           <BoxBody className="text-sm">
-            PSet needs {missing} before it can prepare a book.{' '}
+            PSet needs your OpenRouter key before it can prepare a book.{' '}
             <Link to="/settings#connections" className="text-primary underline underline-offset-2">
-              {!chatReady && !embeddingsReady ? 'Save them in Settings' : 'Save one in Settings'}
+              Save it in Settings
             </Link>
             .
           </BoxBody>
