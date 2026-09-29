@@ -22,9 +22,6 @@ import { cn } from '@/lib/utils'
 
 import { answersOf, buildTree, type Group, type Section } from './tree'
 
-export { answersOf, buildTree } from './tree'
-export { runsSource, runsText } from './runs'
-
 /**
  * A document of blocks, drawn. The server has already split every text
  * field into runs and checked the math, so nothing here parses anything:

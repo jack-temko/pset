@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -163,6 +164,12 @@ func validate(obj []byte, pages pagenum.Map) (*built, []string) {
 	if typ == TypePlot {
 		// The model writes a mark at "11/12" now and then: a constant is a number.
 		if coerceNumbers(m) {
+			obj, _ = json.Marshal(m)
+		}
+	}
+	if typ == TypeStatement {
+		// A theorem number written as a number (3.2 as 3.2, 5 as 5), a page as a string.
+		if coerceStatement(m) {
 			obj, _ = json.Marshal(m)
 		}
 	}
@@ -372,5 +379,20 @@ func coerceNumbers(plot map[string]any) bool {
 			}
 		}
 	})
+	return changed
+}
+
+// coerceStatement reads a statement's number the model wrote as a JSON
+// number, and its page the model wrote as a string, the way it meant them.
+func coerceStatement(m map[string]any) bool {
+	changed := false
+	if n, ok := m["number"].(float64); ok {
+		m["number"], changed = strconv.FormatFloat(n, 'f', -1, 64), true
+	}
+	if p, ok := m["page"].(string); ok {
+		if n, err := strconv.Atoi(strings.TrimSpace(p)); err == nil {
+			m["page"], changed = float64(n), true
+		}
+	}
 	return changed
 }

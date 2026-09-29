@@ -89,7 +89,9 @@ import {
   type Retry,
   type Summary,
 } from '@/api/homework'
-import { AnswersOf, BlockSkeleton, Document, Runs, answersOf, runsSource, runsText } from '@/components/document'
+import { AnswersOf, BlockSkeleton, Document, Runs } from '@/components/document'
+import { runsSource, runsText } from '@/components/document/runs'
+import { answersOf } from '@/components/document/tree'
 import { useHeartbeat, type Kind as ActivityKind } from '@/api/activity'
 import { useAsk, useClearTurns, useStopTurn, useTurns, type About, type LiveTurn } from '@/api/ask'
 import { dueLine, dueStatus } from '@/lib/due'

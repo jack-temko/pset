@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import type { Block } from '@/api/gen/doc'
 
-import { answersOf, buildTree, runsSource, runsText } from './index'
+import { runsSource, runsText } from './runs'
+import { answersOf, buildTree } from './tree'
 
 const t = (text: string) => [{ t: text }]
 

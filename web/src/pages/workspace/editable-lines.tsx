@@ -7,7 +7,8 @@ import { Door } from '@/components/door'
 import { AutoTextarea } from '@/components/input'
 import { Label } from '@/components/label'
 import type { Run } from '@/api/gen/doc'
-import { Runs, runsSource } from '@/components/document'
+import { Runs } from '@/components/document'
+import { runsSource } from '@/components/document/runs'
 
 /** A value keeps its unit on its line: "9 Ω" never breaks after the 9. */
 const keepUnits = (runs: Run[]): Run[] =>

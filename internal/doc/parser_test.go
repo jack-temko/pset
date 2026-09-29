@@ -437,3 +437,32 @@ func jsonEqual(a, b []byte) bool {
 	json.Unmarshal(b, &y)
 	return reflect.DeepEqual(x, y)
 }
+
+func TestAStatementWithANumericNumberOrAStringPageIsRead(t *testing.T) {
+	p := NewParser(context.Background(), Options{Mode: Ask, PageCount: 100}, Handler{})
+	feedIn(p, `{"type":"statement","kind":"definition","number":3.2,"page":"71","text":"A geometric \\(X\\)."}`+"\n", 100)
+	var s StatementBlock
+	json.Unmarshal(p.Blocks()[0], &s)
+	if s.Type != TypeStatement || s.Number != "3.2" || s.Page != 71 || p.Failed() != 0 {
+		t.Fatalf("%s", p.Blocks()[0])
+	}
+}
+
+func TestAFormFeedAndSingleEscapedDelimitersAreRestored(t *testing.T) {
+	// "\frac" is a form feed and "rac" to JSON; "\(" is no escape at all;
+	// "\nu" a newline and "u". All three are what the model meant.
+	line := "{\"type\":\"math\",\"tex\":\"\\frac{1}{2} + \\nu + \\beta\"}\n" +
+		"{\"type\":\"para\",\"text\":\"Since \\(\\frac{a}{b}\\) and \\(\\theta\\) hold.\"}\n"
+	p := NewParser(context.Background(), Options{Mode: Ask, Model: noModel(t)}, Handler{})
+	feedIn(p, line, 7)
+	var m MathBlock
+	json.Unmarshal(p.Blocks()[0], &m)
+	var para ParaBlock
+	json.Unmarshal(p.Blocks()[1], &para)
+	if m.Tex != `\frac{1}{2} + \nu + \beta` || m.Raw {
+		t.Fatalf("tex %q", m.Tex)
+	}
+	if len(para.Text) != 5 || para.Text[1].M != `\frac{a}{b}` || para.Text[3].M != `\theta` {
+		t.Fatalf("%s", runsJSON(para.Text))
+	}
+}
