@@ -1,23 +1,13 @@
 # Backend
 
-The Go rewrite, against the finished UI. Grilled and decided 2026-09-21.
-This file owns the layering, the cross-cutting contracts (ids, routes,
-errors, events, jobs, the document) and the build order. Each package's own
-`README.md` owns its tables, its endpoints and its edge cases.
+The Go backend, built against the finished UI (grilled and decided
+2026-09-21). This file owns the layering, the cross-cutting contracts
+(ids, routes, errors, events, jobs, the document) and the choice of
+models. Each package's own `README.md` owns its tables, its endpoints and
+its edge cases.
 
 The UI specs (`workspace.md`, `import.md`, `settings.md`) say *what* each
-screen needs; this file says how the engine is shaped to give it.
-
-## Scope
-
-- **Kept, tidied:** the leaf packages `pdf`, `ocr`, `mathx`, `llm`.
-- **Rewritten from scratch:** everything that was `engine`, `store` and
-  `api`. The old code stays in git as a reference to lift proven logic
-  from (the locate ladder, OCR, structure extraction, embeddings, the
-  worksheet writer, the repair loop), never as a shape to keep.
-- **Fresh schema.** Migration 1 is the new schema; the old database is
-  ignored. Books are re-imported (which also works out their page numbering);
-  old homework and conversations are gone.
+screen needs; this file says how the backend is shaped to give it.
 
 ## Layers and modules
 
@@ -29,19 +19,22 @@ cmd/pset            wiring only: open the db, build features, start jobs, serve
 internal/
   library           books, import, pages, scans, contents, search
   homework          sets, questions, locate, walkthroughs, due, worksheet PDF
-  ask               turns, the agent loop, its tools
-  settings          connections, health, reset, about
+  ask               turns, the tutor's turn as a job
+  memory            what the tutor keeps about a book and the student
+  settings          the key, health, reset, about
   activity          heartbeats, the week's stats
+  agent             the tool loop Ask and homework guides both run: the tools,
+                    the notes, the rounds
   doc               the document a model writes: block schemas, stream parser, runs, checks, repair, plot sampling
   jobs              the durable queue
   events            the in-process bus and the SSE endpoint
   db                SQLite open, migrations registry, tx helper
   httpx             router helpers, JSON in/out, the error type
-  llm pdf ocr mathx leaves
+  llm pdf ocr execx mathx pagenum probnum   leaves
 ```
 
 **Dependency rule.** Features import shared packages (`jobs`, `events`,
-`db`, `httpx`, `doc`) and leaves, **never each other**. When a feature
+`db`, `httpx`, `doc`, `agent`) and leaves, **never each other**. When a feature
 needs another's data, it declares the smallest interface it needs, in its
 own package, and `cmd/pset` passes the real one in:
 
@@ -64,7 +57,7 @@ feature is then testable with a ten-line fake.
 | `service.go` | Behaviour. Takes and returns domain types. No HTTP. |
 | `store.go` | Its SQL, and its migrations. |
 | `http.go` | Handlers: decode, call the service, encode. No logic. |
-| `wire.go` | The JSON types the UI sees. The only file the TS generator reads. |
+| `wire.go` | The JSON types the UI sees, and the event names. The only file the TS generator reads. |
 | `README.md` | Contract, tables, edge cases. |
 
 **Cross-feature deletes** are foreign keys with `ON DELETE CASCADE`: one
@@ -93,15 +86,21 @@ GET    /api/assignment-reads/{id}        DELETE (dismiss, stopping it)
 POST   /api/assignment-reads/{id}/retry  (a failed read, again)
 POST   /api/books/{id}/assignments       (the kept due dates: new sets, and updates to sets)
 GET    /api/books/{id}/assignments/source (the course page last read)
+POST   /api/books/{id}/references        (lines read in the book's numbering, as Add reads them)
 GET    /api/homework/{id}                PATCH, DELETE
 POST   /api/homework/{id}/questions      (batch of drafts)
-POST   /api/books/{id}/references        (lines read in the book's numbering, as Add reads them)
+POST   /api/homework/{id}/boxed          (one question from boxes drawn on the page)
 GET    /api/homework/{id}/worksheet      (PDF)
 PATCH  /api/questions/{id}               DELETE
 POST   /api/questions/{id}/retry         {page} or {text}
-GET    /api/books/{id}/turns             POST /api/books/{id}/turns
+POST   /api/questions/{id}/boxes         (point out a failed find on the page)
+POST   /api/questions/{id}/guide         (write the guide for an unwritten question)
+GET    /api/questions/{id}/figures/{n}   (a figure's crop, JPEG)
+GET    /api/books/{id}/turns             POST /api/books/{id}/turns    DELETE (clear the conversation)
 POST   /api/turns/{id}/stop
-GET    /api/due   GET /api/week   POST /api/heartbeat
+GET    /api/books/{id}/memories          POST /api/books/{id}/memories
+DELETE /api/memories/{id}
+GET    /api/due   GET /api/week?since=   POST /api/heartbeat
 DELETE /api/heartbeats                   (clear activity history)
 GET    /api/settings  PUT /api/settings  POST /api/settings/test
 PUT    /api/settings/profile             (the name)
@@ -120,10 +119,11 @@ numbers with the book's page runs (`internal/pagenum`, `lib/pages.ts`).
 ## The contract with the UI
 
 **Go is the source of truth.** Each feature's `wire.go` is generated into
-`web/src/api/gen/<feature>.ts` (tygo or similar), along with the event
-union and the error codes. The generated files are committed; a check
-fails when they are stale. `sample.ts` shrinks to
-`web/src/components/fixtures.ts`, typed against the generated types, and
+`web/src/api/gen/<feature>.ts` by tygo (`make gen`), along with the error
+codes. Event names are declared beside the wire types and registered by
+string in the web's `api/` modules. The generated files are committed;
+`make check-gen` fails when they are stale.
+`web/src/components/fixtures.ts` is typed against the generated types and
 feeds only the components page: a contract change breaks the build, not
 the screen.
 
@@ -163,16 +163,25 @@ those queries:
 
 | Event | Carries | Client does |
 |---|---|---|
-| `book.changed` | id, state (queued, preparing {phase, done?, total?}, ready, failed {reason}) | patch the book |
+| `book.changed` | the book (state: queued, preparing {phase, done?, total?}, ready, failed {reason}) | patch the book |
 | `book.removed` | id | drop it |
-| `homework.changed` | id | invalidate the set |
-| `question.changed` | id, homeworkId, state | patch the question |
-| `turn.step` | turnId, step (present tense), running | append or update the step |
+| `homework.changed` | the set's summary | patch the set |
+| `homework.removed` | id, bookId | drop it |
+| `question.changed` | the question, with its `rev` | patch the question |
+| `question.removed` | id, homeworkId | drop it |
+| `assignment.changed` | the assignment read (reading, ready to review, failed) | patch the read |
+| `assignment.removed` | id, bookId | drop it |
+| `turn.changed` | the turn, with the blocks saved so far | patch the turn |
 | `turn.block.start` | turnId, type | that block's skeleton |
-| `turn.block.text` | turnId, runs | the open text block's new runs |
+| `turn.block.text` | turnId, runs | append to the open text block |
 | `turn.block.repairing` | turnId, type | "Tidying" |
 | `turn.block` / `.failed` | turnId, block | replace the skeleton (`.failed`: a raw block) |
-| `turn.done` / `.stopped` / `.failed` | turnId | settle |
+| `turns.cleared` | bookId | empty the conversation |
+| `memory.saved` / `.removed` | the memory / id | patch the menu |
+| `reset` | nothing | refetch everything |
+
+`reset` is the bus's own: it is sent to a client that reconnects with an
+id the ring no longer holds, or one this run of the server never issued.
 
 Every event has a monotonic id. The server keeps a ring buffer, so a
 reconnect with `Last-Event-ID` replays what was missed; if the gap is
@@ -206,7 +215,7 @@ the UI.
 |---|---|---|
 | `import` | 1 | One at a time: every book examined first, then digital books ahead of scans (below). The UI shows "Queued" for the rest. |
 | `question` | 2 | Two homework steps at once, finds and readings before guides (below). A constant, not a setting. |
-| `turn` | 1 per book | One running conversation per book. |
+| `turn` | 8, one per book | Many books may be answering at once; each book answers one question at a time (the job's key is the book). |
 
 **Finds go first** (2026-09-24). A question is up to three jobs in the
 `question` lane: `locate`, which finds it and queues its next step in
@@ -363,25 +372,3 @@ No real model in any test.
 `make dev` runs the Go server with reload on save, Vite with `/api`
 proxied to it, and the TS generator on Go changes, so a wire change shows
 in the editor at once.
-
-## Build order
-
-Each step is live end to end before the next starts.
-
-1. **Foundation:** `db`, `jobs`, `events`, `httpx`, the generator, the
-   client, the query client, `make dev`.
-2. **Settings:** the smallest feature, proving the whole path.
-3. **Library:** upload, the import queue, scans, contents, offset, book
-   edits and removal. Home's shelf and the workspace scan go live.
-4. **Homework:** sets, questions, locate, walkthroughs, due, worksheet.
-5. **Ask:** turns, the agent loop, the document.
-6. **Activity:** heartbeats and the week.
-
-## What the UI still needs for this
-
-- Ask: the **pending block** state (a shaped skeleton per type, a text
-  block's words streaming into it, with the "Writing" and "Tidying"
-  labels) and the **raw block** (muted).
-- Walkthrough: each stage fills **independently** as its event arrives.
-- Routes switch from book sha to book id.
-- Skeletons on every query listed above, and the SSE reconnect.
