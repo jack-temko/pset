@@ -166,8 +166,10 @@ func (e *env) read(t *testing.T, in AssignmentText) AssignmentRead {
 func (e *env) waitRead(t *testing.T, id string) AssignmentRead {
 	t.Helper()
 	deadline := time.Now().Add(10 * time.Second)
-	var r AssignmentRead
 	for time.Now().Before(deadline) {
+		// Fresh each time: a field the reply leaves out (an activity
+		// cleared on finishing) mustn't keep the last poll's value.
+		var r AssignmentRead
 		e.do(t, "GET", "/api/assignment-reads/"+id, nil, &r)
 		if r.State != ReadStateReading {
 			return r
@@ -175,7 +177,7 @@ func (e *env) waitRead(t *testing.T, id string) AssignmentRead {
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatalf("read %s still reading", id)
-	return r
+	return AssignmentRead{}
 }
 
 func TestReadingAnAssignmentFromAWebPage(t *testing.T) {

@@ -514,7 +514,7 @@ func (s *Service) redoReading(ctx context.Context, q row, corrected *[]string) (
 			return q.Question, nil
 		}
 		// A guide that hasn't started, or isn't asked for, reads the reading when it does.
-		res, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = 1, updated_at = ? WHERE id = ? AND state IN (?, ?)`,
+		res, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = 1, reading_doubts = '[]', updated_at = ? WHERE id = ? AND state IN (?, ?)`,
 			mustJSON(runLists(lines)), db.Now(), q.ID, StateLocated, StateUnwritten)
 		if err != nil {
 			return Question{}, err
@@ -527,7 +527,8 @@ func (s *Service) redoReading(ctx context.Context, q row, corrected *[]string) (
 	if corrected != nil {
 		next, edited = nextStep(q.ID, false), 1
 	}
-	return s.rewrite(ctx, q, next, `reading = ?, reading_edited = ?`, mustJSON(runLists(orEmpty(lines))), edited)
+	// Corrected or read again, the old readings' disagreements are gone.
+	return s.rewrite(ctx, q, next, `reading = ?, reading_edited = ?, reading_doubts = '[]'`, mustJSON(runLists(orEmpty(lines))), edited)
 }
 
 // move puts a question at position to (1-based), shifting the ones in

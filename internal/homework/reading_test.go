@@ -29,8 +29,8 @@ func TestAFigureIsReadSettledAndTheGuideWrittenFromIt(t *testing.T) {
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
 
 	want := []string{`Node A: top of \(R_1\).`, "2 A current source from A to B (its arrow points to B)."}
-	if strings.Join(sources(q.Reading), "|") != strings.Join(want, "|") || q.ReadingEdited {
-		t.Fatalf("reading %q (edited %v), want the settled one", sources(q.Reading), q.ReadingEdited)
+	if strings.Join(sources(q.Reading), "|") != strings.Join(want, "|") || q.ReadingEdited || len(q.ReadingDoubts) != 0 {
+		t.Fatalf("reading %q (edited %v, doubts %q), want the settled one and no doubts", sources(q.Reading), q.ReadingEdited, sources(q.ReadingDoubts))
 	}
 	if n := requestsTo(e, "You read the figures"); n != 3 {
 		t.Fatalf("read %d times, want 3", n)
@@ -47,6 +47,50 @@ func TestAFigureIsReadSettledAndTheGuideWrittenFromIt(t *testing.T) {
 	text := openingText(guideRequests(e)[0])
 	if !strings.Contains(text, "- 2 A current source from A to B") || !strings.Contains(text, "the reading is right") {
 		t.Fatalf("the guide wasn't written from the reading:\n%s", text)
+	}
+}
+
+// Where the readings disagreed, the settling says so after its reading:
+// those points are kept to check, apart from the reading, until the
+// student corrects it.
+func TestReadingsThatDisagreedAreKeptToCheck(t *testing.T) {
+	e := newEnv(t)
+	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
+		if strings.Contains(req.Messages[0].Content.Text(), "several readings") {
+			return llmtest.Reply{Text: "- Node A: top of $R_1$.\n- 2 A current source from A to B (its arrow points to B).\n\n**Differed:**\n- The 2 A source: two readings have its arrow pointing to B, one to A; it points to B.\n"}
+		}
+		return fakeModel(req)
+	})
+	h := e.newSet(t)
+	id := e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID
+	q := e.wait(t, id, StateReady)
+	if len(q.Reading) != 2 || len(q.ReadingDoubts) != 1 || !strings.Contains(sources(q.ReadingDoubts)[0], "one to A") {
+		t.Fatalf("reading %q, doubts %q", sources(q.Reading), sources(q.ReadingDoubts))
+	}
+	if text := openingText(guideRequests(e)[0]); strings.Contains(text, "Differed") || strings.Contains(text, "one to A") {
+		t.Fatalf("the doubts reached the guide as reading:\n%s", text)
+	}
+	fixed := []string{"Node A: top of R1.", "2 A current source from A to B."}
+	e.do(t, "PATCH", "/api/questions/"+id, QuestionPatch{Reading: &fixed}, &q)
+	if len(q.ReadingDoubts) != 0 {
+		t.Fatalf("doubts %q outlived the student's correction", sources(q.ReadingDoubts))
+	}
+}
+
+func TestSplitDoubts(t *testing.T) {
+	for _, c := range []struct {
+		in      string
+		reading int
+		doubts  int
+	}{
+		{"- a\n- b\n\nDiffered:\n- None.", 2, 0},
+		{"- a\n- b\n", 2, 0},
+		{"- a\n\n## Differed\n- x one way, y the other.\n- z.", 1, 2},
+	} {
+		r, d := splitDoubts(c.in)
+		if len(readingLines(r)) != c.reading || len(doubtLines(d)) != c.doubts {
+			t.Errorf("%q: %d lines, %d doubts", c.in, len(readingLines(r)), len(doubtLines(d)))
+		}
 	}
 }
 

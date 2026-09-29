@@ -226,7 +226,7 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 	}
 	s.sawProblem(ctx, book, q, loc)
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `UPDATE questions SET page = ?, label = ?, statement = ?, rect = ?, figures = ?, rounds = '[]', reading = '[]', reading_edited = 0, state = ?, activity = '', updated_at = ? WHERE id = ?`,
+		if _, err := tx.ExecContext(ctx, `UPDATE questions SET page = ?, label = ?, statement = ?, rect = ?, figures = ?, rounds = '[]', reading = '[]', reading_edited = 0, reading_doubts = '[]', state = ?, activity = '', updated_at = ? WHERE id = ?`,
 			loc.Page, label, mustJSON(runsOf(statement)), mustJSON(loc.Rect), mustJSON(loc.Figures), StateLocated, db.Now(), q.ID); err != nil {
 			return err
 		}
@@ -252,17 +252,17 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 // question never fails over its reading.
 func (s *Service) read(ctx context.Context, m model, book Book, q row) error {
 	s.setState(ctx, q.ID, StateReading, "")
-	lines, err := s.readFigures(ctx, m, book, q)
+	lines, doubts, err := s.readFigures(ctx, m, book, q)
 	if err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 		slog.Warn("question: reading the figures", "question", q.ID, "err", err)
-		lines = nil
+		lines, doubts = nil, nil
 	}
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = 0, state = ?, activity = '', updated_at = ? WHERE id = ?`,
-			mustJSON(runLists(orEmpty(lines))), StateLocated, db.Now(), q.ID); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = 0, reading_doubts = ?, state = ?, activity = '', updated_at = ? WHERE id = ?`,
+			mustJSON(runLists(orEmpty(lines))), mustJSON(runLists(orEmpty(doubts))), StateLocated, db.Now(), q.ID); err != nil {
 			return err
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(q.ID, false))
@@ -276,19 +276,22 @@ func (s *Service) read(ctx context.Context, m model, book Book, q row) error {
 }
 
 // readFigures is a reading of a question's figures, one fact a line, by
-// the Reader: read three times, quickly and at once, then settled into
-// one with more thought. On the nine circuits of a real problem set a single quick
+// the Reader, and where its readings disagreed: read three times, quickly
+// and at once, then settled into one with more thought. The settling
+// says what it settled; readings that agree are nearly always right, and
+// ones that don't nearly always hold a wrong one, so those points are
+// the student's to check (design/backend.md, "Models"). On the nine circuits of a real problem set a single quick
 // reading got a node or a direction wrong about one time in four, never
 // the same way twice; settled, the hardest five came out right ten times
 // in ten. A reading that fails is left out, and when the settling fails
 // the first reading stands. None when there are no figures to read.
-func (s *Service) readFigures(ctx context.Context, m model, book Book, q row) ([]string, error) {
+func (s *Service) readFigures(ctx context.Context, m model, book Book, q row) (lines, doubts []string, err error) {
 	if q.Page == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	figs := s.figureParts(ctx, book, q)
 	if len(figs) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	ask := func(system, effort string, extra ...llm.Part) (string, error) {
 		content := llm.PartsContent(llm.TextPart(fmt.Sprintf("The problem:\n\n%s\n\nIts figures follow.", source(q.Statement))))
@@ -321,10 +324,10 @@ func (s *Service) readFigures(ctx context.Context, m model, book Book, q row) ([
 		}
 	}
 	if ctx.Err() != nil {
-		return nil, ctx.Err()
+		return nil, nil, ctx.Err()
 	}
 	if len(read) == 0 {
-		return nil, errors.Join(errs...)
+		return nil, nil, errors.Join(errs...)
 	}
 	s.setActivity(ctx, q.ID, "Checking the reading…")
 	var b strings.Builder
@@ -334,15 +337,41 @@ func (s *Service) readFigures(ctx context.Context, m model, book Book, q row) ([
 	settled, err := ask(settlePrompt, "", llm.TextPart(b.String()))
 	if err != nil {
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return nil, nil, ctx.Err()
 		}
 		slog.Warn("question: settling the reading", "question", q.ID, "err", err)
-		return read[0], nil
+		return read[0], nil, nil
 	}
-	if lines := readingLines(settled); len(lines) > 0 {
-		return lines, nil
+	reading, differed := splitDoubts(settled)
+	if lines := readingLines(reading); len(lines) > 0 {
+		return lines, doubtLines(differed), nil
 	}
-	return read[0], nil
+	return read[0], nil, nil
+}
+
+// splitDoubts parts a settled reading from the points where the readings
+// differed, which follow a "Differed:" line.
+func splitDoubts(settled string) (reading, differed string) {
+	lines := strings.SplitAfter(settled, "\n")
+	for i, l := range lines {
+		t := strings.ToLower(strings.Trim(strings.TrimSpace(l), "*#_ "))
+		if strings.HasPrefix(t, "differed") {
+			return strings.Join(lines[:i], ""), strings.Join(lines[i+1:], "")
+		}
+	}
+	return settled, ""
+}
+
+// doubtLines is the points the readings differed on, one a line; "None"
+// is none.
+func doubtLines(differed string) []string {
+	var out []string
+	for _, l := range readingLines(differed) {
+		if strings.ToLower(strings.TrimRight(l, ".")) != "none" {
+			out = append(out, l)
+		}
+	}
+	return out
 }
 
 // readings is how many times a figure is read before the readings are

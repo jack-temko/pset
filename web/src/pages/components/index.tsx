@@ -62,9 +62,10 @@ import { useBoxing } from '@/pages/workspace/boxing-state'
 import { AssignmentReview, AssignmentSourceFields } from '@/pages/workspace/add-homework'
 import { AssignmentReadRow } from '@/pages/workspace/assignment-reads'
 import { QuestionRows, emptyRow, type QuestionRow } from '@/pages/workspace/dialogs'
+import { FigureReading } from '@/pages/workspace/reading'
 import { reviewOf } from '@/pages/workspace/import-state'
 import type { Style } from '@/api/gen/probnum'
-import type { AssignmentRead } from '@/api/homework'
+import type { AssignmentRead, Question } from '@/api/homework'
 import { BookTile } from '@/components/book-tile'
 import { cn } from '@/lib/utils'
 
@@ -111,6 +112,30 @@ const OLD_PLAN: [number, number][] = PS.map((p) => [+p.toFixed(4), +(20 + (1 - p
  * page you open to see what a change did. Add a component here the moment
  * you build one; anything missing from this page is unreviewed.
  */
+
+const readingLine = (t: string) => [{ t }]
+
+/** 4.72's figure as read, for the Figure reading shelf. */
+const READ_QUESTION: Question = {
+  id: 'q-read', homeworkId: 'h1', position: 1, text: '4.72', inBook: true, label: '4.72',
+  statement: [], page: 194, figures: [{ label: 'Figure 4.138' }], hint: [], walkthrough: [],
+  state: 'ready', memory: [], readingEdited: false, readingDoubts: [], notes: [], boxes: [],
+  revealed: [], done: false, activity: '', reason: '', updatedAt: '', rev: 1,
+  reading: [
+    'Node L: top of the 4 A source, top of the 2 Ω, left end of the 4 Ω.',
+    'Node N: right end of the 4 Ω, left end of the 6 Ω, left end of the 2 A source.',
+    'Node a: right end of the 6 Ω, right end of the 2 A source, top of R_L.',
+    'Node D: bottom of the 4 A source, bottom of the 2 Ω, + of the 20 V source.',
+    '4 A current source from D to L (its arrow points to L).',
+    '2 A current source from N to a (its arrow points to a).',
+    '20 V source between D and b, + at D.',
+  ].map(readingLine),
+}
+
+const READING_DOUBTS = [
+  'The 2 A source: two readings have its arrow pointing to a, one to N; it points to a.',
+  'The 20 V source: two readings have + at D, one at b; + is at D.',
+].map(readingLine)
 
 function Section({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
@@ -1136,6 +1161,27 @@ export function Components() {
             <div className="w-panel space-y-3 rounded-md border bg-rail p-card text-base">
               <p>An eigenvalue is a scalar λ for which some nonzero vector</p>
               <StoppedNote />
+            </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Figure reading"
+          note="The words a guide is written from, one fact a line, which the student can correct. Where the figure's three readings disagreed, the Box says Check it and names each point, with what the readings said and what was settled: readings that agree are nearly always right, ones that don't nearly always hold a wrong one. Correcting it, or reading it again, clears them."
+        >
+          <Shelf label="agreed">
+            <div className="w-panel">
+              <FigureReading q={READ_QUESTION} onCorrect={() => {}} onReread={() => {}} />
+            </div>
+          </Shelf>
+          <Shelf label="disagreed">
+            <div className="w-panel">
+              <FigureReading q={{ ...READ_QUESTION, readingDoubts: READING_DOUBTS }} onCorrect={() => {}} onReread={() => {}} />
+            </div>
+          </Shelf>
+          <Shelf label="corrected">
+            <div className="w-panel">
+              <FigureReading q={{ ...READ_QUESTION, readingEdited: true }} onCorrect={() => {}} onReread={() => {}} />
             </div>
           </Shelf>
         </Section>
