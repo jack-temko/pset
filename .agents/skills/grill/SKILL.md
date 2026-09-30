@@ -51,8 +51,9 @@ asking only for what is missing:
    `references/frontier.md` for weighting, dependencies and how to write a question.
 3. **Ask a batch.** Take the highest-weight questions whose dependencies are settled,
    at most four, and ask them in a single call of the ask-user tool. Recommended option
-   first and marked "(Recommended)". One decision per question. Show layouts and other
-   visual options as previews. Do not batch a question with one that depends on it.
+   first and marked "(Recommended)". One decision per question. Show visual options as
+   something the user can look at, not ASCII art: build real mockups from the project's own
+   components and point the question at them (see `references/frontier.md`, rule 5). Do not batch a question with one that depends on it.
 4. **Fold in the answers.** Log the batch verbatim. Turn each answer into a decision
    (`D<n>`: what, why, what it beat). Read free text carefully: it can settle several
    questions at once, add new ones, or reopen an earlier decision (mark it reopened,

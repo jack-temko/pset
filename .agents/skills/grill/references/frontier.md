@@ -57,9 +57,14 @@ treat them as dependent.
 3. **Recommendation first, marked** "(Recommended)", with the reason in its
    description. The reason names what it buys for the person in the brief.
 4. **Say what each choice costs** that person: taps, reading, risk, effort, reversibility.
-5. **Show, do not describe, visual choices.** Layout, copy and mockup options carry a
-   preview (an ASCII wireframe, a sample of the copy) so the user compares things, not
-   words.
+5. **Show, do not describe, visual choices.** The user compares things, not words.
+   - **Copy** (a label, a line of text): put a sample in the option's preview.
+   - **A layout or any visual design:** build it, do not draw it. If the repo has a
+     component library, make the options from the real components on static sample data
+     (a page that renders them, each option labelled), start it where the user can
+     open it, and point the question at it by URL. ASCII wireframes are hard to read and
+     never look like the thing: use them only when there is nothing to build with, and
+     say so. The ask tool's previews are text; they cannot show a layout.
 6. **Header** is a short label (12 characters) naming the decision.
 7. **Plain words.** No jargon the user has not used. Their names for things.
 8. **Do not ask what you can find out.** Read first. If it is in the code, the docs or
