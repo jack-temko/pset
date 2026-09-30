@@ -8,6 +8,8 @@ import (
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/jackt/pset/internal/execx"
 )
 
 // XMLDoc is the structure-relevant content of a PDF: its outline (bookmarks)
@@ -38,7 +40,7 @@ type XMLLine struct {
 // XML runs `pdftohtml -xml -stdout -i <path>` and parses its output. One
 // invocation serves both the outline and the font/position data.
 func XML(ctx context.Context, path string) (*XMLDoc, error) {
-	out, err := run(ctx, "pdftohtml", "-xml", "-stdout", "-i", path)
+	out, err := execx.Run(ctx, "pdftohtml", "-xml", "-stdout", "-i", path)
 	if err != nil {
 		return nil, err
 	}

@@ -1,16 +1,16 @@
 package pdf
 
 import (
-	"bytes"
 	"context"
-	"errors"
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/jackt/pset/internal/execx"
 )
 
-var ErrNotInstalled = errors.New("poppler utility not on PATH")
+// ErrNotInstalled is wrapped by the error of a missing poppler tool.
+var ErrNotInstalled = execx.ErrNotInstalled
 
 type Info struct {
 	Title      string
@@ -26,7 +26,7 @@ type Info struct {
 // (including the "PDF version:" line) goes to stdout; only `pdfinfo -v`, the
 // utility's own version, prints to stderr — do not confuse the two.
 func Metadata(ctx context.Context, path string) (Info, error) {
-	out, err := run(ctx, "pdfinfo", path)
+	out, err := execx.Run(ctx, "pdfinfo", path)
 	if err != nil {
 		return Info{}, err
 	}
@@ -67,7 +67,7 @@ func Metadata(ctx context.Context, path string) (Info, error) {
 // Text runs `pdftotext <path> -` and returns the extracted text. A PDF with
 // no text layer (a pure image scan) yields only page-break form feeds.
 func Text(ctx context.Context, path string) (string, error) {
-	return run(ctx, "pdftotext", path, "-")
+	return execx.Run(ctx, "pdftotext", path, "-")
 }
 
 func parsePageSize(value string) (float64, float64, error) {
@@ -76,22 +76,4 @@ func parsePageSize(value string) (float64, float64, error) {
 		return 0, 0, err
 	}
 	return w, h, nil
-}
-
-func run(ctx context.Context, name string, args ...string) (string, error) {
-	if _, err := exec.LookPath(name); err != nil {
-		return "", fmt.Errorf("%w: %s", ErrNotInstalled, name)
-	}
-	var stdout, stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, name, args...)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
-		if msg == "" {
-			return "", fmt.Errorf("run %s %s: %w", name, strings.Join(args, " "), err)
-		}
-		return "", fmt.Errorf("run %s %s: %w: %s", name, strings.Join(args, " "), err, msg)
-	}
-	return stdout.String(), nil
 }
