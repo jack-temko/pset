@@ -6,10 +6,11 @@ headings, in this order, so any run can find what it needs. Nothing decorative.
 ```
 # <Topic>: grill
 
-status:    grilling | awaiting OK | approved | built | superseded
-date:      YYYY-MM-DD, the session's date
-brief:     one line, the topic and the point of view it is judged from
-sources:   what was read (files, docs, earlier grills)
+- status: grilling | awaiting OK | approved | built | superseded
+- date: YYYY-MM-DD, the session's date
+- brief: one line, the topic and the point of view it is judged from
+- sources: what was read (files, docs, earlier grills)
+(a bullet list, so it renders as separate lines: consecutive plain lines run together)
 
 ## Summary
 The part to read at a glance. It must fit one screen and stand alone.
