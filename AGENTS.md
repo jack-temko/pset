@@ -59,7 +59,9 @@ app before calling it done:
 - Look at every state you changed, in **both themes** (Paper and Night),
   at a desktop width of 1280 or more.
 - A new or changed component also belongs on `/components`, the page
-  that shows every component and variant.
+  that shows every component and variant: a section in a group file under
+  `web/src/pages/components/sections/`, with the component's README as its
+  Docs.
 - The rules are in `design/design-system.md`, and each screen's spec is
   in `design/`. Where a change would contradict a spec, raise it rather
   than quietly diverging.
