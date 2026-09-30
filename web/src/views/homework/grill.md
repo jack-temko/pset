@@ -23,7 +23,8 @@ For the student picking up homework after a long day of class, this view puts th
 | D7 | After the last question, a page that fills the pane: a greeting-style line (like Home's), total time and time per question, anything else a hardworking student who cares about their performance would want, and a Turn in button. | Jack: closes the loop the mission describes. | A quiet Turn in row; nothing; offer the next set |
 | D8 | Behind a click, not always shown: "Add your professor's instructions" and "Not the right problem? Show me where it is". | Jack: declutter. | Keeping them visible |
 | D10 | Choosing a question never moves the book: the student may have a page open beside it. A jump-to-the-problem button exists somewhere (its place is a layout question, gate 2); the always-visible page chip goes. | Jack: "selecting a question should not change where the book is". | Chip only when the scan is elsewhere; chip behind a menu; a quieter chip |
-| ~~D12~~ | ~~Progress marks are **segments in a strip**~~ (reopened: Jack found them too tall for what they say; see D20 once chosen), full strip height as the tap target; done filled, current ringed, waiting hollow, failed in warning ink. | Real tap targets for jumping; scales to about 24 questions. | Numbered chips; dots |
+| ~~D12~~ | ~~Progress marks are **segments in a strip**~~ (replaced by D20: Jack found them too tall for what they say) |  |  | , full strip height as the tap target; done filled, current ringed, waiting hollow, failed in warning ink. | Real tap targets for jumping; scales to about 24 questions. | Numbered chips; dots |
+| D20 | **Progress lives in the header, with no extra row.** The header's bottom edge is a bar cut into the questions, each as wide as it is hard (from a difficulty index; mocked for now, plain when there is none). Beside the title: the count "2 of 8", which opens a list of the questions with their states and is how you jump; then the time left in gray. | Jack: the marks took a lot of room for what "3 of 8" already says; he wanted "some sort of progress bar"; mixing the weighted bar with the header option. | Segments in a strip; one slim row (plain, or weighted); a ring |
 | D19 | **Professor's notes have one way in.** The question menu's "Edit the professor's instructions" ("Add" when there are none) is the only place to edit; the notes box is read-only. The box's Edit button goes. | Jack: two ways to edit or add; collapse into one. Notes are edited rarely, so a menu item is enough. | The Edit button on the box; both |
 | D13 | The jump button is **"Show in book"** on the question's label row, always visible, one tap. | It replaces the page chip's spot without the chip's clutter; "Show me where it is" already means boxing a wrong find. | Under the statement; on the figure only |
 | D14 | **Focus is two columns**: the question, the jump button and the notes pinned on the left, the three help stages scrolling on the right. | The problem never scrolls out of sight of its own walkthrough. | One wider column |
@@ -62,7 +63,7 @@ For the student picking up homework after a long day of class, this view puts th
 
 Open them at `/views/homework?mode=wireframes` (source: `web/src/views/homework/wireframes.tsx`). They are the app's own `Box`, `Button`, `Menu`, `Veil`, `StatTile` and the rest, on static sample data, in the real pane at 440px and 800px (Focus), so veils lift and menus open. What they show:
 
-- **Walkthrough, panel width:** set header (back, title, set menu), the pinned progress strip (a segment per question, "n of m done", time left), the question row (label, "Show in book", question menu), statement, figure, the professor's notes box, the three veiled stages, and the pinned footer with Ask about this and the one primary. A second frame shows a completed question, where the primary reads Mark incomplete.
+- **Walkthrough, panel width:** set header (back, title, set menu), the header carrying the progress (the count that opens the question list, the time left in gray, and the bottom edge as a bar cut into the questions by difficulty), the question row (label, "Show in book", question menu), statement, figure, the professor's notes box, the three veiled stages, and the pinned footer with Ask about this and the one primary. A second frame shows a completed question, where the primary reads Mark incomplete.
 - **Focus (800px):** two columns, the question pinned left and the help scrolling right; strip and footer unchanged.
 - **Finish page:** the greeting line, total time and per-question time (StatTiles), a bar per question with the hardest marked, the hardest listed, Turn in as the one primary, Back to list.
 - **The list:** reads on top, each set with the same strip and time left, "+ New homework", turned-in sets.
@@ -91,15 +92,14 @@ For the student picking up homework after a long day of class, this view puts th
 - **R4** Locked list of set actions "inline move, move down and remove beside the page chip" (2026-09-24 and earlier): move and remove leave the always-visible row (D3).
 - **R5** "Scan jumps on demand: a page chip in the question header" (2026-09-18): the always-visible chip goes; a jump button stays, placed in gate 2 (D10). "Opening a question never moves the scan" is kept and strengthened.
 
-- **R6** "One question at a time: prev/next plus a '3 of 8' position row" (2026-09-18): replaced by the progress strip and the marks; the arrows go (D12, D15). The one-question-at-a-time rule itself is kept.
-- **R7** "The walkthrough header keeps what you read: back, the set's title, '3 of 8', and a ⋯ menu" (2026-09-21): '3 of 8 done' moves into the strip under the header, and a second question menu is added (D12, D16).
+- **R6** "One question at a time: prev/next plus a '3 of 8' position row" (2026-09-18): replaced by the header's count and bar and the count's question list; the arrows go (D15, D20). The one-question-at-a-time rule itself is kept.
+- **R7** "The walkthrough header keeps what you read: back, the set's title, '3 of 8', and a ⋯ menu" (2026-09-21): the count and time left stay in the header row, with the bar as its bottom edge, and a second question menu is added (D16, D20).
 
 ## Disagreements
 - **G1** Progress with a time left (D5): recommended against (a wrong estimate at 1am nags; needs new backend data). Jack chose it anyway, with a design for it (difficulty index and per-question time). Recorded, with A1 as the mitigation.
 - **G2** Page chip (D10): recommended keeping it in some form (one tap to the problem). Jack's answer changes the reason: the book may be open beside the panel, so the scan must not move on selecting a question; a jump button remains.
 
 ## Frontier
-- D20 (gate 2): the progress display: four options built at `/views/homework?mode=wireframes` (A in the header, B one slim row, C weighted by difficulty, D a ring). Awaiting the choice; with the marks gone, the count opens a list of the questions and is how you jump (revisits D12, D15).
 - Gate 2: awaiting the user's confirm of the wireframes.
 - Gate 3 (behavior and states) and gate 4 (data, backend, acceptance): not yet asked.
 

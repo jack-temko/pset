@@ -40,39 +40,32 @@ const QUESTIONS = ['4.27', '4.25', '4.32', '3.12', '2.31', '3.14', '4.30', '5.02
 const OPEN: Mark[] = ['done', 'done', 'current', 'waiting', 'waiting', 'waiting', 'waiting', 'waiting']
 const CURRENT_DONE: Mark[] = ['done', 'done', 'done', 'waiting', 'waiting', 'waiting', 'waiting', 'waiting']
 
-const MARK_CLASS: Record<Mark, string> = {
+const MARK_FILL: Record<Mark, string> = {
   done: 'bg-primary',
-  current: 'bg-primary-soft ring-2 ring-primary',
+  current: 'bg-primary/40',
   waiting: 'bg-muted',
   failed: 'bg-warning',
 }
-const MARK_WORD: Record<Mark, string> = { done: 'done', current: 'current', waiting: 'waiting', failed: 'failed' }
 
-/** One segment per question. In the pinned strip each is a button with the
- *  strip's full height as its target; on a list row they are only marks. */
-function Segments({ marks, jump }: { marks: Mark[]; jump?: boolean }) {
+/** How hard each question is, relative to the set: the backend idea this
+ *  bar uses (ideas/time-remaining-estimate.md). Mocked here. */
+const DIFFICULTY = [2, 2, 4, 3, 1, 1, 3, 2]
+
+/** The set's progress as a bar cut into its questions, each as wide as it is
+ *  hard, so what is left is how much work is left, not how many questions.
+ *  Not a control: jumping is the count's list. */
+function WeightedBar({ marks, className }: { marks: Mark[]; className?: string }) {
   return (
-    <div className="flex gap-1">
-      {marks.map((m, i) =>
-        jump ? (
-          <button
-            key={i}
-            type="button"
-            aria-label={`Go to ${QUESTIONS[i]}, ${MARK_WORD[m]}`}
-            aria-current={m === 'current' || undefined}
-            className="flex h-control-sm flex-1 cursor-pointer items-center"
-          >
-            <span className={cn('h-2 w-full rounded-full', MARK_CLASS[m])} />
-          </button>
-        ) : (
-          <span key={i} className={cn('h-2 flex-1 rounded-full', MARK_CLASS[m])} />
-        ),
-      )}
-    </div>
+    <span aria-hidden className={cn('flex gap-1', className)}>
+      {marks.map((m, i) => (
+        <span key={i} style={{ flexGrow: DIFFICULTY[i] ?? 1, flexBasis: 0 }} className={cn('h-1 rounded-full', MARK_FILL[m])} />
+      ))}
+    </span>
   )
 }
 
-const progressText = (marks: Mark[]) => `${marks.filter((m) => m === 'done').length} of ${marks.length} done · about 1 h 40 m left`
+const doneOf = (marks: Mark[]) => `${marks.filter((m) => m === 'done').length} of ${marks.length}`
+const TIME_LEFT = 'about 1 h 40 m left'
 
 /** The panel's column, under its Ask | Homework header, at a real width. */
 function Panel({ wide, height = 760, children }: { wide?: boolean; height?: number; children: ReactNode }) {
@@ -135,28 +128,6 @@ function SetMenu() {
           Delete homework
         </MenuItem>
       </Menu>
-  )
-}
-
-function SetHeader() {
-  return (
-    <div className="flex h-row shrink-0 items-center gap-2 border-b px-2">
-      <IconButton variant="ghost" size="sm" aria-label="Back to homework">
-        <ChevronLeft />
-      </IconButton>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">Problem set 4</span>
-      <SetMenu />
-    </div>
-  )
-}
-
-/** The pinned progress: a segment per question, and what it adds up to. */
-function Progress({ marks }: { marks: Mark[] }) {
-  return (
-    <div className="shrink-0 space-y-1 border-b px-card pt-1 pb-2">
-      <Segments marks={marks} jump />
-      <p className="text-xs text-muted-foreground tabular-nums">{progressText(marks)}</p>
-    </div>
   )
 }
 
@@ -263,8 +234,7 @@ function Walkthrough({ done }: { done?: boolean }) {
   const marks = done ? CURRENT_DONE : OPEN
   return (
     <>
-      <SetHeader />
-      <Progress marks={marks} />
+      <ProgressHeader marks={marks} />
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-card">
         <QuestionHead done={done} />
         <Statement />
@@ -279,8 +249,7 @@ function Walkthrough({ done }: { done?: boolean }) {
 function FocusWalkthrough() {
   return (
     <>
-      <SetHeader />
-      <Progress marks={OPEN} />
+      <ProgressHeader marks={OPEN} />
       <div className="grid min-h-0 flex-1 grid-cols-2">
         <div className="min-h-0 space-y-5 overflow-y-auto border-r p-card">
           <QuestionHead />
@@ -296,10 +265,6 @@ function FocusWalkthrough() {
 }
 
 const MINUTES = [18, 14, 41, 33, 9, 12, 27, 20]
-
-/** How hard each question is, relative to the set: the backend idea this
- *  bar would use (ideas/time-remaining-estimate.md). Mocked here. */
-const DIFFICULTY = [2, 2, 4, 3, 1, 1, 3, 2]
 
 /** The count that opens the list of the questions: with the marks gone it is
  *  how you jump. A stand-in list, built from Box rows. */
@@ -334,8 +299,6 @@ function Switcher({ children }: { children: ReactNode }) {
   )
 }
 
-const DONE_FRACTION = 3 / 8
-
 function OptionBody() {
   return (
     <div className="min-h-0 flex-1 space-y-5 overflow-hidden p-card">
@@ -345,100 +308,21 @@ function OptionBody() {
   )
 }
 
-/** A: no extra row. The count sits in the header and the header's bottom edge is the bar. */
-function ProgressA() {
+/** The walkthrough's header: back, the set's title, the count (which opens the
+ *  questions), the time left in gray, the set's menu, and the bar as its bottom
+ *  edge. No extra row. */
+function ProgressHeader({ marks, title = 'Problem set 4' }: { marks: Mark[]; title?: string }) {
   return (
-    <>
-      <div className="relative flex h-row shrink-0 items-center gap-1 border-b px-2">
-        <IconButton variant="ghost" size="sm" aria-label="Back to homework">
-          <ChevronLeft />
-        </IconButton>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">Problem set 4</span>
-        <Switcher>3 of 8 · about 1 h 40 m</Switcher>
-        <SetMenu />
-        <span aria-hidden className="absolute inset-x-0 -bottom-px h-1 bg-muted">
-          <span className="block h-full bg-primary" style={{ width: `${DONE_FRACTION * 100}%` }} />
-        </span>
-      </div>
-      <OptionBody />
-    </>
-  )
-}
-
-/** B: one slim row: the count, a plain bar, the time left. */
-function ProgressB() {
-  return (
-    <>
-      <SetHeader />
-      <div className="flex shrink-0 items-center gap-3 border-b px-2 py-1">
-        <Switcher>3 of 8</Switcher>
-        <span className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
-          <span className="block h-full rounded-full bg-primary" style={{ width: `${DONE_FRACTION * 100}%` }} />
-        </span>
-        <span className="pr-2 text-xs whitespace-nowrap text-muted-foreground tabular-nums">about 1 h 40 m left</span>
-      </div>
-      <OptionBody />
-    </>
-  )
-}
-
-/** C: B's one row, with the bar cut into the questions, each as wide as it is
- *  hard, so what is left is how much work is left, not how many questions. */
-function ProgressC() {
-  return (
-    <>
-      <SetHeader />
-      <div className="flex shrink-0 items-center gap-3 border-b px-2 py-1">
-        <Switcher>3 of 8</Switcher>
-        <span className="flex flex-1 gap-1">
-          {OPEN.map((m, i) => (
-            <span
-              key={i}
-              style={{ flexGrow: DIFFICULTY[i], flexBasis: 0 }}
-              className={cn('h-1 rounded-full', m === 'done' ? 'bg-primary' : m === 'current' ? 'bg-primary/40' : 'bg-muted')}
-            />
-          ))}
-        </span>
-        <span className="pr-2 text-xs whitespace-nowrap text-muted-foreground tabular-nums">about 1 h 40 m left</span>
-      </div>
-      <OptionBody />
-    </>
-  )
-}
-
-/** D: no extra row either. A small ring beside the title, and the time left. */
-function ProgressD() {
-  const r = 9
-  const c = 2 * Math.PI * r
-  return (
-    <>
-      <div className="flex h-row shrink-0 items-center gap-1 border-b px-2">
-        <IconButton variant="ghost" size="sm" aria-label="Back to homework">
-          <ChevronLeft />
-        </IconButton>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">Problem set 4</span>
-        <Switcher>
-          <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden className="-rotate-90">
-            <circle cx="12" cy="12" r={r} fill="none" strokeWidth="3" stroke="currentColor" className="text-muted" />
-            <circle
-              cx="12"
-              cy="12"
-              r={r}
-              fill="none"
-              strokeWidth="3"
-              strokeLinecap="round"
-              stroke="currentColor"
-              className="text-primary"
-              strokeDasharray={c}
-              strokeDashoffset={c * (1 - DONE_FRACTION)}
-            />
-          </svg>
-          3 of 8 · 1 h 40 m
-        </Switcher>
-        <SetMenu />
-      </div>
-      <OptionBody />
-    </>
+    <div className="relative flex h-row shrink-0 items-center gap-1 border-b px-2">
+      <IconButton variant="ghost" size="sm" aria-label="Back to homework">
+        <ChevronLeft />
+      </IconButton>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">{title}</span>
+      <Switcher>{doneOf(marks)}</Switcher>
+      <span className="text-xs whitespace-nowrap text-muted-foreground tabular-nums">{TIME_LEFT}</span>
+      <SetMenu />
+      <WeightedBar marks={marks} className="absolute inset-x-0 -bottom-px" />
+    </div>
   )
 }
 
@@ -509,8 +393,8 @@ function List() {
           title="Problem set 4"
           description={
             <span className="block space-y-1 pt-1">
-              <Segments marks={OPEN} />
-              <span className="block tabular-nums">{progressText(OPEN)}</span>
+              <WeightedBar marks={OPEN} />
+              <span className="block tabular-nums">{doneOf(OPEN)} done · {TIME_LEFT}</span>
             </span>
           }
           trailing={<HomeworkStatusLabel status="soon" />}
@@ -520,7 +404,7 @@ function List() {
           title="Chapter 3 exercises"
           description={
             <span className="block space-y-1 pt-1">
-              <Segments marks={['waiting', 'waiting']} />
+              <WeightedBar marks={['waiting', 'waiting']} />
               <span className="block tabular-nums">0 of 2 done · due Tuesday</span>
             </span>
           }
@@ -553,27 +437,19 @@ export function HomeworkWireframes() {
   return (
     <div className="space-y-section">
       <Group
-        title="Progress, four options"
-        note="The marks cost two rows and told you little beyond 3 of 8. In every option the count opens a list of the questions, which is how you jump now. Click the count."
+        title="Progress in the header"
+        note="No extra row. The header's bottom edge is the bar, cut into the questions and as wide as each is hard; the count opens the list of questions (click it); the time left is gray beside it."
       >
-        <Frame title="A. In the header" note="Costs no extra row: the count sits in the header and its bottom edge is the bar. A long set title truncates.">
+        <Frame title="A short set title" note="Problem set 4">
           <Panel height={420}>
-            <ProgressA />
+            <ProgressHeader marks={OPEN} />
+            <OptionBody />
           </Panel>
         </Frame>
-        <Frame title="B. One slim row" note="Costs one 36px row: the count, a plain bar, the time left. Clearest, nothing truncates.">
+        <Frame title="A long set title" note="It truncates to make room for the count and the time; the count and bar never move.">
           <Panel height={420}>
-            <ProgressB />
-          </Panel>
-        </Frame>
-        <Frame title="C. Bar weighted by difficulty" note="Costs the same one row as B. Each question is as wide as it is hard, so the bar shows how much work is left, not how many questions. Without a difficulty index it is B.">
-          <Panel height={420}>
-            <ProgressC />
-          </Panel>
-        </Frame>
-        <Frame title="D. A ring in the header" note="Costs no extra row: a small ring with the count and time beside the title. A long set title truncates.">
-          <Panel height={420}>
-            <ProgressD />
+            <ProgressHeader marks={OPEN} title="Chapter 3 exercises: nodal analysis and superposition" />
+            <OptionBody />
           </Panel>
         </Frame>
       </Group>
