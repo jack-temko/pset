@@ -13,7 +13,14 @@ import { outstanding } from '@/api/homework'
  *  left). The wire types do not carry them yet, so they are read through
  *  here, and each may be missing. */
 export type QuestionExtra = { difficulty?: number; seconds?: number }
-export type SetExtra = { estimate?: Estimate }
+export type SetExtra = {
+  estimate?: Estimate
+  /** How many of its questions have been timed, which the estimate rests on. */
+  timed?: number
+  /** One entry per question, in order, for the list's bar (the list does not
+   *  carry the questions themselves). */
+  bar?: { done: boolean; failed?: boolean; weight?: number }[]
+}
 /** Seconds left at the student's pace, and the range it could fall in. */
 export type Estimate = { seconds: number; low?: number; high?: number }
 
@@ -31,6 +38,13 @@ export function markOf(q: Question, here: boolean): ProgressMark {
 export const segments = (questions: Q[], at: number): ProgressSegment[] =>
   questions.map((q, i) => ({ mark: markOf(q, i === at), weight: q.difficulty }))
 
+/** A set's bar on the list, from what the list carries: the per-question
+ *  entries when there are any, else equal segments, done first. */
+export function listSegments(set: HomeworkSet): ProgressSegment[] {
+  if (set.bar) return set.bar.map((b) => ({ mark: b.failed ? 'failed' : b.done ? 'done' : 'waiting', weight: b.weight }))
+  return Array.from({ length: set.total }, (_, i) => ({ mark: i < set.done ? 'done' : 'waiting' }))
+}
+
 export const doneCount = (questions: Question[]) => questions.filter((q) => q.done).length
 
 /** "2 of 8", the count that opens the list. */
@@ -38,6 +52,8 @@ export const countWords = (questions: Question[]) => `${doneCount(questions)} of
 
 /** What the bar says in words, for a screen reader. */
 export const barLabel = (questions: Question[]) => `${countWords(questions)} done`
+/** The same for a set's row in the list, which has only the counts. */
+export const setBarLabel = (set: { done: number; total: number }) => `${set.done} of ${set.total} done`
 
 /** The first question not yet done, where a set opens. Null when every one
  *  is done (the finish page) or there are none. */
@@ -107,11 +123,14 @@ function span(seconds: number): string {
  * one thing the student would regret is being told it confidently and being
  * wrong, so when in doubt it says nothing.
  */
-export function timeLeftWords(set: HomeworkSet | undefined, questions: Q[]): string | null {
+export function timeLeftWords(set: HomeworkSet | undefined, questions?: Q[]): string | null {
   const e = set?.estimate
   if (!e || !(e.seconds > 0)) return null
-  if (questions.every((q) => q.done)) return null
-  if (questions.filter((q) => (q.seconds ?? 0) > 0).length < MIN_TIMED) return null
+  // The set's questions when they are at hand (the walkthrough), else what
+  // its row in the list carries.
+  const timed = questions ? questions.filter((q) => (q.seconds ?? 0) > 0).length : (set.timed ?? 0)
+  const finished = questions ? questions.every((q) => q.done) : set.total > 0 && set.done === set.total
+  if (finished || timed < MIN_TIMED) return null
   const { low, high } = e
   if (low !== undefined && high !== undefined && high > low && (high - low) / e.seconds > WIDE) {
     return `${span(low)} to ${span(high)} left`

@@ -59,11 +59,11 @@ Claude-only eval key, never the key in his own library.
   - Files: `web/src/views/homework/finish.tsx`, `web/src/views/homework/greetings.ts`, `web/src/views/homework/walkthrough.tsx`, `web/src/views/homework/finish.test.ts`
   - Do: the finish page from the wireframes (greeting line, two StatTiles, a bar per question with the hardest marked, the hardest listed, Turn in, Back to list), reached when the last unfinished question is done and from the count's list. The greeting reuses Home's mechanism with its own lines, seven stretches of the day; draft three a stretch for Jack to approve.
   - Done when: the `finish` scenario shows it in both themes; Turn in works and is undoable from the set menu; tests pass.
-- [ ] 7. (sonnet) The list, and opening a set on its next unfinished question
+- [x] 7. (sonnet) The list, and opening a set on its next unfinished question
   - Files: `web/src/views/homework/index.tsx`, `web/src/views/homework/progress.ts`, `web/src/pages/workspace/index.tsx`
   - Do: each set row carries the bar and "n of m done, time left"; opening a set (from the list or Home's due row) lands on its next unfinished question; a book opens on the Homework tab at the list; the Panel keeps both tabs mounted so Ask and back returns to the same question within a visit.
   - Done when: `handoff-in` and the list scenarios behave as in the grill; going to Ask and back keeps the question and scroll; a reload opens the list.
-- [ ] 8. (sonnet) The mock world and scenarios for the new view
+- [x] 8. (sonnet) The mock world and scenarios for the new view
   - Files: `web/src/views/homework/world.ts`, `web/src/views/homework/scenarios.ts`, `web/src/views/homework/routes.ts`, `web/src/views/homework/stage.tsx`
   - Do: the world carries difficulty, seconds, an estimate and attempts so the view runs on sample data; add scenarios `finish`, `no-guide`, `long-set` (24 questions) and `long-title`; the stage behaves like the workspace (opens on the list, keeps both tabs, stub Ask with the chip).
   - Done when: every scenario in the grill's states table is reachable from the picker and plays.

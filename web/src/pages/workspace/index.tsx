@@ -47,23 +47,6 @@ import { cn, plural } from '@/lib/utils'
 
 type Tab = 'ask' | 'homework'
 
-/** The panel remembers which face it showed, per book. A blocked
- *  localStorage just means it forgets. */
-function readTab(bookId: string): Tab {
-  try {
-    return localStorage.getItem(`pset-panel-tab:${bookId}`) === 'homework' ? 'homework' : 'ask'
-  } catch {
-    return 'ask'
-  }
-}
-function writeTab(bookId: string, tab: Tab) {
-  try {
-    localStorage.setItem(`pset-panel-tab:${bookId}`, tab)
-  } catch {
-    /* forgetting is fine */
-  }
-}
-
 // ---------------------------------------------------------------- rail
 
 /** The book's contents as a tree of quiet rows, every level the book
@@ -573,6 +556,7 @@ function AskTab({
   bookId,
   bookTitle,
   about,
+  visible,
   onClearAbout,
   onJump,
 }: {
@@ -580,6 +564,8 @@ function AskTab({
   bookTitle: string
   /** The homework question "Ask about this" brought along, if any. */
   about: About | null
+  /** Whether its tab is the one showing: it stays mounted behind Homework. */
+  visible: boolean
   onClearAbout: () => void
   onJump: (page: number) => void
 }) {
@@ -598,7 +584,7 @@ function AskTab({
   useLayoutEffect(() => {
     const el = scroller.current
     if (el && pinned.current) el.scrollTop = el.scrollHeight
-  }, [list])
+  }, [list, visible])
 
   const send = (question: string, withAbout: About | null) => {
     if (!question.trim() || running) return
@@ -742,12 +728,12 @@ function Panel({
   width?: number
 }) {
   const navigate = useNavigate()
-  const [tab, setTab] = useState<Tab>(() => (homework ? 'homework' : readTab(bookId)))
+  // A book always opens on Homework, at the list (or on the set the URL
+  // names). Both tabs stay mounted, so Ask about a question and Homework
+  // again is the same question, scrolled where it was; a reload is a new visit.
+  const [tab, setTab] = useState<Tab>('homework')
   const [about, setAbout] = useState<About | null>(null)
-  const pick = (t: Tab) => {
-    setTab(t)
-    writeTab(bookId, t)
-  }
+  const pick = setTab
 
   return (
     <aside
@@ -779,9 +765,17 @@ function Panel({
           <Columns2 />
         </IconButton>
       </div>
-      {tab === 'ask' ? (
-        <AskTab bookId={bookId} bookTitle={bookTitle} about={about} onClearAbout={() => setAbout(null)} onJump={onJump} />
-      ) : (
+      <div className={cn('flex min-h-0 flex-1 flex-col', tab !== 'ask' && 'hidden')}>
+        <AskTab
+          bookId={bookId}
+          bookTitle={bookTitle}
+          about={about}
+          visible={tab === 'ask'}
+          onClearAbout={() => setAbout(null)}
+          onJump={onJump}
+        />
+      </div>
+      <div className={cn('flex min-h-0 flex-1 flex-col', tab !== 'homework' && 'hidden')}>
         <HomeworkTab
           bookId={bookId}
           initialSet={homework}
@@ -793,7 +787,7 @@ function Panel({
           onOpenSettings={() => navigate('/settings#connections')}
           wide={focus}
         />
-      )}
+      </div>
     </aside>
   )
 }

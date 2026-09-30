@@ -270,7 +270,14 @@ export class World {
   summary(id: string): HomeworkSet {
     const h = this.sets.find((x) => x.id === id)!
     const qs = this.questions.filter((q) => q.homeworkId === id)
-    return { ...h, total: qs.length, done: qs.filter((q) => q.done).length, estimate: mockEstimate(qs) }
+    return {
+      ...h,
+      total: qs.length,
+      done: qs.filter((q) => q.done).length,
+      estimate: mockEstimate(qs),
+      timed: qs.filter((q) => (q.seconds ?? 0) > 0).length,
+      bar: [...qs].sort((a, b) => a.position - b.position).map((q) => ({ done: q.done, failed: q.state === 'failed', weight: q.difficulty })),
+    }
   }
 
   detail(id: string): Detail {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { walkthroughKey } from './keys'
-import { countWords, firstUnfinished, markOf, nextUnfinished, primaryOf, segments, stateWord, timeLeftWords, type Q, type HomeworkSet } from './progress'
+import { countWords, firstUnfinished, listSegments, markOf, nextUnfinished, primaryOf, segments, stateWord, timeLeftWords, type Q, type HomeworkSet } from './progress'
 import { makeQuestion, makeSet } from './world'
 import type { Question } from '@/api/homework'
 
@@ -123,5 +123,29 @@ describe('keys', () => {
     expect(walkthroughKey('ArrowLeft', true, false)).toBeNull()
     expect(walkthroughKey('4', false, false)).toBeNull()
     expect(walkthroughKey('Enter', false, false)).toBeNull()
+  })
+})
+
+describe('a set on the list', () => {
+  it('takes its bar from the per-question entries, with failed and weights', () => {
+    const h = { ...set(), total: 3, done: 1, bar: [{ done: true, weight: 2 }, { done: false, failed: true }, { done: false, weight: 4 }] }
+    expect(listSegments(h)).toEqual([
+      { mark: 'done', weight: 2 },
+      { mark: 'failed', weight: undefined },
+      { mark: 'waiting', weight: 4 },
+    ])
+  })
+
+  it('falls back to equal segments, done first, when the list carries only counts', () => {
+    expect(listSegments({ ...set(), total: 3, done: 2 }).map((s) => s.mark)).toEqual(['done', 'done', 'waiting'])
+    expect(listSegments({ ...set(), total: 0, done: 0 })).toEqual([])
+  })
+
+  it('has time left only from the set’s own count of timed questions', () => {
+    const e = { seconds: 3600 }
+    expect(timeLeftWords({ ...set(e), total: 4, done: 1, timed: 2 })).toBe('about 1 h left')
+    expect(timeLeftWords({ ...set(e), total: 4, done: 1, timed: 1 })).toBeNull()
+    expect(timeLeftWords({ ...set(e), total: 4, done: 1 })).toBeNull()
+    expect(timeLeftWords({ ...set(e), total: 4, done: 4, timed: 4 })).toBeNull()
   })
 })
