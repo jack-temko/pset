@@ -1,6 +1,6 @@
 # Homework panel: redesign grill
 
-status:    grilling (gate 2 recap awaiting confirm; wireframes rebuilt from the real components)
+status:    grilling (gate 3 of 4: behavior and states)
 date:      2026-09-30
 brief:     redesign the whole homework view, judged from the tired student (hour 7, 1am, Night, glancing between the scan and the panel)
 sources:   web/src/views/homework/spec.md, design/workspace.md (Homework), design/design-system.md, the /views scenarios, a measured walk of the current view
@@ -103,8 +103,9 @@ For the student picking up homework after a long day of class, this view puts th
 - **G2** Page chip (D10): recommended keeping it in some form (one tap to the problem). Jack's answer changes the reason: the book may be open beside the panel, so the scan must not move on selecting a question; a jump button remains.
 
 ## Frontier
-- Gate 2: awaiting the user's confirm of the wireframes.
-- Gate 3 (behavior and states) and gate 4 (data, backend, acceptance): not yet asked.
+- Gate 2 confirmed 2026-09-30 ("Confirmed, on to behavior").
+- Gate 3 in progress: help stage form (wireframes built, /views/homework?mode=wireframes), persistence across Ask and reloads, what Next does on a question not ready, the order of Next and when the finish page appears; then keyboard, motion, copy.
+- Gate 4 (data, backend, acceptance): not yet asked.
 
 ## Log
 ### Gate 1, batch 1
@@ -135,3 +136,5 @@ For the student picking up homework after a long day of class, this view puts th
 - Menus: "Two menus, each for its thing (Recommended)".
 - Finish page: "Greeting, time chart, hardest (Recommended)".
 - List rows: "Progress and where to resume (Recommended)".
+### Gate 2 confirm
+- "Confirmed, on to behavior (Recommended)".

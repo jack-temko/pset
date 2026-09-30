@@ -219,6 +219,98 @@ function Help() {
   )
 }
 
+/** The three stages as they are: veils at their true size, blurred, so the
+ *  length of each reads. One tap lifts one. */
+function HelpTrueSize() {
+  return <Help />
+}
+
+/** A: three compact rows that open in place. The length is said in words. */
+function HelpRows() {
+  const [open, setOpen] = useState<string | null>(null)
+  const rows: { name: string; meta: string; body: ReactNode }[] = [
+    { name: 'Hint', meta: '2 lines', body: <p>Go around the loop once and write that the voltage rises equal the drops. The resistors are in series, so they share one current.</p> },
+    {
+      name: 'Walkthrough',
+      meta: '5 steps',
+      body: (
+        <p>
+          Going clockwise, the source gives a rise of <MathInline tex="10\ \text{V}" /> and the two resistors are drops, so <MathInline tex="10 = 4i + 8i" />.
+        </p>
+      ),
+    },
+    {
+      name: 'Answers',
+      meta: '2 answers',
+      body: (
+        <p>
+          <MathInline tex="i = 0.83\ \text{A}" /> clockwise; <MathInline tex="P = 5.6\ \text{W}" />.
+        </p>
+      ),
+    },
+  ]
+  return (
+    <Box>
+      {rows.map((r) => (
+        <div key={r.name}>
+          <BoxRow
+            onClick={() => setOpen(open === r.name ? null : r.name)}
+            title={r.name}
+            trailing={
+              <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                {r.meta}
+                <ChevronDown className={cn('size-4 transition-transform duration-100 motion-reduce:transition-none', open === r.name && 'rotate-180')} />
+              </span>
+            }
+          />
+          {open === r.name && <BoxBody className="border-t border-border-muted text-base">{r.body}</BoxBody>}
+        </div>
+      ))}
+    </Box>
+  )
+}
+
+/** C: one button that reveals the next stage; what you have opened stays. */
+function HelpLadder() {
+  const [n, setN] = useState(0)
+  const stages = ['Hint', 'Walkthrough', 'Answers']
+  return (
+    <div className="space-y-4">
+      {stages.slice(0, n).map((name) => (
+        <div key={name} className="space-y-1">
+          <p className="text-xs text-muted-foreground uppercase">{name}</p>
+          <p className="text-base">
+            {name === 'Hint' && 'Go around the loop once and write that the voltage rises equal the drops.'}
+            {name === 'Walkthrough' && 'Going clockwise, the source gives a rise of 10 V and the two resistors are drops, so 10 = 4i + 8i.'}
+            {name === 'Answers' && 'i = 0.83 A clockwise; P = 5.6 W.'}
+          </p>
+        </div>
+      ))}
+      {n < stages.length && (
+        <Button variant="outline" className="w-full" onClick={() => setN(n + 1)}>
+          Show the {stages[n].toLowerCase()}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+function HelpFrame({ children }: { children: ReactNode }) {
+  return (
+    <Panel height={520}>
+      <ProgressHeader marks={OPEN} />
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-card">
+        <QuestionHead />
+        <p className="text-base">
+          Use superposition to find <MathInline tex="v_o" /> in the circuit of Fig. 4.109.
+        </p>
+        {children}
+      </div>
+      <Footer />
+    </Panel>
+  )
+}
+
 function Footer({ done }: { done?: boolean }) {
   return (
     <div className="flex shrink-0 items-center justify-between border-t p-card">
@@ -440,6 +532,26 @@ export function HomeworkWireframes() {
             <ProgressHeader marks={OPEN} title="Chapter 3 exercises: nodal analysis and superposition" />
             <OptionBody />
           </Panel>
+        </Frame>
+      </Group>
+      <Group
+        title="Help stages, three options"
+        note="How the hint, walkthrough and answers sit under the question. Try each: tap to reveal. Same header and footer; only the help differs."
+      >
+        <Frame title="A. Compact rows that open in place" note="Three one-line rows say how long each is (2 lines, 5 steps, 2 answers); tapping opens one in place and it stays. The page stays short.">
+          <HelpFrame>
+            <HelpRows />
+          </HelpFrame>
+        </Frame>
+        <Frame title="B. Veils at true size (today)" note="Each stage laid out at its real length, blurred; a tap lifts it. The length reads at a glance, and the page is long.">
+          <HelpFrame>
+            <HelpTrueSize />
+          </HelpFrame>
+        </Frame>
+        <Frame title="C. One button, next stage" note="Nothing shows but one button, which reveals the next stage each time. Fewest targets, and the order is fixed.">
+          <HelpFrame>
+            <HelpLadder />
+          </HelpFrame>
         </Frame>
       </Group>
       <Group
