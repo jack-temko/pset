@@ -130,15 +130,31 @@ const USAGE: Usage = {
   failed: 0,
 }
 
-/** The same, when one call errored (it cost time even so) and one model
- *  reported no usage at all: a dash, never a zero. */
+/** The same, when one call errored (the provider still bills what it wrote,
+ *  and doesn't say how much) and one model reported no usage at all: the
+ *  figures are a minimum, marked ≥, and a model with nothing counted is a
+ *  dash, never a zero. */
 const USAGE_FAILED: Usage = {
   rows: [
-    { model: 'openai/gpt-6-luna', ms: 4000, tokens: 21034, cost: 0.0009, calls: 2 },
-    { model: 'qwen/qwen4-235b', ms: 9300, calls: 1 },
+    { model: 'openai/gpt-6-luna', ms: 4000, tokens: 21034, cost: 0.0009, calls: 2, uncounted: 1 },
+    { model: 'qwen/qwen4-235b', ms: 9300, calls: 1, uncounted: 1 },
   ],
-  total: { ms: 13300, tokens: 21034, cost: 0.0009, calls: 3 },
+  total: { ms: 13300, tokens: 21034, cost: 0.0009, calls: 3, uncounted: 2 },
   failed: 1,
+}
+
+/** The widest it gets: the longest model name, seven-digit tokens, minutes
+ *  and dollars, and a paid call too small for four decimals (which must not
+ *  read as free). The card grows to fit; it never spills out of itself. */
+const USAGE_WIDE: Usage = {
+  rows: [
+    { model: 'deepseek/deepseek-v4.1-flash', ms: 187000, tokens: 1234567, cost: 12.3456, calls: 9 },
+    { model: 'perceptron/perceptron-mk1.5', ms: 2100, tokens: 9412, cost: 0.0004, calls: 1 },
+    { model: 'openai/gpt-6-luna', ms: 21000, tokens: 21034, cost: 0.00003, calls: 3 },
+    { model: 'local/qwen', ms: 900, tokens: 310, cost: 0, calls: 1 },
+  ],
+  total: { ms: 211000, tokens: 1265323, cost: 12.34603, calls: 14 },
+  failed: 0,
 }
 
 /** 4.72's figure as read, for the Figure reading shelf. */
@@ -834,13 +850,23 @@ export function Components() {
             </div>
           </Shelf>
           <Shelf label="open">
-            <div className="py-6">
+            <div className="h-64">
               <UsageLine usage={USAGE} defaultOpen />
             </div>
           </Shelf>
           <Shelf label="a failed call, and one the provider didn't count">
             <div className="py-1">
               <UsageLine usage={USAGE_FAILED} />
+            </div>
+          </Shelf>
+          <Shelf label="open: a minimum">
+            <div className="h-64">
+              <UsageLine usage={USAGE_FAILED} defaultOpen />
+            </div>
+          </Shelf>
+          <Shelf label="open: the widest">
+            <div className="h-64">
+              <UsageLine usage={USAGE_WIDE} defaultOpen />
             </div>
           </Shelf>
         </Section>

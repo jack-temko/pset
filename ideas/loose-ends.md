@@ -70,3 +70,9 @@ says where the rest went.
   the JSONL, not on the card), and totals across jobs (per book, per
   month, all-time; each is a query on the calls table, with no UI decided).
   (`model-usage.md`)
+- **The usage sink writes on the model call's own path.** One insert is
+  about 90 µs uncontended, so it stays synchronous. Under a long write (the
+  database is one writer) a call's return waits up to the 5 s busy timeout,
+  and then its row is lost with only a log line. A buffered writer would
+  decouple them, at the price of a flush at shutdown and at Reset.
+  (`model-usage-fixes`)

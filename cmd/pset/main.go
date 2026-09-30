@@ -96,6 +96,9 @@ func serve(addr, dir string, log *slog.Logger) error {
 	llm.SetSessionPrefix(installTag(dir))
 	// Every call's cost, recorded on what it was spent on.
 	llm.OnCall(usage.Sink(d))
+	if err := usage.Sweep(ctx, d); err != nil {
+		log.Warn("usage: sweep", "err", err)
+	}
 
 	bus := events.NewBus()
 	queue := jobs.New(d, log)

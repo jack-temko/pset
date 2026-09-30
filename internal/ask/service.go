@@ -202,7 +202,13 @@ func (s *Service) publish(ctx context.Context, id string) (Turn, error) {
 // ForgetBookCalls deletes the usage rows of a book's turns, called as the
 // book is removed, while they can still be named.
 func (s *Service) ForgetBookCalls(ctx context.Context, bookID string) error {
-	_, err := s.c.DB.ExecContext(ctx, `DELETE FROM calls WHERE subject_type = ? AND subject_id IN
-		(SELECT id FROM turns WHERE book_id = ?)`, usage.SubjectTurn, bookID)
-	return err
+	rows, err := listTurns(ctx, s.c.DB, bookID)
+	if err != nil {
+		return err
+	}
+	ids := make([]string, len(rows))
+	for i, r := range rows {
+		ids[i] = r.ID
+	}
+	return usage.ForgetAll(ctx, s.c.DB, usage.SubjectTurn, ids)
 }

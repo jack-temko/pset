@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
 
 import type { Usage } from '@/api/gen/usage'
+import { atLeast, clock, cost, shortModel, tokens } from '@/lib/usage-format'
 import { cn, plural } from '@/lib/utils'
 
 /**
@@ -34,6 +35,7 @@ export function UsageLine({
   const [open, setOpen] = useState(defaultOpen)
   const anchor = useRef<HTMLButtonElement>(null)
   const card = useRef<HTMLDivElement>(null)
+  const cardId = useId()
 
   // Under the line, or over it when there's no room below, right-aligned
   // to it, never past the window's edge — measured and written straight
@@ -66,12 +68,15 @@ export function UsageLine({
       setOpen(false)
     }
     // Capture, and stop it there, as the ConfirmPopover does: this Esc
-    // closes the card and nothing under it.
+    // closes the card and nothing under it. Except from a text field: an
+    // Esc typed in the composer is the composer's too, so it goes on.
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
+      setOpen(false)
+      const t = e.target as HTMLElement | null
+      if (t?.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]')) return
       e.preventDefault()
       e.stopPropagation()
-      setOpen(false)
     }
     document.addEventListener('pointerdown', onDown)
     document.addEventListener('keydown', onKey, true)
@@ -87,6 +92,7 @@ export function UsageLine({
 
   const head = usage.rows[0]
   if (!head) return null
+  const uncounted = usage.total.uncounted ?? 0
 
   return (
     <>
@@ -95,6 +101,7 @@ export function UsageLine({
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
+        aria-controls={open ? cardId : undefined}
         onClick={() => setOpen((v) => !v)}
         // Machinery, not prose: an answer's copy button skips it.
         data-copy-skip
@@ -105,7 +112,9 @@ export function UsageLine({
       >
         {shortModel(head.model)}
         <span aria-hidden>·</span>
-        <span className="whitespace-nowrap">{clock(usage.total.ms)}</span>
+        <span className="whitespace-nowrap" title="Model time: each call's duration, added up">
+          {clock(usage.total.ms)}
+        </span>
         <ChevronDown
           className={cn(
             'size-4 shrink-0 transition-transform duration-150 ease-out motion-reduce:transition-none',
@@ -117,9 +126,12 @@ export function UsageLine({
         createPortal(
           <div
             ref={card}
+            id={cardId}
             role="dialog"
             aria-label="What this cost"
-            className="fixed z-50 w-80 rounded-md border bg-card p-3 shadow-floating"
+            // As wide as its numbers need (a 19-character model and a
+            // seven-digit token count don't fit 20rem), never past the window.
+            className="fixed z-50 w-max min-w-80 max-w-[calc(100vw-1rem)] rounded-md border bg-card p-3 shadow-floating"
           >
             <table className="w-full text-xs">
               <tbody>
@@ -130,60 +142,40 @@ export function UsageLine({
                     </td>
                     <td className="py-1 pl-2 text-right font-mono tabular-nums whitespace-nowrap">{clock(row.ms)}</td>
                     <td className="py-1 pl-2 text-right font-mono tabular-nums whitespace-nowrap">
-                      {row.tokens === undefined ? '–' : row.tokens.toLocaleString('en-US')}
+                      {atLeast(tokens(row.tokens), (row.uncounted ?? 0) > 0)}
                     </td>
-                    <td className="py-1 pl-2 text-right font-mono tabular-nums whitespace-nowrap">{cost(row.cost)}</td>
+                    <td className="py-1 pl-2 text-right font-mono tabular-nums whitespace-nowrap">
+                      {atLeast(cost(row.cost), (row.uncounted ?? 0) > 0)}
+                    </td>
                   </tr>
                 ))}
                 <tr className="border-t border-border-muted">
                   <td className="pt-2 pr-2 whitespace-nowrap">Total · {plural(usage.total.calls, 'call')}</td>
                   <td className="pt-2 pl-2 text-right font-mono tabular-nums whitespace-nowrap">{clock(usage.total.ms)}</td>
                   <td className="pt-2 pl-2 text-right font-mono tabular-nums whitespace-nowrap">
-                    {usage.total.tokens === undefined ? '–' : usage.total.tokens.toLocaleString('en-US')}
+                    {atLeast(tokens(usage.total.tokens), (usage.total.uncounted ?? 0) > 0)}
                   </td>
-                  <td className="pt-2 pl-2 text-right font-mono tabular-nums whitespace-nowrap">{cost(usage.total.cost)}</td>
+                  <td className="pt-2 pl-2 text-right font-mono tabular-nums whitespace-nowrap">
+                    {atLeast(cost(usage.total.cost), (usage.total.uncounted ?? 0) > 0)}
+                  </td>
                 </tr>
               </tbody>
             </table>
-            {usage.failed > 0 && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Includes {usage.failed} failed {usage.failed === 1 ? 'call' : 'calls'}.
-              </p>
-            )}
+            {/* w-0 min-w-full: the notes take the table's width and never set the
+                card's, which would stretch it to one long line. */}
+            <p className="mt-2 w-0 min-w-full text-xs text-muted-foreground">
+              {uncounted > 0 && (
+                <>
+                  {uncounted} of {usage.total.calls} calls reported no usage
+                  {usage.failed > 0 && <> ({usage.failed} failed, and a failed call still bills what it wrote)</>}, so
+                  tokens and cost are at least what's shown.{' '}
+                </>
+              )}
+              Time adds up every call, so calls made at once count in full.
+            </p>
           </div>,
           document.body,
         )}
     </>
   )
-}
-
-/** The model as it reads on the card: the vendor prefix dropped
- *  ("deepseek-v4.1-flash"), the full slug left in the title. */
-function shortModel(model: string): string {
-  const i = model.lastIndexOf('/')
-  return i === -1 ? model : model.slice(i + 1)
-}
-
-/** The models' time, their call durations summed: one decimal under ten
- *  seconds ("2.1s"), whole seconds at ten and up ("14s"), "1m 03s" from a
- *  minute. */
-function clock(ms: number): string {
-  const s = ms / 1000
-  if (s < 10) return `${s.toFixed(1)}s`
-  if (s < 60) return `${Math.round(s)}s`
-  const m = Math.floor(s / 60)
-  let rest = Math.round(s % 60)
-  if (rest === 60) {
-    rest = 0
-    return `${m + 1}m 00s`
-  }
-  return `${m}m ${String(rest).padStart(2, '0')}s`
-}
-
-/** Dollars, four decimals under one ("$0.0031"), two from one ("$1.24"),
- *  and "$0.0000" when a local model served for free. Absent — the
- *  provider didn't say — is a dash, never a zero. */
-function cost(dollars: number | undefined): string {
-  if (dollars === undefined) return '–'
-  return `$${dollars.toFixed(dollars < 1 ? 4 : 2)}`
 }
