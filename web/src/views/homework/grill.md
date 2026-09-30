@@ -1,6 +1,6 @@
 # Homework panel: redesign grill
 
-status:    grilling (gate 3 of 4: behavior and states)
+status:    grilling (gate 3 recap awaiting confirm)
 date:      2026-09-30
 brief:     redesign the whole homework view, judged from the tired student (hour 7, 1am, Night, glancing between the scan and the panel)
 sources:   web/src/views/homework/spec.md, design/workspace.md (Homework), design/design-system.md, the /views scenarios, a measured walk of the current view
@@ -31,6 +31,7 @@ For the student picking up homework after a long day of class, this view puts th
 | D24 | **A book always opens to the Homework list.** Jumping straight into a set is only from Home's due row. **Opening a set lands on its next unfinished question.** The place (set, question, scroll) is kept only within a visit, so going to Ask and back returns to it; a reload or reopening the book opens the list. | Jack: "A book should always open to the homework list ... Opening a homework should jump to the next uncompleted question." | Remembering per book across days; per browser tab |
 | D25 | On a question that is still being found or written, or has failed, the one button reads **Skip for now**: it moves on without marking the question done, and it stays waiting in the bar. | Never marks done what is not done. | Still "Next question" (marks it done); disabled until ready |
 | D26 | **Next question goes to the next unfinished question** (skipping done ones, wrapping past the end); when none are left, the **finish page** appears. | A skipped question keeps coming back until it is done. | Next in order; finish only on request |
+| D27 | **Keyboard:** ← and → browse between questions without completing; 1, 2, 3 open or close the Hint, Walkthrough and Answers rows; Enter on the primary button does Next question (or Skip for now). Off while typing in a field; a tooltip shows each key. Plain Tab and Enter always work. | Covers what the removed arrows did and the most repeated acts with few keys. | Only Tab and Enter; a full set of letter keys |
 | D19 | **Professor's notes have one way in.** The question menu's "Edit the professor's instructions" ("Add" when there are none) is the only place to edit; the notes box is read-only. The box's Edit button goes. | Jack: two ways to edit or add; collapse into one. Notes are edited rarely, so a menu item is enough. | The Edit button on the box; both |
 | D13 | The jump button is **"Show in book"** on the question's label row, always visible, one tap. | It replaces the page chip's spot without the chip's clutter; "Show me where it is" already means boxing a wrong find. | Under the statement; on the figure only |
 | D14 | **Focus is two columns**: the question, the jump button and the notes pinned on the left, the three help stages scrolling on the right. | The problem never scrolls out of sight of its own walkthrough. | One wider column |
@@ -76,6 +77,38 @@ Open them at `/views/homework?mode=wireframes` (source: `web/src/views/homework/
 
 Counts (simulated): Next question 1 click (was 2); most help on one question plus Next 4 clicks (was 5); about 5 tab stops to the first veil (was 10). Candidates dropped in the walkthrough simulation: progress in the footer (a mis-tap jumps a question), everything in the header row (a long set title collides), a left rail of marks (splits progress in two, costs reading width).
 
+**Gate 3: states and components**
+
+| State | What shows | Scenario |
+|---|---|---|
+| List, populated | Reads on top; each set with its bar, "n of m", time left and due flag; "+ New homework"; turned-in sets below | `happy` |
+| List, empty | One sentence and New homework | `empty` |
+| List with reads | Reading (time left), ready (Review), failed (Try again) | `importing` |
+| List, back after a break | Overdue and due-today flags, each set's progress | `return-after-break` |
+| Opening a set | Lands on the next unfinished question | `handoff-in` |
+| Set loading | Skeleton header, bar and rows at their real size | `slow` |
+| Question, ready | Header with count and bar; label, Show in book, question menu; statement, figure, notes; three rows; footer with Ask about this and Next question | `happy` |
+| Question, done (revisited) | A check by the label; the button reads Mark incomplete | `return-after-break` |
+| Question, queued | "Found on p. N. Its guide starts once every question is found."; rows say Waiting; button Skip for now | `slow` |
+| Question, being found, read or written | Spinner line with what it is doing and time left; the Hint row opens when it lands, the others say Writing; Skip for now | `happy` |
+| Question, failed | The failed block by kind with its ways out; Skip for now | `failed` |
+| Question, no guide (old) | "This question has no guide yet." with Write the guide; Skip for now | (new) |
+| Finish page | Greeting line, total and per-question time, bar per question, the hardest, Turn in, Back to list. Reached when the last unfinished question is done; reachable again from the count's list | (new) |
+| Turned in | A Turned in label in the header; Turn in checked in the set menu | `return-after-break` |
+| Focus | Two columns; header and footer unchanged | `?wide=1` |
+| Handoff to Ask and back | Ask about this opens Ask with the question chip; Back returns to the same question and scroll within the visit | `handoff-in` |
+| Opening a book | The Homework tab, at the list | (harness) |
+
+Keyboard (D27): ← → browse, 1 2 3 toggle the rows, Enter on the primary button.
+
+Components:
+- **Reuse as they are:** `Box`, `BoxRow`, `BoxBody`, `Button`, `IconButton`, `HomeworkStatusLabel`, `StatTile`, `Spinner`, `Skeleton`, `Runs`, `MathInline`, and the failed-question block (`FailedQuestion`).
+- **Changed:** `Menu` (redesigned, labelled trigger, current row, one at a time: done, D21 and D22).
+- **New:** a difficulty-weighted progress bar (from the wireframes' `WeightedBar`) and a disclosure row that opens in place (from the wireframes' `Help`). Both get a README and a `/components` section when built.
+- **Removed:** `Veil` (D23).
+
+Copy: "Next question", "Skip for now", "Mark incomplete", "Show in book", "This isn't the right problem", "Edit the professor's instructions", "Turn in", "Back to list", "about 1 h 40 m left", "2 of 8". The finish greeting lines are drafted at build, in Home's seven stretches of the day, for Jack to approve.
+
 ### Mission (confirm)
 For the student picking up homework after a long day of class, this view puts the current question at the center, hard and long as it is, and shows how far along the set is and how much time is left. It is not for managing homework: adding, importing and editing sets stay in their dialogs and the menu.
 
@@ -84,6 +117,7 @@ For the student picking up homework after a long day of class, this view puts th
 - **A2** The usage line stays visible as today until gate 3.
 - **A4** On a completed question the button reads "Mark incomplete" (Jack left this wording to the agent). Moving between questions, including forward from a completed one, is by the marks and the keyboard.
 - **A5** Back returns to the list; the set's title is not a menu. **A6** Above about 24 questions the strip collapses to one bar with a menu. **A7** The Focus toggle itself is unchanged.
+- **A11** Moving between questions swaps instantly and resets the scroll to the top; the bar fills over 200ms; reduced motion is respected. **A12** A question with no guide (the old ones) also takes Skip for now. **A13** Opening a set from Home's due row lands on its next unfinished question, like opening it from the list.
 - **A8** Rows you have opened stay open when you come back to a question (what `revealed` persists today). **A9** Tab switches inside a visit keep the Homework place; only opening the book resets it. **A10** Each row opens independently; more than one can be open.
 - **A3** The previous fixes parked on `homework-keeps-your-place` (keep your place across Ask; the question menu) are inputs to this design, not merged with it.
 
@@ -111,7 +145,7 @@ For the student picking up homework after a long day of class, this view puts th
 
 ## Frontier
 - Gate 2 confirmed 2026-09-30 ("Confirmed, on to behavior").
-- Gate 3 in progress: keyboard shortcuts next; then motion and copy are taken as assumed unless Jack objects.
+- Gate 3: awaiting the user's confirm of the state table and component list. Motion (an instant swap when moving between questions, the bar filling over 200ms, reduced motion respected) and the finish greeting copy are taken as assumed.
 - Gate 4 (data, backend, acceptance): not yet asked.
 
 ## Log
@@ -153,3 +187,6 @@ For the student picking up homework after a long day of class, this view puts th
 
 ## Build notes (removal of the Veil)
 Delete `web/src/components/veil/`, its section and `VeilDemo` in `web/src/pages/components/sections/feedback.tsx`, its use in `web/src/views/homework/walkthrough.tsx` (the `Stage` component), and the mentions in `design/design-system.md`, `design/workspace.md`, `web/src/components/skeleton/README.md`, `web/src/components/dialog/README.md` and `ideas/*` that point at it. Keep the `revealed` field: it now records which rows were opened.
+### Gate 3, batch 2
+- Keyboard: "Arrows to browse, 1 2 3 to open help (Recommended)".
+- Opening (check of my reading): "Yes, that's exactly it (Recommended)".
