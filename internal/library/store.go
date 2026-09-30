@@ -87,7 +87,31 @@ ALTER TABLE books ADD COLUMN page_runs TEXT NOT NULL DEFAULT '';
 ALTER TABLE books ADD COLUMN pages_edited INTEGER NOT NULL DEFAULT 0;`},
 		// How the book numbers its problems (probnum.Style, as JSON): ''
 		// until worked out.
-		{Name: "library/4", SQL: `ALTER TABLE books ADD COLUMN problem_style TEXT NOT NULL DEFAULT ''`}}
+		{Name: "library/4", SQL: `ALTER TABLE books ADD COLUMN problem_style TEXT NOT NULL DEFAULT ''`},
+		// The full-text index finds a book's pages by its id. With book_id and
+		// number unindexed, a search matched every book's pages and then kept
+		// one book's, and each trigger's delete by (book_id, number) read the
+		// whole index: removing an 800-page book from ten took 17 seconds
+		// holding the write lock. Both are indexed columns now, so both are
+		// lookups; a search names the text column, so a word that looks like
+		// part of an id or a page number matches nothing but text.
+		{Name: "library/5", SQL: `
+DROP TRIGGER pages_ai;
+DROP TRIGGER pages_au;
+DROP TRIGGER pages_ad;
+DROP TABLE pages_fts;
+CREATE VIRTUAL TABLE pages_fts USING fts5(book_id, number, text);
+INSERT INTO pages_fts (book_id, number, text) SELECT book_id, number, text FROM pages;
+CREATE TRIGGER pages_ai AFTER INSERT ON pages BEGIN
+	INSERT INTO pages_fts (book_id, number, text) VALUES (new.book_id, new.number, new.text);
+END;
+CREATE TRIGGER pages_au AFTER UPDATE OF text ON pages BEGIN
+	DELETE FROM pages_fts WHERE pages_fts MATCH 'book_id:"' || replace(old.book_id, '"', '""') || '" AND number:"' || old.number || '"';
+	INSERT INTO pages_fts (book_id, number, text) VALUES (new.book_id, new.number, new.text);
+END;
+CREATE TRIGGER pages_ad AFTER DELETE ON pages BEGIN
+	DELETE FROM pages_fts WHERE pages_fts MATCH 'book_id:"' || replace(old.book_id, '"', '""') || '" AND number:"' || old.number || '"';
+END;`}}
 }
 
 var errNotFound = errors.New("not found")
@@ -350,26 +374,38 @@ func decodeVector(b []byte) []float32 {
 }
 
 // searchFTS ranks pages by full-text match, best first, running the match
-// expressions from most to least exact.
+// expressions from most to least exact. Each is confined to the book by its
+// id and to the text column, so nothing else in the index can match it.
 func searchFTS(ctx context.Context, q queryer, bookID, query string, limit int) ([]int, error) {
 	out := []int{}
+	book := ftsWords(bookID)
+	if book == "" {
+		return out, nil
+	}
 	seen := map[int]bool{}
 	for _, m := range ftsMatches(query) {
 		if len(out) >= limit {
 			break
 		}
-		rows, err := q.QueryContext(ctx, `SELECT number FROM pages_fts WHERE pages_fts MATCH ? AND book_id = ? ORDER BY rank LIMIT ?`,
-			m, bookID, limit)
+		rows, err := q.QueryContext(ctx, `SELECT number FROM pages_fts WHERE pages_fts MATCH ? ORDER BY bm25(pages_fts, 0.0, 0.0, 1.0) LIMIT ?`,
+			`book_id : `+book+` AND text : (`+m+`)`, limit)
 		if err != nil {
 			return nil, err
 		}
 		for rows.Next() {
 			var n int
-			rows.Scan(&n)
+			if err := rows.Scan(&n); err != nil {
+				rows.Close()
+				return nil, err
+			}
 			if !seen[n] {
 				seen[n] = true
 				out = append(out, n)
 			}
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, err
 		}
 		rows.Close()
 	}

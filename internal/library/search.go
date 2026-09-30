@@ -78,14 +78,29 @@ func rankByVector(q []float32, rows []vectorRow, limit int) []int {
 	return out
 }
 
+// ftsFields are the words fts5 would see in s: its letters and digits.
+func ftsFields(s string) []string {
+	return strings.FieldsFunc(s, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsNumber(r)
+	})
+}
+
+// ftsWords is s as one quoted fts5 phrase, or "" when it has no words: how
+// an id (whose dashes split it into words) is matched exactly.
+func ftsWords(s string) string {
+	fields := ftsFields(s)
+	if len(fields) == 0 {
+		return ""
+	}
+	return `"` + strings.Join(fields, " ") + `"`
+}
+
 // ftsMatches turns free text into safe fts5 MATCH expressions, best first:
 // the whole query as one phrase (so "Theorem 2.3" stays adjacent), then its
 // word pairs as phrases, then every word as an implicit AND. Everything is
 // quoted, so nothing the student typed reaches fts5 as syntax.
 func ftsMatches(query string) []string {
-	fields := strings.FieldsFunc(query, func(r rune) bool {
-		return !unicode.IsLetter(r) && !unicode.IsNumber(r)
-	})
+	fields := ftsFields(query)
 	if len(fields) == 0 {
 		return nil
 	}
