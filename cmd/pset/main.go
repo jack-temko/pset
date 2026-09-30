@@ -162,7 +162,7 @@ func serve(addr, dir string, log *slog.Logger) error {
 	handlerCtx, endHandlers := context.WithCancel(context.Background())
 	defer endHandlers()
 	srv := &http.Server{
-		Handler:           mux,
+		Handler:           httpx.LocalOnly(addr, mux),
 		ReadHeaderTimeout: 10 * time.Second,
 		BaseContext:       func(net.Listener) context.Context { return handlerCtx },
 	}

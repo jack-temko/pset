@@ -14,8 +14,9 @@ export const CodeUnreachable = "unreachable";
 export const CodeBadKey = "bad_key";
 export const CodeBadModel = "bad_model";
 export const CodeBusy = "busy";
+export const CodeForbidden = "forbidden";
 export const CodeInternal = "internal";
-export type Code = typeof CodeNotFound | typeof CodeInvalid | typeof CodeNotConfigured | typeof CodeDuplicateBook | typeof CodeUnreachable | typeof CodeBadKey | typeof CodeBadModel | typeof CodeBusy | typeof CodeInternal;
+export type Code = typeof CodeNotFound | typeof CodeInvalid | typeof CodeNotConfigured | typeof CodeDuplicateBook | typeof CodeUnreachable | typeof CodeBadKey | typeof CodeBadModel | typeof CodeBusy | typeof CodeForbidden | typeof CodeInternal;
 /**
  * Error is the one error shape on the wire. Message is display-ready copy;
  * Field names the input at fault; ID points at a resource the error is
