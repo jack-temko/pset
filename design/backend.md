@@ -304,6 +304,23 @@ and the probability book, through the eval key:
   the top of its figure. Problem text boxes went from 13 to 16 of 30 for
   the Finder there, and 6 to 14 of 15 for GLM; the circuits book's stayed
   as they were.
+
+  **A problem's words are boxed from where it starts** (2026-09-29). The
+  Finder's JSON box for them was its weak spot: 16 of 30 on the
+  differential equations book's dense pages, where it boxed another
+  problem or the first two lines of a long one. Asked in its own boxing
+  mode (`<hint>BOX</hint>`) for every problem on the page, it finds where
+  each starts far more surely; `pdf.TextExtent` then follows the ink down
+  the problem's column (split at the page's gutter) until the next
+  problem's start, one of its figures, or a gap wider than any inside a
+  problem. Offline that boxed 24 of 30 there and 132 of 138 on the
+  circuits book (17 of 23 before); in the app, 10 of 13 across both.
+  Only "Problem N" labels count, on a box or its collection: it also
+  boxes equations ("Equation (19)"), and on one page it put one label on
+  many boxes. When it doesn't box the problem's start, the find's own
+  box stands. It's one more call, $0.001 to $0.002 and 3 to 7 s. OCR was
+  tried first as the anchor, and Tesseract read the direction fields of
+  a scanned page as text and lost the problem numbers around them.
 - **Reader**, `openai/gpt-6-luna`, with GLM-5.3-Flash behind it. Thirteen
   circuits read into netlists and graded by solving them: 13 right of 13,
   then 16 of 16, at $0.0004 a reading; DeepSeek got 11 and 36 of 39, at

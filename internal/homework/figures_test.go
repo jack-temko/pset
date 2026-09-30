@@ -120,3 +120,49 @@ func TestSameNumber(t *testing.T) {
 		}
 	}
 }
+
+func TestProblemStarts(t *testing.T) {
+	got := problemStarts(`<collection mention="problem">
+ <point_box mention="Problem 12"> (538,182) (1034,262) </point_box>
+ <point_box mention="Problem 12b"> (560,240) (1034,262) </point_box>
+ <point_box mention="Problem 12"> (560,300) (1000,320) </point_box>
+ <point_box mention="Problem *4.68"> (88,561) (447,604) </point_box>
+ <point_box mention="Equation (19)"> (300,700) (600,730) </point_box>
+ <point_box> (1,1) (2,2) </point_box>
+</collection>
+<collection mention="Problem 7">
+ <point_box> (60,800) (500,840) </point_box>
+</collection>`)
+	if len(got) != 3 || got["12"].Y != 0.182 || got["68"].X != 0.088 || got["7"].Y != 0.8 {
+		t.Fatalf("%+v", got)
+	}
+}
+
+// The page's problems are boxed in the Finder's own mode, with no model
+// to fall back on and no reasoning asked for; a reply it can't use leaves
+// the find's own box.
+func TestTheTextBoxIsAskedForInBoxingMode(t *testing.T) {
+	e := newEnv(t)
+	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
+		if req.Messages[0].Content.Text() == "<hint>BOX</hint>" {
+			return llmtest.Reply{Text: `<point_box mention="Problem 3.36"> (100,200) (500,230) </point_box>`}
+		}
+		return fakeModel(req)
+	})
+	h := e.newSet(t)
+	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
+	asked := false
+	for _, r := range e.llm.Chats() {
+		if r.Messages[0].Content.Text() == "<hint>BOX</hint>" {
+			asked = true
+			if r.Model != llm.Finder.Model || len(r.Models) != 0 || r.Reasoning != nil {
+				t.Errorf("boxing asked as %s, models %v, reasoning %+v", r.Model, r.Models, r.Reasoning)
+			}
+		}
+	}
+	// The fake page is blank: the find's own box stands.
+	r, _ := getQuestion(context.Background(), e.svc.c.DB, q.ID)
+	if !asked || r.Rect == nil {
+		t.Fatalf("asked %v, rect %+v", asked, r.Rect)
+	}
+}

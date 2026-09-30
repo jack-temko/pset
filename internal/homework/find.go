@@ -297,6 +297,9 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 		return location{}, false, err
 	}
 	loc.Figures = s.checkFigures(ctx, m, book, q, loc)
+	if r, ok := s.wholeText(ctx, m, book, q, loc, urls[pin.Image-1], page); ok {
+		loc.Rect = &r
+	}
 	return loc, true, nil
 }
 
