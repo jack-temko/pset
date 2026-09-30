@@ -27,11 +27,24 @@ Reply with only JSON, no prose and no code fence:
 // Finding is the Finder's, which boxes well and words less cleanly;
 // the words are the Reader's.
 const statementPrompt = `You write out one homework problem from an image of a textbook page, for a tutor who can't see
-the page.
+the page. The tutor works from your words alone, so leave out nothing the problem needs.
 
-Reply with only the problem's text: every part of it, exactly as the book words it, without its
-number. Math in LaTeX between $...$. No solution, no commentary, and nothing from any other
-problem or from a figure's caption.`
+Reply with only the problem's text, exactly as the book words it. Leave out its own number, even
+where it sits after shared text or in front of its equation, and any mark printed by the number
+(an asterisk, a star, an icon):
+- Every part, each with the book's own letter or number (a., b., c.), as printed. A part's letter
+  never changes: when part a. is only a lead-in, it is still part a.
+- When the problem is one of a run introduced together ("In each of Problems 11 through 16, ...",
+  "Problems 6 through 9 involve ..."), start with that shared text and everything printed with it
+  that the problem needs: a list to choose from, the equations, the data. Only the run this problem
+  is in, and nothing from the other problems in it.
+- A heading the problem opens with, in bold or italics, and any paragraph between it and the
+  parts, all of it.
+- Figure, equation and problem numbers exactly as printed ("Figure 1.1.6", "equation (19)").
+- Math in LaTeX between $...$, a displayed equation on its own line between \[ and \]. Bold and
+  italics as **...** and *...*.
+- No solution and no commentary. Don't describe the figures: they're read on their own. Nothing
+  from a figure's caption or from another problem.`
 
 // assignmentPrompt reads a homework assignment out into due dates and
 // lines. Filled with today's date, the book's title and how it numbers

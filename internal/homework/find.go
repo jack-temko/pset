@@ -304,14 +304,23 @@ func fractions(r pdf.Rect) pdf.Rect {
 	return pdf.Rect{X: f(r.X), Y: f(r.Y), W: f(r.W), H: f(r.H)}
 }
 
+// statementName is the problem the Reader writes out, as the book would
+// say it: "section 1.1's problem 12", on a page where more than one
+// section's problems can share a number.
+func statementName(book Book, loc location, q row) string {
+	if ref, ok := questionRef(book, q); ok {
+		return ref.Name(book.Problems)
+	}
+	if loc.Label != "" {
+		return "problem " + loc.Label
+	}
+	return problemName(q)
+}
+
 // writeOut is a found problem's words, read off its page by the Reader.
 func (s *Service) writeOut(ctx context.Context, m model, book Book, loc location, pageURL string, q row) (string, error) {
-	name := loc.Label
-	if name == "" {
-		name = problemName(q)
-	}
 	content := llm.PartsContent(
-		llm.TextPart(fmt.Sprintf("Problem %s, on %s:", name, book.Pages.Name(loc.Page))),
+		llm.TextPart(fmt.Sprintf("Write out %s, on %s:", statementName(book, loc, q), book.Pages.Name(loc.Page))),
 		llm.ImagePart(pageURL),
 	)
 	reply, err := m.client.ChatOnce(ctx, llm.Reader.Ask(llm.ChatRequest{ReasoningEffort: "low", Messages: []llm.Message{
