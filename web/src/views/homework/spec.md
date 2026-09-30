@@ -133,7 +133,7 @@ Last walked through 2026-09-30, on the redesigned view. The redesign closed the 
 
 ## wants
 
-- The ranking step has not been run on a real model yet (`rank_eval_test.go` needs the eval key). The estimate's calibration is simulated, not measured on real students.
+- The ranking step ran once on a real model over five questions and separated them (1, 1, 1, 3, 5); it has not seen a real set of a student's own. The estimate's calibration is simulated, not measured on real students.
 - Ask taking a context reference (a question id) on a turn, so the chip carries the whole question and not only its text.
 - The problem's position on its page, so Show in book can land on it (filed; needs an engine change).
 
