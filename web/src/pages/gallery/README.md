@@ -26,4 +26,5 @@ Demo | Docs switch).
 **Don't:** put anything the product needs here; add a dependency for the
 Markdown; give an entry an `id` that isn't kebab-case, since it is the URL.
 
-Spec: `ideas/views-gallery.md`.
+Spec: `ideas/views-gallery.md`. What `/views` adds to the frame (the runner, the
+scenario picker, the log): `web/src/views/README.md`.

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 
-import { del, get, patch, post, postForm } from './client'
+import { assets, del, get, patch, post, postForm } from './client'
 import { on } from './events'
 import type { Run } from './gen/doc'
 import { forget, observe } from '@/lib/eta'
@@ -380,8 +380,8 @@ export function usePointOut() {
   })
 }
 
-export const worksheetURL = (homeworkId: string) => `/api/homework/${homeworkId}/worksheet`
-export const figureURL = (questionId: string, n: number) => `/api/questions/${questionId}/figures/${n}`
+export const worksheetURL = (homeworkId: string) => assets.url(`/api/homework/${homeworkId}/worksheet`)
+export const figureURL = (questionId: string, n: number) => assets.url(`/api/questions/${questionId}/figures/${n}`)
 
 // ---------------------------------------------------------------- assignments
 

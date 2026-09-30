@@ -21,6 +21,12 @@ export function on<T>(type: string, fn: (data: T, qc: QueryClient) => void) {
 
 on('reset', (_, qc) => qc.invalidateQueries())
 
+/** Runs what an event type does to a cache: the stream's own path, and
+ *  what /views calls to play a scenario's events into a view's cache. */
+export function emit(type: string, data: unknown, qc: QueryClient = queryClient) {
+  for (const fn of handlers.get(type) ?? []) fn(data, qc)
+}
+
 function dispatch(raw: string) {
   let msg: { type: string; data?: unknown }
   try {
@@ -28,7 +34,7 @@ function dispatch(raw: string) {
   } catch {
     return
   }
-  for (const fn of handlers.get(msg.type) ?? []) fn(msg.data, queryClient)
+  emit(msg.type, msg.data)
 }
 
 // The stream's reachability, so the shell can own a lost-touch banner.

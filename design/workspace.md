@@ -209,6 +209,11 @@ built.
 
 ## Homework (panel tab)
 
+> **Now lives on `/views/homework`.** The view's anatomy, states, data, handoffs
+> and friction log are in `web/src/views/homework/spec.md`, next to the live view
+> and its scenarios; where they disagree with what follows, the spec (and the code)
+> win. This section keeps the decisions and how they were reached.
+
 - **List → walkthrough**, both in the panel: the book's assignments as
   rows (Box + Door), opening one fills the panel with its walkthrough,
   back link at top.
