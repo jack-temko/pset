@@ -64,7 +64,7 @@ extract lands like any change (step 9). No grill: nothing is being decided.
 
 ## Guardrails
 
-- **Locked decisions are not silently reversed.** In a redesign the grill asks a reversal as an explicit question; a tweak never reverses one. The locked list: the panel stays open and remembers its tab; the Focus toggle; every stage of a guide veiled, one click each; Complete is a checkbox that does not advance; the 15px type floor; Primer geometry (32px controls, 6px radius); status is ink, not fill. The dated decisions in `design/*.md` are also locked until a reversal is approved.
+- **Locked decisions are not silently reversed.** In a redesign the grill asks a reversal as an explicit question; a tweak never reverses one. The locked list: the panel stays open; the Focus toggle; the 15px type floor; Primer geometry (32px controls, 6px radius); status is ink, not fill. (Three that were locked, the panel remembering its tab, veiled stages and Complete as a checkbox, were reversed by the homework redesign, 2026-09-30: a locked decision changes only through a reversal the user approves, and the reversal is written where it was decided.) The dated decisions in `design/*.md` are also locked until a reversal is approved.
 - **Never touch a real library or server.** Port 8420 is the user's own PSet. Run Vite on another port with `PSET_API_TARGET=http://127.0.0.1:9`. Test only against `/views` (the mock) or a scratch server on its own port and data dir.
 - **Only the token scale exists.** No fractional or arbitrary spacing utilities; `npm run build` fails on them.
 - **There is no formatter.** Match the file's own style by hand (no semicolons, single quotes); never run prettier.
