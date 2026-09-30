@@ -66,6 +66,11 @@ Reply with only JSON, no prose and no code fence: {"image": 2, "rect": {"x": 0.1
 bounds the figure: its drawing, every label on it, and its caption. Coordinates are fractions of
 the image, in [0, 1], y from the top.`
 
+// startsPrompt asks the Finder, in its own boxing mode, for every
+// numbered problem on a page: where each starts is what's used
+// (textbox.go).
+const startsPrompt = `Box every numbered problem on this page: its number and all of its text, every part and equation, but not its figure. Label each box with its number (like "Problem 12").`
+
 // assignmentPrompt reads a homework assignment out into due dates and
 // lines. Filled with today's date, the book's title and how it numbers
 // its problems.
