@@ -286,6 +286,18 @@ and the probability book, through the eval key:
   then 16 of 16, at $0.0004 a reading; DeepSeek got 11 and 36 of 39, at
   nine times the price. It writes out each found problem, and reads the
   figures, three times and then settled.
+
+  **Writing a problem out** (2026-09-29) keeps what the tutor needs and
+  nothing else. The book's part letters as printed: a part a. that is
+  only a lead-in is still a. A problem in a run ("In each of Problems 11
+  through 16, identify the equation…") opens with the run's shared text
+  and what's printed with it, the a to j list to choose from included.
+  A heading and its paragraph, figure and equation numbers as printed.
+  Its own number, and a mark by it (the asterisk of a hard one), left
+  out; the figures never described, since they're read on their own.
+  Twelve problems from both books, the differential equations book's
+  shared lists, a lead-in part and a run's intro among them, came out
+  right; before, two in six lost what they needed.
 - **Writer**, `deepseek/deepseek-v4.1-flash`. Six guides each: DeepSeek 5
   right, 5 s to 2.5 min, $0.14; Luna 5 right, 20 s to 2 min, $0.04; GLM 6
   right but 4 to 13 minutes, $0.13. DeepSeek's teach best: the book's
