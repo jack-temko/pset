@@ -64,6 +64,18 @@ app before calling it done:
   in `design/`. Where a change would contradict a spec, raise it rather
   than quietly diverging.
 
+## Skills
+
+Project skills live in `.agents/skills/<name>/` (a `SKILL.md` with `name`
+and `description` frontmatter, plus a `references/` folder), the
+vendor-neutral place any harness can read. `.claude/skills` is a symlink
+to it for Claude Code: edit the skill in `.agents/skills`, never a copy.
+`pset-view` (once built, `ideas/views-gallery.md`) is how a screen's
+views are fixed, redesigned and documented one by one.
+
+This file is the one set of agent instructions. `CLAUDE.md` only imports
+it (`@AGENTS.md`); put nothing else there.
+
 ## Repo hygiene: no artifacts in the repo
 
 Never leave screenshots, console logs, traces, browser-tool output, or
