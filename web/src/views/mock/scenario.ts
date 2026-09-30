@@ -23,6 +23,8 @@ export interface ScenarioContext {
   /** Runs `fn` after `ms` of scenario time (scaled by the speed the page
    *  is set to). Cancelled when the scenario ends or replays. */
   after: (ms: number, fn: () => void) => void
+  /** How many times faster than real time the page is set to. */
+  speed: number
 }
 
 export interface Session {
@@ -31,4 +33,6 @@ export interface Session {
   latency?: number
   /** Called once the view is mounted: starts the timeline. */
   play?: () => void
+  /** What the view's stage is told about the situation (a set to open on). */
+  props?: Record<string, unknown>
 }
