@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 
-import { ApiError, del, get, patch, post, postForm } from './client'
+import { ApiError, assets, del, get, patch, post, postForm } from './client'
 import { on } from './events'
 import type { Book, BookChanged, BookPatch, BookRemoved, Books, BookState, Contents, Phase } from './gen/library'
 import { forget, observe } from '@/lib/eta'
@@ -44,7 +44,7 @@ const BUCKETS = [600, 900, 1200, 1800, 2400]
 export function pageImageURL(bookId: string, page: number, width: number) {
   const px = width * (window.devicePixelRatio || 1)
   const w = BUCKETS.find((b) => px <= b) ?? BUCKETS[BUCKETS.length - 1]
-  return `/api/books/${bookId}/pages/${page}/image?w=${w}`
+  return assets.url(`/api/books/${bookId}/pages/${page}/image?w=${w}`)
 }
 
 // ---------------------------------------------------------------- cache

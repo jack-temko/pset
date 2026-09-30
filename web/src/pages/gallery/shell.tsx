@@ -129,7 +129,7 @@ export function GalleryShell({
             {entry && (
               <header className="space-y-3 border-b pb-6">
                 <p className="text-xs font-medium text-primary uppercase">{entry.group}</p>
-                <div className="flex items-start gap-4">
+                <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
                   <h1 className="min-w-0 flex-1 font-heading text-3xl">{entry.title}</h1>
                   {toolbar}
                 </div>

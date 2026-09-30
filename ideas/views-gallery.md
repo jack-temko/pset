@@ -9,8 +9,8 @@ own.
 |---|---|---|
 | `views-plan` | This file, `CLAUDE.md`, and the note in `AGENTS.md`. | Done |
 | `gallery-shell` | `/components` gets a sidebar and one section at a time. | Done |
-| `views-homework` | `/views`, the fetch stub, and the homework pane as the pilot view. | Planned |
-| `views-skill` | The `pset-view` skill, written against what the two above built. | Planned |
+| `views-homework` | `/views`, the fetch stub, and the homework pane as the pilot view. | Done |
+| `views-skill` | The `pset-view` skill, written against what the two above built. | Done: written; task 10 tries it |
 
 The skill is written last on purpose: it should describe the gallery and
 the pilot view as they are, not as they were imagined.
@@ -96,6 +96,19 @@ parser `parse-markdown.ts`), so task 5 reuses it; the README loader is
 rule under `sections/`, whose files are registries. 29 sections, in seven
 groups; a section with a README (or several: Form controls has four) gets a
 Demo | Docs switch, at `?view=docs`.
+
+### As built (`views-homework`)
+
+The homework panel's exits are props (`onJump`, `onAskAbout`, `onOpenSettings`):
+`FailedQuestion` called `navigate` itself, which would have taken the view out of
+the gallery, so it is now a prop the workspace fills in. The views route sits
+outside the live stream (`App.tsx`), pictures go through `assets.url`, and
+`emit` takes the cache to play into. Task 8 deviates once: `design/workspace.md`'s
+Homework section keeps its decision history and gains a pointer to the spec,
+because deleting 335 lines of grilled decisions was not safe before the spec
+carries them. **"Ask about this" already existed** (an `About` chip on the Ask
+composer); what was missing is the way back, and the Homework tab unmounting on a
+tab switch is friction F1 in the spec. Task 11 is that fix.
 
 ### `spec.md`, the format
 
@@ -226,27 +239,27 @@ Each produces friction rows.
   - Files: `web/src/pages/components/sections/feedback.tsx`, `web/src/pages/components/sections/overlays.tsx`, `web/src/pages/components/sections/document.tsx`, `web/src/pages/components/sections/composed.tsx`, `web/src/pages/components/docs.tsx`
   - Do: finish the split; a Docs toggle on each section shows that component's `README.md` (imported `?raw`, drawn by a small renderer for headings, paragraphs, lists, tables, code).
   - Done when: all 30 sections are reachable from the sidebar; the Docs toggle shows the README of Button, Box and Shell correctly; typecheck, lint and tests pass. `web/src/pages/components/index.tsx` is under 100 lines.
-- [ ] 4. (opus) The fetch stub, `emit`, and an in-memory store
+- [x] 4. (opus) The fetch stub, `emit`, and an in-memory store
   - Files: `web/src/views/mock/api.ts`, `web/src/views/mock/store.ts`, `web/src/views/mock/scenario.ts`, `web/src/api/events.ts`, `web/src/views/mock/mock.test.ts`
   - Do: install a `fetch` stub for the life of a mounted view, answering `/api/*` from the store through per-scenario route handlers; unmatched calls answer 404 with the server's error shape and never call the real `fetch`. Export `emit(type, data)` from `events.ts`. A scenario is `{ id, title, fixtures, routes, timeline? }`.
   - Done when: a test proves an unmatched call never reaches the real `fetch`, that a mutation changes the store and a following read sees it, and that `emit` runs a registered handler.
-- [ ] 5. (sonnet) The `/views` route: registry, scenario picker, Replay, spec beside the view
+- [x] 5. (sonnet) The `/views` route: registry, scenario picker, Replay, spec beside the view
   - Files: `web/src/pages/views/index.tsx`, `web/src/views/registry.ts`, `web/src/views/README.md`, `web/src/App.tsx`
   - Do: `/views` and `/views/:view` in the gallery shell; a view is shown with its own `QueryClient` and providers, a scenario picker, Replay, a log of the handoffs it sends, and its `spec.md` beside it. The spec is drawn by `pages/gallery/markdown.tsx`, built with the Docs toggle.
   - Done when: a placeholder view renders live with its spec; typecheck, lint and tests pass.
-- [ ] 6. (sonnet) The homework pane is extracted into `web/src/views/homework/`
+- [x] 6. (sonnet) The homework pane is extracted into `web/src/views/homework/`
   - Files: `web/src/views/homework/index.tsx`, `web/src/views/homework/walkthrough.tsx`, `web/src/pages/workspace/index.tsx`, `web/src/views/registry.ts`, `web/src/views/homework/providers.tsx`
   - Do: move `HomeworkTab`, `SetRow` and `Walkthrough` (and what only they use) out of the workspace page; the page imports the view; `providers.tsx` supplies `BookHere`, `Pages` and `Boxing` for the harness. Behaviour does not change.
   - Done when: the workspace's Homework tab behaves as before in the real app (both themes, 1280 wide); typecheck, lint and tests pass; `pages/workspace/index.tsx` is shorter by what moved.
-- [ ] 7. (sonnet) The homework scenarios, tired paths included
+- [x] 7. (sonnet) The homework scenarios, tired paths included
   - Files: `web/src/views/homework/scenarios.ts`, `web/src/views/homework/routes.ts`, `web/src/views/homework/timeline.ts`
   - Do: scenarios `happy`, `empty`, `slow`, `failed`, `mid-flow-reload`, `return-after-break`, `handoff-in`; a timeline that walks a question through pending, locating, located, reading and writing.
   - Done when: each scenario is reachable from the picker and Replay plays the timeline, with the animations, in both themes.
-- [ ] 8. (opus) The homework `spec.md`, with the student's flow and a first friction log
+- [x] 8. (opus) The homework `spec.md`, with the student's flow and a first friction log
   - Files: `web/src/views/homework/spec.md`, `design/workspace.md`
   - Do: write the spec in the format above, including `student`, `flow`, `budget`, `handoffs` ("Ask about this question" out and back is the first) and a friction log from a real walk through every scenario (keyboard only, Night theme); shrink the Homework section of `design/workspace.md` to a pointer.
   - Done when: every heading in the format is present; each friction row names a scenario that shows it; the file reads correctly beside the live view.
-- [ ] 9. (opus) The `pset-view` skill, written against the built gallery
+- [x] 9. (opus) The `pset-view` skill, written against the built gallery
   - Files: `.agents/skills/pset-view/SKILL.md`, `.agents/skills/pset-view/references/student-lens.md`, `.agents/skills/pset-view/references/spec-template.md`, `.agents/skills/pset-view/references/mock-layer.md`, `.claude/skills`
   - Do: `SKILL.md` (frontmatter `name` and `description`, the modes, the loop, the guardrails) kept short, the three references, and `.claude/skills` as a relative symlink to `../.agents/skills`.
   - Done when: a fresh Claude Code session lists the skill and a run of `audit` on the homework view produces a friction log that matches the spec's format.
@@ -254,7 +267,7 @@ Each produces friction rows.
   - Files: `web/src/views/homework/spec.md`
   - Do: run `redesign` or `fix` on one friction row; the run's changes and the doc updates are the test of the skill.
   - Done when: the row is marked fixed in the friction log with the change made; the skill's loop needed no correction, or the corrections are written back into it.
-- [ ] 11. (opus) The first handoff: "Ask about this question", and back
+- [ ] 11. (opus) The first handoff, finished: "Ask about this" already opens Ask with the question's chip; make Back return to the same set, question and scroll (friction F1)
   - Files: `web/src/views/homework/spec.md`, `web/src/views/homework/walkthrough.tsx`, `web/src/pages/workspace/index.tsx`, `design/workspace.md`
   - Do: run `redesign` through the skill on this handoff: a homework question opens Ask with that question as a context bubble, and Back returns to the same set, question and scroll. The spec's `handoffs` and `wants` say what travels and what Ask needs from the backend (a context reference on a turn); build the frontend side against the harness's stub, and the backend only when asked.
   - Done when: in the harness the handoff shows in the log with its context, and Back restores set, question and scroll (also after a reload); the homework `spec.md` and `design/workspace.md` say so.
