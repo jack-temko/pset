@@ -9,6 +9,8 @@ shared with `/components`.
 ```
 views/<name>/index.tsx     the view, extracted from its screen; the screen imports it
 views/<name>/spec.md       what it is, who it is for, its states, data, handoffs, friction
+views/<name>/grill.md      how a redesign was decided: decisions, reversals, the question log (when it had one)
+views/<name>/wireframes.tsx  the layouts under discussion, built from the real components (`?mode=wireframes`)
 views/<name>/scenarios.ts  the situations it can be shown in
 views/<name>/stage.tsx     where it sits in the product, with the providers its screen gives it
 views/registry.ts          the list /views shows
@@ -49,7 +51,7 @@ the page logs them beside the view, with the API calls it made: a spec's
 A redesign's layouts are looked at, not described. `views/<name>/wireframes.tsx`
 (exported as the view's `wireframes` in `registry.ts`) builds them from the real
 component library on static sample data, in the pane at its real width, and `/views/<name>`
-shows them under its **Wireframes** mode (`?mode=wireframes`). They are live: veils lift,
+shows them under its **Wireframes** mode (`?mode=wireframes`). They are live: rows open,
 menus open. A part that doesn't exist yet is a local stand-in built from tokens and existing
 components; it becomes a component when the view is built. See the `pset-view` skill's
 `grill-stages.md`, gate 2.

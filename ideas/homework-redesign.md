@@ -67,7 +67,7 @@ Claude-only eval key, never the key in his own library.
   - Files: `web/src/views/homework/world.ts`, `web/src/views/homework/scenarios.ts`, `web/src/views/homework/routes.ts`, `web/src/views/homework/stage.tsx`
   - Do: the world carries difficulty, seconds, an estimate and attempts so the view runs on sample data; add scenarios `finish`, `no-guide`, `long-set` (24 questions) and `long-title`; the stage behaves like the workspace (opens on the list, keeps both tabs, stub Ask with the chip).
   - Done when: every scenario in the grill's states table is reachable from the picker and plays.
-- [ ] 9. (sonnet) The docs: spec, design docs, views README
+- [x] 9. (sonnet) The docs: spec, design docs, views README
   - Files: `web/src/views/homework/spec.md`, `design/workspace.md`, `design/design-system.md`, `web/src/views/README.md`
   - Do: rewrite `spec.md` to match what was built (mission, inventory, states, actions, handoffs, data, why, a fresh friction log, wants, open); write each reversal R1 to R10 into `design/workspace.md` (and the Menu and Veil changes into `design/design-system.md`).
   - Done when: the spec reads correctly beside the live view and every reversal in the grill is recorded where the decision was written.

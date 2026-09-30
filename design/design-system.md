@@ -169,7 +169,10 @@ delete asks first. Two rules keep that consistent:
 
 - **One menu per thing.** A thing's actions live in one "⋯" Menu beside
   where it's named: the book's beside its title in the top bar, a
-  homework set's in the walkthrough's header. The destructive act is
+  homework set's in the walkthrough's header, and (2026-09-30) a question's
+  on its label row. Every one is the same Menu: a radius-lg card of
+  full-bleed 40px rows, joined flush to its trigger, one open at a time
+  (`web/src/components/menu/README.md`). The destructive act is
   last, below a divider, in destructive ink. Edit dialogs only edit;
   none carries a delete.
 - **A delete asks where you asked.** A **ConfirmPopover** opens under
