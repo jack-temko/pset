@@ -13,8 +13,15 @@ middle is empty; the h1 says where you are.
 ## You
 
 One field, **your name** (added 2026-09-21). Home's greeting uses it
-("Good evening, Jack.") and the tutor addresses you by it. Empty means
-neither does. Save appears once it changes, like a connection's, but
+("Still at it, Jack?") and the tutor addresses you by it. Empty means
+neither does, and the greeting drops the name ("Still at it?").
+
+The greeting is short (four words or fewer) and changes with the hour and
+from visit to visit (2026-09-30): seven stretches of the day, from
+"12am to 2am" ("Up late, Jack?") to "9pm to 11pm", a few lines each,
+picked at random when Home opens. The lines are in `web/src/lib/greeting.ts`.
+
+Save appears once it changes, like a connection's, but
 there's nothing to test, so it writes straight away.
 
 ## Connections
