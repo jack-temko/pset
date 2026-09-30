@@ -36,6 +36,10 @@ type rankPayload struct {
 // wherever that can become true: a find ending or failing, questions
 // added, a question removed. One already waiting covers it.
 func (s *Service) rankWhenFound(ctx context.Context, setID string) {
+	// Two finds ending together both see the set found; one check-and-queue
+	// at a time, or both queue a ranking.
+	s.rankMu.Lock()
+	defer s.rankMu.Unlock()
 	var total, finding, waiting int
 	if err := s.c.DB.QueryRowContext(ctx, `SELECT count(*), coalesce(sum(in_book = 1 AND state IN ('pending', 'locating')), 0)
 		FROM questions WHERE homework_id = ?`, setID).Scan(&total, &finding); err != nil || total == 0 || finding > 0 {
