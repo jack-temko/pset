@@ -31,9 +31,9 @@ everything left is taken at the recommended default and listed as assumed.
 
 | Mode | For | Grill |
 |---|---|---|
-| `rebuild` | a view from scratch | all gates |
-| `redesign` | same purpose, new flow, layout or behavior | gate 1 is a quick confirm of the mission, then gates 2 to 4 |
+| `redesign` | a view from scratch, or a new flow, layout or behavior (one mode: Jack treats them as the same) | all gates; gate 1 shrinks to a quick confirm when the purpose is clearly unchanged |
 | `tweak` | bug fixes, small adjustments, one friction row | none (with no target it is the read-only audit) |
+| `extract` | a view still inside its screen, put on `/views` unchanged | none: it moves the code verbatim, builds its simulated backend and scenarios, and writes a spec of what exists today |
 
 After the spec the agent **stops for your OK**, then builds, verifies and documents.
 
@@ -49,7 +49,7 @@ After the spec the agent **stops for your OK**, then builds, verifies and docume
 | D6 | The summary sits at the top of `grill.md` and `/views` draws it. | One place to glance; no second file to keep in step. | a phone Artifact each time; a separate spec file |
 | D7 | An answer that contradicts a locked design decision is asked as an explicit reversal ("this reverses X, dated D; reverse it?"). If yes, the reversal and reason go into `grill.md`, the view's `why` and the design doc. | Better designs can win, and nothing is reversed quietly. | never re-ask locked decisions; treat everything as open |
 | D8 | Each grill is fresh (redesigns and rewrites dominate). | Jack's call. | resume only stale questions; always overwrite |
-| D9 | pset-view has three modes: `rebuild`, `redesign`, `tweak`. | Jack asked to cut modes to a few; `redesign` is the middle case he described. | the old six modes |
+| D9 | pset-view has three modes: `redesign`, `tweak`, `extract`. `redesign` covers from scratch and rework (Jack: the same thing for his use); `extract` is the old `new`, since a view cannot be redesigned until it is on `/views`. | Jack asked to cut modes to a few and to have one suggested. | the old six modes; separate `rebuild` and `redesign`; `audit` as a mode (it is `tweak` with no target); `review` as a mode (it is a step of `redesign`) |
 | D10 | After the spec, stop for Jack's OK, then build. | A misread decision costs less on a page than in finished code. | build automatically; build a slice per gate |
 | D11 | If an answer looks worse for the tired student than the recommendation, push back once with the reason, then record the answer and the disagreement. | Design sense gets one hearing; it never argues at 1am. | never push back; keep pushing |
 | D12 | Extras included: a **student walkthrough simulation** (the agent walks a wireframe as the tired student and reports where it gets stuck, before Jack sees it); a **post-build review round** (photos of the real view and a short mini-grill on what feels off); a **cross-view consistency check** (same concept named and placed the same way elsewhere, and every handoff's target exists and accepts what it is sent). Never-show list and rejected alternatives per decision are always in. | Jack picked these. | designing for more student moments than the tired one |
@@ -108,9 +108,9 @@ first real grill); whether `/views` shows the summary above the spec or in a tab
   - Files: `.agents/skills/pset-view/references/grill-stages.md`, `.agents/skills/pset-view/references/spec-template.md`
   - Do: gates 0 to 4 as in the table, each with its question templates, artifact and exit criterion; the student walkthrough simulation before wireframes go to the user; the cross-view consistency check; the post-build review round. Add `mission` and `inventory` to the spec template.
   - Done when: each gate names what it asks, what the user confirms, and when it ends; the template has the new sections.
-- [ ] 3. (opus) pset-view: three modes, grill first, stop for OK
+- [ ] 3. (opus) pset-view: three modes (redesign, tweak, extract), grill first, stop for OK
   - Files: `.agents/skills/pset-view/SKILL.md`, `.agents/skills/pset-view/references/verify.md`, `.agents/skills/pset-view/references/student-lens.md`
-  - Do: replace the six modes with `rebuild`, `redesign`, `tweak` (D9); `rebuild` and `redesign` run the grill and stop for OK (D10); `tweak` with no target is the read-only audit; the loop gains the post-build review round; keep the guardrails and the lessons of the first run.
+  - Do: replace the six modes with `redesign`, `tweak`, `extract` (D9); `redesign` runs the grill and stops for OK (D10); `tweak` with no target is the read-only audit; `extract` is the old `new` (keep its steps from `mock-layer.md`); the loop gains the post-build review round; keep the guardrails and the lessons of the first run.
   - Done when: the loop reads end to end without a reference to a removed mode; `AGENTS.md` mentions the grill skill.
 - [ ] 4. (sonnet) /views draws the grill summary beside the spec
   - Files: `web/src/pages/views/index.tsx`, `web/src/views/registry.ts`, `web/src/views/types.ts`, `web/src/views/README.md`
