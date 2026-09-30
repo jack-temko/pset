@@ -34,6 +34,10 @@ test:
 check: test check-gen
 	go test -race ./...
 
+# The web app's dependencies, for a fresh worktree (tools/agents).
+web/node_modules: web/package-lock.json
+	cd web && npm ci
+
 build:
 	cd web && npm run build
 	go build -o pset ./cmd/pset

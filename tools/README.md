@@ -4,6 +4,7 @@ Programs that live with the code but aren't the app.
 
 | Tool | What it is |
 |---|---|
+| `agents` | The model team on one change: Opus writes the spec, GLM, Flash or Sonnet builds each task, a fresh reviewer checks each one (`tools/agents/README.md`). |
 | `dev` | `make dev`: the Go server rebuilt on save, the TS types regenerated when a `wire.go` changes, and Vite with `/api` proxied to the server, on its own data in `.dev/data`. |
 | `findertest` | Measures finding: Jack's real misses, the professors' references and the typed forms, run against his books, checked against known pages. |
 | `assignmenttest` | Measures reading assignments: ten made-up documents built as they'd arrive (PDFs, web pages it serves, pasted text), scored on due dates, labels, notes and the problems written out. |
