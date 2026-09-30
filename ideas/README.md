@@ -40,3 +40,4 @@ pointing, then importing, because the importer feeds the same finder.
 | [Loose ends](loose-ends.md) | Idea | any | Small things noticed along the way. |
 | [Model usage](model-usage.md) | Done | any | What each finished job cost: model, time, tokens and dollars on one quiet line, a light popover behind it. |
 | [Audit fixes](audit-fixes.md) | Done | any | The 2026-09-29 audit, one branch per finding: leaks, restart, local-only API, docs. |
+| [Asking about a selection](asking-about-a-selection.md) | Planned | any | Click any element of a guide or an answer and ask the tutor about exactly that, with the problem for context. |
