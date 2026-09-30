@@ -55,7 +55,7 @@ Claude-only eval key, never the key in his own library.
   - Files: `web/src/views/homework/walkthrough.tsx`, `web/src/views/homework/stage.tsx`, `web/src/pages/workspace/index.tsx`
   - Do: the panel passes whether it is in Focus; in Focus the question, Show in book and the notes are pinned on the left and the rows scroll on the right; header and footer unchanged.
   - Done when: the Focus checkbox on `/views` and the Focus toggle in the workspace both show two columns, in both themes.
-- [ ] 6. (sonnet) The finish page
+- [x] 6. (sonnet) The finish page
   - Files: `web/src/views/homework/finish.tsx`, `web/src/views/homework/greetings.ts`, `web/src/views/homework/walkthrough.tsx`, `web/src/views/homework/finish.test.ts`
   - Do: the finish page from the wireframes (greeting line, two StatTiles, a bar per question with the hardest marked, the hardest listed, Turn in, Back to list), reached when the last unfinished question is done and from the count's list. The greeting reuses Home's mechanism with its own lines, seven stretches of the day; draft three a stretch for Jack to approve.
   - Done when: the `finish` scenario shows it in both themes; Turn in works and is undoable from the set menu; tests pass.

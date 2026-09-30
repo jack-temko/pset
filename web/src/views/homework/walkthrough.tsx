@@ -1,5 +1,5 @@
 import { useEffect, useState, type KeyboardEvent } from 'react'
-import { BookOpen, Check, ChevronLeft, ChevronDown, ChevronUp, Pencil, Plus, Printer, SquareDashedMousePointer, Trash2 } from 'lucide-react'
+import { BookOpen, Check, Flag, ChevronLeft, ChevronDown, ChevronUp, Pencil, Plus, Printer, SquareDashedMousePointer, Trash2 } from 'lucide-react'
 import { Button, IconButton } from '@/components/button'
 import { Label } from '@/components/label'
 import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
@@ -23,6 +23,7 @@ import { useSettled } from '@/lib/settled'
 import { cn, plural } from '@/lib/utils'
 import { FailedQuestion } from './failed-question'
 import { HelpRows } from './help'
+import { Finish } from './finish'
 import { helpRows, type HelpName } from './help-meta'
 import { isTyping, walkthroughKey } from './keys'
 import { PRIMARY_LABEL, barLabel, countWords, firstUnfinished, nextUnfinished, primaryOf, segments, stateWord, timeLeftWords, type HomeworkSet, type Q } from './progress'
@@ -128,6 +129,9 @@ export function Walkthrough({
   const boxing = useBoxing()
   const [adding, setAdding] = useState(false)
   const [index, setIndex] = useState<number | null>(null)
+  // The finish page fills the pane once every question is done; it is where
+  // the last Next lands, and where a set that is already all done opens.
+  const [finishing, setFinishing] = useState(false)
   // What the student opened by hand, by question: the notes box for
   // editing, the figure's reading and the guide's memory lines, which are
   // behind the question's menu until asked for. And the help rows: a
@@ -141,7 +145,10 @@ export function Walkthrough({
   // Open where you'd pick up: the first question not yet done, once the
   // set has loaded.
   useEffect(() => {
-    if (index === null && detail.data) setIndex(firstUnfinished(detail.data.questions) ?? 0)
+    if (index !== null || !detail.data) return
+    const first = firstUnfinished(detail.data.questions)
+    setIndex(first ?? 0)
+    if (first === null && detail.data.questions.length > 0) setFinishing(true)
   }, [detail.data, index])
   // A question boxed on the page opens once it's in the set.
   const [openedBoxed, setOpenedBoxed] = useState<string | null>(null)
@@ -156,6 +163,8 @@ export function Walkthrough({
   const at = Math.min(index ?? 0, Math.max(questions.length - 1, 0))
   const q = questions[at] as Q | undefined
   const turnedIn = !!set?.turnedInAt
+  // Only while every question is done: add one, or take a mark back, and it is over.
+  const finished = finishing && questions.length > 0 && questions.every((x) => x.done)
   // Until every question is found, the worksheet has bare labels in it.
   const finding = questions.filter(toFind).length
   // A question waits between its steps for a moment, often less: the wait
@@ -204,11 +213,22 @@ export function Walkthrough({
               current={i === at}
               icon={x.done ? <Check className="text-success!" /> : undefined}
               hint={stateWord(x, i === at)}
-              onSelect={() => setIndex(i)}
+              onSelect={() => {
+                setIndex(i)
+                setFinishing(false)
+              }}
             >
               {x.label}
             </MenuItem>
           ))}
+          {questions.every((x) => x.done) && (
+            <>
+              <MenuDivider />
+              <MenuItem icon={<Flag />} current={finished} onSelect={() => setFinishing(true)}>
+                All done
+              </MenuItem>
+            </>
+          )}
         </Menu>
       )}
       {left && <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground tabular-nums">{left}</span>}
@@ -263,7 +283,7 @@ export function Walkthrough({
         )}
       </Menu>
       {questions.length > 0 && (
-        <ProgressBar segments={segments(questions, at)} label={barLabel(questions)} className="absolute inset-x-0 -bottom-px" />
+        <ProgressBar segments={segments(questions, finished ? -1 : at)} label={barLabel(questions)} className="absolute inset-x-0 -bottom-px" />
       )}
     </div>
   )
@@ -349,6 +369,8 @@ export function Walkthrough({
     }
     if (primary === 'next') update.mutate({ id: q.id, patch: { done: true } })
     if (next !== null) setIndex(next)
+    // The last one: nothing is left to go to, so it ends on the finish page.
+    else if (primary === 'next') setFinishing(true)
   }
 
   // ← → browse and 1 2 3 open the rows, for a student whose hands are on
@@ -366,6 +388,22 @@ export function Walkthrough({
     e.preventDefault()
   }
 
+  if (finished && set) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        {header}
+        <Finish
+          title={set.title}
+          questions={questions}
+          turnedIn={turnedIn}
+          onTurnIn={() => updateSet.mutate({ turnedIn: true })}
+          onBack={onBack}
+        />
+        {dialog}
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col" onKeyDown={onKeyDown}>
       {header}
@@ -375,11 +413,11 @@ export function Walkthrough({
           one place. Keys scattered on the parts inside, beside the
           conditional parts and the figures, left stale copies behind
           (three "Add your professor's instructions" under one question). */}
-      <div key={q.id} className={cn('min-h-0 flex-1', wide ? 'grid grid-cols-2' : 'flex flex-col gap-5 overflow-y-auto p-card')}>
+      <div key={q.id} className={cn('min-h-0 flex-1', wide ? 'grid grid-cols-2 grid-rows-1' : 'grid grid-cols-1 content-start gap-5 overflow-y-auto p-card')}>
         {/* The problem and the guide are the same two boxes in both layouts
             (one column, or two in Focus), so toggling Focus keeps what is
             half-typed in either. */}
-        <div className={wide ? 'flex min-h-0 flex-col gap-5 overflow-y-auto border-r p-card' : 'contents'}>
+        <div className={wide ? 'grid min-h-0 grid-cols-1 content-start gap-5 overflow-y-auto border-r p-card' : 'contents'}>
           <div className="flex items-center gap-2">
             <span className="min-w-0 flex-1 truncate text-lg font-semibold">{q.label}</span>
             {q.done && <Check aria-label="Done" className="size-4 shrink-0 text-success" />}
@@ -485,7 +523,7 @@ export function Walkthrough({
           )}
 
         </div>
-        <div className={wide ? 'flex min-h-0 flex-col gap-5 overflow-y-auto p-card' : 'contents'}>
+        <div className={wide ? 'grid min-h-0 grid-cols-1 content-start gap-5 overflow-y-auto p-card' : 'contents'}>
           {q.state === 'failed' ? (
             <>
               <FailedQuestion q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} onOpenSettings={onOpenSettings} />
