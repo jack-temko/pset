@@ -1,6 +1,6 @@
 module github.com/jackt/pset
 
-go 1.26.5
+go 1.26.8
 
 require (
 	github.com/dop251/goja v0.0.0-20260926152631-39ec2650adc9
