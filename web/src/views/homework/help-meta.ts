@@ -1,4 +1,5 @@
 import type { Block } from '@/api/gen/doc'
+import type { Question } from '@/api/homework'
 import { runsText } from '@/components/document/runs'
 import { answersOf } from '@/components/document/tree'
 
@@ -19,3 +20,13 @@ export function helpMeta(name: HelpName, blocks: Block[]): string {
   return plural(Math.max(1, Math.round(chars / 60)), 'line', 'lines')
 }
 
+
+/** The rows a question has, in order, each with its blocks: the answers are
+ *  the walkthrough's answer blocks, so they are there once it is. */
+export function helpRows(q: Question): { name: HelpName; blocks: Block[] }[] {
+  return HELP_NAMES.flatMap((name) => {
+    const blocks = name === 'hint' ? q.hint : q.walkthrough
+    if (name === 'answers' && blocks.length > 0 && answersOf(blocks).length === 0) return []
+    return [{ name, blocks }]
+  })
+}

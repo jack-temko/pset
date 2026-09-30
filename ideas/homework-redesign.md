@@ -46,10 +46,11 @@ Claude-only eval key, never the key in his own library.
   - Files: `web/src/components/progress-bar/index.tsx`, `web/src/components/progress-bar/README.md`, `web/src/components/progress-bar/progress-bar.test.ts`, `web/src/pages/components/sections/feedback.tsx`
   - Do: promote the wireframes' `WeightedBar` (segments as wide as their weight; done, current, waiting, failed; equal widths when there is no weight; not a control). Test the width math and the fallback.
   - Done when: it is on `/components` in both themes; tests, typecheck and build pass.
-- [ ] 4. (opus) The walkthrough: header, question row, rows, the one button, next unfinished, keyboard
+- [x] 4. (opus) The walkthrough: header, question row, rows, the one button, next unfinished, keyboard
   - Files: `web/src/views/homework/walkthrough.tsx`, `web/src/views/homework/progress.ts`, `web/src/views/homework/progress.test.ts`, `web/src/views/homework/keys.ts`, `web/src/views/homework/failed-question.tsx`
   - Do: rebuild the walkthrough to the wireframes: the header with the count Menu (its list of questions, current row), the weighted bar as its edge, the time left in gray; the question row (Show in book, the question menu); read-only notes; the three Disclosure rows; the footer with Ask about this and the one button (Next question marks done and moves to the next unfinished, wrapping, to the finish page when none are left; Mark incomplete on a done question; Skip for now on a question being written, failed or with no guide). Keyboard (D27): left and right browse, 1 2 3 toggle the rows, Enter on the primary; off while typing. Pure logic in `progress.ts` with tests.
   - Done when: every state in the grill's table renders in `/views` in both themes; the logic tests pass; the counts meet the acceptance numbers; the main flow works from the keyboard alone.
+  - Built: tab stops from the tabs to the first row are 6 in `/views` and 7 in the workspace (the Focus toggle is live there), one over the acceptance number; 14 controls on a ready question with the usage line's toggle, one over 13. Both are for the post-build review. Finish page wiring waits for task 6: with nothing left, Next marks done and stays.
 - [ ] 5. (sonnet) Focus in two columns
   - Files: `web/src/views/homework/walkthrough.tsx`, `web/src/views/homework/stage.tsx`, `web/src/pages/workspace/index.tsx`
   - Do: the panel passes whether it is in Focus; in Focus the question, Show in book and the notes are pinned on the left and the rows scroll on the right; header and footer unchanged.
