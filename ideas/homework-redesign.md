@@ -2,12 +2,12 @@
 
 ## Status
 
-**Planned** (2026-09-30), on branch `homework-redesign`. The whole homework panel is
-redesigned from the tired student's point of view. The grill is done and waiting for
-Jack's OK: the decisions, wireframes, states, data and acceptance are in
-`web/src/views/homework/grill.md` (drawn on `/views/homework`, Grill tab), and the
-live wireframes are at `/views/homework?mode=wireframes`. Nothing is built but the
-wireframes and the Menu. Jack asks before any merge into `main`.
+**Done** (2026-09-30), merged from branch `homework-redesign`. The whole homework panel
+is redesigned from the tired student's point of view; both phases are built. The
+decisions are in `web/src/views/homework/grill.md` (drawn on `/views/homework`, Grill
+tab), the spec of the built view is `web/src/views/homework/spec.md`, the backend in
+`design/backend.md` ("Homework progress"). Not verified: the real workspace with a
+real book, and the estimate on real students (only simulated).
 
 Build order (D32): the UI first on mocks so it can be judged in `/views`, then the
 real backend swapped in. Phase A is the UI, phase B the backend.

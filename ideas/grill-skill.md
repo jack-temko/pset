@@ -2,10 +2,10 @@
 
 ## Status
 
-**In progress** (2026-09-30), on branch `grill-skill`. Grilled with Jack the way the
+**Done** (2026-09-30), merged with the homework redesign. Grilled with Jack the way the
 skill grills: audit, a weighted frontier, four questions a batch, recommendation first.
-Tasks 1 to 4 are built (not merged: Jack is asked before any merge); task 5, the first
-real grill, is a redesign of the homework panel with Jack.
+Tasks 1 to 4 built the two skills; task 5, the first real grill, was the homework
+redesign (`ideas/homework-redesign.md`).
 
 ## Two skills (Jack, 2026-09-30)
 
