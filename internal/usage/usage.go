@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/llm"
@@ -45,7 +46,20 @@ CREATE TABLE calls (
 	session          TEXT,
 	error            TEXT
 );
-CREATE INDEX calls_subject ON calls(subject_type, subject_id);`}}
+CREATE INDEX calls_subject ON calls(subject_type, subject_id);`},
+		// A subject removed while a model call for it is in flight: the call
+		// ends after the removal and would record a row for something that
+		// no longer exists, for good. Forget leaves a mark here, in the same
+		// write that deletes the rows, and the sink records nothing for a
+		// marked subject. Marks are only needed while calls can still be in
+		// flight; Sweep clears them.
+		{Name: "usage/2", SQL: `
+CREATE TABLE forgotten (
+	subject_type TEXT NOT NULL,
+	subject_id   TEXT NOT NULL,
+	at           TEXT NOT NULL,
+	PRIMARY KEY (subject_type, subject_id)
+);`}}
 }
 
 // execer is what the sink and the cleanup write through, so they can run
@@ -74,11 +88,16 @@ func Sink(d *sql.DB) func(llm.Call) {
 		if c.Error != "" {
 			errText = c.Error
 		}
+		// Nothing is recorded for a subject that was removed while this call
+		// ran: the mark and the insert are one statement, so a removal
+		// can't slip between checking and writing.
 		if _, err := d.ExecContext(ctx, `INSERT INTO calls
 			(at, subject_type, subject_id, model, answered, ms, prompt_tokens, completion_tokens, cost, host, session, error)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+			WHERE NOT EXISTS (SELECT 1 FROM forgotten WHERE subject_type = ? AND subject_id = ?)`,
 			c.At, c.SubjectType, c.SubjectID, c.Model, nullable(c.Answered), c.Ms,
-			prompt, completion, cost, nullable(c.Host), nullable(c.Session), errText); err != nil {
+			prompt, completion, cost, nullable(c.Host), nullable(c.Session), errText,
+			c.SubjectType, c.SubjectID); err != nil {
 			slog.Error("usage: record call", "subject", c.SubjectType+"/"+c.SubjectID, "err", err)
 		}
 	}
@@ -120,14 +139,16 @@ func ForSubjects(ctx context.Context, q queryer, subjectType string, ids []strin
 	// The answered model is who replied — a fallback's, when the one
 	// asked for failed — falling back to the model asked for, which is
 	// what a call that never got an answer and a provider that doesn't
-	// name its models have. Rows with usage lead, so the card's headline
-	// is who did the work.
-	rows, err := q.QueryContext(ctx, `SELECT subject_id, coalesce(nullif(answered, ''), model) AS model,
+	// name its models have. The alias is not called model, the column's
+	// name: GROUP BY model would group by the column, the model asked
+	// for, and merge a fallback's answers under whichever came first.
+	// Rows with usage lead, so the card's headline is who did the work.
+	rows, err := q.QueryContext(ctx, `SELECT subject_id, coalesce(nullif(answered, ''), model) AS who,
 			sum(ms), sum(cost), sum(coalesce(prompt_tokens, 0) + coalesce(completion_tokens, 0)),
 			count(*), count(prompt_tokens), count(nullif(error, ''))
 		FROM calls
 		WHERE subject_type = ? AND subject_id IN (`+marks+`)
-		GROUP BY subject_id, model
+		GROUP BY subject_id, who
 		ORDER BY 5 DESC, 3 DESC`, args...)
 	if err != nil {
 		return nil, err
@@ -147,7 +168,7 @@ func ForSubjects(ctx context.Context, q queryer, subjectType string, ids []strin
 			u = &Usage{}
 			out[subjectID] = u
 		}
-		row := UsageRow{Model: model, Ms: ms, Calls: calls}
+		row := UsageRow{Model: model, Ms: ms, Calls: calls, Uncounted: calls - withUsage}
 		// A model none of whose calls reported usage shows "–", not zero:
 		// nothing was counted, which isn't the same as nothing was spent.
 		if withUsage > 0 {
@@ -161,6 +182,7 @@ func ForSubjects(ctx context.Context, q queryer, subjectType string, ids []strin
 		u.Rows = append(u.Rows, row)
 		u.Total.Ms += ms
 		u.Total.Calls += calls
+		u.Total.Uncounted += row.Uncounted
 		if row.Tokens != nil {
 			if u.Total.Tokens == nil {
 				u.Total.Tokens = new(int)
@@ -179,10 +201,17 @@ func ForSubjects(ctx context.Context, q queryer, subjectType string, ids []strin
 }
 
 // Forget deletes one subject's call rows, called as the subject goes, so
-// its spending isn't kept after the thing it was spent on.
+// its spending isn't kept after the thing it was spent on. It marks the
+// subject first, so a call still in flight for it (the job stopped, the
+// request unwinding) records nothing when it ends.
 func Forget(ctx context.Context, q execer, subjectType, subjectID string) error {
-	_, err := q.ExecContext(ctx, `DELETE FROM calls WHERE subject_type = ? AND subject_id = ?`, subjectType, subjectID)
-	if err != nil {
+	if subjectID != "" {
+		if _, err := q.ExecContext(ctx, `INSERT OR IGNORE INTO forgotten (subject_type, subject_id, at) VALUES (?, ?, ?)`,
+			subjectType, subjectID, db.Now()); err != nil {
+			return fmt.Errorf("usage: forget %s/%s: %w", subjectType, subjectID, err)
+		}
+	}
+	if _, err := q.ExecContext(ctx, `DELETE FROM calls WHERE subject_type = ? AND subject_id = ?`, subjectType, subjectID); err != nil {
 		return fmt.Errorf("usage: forget %s/%s: %w", subjectType, subjectID, err)
 	}
 	return nil
@@ -195,6 +224,31 @@ func ForgetAll(ctx context.Context, q execer, subjectType string, ids []string) 
 		if err := Forget(ctx, q, subjectType, id); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// How long a removal's mark is kept: a call can outlive its subject by as
+// long as a request can run (llm.DefaultTimeout is 20 minutes), so a day
+// is more than enough.
+const forgottenFor = 24 * time.Hour
+
+// How long a call made for nothing in particular is kept: the Settings
+// key test, a reference the model read. No removal will ever delete them.
+const unattributedFor = 30 * 24 * time.Hour
+
+// Sweep clears what nothing else will: the marks Forget left once no call
+// can still be in flight for them, and old calls that were spent on no
+// subject. Run at startup.
+func Sweep(ctx context.Context, d *sql.DB) error {
+	now := time.Now()
+	if _, err := d.ExecContext(ctx, `DELETE FROM forgotten WHERE at < ?`, db.At(now.Add(-forgottenFor))); err != nil {
+		return fmt.Errorf("usage: sweep marks: %w", err)
+	}
+	// calls.at is RFC 3339 in UTC to the second, which compares as text.
+	if _, err := d.ExecContext(ctx, `DELETE FROM calls WHERE subject_type = '' AND at < ?`,
+		now.Add(-unattributedFor).UTC().Format(time.RFC3339)); err != nil {
+		return fmt.Errorf("usage: sweep calls: %w", err)
 	}
 	return nil
 }

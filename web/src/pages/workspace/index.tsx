@@ -582,6 +582,7 @@ function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) 
   // themselves).
   const endsInStep = t.steps.some((s) => Math.min(s.after ?? 0, t.answer.length) === t.answer.length)
   const thinking = running && !lastRunning && !t.pending && (t.answer.length === 0 || endsInStep)
+  const hasReply = t.steps.length > 0 || t.answer.length > 0 || !!t.pending || thinking
   // Each step sits after the blocks written when it ran. Turns saved
   // before steps carried a position have none, and land at the top, as
   // they always did.
@@ -601,7 +602,7 @@ function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) 
   return (
     <>
       <UserTurn about={t.about || undefined}>{t.question}</UserTurn>
-      {(t.steps.length > 0 || t.answer.length > 0 || t.pending || thinking) && (
+      {hasReply && (
         <AssistantTurn>
           {/* The step feed sits where the calls ran: before the block
               written when each one began. */}
@@ -623,6 +624,10 @@ function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) 
           onSetup={t.failure === 'setup' ? () => navigate('/settings#connections') : undefined}
         />
       )}
+      {/* A turn that ended before it wrote a thing (the first call refused, a
+          stop at once) has no reply to end with the line, and its calls still
+          cost time: it follows the note instead. */}
+      {!hasReply && t.state !== 'running' && t.usage && <UsageLine usage={t.usage} />}
     </>
   )
 }

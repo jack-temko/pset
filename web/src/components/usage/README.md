@@ -11,7 +11,8 @@ there; the numbers are one press away and nothing else ever moves.
   `ChevronDown` a quarter-turn when it's open. `aria-expanded` and
   `aria-haspopup="dialog"` say what it does before it's done.
 - **The card** is the ConfirmPopover's geometry with none of its asking:
-  `w-80`, `card`, hairline border, `shadow-floating`, radius-md, under
+  at least `w-80` and as wide as its numbers need (never past the window),
+  `card`, hairline border, `shadow-floating`, radius-md, under
   the line (over it when there's no room, right-aligned, clamped, portal
   to the body), and it **follows its line on scroll and resize** — the
   transcript streams under it, and a popover that detached would point at
@@ -21,15 +22,25 @@ there; the numbers are one press away and nothing else ever moves.
 - **The numbers** are a `tabular-nums` table, mono for the machine
   strings: one row per model that answered, time then tokens then cost,
   and a Total row carrying the call count. Tokens are exact with
-  separators (the card is where precision lives); time is the models'
-  time summed; a provider that reported no usage shows "–", never a zero,
-  which would say the call was free rather than uncounted. Failed calls
-  are included — they cost too — and a muted footnote says how many.
+  separators (the card is where precision lives). **Time is the calls'
+  durations added up**, so calls made at once count in full; the line's
+  `title` and the card's last note say so. A call that failed, was stopped
+  or came from a provider that reports nothing has no tokens or cost, though
+  a failed one still bills: a row or Total with any marks its figures `≥`,
+  a row with none counted shows "–" (never a zero, which would say free),
+  and the note says how many. A paid call under $0.0001 reads "<$0.0001";
+  "$0.0000" is exactly nothing, a local model.
+- **The formatting** is `web/src/lib/usage-format.ts`, with tests: `clock`,
+  `cost`, `tokens`, `shortModel`, `atLeast`.
 
 **It appears only after the job has finished** (ready or failed, done,
 stopped, failed) and only when at least one call was made; nothing shows
 while it runs, where the working lines already say how it's going. Every
 row is a rerun or retry included: the money was really spent.
+
+**Esc** closes the card and stops there, except from a text field: an Esc
+typed in the composer is the composer's too. The line names the card with
+`aria-controls` while it's open.
 
 **Don't:** reuse the ConfirmPopover for it (that one asks a question,
 steals focus and vanishes); put actions in the card (it informs); show it

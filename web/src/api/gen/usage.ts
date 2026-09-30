@@ -40,6 +40,14 @@ export interface UsageRow {
   tokens?: number /* int */;
   cost?: number /* float64 */;
   calls: number /* int */;
+  /**
+   * Uncounted is how many of those calls reported no usage: ones that
+   * failed or were stopped part-way (the provider still bills what was
+   * written, and never says how much) and ones from a provider that
+   * doesn't report. Tokens and Cost add up only the counted calls, so
+   * with any uncounted they are a minimum, and the card says so.
+   */
+  uncounted?: number /* int */;
 }
 /**
  * UsageTotal is every row added up.
@@ -49,4 +57,8 @@ export interface UsageTotal {
   tokens?: number /* int */;
   cost?: number /* float64 */;
   calls: number /* int */;
+  /**
+   * Uncounted is the rows' uncounted calls added up.
+   */
+  uncounted?: number /* int */;
 }

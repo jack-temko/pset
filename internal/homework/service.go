@@ -761,12 +761,34 @@ func (s *Service) QuestionsDoneSince(ctx context.Context, since time.Time) (ques
 // assignment reads, called as the book is removed, while they can still
 // be named.
 func (s *Service) ForgetBookCalls(ctx context.Context, bookID string) error {
-	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM calls WHERE subject_type = ? AND subject_id IN
-		(SELECT q.id FROM questions q JOIN homework h ON h.id = q.homework_id WHERE h.book_id = ?)`,
-		usage.SubjectQuestion, bookID); err != nil {
+	questions, err := ids(ctx, s.c.DB, `SELECT q.id FROM questions q JOIN homework h ON h.id = q.homework_id WHERE h.book_id = ?`, bookID)
+	if err != nil {
 		return err
 	}
-	_, err := s.c.DB.ExecContext(ctx, `DELETE FROM calls WHERE subject_type = ? AND subject_id IN
-		(SELECT id FROM assignment_reads WHERE book_id = ?)`, usage.SubjectRead, bookID)
-	return err
+	if err := usage.ForgetAll(ctx, s.c.DB, usage.SubjectQuestion, questions); err != nil {
+		return err
+	}
+	reads, err := ids(ctx, s.c.DB, `SELECT id FROM assignment_reads WHERE book_id = ?`, bookID)
+	if err != nil {
+		return err
+	}
+	return usage.ForgetAll(ctx, s.c.DB, usage.SubjectRead, reads)
+}
+
+// ids runs a query for one column of ids.
+func ids(ctx context.Context, d *sql.DB, query string, args ...any) ([]string, error) {
+	rows, err := d.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
 }
