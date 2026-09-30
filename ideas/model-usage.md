@@ -197,11 +197,4 @@ calls, and the frontend draws nothing. Regenerate
 
 ### Deferred
 
-- **Book import surface**: rows are recorded; only the shelf row's UI
-  is owed.
-- **Live totals while a job runs**: the line is for after; the working
-  lines already say how it's going.
-- **Per-call detail, cached/reasoning token split, host**: in the
-  calls table and the JSONL, not on the card; the card stays light.
-- **Cross-job totals** (per book, per month, all-time): the calls
-  table makes each a query; no UI decided.
+Moved to [loose-ends.md](loose-ends.md#from-the-finished-ideas).

@@ -232,7 +232,7 @@ func (s *Service) readOut(ctx context.Context, readID, bookID, source string, co
 		return Assignment{}, err
 	}
 	if !cfg.ChatReady() {
-		return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "There's no OpenRouter key yet. Add yours in Settings, under Connections, then try again.")
+		return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "%s", llm.NoKey)
 	}
 	m := model{client: llm.Open(cfg), name: cfg.ChatModel}
 	msg := llm.PartsContent(llm.TextPart("The assignment:"))

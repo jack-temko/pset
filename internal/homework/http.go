@@ -12,24 +12,12 @@ import (
 
 // Routes mounts the homework endpoints.
 func (s *Service) Routes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/books/{id}/homework", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleFunc("GET /api/books/{id}/homework", httpx.Reply(func(r *http.Request) (List, error) {
 		list, err := s.ForBook(r.Context(), r.PathValue("id"))
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, List{Homework: list})
+		return List{Homework: list}, err
 	}))
-	mux.HandleFunc("POST /api/books/{id}/homework", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var in Input
-		if err := httpx.Decode(r, &in); err != nil {
-			return err
-		}
-		h, err := s.Create(r.Context(), r.PathValue("id"), in)
-		if err != nil {
-			return err
-		}
-		httpx.JSON(w, http.StatusCreated, h)
-		return nil
+	mux.HandleFunc("POST /api/books/{id}/homework", httpx.Send(http.StatusCreated, func(r *http.Request, in Input) (Summary, error) {
+		return s.Create(r.Context(), r.PathValue("id"), in)
 	}))
 	// Reading an assignment starts it in the background: a file as a
 	// multipart upload, or a web page or pasted text as JSON.
@@ -52,128 +40,51 @@ func (s *Service) Routes(mux *http.ServeMux) {
 		httpx.JSON(w, http.StatusAccepted, read)
 		return nil
 	}))
-	mux.HandleFunc("GET /api/books/{id}/assignments/reads", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleFunc("GET /api/books/{id}/assignments/reads", httpx.Reply(func(r *http.Request) (AssignmentReads, error) {
 		reads, err := s.Reads(r.Context(), r.PathValue("id"))
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, AssignmentReads{Reads: reads})
+		return AssignmentReads{Reads: reads}, err
 	}))
-	mux.HandleFunc("GET /api/assignment-reads/{id}", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		read, err := s.Read(r.Context(), r.PathValue("id"))
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, read)
+	mux.HandleFunc("GET /api/assignment-reads/{id}", httpx.Reply(func(r *http.Request) (AssignmentRead, error) {
+		return s.Read(r.Context(), r.PathValue("id"))
 	}))
-	mux.HandleFunc("POST /api/assignment-reads/{id}/retry", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		read, err := s.RetryRead(r.Context(), r.PathValue("id"))
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, read)
+	mux.HandleFunc("POST /api/assignment-reads/{id}/retry", httpx.Reply(func(r *http.Request) (AssignmentRead, error) {
+		return s.RetryRead(r.Context(), r.PathValue("id"))
 	}))
-	mux.HandleFunc("DELETE /api/assignment-reads/{id}", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		if err := s.DismissRead(r.Context(), r.PathValue("id")); err != nil {
-			return err
-		}
-		return httpx.NoContent(w)
+	mux.HandleFunc("DELETE /api/assignment-reads/{id}", httpx.Act(func(r *http.Request) error {
+		return s.DismissRead(r.Context(), r.PathValue("id"))
 	}))
-	mux.HandleFunc("POST /api/books/{id}/assignments", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var in AssignmentImport
-		if err := httpx.Decode(r, &in); err != nil {
-			return err
-		}
+	mux.HandleFunc("POST /api/books/{id}/assignments", httpx.Send(http.StatusCreated, func(r *http.Request, in AssignmentImport) (List, error) {
 		sets, err := s.ImportAssignment(r.Context(), r.PathValue("id"), in)
-		if err != nil {
-			return err
-		}
-		httpx.JSON(w, http.StatusCreated, List{Homework: sets})
-		return nil
+		return List{Homework: sets}, err
 	}))
-	mux.HandleFunc("GET /api/books/{id}/assignments/source", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		src, err := s.LastSource(r.Context(), r.PathValue("id"))
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, src)
+	mux.HandleFunc("GET /api/books/{id}/assignments/source", httpx.Reply(func(r *http.Request) (AssignmentSource, error) {
+		return s.LastSource(r.Context(), r.PathValue("id"))
 	}))
-	mux.HandleFunc("POST /api/books/{id}/references", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var in ReferenceLines
-		if err := httpx.Decode(r, &in); err != nil {
-			return err
-		}
-		out, err := s.ReadLines(r.Context(), r.PathValue("id"), in.Lines)
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, out)
+	mux.HandleFunc("POST /api/books/{id}/references", httpx.Send(http.StatusOK, func(r *http.Request, in ReferenceLines) (LineReadings, error) {
+		return s.ReadLines(r.Context(), r.PathValue("id"), in.Lines)
 	}))
-	mux.HandleFunc("GET /api/due", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleFunc("GET /api/due", httpx.Reply(func(r *http.Request) (List, error) {
 		list, err := s.Due(r.Context())
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, List{Homework: list})
+		return List{Homework: list}, err
 	}))
-	mux.HandleFunc("GET /api/homework/{id}", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		d, err := s.Get(r.Context(), r.PathValue("id"))
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, d)
+	mux.HandleFunc("GET /api/homework/{id}", httpx.Reply(func(r *http.Request) (Detail, error) {
+		return s.Get(r.Context(), r.PathValue("id"))
 	}))
-	mux.HandleFunc("PATCH /api/homework/{id}", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var p Patch
-		if err := httpx.Decode(r, &p); err != nil {
-			return err
-		}
-		h, err := s.Update(r.Context(), r.PathValue("id"), p)
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, h)
+	mux.HandleFunc("PATCH /api/homework/{id}", httpx.Send(http.StatusOK, func(r *http.Request, p Patch) (Summary, error) {
+		return s.Update(r.Context(), r.PathValue("id"), p)
 	}))
-	mux.HandleFunc("DELETE /api/homework/{id}", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		if err := s.Delete(r.Context(), r.PathValue("id")); err != nil {
-			return err
-		}
-		return httpx.NoContent(w)
+	mux.HandleFunc("DELETE /api/homework/{id}", httpx.Act(func(r *http.Request) error {
+		return s.Delete(r.Context(), r.PathValue("id"))
 	}))
-	mux.HandleFunc("POST /api/homework/{id}/questions", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var in AddQuestions
-		if err := httpx.Decode(r, &in); err != nil {
-			return err
-		}
+	mux.HandleFunc("POST /api/homework/{id}/questions", httpx.Send(http.StatusCreated, func(r *http.Request, in AddQuestions) (Questions, error) {
 		qs, err := s.Add(r.Context(), r.PathValue("id"), in.Drafts)
-		if err != nil {
-			return err
-		}
-		httpx.JSON(w, http.StatusCreated, Questions{Questions: qs})
-		return nil
+		return Questions{Questions: qs}, err
 	}))
-	mux.HandleFunc("POST /api/homework/{id}/boxed", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var in Boxes
-		if err := httpx.Decode(r, &in); err != nil {
-			return err
-		}
-		q, err := s.AddBoxed(r.Context(), r.PathValue("id"), in.Boxes)
-		if err != nil {
-			return err
-		}
-		httpx.JSON(w, http.StatusCreated, q)
-		return nil
+	mux.HandleFunc("POST /api/homework/{id}/boxed", httpx.Send(http.StatusCreated, func(r *http.Request, in Boxes) (Question, error) {
+		return s.AddBoxed(r.Context(), r.PathValue("id"), in.Boxes)
 	}))
-	mux.HandleFunc("POST /api/questions/{id}/boxes", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var in Boxes
-		if err := httpx.Decode(r, &in); err != nil {
-			return err
-		}
-		q, err := s.PointOut(r.Context(), r.PathValue("id"), in.Boxes)
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, q)
+	mux.HandleFunc("POST /api/questions/{id}/boxes", httpx.Send(http.StatusOK, func(r *http.Request, in Boxes) (Question, error) {
+		return s.PointOut(r.Context(), r.PathValue("id"), in.Boxes)
 	}))
 	mux.HandleFunc("GET /api/homework/{id}/worksheet", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
 		data, err := s.Worksheet(r.Context(), r.PathValue("id"))
@@ -185,40 +96,17 @@ func (s *Service) Routes(mux *http.ServeMux) {
 		w.Write(data)
 		return nil
 	}))
-	mux.HandleFunc("PATCH /api/questions/{id}", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var p QuestionPatch
-		if err := httpx.Decode(r, &p); err != nil {
-			return err
-		}
-		q, err := s.UpdateQuestion(r.Context(), r.PathValue("id"), p)
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, q)
+	mux.HandleFunc("PATCH /api/questions/{id}", httpx.Send(http.StatusOK, func(r *http.Request, p QuestionPatch) (Question, error) {
+		return s.UpdateQuestion(r.Context(), r.PathValue("id"), p)
 	}))
-	mux.HandleFunc("DELETE /api/questions/{id}", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		if err := s.RemoveQuestion(r.Context(), r.PathValue("id")); err != nil {
-			return err
-		}
-		return httpx.NoContent(w)
+	mux.HandleFunc("DELETE /api/questions/{id}", httpx.Act(func(r *http.Request) error {
+		return s.RemoveQuestion(r.Context(), r.PathValue("id"))
 	}))
-	mux.HandleFunc("POST /api/questions/{id}/guide", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		q, err := s.WriteGuide(r.Context(), r.PathValue("id"))
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, q)
+	mux.HandleFunc("POST /api/questions/{id}/guide", httpx.Reply(func(r *http.Request) (Question, error) {
+		return s.WriteGuide(r.Context(), r.PathValue("id"))
 	}))
-	mux.HandleFunc("POST /api/questions/{id}/retry", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
-		var in Retry
-		if err := httpx.Decode(r, &in); err != nil {
-			return err
-		}
-		q, err := s.RetryQuestion(r.Context(), r.PathValue("id"), in)
-		if err != nil {
-			return err
-		}
-		return httpx.OK(w, q)
+	mux.HandleFunc("POST /api/questions/{id}/retry", httpx.Send(http.StatusOK, func(r *http.Request, in Retry) (Question, error) {
+		return s.RetryQuestion(r.Context(), r.PathValue("id"), in)
 	}))
 	mux.HandleFunc("GET /api/questions/{id}/figures/{n}", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
 		n, err := strconv.Atoi(r.PathValue("n"))

@@ -187,7 +187,7 @@ func (s *Service) withModel(ctx context.Context, q row, step func(context.Contex
 		return err
 	}
 	if !cfg.ChatReady() {
-		return fail(FailureSetup, nil, "There's no OpenRouter key yet. Add yours in Settings, under Connections, then try again.")
+		return fail(FailureSetup, nil, "%s", llm.NoKey)
 	}
 	return step(ctx, model{client: llm.Open(cfg), name: cfg.ChatModel}, book, q)
 }

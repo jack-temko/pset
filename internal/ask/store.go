@@ -30,6 +30,15 @@ CREATE INDEX turns_book ON turns (book_id, created_at);`},
 		// Structured guides: an answer is a document of blocks now, and the
 		// old conversations, written as prose and cards, are deleted.
 		{Name: "ask/2", SQL: `DELETE FROM turns`},
+		// A failed turn says what kind of failure it was, so the page needn't
+		// read its sentence. Turns that failed before this get the kind their
+		// sentence names.
+		{Name: "ask/3", SQL: `
+ALTER TABLE turns ADD COLUMN failure TEXT NOT NULL DEFAULT '';
+UPDATE turns SET failure = 'setup' WHERE state = 'failed' AND (
+	reason LIKE '%no OpenRouter key yet%' OR reason LIKE '%out of credit%' OR reason LIKE '%turned the request down%');
+UPDATE turns SET failure = 'unavailable' WHERE state = 'failed' AND failure = '' AND reason LIKE '%busy right now%';
+UPDATE turns SET failure = 'generation' WHERE state = 'failed' AND failure = '';`},
 	}
 }
 
@@ -40,12 +49,12 @@ type row struct {
 	AboutText string
 }
 
-const cols = `id, book_id, question, about, about_text, steps, answer, state, reason, created_at, updated_at`
+const cols = `id, book_id, question, about, about_text, steps, answer, state, reason, failure, created_at, updated_at`
 
 func scan(s interface{ Scan(...any) error }) (row, error) {
 	var r row
 	var steps, answer string
-	err := s.Scan(&r.ID, &r.BookID, &r.Question, &r.About, &r.AboutText, &steps, &answer, &r.State, &r.Reason, &r.CreatedAt, &r.UpdatedAt)
+	err := s.Scan(&r.ID, &r.BookID, &r.Question, &r.About, &r.AboutText, &steps, &answer, &r.State, &r.Reason, &r.Failure, &r.CreatedAt, &r.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
 	}

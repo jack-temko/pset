@@ -78,8 +78,10 @@ func (b *Bus) Publish(typ string, data any) {
 }
 
 // Subscribe returns a channel of events after lastID, the replay first. If
-// events after lastID have already left the ring, the first event is Reset.
-// lastID 0 means "from now".
+// events after lastID have already left the ring, the first event is Reset;
+// so is an lastID this bus never issued, which is a client that watched an
+// earlier run of the server (ids start again at 1) and missed all that
+// happened between. lastID 0 means "from now".
 func (b *Bus) Subscribe(lastID uint64) (<-chan Event, func()) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -89,7 +91,11 @@ func (b *Bus) Subscribe(lastID uint64) (<-chan Event, func()) {
 		if len(b.ring) > 0 {
 			oldest = b.ring[0].ID
 		}
-		if lastID+1 < oldest {
+		switch {
+		case lastID >= b.next:
+			// Its cursor moves to this run's numbering with the reset.
+			ch <- Event{ID: b.next - 1, Type: Reset}
+		case lastID+1 < oldest:
 			ch <- Event{ID: lastID, Type: Reset}
 		}
 		for _, e := range b.ring {

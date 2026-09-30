@@ -3,17 +3,10 @@
 `/settings`. A document page, and the last screen of the three.
 Decisions from the 2026-09-21 grill; each is settled, not open.
 
-**What the engine already has** (`internal/engine/config.go`,
-`doctor.go`, `reset.go`): `Settings` is four fields (chat endpoint, API
-key, embeddings endpoint, embeddings model) in a `config.json` at mode
-0600. `TestConnection(override)` dials values without saving them.
-Doctor runs six checks, and can fix two of them (data dir, schema).
-`Reset` counts before it deletes.
-
 ## Shape
 
 One page, stacked, in this order: **You · Connections · Health ·
-Appearance · Reset**, then one mono line: `pset 0.9.0 · /path/to/data`. No
+Appearance · Reset**, then one mono line: `pset <version> · /path/to/data`. No
 navigation: two fields and five checks don't need any. The top bar's
 middle is empty; the h1 says where you are.
 
@@ -76,7 +69,7 @@ fact is said once.
 
 A check that fails and can be fixed (data dir, database, and Ollama
 running without its model, which Fix downloads) gets a **Fix** button,
-which is the doctor's `--fix`. One that can't (a missing tool, Ollama
+which repairs it and runs the check again. One that can't (a missing tool, Ollama
 not running) says how to install or start it.
 
 ## Appearance
@@ -99,18 +92,6 @@ naming what goes (2026-09-24, replacing Reset's dialog).
   homework, not from the time.
 - **Reset PSet · Reset everything.** **It is a fresh install:** every
   book, page, homework set and conversation, **and the settings, API
-  key included**. The confirm gives the counts from the engine's dry
+  key included**. The confirm gives the counts from a dry
   run, says there is no undo, reads "Resetting…" while it runs, and
   lands you on an empty Home.
-
-## Backend changes this asks for
-
-- `Settings` gains a **chat model**; `llm.ChatModel` becomes its default.
-- `TestConnection` takes **one side at a time** (chat or embeddings), and
-  a failure reports **which field** it points at.
-- **Save = test, then write**, as one call that refuses to write on a
-  failed probe.
-- **Doctor's fixes are callable per check** from the API, not only as
-  `--fix` for the lot.
-- `Reset` also **removes `config.json`**.
-- An **about** endpoint: version and data directory.

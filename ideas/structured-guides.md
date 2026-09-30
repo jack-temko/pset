@@ -5,18 +5,9 @@
 **Done** (branch `guide-blocks`, merged 2026-09-29 with `openrouter`;
 the look shipped on `guide-look`). The spec lives in design/backend.md
 ("The document") and design/workspace.md. This file stays for the prompt
-evaluation and the tested guide prompt, and for two follow-ups the last
-real-model run (2026-09-29, through OpenRouter) turned up:
-
-- **Ask's prompt is untested.** GLM-5.3-Flash answered an Ask partly in
-  plain prose between tool calls and reached for guide-only blocks (hint,
-  answer): the repair loop rewrote it in four calls, and a first sentence
-  still showed as a raw block. The guide prompt got an A/B; Ask's needs
-  one. DeepSeek V4.1 Flash's Ask came out clean.
-- **Gemini through OpenRouter stops mid-guide.** Gemini 3.8 Flash wrote
-  two of four guides and stopped without an answer on the other two,
-  nudge included: likely its tool loop wants `reasoning_details` handed
-  back, not the plain `reasoning` PSet sends.
+evaluation and the tested guide prompt. The follow-ups the last real-model
+run (2026-09-29, through OpenRouter) turned up, and what was open below,
+moved to [loose-ends.md](loose-ends.md#from-the-finished-ideas).
 
 ## Information
 
@@ -461,13 +452,7 @@ Answers veil.
 
 ### Open
 
-- **The Answers veil for Ask**: none, as decided. Revisit if an Ask
-  answer with parts wants one.
-- **Where answers render inside the walkthrough**: in place at each
-  part's end, and the card again at the end, or only in place. The page
-  did both.
-- **A plot's marks** could be computed (the crossing of two series)
-  rather than given as numbers. Not decided; given numbers are simpler.
+Moved to [loose-ends.md](loose-ends.md#from-the-finished-ideas).
 
 ### The tested guide prompt
 

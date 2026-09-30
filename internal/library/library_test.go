@@ -264,6 +264,31 @@ func TestDigitalBookImportsToReady(t *testing.T) {
 	}
 }
 
+// Ollama stopping after a book is ready must not take search with it: the
+// tutor's search_pages and the finder both call it.
+func TestSearchFallsBackToTextWhenEmbeddingFails(t *testing.T) {
+	e := newEnv(t)
+	var up BookChanged
+	e.upload(t, "linear_algebra-notes.pdf", fixturePDF(t, 3, 12, "Linear Maps"), &up)
+	b := e.waitFor(t, up.Book.ID, StateReady)
+
+	e.llm.FailEmbeddings(400)
+	hits, err := e.svc.Search(context.Background(), b.ID, "determinants of matrices", 3)
+	if err != nil || len(hits) == 0 {
+		t.Fatalf("search with Ollama down: %v %v", hits, err)
+	}
+	if text, _ := e.svc.PageText(context.Background(), b.ID, hits[0]); !strings.Contains(text, "determinants") {
+		t.Fatalf("top hit p.%d: %q", hits[0], text)
+	}
+
+	// A cancelled search is cancelled, not answered with half a ranking.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := e.svc.Search(ctx, b.ID, "determinants", 3); err == nil {
+		t.Fatal("a cancelled search answered")
+	}
+}
+
 func TestDuplicateAndNotAPDFAreRefused(t *testing.T) {
 	e := newEnv(t)
 	pdf := fixturePDF(t, 0, 4, "Dup")
@@ -344,28 +369,53 @@ func TestEmbeddingFailureIsAReadableReason(t *testing.T) {
 	e.waitFor(t, b.ID, StateReady)
 }
 
+// A book stopped before its first job ran says so, and tried again it reads.
+// The queue is paused so that "before it started" is a fact of the test and
+// not a race with the lane: an examine outranks a scan's reading and starts
+// the moment it can.
 func TestStopQueuedThenRetry(t *testing.T) {
 	e := newEnv(t)
-	// Hold the lane with a slow scanned book so the next one stays queued.
-	release := make(chan struct{})
-	e.setOCR(func(p int) (string, error) { <-release; return "text", nil })
-	var first, second BookChanged
-	e.upload(t, "slow.pdf", scannedPDF(t, 2), &first)
-	e.upload(t, "next.pdf", fixturePDF(t, 0, 3, "Next"), &second)
-	e.waitFor(t, first.Book.ID, StatePreparing)
+	e.queue.Pause()
+	var up BookChanged
+	e.upload(t, "next.pdf", fixturePDF(t, 0, 3, "Next"), &up)
 
 	var stopped Book
-	e.do(t, "POST", "/api/books/"+second.Book.ID+"/stop", nil, &stopped)
+	e.do(t, "POST", "/api/books/"+up.Book.ID+"/stop", nil, &stopped)
 	if stopped.State.Kind != StateFailed || stopped.State.Reason != "Cancelled before it started." {
 		t.Fatalf("stopped %+v", stopped.State)
 	}
-	e.do(t, "POST", "/api/books/"+first.Book.ID+"/stop", nil, nil)
-	close(release)
-	if b := e.waitFor(t, first.Book.ID, StateFailed); b.State.Reason != "Stopped." {
+	e.queue.Resume()
+	e.do(t, "POST", "/api/books/"+up.Book.ID+"/retry", nil, nil)
+	e.waitFor(t, up.Book.ID, StateReady)
+}
+
+// A scan stopped while its pages are being read is "Stopped.".
+func TestStopWhileReading(t *testing.T) {
+	e := newEnv(t)
+	entered, release := make(chan struct{}), make(chan struct{})
+	var once, unblock sync.Once
+	// The reading is held in its first page until the test lets it go, and
+	// is let go however the test ends: a held handler would make the
+	// cleanup wait on the queue for the whole test timeout.
+	e.setOCR(func(p int) (string, error) {
+		once.Do(func() { close(entered) })
+		<-release
+		return "text", nil
+	})
+	t.Cleanup(func() { unblock.Do(func() { close(release) }) })
+
+	var up BookChanged
+	e.upload(t, "slow.pdf", scannedPDF(t, 2), &up)
+	select {
+	case <-entered:
+	case <-time.After(20 * time.Second):
+		t.Fatal("the scan was never read")
+	}
+	e.do(t, "POST", "/api/books/"+up.Book.ID+"/stop", nil, nil)
+	unblock.Do(func() { close(release) })
+	if b := e.waitFor(t, up.Book.ID, StateFailed); b.State.Reason != "Stopped." {
 		t.Fatalf("running stop: %+v", b.State)
 	}
-	e.do(t, "POST", "/api/books/"+second.Book.ID+"/retry", nil, nil)
-	e.waitFor(t, second.Book.ID, StateReady)
 }
 
 // slowOCR reads a page in a few milliseconds and counts how often each

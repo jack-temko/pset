@@ -8,7 +8,7 @@ documents: the Math 220 PDF (one date, labels in Boyce's numbering, the
 points dropped and "do c" kept), the EECS 461 PDF (2.1.4 and friends,
 the written-out problems as not in the book, 2.5.2 found inside the
 MATLAB line) and the EECS 202 page (six due dates, every label right,
-the notes kept). Left open below.
+the notes kept). What was left open moved to loose-ends.md.
 
 ## Information
 
@@ -96,7 +96,4 @@ URLs and re-checks (~50). A new dialog spec in `design/workspace.md`.
 
 ### Open
 
-- **Photos**: no "retake" in the review yet, and untested on a real
-  photo. Later, and more for screenshots than photos of the board.
-- **A problem's number changed by the professor** (4.27 became 4.28)
-  shows as a new line and a removal, not as a change.
+Moved to [loose-ends.md](loose-ends.md#from-the-finished-ideas).
