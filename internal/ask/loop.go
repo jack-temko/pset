@@ -14,6 +14,7 @@ import (
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pagenum"
+	"github.com/jackt/pset/internal/usage"
 )
 
 type turnPayload struct {
@@ -69,8 +70,9 @@ func (s *Service) runTurn(ctx context.Context, j jobs.Job) error {
 		return err
 	}
 	r := &run{s: s, t: t}
-	// A book's conversation is one session, turn after turn.
-	err = r.loop(llm.WithSession(ctx, "ask-"+t.BookID))
+	// A book's conversation is one session, turn after turn; every call
+	// in it was spent on this turn.
+	err = r.loop(llm.WithSubject(llm.WithSession(ctx, "ask-"+t.BookID), llm.Subject{Type: usage.SubjectTurn, ID: t.ID}))
 	settle := context.WithoutCancel(ctx)
 	switch {
 	case err == nil:

@@ -1,6 +1,9 @@
 package homework
 
-import "github.com/jackt/pset/internal/doc"
+import (
+	"github.com/jackt/pset/internal/doc"
+	"github.com/jackt/pset/internal/usage"
+)
 
 // Summary is a homework set as lists show it. DueDate is a calendar date
 // (YYYY-MM-DD) or empty; the client turns it into words ("Friday"), since
@@ -127,6 +130,10 @@ type Question struct {
 	// Boxes are what the student drew around the problem on the scan,
 	// when they showed where it is rather than having it found.
 	Boxes []Box `json:"boxes"`
+	// Usage is what producing this — its find, its figure read, its
+	// guide — spent on model calls, once it has finished; nil until it
+	// has made a call, and nothing is drawn.
+	Usage *usage.Usage `json:"usage,omitempty"`
 	// Memory is what writing this guide did with the book's memory: what
 	// it saved, and a remembered range that found the problem.
 	Memory []MemoryLine `json:"memory"`
@@ -377,7 +384,10 @@ type AssignmentRead struct {
 	// Assignment is what was read, once it's ready, marked against the
 	// sets already made from the same source.
 	Assignment *Assignment `json:"assignment,omitempty"`
-	CreatedAt  string      `json:"createdAt"`
+	// Usage is what the read spent on model calls, once it has finished;
+	// nil until it has made a call.
+	Usage     *usage.Usage `json:"usage,omitempty"`
+	CreatedAt string       `json:"createdAt"`
 	// UpdatedAt is when it started reading, or finished.
 	UpdatedAt string `json:"updatedAt"`
 }

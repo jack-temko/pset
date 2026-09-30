@@ -37,4 +37,5 @@ pointing, then importing, because the importer feeds the same finder.
 | [Professor's notes](professor-notes.md) | Done | 3 | "do c", "no PSpice", "500 packets": kept with the question and followed by the guide. |
 | [Structured guides](structured-guides.md) | Done | any | Ask answers and guides as typed blocks the server checks and repairs: math as runs, no red, three veils. |
 | [Loose ends](loose-ends.md) | Idea | any | Small things noticed along the way. |
+| [Model usage](model-usage.md) | Done | any | What each finished job cost: model, time, tokens and dollars on one quiet line, a light popover behind it. |
 | [Audit fixes](audit-fixes.md) | In progress | any | The 2026-09-29 audit, one branch per finding: leaks, restart, local-only API, docs. |

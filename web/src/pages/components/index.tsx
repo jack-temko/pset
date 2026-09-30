@@ -41,6 +41,7 @@ import { Spinner } from '@/components/spinner'
 import { Skeleton } from '@/components/skeleton'
 import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
 import { ConfirmPopover } from '@/components/confirm'
+import { UsageLine } from '@/components/usage'
 import { RadioRows } from '@/components/radio-rows'
 import { SegmentedControl } from '@/components/segmented-control'
 import { Checkbox } from '@/components/checkbox'
@@ -52,6 +53,7 @@ import type { CoverHue } from '@/lib/covers'
 import { ASSIGNMENT, ASSIGNMENT_SETS, BLOCKS, BOOKS, DUE, GUIDE, GUIDE_HINT, sampleBook } from '@/components/fixtures'
 import { AnswersOf, BlockSkeleton, Document } from '@/components/document'
 import type { Block } from '@/api/gen/doc'
+import type { Usage } from '@/api/gen/usage'
 import { PageMap, Pages } from '@/lib/pages'
 import type { Run } from '@/api/gen/pagenum'
 import { PageNumbersField } from '@/pages/workspace/page-numbers'
@@ -114,6 +116,29 @@ const OLD_PLAN: [number, number][] = PS.map((p) => [+p.toFixed(4), +(20 + (1 - p
  */
 
 const readingLine = (t: string) => [{ t }]
+
+/** What one walkthrough cost, as the server reports it: rows ordered by
+ *  tokens, the headline model first. */
+const USAGE: Usage = {
+  rows: [
+    { model: 'openai/gpt-6-luna', ms: 4000, tokens: 21034, cost: 0.0009, calls: 3 },
+    { model: 'deepseek/deepseek-v4.1-flash', ms: 7900, tokens: 18554, cost: 0.0018, calls: 2 },
+    { model: 'z-ai/perceptron-mk1.5', ms: 2100, tokens: 9412, cost: 0.0004, calls: 1 },
+  ],
+  total: { ms: 14000, tokens: 49000, cost: 0.0031, calls: 6 },
+  failed: 0,
+}
+
+/** The same, when one call errored (it cost time even so) and one model
+ *  reported no usage at all: a dash, never a zero. */
+const USAGE_FAILED: Usage = {
+  rows: [
+    { model: 'openai/gpt-6-luna', ms: 4000, tokens: 21034, cost: 0.0009, calls: 2 },
+    { model: 'qwen/qwen4-235b', ms: 9300, calls: 1 },
+  ],
+  total: { ms: 13300, tokens: 21034, cost: 0.0009, calls: 3 },
+  failed: 1,
+}
 
 /** 4.72's figure as read, for the Figure reading shelf. */
 const READ_QUESTION: Question = {
@@ -795,6 +820,27 @@ export function Components() {
           </Shelf>
           <Shelf label="from a button">
             <ResetDemo />
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Usage"
+          note="What a finished job spent, on one quiet line: model · time, a light popover behind it that informs rather than asks. One row per model, a Total with the call count, a footnote when a call failed."
+        >
+          <Shelf label="the line">
+            <div className="py-1">
+              <UsageLine usage={USAGE} />
+            </div>
+          </Shelf>
+          <Shelf label="open">
+            <div className="py-6">
+              <UsageLine usage={USAGE} defaultOpen />
+            </div>
+          </Shelf>
+          <Shelf label="a failed call, and one the provider didn't count">
+            <div className="py-1">
+              <UsageLine usage={USAGE_FAILED} />
+            </div>
           </Shelf>
         </Section>
 
