@@ -1,11 +1,11 @@
 # Homework panel: redesign grill
 
-status:    awaiting OK
-date:      2026-09-30
-brief:     redesign the whole homework view, judged from the tired student (hour 7, 1am, Night, glancing between the scan and the panel)
-sources:   web/src/views/homework/spec.md, design/workspace.md (Homework), design/design-system.md, the /views scenarios, a measured walk of the current view, internal/homework and internal/activity
-wireframes: /views/homework?mode=wireframes (web/src/views/homework/wireframes.tsx), built from the real components
-build plan: ideas/homework-redesign.md
+- status:    awaiting OK
+- date:      2026-09-30
+- brief:     redesign the whole homework view, judged from the tired student (hour 7, 1am, Night, glancing between the scan and the panel)
+- sources:   web/src/views/homework/spec.md, design/workspace.md (Homework), design/design-system.md, the /views scenarios, a measured walk of the current view, internal/homework and internal/activity
+- wireframes: /views/homework?mode=wireframes (web/src/views/homework/wireframes.tsx), built from the real components
+- build plan: ideas/homework-redesign.md
 
 ## Summary
 
