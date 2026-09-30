@@ -10,8 +10,8 @@
   `problem-numbering`, 2026-09-25). Spec in `design/workspace.md`, "The
   book".
 
-Both halves shipped; the file stays for its decisions and the open
-question at the end.
+Both halves shipped; the file stays for its decisions. The open question
+moved to loose-ends.md.
 
 ## Information
 
@@ -125,5 +125,4 @@ Stored per book: the style, the example, and the confidence.
 
 ### Open
 
-- Whether the assignment itself should vote: the 220 sheet's
-  `1.1: 1, 7` says "per section" as plainly as the book does.
+Moved to [loose-ends.md](loose-ends.md#from-the-finished-ideas).

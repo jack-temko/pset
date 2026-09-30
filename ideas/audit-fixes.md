@@ -2,11 +2,12 @@
 
 ## Status
 
-**Built, waiting to be merged** (2026-09-29): one branch per row, each cut
-from `124fe88`, checked on its own and pushed. All seventeen merge into
-one another without a conflict and pass together: gofmt, vet, staticcheck,
-govulncheck, the generated types, the web's types, tests and lint, and
-`go test -race` over every package.
+**Done** (2026-09-30): every row below is merged into `main`, one merge
+commit each. `model-usage` landed on `main` meanwhile; the one branch that
+conflicted with it (`typed-turn-failure`, in the ask wire types) had `main`
+brought in and resolved there. The merged result passed gofmt, vet,
+staticcheck, govulncheck, the generated types, the web's types, tests and
+lint, and `go test -race` over every package.
 
 | # | Branch | Does |
 |---|---|---|
@@ -28,19 +29,12 @@ govulncheck, the generated types, the web's types, tests and lint, and
 | 16 | `package-readmes` | READMEs for homework, ask, doc, activity, pagenum, probnum. Cut from the same base as `docs-backend`, and merges it (the one conflict is resolved there). |
 | 17 | `tools-readme` | `tools/README.md`. |
 
-Merge order doesn't matter except for words: the `ask` README and the
-`design/backend.md` route and event tables describe what
-`typed-turn-failure`, `events-reset-after-restart` and `local-only-api`
-build, and the layer table names `execx`.
-
 Not built, and why:
 
-- **Retiring the Done idea files.** Several still hold open follow-ups
-  (`structured-guides`, `book-structure`, `importing-assignments`) and
-  decision records, and `finder-tests.md` was the only place that said how
-  to run the two test runners (now `tools/README.md`). Moving each open
-  item into `loose-ends.md`, and then deleting the file, is a call for the
-  person who wrote them.
+- **Deleting the Done idea files.** Their open items moved to
+  `loose-ends.md` (2026-09-30) and each says so; they stay for their
+  decisions and evaluations. `finder-tests.md` was the only place that said
+  how to run the two test runners (now `tools/README.md`).
 - Lazy-loading routes or KaTeX (localhost; about 66 KB and 270 KB),
   dropping the KaTeX `.ttf`/`.woff` fonts (876 KB of binary), caching page
   vectors, a circular event ring (10 µs a publish).
