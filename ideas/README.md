@@ -38,6 +38,7 @@ pointing, then importing, because the importer feeds the same finder.
 | [Structured guides](structured-guides.md) | Done | any | Ask answers and guides as typed blocks the server checks and repairs: math as runs, no red, three veils. |
 | [Views gallery](views-gallery.md) | In progress | any | `/components` with a sidebar, `/views` for separable views with sample data and specs, and the `pset-view` skill that works on them one by one. |
 | [Grill skill](grill-skill.md) | Planned | any | A standalone `grill` skill that interviews you in weighted batches until a spec is ironed out, and pset-view's gates for grilling a view before any code: purpose, flow and layout, behavior, data. |
+| [Time remaining estimate](time-remaining-estimate.md) | Idea | any | A time left on a homework set from the student's own pace and an LLM-written difficulty index per question. Mocked in the redesign until this is built. |
 | [Loose ends](loose-ends.md) | Idea | any | Small things noticed along the way. |
 | [Model usage](model-usage.md) | Done | any | What each finished job cost: model, time, tokens and dollars on one quiet line, a light popover behind it. |
 | [Audit fixes](audit-fixes.md) | Done | any | The 2026-09-29 audit, one branch per finding: leaks, restart, local-only API, docs. |
