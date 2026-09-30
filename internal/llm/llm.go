@@ -40,6 +40,17 @@ const DefaultTimeout = 20 * time.Minute
 // minutes-long guide calls this budget exists to allow.
 const dialTimeout = 10 * time.Second
 
+// transport is every Client's: they are built per call (Open), and a
+// Transport of their own each kept its idle connections, and the three
+// goroutines behind each, for good. One shared pool reuses connections
+// and closes idle ones.
+var transport = &http.Transport{
+	DialContext:         (&net.Dialer{Timeout: dialTimeout}).DialContext,
+	TLSHandshakeTimeout: dialTimeout,
+	MaxIdleConnsPerHost: 8,
+	IdleConnTimeout:     90 * time.Second,
+}
+
 // Client talks to one chat endpoint and one embeddings endpoint, both
 // OpenAI-shaped. The zero value is not usable; use New.
 type Client struct {
@@ -58,13 +69,7 @@ func New(apiBaseURL, apiKey, embedBaseURL, embedModel string) *Client {
 		apiKey:       apiKey,
 		embedBaseURL: strings.TrimRight(embedBaseURL, "/"),
 		embedModel:   embedModel,
-		http: &http.Client{
-			Timeout: DefaultTimeout,
-			Transport: &http.Transport{
-				DialContext:         (&net.Dialer{Timeout: dialTimeout}).DialContext,
-				TLSHandshakeTimeout: dialTimeout,
-			},
-		},
+		http:         &http.Client{Timeout: DefaultTimeout, Transport: transport},
 	}
 }
 
