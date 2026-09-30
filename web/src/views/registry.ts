@@ -1,4 +1,5 @@
 import { HomeworkStage } from './homework/stage'
+import { HomeworkWireframes } from './homework/wireframes'
 import { SCENARIOS as homework } from './homework/scenarios'
 import type { ViewEntry } from './types'
 
@@ -16,6 +17,7 @@ const ALL: ViewEntry[] = [
     spec: () => import('./homework/spec.md?raw').then((m) => m.default),
     Stage: HomeworkStage,
     wideLabel: 'Focus',
+    wireframes: HomeworkWireframes,
   },
 ]
 

@@ -65,6 +65,8 @@ export function Views() {
   const wide = !!entry.wideLabel && params.get('wide') === '1'
   // What the column beside the view shows: its spec, its grill's summary
   // (what was decided and why), or the whole grill with the Q&A log.
+  const mode = entry.wireframes && params.get('mode') === 'wireframes' ? 'wireframes' : 'live'
+  const Wireframes = entry.wireframes
   const doc = entry.grill && ['grill', 'log'].includes(params.get('doc') ?? '') ? params.get('doc') : 'spec'
   const set = (key: string, value: string | null) =>
     setParams(
@@ -90,6 +92,19 @@ export function Views() {
       entry={entry}
       toolbar={
         <div className="flex flex-wrap items-center justify-end gap-3">
+          {entry.wireframes && (
+            <SegmentedControl
+              label="Mode"
+              value={mode}
+              onChange={(v) => set('mode', v === 'live' ? null : v)}
+              options={[
+                { value: 'live', label: 'Live' },
+                { value: 'wireframes', label: 'Wireframes' },
+              ]}
+            />
+          )}
+          {mode === 'live' && (
+            <>
           <select
             aria-label="Scenario"
             value={scenario.id}
@@ -123,9 +138,15 @@ export function Views() {
             <RotateCcw />
             Replay
           </Button>
+            </>
+          )}
         </div>
       }
     >
+      {mode === 'wireframes' && Wireframes ? (
+        <Wireframes />
+      ) : (
+        <>
       <p className="text-sm text-muted-foreground">
         <span className="font-medium text-foreground">{scenario.title}.</span> {scenario.note}
       </p>
@@ -160,6 +181,8 @@ export function Views() {
           {doc === 'log' && grill?.id === entry.id && <Markdown source={grill.text} />}
         </div>
       </div>
+        </>
+      )}
     </GalleryShell>
   )
 }
