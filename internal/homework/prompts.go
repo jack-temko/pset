@@ -46,6 +46,26 @@ where it sits after shared text or in front of its equation, and any mark printe
 - No solution and no commentary. Don't describe the figures: they're read on their own. Nothing
   from a figure's caption or from another problem.`
 
+// captionPrompt reads the number each boxed figure's caption prints: the
+// check that the Finder boxed the figure the problem names (figures.go).
+const captionPrompt = `You read the captions of figures cut from textbook pages. Each image is one figure with a little
+of its page around it. For each, give the number its own caption prints ("FIGURE 7.1.3", "Fig.
+4.132", "Figure 2.5.9"), as just the number: "7.1.3". Only the figure's own caption, never a number
+from the text around it. "" when the image shows no caption, or no figure at all: only text.
+
+Reply with only JSON, no prose and no code fence: {"captions": ["7.1.3", ""]}, one for each image,
+in order.`
+
+// figurePrompt finds a figure a problem names on the pages around it,
+// when it isn't on the problem's own page (figures.go).
+const figurePrompt = `You find one figure among images of textbook pages: the one whose caption prints the number
+you're given.
+
+Reply with only JSON, no prose and no code fence: {"image": 2, "rect": {"x": 0.1, "y": 0.5, "w": 0.3,
+"h": 0.2}}. image is the number of the image it's on, or 0 if none of them shows it. rect tightly
+bounds the figure: its drawing, every label on it, and its caption. Coordinates are fractions of
+the image, in [0, 1], y from the top.`
+
 // assignmentPrompt reads a homework assignment out into due dates and
 // lines. Filled with today's date, the book's title and how it numbers
 // its problems.

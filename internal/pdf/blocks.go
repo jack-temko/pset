@@ -14,6 +14,10 @@ import (
 // problem sheds the block it only grazes, and one that clips a figure's
 // edge takes the whole figure. On three pages of circuits this took every
 // model's figure boxes from about two in three to all or nearly all right.
+// A block only partly inside the box is taken row band by row band: on
+// the differential equations book's dense pages one block held the end
+// of one problem and the start of the next, or a problem's last line and
+// the top of a figure (2026-09-29).
 //
 // A box that holds no block half inside it stays as it is, and so does an
 // undecodable page.
@@ -84,19 +88,57 @@ func SnapToBlocks(pageJPEG []byte, r Rect) Rect {
 
 	bx0, by0 := r.X*float64(w), r.Y*float64(h)
 	bx1, by1 := bx0+r.W*float64(w), by0+r.H*float64(h)
-	found := false
-	var sx0, sy0, sx1, sy1 int
-	for _, b := range blocks {
+	// inside is how much of a block the box holds, from 0 to 1.
+	inside := func(b block) float64 {
 		iw := min(bx1, float64(b.x1)) - max(bx0, float64(b.x0))
 		ih := min(by1, float64(b.y1)) - max(by0, float64(b.y0))
-		if iw <= 0 || ih <= 0 || iw*ih*2 < float64((b.x1-b.x0)*(b.y1-b.y0)) {
-			continue
+		if iw <= 0 || ih <= 0 {
+			return 0
 		}
+		return iw * ih / float64((b.x1-b.x0)*(b.y1-b.y0))
+	}
+	found := false
+	var sx0, sy0, sx1, sy1 int
+	take := func(b block) {
 		if !found {
 			sx0, sy0, sx1, sy1, found = b.x0, b.y0, b.x1, b.y1, true
-			continue
+			return
 		}
 		sx0, sy0, sx1, sy1 = min(sx0, b.x0), min(sy0, b.y0), max(sx1, b.x1), max(sy1, b.y1)
+	}
+	for _, b := range blocks {
+		switch f := inside(b); {
+		case f >= 0.5:
+			take(b)
+		case f > 0:
+			// A block the box only partly holds can be two things printed
+			// close: a problem's last line and the figure under it, or
+			// the tail of one problem and the start of the next. Its rows,
+			// split where even a line's worth of white falls, count one
+			// by one.
+			rows := make([]bool, b.y1-b.y0)
+			for y := b.y0; y < b.y1; y++ {
+				for x := b.x0; x < b.x1; x++ {
+					if ink(x, y) {
+						rows[y-b.y0] = true
+						break
+					}
+				}
+			}
+			for _, band := range inkRuns(rows, rowGap) {
+				part := block{b.x1, b.y0 + band[0], b.x0, b.y0 + band[1]}
+				for y := part.y0; y < part.y1; y++ {
+					for x := b.x0; x < b.x1; x++ {
+						if ink(x, y) {
+							part.x0, part.x1 = min(part.x0, x), max(part.x1, x+1)
+						}
+					}
+				}
+				if part.x0 < part.x1 && inside(part) >= 0.5 {
+					take(part)
+				}
+			}
+		}
 	}
 	if !found {
 		return r
@@ -108,6 +150,10 @@ func SnapToBlocks(pageJPEG []byte, r Rect) Rect {
 // inkLevel: anything darker than warm paper is ink, so colored figure
 // strokes count too.
 const inkLevel = 200
+
+// rowGap is the white between rows of a block that splits it into bands:
+// less than lines of text leave between them.
+const rowGap = 3
 
 // inkRuns is the stretches of ink along a line of flags, split wherever
 // gap or more blank ones in a row fall between them, as [start, end).
