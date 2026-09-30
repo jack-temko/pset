@@ -53,7 +53,7 @@ Gate 2, flow and layout
 | D18 | List rows carry the bar and "n of m done, time left"; tapping opens the set on its next unfinished question. | Fixes F2. |
 | D19 | Professor's notes have one way in: the question menu; the box is read-only. | Jack: two ways to edit; collapse into one. |
 | D20 | Progress lives in the header: a difficulty-weighted bar as its bottom edge, the count opening the question list, the time left in gray. | Jack: marks were too tall; mixed the weighted bar with the header option. |
-| D21 | Every dropdown is one redesigned Menu: a radius-lg card with full-bleed 40px rows (the hover wash fills the row to the card's edge, no padding), 256px minimum, a labelled trigger, a current row with a thin ring. | Jack: same styles everywhere, more modern and larger; after the A/B he wanted the wash to fill the whole row to the edge. |
+| D21 | Every dropdown is one redesigned Menu: a radius-lg card with full-bleed 40px rows (the hover wash fills the row to the card's edge, no padding), 256px minimum, a labelled trigger, a current row (post-build: washed and in primary ink; the ring and the blue tint were dropped, Jack 2026-09-30). | Jack: same styles everywhere, more modern and larger; after the A/B he wanted the wash to fill the whole row to the edge. |
 | D22 | Menus never stack: opening one closes any other. | Jack asked how to manage them all open at once. |
 
 Gate 3, behavior and states

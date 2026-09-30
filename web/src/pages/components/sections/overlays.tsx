@@ -5,6 +5,7 @@ import { Button, IconButton } from '@/components/button'
 import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
 import { ConfirmPopover } from '@/components/confirm'
 import { Dialog } from '@/components/dialog'
+import { Spinner } from '@/components/spinner'
 import { cn } from '@/lib/utils'
 import type { ComponentEntry } from './types'
 import { Shelf } from './shared'
@@ -73,16 +74,16 @@ function QuestionHeaderDemo() {
 function QuestionsMenuDemo() {
   return (
     <Menu label="Questions" trigger="2 of 8">
-      <MenuItem icon={<Check className="text-success!" />} hint="Done" onSelect={() => {}}>
+      <MenuItem icon={<Check className="text-success!" />} onSelect={() => {}}>
         4.27
       </MenuItem>
-      <MenuItem icon={<Check className="text-success!" />} hint="Done" onSelect={() => {}}>
+      <MenuItem icon={<Check className="text-success!" />} onSelect={() => {}}>
         4.25
       </MenuItem>
-      <MenuItem current hint="Here" onSelect={() => {}}>
+      <MenuItem current onSelect={() => {}}>
         4.32
       </MenuItem>
-      <MenuItem hint="Waiting" onSelect={() => {}}>
+      <MenuItem icon={<Spinner className="size-4" />} hint="Writing the guide" onSelect={() => {}}>
         3.12
       </MenuItem>
     </Menu>

@@ -210,7 +210,7 @@ const item =
 /** One action or choice. Runs, then closes the menu. A hint is a short, muted
  *  fact at the row's end, worth knowing before you choose it ("3 still being
  *  found", "Done"). `current` marks the row you are on in a list of places:
- *  it is tinted, and it is where the menu opens focus. */
+ *  it is washed and in primary ink, and it is where the menu opens focus. */
 export function MenuItem({
   icon,
   hint,
@@ -231,7 +231,7 @@ export function MenuItem({
       role="menuitem"
       tabIndex={-1}
       aria-current={current || undefined}
-      className={cn(item, current && 'bg-primary-soft text-primary ring-1 ring-primary/70 ring-inset hover:bg-primary-soft [&_svg]:text-primary')}
+      className={cn(item, current && 'bg-muted font-medium text-primary [&_svg]:text-primary')}
       onClick={() => {
         close()
         onSelect()

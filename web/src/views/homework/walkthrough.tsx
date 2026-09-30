@@ -1,5 +1,5 @@
 import { useEffect, useState, type KeyboardEvent } from 'react'
-import { BookOpen, Check, Flag, ChevronLeft, ChevronDown, ChevronUp, Pencil, Plus, Printer, SquareDashedMousePointer, Trash2 } from 'lucide-react'
+import { BookOpen, Check, Flag, ChevronLeft, ChevronDown, ChevronUp, Pencil, Plus, Printer, SquareDashedMousePointer, Trash2, TriangleAlert } from 'lucide-react'
 import { Button, IconButton } from '@/components/button'
 import { Label } from '@/components/label'
 import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
@@ -26,7 +26,7 @@ import { HelpRows } from './help'
 import { Finish } from './finish'
 import { helpRows, type HelpName } from './help-meta'
 import { isTyping, walkthroughKey } from './keys'
-import { PRIMARY_LABEL, barLabel, countWords, firstUnfinished, nextUnfinished, primaryOf, segments, stateWord, timeLeftWords, type HomeworkSet, type Q } from './progress'
+import { PRIMARY_LABEL, barLabel, countWords, firstUnfinished, nextUnfinished, primaryOf, segments, stageWord, timeLeftWords, isWorking, type HomeworkSet, type Q } from './progress'
 
 const STAGE_NAMES = ['hint', 'walkthrough', 'answers'] as const
 
@@ -211,8 +211,16 @@ export function Walkthrough({
             <MenuItem
               key={x.id}
               current={i === at}
-              icon={x.done ? <Check className="text-success!" /> : undefined}
-              hint={stateWord(x, i === at)}
+              icon={
+                x.done ? (
+                  <Check className="text-success!" />
+                ) : isWorking(x) ? (
+                  <Spinner className="size-4" />
+                ) : x.state === 'failed' ? (
+                  <TriangleAlert className="text-warning!" />
+                ) : undefined
+              }
+              hint={stageWord(x) ?? undefined}
               onSelect={() => {
                 setIndex(i)
                 setFinishing(false)

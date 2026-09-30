@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { walkthroughKey } from './keys'
-import { countWords, firstUnfinished, listSegments, markOf, nextUnfinished, primaryOf, segments, stateWord, timeLeftWords, type Q, type HomeworkSet } from './progress'
+import { countWords, firstUnfinished, listSegments, markOf, nextUnfinished, primaryOf, segments, stageWord, timeLeftWords, isWorking, type Q, type HomeworkSet } from './progress'
 import { makeQuestion, makeSet } from './world'
 import type { Question } from '@/api/homework'
 
@@ -72,13 +72,25 @@ describe('the one button', () => {
 })
 
 describe('the list words', () => {
-  it('says what each question is', () => {
-    expect(stateWord(q({ state: 'failed' }), false)).toBe('Failed')
-    expect(stateWord(q({ done: true }), true)).toBe('Done')
-    expect(stateWord(q(), true)).toBe('Here')
-    expect(stateWord(q({ state: 'pending' }), false)).toBe('Queued')
-    expect(stateWord(q({ state: 'writing' }), false)).toBe('Being written')
-    expect(stateWord(q(), false)).toBe('To do')
+  it('says only the stage of work in progress', () => {
+    expect(stageWord(q({ state: 'pending' }))).toBe('Queued')
+    expect(stageWord(q({ state: 'located' }))).toBe('Queued')
+    expect(stageWord(q({ state: 'locating' }))).toBe('Finding it')
+    expect(stageWord(q({ state: 'reading' }))).toBe('Reading the figure')
+    expect(stageWord(q({ state: 'writing' }))).toBe('Writing the guide')
+  })
+
+  it('says nothing for done, failed, to do or no guide', () => {
+    expect(stageWord(q({ done: true }))).toBeNull()
+    expect(stageWord(q({ state: 'failed' }))).toBeNull()
+    expect(stageWord(q())).toBeNull()
+    expect(stageWord(q({ state: 'unwritten' }))).toBeNull()
+  })
+
+  it('spins only while the engine is working on it', () => {
+    expect(isWorking(q({ state: 'writing' }))).toBe(true)
+    expect(isWorking(q({ state: 'pending' }))).toBe(false)
+    expect(isWorking(q({ state: 'writing', done: true }))).toBe(false)
   })
 })
 

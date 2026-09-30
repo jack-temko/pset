@@ -322,7 +322,6 @@ function FocusWalkthrough() {
 
 const MINUTES = [18, 14, 41, 33, 9, 12, 27, 20]
 
-const STATE_WORD: Record<Mark, string> = { done: 'Done', current: 'Here', waiting: 'Waiting', failed: 'Failed' }
 
 /** The count, which opens the list of the questions: with the marks gone it
  *  is how you jump. The real Menu, with a labelled trigger and a current row. */
@@ -334,7 +333,6 @@ function QuestionList({ marks }: { marks: Mark[] }) {
           key={q}
           current={marks[i] === 'current'}
           icon={marks[i] === 'done' ? <Check className="text-success!" /> : undefined}
-          hint={STATE_WORD[marks[i]]}
           onSelect={() => {}}
         >
           {q}

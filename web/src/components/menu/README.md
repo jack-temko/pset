@@ -23,10 +23,11 @@ right-aligned to the trigger.
 - **`MenuItem`**: a 40px row (`row`), a muted 16px icon, the label in `text-sm`, washed `muted`
   on hover and focus. It runs, then the menu closes. An optional **hint** sits at the row's end in muted `text-xs`: a short fact worth
   knowing before you choose it, like Print worksheet's "3 still being found" or a question's
-  "Done". It says, it never disables. **`current`** marks the row you are on in a list of places:
-  tinted `primary-soft` and outlined by a thin inset ring at 70% primary (the tint alone measures 1.16:1 against the
-  card, under the 1.3:1 floor for a fill that carries shape; the ring measures 4.1 / 3.8:1, Night / Paper), and it is where opening the menu
-  puts focus.
+  "Writing the guide". It says, it never disables. **`current`** marks the row you are on in a list of
+  places: the `muted` wash (the hover's, which clears the 1.3:1 floor for a fill that carries shape),
+  the label in primary ink and medium weight, and it is where opening the menu puts focus. (It was a
+  `primary-soft` tint with a thin ring until 2026-09-30, when Jack found the blue too dark and dropped
+  the outline.)
 - **`MenuCheckItem`**: a fact you can take back, like Turned in. A
   primary check sits in the icon column when it's true, so labels stay
   aligned either way.

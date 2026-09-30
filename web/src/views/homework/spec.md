@@ -31,7 +31,7 @@ budget: open a set in 1 click from the list. Per question with a written guide: 
   - turned-in `Box` (no bars)
   - `AddHomeworkDialog`, `HomeworkDialog` (edit title and date)
 - `Walkthrough` (one set), keyed by the set
-  - header, one row: Back, set title (truncates), Turned in label, the count as a `Menu` ("Questions": each question with its state word, the current one ringed, "All done" once every one is, which opens the finish page), time left in gray, the set `Menu` (Add questions, Box one on the page, Edit, Print worksheet, Turn in, Delete); the `ProgressBar` is the row's bottom edge
+  - header, one row: Back, set title (truncates), Turned in label, the count as a `Menu` ("Questions": each question with a check when done, a spinner and its stage ("Writing the guide") while it is being worked on, an alert icon when failed, the current one washed and in primary ink, "All done" once every one is, which opens the finish page), time left in gray, the set `Menu` (Add questions, Box one on the page, Edit, Print worksheet, Turn in, Delete); the `ProgressBar` is the row's bottom edge
   - question row: label, done check, **Show in book** button (only when it has a page), question `Menu` (Move up, Move down, This isn't the right problem, Edit or Add the professor's instructions, Check how the figure reads, What the guide remembered, Remove this question)
   - statement (`Runs`), figures, `ProfessorNotes` (read-only box; its editing state is opened from the question menu), `FigureReading` (only when flagged "Check it", or asked for)
   - `FailedQuestion` (title, reason, the ways out by failure kind, paste-the-problem fallback)

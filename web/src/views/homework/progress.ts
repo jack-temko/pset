@@ -89,15 +89,29 @@ export const PRIMARY_LABEL: Record<Primary, string> = {
   skip: 'Skip for now',
 }
 
-/** A word for a question's state in the count's list. */
-export function stateWord(q: Question, here: boolean): string {
-  if (q.state === 'failed') return 'Failed'
-  if (q.done) return 'Done'
-  if (here) return 'Here'
-  if (q.state === 'pending' || q.state === 'located') return 'Queued'
-  if (outstanding(q)) return 'Being written'
-  return 'To do'
+/** What the count's list says at the end of a question's row: only work in
+ *  progress, by its stage. Done is the check, failed is the alert icon, and
+ *  a question to do or the one you are on says nothing. */
+export function stageWord(q: Question): string | null {
+  if (q.done) return null
+  switch (q.state) {
+    case 'pending':
+    case 'located':
+      return 'Queued'
+    case 'locating':
+      return 'Finding it'
+    case 'reading':
+      return 'Reading the figure'
+    case 'writing':
+      return 'Writing the guide'
+    default:
+      return null
+  }
 }
+
+/** Whether the engine is working on it this moment (a spinner, where a
+ *  queued question only says so). */
+export const isWorking = (q: Question): boolean => !q.done && (q.state === 'locating' || q.state === 'reading' || q.state === 'writing')
 
 // ---------------------------------------------------------------- time left
 

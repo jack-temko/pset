@@ -585,8 +585,10 @@ the questions and the reversals; this is the screen as it is now, and
   row is a **difficulty-weighted bar**: one segment per question, as wide as it is
   hard, filled when done, half for the one you are on, in warning ink when failed.
   It is not a control. The **count is a labelled Menu** listing the questions, each
-  with its state ("Done", "Here", "Being written", "To do", "Failed"), the current one
-  ringed; it is how you jump, and "All done" opens the finish page once every one is.
+  with a check when done, a spinner and its stage ("Finding it", "Writing the guide") while it is
+  worked on ("Queued" while it waits), an alert icon when failed, and no words for the rest; the
+  current one is washed and in primary ink (post-build, Jack: the blue tint was too dark, and no
+  outline); it is how you jump, and "All done" opens the finish page once every one is.
 - **The time left is never confidently wrong.** It shows nothing until two
   questions have been timed, reads "about 1 h 40 m left" rounded to five minutes,
   shows a range when the spread is wide, and is never a live countdown. Time per
@@ -624,8 +626,8 @@ the questions and the reversals; this is the screen as it is now, and
   next unfinished question.
 - **Every dropdown is one Menu**: a radius-lg card with full-bleed 40px rows (the
   hover wash fills the row to the card's edge, no padding), 256px at least, joined
-  flush to its trigger as one shape, a labelled trigger, a thin ring on the current
-  row, only one open at a time. Motion across the app: 200ms for a state change,
+  flush to its trigger as one shape, a labelled trigger, the current
+  row washed and in primary ink, only one open at a time. Motion across the app: 200ms for a state change,
   a 100ms fade for a hover (design-system.md, Motion).
 - **Backend, built after the UI** (`ideas/homework-redesign.md`, phase B): difficulty
   per question from a ranking step after find (a heuristic if the model is down),
