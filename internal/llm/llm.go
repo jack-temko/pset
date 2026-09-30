@@ -928,6 +928,12 @@ func OutOfCredit(status int, body string) bool {
 		strings.Contains(b, "more credits")
 }
 
+// NoKey says it in words, wherever a model call would need a key that was
+// never saved. The one sentence: the web tells a setup failure by the
+// failure kind, not by this text, but it should still read the same
+// everywhere.
+const NoKey = "There's no OpenRouter key yet. Add yours in Settings, under Connections, then try again."
+
 // NoCredit says it in words, for the person waiting on the call.
 const NoCredit = "Your OpenRouter account is out of credit. Top it up at openrouter.ai, then try again."
 
