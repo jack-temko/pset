@@ -11,6 +11,7 @@ import (
 	"github.com/jackt/pset/internal/probnum"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -123,7 +124,11 @@ type Config struct {
 	Time Time
 }
 
-type Service struct{ c Config }
+type Service struct {
+	c Config
+	// rankMu makes "is a ranking already waiting, if not queue one" one step.
+	rankMu sync.Mutex
+}
 
 // A question is a job per step: finding it in the book, reading its
 // figures when it has any, then writing its guide. All share one lane
@@ -143,7 +148,7 @@ const (
 const locateFirst = 1
 
 func New(c Config) *Service {
-	s := &Service{c}
+	s := &Service{c: c}
 	c.Queue.Handle(JobLocate, LaneQuestion, s.runLocate)
 	c.Queue.Handle(JobRead, LaneQuestion, s.runRead)
 	c.Queue.Handle(JobGuide, LaneQuestion, s.runGuide)
