@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import {
   useBooks,
@@ -27,11 +27,20 @@ import { Spinner } from '@/components/spinner'
 import { useWeek, type Week } from '@/api/activity'
 import { useDue, type Summary } from '@/api/homework'
 import { dueLine, dueStatus } from '@/lib/due'
+import { greeting, type GreetingVoice } from '@/lib/greeting'
 import { useShowPending } from '@/lib/settled'
 
-function greeting(hour: number, name: string): string {
-  const time = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
-  return name ? `${time}, ${name}` : time
+/** The greeting for this visit: one line for the hour, chosen once when Home
+ *  opens so it holds still while the page redraws. In dev, `?greeting=a|b`
+ *  picks the voice and `?hour=1` the hour, to look at any of them. */
+function useGreeting(name: string): string {
+  const [pick] = useState(Math.random)
+  const [params] = useSearchParams()
+  const dev = import.meta.env.DEV
+  const voice: GreetingVoice = dev && params.get('greeting') === 'b' ? 'b' : 'a'
+  const hourParam = dev ? Number(params.get('hour') ?? NaN) : NaN
+  const hour = Number.isInteger(hourParam) && hourParam >= 0 && hourParam < 24 ? hourParam : new Date().getHours()
+  return greeting(hour, name, voice, pick)
 }
 
 /** A section's header row: the serif title (and an optional count) on the
@@ -409,6 +418,7 @@ export function Home() {
   // sections read as broken, and a row of zeroes is noise.
   const firstRun = books !== undefined && books.length === 0
   const { data: week } = useWeek()
+  const title = useGreeting(settings?.profile.name ?? '')
   const byBook = (week?.byBook ?? []).flatMap((w) => {
     const b = books?.find((x) => x.id === w.bookId)
     return b ? [{ sha256: b.sha256, cover: b.cover, title: b.title, minutes: w.minutes }] : []
@@ -418,7 +428,7 @@ export function Home() {
     <AppShell>
       <PageShell>
         <PageTitle short="Home" className="text-4xl">
-          {greeting(new Date().getHours(), settings?.profile.name ?? '')}.
+          {title}
         </PageTitle>
         {!firstRun && <ThisWeek week={week} byBook={byBook} />}
         {!firstRun && <Homework books={books} />}
