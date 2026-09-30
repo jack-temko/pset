@@ -66,12 +66,34 @@ ones that fail. Seeds:
   height.
 - How state is seen at a glance (what is done, waiting, failed).
 - Where each handoff sits and how Back returns.
-- Two or three genuinely different layouts, **as ASCII wireframes in the option
-  previews**, for each key state.
+- Two or three genuinely different layouts, **built as real wireframes** (below), for
+  each key state.
 - Density: how much fits before it is too much.
 
 Artifact: a wireframe per key state and the flow with its counts. Exit: the wireframes
 are confirmed.
+
+### Wireframes are built from the components, never drawn in ASCII
+
+ASCII wireframes are hard to read and never look like the thing. A layout question is
+asked about a page the user can open:
+
+- **Build them** in `web/src/views/<name>/wireframes.tsx`, exported as the view's
+  `wireframes` in `views/registry.ts`, from the real component library on static sample
+  data. The frame is the real pane at its real width (440px; 800px in Focus). They show
+  under the **Wireframes** mode of `/views/<name>?mode=wireframes`.
+- **Keep them live.** The real `Veil`s lift, the real `Menu`s open. A part that does not
+  exist yet (a progress strip, a finish page) is a local stand-in built from tokens and
+  existing components, so it can be judged in place; it becomes a component when built.
+- **Options are side by side and labelled** (A, B) on the same page, drawn from the
+  survivors of the student walkthrough simulation. Only the chosen layout is kept in
+  the final version.
+- **Both themes.** Look at them in Paper and Night before asking.
+- **Start it for the user.** Run Vite on a private port (`PSET_API_TARGET=http://127.0.0.1:9`;
+  never 8420) and give the URL in the question. If the user is away from the machine,
+  take screenshots to a scratch folder and offer them as a private page.
+- **Confirm the gate from what they saw.** The recap points at the page; the grill file
+  names `wireframes.tsx` and the URL instead of pasting a drawing.
 
 ## Gate 3: Behavior and states
 
