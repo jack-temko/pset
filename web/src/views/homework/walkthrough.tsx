@@ -104,8 +104,11 @@ export function Walkthrough({
   onJump,
   onAskAbout,
   onOpenSettings,
+  wide = false,
 }: {
   setId: string
+  /** Focus: the question stays put on the left while its help scrolls on the right. */
+  wide?: boolean
   onEdit: () => void
   onDelete: () => void
   onBack: () => void
@@ -372,150 +375,157 @@ export function Walkthrough({
           one place. Keys scattered on the parts inside, beside the
           conditional parts and the figures, left stale copies behind
           (three "Add your professor's instructions" under one question). */}
-      <div key={q.id} className="min-h-0 flex-1 space-y-5 overflow-y-auto p-card">
-        <div className="flex items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-lg font-semibold">{q.label}</span>
-          {q.done && <Check aria-label="Done" className="size-4 shrink-0 text-success" />}
-          {/* Takes the scan to the problem's page, and only when asked: a
-              question that isn't in this book has nothing to show. */}
-          {q.page !== undefined && (
-            <Button variant="outline" size="sm" className="shrink-0" onClick={() => onJump(q.page as number)}>
-              <BookOpen />
-              Show in book
-            </Button>
-          )}
-          {/* What you do to this question: order, what it is, what the
-              professor said, what the guide read and remembered. */}
-          <Menu label="Question actions">
-            {at > 0 && (
-              <MenuItem icon={<ChevronUp />} onSelect={() => move(-1)}>
-                Move up
-              </MenuItem>
+      <div key={q.id} className={cn('min-h-0 flex-1', wide ? 'grid grid-cols-2' : 'flex flex-col gap-5 overflow-y-auto p-card')}>
+        {/* The problem and the guide are the same two boxes in both layouts
+            (one column, or two in Focus), so toggling Focus keeps what is
+            half-typed in either. */}
+        <div className={wide ? 'flex min-h-0 flex-col gap-5 overflow-y-auto border-r p-card' : 'contents'}>
+          <div className="flex items-center gap-2">
+            <span className="min-w-0 flex-1 truncate text-lg font-semibold">{q.label}</span>
+            {q.done && <Check aria-label="Done" className="size-4 shrink-0 text-success" />}
+            {/* Takes the scan to the problem's page, and only when asked: a
+                question that isn't in this book has nothing to show. */}
+            {q.page !== undefined && (
+              <Button variant="outline" size="sm" className="shrink-0" onClick={() => onJump(q.page as number)}>
+                <BookOpen />
+                Show in book
+              </Button>
             )}
-            {at < questions.length - 1 && (
-              <MenuItem icon={<ChevronDown />} onSelect={() => move(1)}>
-                Move down
+            {/* What you do to this question: order, what it is, what the
+                professor said, what the guide read and remembered. */}
+            <Menu label="Question actions">
+              {at > 0 && (
+                <MenuItem icon={<ChevronUp />} onSelect={() => move(-1)}>
+                  Move up
+                </MenuItem>
+              )}
+              {at < questions.length - 1 && (
+                <MenuItem icon={<ChevronDown />} onSelect={() => move(1)}>
+                  Move down
+                </MenuItem>
+              )}
+              {(at > 0 || at < questions.length - 1) && <MenuDivider />}
+              {/* A find can land on the wrong problem; showing the right one
+                  is the same tool a failed find offers. */}
+              {q.inBook && q.page !== undefined && q.state !== 'failed' && (
+                <MenuItem
+                  icon={<SquareDashedMousePointer />}
+                  onSelect={() => boxing.start({ kind: 'find', questionId: q.id, label: q.label })}
+                >
+                  This isn't the right problem
+                </MenuItem>
+              )}
+              <MenuItem icon={<Pencil />} onSelect={() => setEditingNotes(q.id)}>
+                {q.notes.length > 0 ? "Edit the professor's instructions" : "Add your professor's instructions"}
               </MenuItem>
-            )}
-            {(at > 0 || at < questions.length - 1) && <MenuDivider />}
-            {/* A find can land on the wrong problem; showing the right one
-                is the same tool a failed find offers. */}
-            {q.inBook && q.page !== undefined && q.state !== 'failed' && (
-              <MenuItem
-                icon={<SquareDashedMousePointer />}
-                onSelect={() => boxing.start({ kind: 'find', questionId: q.id, label: q.label })}
+              {readingReady && !showReading && (
+                <MenuItem icon={<Check />} onSelect={() => peekAt('reading')}>
+                  Check how the figure reads
+                </MenuItem>
+              )}
+              {q.memory.length > 0 && !showMemory && (
+                <MenuItem onSelect={() => peekAt('memory')}>What the guide remembered</MenuItem>
+              )}
+              <MenuDivider />
+              <MenuConfirmItem
+                icon={<Trash2 />}
+                question={`Remove ${q.label}?`}
+                detail="Its guide and your progress on it go with it."
+                action="Remove"
+                onConfirm={() => {
+                  removeQ.mutate(q.id)
+                  setIndex(Math.max(0, Math.min(at, questions.length - 2)))
+                }}
               >
-                This isn't the right problem
-              </MenuItem>
-            )}
-            <MenuItem icon={<Pencil />} onSelect={() => setEditingNotes(q.id)}>
-              {q.notes.length > 0 ? "Edit the professor's instructions" : "Add your professor's instructions"}
-            </MenuItem>
-            {readingReady && !showReading && (
-              <MenuItem icon={<Check />} onSelect={() => peekAt('reading')}>
-                Check how the figure reads
-              </MenuItem>
-            )}
-            {q.memory.length > 0 && !showMemory && (
-              <MenuItem onSelect={() => peekAt('memory')}>What the guide remembered</MenuItem>
-            )}
-            <MenuDivider />
-            <MenuConfirmItem
-              icon={<Trash2 />}
-              question={`Remove ${q.label}?`}
-              detail="Its guide and your progress on it go with it."
-              action="Remove"
-              onConfirm={() => {
-                removeQ.mutate(q.id)
-                setIndex(Math.max(0, Math.min(at, questions.length - 2)))
-              }}
-            >
-              Remove this question
-            </MenuConfirmItem>
-          </Menu>
-        </div>
-
-        {/* A bare reference ("3.C.14") is already the label; saying it
-            twice isn't a statement. While it's still being found, the
-            statement is a skeleton the book's text will replace. */}
-        {q.statement.length > 0 && runsText(q.statement) !== q.label ? (
-          <div className="text-base">
-            <Runs runs={q.statement} onJump={onJump} />
+                Remove this question
+              </MenuConfirmItem>
+            </Menu>
           </div>
-        ) : (
-          q.inBook &&
-          (q.state === 'pending' || q.state === 'locating') && (
-            <p className="space-y-1 text-base">
-              <Skeleton still={still} className="h-3 w-full" />
-              <Skeleton still={still} className="h-3 w-2/3" />
-            </p>
-          )
-        )}
-        {q.figures.map((f, i) => (
-          <figure key={i} className="space-y-1">
-            <img src={figureURL(q.id, i)} alt={f.label || 'Figure'} className="w-full rounded-md border bg-card" />
-            {f.label && <figcaption className="text-xs text-muted-foreground">{f.label}</figcaption>}
-          </figure>
-        ))}
 
-        {/* The professor's say on the problem, over the book's. Read-only:
-            the question's menu is the one way to change it. */}
-        <ProfessorNotes
-          q={q}
-          editing={editingNotes === q.id}
-          onStop={() => setEditingNotes(null)}
-          onSave={(notes) => update.mutate({ id: q.id, patch: { notes } })}
-        />
+          {/* A bare reference ("3.C.14") is already the label; saying it
+              twice isn't a statement. While it's still being found, the
+              statement is a skeleton the book's text will replace. */}
+          {q.statement.length > 0 && runsText(q.statement) !== q.label ? (
+            <div className="text-base">
+              <Runs runs={q.statement} onJump={onJump} />
+            </div>
+          ) : (
+            q.inBook &&
+            (q.state === 'pending' || q.state === 'locating') && (
+              <p className="space-y-1 text-base">
+                <Skeleton still={still} className="h-3 w-full" />
+                <Skeleton still={still} className="h-3 w-2/3" />
+              </p>
+            )
+          )}
+          {q.figures.map((f, i) => (
+            <figure key={i} className="space-y-1">
+              <img src={figureURL(q.id, i)} alt={f.label || 'Figure'} className="w-full rounded-md border bg-card" />
+              {f.label && <figcaption className="text-xs text-muted-foreground">{f.label}</figcaption>}
+            </figure>
+          ))}
 
-        {/* The words the guide is written from: out only when a reading
-            is flagged, or asked for. */}
-        {showReading && (
-          <FigureReading
+          {/* The professor's say on the problem, over the book's. Read-only:
+              the question's menu is the one way to change it. */}
+          <ProfessorNotes
             q={q}
-            onCorrect={(lines) => redoReading.mutate({ id: q.id, lines })}
-            onReread={() => redoReading.mutate({ id: q.id })}
+            editing={editingNotes === q.id}
+            onStop={() => setEditingNotes(null)}
+            onSave={(notes) => update.mutate({ id: q.id, patch: { notes } })}
           />
-        )}
 
-        {q.state === 'failed' ? (
-          <>
-            <FailedQuestion q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} onOpenSettings={onOpenSettings} />
-            {/* What the failed attempt spent: the calls cost even when
-                the guide didn't land. */}
-            {q.usage && <UsageLine usage={q.usage} />}
-          </>
-        ) : (
-          <>
-            {/* Queued is a word and no motion: nothing is happening to it
-                yet. Working gets the spinner and the shimmer. */}
-            {queued ? (
-              <p className="text-xs text-muted-foreground">{waitingLine(q, questions, pages)}</p>
-            ) : working ? (
-              <WorkingLine q={q} text={working} />
-            ) : (
-              // A wait too young to show yet, with nothing shown before
-              // it: a blank at the line's height, so nothing moves.
-              outstanding(q) && <p className="text-xs">{' '}</p>
-            )}
-            {q.state === 'unwritten' ? (
-              // No guide yet: the ones written before documents were
-              // deleted. Nothing writes one until it's asked for.
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">This question has no guide yet.</p>
-                <Button variant="outline" onClick={() => writeGuide.mutate(q.id)}>
-                  Write the guide
-                </Button>
-              </div>
-            ) : (
-              <HelpRows key={q.id} q={q} queued={queued} open={open} onOpenChange={toggleRow} onJump={onJump} />
-            )}
-            {showMemory && set && <MemoryLines bookId={set.bookId} lines={q.memory} />}
-            {/* What the whole production spent — find, figure read, guide
-                — once it's over. A question still being written keeps its
-                working lines and shows nothing here. */}
-            {(q.state === 'ready' || q.state === 'unwritten') && q.usage && <UsageLine usage={q.usage} />}
-          </>
-        )}
+          {/* The words the guide is written from: out only when a reading
+              is flagged, or asked for. */}
+          {showReading && (
+            <FigureReading
+              q={q}
+              onCorrect={(lines) => redoReading.mutate({ id: q.id, lines })}
+              onReread={() => redoReading.mutate({ id: q.id })}
+            />
+          )}
+
+        </div>
+        <div className={wide ? 'flex min-h-0 flex-col gap-5 overflow-y-auto p-card' : 'contents'}>
+          {q.state === 'failed' ? (
+            <>
+              <FailedQuestion q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} onOpenSettings={onOpenSettings} />
+              {/* What the failed attempt spent: the calls cost even when
+                  the guide didn't land. */}
+              {q.usage && <UsageLine usage={q.usage} />}
+            </>
+          ) : (
+            <>
+              {/* Queued is a word and no motion: nothing is happening to it
+                  yet. Working gets the spinner and the shimmer. */}
+              {queued ? (
+                <p className="text-xs text-muted-foreground">{waitingLine(q, questions, pages)}</p>
+              ) : working ? (
+                <WorkingLine q={q} text={working} />
+              ) : (
+                // A wait too young to show yet, with nothing shown before
+                // it: a blank at the line's height, so nothing moves.
+                outstanding(q) && <p className="text-xs">{' '}</p>
+              )}
+              {q.state === 'unwritten' ? (
+                // No guide yet: the ones written before documents were
+                // deleted. Nothing writes one until it's asked for.
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">This question has no guide yet.</p>
+                  <Button variant="outline" onClick={() => writeGuide.mutate(q.id)}>
+                    Write the guide
+                  </Button>
+                </div>
+              ) : (
+                <HelpRows key={q.id} q={q} queued={queued} open={open} onOpenChange={toggleRow} onJump={onJump} />
+              )}
+              {showMemory && set && <MemoryLines bookId={set.bookId} lines={q.memory} />}
+              {/* What the whole production spent — find, figure read, guide
+                  — once it's over. A question still being written keeps its
+                  working lines and shows nothing here. */}
+              {(q.state === 'ready' || q.state === 'unwritten') && q.usage && <UsageLine usage={q.usage} />}
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center justify-between border-t p-card">

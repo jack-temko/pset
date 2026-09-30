@@ -78,6 +78,7 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
                 harness.handoff({ to: 'Ask', what: 'Ask about this question', carries: `${about.label}: ${about.text.slice(0, 70)}` })
               }
               onOpenSettings={() => harness.handoff({ to: 'Settings', what: 'Open Settings', carries: 'the connections section' })}
+              wide={harness.wide}
             />
           </aside>
         </BookHereContext>

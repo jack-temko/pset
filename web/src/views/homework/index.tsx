@@ -34,6 +34,7 @@ export function HomeworkTab({
   onJump,
   onAskAbout,
   onOpenSettings,
+  wide,
 }: {
   bookId: string
   /** From the URL: Home's due list opens a set directly. */
@@ -41,6 +42,8 @@ export function HomeworkTab({
   onJump: (page: number) => void
   onAskAbout: (about: About) => void
   onOpenSettings: () => void
+  /** Focus: the walkthrough lays out in two columns. */
+  wide?: boolean
 }) {
   const list = useBookHomework(bookId)
   const remove = useDeleteHomework()
@@ -67,6 +70,7 @@ export function HomeworkTab({
           onJump={onJump}
           onAskAbout={onAskAbout}
           onOpenSettings={onOpenSettings}
+          wide={wide}
         />
         {openSet && (
           <HomeworkDialog

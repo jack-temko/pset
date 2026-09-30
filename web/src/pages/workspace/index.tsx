@@ -791,6 +791,7 @@ function Panel({
             pick('ask')
           }}
           onOpenSettings={() => navigate('/settings#connections')}
+          wide={focus}
         />
       )}
     </aside>
