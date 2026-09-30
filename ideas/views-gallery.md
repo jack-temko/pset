@@ -10,7 +10,7 @@ own.
 | `views-plan` | This file, `CLAUDE.md`, and the note in `AGENTS.md`. | Done |
 | `gallery-shell` | `/components` gets a sidebar and one section at a time. | Done |
 | `views-homework` | `/views`, the fetch stub, and the homework pane as the pilot view. | Done |
-| `views-skill` | The `pset-view` skill, written against what the two above built. | Planned |
+| `views-skill` | The `pset-view` skill, written against what the two above built. | Done: written; task 10 tries it |
 
 The skill is written last on purpose: it should describe the gallery and
 the pilot view as they are, not as they were imagined.
@@ -259,7 +259,7 @@ Each produces friction rows.
   - Files: `web/src/views/homework/spec.md`, `design/workspace.md`
   - Do: write the spec in the format above, including `student`, `flow`, `budget`, `handoffs` ("Ask about this question" out and back is the first) and a friction log from a real walk through every scenario (keyboard only, Night theme); shrink the Homework section of `design/workspace.md` to a pointer.
   - Done when: every heading in the format is present; each friction row names a scenario that shows it; the file reads correctly beside the live view.
-- [ ] 9. (opus) The `pset-view` skill, written against the built gallery
+- [x] 9. (opus) The `pset-view` skill, written against the built gallery
   - Files: `.agents/skills/pset-view/SKILL.md`, `.agents/skills/pset-view/references/student-lens.md`, `.agents/skills/pset-view/references/spec-template.md`, `.agents/skills/pset-view/references/mock-layer.md`, `.claude/skills`
   - Do: `SKILL.md` (frontmatter `name` and `description`, the modes, the loop, the guardrails) kept short, the three references, and `.claude/skills` as a relative symlink to `../.agents/skills`.
   - Done when: a fresh Claude Code session lists the skill and a run of `audit` on the homework view produces a friction log that matches the spec's format.
