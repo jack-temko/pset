@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/jackt/pset/internal/db"
@@ -36,6 +37,12 @@ CREATE TABLE study (
 	ended   TEXT NOT NULL
 );
 CREATE INDEX study_ended ON study (ended);`, Do: beatsToStretches},
+		// A stretch with a homework question open is for that question, so
+		// its time can be said: the set's progress and what is left. A
+		// stretch is for one question; moving to another starts a new one.
+		{Name: "activity/3", SQL: `
+ALTER TABLE study ADD COLUMN question_id TEXT NOT NULL DEFAULT '';
+CREATE INDEX study_question ON study (question_id) WHERE question_id != ''`},
 	}
 }
 
@@ -99,6 +106,10 @@ type Service struct {
 
 func New(d *sql.DB, hw Homework) *Service { return &Service{db: d, hw: hw, now: time.Now} }
 
+// SetHomework says where "questions worked" comes from, for a server that
+// builds this before homework (homework reads question time from here).
+func (s *Service) SetHomework(hw Homework) { s.hw = hw }
+
 // Limits on what a stretch can claim: none ends in the future, and none
 // is longer than a sitting. A client that sends more is clamped, not
 // refused, since its clock may be off.
@@ -119,6 +130,12 @@ func (s *Service) Save(ctx context.Context, st Stretch) error {
 	if st.ID == "" || len(st.ID) > 64 {
 		return httpx.Invalid("id", "Name the stretch with an id of up to 64 characters.")
 	}
+	if len(st.QuestionID) > 64 {
+		return httpx.Invalid("questionId", "A question's id is up to 64 characters.")
+	}
+	if st.QuestionID != "" && st.Kind != KindHomework {
+		return httpx.Invalid("questionId", "Only homework time is for a question.")
+	}
 	from, err1 := time.Parse(time.RFC3339Nano, st.Started)
 	to, err2 := time.Parse(time.RFC3339Nano, st.Ended)
 	if err1 != nil || err2 != nil {
@@ -126,9 +143,9 @@ func (s *Service) Save(ctx context.Context, st Stretch) error {
 	}
 	to = minTime(to.UTC(), s.now().UTC().Add(maxAhead))
 	from = maxTime(minTime(from.UTC(), to), to.Add(-maxStretch))
-	_, err := s.db.ExecContext(ctx, `INSERT INTO study (id, book_id, kind, started, ended) VALUES (?, ?, ?, ?, ?)
+	_, err := s.db.ExecContext(ctx, `INSERT INTO study (id, book_id, kind, started, ended, question_id) VALUES (?, ?, ?, ?, ?, ?)
 		ON CONFLICT (id) DO UPDATE SET ended = max(ended, excluded.ended)`,
-		st.ID, st.BookID, st.Kind, db.At(from), db.At(to))
+		st.ID, st.BookID, st.Kind, db.At(from), db.At(to), st.QuestionID)
 	if err != nil {
 		// A book that no longer exists: nothing to record.
 		return httpx.NotFound("book")
@@ -190,6 +207,48 @@ func (s *Service) Week(ctx context.Context, since time.Time) (Week, error) {
 	return w, nil
 }
 
+// QuestionSeconds is the time spent on each of the questions, in seconds:
+// the stretches with that question open, an overlap (two tabs on one
+// question) counted once. A question with none is absent.
+func (s *Service) QuestionSeconds(ctx context.Context, ids []string) (map[string]int, error) {
+	out := map[string]int{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	marks := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT question_id, started, ended FROM study WHERE question_id IN (`+marks+`)`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	by := map[string][]span{}
+	for rows.Next() {
+		var id, from, to string
+		if err := rows.Scan(&id, &from, &to); err != nil {
+			return nil, err
+		}
+		a, err1 := time.Parse(time.RFC3339Nano, from)
+		b, err2 := time.Parse(time.RFC3339Nano, to)
+		if err1 != nil || err2 != nil || !b.After(a) {
+			continue
+		}
+		by[id] = append(by[id], span{a, b})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for id, spans := range by {
+		if n := int(covered(spans).Round(time.Second) / time.Second); n > 0 {
+			out[id] = n
+		}
+	}
+	return out, nil
+}
+
 // Clear forgets all time spent, in every book. Questions worked stay:
 // they come from homework, not from here.
 func (s *Service) Clear(ctx context.Context) error {
@@ -202,6 +261,11 @@ type span struct{ from, to time.Time }
 // minutes is how long the spans cover together, an overlap once, rounded
 // to the minute.
 func minutes(spans []span) int {
+	return int(covered(spans).Round(time.Minute) / time.Minute)
+}
+
+// covered is how long the spans cover together, an overlap once.
+func covered(spans []span) time.Duration {
 	if len(spans) == 0 {
 		return 0
 	}
@@ -216,8 +280,7 @@ func minutes(spans []span) int {
 		total += cur.to.Sub(cur.from)
 		cur = sp
 	}
-	total += cur.to.Sub(cur.from)
-	return int(total.Round(time.Minute) / time.Minute)
+	return total + cur.to.Sub(cur.from)
 }
 
 func minTime(a, b time.Time) time.Time {

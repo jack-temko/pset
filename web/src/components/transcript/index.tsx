@@ -60,7 +60,7 @@ export function AboutChip({ label, onRemove }: { label: string; onRemove?: () =>
  *  Colour eases, so a line fades back as the next begins or the answer
  *  ends. */
 const stepInk = (live: boolean) =>
-  `flex items-center gap-2 text-xs font-normal transition-colors duration-150 ease-out motion-reduce:transition-none ${
+  `flex items-center gap-2 text-xs font-normal transition-colors duration-200 ease-out motion-reduce:transition-none ${
     live ? 'text-foreground' : 'text-muted-foreground'
   }`
 
@@ -164,7 +164,7 @@ export function AssistantTurn({ children }: { children: ReactNode }) {
           setCopied(true)
           setTimeout(() => setCopied(false), 1500)
         }}
-        className="flex h-control-sm w-control-sm items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100 hover:bg-muted/50 hover:text-foreground focus-visible:opacity-100 motion-reduce:transition-none"
+        className="flex h-control-sm w-control-sm items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity duration-200 ease-out group-hover:opacity-100 hover:bg-muted/50 hover:text-foreground focus-visible:opacity-100 motion-reduce:transition-none"
       >
         {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
       </button>

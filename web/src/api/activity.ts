@@ -44,7 +44,7 @@ export const IDLE: Record<Kind, number> = { homework: 20 * 60_000, reading: 5 * 
 /** A stretch that ends for want of input ends this long after the last. */
 const GRACE = 60_000
 
-type Open = { id: string; kind: Kind; started: number; ended: number }
+type Open = { id: string; kind: Kind; question?: string; started: number; ended: number }
 
 /** What the workspace's timer shows: whether time is counting now, and
  *  how much this sitting has counted. */
@@ -60,9 +60,11 @@ export type StudyTime = { counting: boolean; seconds: number }
  * input only counts once the student is back. Spec: design/backend.md,
  * "Time spent".
  */
-export function useStudyTime(bookId: string, kind: () => Kind): StudyTime {
+export function useStudyTime(bookId: string, kind: () => Kind, question?: () => string | undefined): StudyTime {
   const kindRef = useRef(kind)
   kindRef.current = kind
+  const questionRef = useRef(question)
+  questionRef.current = question
   const [shown, setShown] = useState<StudyTime>({ counting: false, seconds: 0 })
   useEffect(() => {
     let lastInput = Date.now()
@@ -74,6 +76,7 @@ export function useStudyTime(bookId: string, kind: () => Kind): StudyTime {
         id: o.id,
         bookId,
         kind: o.kind,
+        questionId: o.question,
         started: new Date(o.started).toISOString(),
         ended: new Date(o.ended).toISOString(),
       })
@@ -92,14 +95,17 @@ export function useStudyTime(bookId: string, kind: () => Kind): StudyTime {
     const tick = () => {
       const now = Date.now()
       const k = kindRef.current()
+      // Homework time is for the question open, when one is: moving to
+      // another starts a new stretch, so the time can be said by question.
+      const qid = k === 'homework' ? questionRef.current?.() : undefined
       const away = now - lastInput > IDLE[k]
       if (document.visibilityState !== 'visible' || away) {
         close(now)
       } else {
-        if (open && open.kind !== k) close(now)
+        if (open && (open.kind !== k || open.question !== qid)) close(now)
         if (!open) {
           // Saved first at the half-minute, or as it closes: never empty.
-          open = { id: crypto.randomUUID(), kind: k, started: now, ended: now }
+          open = { id: crypto.randomUUID(), kind: k, question: qid, started: now, ended: now }
           saved = now
         }
         open.ended = now

@@ -98,7 +98,7 @@ export function BookStatus({
           aria-label={name}
         >
           <span
-            className="block h-full rounded-full bg-primary transition-[width] duration-150 ease-out motion-reduce:transition-none"
+            className="block h-full rounded-full bg-primary transition-[width] duration-200 ease-out motion-reduce:transition-none"
             style={{ width: `${pct}%` }}
           />
         </span>

@@ -35,6 +35,7 @@ export function EditableLines({
   extra,
   onSave,
   editing: startEditing = false,
+  readOnly = false,
   onCancel,
 }: {
   title: string
@@ -57,12 +58,16 @@ export function EditableLines({
   /** Another way out while editing, apart from Cancel and Save. */
   extra?: (stopEditing: () => void) => ReactNode
   onSave: (lines: string[]) => void
-  /** Opens straight into editing, as adding the first line does. */
+  /** Opens straight into editing, with the lines as they are (none, when
+   *  adding the first). */
   editing?: boolean
+  /** No edit button in the header: something else starts the editing. */
+  readOnly?: boolean
   onCancel?: () => void
 }) {
   const [open, setOpen] = useState(false)
-  const [draft, setDraft] = useState<string | null>(startEditing ? '' : null)
+  const source = () => lines.map((l) => `- ${runsSource(l)}`).join('\n')
+  const [draft, setDraft] = useState<string | null>(startEditing ? source() : null)
   const [error, setError] = useState('')
 
   const stop = () => {
@@ -131,10 +136,12 @@ export function EditableLines({
         </span>
         {/* Each line keeps its dash in the box, so a line that wraps still
             reads as one. */}
-        <Button variant="ghost" size="sm" onClick={() => setDraft(lines.map((l) => `- ${runsSource(l)}`).join('\n'))}>
-          <Pencil />
-          {editLabel}
-        </Button>
+        {!readOnly && (
+          <Button variant="ghost" size="sm" onClick={() => setDraft(source())}>
+            <Pencil />
+            {editLabel}
+          </Button>
+        )}
       </BoxHeader>
       <BoxBody className="space-y-3 text-sm">
         {note}

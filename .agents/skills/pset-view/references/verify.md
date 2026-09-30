@@ -46,6 +46,8 @@ const { chromium } = require(process.env.HOME + '/.npm/_npx/e41f203b7505f1fb/nod
 - The handoff log and API-call log are on the page: assert on them
   (`getByText('Ask about this question → Ask')`, `getByText('PATCH /api/questions')`).
 - Fail loudly: collect `pageerror` and `console` errors; a run with any is not done.
+- Photo framing: at 1440x1000 a handoff log falls below the fold. Use a viewport about
+  1500 tall and clip to the panel plus the log, so a phone shows the panel and what it did.
 - Keyboard-only pass: use `page.keyboard.press('Tab')` and count the stops to the
   main action; that number goes in the friction log.
 - Wait for the timeline, not a fixed guess: at `speed=4` a question is written
@@ -60,7 +62,10 @@ const { chromium } = require(process.env.HOME + '/.npm/_npx/e41f203b7505f1fb/nod
       designed (also after a reload).
 - [ ] Text is at or above the 15px floor and readable in Night; targets are at least
       the control height.
-- [ ] `make test` passes (Go tests, `tsc`, `vitest`, `oxlint`).
+- [ ] `make test` passes (Go tests, `tsc`, `vitest`, `oxlint`). Type-check by hand with
+      `npx tsc -b`, never `tsc --noEmit -p .` (it checks nothing here).
+- [ ] Lint: oxlint warnings never fail the build and about forty already exist, so
+      compare the warning count on the files you touched before and after.
 - [ ] `cd web && npm run build` passes: it fails on fractional or off-scale
       utilities and on theme utilities missing from the CSS.
 - [ ] No screenshots, logs or traces in the repo (`git status` shows source only).
@@ -69,6 +74,9 @@ const { chromium } = require(process.env.HOME + '/.npm/_npx/e41f203b7505f1fb/nod
 - [ ] Anything not verified is said so in the report (a real server, a real book).
 
 ## Reporting
+
+If you cannot write a report file (a subagent often cannot), return the report as text
+and let the caller file it.
 
 Say what changed and why in the student's terms; list the friction rows closed
 and opened; show before and after screenshots when the look changed; name what

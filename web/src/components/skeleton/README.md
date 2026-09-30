@@ -27,5 +27,4 @@ a spinner for the same thing.
 - It started still, on the reading that only the Spinner may loop. Jack
   asked for the shimmer: a loading block is exactly the "waiting" that a
   loop is allowed to mean, and a still one read as a broken layout. (The
-  Veil rejected a shimmer for the opposite reason: veiled content isn't
-  loading, so it mustn't look like it.)
+  Veil, since removed, rejected a shimmer for the opposite reason.)

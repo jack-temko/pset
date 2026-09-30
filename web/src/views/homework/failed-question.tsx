@@ -5,6 +5,7 @@ import { Button } from '@/components/button'
 import { useBoxing } from '@/pages/workspace/boxing-state'
 import type { Failure, Question, Retry } from '@/api/homework'
 import { usePages } from '@/lib/pages'
+import { failedLine } from './failed-line'
 
 /**
  * A question the engine couldn't write a guide for, as a recoverable
@@ -73,6 +74,8 @@ export function FailedQuestion({
             {title}
           </p>
           <p className="text-sm text-muted-foreground">{q.reason}</p>
+          {/* A second failure says it is one; a model outage, how long ago. */}
+          {failedLine(q) && <p className="text-xs text-muted-foreground">{failedLine(q)}</p>}
         </div>
 
         {kind === 'not_found' ? (

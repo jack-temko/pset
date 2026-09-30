@@ -1,12 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Pencil, Plus, Printer, SquareDashedMousePointer, Trash2 } from 'lucide-react'
-import { Checkbox } from '@/components/checkbox'
+import { useEffect, useState, type KeyboardEvent } from 'react'
+import { BookOpen, Check, Flag, ChevronLeft, ChevronDown, ChevronUp, Pencil, Plus, Printer, SquareDashedMousePointer, Trash2, TriangleAlert } from 'lucide-react'
 import { Button, IconButton } from '@/components/button'
-import { PageRef } from '@/components/transcript'
-import { Veil } from '@/components/veil'
 import { Label } from '@/components/label'
 import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
-import { ConfirmPopover } from '@/components/confirm'
+import { ProgressBar } from '@/components/progress-bar'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
 import { UsageLine } from '@/components/usage'
@@ -17,39 +14,19 @@ import { FigureReading } from '@/pages/workspace/reading'
 import { ProfessorNotes } from '@/pages/workspace/notes'
 import { useBoxing } from '@/pages/workspace/boxing-state'
 import { figureURL, outstanding, questionStep, toFind, useHomeworkSet, useRemoveQuestion, useRedoReading, useRetryQuestion, useWriteGuide, useUpdateHomework, useUpdateQuestion, worksheetURL, type Question } from '@/api/homework'
-import { AnswersOf, Document, Runs } from '@/components/document'
+import { Runs } from '@/components/document'
 import { runsSource, runsText } from '@/components/document/runs'
-import { answersOf } from '@/components/document/tree'
 import type { About } from '@/api/ask'
 import { useTimeLeft } from '@/lib/eta'
 import { PageMap, usePages } from '@/lib/pages'
 import { useSettled } from '@/lib/settled'
 import { cn, plural } from '@/lib/utils'
 import { FailedQuestion } from './failed-question'
-
-/** A stage of the guide: the content is there from the start, behind
- *  frosted glass. One click lifts the veil: no buttons to sequence, and
- *  nothing spoiled by accident. */
-function Stage({
-  label,
-  revealed,
-  onReveal,
-  children,
-}: {
-  label: string
-  revealed: boolean
-  onReveal: () => void
-  children: ReactNode
-}) {
-  return (
-    <div className="space-y-1">
-      <p className="text-xs text-muted-foreground uppercase">{label}</p>
-      <Veil label={`Show ${label}`} revealed={revealed} onReveal={onReveal}>
-        <div className="space-y-3 text-base">{children}</div>
-      </Veil>
-    </div>
-  )
-}
+import { HelpRows } from './help'
+import { Finish } from './finish'
+import { helpRows, type HelpName } from './help-meta'
+import { isTyping, walkthroughKey } from './keys'
+import { PRIMARY_LABEL, barLabel, countWords, firstUnfinished, nextUnfinished, ordinal, primaryOf, queuePlace, segments, stageWord, timeLeftWords, isWorking, type HomeworkSet, type Q } from './progress'
 
 const STAGE_NAMES = ['hint', 'walkthrough', 'answers'] as const
 
@@ -107,18 +84,22 @@ function WorkingLine({ q, text }: { q: Question; text: string }) {
  *  questions ahead of it. */
 function waitingLine(q: Question, questions: Question[], pages: PageMap): string {
   const ahead = questions.filter((x) => x.position < q.position)
+  // "3rd in line" once there is a line: the questions before it still owed work.
+  const place = queuePlace(q, questions)
+  const inLine = place > 1 ? ` It is ${ordinal(place)} in line.` : ''
   if (toFind(q)) {
-    return ahead.some(toFind) ? 'Queued: it starts when the questions ahead of it are found.' : 'Queued: it starts in a moment.'
+    return (ahead.some(toFind) ? 'Queued: it starts when the questions ahead of it are found.' : 'Queued: it starts in a moment.') + inLine
   }
   const lead = q.page !== undefined ? `Found on p. ${pages.label(q.page)}. Its guide starts` : 'Queued: it starts'
-  if (questions.some((x) => x.id !== q.id && toFind(x))) return `${lead} once every question is found.`
-  if (ahead.some(outstanding)) return `${lead} once the questions ahead of it are written.`
+  if (questions.some((x) => x.id !== q.id && toFind(x))) return `${lead} once every question is found.${inLine}`
+  if (ahead.some(outstanding)) return `${lead} once the questions ahead of it are written.${inLine}`
   return `${lead} in a moment.`
 }
 
-/** One question at a time. Both stages sit veiled below the statement:
- *  the walkthrough carries the solution, and Complete is a checkbox that
- *  does exactly one thing. Spec: design/workspace.md. */
+/** One question at a time, and the set's progress always in view: the
+ *  header holds the count (which opens the list of questions), the time
+ *  left and the bar; the footer has one primary button. The help is three
+ *  rows that open in place. Spec: web/src/views/homework/spec.md. */
 export function Walkthrough({
   setId,
   onEdit,
@@ -127,8 +108,14 @@ export function Walkthrough({
   onJump,
   onAskAbout,
   onOpenSettings,
+  onQuestion,
+  wide = false,
 }: {
   setId: string
+  /** The question on screen (null on the finish page), for counting time. */
+  onQuestion?: (id: string | null) => void
+  /** Focus: the question stays put on the left while its help scrolls on the right. */
+  wide?: boolean
   onEdit: () => void
   onDelete: () => void
   onBack: () => void
@@ -148,20 +135,26 @@ export function Walkthrough({
   const boxing = useBoxing()
   const [adding, setAdding] = useState(false)
   const [index, setIndex] = useState<number | null>(null)
-  // Removing a question asks first, under its trash button. It holds the
-  // id it asked about, so moving to another question can't retarget it.
-  const [removing, setRemoving] = useState<string | null>(null)
-  const trash = useRef<HTMLButtonElement>(null)
+  // The finish page fills the pane once every question is done; it is where
+  // the last Next lands, and where a set that is already all done opens.
+  const [finishing, setFinishing] = useState(false)
+  // What the student opened by hand, by question: the notes box for
+  // editing, the figure's reading and the guide's memory lines, which are
+  // behind the question's menu until asked for. And the help rows: a
+  // question's open rows start as the ones it was left with.
+  const [editingNotes, setEditingNotes] = useState<string | null>(null)
+  const [peeked, setPeeked] = useState<Record<string, ('reading' | 'memory')[]>>({})
+  const [rowsOpen, setRowsOpen] = useState<Record<string, string[]>>({})
 
-  const set = detail.data?.homework
-  const questions = detail.data?.questions ?? []
-  // Open where you'd pick up: the first question not yet complete, once
-  // the set has loaded.
+  const set = detail.data?.homework as HomeworkSet | undefined
+  const questions = (detail.data?.questions ?? []) as Q[]
+  // Open where you'd pick up: the first question not yet done, once the
+  // set has loaded.
   useEffect(() => {
-    if (index === null && detail.data) {
-      const i = detail.data.questions.findIndex((q) => !q.done)
-      setIndex(i === -1 ? 0 : i)
-    }
+    if (index !== null || !detail.data) return
+    const first = firstUnfinished(detail.data.questions)
+    setIndex(first ?? 0)
+    if (first === null && detail.data.questions.length > 0) setFinishing(true)
   }, [detail.data, index])
   // A question boxed on the page opens once it's in the set.
   const [openedBoxed, setOpenedBoxed] = useState<string | null>(null)
@@ -174,8 +167,16 @@ export function Walkthrough({
     }
   }, [boxing.added, openedBoxed, detail.data])
   const at = Math.min(index ?? 0, Math.max(questions.length - 1, 0))
-  const q = questions[at] as Question | undefined
+  const q = questions[at] as Q | undefined
   const turnedIn = !!set?.turnedInAt
+  // Only while every question is done: add one, or take a mark back, and it is over.
+  const finished = finishing && questions.length > 0 && questions.every((x) => x.done)
+  // Which question is on screen, so the workspace counts time against it.
+  const onScreen = finished ? null : (q?.id ?? null)
+  useEffect(() => {
+    onQuestion?.(onScreen)
+    return () => onQuestion?.(null)
+  }, [onQuestion, onScreen])
   // Until every question is found, the worksheet has bare labels in it.
   const finding = questions.filter(toFind).length
   // A question waits between its steps for a moment, often less: the wait
@@ -201,11 +202,14 @@ export function Walkthrough({
     />
   )
 
-  // The bar keeps what you read (where you are, which set, how far in)
-  // and the menu holds what you do to the set. Turned in stays a fact you
-  // can take back, as a checkable item.
+  const left = timeLeftWords(set, questions)
+
+  // The bar keeps what you read, in one row: where you are (the count,
+  // which opens the questions), how long is left, and the bar as the
+  // row's bottom edge. The menu holds what you do to the set. Turned in
+  // stays a fact you can take back, as a checkable item.
   const header = (
-    <div className="flex h-row shrink-0 items-center gap-2 border-b px-2">
+    <div className="relative flex h-row shrink-0 items-center gap-1 border-b px-2">
       <IconButton variant="ghost" size="sm" aria-label="Back to homework" onClick={onBack}>
         <ChevronLeft />
       </IconButton>
@@ -214,10 +218,40 @@ export function Walkthrough({
       </span>
       {turnedIn && <Label tone="success">Turned in</Label>}
       {questions.length > 0 && (
-        <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
-          {at + 1} of {questions.length}
-        </span>
+        <Menu label="Questions" trigger={countWords(questions)} align="end">
+          {questions.map((x, i) => (
+            <MenuItem
+              key={x.id}
+              current={i === at}
+              icon={
+                x.done ? (
+                  <Check className="text-success!" />
+                ) : isWorking(x) ? (
+                  <Spinner className="size-4" />
+                ) : x.state === 'failed' ? (
+                  <TriangleAlert className="text-warning!" />
+                ) : undefined
+              }
+              hint={stageWord(x) ?? undefined}
+              onSelect={() => {
+                setIndex(i)
+                setFinishing(false)
+              }}
+            >
+              {x.label}
+            </MenuItem>
+          ))}
+          {questions.every((x) => x.done) && (
+            <>
+              <MenuDivider />
+              <MenuItem icon={<Flag />} current={finished} onSelect={() => setFinishing(true)}>
+                All done
+              </MenuItem>
+            </>
+          )}
+        </Menu>
       )}
+      {left && <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground tabular-nums">{left}</span>}
       <Menu label="Homework actions">
         <MenuItem icon={<Plus />} onSelect={() => setAdding(true)}>
           Add questions
@@ -268,6 +302,9 @@ export function Walkthrough({
           </>
         )}
       </Menu>
+      {questions.length > 0 && (
+        <ProgressBar segments={segments(questions, finished ? -1 : at)} label={barLabel(questions)} className="absolute inset-x-0 -bottom-px" />
+      )}
     </div>
   )
 
@@ -319,8 +356,76 @@ export function Walkthrough({
   // while it isn't known yet whether this is a wait.
   const still = queued || !shownState
 
+  // The help rows this question has open, and how one opens or closes.
+  const open = new Set(rowsOpen[q.id] ?? q.revealed)
+  const toggleRow = (name: HelpName, to: boolean) => {
+    setRowsOpen((all) => {
+      const now = new Set(all[q.id] ?? q.revealed)
+      if (to) now.add(name)
+      else now.delete(name)
+      return { ...all, [q.id]: [...now] }
+    })
+    if (to && !q.revealed.includes(name)) update.mutate({ id: q.id, patch: { reveal: name } })
+  }
+
+  // The figure's reading is out in the open only when it is flagged, and
+  // the guide's memory lines only when asked for, from the question's menu.
+  const peek = peeked[q.id] ?? []
+  const peekAt = (what: 'reading' | 'memory') => setPeeked((all) => ({ ...all, [q.id]: [...(all[q.id] ?? []), what] }))
+  const readingReady = q.figures.length > 0 && q.page !== undefined && !['pending', 'locating', 'reading'].includes(q.state)
+  const flagged = !q.readingEdited && q.readingDoubts.length > 0
+  const showReading = readingReady && (flagged || peek.includes('reading'))
+  const showMemory = q.memory.length > 0 && peek.includes('memory')
+
+  // What the one button does, and where it leads: done is marked and the
+  // next question not yet done comes up, round the end; a skipped one is
+  // not marked; a done one takes its mark back and stays.
+  const primary = primaryOf(q)
+  const next = nextUnfinished(questions, at)
+  const press = () => {
+    if (primary === 'incomplete') {
+      update.mutate({ id: q.id, patch: { done: false } })
+      return
+    }
+    if (primary === 'next') update.mutate({ id: q.id, patch: { done: true } })
+    if (next !== null) setIndex(next)
+    // The last one: nothing is left to go to, so it ends on the finish page.
+    else if (primary === 'next') setFinishing(true)
+  }
+
+  // ← → browse and 1 2 3 open the rows, for a student whose hands are on
+  // the keyboard: off while typing, in a menu or in a dialog.
+  const onKeyDown = (e: KeyboardEvent) => {
+    const key = walkthroughKey(e.key, e.metaKey || e.ctrlKey || e.altKey, isTyping(e.target))
+    if (!key) return
+    if (key.kind === 'browse') {
+      const to = Math.max(0, Math.min(questions.length - 1, at + key.by))
+      if (to !== at) setIndex(to)
+    } else {
+      const row = helpRows(q)[key.index]
+      if (row && row.blocks.length > 0) toggleRow(row.name, !open.has(row.name))
+    }
+    e.preventDefault()
+  }
+
+  if (finished && set) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        {header}
+        <Finish
+          title={set.title}
+          questions={questions}
+          turnedIn={turnedIn}
+          onTurnIn={() => updateSet.mutate({ turnedIn: true })}
+          onBack={onBack}
+        />
+        {dialog}
+      </div>
+    )
+  }
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col" onKeyDown={onKeyDown}>
       {header}
 
       {/* Keyed by the question: moving to another starts its body fresh
@@ -328,101 +433,108 @@ export function Walkthrough({
           one place. Keys scattered on the parts inside, beside the
           conditional parts and the figures, left stale copies behind
           (three "Add your professor's instructions" under one question). */}
-      <div key={q.id} className="min-h-0 flex-1 space-y-5 overflow-y-auto p-card">
-        <div className="flex items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-lg font-semibold">{q.label}</span>
-          {/* A question that isn't in this book has nothing to jump to. */}
-          {q.page !== undefined && <PageRef pdf={q.page} onJump={onJump} />}
-          {q.done && <Check aria-label="Done" className="size-4 text-success" />}
-          {/* Order and removal, inline and quiet: the set is editable from
-              the question you are looking at. */}
-          <IconButton variant="ghost" size="sm" aria-label="Move this question up" disabled={at === 0} onClick={() => move(-1)}>
-            <ChevronUp />
-          </IconButton>
-          <IconButton
-            variant="ghost"
-            size="sm"
-            aria-label="Move this question down"
-            disabled={at === questions.length - 1}
-            onClick={() => move(1)}
-          >
-            <ChevronDown />
-          </IconButton>
-          <IconButton
-            ref={trash}
-            variant="ghost"
-            size="sm"
-            aria-label="Remove this question"
-            aria-haspopup="dialog"
-            aria-expanded={removing === q.id}
-            onClick={() => setRemoving(q.id)}
-            className={cn(removing === q.id && 'bg-muted/50 text-foreground')}
-          >
-            <Trash2 />
-          </IconButton>
-          {removing === q.id && (
-            <ConfirmPopover
-              anchor={trash}
-              question={`Remove ${q.label}?`}
-              detail="Its guide and your progress on it go with it."
-              action="Remove"
-              onCancel={() => setRemoving(null)}
-              onConfirm={() => {
-                setRemoving(null)
-                removeQ.mutate(q.id)
-                setIndex(Math.max(0, Math.min(at, questions.length - 2)))
-              }}
-            />
-          )}
-        </div>
-
-        {/* A bare reference ("3.C.14") is already the label; saying it
-            twice isn't a statement. While it's still being found, the
-            statement is a skeleton the book's text will replace. */}
-        {q.statement.length > 0 && runsText(q.statement) !== q.label ? (
-          <div className="text-base">
-            <Runs runs={q.statement} onJump={onJump} />
+      <div key={q.id} className={cn('min-h-0 flex-1', wide ? 'grid grid-cols-2 grid-rows-1' : 'grid grid-cols-1 content-start gap-5 overflow-y-auto p-card')}>
+        {/* The problem and the guide are the same two boxes in both layouts
+            (one column, or two in Focus), so toggling Focus keeps what is
+            half-typed in either. */}
+        <div className={wide ? 'grid min-h-0 grid-cols-1 content-start gap-5 overflow-y-auto border-r p-card' : 'contents'}>
+          <div className="flex items-center gap-2">
+            <span className="min-w-0 flex-1 truncate text-lg font-semibold">{q.label}</span>
+            {q.done && <Check aria-label="Done" className="size-4 shrink-0 text-success" />}
+            {/* Takes the scan to the problem's page, and only when asked: a
+                question that isn't in this book has nothing to show. */}
+            {q.page !== undefined && (
+              <Button variant="outline" size="sm" className="shrink-0" onClick={() => onJump(q.page as number)}>
+                <BookOpen />
+                Show in book
+              </Button>
+            )}
+            {/* What you do to this question: order, what it is, what the
+                professor said, what the guide read and remembered. */}
+            <Menu label="Question actions">
+              {at > 0 && (
+                <MenuItem icon={<ChevronUp />} onSelect={() => move(-1)}>
+                  Move up
+                </MenuItem>
+              )}
+              {at < questions.length - 1 && (
+                <MenuItem icon={<ChevronDown />} onSelect={() => move(1)}>
+                  Move down
+                </MenuItem>
+              )}
+              {(at > 0 || at < questions.length - 1) && <MenuDivider />}
+              {/* A find can land on the wrong problem; showing the right one
+                  is the same tool a failed find offers. */}
+              {q.inBook && q.page !== undefined && q.state !== 'failed' && (
+                <MenuItem
+                  icon={<SquareDashedMousePointer />}
+                  onSelect={() => boxing.start({ kind: 'find', questionId: q.id, label: q.label })}
+                >
+                  This isn't the right problem
+                </MenuItem>
+              )}
+              <MenuItem icon={<Pencil />} onSelect={() => setEditingNotes(q.id)}>
+                {q.notes.length > 0 ? "Edit the professor's instructions" : "Add your professor's instructions"}
+              </MenuItem>
+              {readingReady && !showReading && (
+                <MenuItem icon={<Check />} onSelect={() => peekAt('reading')}>
+                  Check how the figure reads
+                </MenuItem>
+              )}
+              {q.memory.length > 0 && !showMemory && (
+                <MenuItem onSelect={() => peekAt('memory')}>What the guide remembered</MenuItem>
+              )}
+              <MenuDivider />
+              <MenuConfirmItem
+                icon={<Trash2 />}
+                question={`Remove ${q.label}?`}
+                detail="Its guide and your progress on it go with it."
+                action="Remove"
+                onConfirm={() => {
+                  removeQ.mutate(q.id)
+                  setIndex(Math.max(0, Math.min(at, questions.length - 2)))
+                }}
+              >
+                Remove this question
+              </MenuConfirmItem>
+            </Menu>
           </div>
-        ) : (
-          q.inBook &&
-          (q.state === 'pending' || q.state === 'locating') && (
-            <p className="space-y-1 text-base">
-              <Skeleton still={still} className="h-3 w-full" />
-              <Skeleton still={still} className="h-3 w-2/3" />
-            </p>
-          )
-        )}
-        {q.figures.map((f, i) => (
-          <figure key={i} className="space-y-1">
-            <img src={figureURL(q.id, i)} alt={f.label || 'Figure'} className="w-full rounded-md border bg-card" />
-            {f.label && <figcaption className="text-xs text-muted-foreground">{f.label}</figcaption>}
-          </figure>
-        ))}
-        {/* A find can land on the wrong problem; showing the right one is
-            the same tool a failed find offers. */}
-        {q.inBook && q.page !== undefined && q.state !== 'failed' && (
-          <p className="text-xs text-muted-foreground">
-            Not the right problem?{' '}
-            <button
-              type="button"
-              className="text-primary underline-offset-2 hover:underline"
-              onClick={() => boxing.start({ kind: 'find', questionId: q.id, label: q.label })}
-            >
-              Show me where it is
-            </button>
-          </p>
-        )}
 
-        {/* The professor's say on the problem, over the book's. */}
-        <ProfessorNotes q={q} onSave={(notes) => update.mutate({ id: q.id, patch: { notes } })} />
+          {/* A bare reference ("3.C.14") is already the label; saying it
+              twice isn't a statement. While it's still being found, the
+              statement is a skeleton the book's text will replace. */}
+          {q.statement.length > 0 && runsText(q.statement) !== q.label ? (
+            <div className="text-base">
+              <Runs runs={q.statement} onJump={onJump} />
+            </div>
+          ) : (
+            q.inBook &&
+            (q.state === 'pending' || q.state === 'locating') && (
+              <p className="space-y-1 text-base">
+                <Skeleton still={still} className="h-3 w-full" />
+                <Skeleton still={still} className="h-3 w-2/3" />
+              </p>
+            )
+          )}
+          {q.figures.map((f, i) => (
+            <figure key={i} className="space-y-1">
+              <img src={figureURL(q.id, i)} alt={f.label || 'Figure'} className="w-full rounded-md border bg-card" />
+              {f.label && <figcaption className="text-xs text-muted-foreground">{f.label}</figcaption>}
+            </figure>
+          ))}
 
-        {/* The words the guide is written from, once there are any: a
-            question still being found or read has none to check yet. */}
-        {q.figures.length > 0 &&
-          q.page !== undefined &&
-          q.state !== 'pending' &&
-          q.state !== 'locating' &&
-          q.state !== 'reading' && (
+          {/* The professor's say on the problem, over the book's. Read-only:
+              the question's menu is the one way to change it. */}
+          <ProfessorNotes
+            q={q}
+            editing={editingNotes === q.id}
+            onStop={() => setEditingNotes(null)}
+            onSave={(notes) => update.mutate({ id: q.id, patch: { notes } })}
+          />
+
+          {/* The words the guide is written from: out only when a reading
+              is flagged, or asked for. */}
+          {showReading && (
             <FigureReading
               q={q}
               onCorrect={(lines) => redoReading.mutate({ id: q.id, lines })}
@@ -430,92 +542,64 @@ export function Walkthrough({
             />
           )}
 
-        {q.state === 'failed' ? (
-          <>
-            <FailedQuestion q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} onOpenSettings={onOpenSettings} />
-            {/* What the failed attempt spent: the calls cost even when
-                the guide didn't land. */}
-            {q.usage && <UsageLine usage={q.usage} />}
-          </>
-        ) : (
-          <>
-            {/* Queued is a word and no motion: nothing is happening to it
-                yet. Working gets the spinner and the shimmer. */}
-            {queued ? (
-              <p className="text-xs text-muted-foreground">{waitingLine(q, questions, pages)}</p>
-            ) : working ? (
-              <WorkingLine q={q} text={working} />
-            ) : (
-              // A wait too young to show yet, with nothing shown before
-              // it: a blank at the line's height, so nothing moves.
-              outstanding(q) && <p className="text-xs">{'\u00a0'}</p>
-            )}
-            {q.state === 'unwritten' ? (
-              // No guide yet: the ones written before documents were
-              // deleted. Nothing writes one until it's asked for.
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">This question has no guide yet.</p>
-                <Button variant="outline" onClick={() => writeGuide.mutate(q.id)}>
-                  Write the guide
-                </Button>
-              </div>
-            ) : (
-              STAGE_NAMES.map((name) => {
-                const blocks = name === 'hint' ? q.hint : q.walkthrough
-                // Each stage fills in as it's written: the hint can be
-                // there while the walkthrough is still a skeleton. The
-                // answers are the walkthrough's answer blocks, so they
-                // arrive with it.
-                if (blocks.length === 0) return <StageSkeleton key={name} name={name} still={still} />
-                if (name === 'answers' && answersOf(blocks).length === 0) return null
-                return (
-                  <Stage
-                    key={name}
-                    label={name}
-                    revealed={q.revealed.includes(name)}
-                    onReveal={() => update.mutate({ id: q.id, patch: { reveal: name } })}
-                  >
-                    {name === 'answers' ? (
-                      <AnswersOf blocks={q.walkthrough} onJump={onJump} />
-                    ) : (
-                      <Document blocks={blocks} onJump={onJump} reading />
-                    )}
-                  </Stage>
-                )
-              })
-            )}
-            {set && <MemoryLines bookId={set.bookId} lines={q.memory} />}
-            {/* What the whole production spent — find, figure read, guide
-                — once it's over. A question still being written keeps its
-                working lines and shows nothing here. */}
-            {(q.state === 'ready' || q.state === 'unwritten') && q.usage && <UsageLine usage={q.usage} />}
-          </>
-        )}
+        </div>
+        <div className={wide ? 'grid min-h-0 grid-cols-1 content-start gap-5 overflow-y-auto p-card' : 'contents'}>
+          {q.state === 'failed' ? (
+            <>
+              <FailedQuestion q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} onOpenSettings={onOpenSettings} />
+              {/* What the failed attempt spent: the calls cost even when
+                  the guide didn't land. */}
+              {q.usage && <UsageLine usage={q.usage} />}
+            </>
+          ) : (
+            <>
+              {/* Queued is a word and no motion: nothing is happening to it
+                  yet. Working gets the spinner and the shimmer. */}
+              {queued ? (
+                <p className="text-xs text-muted-foreground">{waitingLine(q, questions, pages)}</p>
+              ) : working ? (
+                <WorkingLine q={q} text={working} />
+              ) : (
+                // A wait too young to show yet, with nothing shown before
+                // it: a blank at the line's height, so nothing moves.
+                outstanding(q) && <p className="text-xs">{' '}</p>
+              )}
+              {q.state === 'unwritten' ? (
+                // No guide yet: the ones written before documents were
+                // deleted. Nothing writes one until it's asked for.
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">This question has no guide yet.</p>
+                  <Button variant="outline" onClick={() => writeGuide.mutate(q.id)}>
+                    Write the guide
+                  </Button>
+                </div>
+              ) : (
+                <HelpRows key={q.id} q={q} queued={queued} open={open} onOpenChange={toggleRow} onJump={onJump} />
+              )}
+              {showMemory && set && <MemoryLines bookId={set.bookId} lines={q.memory} />}
+              {/* What the whole production spent — find, figure read, guide
+                  — once it's over. A question still being written keeps its
+                  working lines and shows nothing here. */}
+              {(q.state === 'ready' || q.state === 'unwritten') && q.usage && <UsageLine usage={q.usage} />}
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center justify-between border-t p-card">
         <Button variant="ghost" size="sm" onClick={() => onAskAbout({ label: q.label, text: runsSource(q.statement) || q.text })}>
           Ask about this
         </Button>
-        <div className="flex items-center gap-2">
-          <IconButton variant="ghost" size="sm" aria-label="Previous question" disabled={at === 0} onClick={() => setIndex(at - 1)}>
-            <ChevronLeft />
-          </IconButton>
-          <IconButton
-            variant="ghost"
-            size="sm"
-            aria-label="Next question"
-            disabled={at === questions.length - 1}
-            onClick={() => setIndex(at + 1)}
-          >
-            <ChevronRight />
-          </IconButton>
-          {/* Done must be as easy to take back as to claim, so it is a
-              checkbox and it does not advance. */}
-          <Checkbox checked={q.done} onChange={() => update.mutate({ id: q.id, patch: { done: !q.done } })}>
-            Complete
-          </Checkbox>
-        </div>
+        {/* The one primary button: done is as easy to take back as to
+            claim, and a question that can't be finished yet is skipped,
+            never marked. */}
+        <Button
+          variant={primary === 'next' ? 'primary' : 'outline'}
+          disabled={primary === 'skip' && next === null}
+          onClick={press}
+        >
+          {PRIMARY_LABEL[primary]}
+        </Button>
       </div>
 
       {dialog}

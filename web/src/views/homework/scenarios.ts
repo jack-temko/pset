@@ -39,10 +39,10 @@ function session(ctx: ScenarioContext, build: (w: World) => Partial<Session> & {
  *  one being written, one waiting. */
 function problemSet4(w: World) {
   return addSet(w, 'Problem set 4', 1, [
-    { label: '4.27', state: 'ready', done: true, revealed: ['hint', 'walkthrough', 'answers'] },
-    { label: '4.25', state: 'ready', revealed: ['hint'], notes: [[{ t: 'no PSpice or MultiSim' }]] },
-    { label: '4.32', state: 'writing', activity: 'Thinking…' },
-    { label: '3.12', state: 'pending' },
+    { label: '4.27', state: 'ready', done: true, revealed: ['hint', 'walkthrough', 'answers'], difficulty: 2, seconds: 1080 },
+    { label: '4.25', state: 'ready', revealed: ['hint'], notes: [[{ t: 'no PSpice or MultiSim' }]], difficulty: 2, seconds: 840 },
+    { label: '4.32', state: 'writing', activity: 'Thinking…', difficulty: 4 },
+    { label: '3.12', state: 'pending', difficulty: 3 },
   ])
 }
 
@@ -148,10 +148,10 @@ const returnAfterBreak: Scenario = {
         { label: '3.12', state: 'ready' },
       ])
       addSet(w, 'Problem set 4', 0, [
-        { label: '4.27', state: 'ready', done: true },
-        { label: '4.25', state: 'ready', done: true },
-        { label: '4.32', state: 'ready', done: true },
-        { label: '3.12', state: 'ready', revealed: ['hint'] },
+        { label: '4.27', state: 'ready', done: true, difficulty: 2, seconds: 1080 },
+        { label: '4.25', state: 'ready', done: true, difficulty: 2, seconds: 840 },
+        { label: '4.32', state: 'ready', done: true, difficulty: 4, seconds: 2460 },
+        { label: '3.12', state: 'ready', revealed: ['hint'], difficulty: 3 },
       ])
       addSet(w, 'Chapter 5 exercises', 7, [
         { label: '4.27', state: 'ready' },
@@ -181,4 +181,74 @@ const importing: Scenario = {
     }),
 }
 
-export const SCENARIOS: Scenario[] = [happy, handoffIn, empty, slow, failed, midFlow, returnAfterBreak, importing]
+const finish: Scenario = {
+  id: 'finish',
+  title: 'Every question done',
+  note: 'Problem set 4 with all six questions done and timed: it opens on the finish page. Mark one incomplete from the count’s list, then finish it again.',
+  start: (ctx) =>
+    session(ctx, (w) => {
+      const s = addSet(w, 'Problem set 4', 1, [
+        { label: '4.27', state: 'ready', done: true, difficulty: 2, seconds: 1080 },
+        { label: '4.25', state: 'ready', done: true, difficulty: 2, seconds: 840 },
+        { label: '4.32', state: 'ready', done: true, difficulty: 4, seconds: 2460 },
+        { label: '3.12', state: 'ready', done: true, difficulty: 3, seconds: 1980 },
+        { label: '2.31', state: 'ready', done: true, difficulty: 1, seconds: 540 },
+        { label: '3.14', state: 'ready', done: true, difficulty: 1, seconds: 720 },
+      ])
+      return { props: { initialSet: s.id } }
+    }),
+}
+
+const noGuide: Scenario = {
+  id: 'no-guide',
+  title: 'A question with no guide',
+  note: 'The second question was written before guides were kept as documents: it says it has none and offers Write the guide. Its button is Skip for now.',
+  start: (ctx) =>
+    session(ctx, (w) => {
+      const s = addSet(w, 'Problem set 4', 1, [
+        { label: '4.27', state: 'ready', done: true, difficulty: 2, seconds: 1080 },
+        { label: '4.25', state: 'unwritten', difficulty: 2 },
+        { label: '4.32', state: 'ready', difficulty: 4 },
+      ])
+      return { props: { initialSet: s.id } }
+    }),
+}
+
+const longSet: Scenario = {
+  id: 'long-set',
+  title: 'A long set',
+  note: 'Twenty-four questions, nine done. The bar’s segments get thin and the count’s list scrolls; the count, bar and time left never move.',
+  start: (ctx) =>
+    session(ctx, (w) => {
+      const s = addSet(
+        w,
+        'Chapter 4 exercises',
+        2,
+        Array.from({ length: 24 }, (_, i) => ({
+          label: `4.${String(i + 1).padStart(2, '0')}`,
+          state: 'ready' as const,
+          done: i < 9,
+          difficulty: (i % 5) + 1,
+          seconds: i < 9 ? 600 + ((i * 317) % 900) : undefined,
+        })),
+      )
+      return { props: { initialSet: s.id } }
+    }),
+}
+
+const longTitle: Scenario = {
+  id: 'long-title',
+  title: 'A long set title',
+  note: 'The title is cut to make room: the count, the time left and the menu stay where they are.',
+  start: (ctx) =>
+    session(ctx, (w) => {
+      const s = addSet(w, 'Chapter 3 exercises: nodal analysis, mesh analysis and superposition, with the lab prelab', 2, [
+        { label: '4.27', state: 'ready', done: true, difficulty: 2, seconds: 1080 },
+        { label: '4.25', state: 'ready', done: true, difficulty: 2, seconds: 840 },
+        { label: '4.32', state: 'ready', difficulty: 4 },
+      ])
+      return { props: { initialSet: s.id } }
+    }),
+}
+
+export const SCENARIOS: Scenario[] = [happy, handoffIn, empty, slow, failed, midFlow, returnAfterBreak, importing, finish, noGuide, longSet, longTitle]

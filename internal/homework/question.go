@@ -158,12 +158,17 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 
 // setFailed marks a question failed: what kind, and in words.
 func (s *Service) setFailed(ctx context.Context, id string, kind Failure, reason string) {
-	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET state = 'failed', failure = ?, reason = ?, activity = '', updated_at = ? WHERE id = ?`,
-		kind, reason, db.Now(), id); err != nil {
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET state = 'failed', failure = ?, reason = ?, activity = '', failed_at = ?, updated_at = ? WHERE id = ?`,
+		kind, reason, db.Now(), db.Now(), id); err != nil {
 		slog.Error("question: set failed", "question", id, "err", err)
 		return
 	}
 	s.publishQuestion(ctx, id)
+	// A find that failed was the last one the set was waiting on, maybe.
+	var set string
+	if s.c.DB.QueryRowContext(ctx, `SELECT homework_id FROM questions WHERE id = ?`, id).Scan(&set) == nil {
+		s.rankWhenFound(ctx, set)
+	}
 }
 
 func (s *Service) setState(ctx context.Context, id string, st State, reason string) {
@@ -246,6 +251,8 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 	// No Wake: the guide waits for this job's slot, and settling wakes
 	// the queue.
 	s.publishQuestion(ctx, q.ID)
+	// With the last of the set found, it can be ranked.
+	s.rankWhenFound(ctx, q.HomeworkID)
 	return nil
 }
 

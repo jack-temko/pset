@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
-import { ChevronDown, ChevronUp, Pencil, Plus, Printer, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Pencil, Plus, Printer, Trash2 } from 'lucide-react'
 import { Box, BoxBody } from '@/components/box'
 import { Button, IconButton } from '@/components/button'
 import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
 import { ConfirmPopover } from '@/components/confirm'
 import { Dialog } from '@/components/dialog'
+import { Spinner } from '@/components/spinner'
 import { cn } from '@/lib/utils'
 import type { ComponentEntry } from './types'
 import { Shelf } from './shared'
@@ -65,6 +66,27 @@ function QuestionHeaderDemo() {
         />
       )}
     </div>
+  )
+}
+
+/** A dropdown with a labelled trigger and a current row: the homework
+ *  header's count, which lists the set's questions. */
+function QuestionsMenuDemo() {
+  return (
+    <Menu label="Questions" trigger="2 of 8">
+      <MenuItem icon={<Check className="text-success!" />} onSelect={() => {}}>
+        4.27
+      </MenuItem>
+      <MenuItem icon={<Check className="text-success!" />} onSelect={() => {}}>
+        4.25
+      </MenuItem>
+      <MenuItem current onSelect={() => {}}>
+        4.32
+      </MenuItem>
+      <MenuItem icon={<Spinner className="size-4" />} hint="Writing the guide" onSelect={() => {}}>
+        3.12
+      </MenuItem>
+    </Menu>
   )
 }
 
@@ -166,6 +188,15 @@ export const overlaysSections: ComponentEntry[] = [
       <>
         <Shelf label="overflow">
           <MenuDemo />
+        </Shelf>
+        <Shelf label="labelled trigger, current row">
+          <QuestionsMenuDemo />
+        </Shelf>
+        <Shelf label="one at a time">
+          <MenuDemo />
+          <QuestionsMenuDemo />
+          <HomeworkMenuDemo />
+          <p className="text-xs text-muted-foreground">Open one, then another: the first closes. Menus never stack.</p>
         </Shelf>
       </>
     ),

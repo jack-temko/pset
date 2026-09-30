@@ -92,7 +92,7 @@ export function CoverPicker({ value, onChange }: { value: CoverHue; onChange: (h
           aria-label={hue}
           onClick={() => onChange(hue)}
           className={cn(
-            'cursor-pointer rounded-sm transition-shadow duration-150 ease-out motion-reduce:transition-none',
+            'cursor-pointer rounded-sm transition-shadow duration-200 ease-out motion-reduce:transition-none',
             hue === value ? 'ring-2 ring-primary' : 'hover:ring-1 hover:ring-border',
           )}
         >

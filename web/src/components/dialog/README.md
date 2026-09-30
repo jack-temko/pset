@@ -42,10 +42,8 @@ this); open one without a title; add a second way to dismiss it.
 - **New in the app, not in the baseline.** It arrived with homework
   creation.
 - **The scrim carries a slight backdrop blur**, which the Veil's notes
-  argued against reusing. The distinction that makes both true: the Veil
-  blurs *content you could read*, to say "not yet"; the scrim blurs a
-  *whole screen you are no longer on*, to say "not here". They never
-  appear in the same layer.
+  (the Veil is since removed) argued against reusing: the scrim blurs a
+  *whole screen you are no longer on*, to say "not here".
 - **A native `<dialog>`, not a React portal.** Rejected the portal
   approach because Esc, focus containment and background inertness are
   three chances to get it subtly wrong, and the platform already has
