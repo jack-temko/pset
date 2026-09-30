@@ -23,9 +23,10 @@ import { Spinner } from '@/components/spinner'
 import { DurationValue, StatTile } from '@/components/stat-tile'
 import { MathInline } from '@/components/transcript'
 import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
-import { Veil } from '@/components/veil'
 import { cn } from '@/lib/utils'
 import { sampleFigure } from '@/views/mock/assets'
+import { FailedQuestion } from './failed-question'
+import { makeQuestion } from './world'
 
 /**
  * The homework redesign's wireframes (gate 2 of the grill), built from the
@@ -182,51 +183,10 @@ function Statement() {
   )
 }
 
-function HelpStage({ label, children }: { label: string; children: ReactNode }) {
-  const [revealed, setRevealed] = useState(false)
-  return (
-    <div className="space-y-1">
-      <p className="text-xs text-muted-foreground uppercase">{label}</p>
-      <Veil label={`Show ${label.toLowerCase()}`} revealed={revealed} onReveal={() => setRevealed(true)}>
-        <div className="space-y-3 text-base">{children}</div>
-      </Veil>
-    </div>
-  )
-}
-
-function Help() {
-  return (
-    <div className="space-y-5">
-      <HelpStage label="Hint">
-        <p>Go around the loop once and write that the voltage rises equal the drops. The resistors are in series, so they share one current.</p>
-      </HelpStage>
-      <HelpStage label="Walkthrough">
-        <p>
-          Going clockwise, the source gives a rise of <MathInline tex="10\ \text{V}" /> and the two resistors are drops, so{' '}
-          <MathInline tex="10 = 4i + 8i" />.
-        </p>
-        <p>
-          Add the drops and divide by <MathInline tex="12\ \Omega" /> to get the current, then use <MathInline tex="P = i^2 R" /> for the power in the{' '}
-          <MathInline tex="8\ \Omega" /> resistor.
-        </p>
-      </HelpStage>
-      <HelpStage label="Answers">
-        <p>
-          <MathInline tex="i = 0.83\ \text{A}" /> clockwise; <MathInline tex="P = 5.6\ \text{W}" />.
-        </p>
-      </HelpStage>
-    </div>
-  )
-}
-
-/** The three stages as they are: veils at their true size, blurred, so the
- *  length of each reads. One tap lifts one. */
-function HelpTrueSize() {
-  return <Help />
-}
-
-/** A: three compact rows that open in place. The length is said in words. */
-function HelpRows() {
+/** The three stages as compact rows that open in place: the length said in
+ *  words, a tap opens one and it stays. While the guide is still being written
+ *  the rows it has not reached show a spinner and cannot be opened. */
+function Help({ writing }: { writing?: boolean }) {
   const [open, setOpen] = useState<string | null>(null)
   const rows: { name: string; meta: string; body: ReactNode }[] = [
     { name: 'Hint', meta: '2 lines', body: <p>Go around the loop once and write that the voltage rises equal the drops. The resistors are in series, so they share one current.</p> },
@@ -254,13 +214,20 @@ function HelpRows() {
       {rows.map((r) => (
         <div key={r.name}>
           <BoxRow
-            onClick={() => setOpen(open === r.name ? null : r.name)}
+            onClick={writing && r.name !== 'Hint' ? undefined : () => setOpen(open === r.name ? null : r.name)}
             title={r.name}
             trailing={
-              <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                {r.meta}
-                <ChevronDown className={cn('size-4 transition-transform duration-100 motion-reduce:transition-none', open === r.name && 'rotate-180')} />
-              </span>
+              writing && r.name !== 'Hint' ? (
+                <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                  Writing
+                  <Spinner className="size-3" />
+                </span>
+              ) : (
+                <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {r.meta}
+                  <ChevronDown className={cn('size-4 transition-transform duration-100 motion-reduce:transition-none', open === r.name && 'rotate-180')} />
+                </span>
+              )
             }
           />
           {open === r.name && <BoxBody className="border-t border-border-muted text-base">{r.body}</BoxBody>}
@@ -270,55 +237,52 @@ function HelpRows() {
   )
 }
 
-/** C: one button that reveals the next stage; what you have opened stays. */
-function HelpLadder() {
-  const [n, setN] = useState(0)
-  const stages = ['Hint', 'Walkthrough', 'Answers']
-  return (
-    <div className="space-y-4">
-      {stages.slice(0, n).map((name) => (
-        <div key={name} className="space-y-1">
-          <p className="text-xs text-muted-foreground uppercase">{name}</p>
-          <p className="text-base">
-            {name === 'Hint' && 'Go around the loop once and write that the voltage rises equal the drops.'}
-            {name === 'Walkthrough' && 'Going clockwise, the source gives a rise of 10 V and the two resistors are drops, so 10 = 4i + 8i.'}
-            {name === 'Answers' && 'i = 0.83 A clockwise; P = 5.6 W.'}
-          </p>
-        </div>
-      ))}
-      {n < stages.length && (
-        <Button variant="outline" className="w-full" onClick={() => setN(n + 1)}>
-          Show the {stages[n].toLowerCase()}
-        </Button>
-      )}
-    </div>
-  )
-}
-
-function HelpFrame({ children }: { children: ReactNode }) {
-  return (
-    <Panel height={520}>
-      <ProgressHeader marks={OPEN} />
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-card">
-        <QuestionHead />
-        <p className="text-base">
-          Use superposition to find <MathInline tex="v_o" /> in the circuit of Fig. 4.109.
-        </p>
-        {children}
-      </div>
-      <Footer />
-    </Panel>
-  )
-}
-
-function Footer({ done }: { done?: boolean }) {
+function Footer({ done, skip }: { done?: boolean; skip?: boolean }) {
   return (
     <div className="flex shrink-0 items-center justify-between border-t p-card">
       <Button variant="ghost" size="sm">
         Ask about this
       </Button>
-      {done ? <Button variant="outline">Mark incomplete</Button> : <Button>Next question</Button>}
+      {done ? <Button variant="outline">Mark incomplete</Button> : skip ? <Button variant="outline">Skip for now</Button> : <Button>Next question</Button>}
     </div>
+  )
+}
+
+/** The states a question passes through or ends in, in the same frame. */
+function StateWalkthrough({ state }: { state: 'writing' | 'failed' }) {
+  return (
+    <>
+      <ProgressHeader marks={OPEN} />
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-card">
+        <QuestionHead />
+        <p className="text-base">
+          Determine the Thevenin equivalent of the circuit seen from terminals <MathInline tex="a\text{-}b" />.
+        </p>
+        {state === 'writing' ? (
+          <>
+            <p className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Spinner className="size-3" />
+              Writing the guide · about a minute left
+            </p>
+            <Help writing />
+          </>
+        ) : (
+          <FailedQuestion
+            q={makeQuestion({
+              homeworkId: 'w',
+              position: 3,
+              label: '4.32',
+              state: 'failed',
+              failure: 'unavailable',
+              reason: "OpenRouter didn't answer in time. Nothing is wrong with 4.32.",
+            })}
+            onRetry={() => {}}
+            onOpenSettings={() => {}}
+          />
+        )}
+      </div>
+      <Footer skip />
+    </>
   )
 }
 
@@ -535,28 +499,8 @@ export function HomeworkWireframes() {
         </Frame>
       </Group>
       <Group
-        title="Help stages, three options"
-        note="How the hint, walkthrough and answers sit under the question. Try each: tap to reveal. Same header and footer; only the help differs."
-      >
-        <Frame title="A. Compact rows that open in place" note="Three one-line rows say how long each is (2 lines, 5 steps, 2 answers); tapping opens one in place and it stays. The page stays short.">
-          <HelpFrame>
-            <HelpRows />
-          </HelpFrame>
-        </Frame>
-        <Frame title="B. Veils at true size (today)" note="Each stage laid out at its real length, blurred; a tap lifts it. The length reads at a glance, and the page is long.">
-          <HelpFrame>
-            <HelpTrueSize />
-          </HelpFrame>
-        </Frame>
-        <Frame title="C. One button, next stage" note="Nothing shows but one button, which reveals the next stage each time. Fewest targets, and the order is fixed.">
-          <HelpFrame>
-            <HelpLadder />
-          </HelpFrame>
-        </Frame>
-      </Group>
-      <Group
         title="Walkthrough, panel width"
-        note="The header and the footer are pinned; only the middle scrolls. Lift a veil, open a menu, click the count: these are the real components."
+        note="The header and the footer are pinned; only the middle scrolls. Open a row, open a menu, click the count: these are the real components."
       >
         <Frame title="A question with a written guide" note="The one primary is Next question. The count in the header opens the list of questions.">
           <Panel>
@@ -566,6 +510,16 @@ export function HomeworkWireframes() {
         <Frame title="A completed question" note="The same button turns into Mark incomplete: undo in place, no toast.">
           <Panel>
             <Walkthrough done />
+          </Panel>
+        </Frame>
+        <Frame title="Still being written" note="The hint has landed and opens; the rest say Writing. The button is Skip for now: it moves on without marking the question done.">
+          <Panel>
+            <StateWalkthrough state="writing" />
+          </Panel>
+        </Frame>
+        <Frame title="Failed" note="The real failed-question block, with its ways out. The button is Skip for now.">
+          <Panel>
+            <StateWalkthrough state="failed" />
           </Panel>
         </Frame>
       </Group>

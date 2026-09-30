@@ -27,6 +27,10 @@ For the student picking up homework after a long day of class, this view puts th
 | D20 | **Progress lives in the header, with no extra row.** The header's bottom edge is a bar cut into the questions, each as wide as it is hard (from a difficulty index; mocked for now, plain when there is none). Beside the title: the count "2 of 8", which opens a list of the questions with their states and is how you jump; then the time left in gray. | Jack: the marks took a lot of room for what "3 of 8" already says; he wanted "some sort of progress bar"; mixing the weighted bar with the header option. | Segments in a strip; one slim row (plain, or weighted); a ring |
 | D21 | **Every dropdown is the same redesigned Menu**: a padded radius-lg card, inset rounded 40px rows, a 256px minimum, a short entrance. The question list is this Menu with a labelled trigger and a current row, not a look-alike. | Jack: "the styles need to be the same across all dropdown menus"; "slightly more modern and larger". | A separate list component; leaving the old flat menu |
 | D22 | **Menus never stack.** Opening one closes any other, by press or by keyboard; the set menu, the question menu and the question list can never overlap. | Jack asked how to manage them all open at once. | Letting them stack with offsets; closing only on outside press |
+| D23 | **The help stages are compact rows that open in place**: Hint, Walkthrough and Answers as one-line rows that say how long each is ("2 lines", "5 steps", "2 answers"); a tap opens one in place and it stays; a tap again closes it. **The frosted Veil component is removed.** | Jack: "I don't like the frosted. Remove that component." Rows keep a long question short to scroll and are real 40px targets. | True-size veils; a one-button ladder |
+| D24 | **A book always opens to the Homework list.** Jumping straight into a set is only from Home's due row. **Opening a set lands on its next unfinished question.** The place (set, question, scroll) is kept only within a visit, so going to Ask and back returns to it; a reload or reopening the book opens the list. | Jack: "A book should always open to the homework list ... Opening a homework should jump to the next uncompleted question." | Remembering per book across days; per browser tab |
+| D25 | On a question that is still being found or written, or has failed, the one button reads **Skip for now**: it moves on without marking the question done, and it stays waiting in the bar. | Never marks done what is not done. | Still "Next question" (marks it done); disabled until ready |
+| D26 | **Next question goes to the next unfinished question** (skipping done ones, wrapping past the end); when none are left, the **finish page** appears. | A skipped question keeps coming back until it is done. | Next in order; finish only on request |
 | D19 | **Professor's notes have one way in.** The question menu's "Edit the professor's instructions" ("Add" when there are none) is the only place to edit; the notes box is read-only. The box's Edit button goes. | Jack: two ways to edit or add; collapse into one. Notes are edited rarely, so a menu item is enough. | The Edit button on the box; both |
 | D13 | The jump button is **"Show in book"** on the question's label row, always visible, one tap. | It replaces the page chip's spot without the chip's clutter; "Show me where it is" already means boxing a wrong find. | Under the statement; on the figure only |
 | D14 | **Focus is two columns**: the question, the jump button and the notes pinned on the left, the three help stages scrolling on the right. | The problem never scrolls out of sight of its own walkthrough. | One wider column |
@@ -80,6 +84,7 @@ For the student picking up homework after a long day of class, this view puts th
 - **A2** The usage line stays visible as today until gate 3.
 - **A4** On a completed question the button reads "Mark incomplete" (Jack left this wording to the agent). Moving between questions, including forward from a completed one, is by the marks and the keyboard.
 - **A5** Back returns to the list; the set's title is not a menu. **A6** Above about 24 questions the strip collapses to one bar with a menu. **A7** The Focus toggle itself is unchanged.
+- **A8** Rows you have opened stay open when you come back to a question (what `revealed` persists today). **A9** Tab switches inside a visit keep the Homework place; only opening the book resets it. **A10** Each row opens independently; more than one can be open.
 - **A3** The previous fixes parked on `homework-keeps-your-place` (keep your place across Ask; the question menu) are inputs to this design, not merged with it.
 
 ### Open
@@ -95,6 +100,8 @@ For the student picking up homework after a long day of class, this view puts th
 - **R5** "Scan jumps on demand: a page chip in the question header" (2026-09-18): the always-visible chip goes; a jump button stays, placed in gate 2 (D10). "Opening a question never moves the scan" is kept and strengthened.
 
 - **R6** "One question at a time: prev/next plus a '3 of 8' position row" (2026-09-18): replaced by the header's count and bar and the count's question list; the arrows go (D15, D20). The one-question-at-a-time rule itself is kept.
+- **R9** "Three stages, all veiled ... behind frosted glass (the Veil)" and "Answers collects every part's answer block" (design/workspace.md, 2026-09-29): the veils go; the stages are rows that open in place (D23). The Veil component is deleted. The answers row is still derived from the walkthrough's answer blocks.
+- **R10** "The panel is always open, and remembers per book which tab it showed" (design/workspace.md, 2026-09-18): the panel opens on the Homework list every time a book is opened (D24). Going to Ask and back within a visit keeps the place.
 - **R8** The Menu component's earlier rule "no padding: every pixel of the card belongs to a row" (web/src/components/menu/README.md): reversed by D21 for the modern look, with the dead-strip trade written into that README.
 - **R7** "The walkthrough header keeps what you read: back, the set's title, '3 of 8', and a ⋯ menu" (2026-09-21): the count and time left stay in the header row, with the bar as its bottom edge, and a second question menu is added (D16, D20).
 
@@ -104,7 +111,7 @@ For the student picking up homework after a long day of class, this view puts th
 
 ## Frontier
 - Gate 2 confirmed 2026-09-30 ("Confirmed, on to behavior").
-- Gate 3 in progress: help stage form (wireframes built, /views/homework?mode=wireframes), persistence across Ask and reloads, what Next does on a question not ready, the order of Next and when the finish page appears; then keyboard, motion, copy.
+- Gate 3 in progress: keyboard shortcuts next; then motion and copy are taken as assumed unless Jack objects.
 - Gate 4 (data, backend, acceptance): not yet asked.
 
 ## Log
@@ -138,3 +145,11 @@ For the student picking up homework after a long day of class, this view puts th
 - List rows: "Progress and where to resume (Recommended)".
 ### Gate 2 confirm
 - "Confirmed, on to behavior (Recommended)".
+### Gate 3, batch 1
+- Help stages: "I don't like the frosted. Remove that component. Go with compact rows that open in place."
+- Remembering: "A book should always open to the homework list. We can jump to homework from the list on the home. Opening a homework should jump to the next uncompleted question."
+- Not ready: "Say \"Skip for now\" and don't mark it done (Recommended)".
+- Order: "Next unfinished, finish when all done (Recommended)".
+
+## Build notes (removal of the Veil)
+Delete `web/src/components/veil/`, its section and `VeilDemo` in `web/src/pages/components/sections/feedback.tsx`, its use in `web/src/views/homework/walkthrough.tsx` (the `Stage` component), and the mentions in `design/design-system.md`, `design/workspace.md`, `web/src/components/skeleton/README.md`, `web/src/components/dialog/README.md` and `ideas/*` that point at it. Keep the `revealed` field: it now records which rows were opened.
