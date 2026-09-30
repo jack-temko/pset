@@ -18,16 +18,16 @@ describe('greeting', () => {
   })
 
   it('picks a line from the pick, and never runs off the end', () => {
-    expect(greeting(0, 'Jack', 'a', 0)).toBe('Up late, Jack?')
-    expect(greeting(0, 'Jack', 'a', 0.999999)).toBe('Still up, Jack?')
-    expect(greeting(0, 'Jack', 'b', 0.5)).toBe('Sleep can wait, Jack.')
+    expect(greeting(0, 'Jack', 0)).toBe('Up late, Jack?')
+    expect(greeting(0, 'Jack', 0.5)).toBe('Sleep can wait, Jack.')
+    expect(greeting(0, 'Jack', 0.999999)).toBe('Almost there, Jack.')
+    expect(greeting(22, '', 0.999999)).toBe('Rest is progress.')
   })
 
   it('leaves no placeholder, em dash or double space in any line', () => {
     for (const b of bands) {
-      expect(b.a.length).toBe(3)
-      expect(b.b.length).toBe(3)
-      for (const line of [...b.a, ...b.b]) {
+      expect(b.lines.length).toBeGreaterThanOrEqual(3)
+      for (const line of b.lines) {
         for (const name of ['Jack', '']) {
           const out = fill(line, name)
           expect(out).not.toMatch(/\{|—|\s\s| [?.!,]/)

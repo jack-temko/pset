@@ -27,20 +27,19 @@ import { Spinner } from '@/components/spinner'
 import { useWeek, type Week } from '@/api/activity'
 import { useDue, type Summary } from '@/api/homework'
 import { dueLine, dueStatus } from '@/lib/due'
-import { greeting, type GreetingVoice } from '@/lib/greeting'
+import { greeting } from '@/lib/greeting'
 import { useShowPending } from '@/lib/settled'
 
 /** The greeting for this visit: one line for the hour, chosen once when Home
- *  opens so it holds still while the page redraws. In dev, `?greeting=a|b`
- *  picks the voice and `?hour=1` the hour, to look at any of them. */
+ *  opens so it holds still while the page redraws. In dev, `?hour=1` picks
+ *  the hour, to look at any of them. */
 function useGreeting(name: string): string {
   const [pick] = useState(Math.random)
   const [params] = useSearchParams()
   const dev = import.meta.env.DEV
-  const voice: GreetingVoice = dev && params.get('greeting') === 'b' ? 'b' : 'a'
   const hourParam = dev ? Number(params.get('hour') ?? NaN) : NaN
   const hour = Number.isInteger(hourParam) && hourParam >= 0 && hourParam < 24 ? hourParam : new Date().getHours()
-  return greeting(hour, name, voice, pick)
+  return greeting(hour, name, pick)
 }
 
 /** A section's header row: the serif title (and an optional count) on the
