@@ -199,6 +199,21 @@ const finish: Scenario = {
     }),
 }
 
+const finishUntimed: Scenario = {
+  id: 'finish-untimed',
+  title: 'Every question done, none timed',
+  note: 'All done, but no time was kept (done before time was counted): the finish page is the line and the way out, centered in the pane.',
+  start: (ctx) =>
+    session(ctx, (w) => {
+      const s = addSet(w, 'Homework due Sep 30', 0, [
+        { label: '4.27', state: 'ready', done: true },
+        { label: '4.25', state: 'ready', done: true },
+        { label: '4.32', state: 'ready', done: true },
+      ])
+      return { props: { initialSet: s.id } }
+    }),
+}
+
 const noGuide: Scenario = {
   id: 'no-guide',
   title: 'A question with no guide',
@@ -251,4 +266,4 @@ const longTitle: Scenario = {
     }),
 }
 
-export const SCENARIOS: Scenario[] = [happy, handoffIn, empty, slow, failed, midFlow, returnAfterBreak, importing, finish, noGuide, longSet, longTitle]
+export const SCENARIOS: Scenario[] = [happy, handoffIn, empty, slow, failed, midFlow, returnAfterBreak, importing, finish, finishUntimed, noGuide, longSet, longTitle]

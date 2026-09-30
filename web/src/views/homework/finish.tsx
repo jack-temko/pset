@@ -52,56 +52,60 @@ export function Finish({
 
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col items-center gap-5 overflow-y-auto p-card py-8 text-center">
-        <div className="shrink-0 space-y-2">
-          <h2 className="font-heading text-4xl">{line}</h2>
-          <p className="font-heading text-lg text-muted-foreground italic">
-            {questions.length === 1 ? 'The one question is' : `All ${questions.length} are`} done in {title}.
-          </p>
-        </div>
-        {stats.timed > 0 && (
-          <div className="grid w-full shrink-0 grid-cols-2 gap-3 text-left">
-            <StatTile label="Total time" value={<DurationValue minutes={toMinutes(stats.total)} />} context={`across ${plural(stats.timed, 'question')}`} />
-            <StatTile label="Per question" value={<DurationValue minutes={toMinutes(stats.average)} />} context="about, on average" />
+      <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto p-card py-8 text-center">
+        {/* my-auto centers it in the pane when there is little to show (no
+            timing yet) and lets it scroll from the top when there is a lot. */}
+        <div className="my-auto flex w-full flex-col items-center gap-5">
+          <div className="shrink-0 space-y-2">
+            <h2 className="font-heading text-4xl">{line}</h2>
+            <p className="font-heading text-lg text-muted-foreground italic">
+              {questions.length === 1 ? 'The one question is' : `All ${questions.length} are`} done in {title}.
+            </p>
           </div>
-        )}
-        {stats.timed > 1 && (
-          <div className="w-full shrink-0 space-y-2 text-left">
-            <p className="text-xs text-muted-foreground">Time per question</p>
-            <div role="img" aria-label="Time per question" className="flex h-24 items-end gap-1">
-              {questions.map((q) => (
-                <span
-                  key={q.id}
-                  title={`${q.label}: ${shortTime(q.seconds ?? 0)}`}
-                  style={{ height: `${((q.seconds ?? 0) / stats.most) * 100}%` }}
-                  className={cn('flex-1 rounded-sm', q.seconds === stats.most ? 'bg-primary' : 'bg-foreground/25')}
-                />
-              ))}
+          {stats.timed > 0 && (
+            <div className="grid w-full shrink-0 grid-cols-2 gap-3 text-left">
+              <StatTile label="Total time" value={<DurationValue minutes={toMinutes(stats.total)} />} context={`across ${plural(stats.timed, 'question')}`} />
+              <StatTile label="Per question" value={<DurationValue minutes={toMinutes(stats.average)} />} context="about, on average" />
             </div>
-            {labelled && (
-              <div className="flex gap-1 text-xs text-muted-foreground tabular-nums">
+          )}
+          {stats.timed > 1 && (
+            <div className="w-full shrink-0 space-y-2 text-left">
+              <p className="text-xs text-muted-foreground">Time per question</p>
+              <div role="img" aria-label="Time per question" className="flex h-24 items-end gap-1">
                 {questions.map((q) => (
-                  <span key={q.id} className="flex-1 truncate text-center">
-                    {q.label}
-                  </span>
+                  <span
+                    key={q.id}
+                    title={`${q.label}: ${shortTime(q.seconds ?? 0)}`}
+                    style={{ height: `${((q.seconds ?? 0) / stats.most) * 100}%` }}
+                    className={cn('flex-1 rounded-sm', q.seconds === stats.most ? 'bg-primary' : 'bg-foreground/25')}
+                  />
                 ))}
               </div>
-            )}
-          </div>
-        )}
-        {stats.hardest.length > 0 && (
-          <Box className="w-full shrink-0 text-left">
-            <BoxHeader>The hardest</BoxHeader>
-            {stats.hardest.map((q, i) => (
-              <BoxRow
-                key={q.id}
-                title={q.label}
-                description={hardWhy(q, i, stats.hardest)}
-                trailing={<RowValue>{shortTime(q.seconds ?? 0)}</RowValue>}
-              />
-            ))}
-          </Box>
-        )}
+              {labelled && (
+                <div className="flex gap-1 text-xs text-muted-foreground tabular-nums">
+                  {questions.map((q) => (
+                    <span key={q.id} className="flex-1 truncate text-center">
+                      {q.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {stats.hardest.length > 0 && (
+            <Box className="w-full shrink-0 text-left">
+              <BoxHeader>The hardest</BoxHeader>
+              {stats.hardest.map((q, i) => (
+                <BoxRow
+                  key={q.id}
+                  title={q.label}
+                  description={hardWhy(q, i, stats.hardest)}
+                  trailing={<RowValue>{shortTime(q.seconds ?? 0)}</RowValue>}
+                />
+              ))}
+            </Box>
+          )}
+        </div>
       </div>
       {/* The way out is pinned, as the question's footer is: Turn in is the one primary. */}
       <div className="flex shrink-0 items-center justify-between border-t p-card">

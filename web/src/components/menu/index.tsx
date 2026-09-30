@@ -150,7 +150,7 @@ export function Menu({
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className={cn('tabular-nums', open && 'relative z-[60] rounded-b-none border-border bg-card')}
+          className={cn('tabular-nums', open && 'relative z-[60] rounded-b-none border-border bg-card hover:bg-card')}
         >
           {trigger}
           <ChevronDown className={cn('transition-transform duration-200 motion-reduce:transition-none', open && 'rotate-180')} />
@@ -164,7 +164,7 @@ export function Menu({
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className={cn(open && 'relative z-[60] rounded-b-none border-border bg-card text-foreground')}
+          className={cn(open && 'relative z-[60] rounded-b-none border-border bg-card text-foreground hover:bg-card')}
         >
           <Ellipsis />
         </IconButton>

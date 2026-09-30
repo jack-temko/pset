@@ -222,7 +222,7 @@ export function Walkthrough({
           {questions.map((x, i) => (
             <MenuItem
               key={x.id}
-              current={i === at}
+              current={!finished && i === at}
               icon={
                 x.done ? (
                   <Check className="text-success!" />
