@@ -233,6 +233,14 @@ Empty.
 - Regret, multi-select: "The estimate being confidently wrong".
 - Anything else: "Also I still do not like the drop down, can you run some A/B on it and include it with the frontend pass. Particularly that the hover design color does not take up the whole item. And it should show like the menu is attached to the drop down. Make sure the colors look right."
 
+## Post-build (2026-09-30, UI on mocks, before the backend)
+Photos of every scenario in both themes were sent, then one batch of four questions. The built view met the acceptance numbers except two, both accepted.
+- **P1** Finish lines: "Keep my drafts (Recommended)". The 21 lines in `greetings.ts` stand; A15 is settled.
+- **P2** Usage line: "Keep it, accept 14 (Recommended)". 14 controls on a ready question instead of 13; the usage line stays as A2 said.
+- **P3** Tab stops: "Accept 7 (Recommended)". From the panel tabs to the first help row is 7 in the workspace (6 in `/views`, where Focus is disabled); the keys 1 2 3 reach the rows directly.
+- **P4** Landing: "One merge, after the backend (Recommended)". Merged earlier, the bar is equal segments and there is no time left. Nothing merges to main without Jack's word.
+- Numbers met: open a set in 1 tap; a written guide in at most 4 taps (three rows and Next), 0 typing; header 1 row with count, bar and time left pinned at every scroll position; all 12 scenarios load with no console errors in Paper and Night at 1280 wide; the main flow runs from the keyboard alone (row by key, Enter on Next).
+
 ## Build notes (removal of the Veil)
 Delete `web/src/components/veil/`, its section and `VeilDemo` in `web/src/pages/components/sections/feedback.tsx`, its use in `web/src/views/homework/walkthrough.tsx` (the `Stage` component), and the mentions in `design/design-system.md`, `design/workspace.md`, `web/src/components/skeleton/README.md`, `web/src/components/dialog/README.md` and `ideas/*` that point at it. Keep the `revealed` field: it now records which rows were opened.
 ### Gate 3, batch 2

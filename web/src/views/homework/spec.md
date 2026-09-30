@@ -125,8 +125,8 @@ Last walked through 2026-09-30, on the redesigned view. The redesign closed the 
 
 | id | where | what goes wrong for a tired student | severity | fix | status |
 |---|---|---|---|---|---|
-| F9 | tab order | From the panel tabs to the first help row is 6 stops in `/views` and 7 in the workspace (the Focus toggle is live there); the acceptance number is 6. | polish | raise in the post-build review; the keys 1 2 3 reach the rows directly | open |
-| F10 | ready question | 14 controls are visible (13 is the target); the usage line's toggle is the extra one. | polish | raise in the post-build review | open |
+| F9 | tab order | From the panel tabs to the first help row is 6 stops in `/views` and 7 in the workspace (the Focus toggle is live there); the acceptance number is 6. | polish | accepted (post-build P3): the keys 1 2 3 reach the rows directly | accepted |
+| F10 | ready question | 14 controls are visible (13 is the target); the usage line's toggle is the extra one. | polish | accepted (post-build P2): the usage line stays | accepted |
 | F5 | waiting sentence | "Queued: it starts once the questions ahead of it are written" still gives no place in line and no time. | friction | "3rd in line", derived from the set's questions | open |
 | F6 | failed, unavailable | A second failure reads the same as the first. | friction | say it failed again (needs `attempts`, backend) | open |
 | F11 | time left | Shows only when the mock or the backend sends an estimate; until the real backend sends difficulty, seconds and an estimate, the bar is equal segments and there is no time. | friction | phase B of `ideas/homework-redesign.md` | open |
@@ -139,7 +139,6 @@ Last walked through 2026-09-30, on the redesigned view. The redesign closed the 
 
 ## open
 
-- The finish greeting lines are the agent's draft (three for each of Home's seven stretches, `greetings.ts`), for Jack to approve.
 - Whether the time left also shows on Home's due rows (out of scope here).
 - Homework-only helpers still live in `web/src/pages/workspace/` (`add-homework.tsx`, `assignment-reads.tsx`, `reading.tsx`, `notes.tsx`, `import-state.ts`, `memory.tsx`): move them under this view with the next pass.
 

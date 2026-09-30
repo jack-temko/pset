@@ -71,7 +71,7 @@ Claude-only eval key, never the key in his own library.
   - Files: `web/src/views/homework/spec.md`, `design/workspace.md`, `design/design-system.md`, `web/src/views/README.md`
   - Do: rewrite `spec.md` to match what was built (mission, inventory, states, actions, handoffs, data, why, a fresh friction log, wants, open); write each reversal R1 to R10 into `design/workspace.md` (and the Menu and Veil changes into `design/design-system.md`).
   - Done when: the spec reads correctly beside the live view and every reversal in the grill is recorded where the decision was written.
-- [ ] 10. (opus) Post-build review round with Jack
+- [x] 10. (opus) Post-build review round with Jack
   - Files: `web/src/views/homework/grill.md`
   - Do: photograph the real view (both themes, every key scenario, about 1500 tall, clipped to the panel and its log), show the photos, run a short grill (at most two batches) on what feels off, what to cut and what is missing; record the answers under a dated Post-build heading.
   - Done when: Jack has seen the photos and answered; small fixes are done or queued, a large one has reopened its gate.
