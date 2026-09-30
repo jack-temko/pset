@@ -31,7 +31,7 @@ export function Veil({
         aria-hidden={!revealed}
         inert={!revealed}
         className={cn(
-          'transition-[opacity,filter] duration-150 ease-out motion-reduce:transition-none',
+          'transition-[opacity,filter] duration-200 ease-out motion-reduce:transition-none',
           !revealed &&
             'opacity-45 blur-[6px] select-none group-hover/veil:opacity-60 group-hover/veil:blur-[4px]',
         )}
@@ -46,7 +46,7 @@ export function Veil({
           aria-label={label}
           className="absolute inset-0 flex cursor-pointer items-center justify-center"
         >
-          <span className="flex h-control-sm items-center rounded-md border bg-card px-3 text-xs text-muted-foreground shadow-floating transition-colors duration-150 ease-out group-hover/veil:text-foreground motion-reduce:transition-none">
+          <span className="flex h-control-sm items-center rounded-md border bg-card px-3 text-xs text-muted-foreground shadow-floating transition-colors duration-200 ease-out group-hover/veil:text-foreground motion-reduce:transition-none">
             {label}
           </span>
         </button>

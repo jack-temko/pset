@@ -39,7 +39,7 @@ export function Checkbox({
       <span
         aria-hidden
         className={cn(
-          'grid size-4 shrink-0 place-items-center rounded-sm border transition-colors duration-150 ease-out motion-reduce:transition-none',
+          'grid size-4 shrink-0 place-items-center rounded-sm border transition-colors duration-200 ease-out motion-reduce:transition-none',
           checked ? 'border-primary bg-primary text-primary-foreground' : 'border-input bg-card',
         )}
       >

@@ -34,7 +34,7 @@ Claude-only eval key, never the key in his own library.
 
 ## Tasks
 
-- [ ] 1. (opus) The Menu's hover, attachment and colors: an A/B, then the winner
+- [x] 1. (opus) The Menu's hover, attachment and colors: an A/B, then the winner
   - Files: `web/src/components/menu/index.tsx`, `web/src/components/menu/README.md`, `web/src/views/homework/wireframes.tsx`, `web/src/pages/components/sections/overlays.tsx`
   - Do: build two or three live variants of the menu on the wireframes page: a hover that does not fill the whole row (an inset pill, a left accent, a content-width wash), and a card that reads as attached to its dropdown (flush under the trigger with a shared edge, a caret, or aligned with the trigger kept tinted). Measure the contrast of every color involved (hover, current, icon, text, border, shadow) in both themes against the design system's floors and report the numbers. Ask Jack to choose; apply the winner to `Menu` and its README.
   - Done when: Jack has chosen from the live page, the contrast numbers are in the README, every menu in the app (book menu, homework menus, `/components`) looks right in both themes, and `npm run build` and the tests pass.

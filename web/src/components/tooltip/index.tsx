@@ -69,7 +69,7 @@ export function Tooltip({
           className={cn(
             'pointer-events-none fixed z-50 rounded-sm bg-foreground px-2 py-1 font-sans text-xs whitespace-nowrap text-background',
             // Opacity only: a tooltip appears, it doesn't travel.
-            'transition-opacity duration-150 ease-out motion-reduce:transition-none',
+            'transition-opacity duration-200 ease-out motion-reduce:transition-none',
             at ? 'opacity-100' : 'invisible opacity-0',
             at?.delay && 'delay-300',
             side === 'top'

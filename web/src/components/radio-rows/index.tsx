@@ -84,7 +84,7 @@ export function RadioRows<T extends string>({
             <span aria-hidden className="flex h-5 shrink-0 items-center">
               <span
                 className={cn(
-                  'grid size-4 place-items-center rounded-full border bg-card transition-colors duration-150 ease-out motion-reduce:transition-none',
+                  'grid size-4 place-items-center rounded-full border bg-card transition-colors duration-200 ease-out motion-reduce:transition-none',
                   on ? 'border-primary' : 'border-input',
                 )}
               >

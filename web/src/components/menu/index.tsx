@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 
 const Close = createContext<() => void>(() => {})
 
+
 /** The one menu that is open, if any. Opening a menu closes it: menus never
  *  stack, whether they were opened by a press or from the keyboard. */
 let active: (() => void) | null = null
@@ -48,7 +49,7 @@ export function Menu({
   children: ReactNode
 }) {
   const [open, setOpen] = useState(false)
-  const [at, setAt] = useState<{ top: number; left?: number; right?: number; max: number } | null>(null)
+  const [at, setAt] = useState<{ top: number; left?: number; right?: number; max: number; w: number } | null>(null)
   const [shown, setShown] = useState(false)
   const button = useRef<HTMLButtonElement>(null)
   const panel = useRef<HTMLDivElement>(null)
@@ -76,7 +77,9 @@ export function Menu({
     if (!open || !button.current) return
     const r = button.current.getBoundingClientRect()
     setAt({
-      top: r.bottom + 4,
+      w: r.width,
+      // The card joins the trigger: it starts one pixel up so their borders are one line.
+      top: r.bottom - 1,
       left: side === 'start' ? r.left : undefined,
       right: side === 'end' ? window.innerWidth - r.right : undefined,
       max: Math.max(160, window.innerHeight - r.bottom - 16),
@@ -147,10 +150,10 @@ export function Menu({
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className={cn('tabular-nums', open && 'bg-muted/50')}
+          className={cn('tabular-nums', open && 'relative z-[60] rounded-b-none border-border bg-card')}
         >
           {trigger}
-          <ChevronDown className={cn('transition-transform duration-100 motion-reduce:transition-none', open && 'rotate-180')} />
+          <ChevronDown className={cn('transition-transform duration-200 motion-reduce:transition-none', open && 'rotate-180')} />
         </Button>
       ) : (
         <IconButton
@@ -161,7 +164,7 @@ export function Menu({
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className={cn(open && 'bg-muted/50 text-foreground')}
+          className={cn(open && 'relative z-[60] rounded-b-none border-border bg-card text-foreground')}
         >
           <Ellipsis />
         </IconButton>
@@ -170,20 +173,30 @@ export function Menu({
         at &&
         createPortal(
           <div
-            ref={panel}
-            role="menu"
-            aria-label={label}
-            onKeyDown={onKeyDown}
-            style={{ top: at.top, left: at.left, right: at.right, maxHeight: at.max }}
-            // A padded card: rows sit inside it as inset, rounded washes, and
-            // the card is a large floating surface, so radius-lg and the shadow.
+            style={{ top: at.top, left: at.left, right: at.right }}
             className={cn(
-              'fixed z-50 min-w-64 overflow-y-auto rounded-lg border bg-card p-1 shadow-floating transition duration-100 ease-out motion-reduce:transition-none',
+              'fixed z-50 min-w-64 transition duration-200 ease-out motion-reduce:transition-none',
               side === 'start' ? 'origin-top-left' : 'origin-top-right',
               shown ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
             )}
           >
-            <Close value={close}>{children}</Close>
+            <div
+              ref={panel}
+              role="menu"
+              aria-label={label}
+              onKeyDown={onKeyDown}
+              style={{ maxHeight: at.max }}
+              // No padding: every pixel of the card belongs to a row, so a hover
+              // wash runs to the card's edge. The card clips the first and last
+              // wash to its radius. It joins its trigger at one corner, which is
+              // squared; it is a large floating surface, so radius-lg and the shadow.
+              className={cn(
+                'relative overflow-y-auto rounded-lg border bg-card shadow-floating',
+                side === 'start' ? 'rounded-tl-none' : 'rounded-tr-none',
+              )}
+            >
+              <Close value={close}>{children}</Close>
+            </div>
           </div>,
           document.body,
         )}
@@ -192,7 +205,7 @@ export function Menu({
 }
 
 const item =
-  'flex min-h-row w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm text-foreground outline-none hover:bg-muted focus-visible:bg-muted [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground'
+  'flex min-h-row w-full cursor-pointer items-center gap-3 px-3 text-left text-sm text-foreground outline-none hover:bg-muted focus-visible:bg-muted [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground'
 
 /** One action or choice. Runs, then closes the menu. A hint is a short, muted
  *  fact at the row's end, worth knowing before you choose it ("3 still being
@@ -218,7 +231,7 @@ export function MenuItem({
       role="menuitem"
       tabIndex={-1}
       aria-current={current || undefined}
-      className={cn(item, current && 'bg-primary-soft text-primary hover:bg-primary-soft [&_svg]:text-primary')}
+      className={cn(item, current && 'bg-primary-soft text-primary ring-1 ring-primary/70 ring-inset hover:bg-primary-soft [&_svg]:text-primary')}
       onClick={() => {
         close()
         onSelect()
@@ -318,5 +331,5 @@ export function MenuCheckItem({
 }
 
 export function MenuDivider() {
-  return <div role="separator" className="-mx-1 my-1 h-px bg-border-muted" />
+  return <div role="separator" className="h-px bg-border-muted" />
 }

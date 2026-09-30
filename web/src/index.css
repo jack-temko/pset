@@ -284,6 +284,16 @@
     .dark {
         color-scheme: dark;
     }
+    /* Hover and focus washes fade in over 100ms (2026-09-30; they were instant
+       before). :where() gives it no specificity, so anything that sets its own
+       transition keeps it, and reduced motion gets none. */
+    @media (prefers-reduced-motion: no-preference) {
+        :where(button, a, summary, label, [role='menuitem'], [role='menuitemcheckbox'], [role='tab'], [role='radio']) {
+            transition-property: color, background-color, border-color;
+            transition-duration: 100ms;
+            transition-timing-function: ease-out;
+        }
+    }
     /* The focus ring is one thing everywhere: solid 2px, offset 2px. */
     :focus-visible {
         @apply outline-2 outline-offset-2 outline-ring;

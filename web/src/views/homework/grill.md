@@ -53,7 +53,7 @@ Gate 2, flow and layout
 | D18 | List rows carry the bar and "n of m done, time left"; tapping opens the set on its next unfinished question. | Fixes F2. |
 | D19 | Professor's notes have one way in: the question menu; the box is read-only. | Jack: two ways to edit; collapse into one. |
 | D20 | Progress lives in the header: a difficulty-weighted bar as its bottom edge, the count opening the question list, the time left in gray. | Jack: marks were too tall; mixed the weighted bar with the header option. |
-| D21 | Every dropdown is one redesigned Menu: padded radius-lg card, inset 40px rows, 256px minimum, labelled trigger, current row. | Jack: same styles everywhere, more modern and larger. |
+| D21 | Every dropdown is one redesigned Menu: a radius-lg card with full-bleed 40px rows (the hover wash fills the row to the card's edge, no padding), 256px minimum, a labelled trigger, a current row with a thin ring. | Jack: same styles everywhere, more modern and larger; after the A/B he wanted the wash to fill the whole row to the edge. |
 | D22 | Menus never stack: opening one closes any other. | Jack asked how to manage them all open at once. |
 
 Gate 3, behavior and states
@@ -75,7 +75,8 @@ Gate 4, data, backend and acceptance
 | D30 | The acceptance numbers below. | Confirmed. |
 | D31 | Difficulty comes from a ranking step after find: one cheap call sees every statement in the set and scores each 1 to 5 against the others; heuristic fallback if the model is down; re-ranks when questions change. | Every question is found before any guide is written; the bar is weighted from the moment a set opens. |
 | D32 | Build order: the UI first on mocks so it can be judged in /views, then the real backend swapped in. | Matches the UI-first cycle. |
-| D33 | The Menu gets an A/B in the frontend pass: a hover that does not fill the whole row, a menu that reads as attached to its dropdown, colors measured in both themes. | Jack: still does not like it. |
+| D33 | **Done.** The Menu A/B ran in the frontend pass: three hovers and three attachments as live menus, colors measured in both themes. Jack chose the full-bleed fill hover and the **flush** attachment (the card joins the trigger as one shape), and the current row takes a thin ring because its tint alone was 1.16:1. | Jack: still did not like it. |
+| D35 | **Animation durations (Jack, 2026-09-30):** state animations go from 150 to **200ms** ease-out; hover washes get a **100ms fade** (they were instant). One base-layer rule does the hover fade. | Jack: "Give hover a short fade, then go to 200ms." |
 | D34 | Nothing is cut; build all of it. | Jack. |
 
 ### The artifacts
@@ -161,7 +162,6 @@ Reads: `GET /api/books/:id/homework`, `GET /api/homework/:id` (now with difficul
 - **A17** The previous grill, if any, is archived to `grills/<date>.md`; none existed.
 
 ### Open
-- The Menu's hover, attachment and colors: an A/B, first thing in the frontend pass (D33).
 - The ranking prompt and its eval need a real model: it runs on Jack's Claude-only eval key, never the key in his own library.
 - The exact finish greeting lines.
 - Whether time left also shows on Home's due rows (not decided, out of scope here).
@@ -174,7 +174,8 @@ Reads: `GET /api/books/:id/homework`, `GET /api/homework/:id` (now with difficul
 - **R5** "Scan jumps on demand: a page chip in the question header" (2026-09-18): the chip goes; "Show in book" stays; opening a question still never moves the scan.
 - **R6** "One question at a time: prev/next plus a position row" (2026-09-18): replaced by the header's count, bar and question list; the arrows go.
 - **R7** "The walkthrough header keeps back, title, '3 of 8', and a ⋯ menu" (2026-09-21): count and time left stay in the header row, the bar is its edge, and a second question menu is added.
-- **R8** The Menu's "no padding: every pixel of the card belongs to a row" (menu/README.md): reversed by D21 for the modern look.
+- **R8** *(withdrawn)* The Menu's "no padding" rule: a padded, inset-pill version was tried and dropped; the rule stands (D21, D33).
+- **R11** "Hover shows at once" (design/design-system.md, Motion, 2026-09-25): reversed by D35; hover washes now fade in over 100ms. The old reason (a swept list lit rows late) is why it is short.
 - **R9** "Three stages, all veiled ... behind frosted glass (the Veil)" (2026-09-29): the veils and the component go (D23).
 - **R10** "The panel remembers per book which tab it showed" (2026-09-18): the panel opens on the Homework list every time (D24).
 
@@ -183,7 +184,7 @@ Reads: `GET /api/books/:id/homework`, `GET /api/homework/:id` (now with difficul
 - **G2** Page chip (D10): recommended keeping it in some form. Jack's answer changed the reason: the book may be open beside the panel, so selecting a question must not move it; a jump button remains.
 
 ## Frontier
-Empty, except the Menu A/B (D33), which Jack asked to run in the frontend pass.
+Empty.
 
 ## Log
 ### Gate 1, batch 1

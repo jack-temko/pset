@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Focus } from 'lucide-react'
+import { Columns2 } from 'lucide-react'
 
 import { useAddBoxed, usePointOut } from '@/api/homework'
 import { IconButton } from '@/components/button'
@@ -66,7 +66,7 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
                 </UnderlineTab>
               </UnderlineNav>
               <IconButton variant="ghost" size="sm" aria-label="Focus on the panel" disabled>
-                <Focus />
+                <Columns2 />
               </IconButton>
             </div>
             <BoxingStandIn />

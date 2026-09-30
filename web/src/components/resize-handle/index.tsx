@@ -103,14 +103,14 @@ export function ResizeHandle({
         <span
           aria-hidden
           className={cn(
-            'absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-transparent transition-colors duration-150',
+            'absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-transparent transition-colors duration-200',
             'group-hover:bg-ring group-focus-visible:bg-ring group-data-dragging:bg-ring',
           )}
         />
         <span
           aria-hidden
           className={cn(
-            'absolute top-1/2 left-1/2 h-8 w-1 -translate-1/2 rounded-full bg-input transition-colors duration-150',
+            'absolute top-1/2 left-1/2 h-8 w-1 -translate-1/2 rounded-full bg-input transition-colors duration-200',
             'group-hover:bg-ring group-focus-visible:bg-ring group-data-dragging:bg-ring',
           )}
         />

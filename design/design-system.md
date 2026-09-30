@@ -201,14 +201,14 @@ without it silently pushes the layout taller instead of scrolling.
 
 ## Motion
 
-Motion is functional and fast: **150ms, ease-out**. It exists to make a
+Motion is functional and fast: **200ms, ease-out** for a state change and **100ms** for a hover (2026-09-30, Jack; both were 150ms and instant). It exists to make a
 state change legible, never to decorate. Two movements exist, and no
 others:
 
 - **A book cover lifts 4px** off the shelf on hover, with `shadow-lift`.
 - **Veiled content resolves**: blur and opacity easing back to nothing
   when a hint or a walkthrough is revealed, and easing part of the way
-  on hover.
+  on hover. (The Veil is being removed; see ideas/homework-redesign.md.)
 
 Everything else is a colour or opacity change, and a hover's is
 instant (below).
@@ -234,19 +234,19 @@ draws a **Skeleton** first: shimmering `muted` blocks at the size and
 count of what's coming, inline in real line boxes so a skeleton row and
 the row that replaces it measure the same.
 
-**Hover shows at once** (2026-09-25). A hover wash or ink change has no
-transition: it's there the instant the pointer is, and gone the instant
-it leaves. Faded, a list swept with the pointer lit each row late and
-left a trail fading behind it, and crossing the hairline between two
-rows blinked both: Jack saw it as jitter and lag ("It seems to jitter
-and flash away sometimes. Almost looks like its lagging. Its also quite
-slow."). The fade stays for changes of state, which happen once and are
-worth seeing happen: a checkbox's tick, a radio's dot, a transcript step
-easing back, the veil resolving, the cover lifting, a tooltip appearing.
+**Hover fades in over 100ms** (2026-09-30, Jack: "give hover a short fade", reversing
+2026-09-25). A hover wash or ink change used to be instant, because a slower fade left a
+swept list lighting rows late and trailing behind the pointer ("It seems to jitter and flash
+away sometimes. Almost looks like its lagging. Its also quite slow."). The fade is now 100ms
+ease-out, short enough that a swept list keeps up, and it is one rule in the base layer
+(`web/src/index.css`, `:where(button, a, ...)`), so a hover class needs no transition of its
+own. Changes of state, which happen once and are worth seeing happen (a checkbox's tick, a
+radio's dot, a transcript step easing back, the cover lifting, a tooltip or a menu appearing),
+take 200ms.
 
-Anything that moves states `transition duration-150 ease-out` explicitly,
-paired with `motion-reduce:transition-none`. A hover class leaves it
-off.
+Anything that moves for a change of state says `transition duration-200 ease-out` explicitly,
+paired with `motion-reduce:transition-none`. A hover class says nothing: the base layer does
+it.
 
 ## Writing
 

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowUp, Brain, ChevronRight, Focus, Pencil, RotateCcw, Square, Trash2 } from 'lucide-react'
+import { ArrowUp, Brain, ChevronRight, Columns2, Pencil, RotateCcw, Square, Trash2 } from 'lucide-react'
 
 import { AppShell } from '@/components/shell'
 import { AutoTextarea } from '@/components/input'
@@ -172,7 +172,7 @@ function Rail({
                 RAIL_CHEVRON[Math.min(depth, RAIL_CHEVRON.length - 1)],
               )}
             >
-              <ChevronRight className={cn('size-4 transition-transform duration-150 motion-reduce:transition-none', isOpen && 'rotate-90')} />
+              <ChevronRight className={cn('size-4 transition-transform duration-200 motion-reduce:transition-none', isOpen && 'rotate-90')} />
             </button>
           )}
         </div>
@@ -450,7 +450,7 @@ function Scan({
           wake()
         }}
         className={cn(
-          'absolute bottom-6 left-1/2 flex h-control -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-1 text-xs text-muted-foreground shadow-floating transition-opacity duration-150 ease-out focus-within:opacity-100 motion-reduce:transition-none',
+          'absolute bottom-6 left-1/2 flex h-control -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-1 text-xs text-muted-foreground shadow-floating transition-opacity duration-200 ease-out focus-within:opacity-100 motion-reduce:transition-none',
           pillAwake ? 'opacity-100' : 'opacity-0',
         )}
       >
@@ -776,7 +776,7 @@ function Panel({
           onClick={onFocusToggle}
           className={cn(focus && 'bg-muted/50 text-foreground')}
         >
-          <Focus />
+          <Columns2 />
         </IconButton>
       </div>
       {tab === 'ask' ? (

@@ -117,7 +117,7 @@ export function UsageLine({
         </span>
         <ChevronDown
           className={cn(
-            'size-4 shrink-0 transition-transform duration-150 ease-out motion-reduce:transition-none',
+            'size-4 shrink-0 transition-transform duration-200 ease-out motion-reduce:transition-none',
             open && 'rotate-180',
           )}
         />

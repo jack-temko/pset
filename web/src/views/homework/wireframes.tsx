@@ -5,7 +5,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronUp,
-  Focus,
+  Columns2,
   Pencil,
   Plus,
   Printer,
@@ -85,7 +85,7 @@ function Panel({ wide, height = 760, children }: { wide?: boolean; height?: numb
           </UnderlineTab>
         </UnderlineNav>
         <IconButton variant="ghost" size="sm" aria-label="Focus on the panel">
-          <Focus />
+          <Columns2 />
         </IconButton>
       </div>
       {children}
