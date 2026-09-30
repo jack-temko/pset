@@ -592,8 +592,9 @@ the questions and the reversals; this is the screen as it is now, and
 - **The time left is never confidently wrong.** It shows nothing until two
   questions have been timed, reads "about 1 h 40 m left" rounded to five minutes,
   shows a range when the spread is wide, and is never a live countdown. Time per
-  question is active time with the question open in the walkthrough, pausing
-  after five minutes idle.
+  question is the homework time with the question open in the walkthrough,
+  counted as stretches are (20 minutes of no input ends one: it is worked on paper),
+  overlaps once.
 - **The question row**: its label, a check when done, **Show in book** (only when
   it has a page), and the **question's menu**: Move up, Move down, This isn't the
   right problem, Edit or Add the professor's instructions, Check how the figure

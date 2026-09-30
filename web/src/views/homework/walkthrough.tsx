@@ -105,9 +105,12 @@ export function Walkthrough({
   onJump,
   onAskAbout,
   onOpenSettings,
+  onQuestion,
   wide = false,
 }: {
   setId: string
+  /** The question on screen (null on the finish page), for counting time. */
+  onQuestion?: (id: string | null) => void
   /** Focus: the question stays put on the left while its help scrolls on the right. */
   wide?: boolean
   onEdit: () => void
@@ -165,6 +168,12 @@ export function Walkthrough({
   const turnedIn = !!set?.turnedInAt
   // Only while every question is done: add one, or take a mark back, and it is over.
   const finished = finishing && questions.length > 0 && questions.every((x) => x.done)
+  // Which question is on screen, so the workspace counts time against it.
+  const onScreen = finished ? null : (q?.id ?? null)
+  useEffect(() => {
+    onQuestion?.(onScreen)
+    return () => onQuestion?.(null)
+  }, [onQuestion, onScreen])
   // Until every question is found, the worksheet has bare labels in it.
   const finding = questions.filter(toFind).length
   // A question waits between its steps for a moment, often less: the wait

@@ -410,6 +410,15 @@ calendar; overlapping stretches (two tabs) count once. `DELETE
 come from homework and stay. The heartbeats already recorded became
 stretches, back-to-back beats run together, the same minutes.
 
+**Time per question** (2026-09-30, the homework redesign): a `homework`
+stretch names the question that was open, `questionId`, when the
+Homework tab is showing one (not the list, not the finish page), and
+moving to another question starts a new stretch. A question's `seconds`
+is the union of its stretches, an overlap once, sent on the question as
+of the snapshot (a stretch being worked is saved every half-minute, so
+it runs a little behind). Only `homework` time is for a question; the
+week's totals are unchanged.
+
 ## Logging
 
 `slog` to stderr. Every LLM request and response, with the model's

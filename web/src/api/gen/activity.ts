@@ -14,7 +14,10 @@ export type Kind = typeof KindReading | typeof KindHomework | typeof KindAsking;
  * Stretch is POST /api/study: a stretch of study in one book at one
  * kind of thing, from started to ended (RFC 3339). The workspace makes
  * up its id when the stretch begins and sends it again, with a later
- * end, every half-minute and once more as the tab goes.
+ * end, every half-minute and once more as the tab goes. A homework
+ * stretch names the question that was open (QuestionID), so the time
+ * can be said by question; moving to another question starts a new
+ * stretch.
  */
 export interface Stretch {
   id: string;
@@ -22,6 +25,7 @@ export interface Stretch {
   kind: Kind;
   started: string;
   ended: string;
+  questionId?: string;
 }
 /**
  * BookMinutes is one book's share of the week.

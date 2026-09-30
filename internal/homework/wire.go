@@ -145,6 +145,10 @@ type Question struct {
 	// which gives it its share of the set's progress bar. Absent until
 	// the set has been ranked (rank.go).
 	Difficulty int `json:"difficulty,omitempty"`
+	// Seconds is the time spent on it with it open in the walkthrough,
+	// as of this snapshot (a stretch being worked is saved every half
+	// minute, so it runs a little behind). Absent until there is some.
+	Seconds int `json:"seconds,omitempty"`
 	// UpdatedAt is when its state (or its statement, or a stage) last
 	// changed: while it waits, when the wait began.
 	UpdatedAt string `json:"updatedAt"`

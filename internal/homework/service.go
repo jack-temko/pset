@@ -97,6 +97,12 @@ type Seen struct {
 	Page  int
 }
 
+// Time is how long the student has spent on questions: the stretches of
+// study with each one open, in seconds.
+type Time interface {
+	QuestionSeconds(ctx context.Context, ids []string) (map[string]int, error)
+}
+
 type Queue interface {
 	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
 	// Wake starts what was enqueued, once its transaction has committed.
@@ -113,6 +119,8 @@ type Config struct {
 	Settings Settings
 	// Memory is the book's memory; nil runs without one.
 	Memory Memory
+	// Time is the time spent on each question; nil says none was.
+	Time Time
 }
 
 type Service struct{ c Config }
@@ -227,6 +235,9 @@ func (s *Service) Get(ctx context.Context, id string) (Detail, error) {
 	if err := fillUsage(ctx, s.c.DB, qs); err != nil {
 		return Detail{}, err
 	}
+	if err := s.fillSeconds(ctx, qs); err != nil {
+		return Detail{}, err
+	}
 	return Detail{Homework: h, Questions: qs}, nil
 }
 
@@ -243,6 +254,22 @@ func fillUsage(ctx context.Context, d *sql.DB, qs []Question) error {
 	}
 	for i, q := range qs {
 		qs[i].Usage = uses[q.ID]
+	}
+	return nil
+}
+
+// fillSeconds puts the time spent on each question on it, one query for
+// the set. A question with none keeps zero, which the wire leaves out.
+func (s *Service) fillSeconds(ctx context.Context, qs []Question) error {
+	if s.c.Time == nil {
+		return nil
+	}
+	got, err := s.c.Time.QuestionSeconds(ctx, questionIDs(qs))
+	if err != nil {
+		return err
+	}
+	for i, q := range qs {
+		qs[i].Seconds = got[q.ID]
 	}
 	return nil
 }
@@ -752,6 +779,11 @@ func (s *Service) publishQuestion(ctx context.Context, id string) (Question, err
 	if q.Question.Usage, err = usage.For(ctx, s.c.DB, usage.SubjectQuestion, id); err != nil {
 		return Question{}, err
 	}
+	one := []Question{q.Question}
+	if err = s.fillSeconds(ctx, one); err != nil {
+		return Question{}, err
+	}
+	q.Question.Seconds = one[0].Seconds
 	s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: q.Question})
 	return q.Question, nil
 }

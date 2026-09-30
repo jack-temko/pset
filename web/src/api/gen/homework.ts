@@ -192,6 +192,12 @@ export interface Question {
    */
   difficulty?: number /* int */;
   /**
+   * Seconds is the time spent on it with it open in the walkthrough,
+   * as of this snapshot (a stretch being worked is saved every half
+   * minute, so it runs a little behind). Absent until there is some.
+   */
+  seconds?: number /* int */;
+  /**
    * UpdatedAt is when its state (or its statement, or a stage) last
    * changed: while it waits, when the wait began.
    */

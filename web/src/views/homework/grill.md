@@ -158,7 +158,7 @@ Reads: `GET /api/books/:id/homework`, `GET /api/homework/:id` (now with difficul
 - **A5** Back returns to the list; the set title is not a menu. **A6** The weighted bar has no upper limit on questions.
 - **A7** The Focus toggle is unchanged. **A8** Rows you opened stay open when you return. **A9** Tab switches inside a visit keep the place; only opening the book resets it. **A10** Rows open independently.
 - **A11** Moving between questions swaps instantly and resets scroll; the bar fills over 200ms; reduced motion respected. **A12** A question with no guide also takes Skip for now. **A13** A set opened from Home lands on its next unfinished question.
-- **A14** Time per question is active time with the question open in the walkthrough, pausing after 5 minutes idle, overlaps counted once. **A15** The finish greeting lines are drafted at build, in Home's seven stretches, for Jack to approve. **A16** Queue place is derived client-side.
+- **A14** Time per question is the homework time with the question open in the walkthrough, overlaps counted once. *(Corrected at build: idle is as today's stretches, 20 minutes on homework since it is worked on paper, not the 5 first assumed.)* **A15** The finish greeting lines are drafted at build, in Home's seven stretches, for Jack to approve. **A16** Queue place is derived client-side.
 - **A17** The previous grill, if any, is archived to `grills/<date>.md`; none existed.
 
 ### Open

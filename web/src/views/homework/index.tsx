@@ -46,6 +46,7 @@ export function HomeworkTab({
   onJump,
   onAskAbout,
   onOpenSettings,
+  onQuestion,
   wide,
 }: {
   bookId: string
@@ -54,6 +55,9 @@ export function HomeworkTab({
   onJump: (page: number) => void
   onAskAbout: (about: About) => void
   onOpenSettings: () => void
+  /** The question on screen, or null when none is (the list, the finish
+   *  page): the workspace counts time against it. */
+  onQuestion?: (id: string | null) => void
   /** Focus: the walkthrough lays out in two columns. */
   wide?: boolean
 }) {
@@ -82,6 +86,7 @@ export function HomeworkTab({
           onJump={onJump}
           onAskAbout={onAskAbout}
           onOpenSettings={onOpenSettings}
+          onQuestion={onQuestion}
           wide={wide}
         />
         {openSet && (

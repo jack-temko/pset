@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowUp, Brain, ChevronRight, Columns2, Pencil, RotateCcw, Square, Trash2 } from 'lucide-react'
 
@@ -709,6 +709,7 @@ function Panel({
   bookId,
   bookTitle,
   onActive,
+  onQuestion,
   homework,
   focus,
   onFocusToggle,
@@ -719,6 +720,8 @@ function Panel({
   bookTitle: string
   /** Where the student last worked, for the week's time. */
   onActive: (kind: ActivityKind) => void
+  /** The homework question on screen, or null, for counting its time. */
+  onQuestion: (id: string | null) => void
   /** A homework set named in the URL opens the Homework tab on it. */
   homework?: string
   focus: boolean
@@ -785,6 +788,7 @@ function Panel({
             pick('ask')
           }}
           onOpenSettings={() => navigate('/settings#connections')}
+          onQuestion={onQuestion}
           wide={focus}
         />
       </div>
@@ -866,7 +870,14 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   // Time counts toward what you last touched: the panel's tab, or the
   // book itself.
   const activity = useRef<ActivityKind>('reading')
-  const study = useStudyTime(book.id, () => activity.current)
+  // The homework question on screen, when one is: its time is counted for it.
+  const openQuestion = useRef<string | null>(null)
+  const onQuestion = useCallback((id: string | null) => void (openQuestion.current = id), [])
+  const study = useStudyTime(
+    book.id,
+    () => activity.current,
+    () => openQuestion.current ?? undefined,
+  )
 
   return (
     <Pages value={pages}>
@@ -958,6 +969,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                 bookId={book.id}
                 bookTitle={book.title}
                 onActive={(k) => (activity.current = k)}
+                onQuestion={onQuestion}
                 homework={homework}
                 focus={focus}
                 onFocusToggle={() => setFocus((f) => !f)}

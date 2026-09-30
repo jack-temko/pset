@@ -129,10 +129,14 @@ func serve(addr, dir string, log *slog.Logger) error {
 	})
 	cfg.SetLibrary(books)
 	memories := memory.New(d, bus)
+	// Time is counted by activity and read by homework, which activity in
+	// turn reads "questions worked" from: built first, told after.
+	clock := activity.New(d, nil)
 	sets = homework.New(homework.Config{
 		DB: d, Events: bus, Queue: queue, Library: homeworkLibrary{books}, Settings: cfg,
-		Memory: homeworkMemory{agentMemory{memories}},
+		Memory: homeworkMemory{agentMemory{memories}}, Time: clock,
 	})
+	clock.SetHomework(sets)
 
 	tutor = ask.New(ask.Config{
 		DB: d, Events: bus, Queue: queue, Library: askLibrary{books}, Settings: cfg,
@@ -145,7 +149,7 @@ func serve(addr, dir string, log *slog.Logger) error {
 	sets.Routes(mux)
 	tutor.Routes(mux)
 	memories.Routes(mux)
-	activity.New(d, sets).Routes(mux)
+	clock.Routes(mux)
 	mux.HandleFunc("GET /api/events", bus.Handler)
 	mux.HandleFunc("/api/", httpx.NotFoundAPI)
 	mux.Handle("/", httpx.SPAFrom(web.Dist, "dist"))

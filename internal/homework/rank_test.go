@@ -193,3 +193,37 @@ func TestRankListCarriesWhatMakesAQuestionLong(t *testing.T) {
 		}
 	}
 }
+
+// spent is a Time with a fixed answer.
+type spent map[string]int
+
+func (s spent) QuestionSeconds(_ context.Context, ids []string) (map[string]int, error) {
+	out := map[string]int{}
+	for _, id := range ids {
+		if n := s[id]; n > 0 {
+			out[id] = n
+		}
+	}
+	return out, nil
+}
+
+func TestQuestionsCarryTheTimeSpentOnThem(t *testing.T) {
+	e := newEnv(t)
+	h := e.newSet(t)
+	qs := e.add(t, h.ID, Draft{Text: "First, written here.", InBook: false}, Draft{Text: "Second, written here.", InBook: false})
+	e.wait(t, qs[0].ID, StateReady)
+	e.wait(t, qs[1].ID, StateReady)
+	e.svc.c.Time = spent{qs[0].ID: 1260}
+	var d Detail
+	e.do(t, "GET", "/api/homework/"+h.ID, nil, &d)
+	if d.Questions[0].Seconds != 1260 || d.Questions[1].Seconds != 0 {
+		t.Fatalf("seconds %d and %d, want 1260 and none", d.Questions[0].Seconds, d.Questions[1].Seconds)
+	}
+	// The snapshot an event or a patch carries says it too.
+	yes := true
+	var q Question
+	e.do(t, "PATCH", "/api/questions/"+qs[0].ID, QuestionPatch{Done: &yes}, &q)
+	if q.Seconds != 1260 || !q.Done {
+		t.Fatalf("patched %+v", q)
+	}
+}
