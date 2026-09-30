@@ -1,6 +1,6 @@
 # Homework panel: redesign grill
 
-status:    grilling (gate 2 recap awaiting confirm)
+status:    grilling (gate 2 recap awaiting confirm; wireframes rebuilt from the real components)
 date:      2026-09-30
 brief:     redesign the whole homework view, judged from the tired student (hour 7, 1am, Night, glancing between the scan and the panel)
 sources:   web/src/views/homework/spec.md, design/workspace.md (Homework), design/design-system.md, the /views scenarios, a measured walk of the current view
@@ -57,47 +57,15 @@ For the student picking up homework after a long day of class, this view puts th
 | Move and remove controls | Reorder, remove a question | never by default, in the menu | D3 |
 | Finish page extras | Help used, what is due next, pace against earlier sets | never | D11 |
 
-**Gate 2: wireframes**
+**Gate 2: wireframes** (built from the real components, not drawn)
 
-Walkthrough, panel width (pinned strip and footer; only the middle scrolls):
-```
-┌──────────────────────────────────────────┐
-│ ‹  Problem set 4                       ⋯ │  set menu
-│ ▰▰▰▱▱▱▱▱  3 of 8 done · about 1 h 40 m  │  pinned, tap a mark to jump
-├──────────────────────────────────────────┤
-│ 4.25            [ Show in book ]       ⋯ │  question menu
-│ Use superposition to find v_o in the     │
-│ circuit of Fig. 4.107 ...                │
-│ [ figure ]                               │
-│ From your professor: no PSpice           │
-│ HINT         ▒▒▒▒ tap to show ▒▒▒▒       │
-│ WALKTHROUGH  ▒▒▒▒ tap to show ▒▒▒▒       │
-│ ANSWERS      ▒▒▒▒ tap to show ▒▒▒▒       │
-├──────────────────────────────────────────┤
-│ Ask about this         [ Next question ] │  pinned; the one primary
-└──────────────────────────────────────────┘
-   on a completed question the button reads  [ Mark incomplete ]
-```
-Focus (800px): two columns; the question, the jump button and the notes pinned left, the three help stages scrolling right; the strip and footer unchanged.
+Open them at `/views/homework?mode=wireframes` (source: `web/src/views/homework/wireframes.tsx`). They are the app's own `Box`, `Button`, `Menu`, `Veil`, `StatTile` and the rest, on static sample data, in the real pane at 440px and 800px (Focus), so veils lift and menus open. What they show:
 
-Finish page (fills the pane after the last question):
-```
-│   Long night. It shows.                  │
-│   All 8 done · 2 h 14 m                  │
-│   ▁▃▅▂▇▃▄▂   time per question           │
-│   Hardest: 4.32 · 41 m,  3.12 · 33 m     │
-│   [        Turn in        ]  Back to list│
-```
-List:
-```
-│ Reading EECS 202 Homework   Review   ✕  │
-│ Problem set 4              [ Due soon ]  │
-│ ▰▰▰▱▱▱▱▱  3 of 8 · about 1 h 40 m       │
-│ Chapter 3 exercises                      │
-│ ▱▱  0 of 2 · due Tuesday                 │
-│ + New homework                           │
-│ Turned in    Problem set 3            ✓  │
-```
+- **Walkthrough, panel width:** set header (back, title, set menu), the pinned progress strip (a segment per question, "n of m done", time left), the question row (label, "Show in book", question menu), statement, figure, the professor's notes box, the three veiled stages, and the pinned footer with Ask about this and the one primary. A second frame shows a completed question, where the primary reads Mark incomplete.
+- **Focus (800px):** two columns, the question pinned left and the help scrolling right; strip and footer unchanged.
+- **Finish page:** the greeting line, total time and per-question time (StatTiles), a bar per question with the hardest marked, the hardest listed, Turn in as the one primary, Back to list.
+- **The list:** reads on top, each set with the same strip and time left, "+ New homework", turned-in sets.
+
 Counts (simulated): Next question 1 click (was 2); most help on one question plus Next 4 clicks (was 5); about 5 tab stops to the first veil (was 10). Candidates dropped in the walkthrough simulation: progress in the footer (a mis-tap jumps a question), everything in the header row (a long set title collides), a left rail of marks (splits progress in two, costs reading width).
 
 ### Mission (confirm)
@@ -154,6 +122,8 @@ For the student picking up homework after a long day of class, this view puts th
 - Jump button: "On the question's label row (Recommended)".
 - Focus layout: "Two columns (Recommended)".
 - Arrows: "Remove them; marks and keyboard (Recommended)".
+### Gate 2, wireframes redone
+- Jack: "Don't love the ascii wireframes, they are all butchered. I'd rather have you make wireframes using my own components." The wireframes were rebuilt from the real component library; the skills were updated to say so (grill/references/frontier.md, pset-view/references/grill-stages.md).
 ### Gate 2, batch 2
 - Menus: "Two menus, each for its thing (Recommended)".
 - Finish page: "Greeting, time chart, hardest (Recommended)".
