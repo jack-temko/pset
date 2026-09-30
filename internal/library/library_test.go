@@ -28,6 +28,7 @@ import (
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // ---------------------------------------------------------------- fixtures
@@ -134,7 +135,7 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { d.Close() })
-	if err := db.Migrate(context.Background(), d, append(jobs.Migrations(), Migrations()...)); err != nil {
+	if err := db.Migrate(context.Background(), d, append(append(jobs.Migrations(), usage.Migrations()...), Migrations()...)); err != nil {
 		t.Fatal(err)
 	}
 	e := &env{llm: llmtest.New(t), events: &recorder{}, dir: dir}
@@ -260,6 +261,31 @@ func TestDigitalBookImportsToReady(t *testing.T) {
 	}
 	if !e.events.has(EventBookChanged, `"kind":"ready"`) || !e.events.has(EventBookChanged, `"phase":"search"`) {
 		t.Fatalf("events %v", e.events.events)
+	}
+}
+
+// Ollama stopping after a book is ready must not take search with it: the
+// tutor's search_pages and the finder both call it.
+func TestSearchFallsBackToTextWhenEmbeddingFails(t *testing.T) {
+	e := newEnv(t)
+	var up BookChanged
+	e.upload(t, "linear_algebra-notes.pdf", fixturePDF(t, 3, 12, "Linear Maps"), &up)
+	b := e.waitFor(t, up.Book.ID, StateReady)
+
+	e.llm.FailEmbeddings(400)
+	hits, err := e.svc.Search(context.Background(), b.ID, "determinants of matrices", 3)
+	if err != nil || len(hits) == 0 {
+		t.Fatalf("search with Ollama down: %v %v", hits, err)
+	}
+	if text, _ := e.svc.PageText(context.Background(), b.ID, hits[0]); !strings.Contains(text, "determinants") {
+		t.Fatalf("top hit p.%d: %q", hits[0], text)
+	}
+
+	// A cancelled search is cancelled, not answered with half a ranking.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := e.svc.Search(ctx, b.ID, "determinants", 3); err == nil {
+		t.Fatal("a cancelled search answered")
 	}
 }
 

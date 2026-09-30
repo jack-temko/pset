@@ -26,6 +26,7 @@ import (
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pdf"
 	"github.com/jackt/pset/internal/probnum"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // Importing an assignment: a professor's PDF, a course web page, a
@@ -147,6 +148,7 @@ func (s *Service) runAssignmentRead(ctx context.Context, j jobs.Job) error {
 		return err
 	}
 	ctx = llm.WithSession(ctx, "assignment-"+p.ReadID)
+	ctx = llm.WithSubject(ctx, llm.Subject{Type: usage.SubjectRead, ID: p.ReadID})
 	var bookID, source, pageURL, text string
 	var data []byte
 	err := s.c.DB.QueryRowContext(ctx, `SELECT book_id, source, url, text, file FROM assignment_reads WHERE id = ?`, p.ReadID).

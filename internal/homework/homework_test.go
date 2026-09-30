@@ -27,6 +27,7 @@ import (
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // ---------------------------------------------------------------- fakes
@@ -168,6 +169,7 @@ func newEnvWith(t *testing.T, mem Memory) *env {
 	}
 	t.Cleanup(func() { d.Close() })
 	migs := append(jobs.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
+	migs = append(migs, usage.Migrations()...)
 	migs = append(migs, Migrations()...)
 	if err := db.Migrate(context.Background(), d, migs); err != nil {
 		t.Fatal(err)
@@ -729,7 +731,8 @@ func TestEveryUpdateBumpsRev(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer d.Close()
-	migs := append([]db.Migration{{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`}}, Migrations()...)
+	migs := append([]db.Migration{{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`}}, usage.Migrations()...)
+	migs = append(migs, Migrations()...)
 	if err := db.Migrate(ctx, d, migs); err != nil {
 		t.Fatal(err)
 	}

@@ -21,6 +21,7 @@ import (
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // Book is what homework needs to know about a book.
@@ -219,7 +220,30 @@ func (s *Service) Get(ctx context.Context, id string) (Detail, error) {
 		return Detail{}, err
 	}
 	qs, err := listQuestions(ctx, s.c.DB, id)
-	return Detail{Homework: h, Questions: qs}, err
+	if err != nil {
+		return Detail{}, err
+	}
+	if err := fillUsage(ctx, s.c.DB, qs); err != nil {
+		return Detail{}, err
+	}
+	return Detail{Homework: h, Questions: qs}, nil
+}
+
+// fillUsage puts each question's spending on it, one grouped query for
+// the set. A question with no calls keeps nil, and no line is drawn.
+func fillUsage(ctx context.Context, d *sql.DB, qs []Question) error {
+	ids := make([]string, len(qs))
+	for i, q := range qs {
+		ids[i] = q.ID
+	}
+	uses, err := usage.ForSubjects(ctx, d, usage.SubjectQuestion, ids)
+	if err != nil {
+		return err
+	}
+	for i, q := range qs {
+		qs[i].Usage = uses[q.ID]
+	}
+	return nil
 }
 
 func (s *Service) Update(ctx context.Context, id string, p Patch) (Summary, error) {
@@ -275,8 +299,21 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM homework WHERE id = ?`, id); err != nil {
 		return err
 	}
+	// The questions went with the set; their calls go with them.
+	if err := usage.ForgetAll(ctx, s.c.DB, usage.SubjectQuestion, questionIDs(qs)); err != nil {
+		return err
+	}
 	s.c.Events.Publish(EventHomeworkRemoved, HomeworkRemoved{ID: id, BookID: h.BookID})
 	return nil
+}
+
+// questionIDs is a list of questions as their ids.
+func questionIDs(qs []Question) []string {
+	out := make([]string, len(qs))
+	for i, q := range qs {
+		out[i] = q.ID
+	}
+	return out
 }
 
 // ---------------------------------------------------------------- questions
@@ -570,6 +607,9 @@ func (s *Service) RemoveQuestion(ctx context.Context, id string) error {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM questions WHERE id = ?`, id); err != nil {
 			return err
 		}
+		if err := usage.Forget(ctx, tx, usage.SubjectQuestion, id); err != nil {
+			return err
+		}
 		return renumber(ctx, tx, q.HomeworkID)
 	})
 	if err != nil {
@@ -695,6 +735,9 @@ func (s *Service) publishQuestion(ctx context.Context, id string) (Question, err
 	if err != nil {
 		return Question{}, err
 	}
+	if q.Question.Usage, err = usage.For(ctx, s.c.DB, usage.SubjectQuestion, id); err != nil {
+		return Question{}, err
+	}
 	s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: q.Question})
 	return q.Question, nil
 }
@@ -705,4 +748,18 @@ func (s *Service) QuestionsDoneSince(ctx context.Context, since time.Time) (ques
 	err = s.c.DB.QueryRowContext(ctx, `SELECT count(*), count(DISTINCT homework_id) FROM questions WHERE done_at >= ?`,
 		db.At(since)).Scan(&questions, &sets)
 	return
+}
+
+// ForgetBookCalls deletes the usage rows of a book's questions and
+// assignment reads, called as the book is removed, while they can still
+// be named.
+func (s *Service) ForgetBookCalls(ctx context.Context, bookID string) error {
+	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM calls WHERE subject_type = ? AND subject_id IN
+		(SELECT q.id FROM questions q JOIN homework h ON h.id = q.homework_id WHERE h.book_id = ?)`,
+		usage.SubjectQuestion, bookID); err != nil {
+		return err
+	}
+	_, err := s.c.DB.ExecContext(ctx, `DELETE FROM calls WHERE subject_type = ? AND subject_id IN
+		(SELECT id FROM assignment_reads WHERE book_id = ?)`, usage.SubjectRead, bookID)
+	return err
 }

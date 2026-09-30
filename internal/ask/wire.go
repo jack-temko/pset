@@ -1,6 +1,9 @@
 package ask
 
-import "github.com/jackt/pset/internal/doc"
+import (
+	"github.com/jackt/pset/internal/doc"
+	"github.com/jackt/pset/internal/usage"
+)
 
 // TurnState is where a turn is.
 type TurnState string
@@ -61,8 +64,11 @@ type Turn struct {
 	State    TurnState   `json:"state" tstype:"'running' | 'done' | 'stopped' | 'failed'"`
 	Reason   string      `json:"reason,omitempty"`
 	// Failure is what kind of failure a failed turn had.
-	Failure   Failure `json:"failure,omitempty"`
-	CreatedAt string  `json:"createdAt"`
+	Failure Failure `json:"failure,omitempty"`
+	// Usage is what answering this turn spent on model calls, once it has
+	// finished; nil until it has made a call, and nothing is drawn.
+	Usage     *usage.Usage `json:"usage,omitempty"`
+	CreatedAt string       `json:"createdAt"`
 	// UpdatedAt orders copies of the turn: a reply that arrives after a
 	// newer event must not win.
 	UpdatedAt string `json:"updatedAt"`

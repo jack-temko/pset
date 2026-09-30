@@ -17,6 +17,7 @@ import (
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // Book is what the tutor needs to know about a book.
@@ -74,11 +75,23 @@ func (s *Service) Turns(ctx context.Context, bookID string) ([]Turn, error) {
 		return nil, err
 	}
 	rows, err := listTurns(ctx, s.c.DB, bookID)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, len(rows))
+	for i, r := range rows {
+		ids[i] = r.ID
+	}
+	uses, err := usage.ForSubjects(ctx, s.c.DB, usage.SubjectTurn, ids)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]Turn, len(rows))
 	for i, r := range rows {
+		r.Turn.Usage = uses[r.ID]
 		out[i] = r.Turn
 	}
-	return out, err
+	return out, nil
 }
 
 // Ask starts a turn. It runs as a job, so leaving the workspace doesn't
@@ -163,6 +176,13 @@ func (s *Service) Clear(ctx context.Context, bookID string) error {
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM turns WHERE book_id = ?`, bookID); err != nil {
 		return err
 	}
+	ids := make([]string, len(rows))
+	for i, r := range rows {
+		ids[i] = r.ID
+	}
+	if err := usage.ForgetAll(ctx, s.c.DB, usage.SubjectTurn, ids); err != nil {
+		return err
+	}
 	s.c.Events.Publish(EventTurnsCleared, TurnsCleared{BookID: bookID})
 	return nil
 }
@@ -172,6 +192,17 @@ func (s *Service) publish(ctx context.Context, id string) (Turn, error) {
 	if err != nil {
 		return Turn{}, err
 	}
+	if t.Turn.Usage, err = usage.For(ctx, s.c.DB, usage.SubjectTurn, id); err != nil {
+		return Turn{}, err
+	}
 	s.c.Events.Publish(EventTurnChanged, TurnChanged{Turn: t.Turn})
 	return t.Turn, nil
+}
+
+// ForgetBookCalls deletes the usage rows of a book's turns, called as the
+// book is removed, while they can still be named.
+func (s *Service) ForgetBookCalls(ctx context.Context, bookID string) error {
+	_, err := s.c.DB.ExecContext(ctx, `DELETE FROM calls WHERE subject_type = ? AND subject_id IN
+		(SELECT id FROM turns WHERE book_id = ?)`, usage.SubjectTurn, bookID)
+	return err
 }

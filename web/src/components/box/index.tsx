@@ -73,6 +73,7 @@ export function BoxRow({
   onClick,
   selected,
   className,
+  wrapDescription,
 }: {
   leading?: ReactNode
   title: ReactNode
@@ -83,6 +84,10 @@ export function BoxRow({
   onClick?: () => void
   selected?: boolean
   className?: string
+  /** Lets the description wrap instead of truncating, for one that ends
+   *  in something alive — a control whose tail must never be clipped
+   *  under the ellipsis. The read row's spending line. */
+  wrapDescription?: boolean
 }) {
   const content = (
     <>
@@ -94,7 +99,9 @@ export function BoxRow({
       <span className="min-w-0 flex-1">
         <span className="block truncate">{title}</span>
         {description && (
-          <span className="block truncate text-xs text-muted-foreground">{description}</span>
+          <span className={cn('block text-xs text-muted-foreground', !wrapDescription && 'truncate')}>
+            {description}
+          </span>
         )}
       </span>
       {trailing && <span className="shrink-0">{trailing}</span>}

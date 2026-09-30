@@ -47,6 +47,7 @@ import { ConfirmPopover } from '@/components/confirm'
 import { ResizeHandle } from '@/components/resize-handle'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
+import { UsageLine } from '@/components/usage'
 import { BookDialog, HomeworkDialog } from './dialogs'
 import { AddHomeworkDialog } from './add-homework'
 import { useBookHere } from './book-here'
@@ -605,6 +606,9 @@ function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) 
           {/* The step feed sits where the calls ran: before the block
               written when each one began. */}
           <Document blocks={t.answer} onJump={onJump} before={feed} />
+          {/* What answering spent, once the turn is over; while it runs
+              the step feed is already saying how it's going. */}
+          {t.state !== 'running' && t.usage && <UsageLine usage={t.usage} />}
           {thinking && t.steps.length === 0 && <Thinking />}
           {t.pending && (
             <BlockSkeleton type={t.pending.type} runs={t.pending.runs} repairing={t.pending.repairing} onJump={onJump} />
@@ -1310,7 +1314,12 @@ function Walkthrough({
           )}
 
         {q.state === 'failed' ? (
-          <FailedQuestion q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} />
+          <>
+            <FailedQuestion q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} />
+            {/* What the failed attempt spent: the calls cost even when
+                the guide didn't land. */}
+            {q.usage && <UsageLine usage={q.usage} />}
+          </>
         ) : (
           <>
             {/* Queued is a word and no motion: nothing is happening to it
@@ -1359,6 +1368,10 @@ function Walkthrough({
               })
             )}
             {set && <MemoryLines bookId={set.bookId} lines={q.memory} />}
+            {/* What the whole production spent — find, figure read, guide
+                — once it's over. A question still being written keeps its
+                working lines and shows nothing here. */}
+            {(q.state === 'ready' || q.state === 'unwritten') && q.usage && <UsageLine usage={q.usage} />}
           </>
         )}
       </div>

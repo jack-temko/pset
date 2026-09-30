@@ -31,6 +31,7 @@ import (
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/memory"
 	"github.com/jackt/pset/internal/settings"
+	"github.com/jackt/pset/internal/usage"
 	"github.com/jackt/pset/web"
 )
 
@@ -78,6 +79,7 @@ func serve(addr, dir string, log *slog.Logger) error {
 	migrations := concat(
 		jobs.Migrations(),
 		settings.Migrations(),
+		usage.Migrations(),
 		library.Migrations(),
 		memory.Migrations(),
 		homework.Migrations(),
@@ -92,6 +94,8 @@ func serve(addr, dir string, log *slog.Logger) error {
 	// Every model request and reply, to trace a bad answer to its prompt.
 	llm.LogCallsTo(filepath.Join(dir, "logs", "llm.jsonl"))
 	llm.SetSessionPrefix(installTag(dir))
+	// Every call's cost, recorded on what it was spent on.
+	llm.OnCall(usage.Sink(d))
 
 	bus := events.NewBus()
 	queue := jobs.New(d, log)
@@ -107,17 +111,27 @@ func serve(addr, dir string, log *slog.Logger) error {
 		Dialer:     settings.LiveDialer{},
 		Queue:      queue,
 	})
+	// The book remover deletes a book's homework and turn usage through
+	// these, which the features fill in once built.
+	var sets *homework.Service
+	var tutor *ask.Service
 	books := library.New(library.Config{
 		DB: d, DataDir: dir, Events: bus, Queue: queue, Models: cfg,
+		ForgetCalls: func(ctx context.Context, bookID string) error {
+			if err := sets.ForgetBookCalls(ctx, bookID); err != nil {
+				return err
+			}
+			return tutor.ForgetBookCalls(ctx, bookID)
+		},
 	})
 	cfg.SetLibrary(books)
 	memories := memory.New(d, bus)
-	sets := homework.New(homework.Config{
+	sets = homework.New(homework.Config{
 		DB: d, Events: bus, Queue: queue, Library: homeworkLibrary{books}, Settings: cfg,
 		Memory: homeworkMemory{agentMemory{memories}},
 	})
 
-	tutor := ask.New(ask.Config{
+	tutor = ask.New(ask.Config{
 		DB: d, Events: bus, Queue: queue, Library: askLibrary{books}, Settings: cfg,
 		Memory: agentMemory{memories},
 	})
@@ -132,6 +146,15 @@ func serve(addr, dir string, log *slog.Logger) error {
 	mux.HandleFunc("GET /api/events", bus.Handler)
 	mux.HandleFunc("/api/", httpx.NotFoundAPI)
 	mux.Handle("/", httpx.SPAFrom(web.Dist, "dist"))
+
+	// The port is taken before the queue starts: a second copy on the same
+	// data would otherwise put the first one's running jobs back to queued,
+	// and start them again, before finding the port busy.
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("listen on %s: %w", addr, err)
+	}
+	defer ln.Close()
 
 	runCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -148,13 +171,9 @@ func serve(addr, dir string, log *slog.Logger) error {
 	handlerCtx, endHandlers := context.WithCancel(context.Background())
 	defer endHandlers()
 	srv := &http.Server{
-		Handler:           mux,
+		Handler:           httpx.LocalOnly(addr, mux),
 		ReadHeaderTimeout: 10 * time.Second,
 		BaseContext:       func(net.Listener) context.Context { return handlerCtx },
-	}
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		return fmt.Errorf("listen on %s: %w", addr, err)
 	}
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- srv.Serve(ln) }()

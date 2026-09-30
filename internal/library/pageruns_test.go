@@ -10,6 +10,7 @@ import (
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/pagenum"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // scanText is a scanned page's text with its printed number in the head,
@@ -54,7 +55,7 @@ func TestFillPageRuns(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { d.Close() })
-	if err := db.Migrate(ctx, d, append(jobs.Migrations(), Migrations()...)); err != nil {
+	if err := db.Migrate(ctx, d, append(append(jobs.Migrations(), usage.Migrations()...), Migrations()...)); err != nil {
 		t.Fatal(err)
 	}
 	add := func(id string, offset int, edited bool, texts []string) {
