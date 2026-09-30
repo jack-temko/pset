@@ -250,7 +250,11 @@ func TestReadingAnAssignmentFromAWebPage(t *testing.T) {
 	pageUp := page.Config.Handler
 	page.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, coursePage) })
 	var retried AssignmentRead
-	if code := e.do(t, "POST", "/api/assignment-reads/"+bad.ID+"/retry", nil, &retried); code != 200 || retried.State != ReadStateReading {
+	// The reply is the read as the retry left it: reading, or already ready
+	// when the job beat the reply back (a busy machine). Failed is the only
+	// wrong answer.
+	if code := e.do(t, "POST", "/api/assignment-reads/"+bad.ID+"/retry", nil, &retried); code != 200 ||
+		(retried.State != ReadStateReading && retried.State != ReadStateReady) {
 		t.Fatalf("retry %d %+v", code, retried)
 	}
 	if again := e.waitRead(t, bad.ID); again.State != ReadStateReady || again.Error != "" {
@@ -296,7 +300,8 @@ func TestReadingAnUploadedOrPastedAssignment(t *testing.T) {
 	}
 
 	code, r := upload("Assignment 3.txt", []byte("ECE 313 Assignment #3, due September 15\n1. Problem 2.1.4, p. 57.\n"), "")
-	if code != 202 || r.State != ReadStateReading || r.Source != "Assignment 3.txt" {
+	// Reading, or already ready if the job beat the reply back.
+	if code != 202 || (r.State != ReadStateReading && r.State != ReadStateReady) || r.Source != "Assignment 3.txt" {
 		t.Fatalf("upload %d %+v", code, r)
 	}
 	if r = e.waitRead(t, r.ID); r.State != ReadStateReady || len(r.Assignment.Groups) != 2 {
