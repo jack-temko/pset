@@ -281,6 +281,29 @@ and the probability book, through the eval key:
   think, it did far worse, so it's asked plain. Its words are less clean
   (the problem's number left in, math not always in `$`), so it writes
   none: it finds, and the Reader writes.
+
+  **Its figures are checked** (2026-09-29), after the Reader has written
+  the problem out. On the differential equations book the Finder boxed a
+  figure on the problem's page for a problem whose figure is on another
+  (7.1 #16's is three pages back), gave a problem its neighbour's figure,
+  and once boxed the words "Figure 7.1.4" in the text. So a box too small
+  to be a figure goes, the Reader reads each boxed figure's own caption,
+  and one the problem doesn't name as "Figure N" goes (a run's "Figures
+  1.1.5 through 1.1.10" doesn't count). A figure the problem names that
+  wasn't boxed is looked for by the Finder on the problem's page, the
+  pages whose text mentions it and the three either side, and kept when
+  its caption says it's the one: it's stored with its own page. A problem
+  that names no figure keeps what was boxed. A Finder reply that doesn't
+  parse is tried once more with its brackets balanced, and a find whose
+  number isn't the one asked for (a page that only said "See Problem
+  14") isn't taken.
+
+  **Snapping by rows** (2026-09-29): a block the box only partly holds is
+  taken row band by row band. On the dense pages one block held the end
+  of one problem and the start of the next, or a problem's last lines and
+  the top of its figure. Problem text boxes went from 13 to 16 of 30 for
+  the Finder there, and 6 to 14 of 15 for GLM; the circuits book's stayed
+  as they were.
 - **Reader**, `openai/gpt-6-luna`, with GLM-5.3-Flash behind it. Thirteen
   circuits read into netlists and graded by solving them: 13 right of 13,
   then 16 of 16, at $0.0004 a reading; DeepSeek got 11 and 36 of 39, at

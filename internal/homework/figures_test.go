@@ -1,0 +1,122 @@
+package homework
+
+import (
+	"context"
+	"slices"
+	"strings"
+	"sync/atomic"
+	"testing"
+
+	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/llm/llmtest"
+)
+
+func TestFigureNumbers(t *testing.T) {
+	for in, want := range map[string][]string{
+		"Find the Norton equivalent in Fig. 4.119.":                                              {"4.119"},
+		"Figure 7.1.3(a) shows the masses; the forces are in Figure 7.1.3(b).":                   {"7.1.3"},
+		"(see FIGURE 2.5.9). In this case":                                                       {"2.5.9"},
+		"shown in Figures 1.1.5 through 1.1.10. … The direction field of Figure 1.1.6.":          {"1.1.6"},
+		"Consider the circuit shown in Figure 7.1.2 and the one in Fig 7.1.4, then Figure 7.1.2": {"7.1.2", "7.1.4"},
+		"No figure here, just the configuration of a figure-eight.":                              nil,
+	} {
+		if got := figureNumbers(in); !slices.Equal(got, want) {
+			t.Errorf("%q: %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestFigureCandidates(t *testing.T) {
+	texts := []string{"", "", "shown in Figure 7.1.2. Let V", "", "", "7.1.20 is not it", "the problem"}
+	// The problem's own page, the page that mentions it, then the rest
+	// within reach, nearest first; never past the book.
+	if got := figureCandidates(texts, 7, "7.1.2"); !slices.Equal(got, []int{7, 3, 6, 5, 4}) {
+		t.Fatalf("candidates %v", got)
+	}
+}
+
+// A figure the Finder boxed that the problem doesn't name is dropped, and
+// the one it names is looked for on the pages around, and kept once its
+// caption says it's the one.
+func TestAFigureOnAnotherPageIsFound(t *testing.T) {
+	e := newEnv(t)
+	var captionCalls atomic.Int32
+	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
+		sys := req.Messages[0].Content.Text()
+		switch {
+		case strings.Contains(sys, "You write out one homework problem"):
+			return llmtest.Reply{Text: "Find the voltage across $R_2$ in Figure 3.7."}
+		case strings.Contains(sys, "You read the captions"):
+			// The figure boxed on the problem's page is 3.8; the one found
+			// on another page is 3.7.
+			if captionCalls.Add(1) == 1 {
+				return llmtest.Reply{Text: `{"captions": ["3.8"]}`}
+			}
+			return llmtest.Reply{Text: `{"captions": ["3.7"]}`}
+		case strings.Contains(sys, "You find one figure"):
+			return llmtest.Reply{Text: `{"image": 3, "rect": {"x": 0.1, "y": 0.1, "w": 0.5, "h": 0.4}}`}
+		}
+		return fakeModel(req)
+	})
+	h := e.newSet(t)
+	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
+	if len(q.Figures) != 1 || q.Figures[0].Label != "Figure 3.7" {
+		t.Fatalf("figures %+v", q.Figures)
+	}
+	r, err := getQuestion(context.Background(), e.svc.c.DB, q.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Found on image 3 of the problem's page 3 and the pages around it: 3,
+	// 2, 4.
+	if r.FigRect[0].Page != 4 {
+		t.Fatalf("figure on page %d, want 4", r.FigRect[0].Page)
+	}
+}
+
+// A problem that names no figure by number keeps what was boxed: there's
+// nothing to check it against.
+func TestUnnamedFiguresStay(t *testing.T) {
+	e := newEnv(t)
+	h := e.newSet(t)
+	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
+	if len(q.Figures) != 1 || requestsTo(e, "You read the captions") != 0 {
+		t.Fatalf("figures %+v, caption checks %d", q.Figures, requestsTo(e, "You read the captions"))
+	}
+}
+
+func TestBalance(t *testing.T) {
+	for in, want := range map[string]string{
+		`{"figures": [{"rect": {"h": 0.2}}}`: `{"figures": [{"rect": {"h": 0.2}}]}`,
+		`{"a": [1, 2}`:                       `{"a": [1, 2]}`,
+		`{"a": "}]"`:                         `{"a": "}]"}`,
+		`{"a": 1}}`:                          `{"a": 1}`,
+	} {
+		if got, _ := balance(in); got != want {
+			t.Errorf("%s: %s, want %s", in, got, want)
+		}
+	}
+	var pin struct {
+		Image   int `json:"image"`
+		Figures []struct {
+			Label string `json:"label"`
+		} `json:"figures"`
+	}
+	if err := decodeReply("```json\n{\"image\": 1, \"figures\": [{\"label\": \"Figure 7.1.3\", \"rect\": {\"h\": 0.2}}}\n```", &pin); err != nil || pin.Image != 1 || len(pin.Figures) != 1 {
+		t.Fatalf("%+v %v", pin, err)
+	}
+}
+
+func TestSameNumber(t *testing.T) {
+	for _, c := range []struct {
+		label, number string
+		want          bool
+	}{
+		{"7.1 #14", "14", true}, {"14.", "14", true}, {"*4.68", "68", true}, {"Problem 4.72", "72", true},
+		{"", "14", false}, {"7.1 #13", "14", false}, {"4.7", "72", false},
+	} {
+		if got := sameNumber(c.label, c.number); got != c.want {
+			t.Errorf("%q vs %q: %v", c.label, c.number, got)
+		}
+	}
+}

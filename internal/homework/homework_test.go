@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -133,7 +134,11 @@ func fakeModel(req llm.ChatRequest) llmtest.Reply {
 		if strings.Contains(user[0].Text, "3.99") {
 			return llmtest.Reply{Text: `{"image": 0}`}
 		}
-		return llmtest.Reply{Text: `{"image": 1, "label": "3.36",
+		label := "3.36"
+		if m := regexp.MustCompile(`\d+\.\d+`).FindString(user[0].Text); m != "" {
+			label = m
+		}
+		return llmtest.Reply{Text: `{"image": 1, "label": "` + label + `",
 			"question_rect": {"x": 0.1, "y": 0.2, "w": 0.8, "h": 0.2},
 			"figures": [{"label": "Figure 3.7", "rect": {"x": 0.1, "y": 0.5, "w": 0.4, "h": 0.3}}]}`}
 	case strings.Contains(sys, "You write out one homework problem"):
