@@ -693,7 +693,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 	}
 	// Memory lines stay with saved rounds, which a retry of the same
 	// problem carries on from; the guide clears them with the rounds.
-	set := `reason = '', failure = '', hint = '[]', walkthrough = '[]',
+	set := `attempts = attempts + 1, reason = '', failure = '', hint = '[]', walkthrough = '[]',
 		memory = CASE WHEN rounds = '[]' THEN '[]' ELSE memory END, updated_at = ?`
 	args := []any{db.Now()}
 	// What's left to do, and the state it waits in: the step that failed,

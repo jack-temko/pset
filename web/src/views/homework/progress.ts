@@ -100,6 +100,20 @@ export function stageWord(q: Question): string | null {
  *  queued question only says so). */
 export const isWorking = (q: Question): boolean => !q.done && (q.state === 'locating' || q.state === 'reading' || q.state === 'writing')
 
+/** 1st, 2nd, 3rd, 4th, 11th, 21st. */
+export function ordinal(n: number): string {
+  const teen = n % 100 >= 11 && n % 100 <= 13
+  const suffix = teen ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th'
+  return `${n}${suffix}`
+}
+
+/** Where a waiting question is in line: one more than the questions ahead
+ *  of it that the engine still owes work on. The engine takes a set in order,
+ *  so this is the wait as the student would count it. */
+export function queuePlace(q: Question, questions: Question[]): number {
+  return 1 + questions.filter((x) => x.id !== q.id && x.position < q.position && outstanding(x)).length
+}
+
 // ---------------------------------------------------------------- time left
 
 /** Fewer timed questions than this and the student's pace is a guess. */

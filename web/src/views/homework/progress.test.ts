@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { walkthroughKey } from './keys'
-import { countWords, firstUnfinished, listSegments, markOf, nextUnfinished, primaryOf, segments, stageWord, timeLeftWords, isWorking, type Q, type HomeworkSet } from './progress'
+import { countWords, firstUnfinished, listSegments, markOf, nextUnfinished, ordinal, primaryOf, queuePlace, segments, stageWord, timeLeftWords, isWorking, type Q, type HomeworkSet } from './progress'
 import { makeQuestion, makeSet } from './world'
 import type { Question } from '@/api/homework'
 
@@ -159,5 +159,19 @@ describe('a set on the list', () => {
     expect(timeLeftWords({ ...set(e), total: 4, done: 1, timed: 1 })).toBeNull()
     expect(timeLeftWords({ ...set(e), total: 4, done: 1 })).toBeNull()
     expect(timeLeftWords({ ...set(e), total: 4, done: 4, timed: 4 })).toBeNull()
+  })
+})
+
+describe('the place in line', () => {
+  it('counts the questions ahead that the engine still owes work on', () => {
+    const at = (position: number, state: Question['state'], done = false) => ({ ...q({ state, done }), position })
+    const all = [at(1, 'ready'), at(2, 'writing'), at(3, 'pending'), at(4, 'located'), at(5, 'pending')]
+    expect(queuePlace(all[2], all)).toBe(2)
+    expect(queuePlace(all[4], all)).toBe(4)
+    expect(queuePlace(all[1], all)).toBe(1)
+  })
+
+  it('says it in ordinals', () => {
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 101, 112].map(ordinal)).toEqual(['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '101st', '112th'])
   })
 })

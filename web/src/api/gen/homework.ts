@@ -228,6 +228,13 @@ export interface Question {
    */
   seconds?: number /* int */;
   /**
+   * Attempts is how many times it has been tried again after failing,
+   * and FailedAt (RFC 3339) when it last failed, while it is failed: so a
+   * second failure says it is one, and how long ago.
+   */
+  attempts?: number /* int */;
+  failedAt?: string;
+  /**
    * UpdatedAt is when its state (or its statement, or a stage) last
    * changed: while it waits, when the wait began.
    */

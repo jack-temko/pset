@@ -227,3 +227,32 @@ func TestQuestionsCarryTheTimeSpentOnThem(t *testing.T) {
 		t.Fatalf("patched %+v", q)
 	}
 }
+
+func TestAFailedQuestionSaysWhenAndHowManyTimes(t *testing.T) {
+	e := newEnv(t)
+	h := e.newSet(t)
+	// 3.99 isn't in the book: the find fails, every time.
+	qs := e.add(t, h.ID, Draft{Text: "3.99", InBook: true})
+	first := e.wait(t, qs[0].ID, StateFailed)
+	if first.Attempts != 0 || first.FailedAt == "" {
+		t.Fatalf("first failure: attempts %d, failedAt %q", first.Attempts, first.FailedAt)
+	}
+	var again Question
+	if code := e.do(t, "POST", "/api/questions/"+qs[0].ID+"/retry", Retry{}, &again); code != 200 {
+		t.Fatalf("retry %d", code)
+	}
+	if again.Attempts != 1 || again.FailedAt != "" {
+		t.Fatalf("while trying again: attempts %d, failedAt %q (only a failed question has one)", again.Attempts, again.FailedAt)
+	}
+	second := e.wait(t, qs[0].ID, StateFailed)
+	if second.Attempts != 1 || second.FailedAt == "" || second.FailedAt < first.FailedAt {
+		t.Fatalf("second failure: attempts %d, failedAt %q after %q", second.Attempts, second.FailedAt, first.FailedAt)
+	}
+	// Pasting the problem is another try, and works: no longer failed.
+	text := "Find the current through R1."
+	e.do(t, "POST", "/api/questions/"+qs[0].ID+"/retry", Retry{Text: &text}, nil)
+	ready := e.wait(t, qs[0].ID, StateReady)
+	if ready.Attempts != 2 || ready.FailedAt != "" {
+		t.Fatalf("after pasting it: attempts %d, failedAt %q", ready.Attempts, ready.FailedAt)
+	}
+}

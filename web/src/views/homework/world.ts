@@ -178,6 +178,8 @@ export function makeQuestion(init: QuestionInit): Q {
     done: init.done ?? false,
     difficulty: init.difficulty,
     seconds: init.seconds,
+    // A question that starts failed failed a couple of minutes ago.
+    failedAt: init.state === 'failed' ? new Date(Date.now() - 2 * 60_000).toISOString() : undefined,
     updatedAt: new Date().toISOString(),
     rev: 1,
   }
@@ -320,7 +322,7 @@ export class World {
       v += 2600
       if (opts.fail?.at === 'locating') {
         this.finderFree = v
-        step(v, { state: 'failed', failure: opts.fail.failure, reason: opts.fail.reason, activity: undefined })
+        step(v, { state: 'failed', failure: opts.fail.failure, reason: opts.fail.reason, activity: undefined, failedAt: new Date().toISOString() })
         return
       }
       this.finderFree = v
@@ -347,7 +349,7 @@ export class World {
     v += 3200
     if (opts.fail?.at === 'writing') {
       this.writerFree = v
-      step(v, { state: 'failed', failure: opts.fail.failure, reason: opts.fail.reason, activity: undefined })
+      step(v, { state: 'failed', failure: opts.fail.failure, reason: opts.fail.reason, activity: undefined, failedAt: new Date().toISOString() })
       return
     }
     this.writerFree = v

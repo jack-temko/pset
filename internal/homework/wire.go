@@ -173,6 +173,11 @@ type Question struct {
 	// as of this snapshot (a stretch being worked is saved every half
 	// minute, so it runs a little behind). Absent until there is some.
 	Seconds int `json:"seconds,omitempty"`
+	// Attempts is how many times it has been tried again after failing,
+	// and FailedAt (RFC 3339) when it last failed, while it is failed: so a
+	// second failure says it is one, and how long ago.
+	Attempts int    `json:"attempts,omitempty"`
+	FailedAt string `json:"failedAt,omitempty"`
 	// UpdatedAt is when its state (or its statement, or a stage) last
 	// changed: while it waits, when the wait began.
 	UpdatedAt string `json:"updatedAt"`

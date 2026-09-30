@@ -26,7 +26,7 @@ import { HelpRows } from './help'
 import { Finish } from './finish'
 import { helpRows, type HelpName } from './help-meta'
 import { isTyping, walkthroughKey } from './keys'
-import { PRIMARY_LABEL, barLabel, countWords, firstUnfinished, nextUnfinished, primaryOf, segments, stageWord, timeLeftWords, isWorking, type HomeworkSet, type Q } from './progress'
+import { PRIMARY_LABEL, barLabel, countWords, firstUnfinished, nextUnfinished, ordinal, primaryOf, queuePlace, segments, stageWord, timeLeftWords, isWorking, type HomeworkSet, type Q } from './progress'
 
 const STAGE_NAMES = ['hint', 'walkthrough', 'answers'] as const
 
@@ -84,12 +84,15 @@ function WorkingLine({ q, text }: { q: Question; text: string }) {
  *  questions ahead of it. */
 function waitingLine(q: Question, questions: Question[], pages: PageMap): string {
   const ahead = questions.filter((x) => x.position < q.position)
+  // "3rd in line" once there is a line: the questions before it still owed work.
+  const place = queuePlace(q, questions)
+  const inLine = place > 1 ? ` It is ${ordinal(place)} in line.` : ''
   if (toFind(q)) {
-    return ahead.some(toFind) ? 'Queued: it starts when the questions ahead of it are found.' : 'Queued: it starts in a moment.'
+    return (ahead.some(toFind) ? 'Queued: it starts when the questions ahead of it are found.' : 'Queued: it starts in a moment.') + inLine
   }
   const lead = q.page !== undefined ? `Found on p. ${pages.label(q.page)}. Its guide starts` : 'Queued: it starts'
-  if (questions.some((x) => x.id !== q.id && toFind(x))) return `${lead} once every question is found.`
-  if (ahead.some(outstanding)) return `${lead} once the questions ahead of it are written.`
+  if (questions.some((x) => x.id !== q.id && toFind(x))) return `${lead} once every question is found.${inLine}`
+  if (ahead.some(outstanding)) return `${lead} once the questions ahead of it are written.${inLine}`
   return `${lead} in a moment.`
 }
 
