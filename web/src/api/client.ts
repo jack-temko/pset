@@ -68,6 +68,14 @@ export async function postForm<T>(path: string, body: FormData): Promise<T> {
   return data as T
 }
 
+/**
+ * Where the pictures and documents an `<img>` or a new tab loads come from.
+ * They are plain URLs, so `fetch` can't be stubbed under them: every such
+ * URL passes through here, and /views points it at samples of its own so a
+ * view never asks a real server for a scan.
+ */
+export const assets = { url: (path: string): string => path }
+
 export const get = <T>(path: string) => api<T>('GET', path)
 export const post = <T>(path: string, body?: unknown) => api<T>('POST', path, body)
 export const put = <T>(path: string, body?: unknown) => api<T>('PUT', path, body)
