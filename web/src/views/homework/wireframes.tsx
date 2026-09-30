@@ -75,10 +75,10 @@ function Segments({ marks, jump }: { marks: Mark[]; jump?: boolean }) {
 const progressText = (marks: Mark[]) => `${marks.filter((m) => m === 'done').length} of ${marks.length} done · about 1 h 40 m left`
 
 /** The panel's column, under its Ask | Homework header, at a real width. */
-function Panel({ wide, children }: { wide?: boolean; children: ReactNode }) {
+function Panel({ wide, height = 760, children }: { wide?: boolean; height?: number; children: ReactNode }) {
   return (
     <aside
-      style={{ height: '760px' }}
+      style={{ height }}
       className={cn('flex shrink-0 flex-col overflow-hidden rounded-md border bg-rail', wide ? 'w-panel-wide' : 'w-panel')}
     >
       <div className="flex h-row shrink-0 items-center justify-between border-b px-card">
@@ -111,13 +111,8 @@ function Frame({ title, note, children }: { title: string; note: string; childre
   )
 }
 
-function SetHeader() {
+function SetMenu() {
   return (
-    <div className="flex h-row shrink-0 items-center gap-2 border-b px-2">
-      <IconButton variant="ghost" size="sm" aria-label="Back to homework">
-        <ChevronLeft />
-      </IconButton>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">Problem set 4</span>
       <Menu label="Homework actions">
         <MenuItem icon={<Plus />} onSelect={() => {}}>
           Add questions
@@ -140,6 +135,17 @@ function SetHeader() {
           Delete homework
         </MenuItem>
       </Menu>
+  )
+}
+
+function SetHeader() {
+  return (
+    <div className="flex h-row shrink-0 items-center gap-2 border-b px-2">
+      <IconButton variant="ghost" size="sm" aria-label="Back to homework">
+        <ChevronLeft />
+      </IconButton>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">Problem set 4</span>
+      <SetMenu />
     </div>
   )
 }
@@ -178,8 +184,8 @@ function QuestionHead({ done }: { done?: boolean }) {
         <MenuItem icon={<SquareDashedMousePointer />} onSelect={() => {}}>
           This isn't the right problem
         </MenuItem>
-        <MenuItem icon={<Plus />} onSelect={() => {}}>
-          Add the professor's instructions
+        <MenuItem icon={<Pencil />} onSelect={() => {}}>
+          Edit the professor's instructions
         </MenuItem>
       </Menu>
     </div>
@@ -198,13 +204,7 @@ function Statement() {
         <figcaption className="text-xs text-muted-foreground">Fig. 4.109</figcaption>
       </figure>
       <Box>
-        <BoxHeader>
-          From your professor
-          <Button variant="ghost" size="sm">
-            <Pencil />
-            Edit
-          </Button>
-        </BoxHeader>
+        <BoxHeader>From your professor</BoxHeader>
         <BoxBody className="text-sm">no PSpice or MultiSim</BoxBody>
       </Box>
     </div>
@@ -296,6 +296,151 @@ function FocusWalkthrough() {
 }
 
 const MINUTES = [18, 14, 41, 33, 9, 12, 27, 20]
+
+/** How hard each question is, relative to the set: the backend idea this
+ *  bar would use (ideas/time-remaining-estimate.md). Mocked here. */
+const DIFFICULTY = [2, 2, 4, 3, 1, 1, 3, 2]
+
+/** The count that opens the list of the questions: with the marks gone it is
+ *  how you jump. A stand-in list, built from Box rows. */
+function Switcher({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  const rows: { q: string; state: Mark; word: string }[] = QUESTIONS.slice(0, 5).map((q, i) => ({
+    q,
+    state: OPEN[i],
+    word: OPEN[i] === 'done' ? 'Done' : OPEN[i] === 'current' ? 'Here' : 'Waiting',
+  }))
+  return (
+    <span className="relative">
+      <Button variant="ghost" size="sm" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="tabular-nums">
+        {children}
+        <ChevronDown />
+      </Button>
+      {open && (
+        <Box className="absolute top-full left-0 z-10 mt-1 w-64 shadow-floating">
+          {rows.map((r) => (
+            <BoxRow
+              key={r.q}
+              selected={r.state === 'current'}
+              onClick={() => setOpen(false)}
+              leading={r.state === 'done' ? <Check className="text-success" /> : undefined}
+              title={r.q}
+              trailing={<span className="text-xs text-muted-foreground">{r.word}</span>}
+            />
+          ))}
+        </Box>
+      )}
+    </span>
+  )
+}
+
+const DONE_FRACTION = 3 / 8
+
+function OptionBody() {
+  return (
+    <div className="min-h-0 flex-1 space-y-5 overflow-hidden p-card">
+      <QuestionHead />
+      <Statement />
+    </div>
+  )
+}
+
+/** A: no extra row. The count sits in the header and the header's bottom edge is the bar. */
+function ProgressA() {
+  return (
+    <>
+      <div className="relative flex h-row shrink-0 items-center gap-1 border-b px-2">
+        <IconButton variant="ghost" size="sm" aria-label="Back to homework">
+          <ChevronLeft />
+        </IconButton>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">Problem set 4</span>
+        <Switcher>3 of 8 · about 1 h 40 m</Switcher>
+        <SetMenu />
+        <span aria-hidden className="absolute inset-x-0 -bottom-px h-1 bg-muted">
+          <span className="block h-full bg-primary" style={{ width: `${DONE_FRACTION * 100}%` }} />
+        </span>
+      </div>
+      <OptionBody />
+    </>
+  )
+}
+
+/** B: one slim row: the count, a plain bar, the time left. */
+function ProgressB() {
+  return (
+    <>
+      <SetHeader />
+      <div className="flex shrink-0 items-center gap-3 border-b px-2 py-1">
+        <Switcher>3 of 8</Switcher>
+        <span className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
+          <span className="block h-full rounded-full bg-primary" style={{ width: `${DONE_FRACTION * 100}%` }} />
+        </span>
+        <span className="pr-2 text-xs whitespace-nowrap text-muted-foreground tabular-nums">about 1 h 40 m left</span>
+      </div>
+      <OptionBody />
+    </>
+  )
+}
+
+/** C: B's one row, with the bar cut into the questions, each as wide as it is
+ *  hard, so what is left is how much work is left, not how many questions. */
+function ProgressC() {
+  return (
+    <>
+      <SetHeader />
+      <div className="flex shrink-0 items-center gap-3 border-b px-2 py-1">
+        <Switcher>3 of 8</Switcher>
+        <span className="flex flex-1 gap-1">
+          {OPEN.map((m, i) => (
+            <span
+              key={i}
+              style={{ flexGrow: DIFFICULTY[i], flexBasis: 0 }}
+              className={cn('h-1 rounded-full', m === 'done' ? 'bg-primary' : m === 'current' ? 'bg-primary/40' : 'bg-muted')}
+            />
+          ))}
+        </span>
+        <span className="pr-2 text-xs whitespace-nowrap text-muted-foreground tabular-nums">about 1 h 40 m left</span>
+      </div>
+      <OptionBody />
+    </>
+  )
+}
+
+/** D: no extra row either. A small ring beside the title, and the time left. */
+function ProgressD() {
+  const r = 9
+  const c = 2 * Math.PI * r
+  return (
+    <>
+      <div className="flex h-row shrink-0 items-center gap-1 border-b px-2">
+        <IconButton variant="ghost" size="sm" aria-label="Back to homework">
+          <ChevronLeft />
+        </IconButton>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">Problem set 4</span>
+        <Switcher>
+          <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden className="-rotate-90">
+            <circle cx="12" cy="12" r={r} fill="none" strokeWidth="3" stroke="currentColor" className="text-muted" />
+            <circle
+              cx="12"
+              cy="12"
+              r={r}
+              fill="none"
+              strokeWidth="3"
+              strokeLinecap="round"
+              stroke="currentColor"
+              className="text-primary"
+              strokeDasharray={c}
+              strokeDashoffset={c * (1 - DONE_FRACTION)}
+            />
+          </svg>
+          3 of 8 · 1 h 40 m
+        </Switcher>
+        <SetMenu />
+      </div>
+      <OptionBody />
+    </>
+  )
+}
 
 function Finish() {
   const hardest = Math.max(...MINUTES)
@@ -407,6 +552,31 @@ function Group({ title, note, children }: { title: string; note: string; childre
 export function HomeworkWireframes() {
   return (
     <div className="space-y-section">
+      <Group
+        title="Progress, four options"
+        note="The marks cost two rows and told you little beyond 3 of 8. In every option the count opens a list of the questions, which is how you jump now. Click the count."
+      >
+        <Frame title="A. In the header" note="Costs no extra row: the count sits in the header and its bottom edge is the bar. A long set title truncates.">
+          <Panel height={420}>
+            <ProgressA />
+          </Panel>
+        </Frame>
+        <Frame title="B. One slim row" note="Costs one 36px row: the count, a plain bar, the time left. Clearest, nothing truncates.">
+          <Panel height={420}>
+            <ProgressB />
+          </Panel>
+        </Frame>
+        <Frame title="C. Bar weighted by difficulty" note="Costs the same one row as B. Each question is as wide as it is hard, so the bar shows how much work is left, not how many questions. Without a difficulty index it is B.">
+          <Panel height={420}>
+            <ProgressC />
+          </Panel>
+        </Frame>
+        <Frame title="D. A ring in the header" note="Costs no extra row: a small ring with the count and time beside the title. A long set title truncates.">
+          <Panel height={420}>
+            <ProgressD />
+          </Panel>
+        </Frame>
+      </Group>
       <Group
         title="Walkthrough, panel width"
         note="The progress strip and the footer are pinned; only the middle scrolls. Lift a veil, open a menu, hover a segment: these are the real components."

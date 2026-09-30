@@ -23,7 +23,8 @@ For the student picking up homework after a long day of class, this view puts th
 | D7 | After the last question, a page that fills the pane: a greeting-style line (like Home's), total time and time per question, anything else a hardworking student who cares about their performance would want, and a Turn in button. | Jack: closes the loop the mission describes. | A quiet Turn in row; nothing; offer the next set |
 | D8 | Behind a click, not always shown: "Add your professor's instructions" and "Not the right problem? Show me where it is". | Jack: declutter. | Keeping them visible |
 | D10 | Choosing a question never moves the book: the student may have a page open beside it. A jump-to-the-problem button exists somewhere (its place is a layout question, gate 2); the always-visible page chip goes. | Jack: "selecting a question should not change where the book is". | Chip only when the scan is elsewhere; chip behind a menu; a quieter chip |
-| D12 | Progress marks are **segments in a strip**, full strip height as the tap target; done filled, current ringed, waiting hollow, failed in warning ink. | Real tap targets for jumping; scales to about 24 questions. | Numbered chips; dots |
+| ~~D12~~ | ~~Progress marks are **segments in a strip**~~ (reopened: Jack found them too tall for what they say; see D20 once chosen), full strip height as the tap target; done filled, current ringed, waiting hollow, failed in warning ink. | Real tap targets for jumping; scales to about 24 questions. | Numbered chips; dots |
+| D19 | **Professor's notes have one way in.** The question menu's "Edit the professor's instructions" ("Add" when there are none) is the only place to edit; the notes box is read-only. The box's Edit button goes. | Jack: two ways to edit or add; collapse into one. Notes are edited rarely, so a menu item is enough. | The Edit button on the box; both |
 | D13 | The jump button is **"Show in book"** on the question's label row, always visible, one tap. | It replaces the page chip's spot without the chip's clutter; "Show me where it is" already means boxing a wrong find. | Under the statement; on the figure only |
 | D14 | **Focus is two columns**: the question, the jump button and the notes pinned on the left, the three help stages scrolling on the right. | The problem never scrolls out of sight of its own walkthrough. | One wider column |
 | D15 | **Previous and Next arrows are removed.** Moving is the marks, the one button and the arrow keys when the panel has focus. | Fewest controls; the marks cover it. | Keep a Previous arrow; keep both |
@@ -98,6 +99,7 @@ For the student picking up homework after a long day of class, this view puts th
 - **G2** Page chip (D10): recommended keeping it in some form (one tap to the problem). Jack's answer changes the reason: the book may be open beside the panel, so the scan must not move on selecting a question; a jump button remains.
 
 ## Frontier
+- D20 (gate 2): the progress display: four options built at `/views/homework?mode=wireframes` (A in the header, B one slim row, C weighted by difficulty, D a ring). Awaiting the choice; with the marks gone, the count opens a list of the questions and is how you jump (revisits D12, D15).
 - Gate 2: awaiting the user's confirm of the wireframes.
 - Gate 3 (behavior and states) and gate 4 (data, backend, acceptance): not yet asked.
 
@@ -122,6 +124,8 @@ For the student picking up homework after a long day of class, this view puts th
 - Jump button: "On the question's label row (Recommended)".
 - Focus layout: "Two columns (Recommended)".
 - Arrows: "Remove them; marks and keyboard (Recommended)".
+### Gate 2, review of the wireframes
+- Jack: "there are two ways to edit/add prof notes. Collapse into one. Also what are some other options for the marks for each question? We already show 3 of 8 done, we have a glancable status. They take up a lot of room and don't add a ton of meaningful information, but I would like some sort of progress bar or something. Give me some options."
 ### Gate 2, wireframes redone
 - Jack: "Don't love the ascii wireframes, they are all butchered. I'd rather have you make wireframes using my own components." The wireframes were rebuilt from the real component library; the skills were updated to say so (grill/references/frontier.md, pset-view/references/grill-stages.md).
 ### Gate 2, batch 2
