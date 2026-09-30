@@ -266,36 +266,25 @@ function FocusWalkthrough() {
 
 const MINUTES = [18, 14, 41, 33, 9, 12, 27, 20]
 
-/** The count that opens the list of the questions: with the marks gone it is
- *  how you jump. A stand-in list, built from Box rows. */
-function Switcher({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false)
-  const rows: { q: string; state: Mark; word: string }[] = QUESTIONS.slice(0, 5).map((q, i) => ({
-    q,
-    state: OPEN[i],
-    word: OPEN[i] === 'done' ? 'Done' : OPEN[i] === 'current' ? 'Here' : 'Waiting',
-  }))
+const STATE_WORD: Record<Mark, string> = { done: 'Done', current: 'Here', waiting: 'Waiting', failed: 'Failed' }
+
+/** The count, which opens the list of the questions: with the marks gone it
+ *  is how you jump. The real Menu, with a labelled trigger and a current row. */
+function QuestionList({ marks }: { marks: Mark[] }) {
   return (
-    <span className="relative">
-      <Button variant="ghost" size="sm" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="tabular-nums">
-        {children}
-        <ChevronDown />
-      </Button>
-      {open && (
-        <Box className="absolute top-full left-0 z-10 mt-1 w-64 shadow-floating">
-          {rows.map((r) => (
-            <BoxRow
-              key={r.q}
-              selected={r.state === 'current'}
-              onClick={() => setOpen(false)}
-              leading={r.state === 'done' ? <Check className="text-success" /> : undefined}
-              title={r.q}
-              trailing={<span className="text-xs text-muted-foreground">{r.word}</span>}
-            />
-          ))}
-        </Box>
-      )}
-    </span>
+    <Menu label="Questions" trigger={doneOf(marks)}>
+      {QUESTIONS.map((q, i) => (
+        <MenuItem
+          key={q}
+          current={marks[i] === 'current'}
+          icon={marks[i] === 'done' ? <Check className="text-success!" /> : undefined}
+          hint={STATE_WORD[marks[i]]}
+          onSelect={() => {}}
+        >
+          {q}
+        </MenuItem>
+      ))}
+    </Menu>
   )
 }
 
@@ -318,7 +307,7 @@ function ProgressHeader({ marks, title = 'Problem set 4' }: { marks: Mark[]; tit
         <ChevronLeft />
       </IconButton>
       <span className="min-w-0 flex-1 truncate text-sm font-medium">{title}</span>
-      <Switcher>{doneOf(marks)}</Switcher>
+      <QuestionList marks={marks} />
       <span className="text-xs whitespace-nowrap text-muted-foreground tabular-nums">{TIME_LEFT}</span>
       <SetMenu />
       <WeightedBar marks={marks} className="absolute inset-x-0 -bottom-px" />
@@ -455,9 +444,9 @@ export function HomeworkWireframes() {
       </Group>
       <Group
         title="Walkthrough, panel width"
-        note="The progress strip and the footer are pinned; only the middle scrolls. Lift a veil, open a menu, hover a segment: these are the real components."
+        note="The header and the footer are pinned; only the middle scrolls. Lift a veil, open a menu, click the count: these are the real components."
       >
-        <Frame title="A question with a written guide" note="The one primary is Next question. Tapping a segment jumps to that question.">
+        <Frame title="A question with a written guide" note="The one primary is Next question. The count in the header opens the list of questions.">
           <Panel>
             <Walkthrough />
           </Panel>
@@ -469,7 +458,7 @@ export function HomeworkWireframes() {
         </Frame>
       </Group>
       <Group title="Focus, 800px" note="Two columns: the question stays pinned on the left while the help scrolls on the right.">
-        <Frame title="The panel in Focus" note="Strip and footer are unchanged.">
+        <Frame title="The panel in Focus" note="Header and footer are unchanged.">
           <Panel wide>
             <FocusWalkthrough />
           </Panel>
@@ -481,7 +470,7 @@ export function HomeworkWireframes() {
             <Finish />
           </Panel>
         </Frame>
-        <Frame title="The list" note="Each set carries the same strip and time left; tapping opens it on the first incomplete question.">
+        <Frame title="The list" note="Each set carries the same bar and time left; tapping opens it on the first incomplete question.">
           <Panel>
             <List />
           </Panel>
