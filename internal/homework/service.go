@@ -139,6 +139,7 @@ func New(c Config) *Service {
 	c.Queue.Handle(JobLocate, LaneQuestion, s.runLocate)
 	c.Queue.Handle(JobRead, LaneQuestion, s.runRead)
 	c.Queue.Handle(JobGuide, LaneQuestion, s.runGuide)
+	c.Queue.Handle(JobRank, LaneQuestion, s.runRank)
 	c.Queue.Handle(JobAssignment, LaneAssignment, s.runAssignmentRead)
 	return s
 }
@@ -303,6 +304,7 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 	for _, q := range qs {
 		s.c.Queue.StopSubject(ctx, q.ID)
 	}
+	s.c.Queue.StopSubject(ctx, id)
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM homework WHERE id = ?`, id); err != nil {
 		return err
 	}
@@ -379,6 +381,9 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 		s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: q})
 	}
 	s.publishSet(ctx, homeworkID)
+	// Questions not from the book have nothing to find: the set may be
+	// ready to rank already.
+	s.rankWhenFound(ctx, homeworkID)
 	s.c.Queue.Wake()
 	return out, nil
 }
@@ -630,6 +635,8 @@ func (s *Service) RemoveQuestion(ctx context.Context, id string) error {
 		}
 	}
 	s.publishSet(ctx, q.HomeworkID)
+	// Difficulty is against the rest of the set, so the rest is ranked again.
+	s.rankWhenFound(ctx, q.HomeworkID)
 	return nil
 }
 

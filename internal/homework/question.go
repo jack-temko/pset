@@ -164,6 +164,11 @@ func (s *Service) setFailed(ctx context.Context, id string, kind Failure, reason
 		return
 	}
 	s.publishQuestion(ctx, id)
+	// A find that failed was the last one the set was waiting on, maybe.
+	var set string
+	if s.c.DB.QueryRowContext(ctx, `SELECT homework_id FROM questions WHERE id = ?`, id).Scan(&set) == nil {
+		s.rankWhenFound(ctx, set)
+	}
 }
 
 func (s *Service) setState(ctx context.Context, id string, st State, reason string) {
@@ -246,6 +251,8 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 	// No Wake: the guide waits for this job's slot, and settling wakes
 	// the queue.
 	s.publishQuestion(ctx, q.ID)
+	// With the last of the set found, it can be ranked.
+	s.rankWhenFound(ctx, q.HomeworkID)
 	return nil
 }
 

@@ -186,6 +186,12 @@ export interface Question {
   revealed: string[];
   done: boolean;
   /**
+   * Difficulty is how hard it is against the rest of its set, 1 to 5,
+   * which gives it its share of the set's progress bar. Absent until
+   * the set has been ranked (rank.go).
+   */
+  difficulty?: number /* int */;
+  /**
    * UpdatedAt is when its state (or its statement, or a stage) last
    * changed: while it waits, when the wait began.
    */
