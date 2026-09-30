@@ -129,11 +129,11 @@ Last walked through 2026-09-30, on the redesigned view. The redesign closed the 
 | F10 | ready question | 14 controls are visible (13 is the target); the usage line's toggle is the extra one. | polish | accepted (post-build P2): the usage line stays | accepted |
 | F5 | waiting sentence | "Queued: it starts once the questions ahead of it are written" still gives no place in line and no time. | friction | "3rd in line", derived from the set's questions | open |
 | F6 | failed, unavailable | A second failure reads the same as the first. | friction | say it failed again (needs `attempts`, backend) | open |
-| F11 | time left | Shows only when the mock or the backend sends an estimate; until the real backend sends difficulty, seconds and an estimate, the bar is equal segments and there is no time. | friction | phase B of `ideas/homework-redesign.md` | open |
+| F11 | time left | Needs two finished, timed questions; before that the bar is weighted but there is no time, which is on purpose. | friction | none: it is the guard | accepted |
 
 ## wants
 
-- Backend (phase B): `difficulty` per question from a ranking step after find; `seconds` per question from study stretches tagged with the question; the set's `estimate` with `low` and `high`; `attempts` and `failedAt`; `timed` and a per-question `bar` on the list's summaries.
+- The ranking step has not been run on a real model yet (`rank_eval_test.go` needs the eval key). The estimate's calibration is simulated, not measured on real students.
 - Ask taking a context reference (a question id) on a turn, so the chip carries the whole question and not only its text.
 - The problem's position on its page, so Show in book can land on it (filed; needs an engine change).
 

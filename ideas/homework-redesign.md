@@ -96,7 +96,8 @@ Claude-only eval key, never the key in his own library.
   - Do: count a question's tries and record when it last failed (a migration); set them on retry and on failure; send `attempts` and `failedAt` on `Question`.
   - Done when: tests show the count rising on retry and the time set on failure; `make test` passes.
   - Built: migration `homework/16` (`attempts`, `failed_at`); a retry or pointing out a failed question counts an attempt; `failedAt` is sent only while failed. The failed block says "Tried once more and it failed again, 2 minutes ago" (and, for an outage, "It failed 5 minutes ago"); a waiting question says "It is 3rd in line" (derived in the view).
-- [ ] 15. (sonnet) Swap the mocks for the real backend
+- [x] 15. (sonnet) Swap the mocks for the real backend
   - Files: `web/src/api/homework.ts`, `web/src/views/homework/world.ts`, `web/src/views/homework/walkthrough.tsx`, `web/src/pages/workspace/index.tsx`
   - Do: the view reads the real `difficulty`, `seconds`, estimate, `attempts` and `failedAt`; the waiting and failed copy uses `attempts` and `failedAt`; queue place derived from the set's questions; the mock world keeps the same shapes for `/views`.
   - Done when: the view works on the real API with a scratch server (never port 8420) and on `/views`; the estimate guards hold; `make check` passes.
+  - Built: the view reads the generated types (no local stand-ins), queue place derived in the view, the mock keeps the same shapes. Verified end to end in Go (real activity service, real stretches, seconds and time left on the wire). **Not verified:** the real workspace with a real book (importing one needs a model key; a scratch server on 8499 refused without one), so the stretch-with-a-question code in `useStudyTime` is typechecked but not run against a server, and the ranking prompt has not met a real model.

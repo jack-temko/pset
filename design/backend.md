@@ -419,6 +419,32 @@ of the snapshot (a stretch being worked is saved every half-minute, so
 it runs a little behind). Only `homework` time is for a question; the
 week's totals are unchanged.
 
+## Homework progress (2026-09-30, the homework redesign)
+
+Three things the set's progress bar and time left rest on, all in
+`internal/homework`:
+
+- **Difficulty** (`rank.go`): one job per set, queued once no question is
+  left to find (every question is found before any guide is written) and
+  again when one is added or removed. One cheap call (the Reader) sees every
+  statement and scores each 1 to 5 against the others; its answer is read
+  strictly (every question once, whole numbers 1 to 5), else a heuristic from
+  length, parts, figures and math stands in. It never fails a question.
+  `difficulty` rides on the question. `rank_eval_test.go` runs the prompt on a
+  real model when `PSET_EVAL_KEY` is set.
+- **Time per question**: see "Time spent" above; `seconds` rides on the
+  question.
+- **The estimate** (`estimate.go`): seconds a point of difficulty took the
+  student, from finished questions of a minute or more (at least two), times
+  the difficulty left, less what a started question has had, never under a
+  quarter of it. The range comes from how much their questions varied, how few
+  finished and how few remain. `estimate`, `timed` and the list's `bar` ride on
+  the set. `estimate_test.go` simulates timed sets and checks the error and that
+  the truth falls in the range about nine times in ten; the client shows "about"
+  only when the range is narrow.
+- `attempts` and `failedAt` on a failed question: how many times it has been
+  tried again, and when it last failed.
+
 ## Logging
 
 `slog` to stderr. Every LLM request and response, with the model's

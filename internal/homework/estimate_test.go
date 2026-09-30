@@ -1,12 +1,16 @@
 package homework
 
 import (
+	"context"
 	"math"
 	"math/rand"
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/jackt/pset/internal/activity"
+	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/llm/llmtest"
 )
 
@@ -230,5 +234,49 @@ func TestSetsCarryTheirBarAndTheTimeLeft(t *testing.T) {
 	}
 	if !sawEstimate {
 		t.Fatal("no homework.changed event carried the estimate")
+	}
+}
+
+// The real thing end to end: stretches saved through the activity service,
+// read back as a question's seconds and a set's time left.
+func TestTimeLeftFromRealStretches(t *testing.T) {
+	e := newEnv(t)
+	e.llm.Fallback(ranker(func(string) llmtest.Reply { return llmtest.Reply{Text: "no scores"} }))
+	clock := activity.New(e.svc.c.DB, nil)
+	if err := db.Migrate(context.Background(), e.svc.c.DB, activity.Migrations()); err != nil {
+		t.Fatal(err)
+	}
+	e.svc.c.Time = clock
+	h := e.newSet(t)
+	qs := e.add(t, h.ID, Draft{Text: "One, written here.", InBook: false}, Draft{Text: "Two, written here.", InBook: false},
+		Draft{Text: "Three, written here.", InBook: false}, Draft{Text: "Four, written here.", InBook: false})
+	for _, q := range qs {
+		e.wait(t, q.ID, StateReady)
+		e.difficulty(t, q.ID)
+	}
+	for i, d := range []int{2, 2, 4, 1} {
+		e.svc.c.DB.Exec(`UPDATE questions SET difficulty = ? WHERE id = ?`, d, qs[i].ID)
+	}
+	start := time.Now().UTC().Add(-2 * time.Hour)
+	at := func(m int) string { return start.Add(time.Duration(m) * time.Minute).Format(time.RFC3339) }
+	for i, s := range []activity.Stretch{
+		{ID: "s1", BookID: "b1", Kind: activity.KindHomework, Started: at(0), Ended: at(10), QuestionID: qs[0].ID},
+		{ID: "s2", BookID: "b1", Kind: activity.KindHomework, Started: at(10), Ended: at(20), QuestionID: qs[1].ID},
+		{ID: "s3", BookID: "b1", Kind: activity.KindHomework, Started: at(20), Ended: at(25)},
+	} {
+		if err := clock.Save(context.Background(), s); err != nil {
+			t.Fatalf("stretch %d: %v", i, err)
+		}
+	}
+	yes := true
+	e.do(t, "PATCH", "/api/questions/"+qs[0].ID, QuestionPatch{Done: &yes}, nil)
+	e.do(t, "PATCH", "/api/questions/"+qs[1].ID, QuestionPatch{Done: &yes}, nil)
+	var d Detail
+	e.do(t, "GET", "/api/homework/"+h.ID, nil, &d)
+	if d.Questions[0].Seconds != 600 || d.Questions[1].Seconds != 600 || d.Questions[2].Seconds != 0 {
+		t.Fatalf("seconds %d %d %d, want 600 600 0 (the stretch with no question is for none)", d.Questions[0].Seconds, d.Questions[1].Seconds, d.Questions[2].Seconds)
+	}
+	if est := d.Homework.Estimate; est == nil || est.Seconds != 1500 || d.Homework.Timed != 2 {
+		t.Fatalf("estimate %+v timed %d, want 1500 s from 2", est, d.Homework.Timed)
 	}
 }
