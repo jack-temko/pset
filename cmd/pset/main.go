@@ -147,6 +147,15 @@ func serve(addr, dir string, log *slog.Logger) error {
 	mux.HandleFunc("/api/", httpx.NotFoundAPI)
 	mux.Handle("/", httpx.SPAFrom(web.Dist, "dist"))
 
+	// The port is taken before the queue starts: a second copy on the same
+	// data would otherwise put the first one's running jobs back to queued,
+	// and start them again, before finding the port busy.
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("listen on %s: %w", addr, err)
+	}
+	defer ln.Close()
+
 	runCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	queueDone := make(chan struct{})
@@ -165,10 +174,6 @@ func serve(addr, dir string, log *slog.Logger) error {
 		Handler:           httpx.LocalOnly(addr, mux),
 		ReadHeaderTimeout: 10 * time.Second,
 		BaseContext:       func(net.Listener) context.Context { return handlerCtx },
-	}
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		return fmt.Errorf("listen on %s: %w", addr, err)
 	}
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- srv.Serve(ln) }()
