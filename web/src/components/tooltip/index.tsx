@@ -30,8 +30,9 @@ export function Tooltip({
   children,
 }: {
   label: string
-  /** `left` for targets pinned to a pane's right edge. */
-  side?: 'top' | 'left'
+  /** `left` for targets pinned to a pane's right edge, `bottom` for
+   *  ones in the top bar. */
+  side?: 'top' | 'left' | 'bottom'
   children: ReactElement<Handlers>
 }) {
   const id = useId()
@@ -42,7 +43,9 @@ export function Tooltip({
     setAt(
       side === 'top'
         ? { x: r.left + r.width / 2, y: r.top, delay }
-        : { x: r.left, y: r.top + r.height / 2, delay },
+        : side === 'bottom'
+          ? { x: r.left + r.width / 2, y: r.bottom, delay }
+          : { x: r.left, y: r.top + r.height / 2, delay },
     )
   }
   const hide = () => setAt(null)
@@ -69,7 +72,11 @@ export function Tooltip({
             'transition-opacity duration-150 ease-out motion-reduce:transition-none',
             at ? 'opacity-100' : 'invisible opacity-0',
             at?.delay && 'delay-300',
-            side === 'top' ? '-mt-2 -translate-x-1/2 -translate-y-full' : '-ml-2 -translate-x-full -translate-y-1/2',
+            side === 'top'
+              ? '-mt-2 -translate-x-1/2 -translate-y-full'
+              : side === 'bottom'
+                ? 'mt-2 -translate-x-1/2'
+                : '-ml-2 -translate-x-full -translate-y-1/2',
           )}
         >
           {label}

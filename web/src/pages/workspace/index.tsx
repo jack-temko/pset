@@ -93,7 +93,8 @@ import {
 import { AnswersOf, BlockSkeleton, Document, Runs } from '@/components/document'
 import { runsSource, runsText } from '@/components/document/runs'
 import { answersOf } from '@/components/document/tree'
-import { useHeartbeat, type Kind as ActivityKind } from '@/api/activity'
+import { useStudyTime, type Kind as ActivityKind } from '@/api/activity'
+import { StudyTimer } from './study-timer'
 import { useAsk, useClearTurns, useStopTurn, useTurns, type About, type LiveTurn } from '@/api/ask'
 import { dueLine, dueStatus } from '@/lib/due'
 import { useTimeLeft } from '@/lib/eta'
@@ -1687,7 +1688,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   // Time counts toward what you last touched: the panel's tab, or the
   // book itself.
   const activity = useRef<ActivityKind>('reading')
-  useHeartbeat(book.id, () => activity.current)
+  const study = useStudyTime(book.id, () => activity.current)
 
   return (
     <Pages value={pages}>
@@ -1727,6 +1728,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                     Remove book
                   </MenuConfirmItem>
                 </Menu>
+                <StudyTimer time={study} />
               </span>
             }
           >
