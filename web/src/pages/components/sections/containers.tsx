@@ -3,6 +3,7 @@ import { BookOpen } from 'lucide-react'
 import { BookCover, CoverPicker } from '@/components/book-cover'
 import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@/components/box'
 import { Button } from '@/components/button'
+import { Disclosure } from '@/components/disclosure'
 import { ImportRow } from '@/components/import-row'
 import { Door } from '@/components/door'
 import { HomeworkStatusLabel } from '@/components/homework-status'
@@ -44,6 +45,25 @@ function CoverPickerDemo() {
 observe('book:b89d3b72', 'import:read', { done: 100, total: 312 }, Date.now() - 60_000)
 
 observe('book:b89d3b72', 'import:read', { done: 140, total: 312 }, Date.now())
+
+/** Rows that open in place, as a question's help does. */
+function DisclosureDemo() {
+  const [open, setOpen] = useState<string | null>('Hint')
+  const rows = [
+    ['Hint', '2 lines', 'Go around the loop once and write that the voltage rises equal the drops.'],
+    ['Walkthrough', '5 steps', 'Going clockwise, the source gives a rise of 10 V and the two resistors are drops.'],
+    ['Answers', '2 answers', 'i = 0.83 A clockwise; P = 5.6 W.'],
+  ]
+  return (
+    <Box className="w-panel">
+      {rows.map(([title, meta, body]) => (
+        <Disclosure key={title} title={title} meta={meta} open={open === title} onOpenChange={(o) => setOpen(o ? title : null)}>
+          <p>{body}</p>
+        </Disclosure>
+      ))}
+    </Box>
+  )
+}
 
 export const containersSections: ComponentEntry[] = [
   {
@@ -249,6 +269,27 @@ export const containersSections: ComponentEntry[] = [
           <div className="grid w-full max-w-2xl grid-cols-3 gap-4">
             <StatTile label="Homework" chart={1} value="0" context="nothing yet this week" />
           </div>
+        </Shelf>
+      </>
+    ),
+  },
+  {
+    id: 'disclosure',
+    title: 'Disclosure',
+    group: 'Containers',
+    note: 'A row that opens its content in place and says how long it is. It stays open; a tap closes it.',
+    docs: ['disclosure'],
+    Demo: () => (
+      <>
+        <Shelf label="rows in a Box">
+          <DisclosureDemo />
+        </Shelf>
+        <Shelf label="still being written">
+          <Box className="w-panel">
+            <Disclosure title="Walkthrough" busy="Writing" open={false} onOpenChange={() => {}}>
+              <p />
+            </Disclosure>
+          </Box>
         </Shelf>
       </>
     ),

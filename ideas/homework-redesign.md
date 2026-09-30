@@ -38,11 +38,11 @@ Claude-only eval key, never the key in his own library.
   - Files: `web/src/components/menu/index.tsx`, `web/src/components/menu/README.md`, `web/src/views/homework/wireframes.tsx`, `web/src/pages/components/sections/overlays.tsx`
   - Do: build two or three live variants of the menu on the wireframes page: a hover that does not fill the whole row (an inset pill, a left accent, a content-width wash), and a card that reads as attached to its dropdown (flush under the trigger with a shared edge, a caret, or aligned with the trigger kept tinted). Measure the contrast of every color involved (hover, current, icon, text, border, shadow) in both themes against the design system's floors and report the numbers. Ask Jack to choose; apply the winner to `Menu` and its README.
   - Done when: Jack has chosen from the live page, the contrast numbers are in the README, every menu in the app (book menu, homework menus, `/components`) looks right in both themes, and `npm run build` and the tests pass.
-- [ ] 2. (sonnet) A disclosure row that opens in place, and the Veil removed
+- [x] 2. (sonnet) A disclosure row that opens in place, and the Veil removed
   - Files: `web/src/components/disclosure/index.tsx`, `web/src/components/disclosure/README.md`, `web/src/pages/components/sections/feedback.tsx`, `web/src/pages/components/sections/containers.tsx`, `web/src/components/veil/index.tsx`
   - Do: promote the wireframes' `Help` rows to a `Disclosure` component (a row with a title and a meta on the right that opens its content in place and stays open; `writing` state with a spinner that cannot open). Delete `components/veil` and its `/components` section; remove the mentions in `design/design-system.md`, `design/workspace.md` and the READMEs that point at it.
   - Done when: nothing imports `@/components/veil`; `/components` shows Disclosure with its README; typecheck, tests, lint and build pass.
-- [ ] 3. (sonnet) A difficulty-weighted progress bar component
+- [x] 3. (sonnet) A difficulty-weighted progress bar component
   - Files: `web/src/components/progress-bar/index.tsx`, `web/src/components/progress-bar/README.md`, `web/src/components/progress-bar/progress-bar.test.ts`, `web/src/pages/components/sections/feedback.tsx`
   - Do: promote the wireframes' `WeightedBar` (segments as wide as their weight; done, current, waiting, failed; equal widths when there is no weight; not a control). Test the width math and the fallback.
   - Done when: it is on `/components` in both themes; tests, typecheck and build pass.

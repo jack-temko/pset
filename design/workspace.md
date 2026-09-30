@@ -462,7 +462,7 @@ built.
   on as any found question does; a new one opens in the walkthrough.
 - **Scan jumps on demand**: a page chip in the question header; opening a
   question never moves the scan by itself.
-- **Three stages, all veiled**: *hint*, *walkthrough* and *answers*
+- **Three stages, all veiled** *(superseded 2026-09-30: rows that open in place, the Veil removed; web/src/views/homework/grill.md, D23 and R9)*: *hint*, *walkthrough* and *answers*
   (2026-09-29): the walkthrough carries the working, and the Answers
   veil collects every part's `answer` block, so a student can check
   paper work without seeing the working. Each sits behind frosted glass

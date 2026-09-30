@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Pencil, Plus, Printer, SquareDashedMousePointer, Trash2 } from 'lucide-react'
 import { Checkbox } from '@/components/checkbox'
 import { Button, IconButton } from '@/components/button'
 import { PageRef } from '@/components/transcript'
-import { Veil } from '@/components/veil'
 import { Label } from '@/components/label'
 import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
 import { ConfirmPopover } from '@/components/confirm'
@@ -17,39 +16,15 @@ import { FigureReading } from '@/pages/workspace/reading'
 import { ProfessorNotes } from '@/pages/workspace/notes'
 import { useBoxing } from '@/pages/workspace/boxing-state'
 import { figureURL, outstanding, questionStep, toFind, useHomeworkSet, useRemoveQuestion, useRedoReading, useRetryQuestion, useWriteGuide, useUpdateHomework, useUpdateQuestion, worksheetURL, type Question } from '@/api/homework'
-import { AnswersOf, Document, Runs } from '@/components/document'
+import { Runs } from '@/components/document'
 import { runsSource, runsText } from '@/components/document/runs'
-import { answersOf } from '@/components/document/tree'
 import type { About } from '@/api/ask'
 import { useTimeLeft } from '@/lib/eta'
 import { PageMap, usePages } from '@/lib/pages'
 import { useSettled } from '@/lib/settled'
 import { cn, plural } from '@/lib/utils'
 import { FailedQuestion } from './failed-question'
-
-/** A stage of the guide: the content is there from the start, behind
- *  frosted glass. One click lifts the veil: no buttons to sequence, and
- *  nothing spoiled by accident. */
-function Stage({
-  label,
-  revealed,
-  onReveal,
-  children,
-}: {
-  label: string
-  revealed: boolean
-  onReveal: () => void
-  children: ReactNode
-}) {
-  return (
-    <div className="space-y-1">
-      <p className="text-xs text-muted-foreground uppercase">{label}</p>
-      <Veil label={`Show ${label}`} revealed={revealed} onReveal={onReveal}>
-        <div className="space-y-3 text-base">{children}</div>
-      </Veil>
-    </div>
-  )
-}
+import { HelpRows } from './help'
 
 const STAGE_NAMES = ['hint', 'walkthrough', 'answers'] as const
 
@@ -460,29 +435,13 @@ export function Walkthrough({
                 </Button>
               </div>
             ) : (
-              STAGE_NAMES.map((name) => {
-                const blocks = name === 'hint' ? q.hint : q.walkthrough
-                // Each stage fills in as it's written: the hint can be
-                // there while the walkthrough is still a skeleton. The
-                // answers are the walkthrough's answer blocks, so they
-                // arrive with it.
-                if (blocks.length === 0) return <StageSkeleton key={name} name={name} still={still} />
-                if (name === 'answers' && answersOf(blocks).length === 0) return null
-                return (
-                  <Stage
-                    key={name}
-                    label={name}
-                    revealed={q.revealed.includes(name)}
-                    onReveal={() => update.mutate({ id: q.id, patch: { reveal: name } })}
-                  >
-                    {name === 'answers' ? (
-                      <AnswersOf blocks={q.walkthrough} onJump={onJump} />
-                    ) : (
-                      <Document blocks={blocks} onJump={onJump} reading />
-                    )}
-                  </Stage>
-                )
-              })
+              <HelpRows
+                key={q.id}
+                q={q}
+                queued={queued}
+                onReveal={(name) => update.mutate({ id: q.id, patch: { reveal: name } })}
+                onJump={onJump}
+              />
             )}
             {set && <MemoryLines bookId={set.bookId} lines={q.memory} />}
             {/* What the whole production spent — find, figure read, guide
