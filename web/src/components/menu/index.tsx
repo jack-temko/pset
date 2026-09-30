@@ -178,7 +178,7 @@ export function Menu({
             // A padded card: rows sit inside it as inset, rounded washes, and
             // the card is a large floating surface, so radius-lg and the shadow.
             className={cn(
-              'fixed z-50 min-w-60 overflow-y-auto rounded-lg border bg-card p-1 shadow-floating transition duration-100 ease-out motion-reduce:transition-none',
+              'fixed z-50 min-w-64 overflow-y-auto rounded-lg border bg-card p-1 shadow-floating transition duration-100 ease-out motion-reduce:transition-none',
               side === 'start' ? 'origin-top-left' : 'origin-top-right',
               shown ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
             )}

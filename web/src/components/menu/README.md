@@ -5,7 +5,7 @@ ghost "⋯" `IconButton` opens a floating card of rows beneath it,
 right-aligned to the trigger.
 
 - **The card** is `card` with a hairline border and `shadow-floating`, **radius-lg** (a large floating
-  surface), 4px of padding, and a 240px minimum width. Rows sit inside it as **inset, rounded
+  surface), 4px of padding, and a 256px minimum width. Rows sit inside it as **inset, rounded
   washes**, so the card reads as a surface holding rows and not as a stack of full-bleed stripes.
   It eases in (a 100ms fade and settle from its trigger's corner, none under reduced motion) and
   scrolls inside itself when it is taller than the room below.
@@ -46,7 +46,7 @@ the rest); nest menus; put a form or anything that needs typing in one
 
 - **Redesigned** (2026-09-30, Jack, in the homework redesign): "slightly more modern and larger",
   and the same in every dropdown. Rows went from 32px to 40px, the minimum width from 192px to
-  240px, the card from radius-md to radius-lg, and rows became inset rounded washes with the
+  256px, the card from radius-md to radius-lg, and rows became inset rounded washes with the
   card padded 4px. **This reverses the earlier "no padding" rule**: the edge-to-edge wash was
   chosen so no strip of the card was dead to the pointer, and the 4px inset now is dead. The
   trade was made knowingly, for the modern look. Hover is the full `muted` wash now (rows are
