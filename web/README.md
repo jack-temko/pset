@@ -24,8 +24,9 @@ src/api/         one file per backend feature: queries, mutations, and the
                  SSE handlers that patch the cache (events.ts owns the stream)
 src/api/gen/     TS types generated from the Go wire.go files (make gen); never edit
 src/components/  the design system: one folder per component, each with a README
-src/pages/       the three screens (home, workspace, settings) and /components,
-                 a page showing every component and variant
+src/pages/       the three screens (home, workspace, settings), /components
+                 (every component and variant, a section at a time) and the
+                 gallery frame it shares with /views (gallery/)
 src/lib/         small pure helpers (page numbers, due dates, theme, covers)
 ```
 
