@@ -75,6 +75,5 @@ server, a migration from one rect to a list. It needs a spec in
 
 ### Open
 
-- Whether a box's kind (text or figure) is chosen, or read by the model.
-- Whether boxing several problems at once, in a row, adds each as its
-  own question.
+Both were answered as built; the answers are for Jack to confirm, in
+[loose-ends.md](loose-ends.md#from-the-finished-ideas).
