@@ -24,6 +24,17 @@ bar's middle names the book.
   walkthrough); the scan shrinks but stays visible. The toggle sits right of the panel's tabs.
 - The panel is always open, and remembers **per book** which tab it showed.
 
+## Time
+
+**The top bar shows this sitting's time** (2026-09-29), after the book's
+menu, quiet: mono, small, muted. "Studying · 42m" while it counts,
+"Paused · 42m" when it doesn't, so the student can see it counts and
+trust the week Home reports. It pauses after 5 minutes without a click
+or a key, or 20 with a homework question open, since that's worked on
+paper, and picks up at the next one. The tooltip, below it, says so.
+How it's counted: design/backend.md, "Time spent is stretches of
+study".
+
 ## Page numbers
 
 **The app speaks the printed page number everywhere** (2026-09-21): page

@@ -9,11 +9,16 @@ const (
 	KindAsking   Kind = "asking"
 )
 
-// Heartbeat is POST /api/heartbeat: the workspace sends one every 30
-// seconds while it's visible and the student has touched it recently.
-type Heartbeat struct {
-	BookID string `json:"bookId"`
-	Kind   Kind   `json:"kind"`
+// Stretch is POST /api/study: a stretch of study in one book at one
+// kind of thing, from started to ended (RFC 3339). The workspace makes
+// up its id when the stretch begins and sends it again, with a later
+// end, every half-minute and once more as the tab goes.
+type Stretch struct {
+	ID      string `json:"id"`
+	BookID  string `json:"bookId"`
+	Kind    Kind   `json:"kind"`
+	Started string `json:"started"`
+	Ended   string `json:"ended"`
 }
 
 // BookMinutes is one book's share of the week.

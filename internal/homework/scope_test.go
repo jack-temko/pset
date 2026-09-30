@@ -120,3 +120,25 @@ func TestAddSplitsARowIntoItsProblems(t *testing.T) {
 		t.Fatalf("labels %q, texts %q", labels, texts)
 	}
 }
+
+// The Reader is told which problem to write out as the book would say it,
+// since a page can hold more than one section's problem 12.
+func TestStatementName(t *testing.T) {
+	local := Book{Problems: probnum.Style{Form: probnum.FormLocal, Where: probnum.WhereSection, Heading: "Problems"}}
+	chapter := Book{Problems: probnum.Style{Form: probnum.FormChapter, Where: probnum.WhereChapter}}
+	for _, c := range []struct {
+		book  Book
+		q     row
+		label string
+		want  string
+	}{
+		{local, row{Question: Question{Text: "1.1 #12", InBook: true}}, "12", "section 1.1's problem 12"},
+		{chapter, row{Question: Question{Text: "4.72", InBook: true}}, "4.72", "problem 4.72"},
+		{chapter, row{Question: Question{Text: "the ladder one", InBook: true}}, "3.36", "problem 3.36"},
+		{chapter, row{Question: Question{Text: "the ladder one", InBook: true}}, "", "this question"},
+	} {
+		if got := statementName(c.book, location{Label: c.label}, c.q); got != c.want {
+			t.Errorf("%q: %q, want %q", c.q.Text, got, c.want)
+		}
+	}
+}

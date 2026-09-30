@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -251,11 +252,17 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 			Rect  *pdf.Rect `json:"rect"`
 		} `json:"figures"`
 	}
-	if err := json.Unmarshal([]byte(llm.Unfence(reply)), &pin); err != nil {
+	if err := decodeReply(reply, &pin); err != nil {
 		slog.Warn("locate: reply wasn't JSON", "question", q.ID, "err", err)
 		return location{}, false, nil
 	}
 	if pin.Image < 1 || pin.Image > len(order) {
+		return location{}, false, nil
+	}
+	// A page that only mentions the problem ("See Problem 14") isn't it:
+	// the number the Finder read must be the one asked for.
+	if ref, ok := questionRef(book, q); ok && !sameNumber(pin.Label, ref.Number) {
+		slog.Info("locate: the problem found has another number", "question", q.ID, "label", pin.Label, "want", ref.Number)
 		return location{}, false, nil
 	}
 	loc := location{Page: order[pin.Image-1], Label: strings.TrimSpace(pin.Label)}
@@ -274,18 +281,102 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 		}
 		return pdf.SnapToBlocks(page, f), true
 	}
+	fitFigure := func(r *pdf.Rect) (pdf.Rect, bool) {
+		f, ok := fit(r)
+		return f, ok && bigEnough(f)
+	}
 	if r, ok := fit(pin.Rect); ok {
 		loc.Rect = &r
 	}
 	for _, f := range pin.Figures {
-		if r, ok := fit(f.Rect); ok && len(loc.Figures) < maxFigures {
+		if r, ok := fitFigure(f.Rect); ok && len(loc.Figures) < maxFigures {
 			loc.Figures = append(loc.Figures, figure{Label: strings.TrimSpace(f.Label), Rect: r})
 		}
 	}
 	if loc.Statement, err = s.writeOut(ctx, m, book, loc, urls[pin.Image-1], q); err != nil {
 		return location{}, false, err
 	}
+	loc.Figures = s.checkFigures(ctx, m, book, q, loc)
+	if r, ok := s.wholeText(ctx, m, book, q, loc, urls[pin.Image-1], page); ok {
+		loc.Rect = &r
+	}
 	return loc, true, nil
+}
+
+// bigEnough is a box that can hold a figure: the Finder has boxed the
+// words "Figure 7.1.4" in a problem's text and called that the figure.
+func bigEnough(r pdf.Rect) bool { return r.W >= 0.06 && r.H >= 0.04 }
+
+// sameNumber is whether a label the Finder read ("7.1 #14", "*4.68",
+// "14.") ends in the problem's number.
+func sameNumber(label, number string) bool {
+	nums := labelDigits.FindAllString(label, -1)
+	return len(nums) > 0 && strings.TrimLeft(nums[len(nums)-1], "0") == strings.TrimLeft(number, "0")
+}
+
+var labelDigits = regexp.MustCompile(`\d+`)
+
+// decodeReply reads a model's JSON reply, and when it doesn't parse, once
+// more with its brackets balanced: the Finder now and then closes a list
+// with a brace ("}}}" for "}]}"), and a find lost to that was found
+// again, wrongly, on a page that only mentioned the problem.
+func decodeReply(reply string, v any) error {
+	s := llm.Unfence(reply)
+	err := json.Unmarshal([]byte(s), v)
+	if err == nil {
+		return nil
+	}
+	if fixed, changed := balance(s); changed && json.Unmarshal([]byte(fixed), v) == nil {
+		return nil
+	}
+	return err
+}
+
+// balance closes what a JSON text leaves open, and whatever a closer
+// skips past: each } or ] first closes what's open inside it.
+func balance(s string) (string, bool) {
+	var b strings.Builder
+	var open []byte
+	inString, escaped, changed := false, false, false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if inString {
+			b.WriteByte(c)
+			switch {
+			case escaped:
+				escaped = false
+			case c == '\\':
+				escaped = true
+			case c == '"':
+				inString = false
+			}
+			continue
+		}
+		switch c {
+		case '"':
+			inString = true
+		case '{':
+			open = append(open, '}')
+		case '[':
+			open = append(open, ']')
+		case '}', ']':
+			for len(open) > 0 && open[len(open)-1] != c {
+				b.WriteByte(open[len(open)-1])
+				open, changed = open[:len(open)-1], true
+			}
+			if len(open) == 0 {
+				changed = true
+				continue
+			}
+			open = open[:len(open)-1]
+		}
+		b.WriteByte(c)
+	}
+	for len(open) > 0 {
+		b.WriteByte(open[len(open)-1])
+		open, changed = open[:len(open)-1], true
+	}
+	return b.String(), changed
 }
 
 // locateWidth is how wide the pages are shown to the Finder.
@@ -304,14 +395,23 @@ func fractions(r pdf.Rect) pdf.Rect {
 	return pdf.Rect{X: f(r.X), Y: f(r.Y), W: f(r.W), H: f(r.H)}
 }
 
+// statementName is the problem the Reader writes out, as the book would
+// say it: "section 1.1's problem 12", on a page where more than one
+// section's problems can share a number.
+func statementName(book Book, loc location, q row) string {
+	if ref, ok := questionRef(book, q); ok {
+		return ref.Name(book.Problems)
+	}
+	if loc.Label != "" {
+		return "problem " + loc.Label
+	}
+	return problemName(q)
+}
+
 // writeOut is a found problem's words, read off its page by the Reader.
 func (s *Service) writeOut(ctx context.Context, m model, book Book, loc location, pageURL string, q row) (string, error) {
-	name := loc.Label
-	if name == "" {
-		name = problemName(q)
-	}
 	content := llm.PartsContent(
-		llm.TextPart(fmt.Sprintf("Problem %s, on %s:", name, book.Pages.Name(loc.Page))),
+		llm.TextPart(fmt.Sprintf("Write out %s, on %s:", statementName(book, loc, q), book.Pages.Name(loc.Page))),
 		llm.ImagePart(pageURL),
 	)
 	reply, err := m.client.ChatOnce(ctx, llm.Reader.Ask(llm.ChatRequest{ReasoningEffort: "low", Messages: []llm.Message{

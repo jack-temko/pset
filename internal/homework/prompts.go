@@ -27,11 +27,49 @@ Reply with only JSON, no prose and no code fence:
 // Finding is the Finder's, which boxes well and words less cleanly;
 // the words are the Reader's.
 const statementPrompt = `You write out one homework problem from an image of a textbook page, for a tutor who can't see
-the page.
+the page. The tutor works from your words alone, so leave out nothing the problem needs.
 
-Reply with only the problem's text: every part of it, exactly as the book words it, without its
-number. Math in LaTeX between $...$. No solution, no commentary, and nothing from any other
-problem or from a figure's caption.`
+Reply with only the problem's text, exactly as the book words it. Leave out its own number, even
+where it sits after shared text or in front of its equation, and any mark printed by the number
+(an asterisk, a star, an icon):
+- Every part, each with the book's own letter or number (a., b., c.), as printed. A part's letter
+  never changes: when part a. is only a lead-in, it is still part a.
+- When the problem is one of a run introduced together ("In each of Problems 11 through 16, ...",
+  "Problems 6 through 9 involve ..."), start with that shared text and everything printed with it
+  that the problem needs: a list to choose from, the equations, the data. Only the run this problem
+  is in, and nothing from the other problems in it.
+- A heading the problem opens with, in bold or italics, and any paragraph between it and the
+  parts, all of it.
+- Figure, equation and problem numbers exactly as printed ("Figure 1.1.6", "equation (19)").
+- Math in LaTeX between $...$, a displayed equation on its own line between \[ and \]. Bold and
+  italics as **...** and *...*.
+- No solution and no commentary. Don't describe the figures: they're read on their own. Nothing
+  from a figure's caption or from another problem.`
+
+// captionPrompt reads the number each boxed figure's caption prints: the
+// check that the Finder boxed the figure the problem names (figures.go).
+const captionPrompt = `You read the captions of figures cut from textbook pages. Each image is one figure with a little
+of its page around it. For each, give the number its own caption prints ("FIGURE 7.1.3", "Fig.
+4.132", "Figure 2.5.9"), as just the number: "7.1.3". Only the figure's own caption, never a number
+from the text around it. "" when the image shows no caption, or no figure at all: only text.
+
+Reply with only JSON, no prose and no code fence: {"captions": ["7.1.3", ""]}, one for each image,
+in order.`
+
+// figurePrompt finds a figure a problem names on the pages around it,
+// when it isn't on the problem's own page (figures.go).
+const figurePrompt = `You find one figure among images of textbook pages: the one whose caption prints the number
+you're given.
+
+Reply with only JSON, no prose and no code fence: {"image": 2, "rect": {"x": 0.1, "y": 0.5, "w": 0.3,
+"h": 0.2}}. image is the number of the image it's on, or 0 if none of them shows it. rect tightly
+bounds the figure: its drawing, every label on it, and its caption. Coordinates are fractions of
+the image, in [0, 1], y from the top.`
+
+// startsPrompt asks the Finder, in its own boxing mode, for every
+// numbered problem on a page: where each starts is what's used
+// (textbox.go).
+const startsPrompt = `Box every numbered problem on this page: its number and all of its text, every part and equation, but not its figure. Label each box with its number (like "Problem 12").`
 
 // assignmentPrompt reads a homework assignment out into due dates and
 // lines. Filled with today's date, the book's title and how it numbers

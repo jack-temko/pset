@@ -65,6 +65,7 @@ import { AssignmentReview, AssignmentSourceFields } from '@/pages/workspace/add-
 import { AssignmentReadRow } from '@/pages/workspace/assignment-reads'
 import { QuestionRows, emptyRow, type QuestionRow } from '@/pages/workspace/dialogs'
 import { FigureReading } from '@/pages/workspace/reading'
+import { StudyTimer } from '@/pages/workspace/study-timer'
 import { reviewOf } from '@/pages/workspace/import-state'
 import type { Style } from '@/api/gen/probnum'
 import type { AssignmentRead, Question } from '@/api/homework'
@@ -1234,6 +1235,18 @@ export function Components() {
               <p>An eigenvalue is a scalar λ for which some nonzero vector</p>
               <StoppedNote />
             </div>
+          </Shelf>
+        </Section>
+
+        <Section
+          title="Study timer"
+          note="In the workspace's top bar, after the book's menu: this sitting's time, counting toward the week. It pauses after 5 minutes without a click or a key, 20 with a homework question open, and a pause counts only up to a minute after the last input."
+        >
+          <Shelf label="counting">
+            <StudyTimer time={{ counting: true, seconds: 42 * 60 + 17 }} />
+          </Shelf>
+          <Shelf label="paused">
+            <StudyTimer time={{ counting: false, seconds: 65 * 60 }} />
           </Shelf>
         </Section>
 
