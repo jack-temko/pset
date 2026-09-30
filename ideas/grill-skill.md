@@ -2,9 +2,24 @@
 
 ## Status
 
-**Planned** (2026-09-30), on branch `grill-skill` (design only, nothing built).
-Grilled with Jack the way the skill will grill: audit, a weighted frontier, four
-questions a batch, recommendation first. Waiting for Jack's OK to build.
+**In progress** (2026-09-30), on branch `grill-skill`. Grilled with Jack the way the
+skill grills: audit, a weighted frontier, four questions a batch, recommendation first.
+Tasks 1 to 4 are built (not merged: Jack is asked before any merge); task 5, the first
+real grill, is a redesign of the homework panel with Jack.
+
+## Two skills (Jack, 2026-09-30)
+
+- **`grill`** (`.agents/skills/grill/`) is generic and knows nothing about views. It
+  interviews the user about anything (a redesign, a feature, what to remove, an
+  architecture choice, positioning or marketing) and writes the one-page spec. It has
+  starter packs for those topics in `references/packs.md` and takes a **brief**.
+- **`pset-view`** (`.agents/skills/pset-view/`, keeps its name) owns the view gates and
+  the three modes, and calls `grill`, handing it the brief in
+  `references/grill-stages.md`.
+
+The interface is the brief: `topic`, `output` path, `viewpoint`, `locked` decisions
+(with where they are written), and `stages` (gates, each with seeds, an artifact and an
+exit test). `grill` returns a `grill.md` and stops for the user's OK; `pset-view` builds.
 
 ## Summary (glance)
 
@@ -82,13 +97,15 @@ the fix. For a redesign the decisions come first and are Jack's, so they are ask
 in the order that cheapens the rest, and written down once. The same reasoning as
 `ideas/README.md`'s grills, made repeatable.
 
-What the skill is made of:
+What the skills are made of:
 
 ```
 .agents/skills/grill/
   SKILL.md                     the loop, the rules, when it stops
   references/frontier.md       building and weighting the frontier; question craft
   references/grill-file.md     the grill.md format, heading by heading
+  references/packs.md          starter gates and seeds: redesign, feature, removal,
+                               architecture, positioning
   references/fallback.md       running without an ask-user tool
 .agents/skills/pset-view/
   references/grill-stages.md   the view gates: questions to ask, artifact and exit
@@ -106,19 +123,19 @@ first real grill); whether `/views` shows the summary above the spec or in a tab
 
 ## Tasks
 
-- [ ] 1. (opus) The grill procedure as a standalone skill
-  - Files: `.agents/skills/grill/SKILL.md`, `.agents/skills/grill/references/frontier.md`, `.agents/skills/grill/references/grill-file.md`, `.agents/skills/grill/references/fallback.md`, `.claude/skills`
+- [x] 1. (opus) The grill procedure as a standalone skill
+  - Files: `.agents/skills/grill/SKILL.md`, `.agents/skills/grill/references/frontier.md`, `.agents/skills/grill/references/grill-file.md`, `.agents/skills/grill/references/fallback.md`, `.agents/skills/grill/references/packs.md`
   - Do: write the skill from D2 to D8, D11 and A2 to A6: audit, frontier, weighted batches, the done rule, push back once, the file format, the fallback for harnesses without an ask-user tool. Frontmatter with `name` and `description`; short `SKILL.md`, detail in the references. `.claude/skills` already links `.agents/skills`.
   - Done when: the skill lists in a fresh session; a dry run on a toy topic produces a `grill.md` with every heading in A6 and a summary a person can read in under a minute.
-- [ ] 2. (opus) The view gates for pset-view
+- [x] 2. (opus) The view gates for pset-view
   - Files: `.agents/skills/pset-view/references/grill-stages.md`, `.agents/skills/pset-view/references/spec-template.md`
   - Do: gates 0 to 4 as in the table, each with its question templates, artifact and exit criterion; the student walkthrough simulation before wireframes go to the user; the cross-view consistency check; the post-build review round. Add `mission` and `inventory` to the spec template.
   - Done when: each gate names what it asks, what the user confirms, and when it ends; the template has the new sections.
-- [ ] 3. (opus) pset-view: three modes (redesign, tweak, extract), grill first, stop for OK
+- [x] 3. (opus) pset-view: three modes (redesign, tweak, extract), grill first, stop for OK
   - Files: `.agents/skills/pset-view/SKILL.md`, `.agents/skills/pset-view/references/verify.md`, `.agents/skills/pset-view/references/student-lens.md`
   - Do: replace the six modes with `redesign`, `tweak`, `extract` (D9); `redesign` runs the grill and stops for OK (D10); `tweak` with no target is the read-only audit; `extract` is the old `new` (keep its steps from `mock-layer.md`); the loop gains the post-build review round; keep the guardrails and the lessons of the first run.
   - Done when: the loop reads end to end without a reference to a removed mode; `AGENTS.md` mentions the grill skill.
-- [ ] 4. (sonnet) /views draws the grill summary beside the spec
+- [x] 4. (sonnet) /views draws the grill summary beside the spec
   - Files: `web/src/pages/views/index.tsx`, `web/src/views/registry.ts`, `web/src/views/types.ts`, `web/src/views/README.md`
   - Do: a view may carry `grill.md` (loaded `?raw`); `/views/<name>` shows its Summary section above the spec, under a Grill tab or heading (open: see Information).
   - Done when: a view with a `grill.md` shows its summary on `/views`, in both themes; one without shows nothing new; typecheck, lint and tests pass.

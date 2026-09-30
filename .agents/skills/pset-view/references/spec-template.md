@@ -11,8 +11,16 @@ renderer handles headings, paragraphs, lists, tables, fences, quotes, and
 
 purpose:  one line, what it is for
 where:    the screen and slot, its size, the code folder, the screen spec's section
+mission:  For the student <moment>, this view lets them <job> so that <outcome>. It is
+          not for <x>. (From the grill's gate 1.)
 budget:   the targets, as numbers a run can fail (e.g. "resume in 1 click; per
-          question at most 4 clicks, 0 typing, 1 decision")
+          question at most 4 clicks, 0 typing, 1 decision; at most 6 tab stops to the
+          first veil"). Tab-stop counts live here and are recounted every run.
+
+## inventory
+| element | shows / does / links | must, should or never | why |
+Every element of the view, and what it must never show. From the grill's gate 1;
+kept true to what was built.
 
 ## student
 who, when, state of mind, in a few lines. What they open it to do. What they
@@ -47,7 +55,8 @@ Design decisions, each with the reason and what was rejected. This is what stops
 the next run from undoing a choice.
 
 ## friction
-The log (see student-lens.md): id | where | what goes wrong | severity | fix | status
+The log (see student-lens.md): id | where | what goes wrong | severity | fix | status | shown in
+(`shown in` is the scenario id that reproduces it)
 
 ## wants
 Backend changes the frontend needs, proposed and not built, each with why.

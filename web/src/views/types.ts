@@ -29,6 +29,9 @@ export interface ViewEntry extends GalleryEntry {
   scenarios: Scenario[]
   /** The view's spec.md, loaded when the page shows it. */
   spec: () => Promise<string>
+  /** The view's grill.md (see views/grill.ts), when it has one: what was
+   *  decided and why. Filled in by the registry from the file's presence. */
+  grill?: () => Promise<string>
   Stage: ComponentType<{ harness: Harness }>
   /** Set when the view has a wider face (the panel's Focus): what the
    *  toggle is called. */
