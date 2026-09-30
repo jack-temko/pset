@@ -11,12 +11,17 @@ export const KindHomework = "homework";
 export const KindAsking = "asking";
 export type Kind = typeof KindReading | typeof KindHomework | typeof KindAsking;
 /**
- * Heartbeat is POST /api/heartbeat: the workspace sends one every 30
- * seconds while it's visible and the student has touched it recently.
+ * Stretch is POST /api/study: a stretch of study in one book at one
+ * kind of thing, from started to ended (RFC 3339). The workspace makes
+ * up its id when the stretch begins and sends it again, with a later
+ * end, every half-minute and once more as the tab goes.
  */
-export interface Heartbeat {
+export interface Stretch {
+  id: string;
   bookId: string;
   kind: Kind;
+  started: string;
+  ended: string;
 }
 /**
  * BookMinutes is one book's share of the week.

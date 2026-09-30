@@ -22,7 +22,7 @@ internal/
   ask               turns, the tutor's turn as a job
   memory            what the tutor keeps about a book and the student
   settings          the key, health, reset, about
-  activity          heartbeats, the week's stats
+  activity          stretches of study, the week's stats
   agent             the tool loop Ask and homework guides both run: the tools,
                     the notes, the rounds
   doc               the document a model writes: block schemas, stream parser, runs, checks, repair, plot sampling
@@ -100,8 +100,8 @@ GET    /api/books/{id}/turns             POST /api/books/{id}/turns    DELETE (c
 POST   /api/turns/{id}/stop
 GET    /api/books/{id}/memories          POST /api/books/{id}/memories
 DELETE /api/memories/{id}
-GET    /api/due   GET /api/week?since=   POST /api/heartbeat
-DELETE /api/heartbeats                   (clear activity history)
+GET    /api/due   GET /api/week?since=   POST /api/study
+DELETE /api/study                       (clear activity history)
 GET    /api/settings  PUT /api/settings  POST /api/settings/test
 PUT    /api/settings/profile             (the name)
 GET    /api/health    POST /api/health/{check}/fix
@@ -388,16 +388,27 @@ Settings screen already shows it.
 **Page scans render on demand**, per width bucket, cached under the data
 directory and served `immutable`. Zoom asks for a bigger bucket.
 
-**Time stats come from heartbeats.** While the workspace tab is visible
-and there was input in the last two minutes, the client sends
-`{book, kind}` every 30 seconds: whichever of `reading` (the scan or
-rail), `asking` (the Ask tab) or `homework` (the Homework tab) was last
-touched. Each heartbeat counts 30 seconds (a second tab in the same
-half-minute counts once), and `/api/week?since=` sums them from the
-start of the student's week, which the client sends because it knows
-the local calendar. `DELETE /api/heartbeats` forgets them all
-(Settings' Clear history); questions worked come from homework and
-stay.
+**Time spent is stretches of study** (2026-09-29, replacing heartbeats,
+which counted only with input in the last two minutes: homework is
+worked on paper, and the week came out short). While the workspace tab
+is visible, the client keeps one stretch open for what the student last
+touched, `reading` (the scan or rail), `asking` (the Ask tab) or
+`homework` (the Homework tab), and a new one when that changes. It ends
+when the tab hides or closes, or when there's been no click, key, wheel
+or scroll for 20 minutes on homework, or 5 otherwise. The client names
+each stretch with an id and saves it, `POST /api/study {id, bookId,
+kind, started, ended}`, every half-minute and once more as it ends (a
+keepalive request, so it outlives a closing tab); saving the same id
+again only moves its end on. Every save puts the end no later than a
+minute after the last input, so time with no input counts once the
+student is back, and a stretch that ends for want of input ends a
+minute after the last. The server clamps an end to its own clock and a
+stretch to six hours. `/api/week?since=` sums them from the start of the
+student's week, which the client sends because it knows the local
+calendar; overlapping stretches (two tabs) count once. `DELETE
+/api/study` forgets them all (Settings' Clear history); questions worked
+come from homework and stay. The heartbeats already recorded became
+stretches, back-to-back beats run together, the same minutes.
 
 ## Logging
 
