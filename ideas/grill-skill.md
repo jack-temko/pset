@@ -42,7 +42,7 @@ After the spec the agent **stops for your OK**, then builds, verifies and docume
 | # | Decision | Why | Rejected |
 |---|---|---|---|
 | D1 | The record lives at `web/src/views/<name>/grill.md`, beside `spec.md`. | `/views` can render it beside the live view; an agent on the view finds both; it moves with the view. | `design/grills/`, `ideas/` |
-| D2 | A standalone `grill` skill in `.agents/skills/grill/`, with pluggable stage banks; `pset-view` supplies the view banks. | The engine also grills backend features and new ideas; a view bank is view knowledge. | grill inside pset-view only; a fully generic grill with no banks |
+| D2 | A standalone `grill` skill in `.agents/skills/grill/`, with pluggable stage banks; `pset-view` supplies the view banks. | The same procedure also grills backend features and new ideas; a view bank is view knowledge. | grill inside pset-view only; a fully generic grill with no banks |
 | D3 | Five gates (0 to 4 above), each ending in an artifact the user confirms. Jack delegated the choice. | Artifact-anchored gates stop later stages drifting from unchecked earlier ones; cheap, high-leverage decisions come first; a later answer that contradicts an earlier gate reopens it. | one continuous frontier; three ungated stages |
 | D4 | Audit first: read the view, its spec, friction log, design docs and code; ask only what the code cannot answer; every question carries a recommended option with its reason. | The user confirms or overrules instead of authoring. | neutral options; asking blind |
 | D5 | A gate ends when its high-weight questions are answered or deferred; the rest is taken at the recommended default and listed as **assumed**. | Bounded length at 1am; assumptions are visible and overrulable. | exhaust everything; a fixed number of batches |
@@ -64,10 +64,16 @@ After the spec the agent **stops for your OK**, then builds, verifies and docume
 - **A6** The grill file is Markdown with fixed headings: Summary, Mission, Inventory (shows, does, links, never shows), Wireframes, Decisions, Assumed, Open, Reversals, Disagreements, Frontier (what is left), and the Q&A log, verbatim, by batch.
 - **A7** Gate 1's mission is one sentence: "For the student <moment>, this view lets them <job> so that <outcome>", plus "It is not for <x>". Jack amends it at the gate.
 - **A8** The tired student (hour 7, 1am, Night) is the design persona; the walkthrough simulation uses it. Other moments are noted in `open`, not designed for.
-- **A9** The grill is for views first; a bank for backend features can follow, using the same engine.
+- **A9** The grill is for views first; a bank for backend features can follow, using the same procedure.
 - **A10** Nothing is written into the repo except `grill.md` (and its archive) and, after Jack's OK, the changes the spec calls for.
 
 ## Information
+
+A note on words: the grill is **not a program**. It is a skill, which is a set of
+Markdown instructions the model loads as context: a procedure to follow (audit,
+build the frontier, ask a batch, fold in the answers, repeat) and a file format to
+write. The asking itself is the harness's own ask-user tool. The only code in this
+plan is task 4, the `/views` tab that displays a finished `grill.md`.
 
 Where this came from. The pilot run of `pset-view` (`views-gallery.md`) found and
 fixed a real bug from the tired student's flow, but it decided things alone that
@@ -100,7 +106,7 @@ first real grill); whether `/views` shows the summary above the spec or in a tab
 
 ## Tasks
 
-- [ ] 1. (opus) The grill engine as a standalone skill
+- [ ] 1. (opus) The grill procedure as a standalone skill
   - Files: `.agents/skills/grill/SKILL.md`, `.agents/skills/grill/references/frontier.md`, `.agents/skills/grill/references/grill-file.md`, `.agents/skills/grill/references/fallback.md`, `.claude/skills`
   - Do: write the skill from D2 to D8, D11 and A2 to A6: audit, frontier, weighted batches, the done rule, push back once, the file format, the fallback for harnesses without an ask-user tool. Frontmatter with `name` and `description`; short `SKILL.md`, detail in the references. `.claude/skills` already links `.agents/skills`.
   - Done when: the skill lists in a fresh session; a dry run on a toy topic produces a `grill.md` with every heading in A6 and a summary a person can read in under a minute.
