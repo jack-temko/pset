@@ -10,7 +10,7 @@ const q = (over: Partial<Question> & { state?: Question['state'] } = {}, extra: 
   ...over,
   ...extra,
 })
-const set = (estimate?: HomeworkSet['estimate']): HomeworkSet => ({ ...makeSet('Set', null), estimate })
+const set = (estimate?: { seconds: number; low?: number; high?: number }): HomeworkSet => ({ ...makeSet('Set', null), estimate: estimate && { low: estimate.seconds, high: estimate.seconds, ...estimate } })
 
 describe('marks', () => {
   it('marks failed first, then done, then here, then waiting', () => {

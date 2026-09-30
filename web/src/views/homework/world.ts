@@ -1,9 +1,9 @@
-import type { Assignment, AssignmentRead, Detail, Failure, Question, Summary } from '@/api/homework'
+import type { Assignment, AssignmentRead, Detail, Estimate, Failure, Question, Summary } from '@/api/homework'
 import type { Book } from '@/api/library'
 import type { Block, Run } from '@/api/gen/doc'
 import type { Usage } from '@/api/gen/usage'
 import type { ScenarioContext } from '@/views/mock/scenario'
-import type { Estimate, HomeworkSet, Q } from './progress'
+import type { HomeworkSet, Q } from './progress'
 import { COVERS } from '@/lib/covers'
 
 const t = (text: string): Run => ({ t: text })

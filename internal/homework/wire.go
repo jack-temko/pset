@@ -17,6 +17,30 @@ type Summary struct {
 	Total      int    `json:"total"`
 	Done       int    `json:"done"`
 	CreatedAt  string `json:"createdAt"`
+	// Bar is one entry per question, in order, for the set's progress bar
+	// on the list (which does not carry the questions themselves).
+	Bar []BarEntry `json:"bar,omitempty"`
+	// Estimate is the time left at the student's pace, and Timed how
+	// many finished questions it learned the pace from. Absent until it
+	// has two to go on (estimate.go).
+	Estimate *Estimate `json:"estimate,omitempty"`
+	Timed    int       `json:"timed,omitempty"`
+}
+
+// Estimate is the time left on a set at the student's pace, in seconds,
+// and the range it could fall in.
+type Estimate struct {
+	Seconds int `json:"seconds"`
+	Low     int `json:"low"`
+	High    int `json:"high"`
+}
+
+// BarEntry is a question as the set's bar shows it: done, failed, and as
+// wide as it is hard (Weight is its difficulty, 0 until ranked).
+type BarEntry struct {
+	Done   bool `json:"done"`
+	Failed bool `json:"failed,omitempty"`
+	Weight int  `json:"weight,omitempty"`
 }
 
 // List is a book's sets, or the due list across books.

@@ -8,24 +8,11 @@ import { outstanding } from '@/api/homework'
  * time left in words. Pure, so the flow can be tested without a screen.
  */
 
-/** What the backend will add to a question (how hard it is against the rest
- *  of the set, how long the student has spent on it) and to a set (the time
- *  left). The wire types do not carry them yet, so they are read through
- *  here, and each may be missing. */
-export type QuestionExtra = { difficulty?: number; seconds?: number }
-export type SetExtra = {
-  estimate?: Estimate
-  /** How many of its questions have been timed, which the estimate rests on. */
-  timed?: number
-  /** One entry per question, in order, for the list's bar (the list does not
-   *  carry the questions themselves). */
-  bar?: { done: boolean; failed?: boolean; weight?: number }[]
-}
-/** Seconds left at the student's pace, and the range it could fall in. */
-export type Estimate = { seconds: number; low?: number; high?: number }
-
-export type Q = Question & QuestionExtra
-export type HomeworkSet = Summary & SetExtra
+/** A question and a set as the wire sends them: a question with its
+ *  difficulty and the seconds spent on it, a set with its bar, how many
+ *  questions its time left was learned from, and the time left. */
+export type Q = Question
+export type HomeworkSet = Summary
 
 /** The bar's segment for a question: a failed one is marked whatever else
  *  is true, then done, then the one you are on, then what waits. */
@@ -117,8 +104,9 @@ export const isWorking = (q: Question): boolean => !q.done && (q.state === 'loca
 
 /** Fewer timed questions than this and the student's pace is a guess. */
 export const MIN_TIMED = 2
-/** A range this wide against its middle is shown as a range. */
-const WIDE = 0.5
+/** A range this wide against its middle is shown as a range (the backend's
+ *  calibration test, estimate_test.go, is written against this number). */
+const WIDE = 0.8
 
 /** Seconds as the nearest five minutes, in words: "25 min", "1 h 40 m". */
 function span(seconds: number): string {

@@ -167,14 +167,22 @@ func (s *Service) ForBook(ctx context.Context, bookID string) ([]Summary, error)
 	if _, err := s.c.Library.Book(ctx, bookID); err != nil {
 		return nil, err
 	}
-	return listSummaries(ctx, s.c.DB, `WHERE h.book_id = ? ORDER BY h.created_at DESC`, bookID)
+	hs, err := listSummaries(ctx, s.c.DB, `WHERE h.book_id = ? ORDER BY h.created_at DESC`, bookID)
+	if err != nil {
+		return nil, err
+	}
+	return hs, s.fillSummaries(ctx, hs)
 }
 
 // Due lists every set not yet turned in, across books: dated ones by date,
 // then the undated, newest first.
 func (s *Service) Due(ctx context.Context) ([]Summary, error) {
-	return listSummaries(ctx, s.c.DB, `WHERE h.turned_in_at = ''
+	hs, err := listSummaries(ctx, s.c.DB, `WHERE h.turned_in_at = ''
 		ORDER BY h.due_date = '', h.due_date, h.created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	return hs, s.fillSummaries(ctx, hs)
 }
 
 func (s *Service) Create(ctx context.Context, bookID string, in Input) (Summary, error) {
@@ -226,6 +234,9 @@ func (s *Service) Get(ctx context.Context, id string) (Detail, error) {
 		return Detail{}, httpx.NotFound("homework set")
 	}
 	if err != nil {
+		return Detail{}, err
+	}
+	if h, err = s.filled(ctx, h); err != nil {
 		return Detail{}, err
 	}
 	qs, err := listQuestions(ctx, s.c.DB, id)
@@ -762,9 +773,19 @@ func (s *Service) WriteGuide(ctx context.Context, id string) (Question, error) {
 
 // ---------------------------------------------------------------- events
 
+// filled is a set with its bar, pace and time left put on.
+func (s *Service) filled(ctx context.Context, h Summary) (Summary, error) {
+	one := []Summary{h}
+	err := s.fillSummaries(ctx, one)
+	return one[0], err
+}
+
 func (s *Service) publishSet(ctx context.Context, id string) (Summary, error) {
 	h, err := getSummary(ctx, s.c.DB, id)
 	if err != nil {
+		return Summary{}, err
+	}
+	if h, err = s.filled(ctx, h); err != nil {
 		return Summary{}, err
 	}
 	s.c.Events.Publish(EventHomeworkChanged, HomeworkChanged{Homework: h})
