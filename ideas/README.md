@@ -11,27 +11,6 @@ When you start one, set it to In progress and name the branch. When it
 ships, the spec in `design/` becomes the truth: set it to Done with a
 pointer there, and delete the file once nothing in it is still useful.
 
-## Tasks
-
-A group being built by the model team (`tools/agents/README.md`) has a
-third section, **Tasks**: the build, in order, one checklist item per
-task, each given to the cheapest model that can do it (`flash`, `glm`,
-`sonnet`, or `opus` when nothing smaller will do). The title is the
-task's commit message.
-
-```markdown
-## Tasks
-
-- [ ] 1. (glm) A problem's number reads the same in every book
-  - Files: `internal/finder/number.go`, `internal/finder/number_test.go`
-  - Do: exactly what changes: names, signatures, behaviour, edge cases.
-  - Done when: what a reviewer can check: the tests that prove it, the
-    commands that pass, what to look at in the app for a UI task.
-```
-
-Five files or fewer each, every one named. The loop ticks a box when the
-task's review approves it.
-
 ## Statuses
 
 | Status | Means |

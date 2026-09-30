@@ -31,24 +31,6 @@ section, indexed in `ideas/README.md`. When you start one, mark it In
 progress with its branch; when it ships, the spec goes in `design/` and
 the idea is marked Done.
 
-## The model team
-
-`go run ./tools/agents` runs a change through the team: Opus writes the
-spec in `ideas/`, the model each task names builds it, and a fresh
-reviewer checks each task against the spec (`tools/agents/README.md`).
-If you're one of those sessions, the spec and your task are your brief;
-the prompt says what your role may touch.
-
-## Writing
-
-No em dashes, anywhere: code comments, docs, specs, commit messages, UI
-copy. Use what it stands in for: a colon when what follows explains,
-parentheses for an aside, a comma for a pause, a period for a new
-sentence. An en dash for ranges ("p. 142–145") is fine.
-
-Commit messages carry no attribution: no `Co-Authored-By` trailers and
-no "Generated with" lines.
-
 ## Checking UI changes
 
 There is no automated visual suite. See a UI change working in the real
