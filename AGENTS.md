@@ -1,35 +1,54 @@
 # Agent notes
 
-## Work on a branch, then merge it
+## Branches: `dev` is where work lands, `main` is releases
 
-Jack works in the main checkout at the same time, so it can hold his
-uncommitted changes at any moment. Every change goes on its own branch,
-in its own worktree next to the repo, never straight onto `main`:
-`git worktree add ../pset-<topic> -b <topic>`. Don't edit, stage or
-commit in Jack's checkout. Name the topic for what the change does, in
-kebab-case (`delete-anything-confirmed`), never a generated name like
-`claude/laughing-gauss-1135o5`: it lands in `main`'s history through
-the merge commit.
+- **`main` holds releases only**: what Jack is comfortable handing to
+  friends. Never branch from it, push to it or merge into it. Jack alone
+  promotes `dev` into `main` and tags the release (`vMAJOR.MINOR.PATCH`,
+  starting at v0.1.0); a `v*` tag on `main` starts the binary build.
+- **`dev` is the default branch and takes every change**, by pull request.
+  Jack's own checkout sits on `dev` and may hold his uncommitted changes
+  at any moment, so don't edit, stage or commit in it.
+- **Every change gets its own branch and worktree**, from `dev`, next to
+  the repo: `git worktree add ../pset-<topic> -b <topic> dev`. Name the topic
+  for what the change does, in kebab-case (`delete-anything-confirmed`),
+  never a generated name like `claude/laughing-gauss-1135o5`. Parked and
+  throwaway branches are named the same way. Commits carry no
+  Co-Authored-By and no "Generated with" lines.
 
-When the change is done and checked (the tests, and the real app for a
-UI change):
+**Landing a change** (the tests, and the real app for a UI change, first):
 
-1. Bring `main` into the branch and resolve any conflicts there.
-2. Run the checks again on the merged result.
-3. Merge the branch into `main` with a merge commit, named like the
-   history's own ("Merge <branch>: <what it does>"), and push. The merge
-   is the one step that runs in the main checkout. If Jack's uncommitted
-   changes touch the files the merge would change, stop and ask rather
-   than stash, reset or overwrite.
-4. Remove the worktree and delete the branch.
+1. Push the branch and open a pull request into `dev`:
+   `gh pr create --base dev`. The title is what the change does. The body
+   says what it does, what was checked, and what was not.
+2. CI runs `make check` (Go tests, typecheck, vitest, lint, the
+   generated-types check, then the Go tests again under the race
+   detector). A ruleset on `dev` blocks the merge until it is green and the
+   branch is up to date with `dev`: if `dev` moved, `gh pr update-branch`
+   and wait for the run again. Run `make check` yourself first; don't use
+   CI to find out.
+3. A red check is fixed, never re-run until it goes green. A flaky test is
+   fixed in its own change before the next merge. If `dev` itself goes red,
+   revert the change that did it first, then fix on a branch.
+4. When it is green, **merge your own pull request** with a squash
+   (`gh pr merge --squash --delete-branch`) and tell Jack what landed. Then
+   remove the worktree. Don't wait for Jack, and never merge into `main`.
+
+**Releasing is Jack's**: a pull request from `dev` into `main`, merged with
+a merge commit (not a squash, so `main` stays an ancestor of `dev`), which
+also runs the web build and `govulncheck`, then the tag. A bug in a release
+is fixed on `dev` and released again (v0.2.1); there is no hotfix branch.
+Cloud sessions (claude.ai/code) follow the same rules: branch from `dev`,
+open a pull request. Direct pushes to `dev` and `main` are refused.
+Spec and reasons: `ideas/git-workflow-grill.md`.
 
 ## Ideas in progress
 
 `ideas/` holds work that's decided but not built, being built, or
 stuck: one file per group, each with a Status and an Information
 section, indexed in `ideas/README.md`. When you start one, mark it In
-progress with its branch; when it ships, the spec goes in `design/` and
-the idea is marked Done.
+progress with its branch; when it ships (merged into `dev`), the spec goes
+in `design/` and the idea is marked Done.
 
 ## Checking UI changes
 
