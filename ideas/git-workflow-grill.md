@@ -1,6 +1,6 @@
 # Git workflow: grill
 
-- status: awaiting OK
+- status: approved (2026-10-01); built in steps, see the end
 - date: 2026-10-01
 - brief: how PSet's changes are branched, checked, merged and released, from Jack's side (one person, several agent sessions at once, friends who run releases)
 - sources: AGENTS.md, `.github/workflows/ci.yml`, the Makefile, `git log`, the repo's GitHub settings (public, no branch protection, merge commits, no PRs ever), memory notes branch-worktree-workflow, pset-github and no-commit-attribution
