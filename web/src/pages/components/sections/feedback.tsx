@@ -7,7 +7,7 @@ import { Label } from '@/components/label'
 import { ProgressBar } from '@/components/progress-bar'
 import { Spinner } from '@/components/spinner'
 import { Skeleton } from '@/components/skeleton'
-import { UsageLine } from '@/components/usage'
+import { UsageLine, UsageText } from '@/components/usage'
 import type { Usage } from '@/api/gen/usage'
 import type { ComponentEntry } from './types'
 import { Shelf } from './shared'
@@ -93,6 +93,12 @@ export const feedbackSections: ComponentEntry[] = [
         <Shelf label="the line">
           <div className="py-1">
             <UsageLine usage={USAGE} />
+          </div>
+        </Shelf>
+        <Shelf label="as plain text (a question's page)">
+          <div className="space-y-2 py-1">
+            <UsageText usage={USAGE} />
+            <UsageText usage={USAGE_FAILED} />
           </div>
         </Shelf>
         <Shelf label="open">

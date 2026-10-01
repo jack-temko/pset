@@ -33,6 +33,15 @@ there; the numbers are one press away and nothing else ever moves.
 - **The formatting** is `web/src/lib/usage-format.ts`, with tests: `clock`,
   `cost`, `tokens`, `shortModel`, `atLeast`.
 
+**`UsageText`** is the same spending as one muted, non-interactive line, for
+where the spending is plain on the page (a question's guide in the homework
+walkthrough): `deepseek-v4 +1 · 25s · 11,016 tokens · $0.0047`. The order is
+the card's columns and the student's: the model that did the most (and how
+many more served the job), the time, the tokens, the cost last. It carries
+the card's marks (`≥` when a call reported nothing, a dash for nothing at
+all) and a `title` naming every model. Use `UsageLine` where the numbers are
+machinery beside prose (an Ask answer, an assignment read).
+
 **It appears only after the job has finished** (ready or failed, done,
 stopped, failed) and only when at least one call was made; nothing shows
 while it runs, where the working lines already say how it's going. Every

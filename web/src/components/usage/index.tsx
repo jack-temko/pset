@@ -179,3 +179,41 @@ export function UsageLine({
     </>
   )
 }
+
+/**
+ * The same spending as one muted line, not a control: the model that did the
+ * most of the work (and how many more served the job), the time, the tokens,
+ * the cost, in that order: the order of the columns in the card, and of what
+ * the student cares about, last the one that is a number to skim past. Where
+ * the spending is the thing's own subject (a guide on a question's page) the
+ * numbers are plain on the page; where it is machinery beside prose (an Ask
+ * answer) the popover keeps them one press away.
+ *
+ * Time and tokens carry the card's marks: "≥" when a call reported nothing,
+ * a dash where nothing was reported at all. Nothing shows without a call.
+ */
+export function UsageText({ usage, className }: { usage: Usage; className?: string }) {
+  const head = usage.rows[0]
+  if (!head) return null
+  const partial = (usage.total.uncounted ?? 0) > 0
+  const more = usage.rows.length - 1
+  return (
+    <p
+      // Machinery, not prose: a copy button skips it.
+      data-copy-skip
+      title={`${usage.rows.map((r) => r.model).join(', ')}. Time adds up every call, so calls made at once count in full.`}
+      className={cn('flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground tabular-nums', className)}
+    >
+      <span>
+        {shortModel(head.model)}
+        {more > 0 && ` +${more}`}
+      </span>
+      <span aria-hidden>·</span>
+      <span className="whitespace-nowrap">{clock(usage.total.ms)}</span>
+      <span aria-hidden>·</span>
+      <span className="whitespace-nowrap">{atLeast(tokens(usage.total.tokens), partial)} tokens</span>
+      <span aria-hidden>·</span>
+      <span className="whitespace-nowrap">{atLeast(cost(usage.total.cost), partial)}</span>
+    </p>
+  )
+}

@@ -6,7 +6,7 @@ import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/c
 import { ProgressBar } from '@/components/progress-bar'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
-import { UsageLine } from '@/components/usage'
+import { UsageText } from '@/components/usage'
 import { AddHomeworkDialog } from '@/pages/workspace/add-homework'
 import { useBookHere } from '@/pages/workspace/book-here'
 import { MemoryLines } from '@/pages/workspace/memory'
@@ -447,11 +447,11 @@ export function Walkthrough({
           one place. Keys scattered on the parts inside, beside the
           conditional parts and the figures, left stale copies behind
           (three "Add your professor's instructions" under one question). */}
-      <div key={q.id} className={cn('min-h-0 flex-1', wide ? 'grid grid-cols-2 grid-rows-1' : 'grid grid-cols-1 content-start gap-5 overflow-y-auto p-card')}>
+      <div key={q.id} className={cn('min-h-0 flex-1', wide ? 'grid grid-cols-2 grid-rows-1' : 'grid grid-cols-1 auto-rows-max content-start gap-5 overflow-y-auto p-card')}>
         {/* The problem and the guide are the same two boxes in both layouts
             (one column, or two in Focus), so toggling Focus keeps what is
             half-typed in either. */}
-        <div className={wide ? 'grid min-h-0 grid-cols-1 content-start gap-5 overflow-y-auto border-r p-card' : 'contents'}>
+        <div className={wide ? 'grid min-h-0 grid-cols-1 auto-rows-max content-start gap-5 overflow-y-auto border-r p-card' : 'contents'}>
           <div className="flex items-center gap-2">
             <span className="min-w-0 flex-1 truncate text-lg font-semibold">{q.label}</span>
             {q.done && <Check aria-label="Done" className="size-4 shrink-0 text-success" />}
@@ -557,13 +557,13 @@ export function Walkthrough({
           )}
 
         </div>
-        <div className={wide ? 'grid min-h-0 grid-cols-1 content-start gap-5 overflow-y-auto p-card' : 'contents'}>
+        <div className={wide ? 'grid min-h-0 grid-cols-1 auto-rows-max content-start gap-5 overflow-y-auto p-card' : 'contents'}>
           {q.state === 'failed' ? (
             <>
               <FailedQuestion q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} onOpenSettings={onOpenSettings} />
               {/* What the failed attempt spent: the calls cost even when
                   the guide didn't land. */}
-              {q.usage && <UsageLine usage={q.usage} />}
+              {q.usage && <UsageText usage={q.usage} />}
             </>
           ) : (
             <>
@@ -621,7 +621,7 @@ export function Walkthrough({
               {/* What the whole production spent — find, figure read, guide
                   — once it's over. A question still being written keeps its
                   working lines and shows nothing here. */}
-              {(q.state === 'ready' || q.state === 'unwritten') && q.usage && <UsageLine usage={q.usage} />}
+              {(q.state === 'ready' || q.state === 'unwritten') && q.usage && <UsageText usage={q.usage} />}
             </>
           )}
         </div>
