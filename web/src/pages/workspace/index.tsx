@@ -30,6 +30,7 @@ import {
 import { ApiError } from '@/api/client'
 import { useBookHomework, useAddBoxed, usePointOut } from '@/api/homework'
 import { BlockSkeleton, Document } from '@/components/document'
+import { answerAbout, turnSource, type PendingSel } from '@/components/document/selection'
 import { useStudyTime, type Kind as ActivityKind } from '@/api/activity'
 import { StudyTimer } from './study-timer'
 import { useAsk, useClearTurns, useStopTurn, useTurns, type About, type LiveTurn } from '@/api/ask'
@@ -507,8 +508,28 @@ function dayLabel(iso: string, now = new Date()): string {
  * until it arrives, so a shimmer would promise a size it may not take.
  * Skeletons belong to blocks, where the type arrives before the block.
  */
-function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) => void; onRetry: () => void }) {
+function TurnView({
+  t,
+  onJump,
+  onRetry,
+  selection,
+  onPickSelection,
+  onSelect,
+  onClearAbout,
+}: {
+  t: LiveTurn
+  onJump: (page: number) => void
+  onRetry: () => void
+  /** The pending selection, for the outline while its chip rides the
+   *  composer. */
+  selection: PendingSel | null
+  onPickSelection: (selection: PendingSel) => void
+  onSelect: (about: About, selection: PendingSel) => void
+  onClearAbout: () => void
+}) {
   const navigate = useNavigate()
+  const pages = usePages()
+  const source = turnSource(t.id)
   const running = t.state === 'running'
   const last = t.steps[t.steps.length - 1]
   const lastRunning = !!last?.running
@@ -540,8 +561,23 @@ function TurnView({ t, onJump, onRetry }: { t: LiveTurn; onJump: (page: number) 
       {hasReply && (
         <AssistantTurn>
           {/* The step feed sits where the calls ran: before the block
-              written when each one began. */}
-          <Document blocks={t.answer} onJump={onJump} before={feed} />
+              written when each one began. A finished block is
+              selectable, to ask a follow-up about exactly it. */}
+          <Document
+            blocks={t.answer}
+            onJump={onJump}
+            before={feed}
+            ask={{
+              selected: selection?.source === source ? selection.sel : null,
+              onPick: (sel) => onPickSelection({ source, sel }),
+              onAsk: (sel) =>
+                onSelect(
+                  answerAbout({ question: t.question, about: t.about || undefined, blocks: t.answer, sel, pages }),
+                  { source, sel },
+                ),
+              onClear: onClearAbout,
+            }}
+          />
           {/* What answering spent, once the turn is over; while it runs
               the step feed is already saying how it's going. */}
           {t.state !== 'running' && t.usage && <UsageLine usage={t.usage} />}
@@ -575,13 +611,20 @@ function AskTab({
   about,
   onClearAbout,
   onJump,
+  selection,
+  onPickSelection,
+  onSelect,
 }: {
   bookId: string
   bookTitle: string
-  /** The homework question "Ask about this" brought along, if any. */
+  /** The context chip riding the composer: a question's "Ask about
+   *  this", or a selection from a guide or an earlier answer. */
   about: About | null
   onClearAbout: () => void
   onJump: (page: number) => void
+  selection: PendingSel | null
+  onPickSelection: (selection: PendingSel) => void
+  onSelect: (about: About, selection: PendingSel) => void
 }) {
   const turns = useTurns(bookId)
   const ask = useAsk(bookId)
@@ -591,8 +634,15 @@ function AskTab({
   const [text, setText] = useState('')
   const scroller = useRef<HTMLDivElement | null>(null)
   const pinned = useRef(true)
+  const composer = useRef<HTMLDivElement | null>(null)
   const list = turns.data
   const running = list?.find((t) => t.state === 'running')
+
+  // The chip arrives with the box empty, so the box takes the focus:
+  // the next words typed are your own question.
+  useEffect(() => {
+    if (about) composer.current?.querySelector('textarea')?.focus()
+  }, [about])
 
   // Follow the answer as it streams, unless you've scrolled up to read.
   useLayoutEffect(() => {
@@ -651,14 +701,22 @@ function AskTab({
               return (
                 <div key={t.id} className="space-y-5">
                   {newDay && <DayDivider label={day} />}
-                  <TurnView t={t} onJump={onJump} onRetry={() => send(t.question, null)} />
+                  <TurnView
+                    t={t}
+                    onJump={onJump}
+                    onRetry={() => send(t.question, null)}
+                    selection={selection}
+                    onPickSelection={onPickSelection}
+                    onSelect={onSelect}
+                    onClearAbout={onClearAbout}
+                  />
                 </div>
               )
             })}
           </div>
         )}
       </div>
-      <div className="shrink-0 border-t p-card">
+      <div ref={composer} className="shrink-0 border-t p-card">
         {/* The question rides above the composer as a chip, so the box
             stays empty for your own words. */}
         {about && (
@@ -743,7 +801,20 @@ function Panel({
 }) {
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>(() => (homework ? 'homework' : readTab(bookId)))
-  const [about, setAbout] = useState<About | null>(null)
+  // The context chip riding the composer, and the selection it came
+  // from (a guide element or an answer element): one chip at a time,
+  // and the two live and go together, so the outline on the document
+  // and the chip above the composer are one state. The selection is
+  // held here, above the tabs, because a page shows two documents (a
+  // hint and a walkthrough) and at most one element outlines at a time.
+  const [pending, setPending] = useState<{ about: About | null; sel: PendingSel | null }>({ about: null, sel: null })
+  const { about, sel: selection } = pending
+  // A pick not yet asked about retires the chip of the selection it
+  // replaces (its About describes the old element); a question's chip
+  // ("Ask about this", no selection) stays through a pick.
+  const pickSelection = (next: PendingSel) => setPending((p) => (p.sel ? { about: null, sel: next } : p))
+  const askAbout = (a: About, sel: PendingSel | null) => setPending({ about: a, sel })
+  const clearAbout = () => setPending({ about: null, sel: null })
   const pick = (t: Tab) => {
     setTab(t)
     writeTab(bookId, t)
@@ -780,16 +851,28 @@ function Panel({
         </IconButton>
       </div>
       {tab === 'ask' ? (
-        <AskTab bookId={bookId} bookTitle={bookTitle} about={about} onClearAbout={() => setAbout(null)} onJump={onJump} />
+        <AskTab
+          bookId={bookId}
+          bookTitle={bookTitle}
+          about={about}
+          onClearAbout={clearAbout}
+          onJump={onJump}
+          selection={selection}
+          onPickSelection={pickSelection}
+          onSelect={askAbout}
+        />
       ) : (
         <HomeworkTab
           bookId={bookId}
           initialSet={homework}
           onJump={onJump}
-          onAskAbout={(a) => {
-            setAbout(a)
+          onAskAbout={(a, sel) => {
+            askAbout(a, sel ?? null)
             pick('ask')
           }}
+          onPickSelection={pickSelection}
+          onClearAbout={clearAbout}
+          selection={selection}
           onOpenSettings={() => navigate('/settings#connections')}
         />
       )}

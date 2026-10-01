@@ -61,6 +61,7 @@ budget: resume a set in 1 click from the list. Per question with a written guide
 - Remove a question: trash asks in place (`ConfirmPopover`), then `DELETE`.
 - Try again, Look there, Use this text, Show me where it is: the failed question's ways out; boxing starts a session on the scan.
 - Turn in: a check item in the header menu, taken back by choosing it again.
+- Ask about a selection: hover washes a guide element (a block, a derivation line, a part or step heading, which takes its whole group), a click outlines it, the toolbar's button composes the About (the question and the exact selection) and hands it up as the chip; Esc, the toolbar's or the chip's ✕, or clicking the outlined element again drops outline and chip together (design/workspace.md, "Asking about a selection").
 
 ## handoffs
 

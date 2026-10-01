@@ -33,7 +33,7 @@ the semantic token, never a raw value; both themes then come free.
 | `card-header` | The header band of a Box and the footer of a dialog. |
 | `rail` | The workspace's contents rail and panel ground. Follows the theme. |
 | `primary` / `primary-foreground` | The one blue: primary buttons, links, the current item. |
-| `primary-soft` | Its only tint: selected rows, the active tab, an anchor chip. |
+| `primary-soft` | Its only tint: selected rows, the active tab, an anchor chip, a selected document element. |
 | `secondary` / `secondary-foreground` | The secondary button's fill. |
 | `muted` | Quiet fills: ghost hover, skeletons, roundels, progress tracks. A row's hover wash is `muted/50`: hover only signals, it doesn't carry shape, and full muted reads as selection. |
 | `muted-foreground` | Secondary text (leads, hints, meta lines) and icons at rest. |
@@ -194,6 +194,18 @@ the ConfirmPopover detaches when the page scrolls, this one follows its
 line on scroll and resize, because the thing it describes keeps moving
 under it. Opening it moves nothing else. Component:
 `web/src/components/usage`.
+
+**Selecting what you ask about** (2026-09-30). Every element of a live
+document (a guide's stages, an answer) selects. Hover is the hover wash,
+`muted/50` with a `border-muted` hairline, instant as every hover; the
+pick is the selection pair, `primary-soft` under a `primary` outline,
+rounded `sm` like a box on the page; and the toolbar on the pick is the
+boxing toolbar's card (`shadow-floating`, the Menu's shape) pinned to
+the outline's top-right corner, straddling its top edge, except inside
+a framed card (a derivation) whose corners would clip it, where it sits
+just inside. One element outlines at a time, held above the documents,
+and the outline lives exactly as long as the composer's context chip.
+Components: `web/src/components/document`.
 
 A scrolling flex child must set `min-h-0`. Flex items default to
 `min-height: auto` and refuse to shrink below their content, so a pane

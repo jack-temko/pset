@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Focus } from 'lucide-react'
 
 import { useAddBoxed, usePointOut } from '@/api/homework'
 import { IconButton } from '@/components/button'
+import type { PendingSel } from '@/components/document/selection'
 import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
 import { BoxingBar, BoxingProvider } from '@/pages/workspace/boxing'
 import { useBoxing } from '@/pages/workspace/boxing-state'
@@ -36,6 +37,9 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
   const pages = useMemo(() => new PageMap(BOOK.pageRuns), [])
   const addBoxed = useAddBoxed()
   const pointOut = usePointOut()
+  // The panel holds the pending selection above its tab; here it stays
+  // in the stage, and every way out logs the handoff.
+  const [selection, setSelection] = useState<PendingSel | null>(null)
 
   return (
     <Pages value={pages}>
@@ -74,9 +78,16 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
               bookId={BOOK_ID}
               initialSet={harness.props.initialSet as string | undefined}
               onJump={(page) => harness.handoff({ to: 'Page scan', what: 'Jump to a page', carries: `PDF page ${page}` })}
-              onAskAbout={(about) =>
+              onAskAbout={(about, sel) => {
+                setSelection(sel ?? null)
                 harness.handoff({ to: 'Ask', what: 'Ask about this question', carries: `${about.label}: ${about.text.slice(0, 70)}` })
-              }
+              }}
+              onPickSelection={(sel) => setSelection(sel)}
+              onClearAbout={() => {
+                setSelection(null)
+                harness.handoff({ to: 'Ask', what: 'Drop the context chip', carries: 'the chip and its outline go together' })
+              }}
+              selection={selection}
               onOpenSettings={() => harness.handoff({ to: 'Settings', what: 'Open Settings', carries: 'the connections section' })}
             />
           </aside>

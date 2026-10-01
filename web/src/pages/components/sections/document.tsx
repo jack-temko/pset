@@ -1,6 +1,10 @@
-import { AnswersCard, AssistantTurn, Callout, ConversationStart, DayDivider, FailedTurn, GuidePara, MathDisplay, MathInline, AnswerTable, CodeBlock, Note, PageRef, PartHeader, Plot, Statement, StepHeading, Steps, StoppedNote, Thinking, UserTurn, WorkedSteps } from '@/components/transcript'
+import { useState } from 'react'
+import { AnswersCard, AssistantTurn, Callout, ConversationStart, DayDivider, FailedTurn, GuidePara, MathDisplay, MathInline, AnswerTable, CodeBlock, Note, PageRef, PartHeader, Plot, Statement, StepHeading, Steps, StoppedNote, Thinking, UserTurn, WorkedSteps, AboutChip } from '@/components/transcript'
 import { BLOCKS, GUIDE, GUIDE_HINT } from '@/components/fixtures'
 import { AnswersOf, BlockSkeleton, Document } from '@/components/document'
+import { answerAbout, guideAbout, type Sel } from '@/components/document/selection'
+import type { AskWiring } from '@/components/document/selectable'
+import type { About } from '@/api/ask'
 import type { Block } from '@/api/gen/doc'
 import { PageMap, Pages } from '@/lib/pages'
 import { FigureReading } from '@/pages/workspace/reading'
@@ -72,6 +76,53 @@ const READING_DOUBTS = [
   'The 2 A source: two readings have its arrow pointing to a, one to N; it points to a.',
   'The 20 V source: two readings have + at D, one at b; + is at D.',
 ].map(readingLine)
+
+/** A document that selects, held together for the demo the way the
+ *  workspace holds it: the outline and the chip one state, ✕ or Esc
+ *  drops both, and the chip rides where the composer is. */
+function SelectingDocument({ blocks, stage }: { blocks: Block[]; stage: 'walkthrough' | 'answer' }) {
+  const [sel, setSel] = useState<Sel | null>(null)
+  const [about, setAbout] = useState<About | null>(null)
+  const ask: AskWiring = {
+    selected: sel,
+    onPick: (picked) => setSel(picked),
+    onAsk: (picked) => {
+      setSel(picked)
+      setAbout(
+        stage === 'walkthrough'
+          ? guideAbout({
+              question: '3.7.8',
+              problem: 'A phone plan charges $15 a month plus $1 a minute. Each minute ends the call with probability p. For what p is it cheaper than the old plan?',
+              blocks,
+              sel: picked,
+              stage: 'walkthrough',
+              pages: DEMO_PAGES,
+            })
+          : answerAbout({ question: 'When is the new plan cheaper than the old one?', blocks, sel: picked, pages: DEMO_PAGES }),
+      )
+    },
+    onClear: () => {
+      setSel(null)
+      setAbout(null)
+    },
+  }
+  return (
+    <div className="space-y-3">
+      <Document reading={stage === 'walkthrough'} blocks={blocks} onJump={() => {}} ask={ask} />
+      <div className="flex min-h-control items-center gap-2 rounded-md border bg-card p-2">
+        {about ? (
+          <AboutChip label={about.label} onRemove={ask.onClear} />
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Hover an element, click it, then Ask about it. A line of a derivation, and a part or step heading (its whole group), select too.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const DEMO_PAGES = PageMap.single(16)
 
 export const documentSections: ComponentEntry[] = [
   {
@@ -523,6 +574,27 @@ export const documentSections: ComponentEntry[] = [
           </Shelf>
         </Pages>
       </>
+    ),
+  },
+  {
+    id: 'selection',
+    title: 'Asking about a selection',
+    group: 'Document and transcript',
+    note: "Every element of a live document is selectable: hover washes it quietly, a click picks it, and a small toolbar on the outline asks about exactly it, the button naming what it points at. A derivation's lines select one by one; a part or step heading selects its whole group. The outline and the composer's chip are one state: the chip names the question and the place (an answer's selection is an excerpt), ✕ or Esc drops both, and the chip the sent turn keeps is an inert record. What the tutor receives is the whole problem plus the selection's exact text, snapshotted when picked.",
+    docs: ['document'],
+    Demo: () => (
+      <Pages value={DEMO_PAGES}>
+        <Shelf label="a guide that selects">
+          <div className="w-panel-wide rounded-md border bg-rail p-card text-base">
+            <SelectingDocument blocks={GUIDE} stage="walkthrough" />
+          </div>
+        </Shelf>
+        <Shelf label="an answer that selects (the chip is an excerpt)">
+          <div className="w-panel rounded-md border bg-rail p-card text-base">
+            <SelectingDocument blocks={BLOCKS} stage="answer" />
+          </div>
+        </Shelf>
+      </Pages>
     ),
   },
 ]

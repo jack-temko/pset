@@ -9,6 +9,7 @@ import { AddHomeworkDialog } from '@/pages/workspace/add-homework'
 import { AssignmentReads } from '@/pages/workspace/assignment-reads'
 import { useBookHomework, useDeleteHomework, useHomeworkSet, useUpdateHomework, type Summary } from '@/api/homework'
 import type { About } from '@/api/ask'
+import type { PendingSel } from '@/components/document/selection'
 import { dueLine, dueStatus } from '@/lib/due'
 import { cn } from '@/lib/utils'
 import { Walkthrough } from './walkthrough'
@@ -33,13 +34,19 @@ export function HomeworkTab({
   initialSet,
   onJump,
   onAskAbout,
+  onPickSelection,
+  onClearAbout,
+  selection,
   onOpenSettings,
 }: {
   bookId: string
   /** From the URL: Home's due list opens a set directly. */
   initialSet?: string
   onJump: (page: number) => void
-  onAskAbout: (about: About) => void
+  onAskAbout: (about: About, selection?: PendingSel) => void
+  onPickSelection: (selection: PendingSel) => void
+  onClearAbout: () => void
+  selection: PendingSel | null
   onOpenSettings: () => void
 }) {
   const list = useBookHomework(bookId)
@@ -66,6 +73,9 @@ export function HomeworkTab({
           onBack={() => setOpenId(null)}
           onJump={onJump}
           onAskAbout={onAskAbout}
+          onPickSelection={onPickSelection}
+          onClearAbout={onClearAbout}
+          selection={selection}
           onOpenSettings={onOpenSettings}
         />
         {openSet && (

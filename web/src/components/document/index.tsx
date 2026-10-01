@@ -1,4 +1,4 @@
-import { Fragment, useMemo, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import type { Block, Run } from '@/api/gen/doc'
 import { Skeleton } from '@/components/skeleton'
@@ -20,6 +20,8 @@ import {
 } from '@/components/transcript'
 import { cn } from '@/lib/utils'
 
+import { selBlock, selLine, selPart, selStep } from './selection'
+import { Selectable, type AskWiring, type Scope } from './selectable'
 import { answersOf, buildTree, type Group, type Section } from './tree'
 
 /**
@@ -101,8 +103,11 @@ function Para({ runs, look }: { runs: Run[]; look: Look }) {
 }
 
 /** One block, as a component. `part` and `step` are drawn by the tree; a
- *  stray one (a block list not built into a tree) draws as its heading. */
-export function BlockView({ block, look }: { block: Block; look: Look }) {
+ *  stray one (a block list not built into a tree) draws as its heading.
+ *  `pick` is the selection wiring when the block sits in a document
+ *  that selects: a derivation passes it down so one of its lines can be
+ *  picked on their own. */
+export function BlockView({ block, look, pick }: { block: Block; look: Look; pick?: { scope: Scope; index: number } }) {
   const jump = look.onJump
   switch (block.type) {
     case 'hint':
@@ -124,6 +129,7 @@ export function BlockView({ block, look }: { block: Block; look: Look }) {
             raw: s.raw,
             why: s.why?.length ? <Runs runs={s.why} onJump={jump} /> : undefined,
           }))}
+          linePick={pick ? { scope: pick.scope, line: (n: number) => selLine(pick.index, n) } : undefined}
         />
       )
     case 'callout':
@@ -181,26 +187,81 @@ function RawTeX({ tex }: { tex: string }) {
  * The whole document. `before(i)` is drawn ahead of the block at index `i`
  * (and, once, at `blocks.length`): where Ask's step feed sits between the
  * blocks it happened between. `reading` draws paragraphs at the guide's
- * reading size; Ask's answers stay compact.
+ * reading size; Ask's answers stay compact. With `ask` every element is
+ * selectable: hover washes it, a click picks it, and the toolbar on the
+ * outline asks about it (./selectable).
  */
 export function Document({
   blocks,
   onJump,
   reading,
   before,
+  ask,
 }: {
   blocks: Block[]
   onJump?: Jump
   reading?: boolean
   before?: (index: number) => ReactNode
+  ask?: AskWiring
 }) {
   const tree = useMemo(() => buildTree(blocks), [blocks])
   const look: Look = { reading, onJump }
   const gap = reading ? 'space-y-4' : 'space-y-3'
+  // Hover is read off the DOM (the innermost [data-sel] under the
+  // pointer), so a block inside a step washes alone; CSS :hover would
+  // light every selectable ancestor at once.
+  const [hover, setHover] = useState<string | null>(null)
+  // The pick lives above the documents (a page shows two: a hint and a
+  // walkthrough), so `ask.selected` is already the one outlined element,
+  // whether picked or asked about. This tree only reports clicks.
+  const outlined = ask?.selected ?? null
+  const scope: Scope = { ask, hover, outlined }
+
+  // Esc lets go; an open menu or dialog takes Esc first.
+  useEffect(() => {
+    if (!ask || !outlined) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (e.defaultPrevented || document.querySelector('[role="menu"], [role="dialog"]')) return
+      ask.onClear()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [ask, outlined])
+
   return (
-    <div className={reading ? 'space-y-8' : 'space-y-3'}>
+    <div
+      className={reading ? 'space-y-8' : 'space-y-3'}
+      onMouseOver={
+        ask
+          ? (e) => {
+              const el = (e.target as Element).closest('[data-sel]')
+              const next = el?.getAttribute('data-sel') ?? null
+              setHover((was) => (was === next ? was : next))
+            }
+          : undefined
+      }
+      onMouseLeave={ask ? () => setHover(null) : undefined}
+      onClick={
+        ask
+          ? (e) => {
+              // Page chips, links and the toolbar's own buttons keep
+              // their clicks, and a drag that took the words isn't a
+              // pick. The innermost [data-sel] under the pointer is
+              // what the student pointed at.
+              if (e.target instanceof Element && e.target.closest('button, a')) return
+              if (window.getSelection()?.toString()) return
+              const sel = (e.target as Element).closest('[data-sel]')?.getAttribute('data-sel')
+              if (!sel) return
+              // Clicking the outlined one lets go, chip and all.
+              if (sel === outlined) ask.onClear()
+              else ask.onPick(sel)
+            }
+          : undefined
+      }
+    >
       {tree.map((section) => (
-        <SectionView key={section.index} section={section} first={section === tree[0]} look={look} gap={gap} before={before} />
+        <SectionView key={section.index} section={section} first={section === tree[0]} look={look} gap={gap} before={before} scope={scope} />
       ))}
       {before?.(blocks.length)}
     </div>
@@ -213,20 +274,25 @@ function SectionView({
   look,
   gap,
   before,
+  scope,
 }: {
   section: Section
   first: boolean
   look: Look
   gap: string
   before?: (index: number) => ReactNode
+  scope: Scope
 }) {
-  const body = section.groups.map((g) => <GroupView key={g.index} group={g} look={look} gap={gap} before={before} />)
+  const body = section.groups.map((g) => <GroupView key={g.index} group={g} look={look} gap={gap} before={before} scope={scope} />)
   if (!section.part) return <>{body}</>
   return (
     <section className={cn(look.reading ? 'space-y-6' : 'space-y-3')}>
       {before?.(section.index)}
-      <PartHeader label={section.part.label} title={<Runs runs={section.part.title} onJump={look.onJump} />} first={first} />
-      {body}
+      {/* A part header selects its whole part. */}
+      <Selectable sel={selPart(section.index)} scope={scope} className={cn(look.reading ? 'space-y-6' : 'space-y-3')}>
+        <PartHeader label={section.part.label} title={<Runs runs={section.part.title} onJump={look.onJump} />} first={first} />
+        {body}
+      </Selectable>
     </section>
   )
 }
@@ -236,24 +302,34 @@ function GroupView({
   look,
   gap,
   before,
+  scope,
 }: {
   group: Group
   look: Look
   gap: string
   before?: (index: number) => ReactNode
+  scope: Scope
 }) {
-  const items = group.items.map(({ block, index }) => (
-    <Fragment key={index}>
-      {before?.(index)}
-      <BlockView block={block} look={look} />
-    </Fragment>
-  ))
+  const items = group.items.map(({ block, index }) => {
+    const sel = selBlock(index)
+    return (
+      <Fragment key={index}>
+        {before?.(index)}
+        <Selectable sel={sel} scope={scope} block={block}>
+          <BlockView block={block} look={look} pick={scope.ask ? { scope, index } : undefined} />
+        </Selectable>
+      </Fragment>
+    )
+  })
   if (!group.step) return <div className={gap}>{items}</div>
   return (
     <div className={gap}>
       {before?.(group.index)}
-      <StepHeading number={group.number} title={<Runs runs={group.step.title} onJump={look.onJump} />} />
-      {items}
+      {/* A step heading selects its whole step. */}
+      <Selectable sel={selStep(group.index)} scope={scope} className={gap}>
+        <StepHeading number={group.number} title={<Runs runs={group.step.title} onJump={look.onJump} />} />
+        {items}
+      </Selectable>
     </div>
   )
 }

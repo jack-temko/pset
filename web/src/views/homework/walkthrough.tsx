@@ -18,6 +18,7 @@ import { ProfessorNotes } from '@/pages/workspace/notes'
 import { useBoxing } from '@/pages/workspace/boxing-state'
 import { figureURL, outstanding, questionStep, toFind, useHomeworkSet, useRemoveQuestion, useRedoReading, useRetryQuestion, useWriteGuide, useUpdateHomework, useUpdateQuestion, worksheetURL, type Question } from '@/api/homework'
 import { AnswersOf, Document, Runs } from '@/components/document'
+import { guideAbout, questionSource, type PendingSel } from '@/components/document/selection'
 import { runsSource, runsText } from '@/components/document/runs'
 import { answersOf } from '@/components/document/tree'
 import type { About } from '@/api/ask'
@@ -126,6 +127,9 @@ export function Walkthrough({
   onBack,
   onJump,
   onAskAbout,
+  onPickSelection,
+  onClearAbout,
+  selection,
   onOpenSettings,
 }: {
   setId: string
@@ -133,7 +137,16 @@ export function Walkthrough({
   onDelete: () => void
   onBack: () => void
   onJump: (page: number) => void
-  onAskAbout: (about: About) => void
+  /** "Ask about this" on the question, or the toolbar on a selection:
+   *  one context chip at a time, the selection replacing (or being
+   *  replaced by) whatever was there. */
+  onAskAbout: (about: About, selection?: PendingSel) => void
+  /** A click picked an element: the outline before anything is asked. */
+  onPickSelection: (selection: PendingSel) => void
+  /** The chip's ✕, Esc, or sending: the selection goes with the chip. */
+  onClearAbout: () => void
+  /** The pending selection, for the outline while its chip rides. */
+  selection: PendingSel | null
   onOpenSettings: () => void
 }) {
   const pages = usePages()
@@ -468,6 +481,12 @@ export function Walkthrough({
                 // arrive with it.
                 if (blocks.length === 0) return <StageSkeleton key={name} name={name} still={still} />
                 if (name === 'answers' && answersOf(blocks).length === 0) return null
+                // Every element of a stage that has lifted its veil is
+                // selectable, to ask about exactly it. The answers card
+                // repeats the walkthrough's answer rows, which stay
+                // selectable in place.
+                const stage = name === 'hint' ? ('hint' as const) : ('walkthrough' as const)
+                const source = questionSource(q.id, stage)
                 return (
                   <Stage
                     key={name}
@@ -478,7 +497,28 @@ export function Walkthrough({
                     {name === 'answers' ? (
                       <AnswersOf blocks={q.walkthrough} onJump={onJump} />
                     ) : (
-                      <Document blocks={blocks} onJump={onJump} reading />
+                      <Document
+                        blocks={blocks}
+                        onJump={onJump}
+                        reading
+                        ask={{
+                          selected: selection?.source === source ? selection.sel : null,
+                          onPick: (sel) => onPickSelection({ source, sel }),
+                          onAsk: (sel) =>
+                            onAskAbout(
+                              guideAbout({
+                                question: q.label,
+                                problem: runsSource(q.statement) || q.text,
+                                blocks,
+                                sel,
+                                stage,
+                                pages,
+                              }),
+                              { source, sel },
+                            ),
+                          onClear: onClearAbout,
+                        }}
+                      />
                     )}
                   </Stage>
                 )
