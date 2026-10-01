@@ -11,6 +11,7 @@ import (
 	"github.com/jackt/pset/internal/probnum"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -97,6 +98,12 @@ type Seen struct {
 	Page  int
 }
 
+// Time is how long the student has spent on questions: the stretches of
+// study with each one open, in seconds.
+type Time interface {
+	QuestionSeconds(ctx context.Context, ids []string) (map[string]int, error)
+}
+
 type Queue interface {
 	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
 	// Wake starts what was enqueued, once its transaction has committed.
@@ -113,9 +120,15 @@ type Config struct {
 	Settings Settings
 	// Memory is the book's memory; nil runs without one.
 	Memory Memory
+	// Time is the time spent on each question; nil says none was.
+	Time Time
 }
 
-type Service struct{ c Config }
+type Service struct {
+	c Config
+	// rankMu makes "is a ranking already waiting, if not queue one" one step.
+	rankMu sync.Mutex
+}
 
 // A question is a job per step: finding it in the book, reading its
 // figures when it has any, then writing its guide. All share one lane
@@ -135,10 +148,11 @@ const (
 const locateFirst = 1
 
 func New(c Config) *Service {
-	s := &Service{c}
+	s := &Service{c: c}
 	c.Queue.Handle(JobLocate, LaneQuestion, s.runLocate)
 	c.Queue.Handle(JobRead, LaneQuestion, s.runRead)
 	c.Queue.Handle(JobGuide, LaneQuestion, s.runGuide)
+	c.Queue.Handle(JobRank, LaneQuestion, s.runRank)
 	c.Queue.Handle(JobAssignment, LaneAssignment, s.runAssignmentRead)
 	return s
 }
@@ -158,14 +172,22 @@ func (s *Service) ForBook(ctx context.Context, bookID string) ([]Summary, error)
 	if _, err := s.c.Library.Book(ctx, bookID); err != nil {
 		return nil, err
 	}
-	return listSummaries(ctx, s.c.DB, `WHERE h.book_id = ? ORDER BY h.created_at DESC`, bookID)
+	hs, err := listSummaries(ctx, s.c.DB, `WHERE h.book_id = ? ORDER BY h.created_at DESC`, bookID)
+	if err != nil {
+		return nil, err
+	}
+	return hs, s.fillSummaries(ctx, hs)
 }
 
 // Due lists every set not yet turned in, across books: dated ones by date,
 // then the undated, newest first.
 func (s *Service) Due(ctx context.Context) ([]Summary, error) {
-	return listSummaries(ctx, s.c.DB, `WHERE h.turned_in_at = ''
+	hs, err := listSummaries(ctx, s.c.DB, `WHERE h.turned_in_at = ''
 		ORDER BY h.due_date = '', h.due_date, h.created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	return hs, s.fillSummaries(ctx, hs)
 }
 
 func (s *Service) Create(ctx context.Context, bookID string, in Input) (Summary, error) {
@@ -219,11 +241,17 @@ func (s *Service) Get(ctx context.Context, id string) (Detail, error) {
 	if err != nil {
 		return Detail{}, err
 	}
+	if h, err = s.filled(ctx, h); err != nil {
+		return Detail{}, err
+	}
 	qs, err := listQuestions(ctx, s.c.DB, id)
 	if err != nil {
 		return Detail{}, err
 	}
 	if err := fillUsage(ctx, s.c.DB, qs); err != nil {
+		return Detail{}, err
+	}
+	if err := s.fillSeconds(ctx, qs); err != nil {
 		return Detail{}, err
 	}
 	return Detail{Homework: h, Questions: qs}, nil
@@ -242,6 +270,22 @@ func fillUsage(ctx context.Context, d *sql.DB, qs []Question) error {
 	}
 	for i, q := range qs {
 		qs[i].Usage = uses[q.ID]
+	}
+	return nil
+}
+
+// fillSeconds puts the time spent on each question on it, one query for
+// the set. A question with none keeps zero, which the wire leaves out.
+func (s *Service) fillSeconds(ctx context.Context, qs []Question) error {
+	if s.c.Time == nil {
+		return nil
+	}
+	got, err := s.c.Time.QuestionSeconds(ctx, questionIDs(qs))
+	if err != nil {
+		return err
+	}
+	for i, q := range qs {
+		qs[i].Seconds = got[q.ID]
 	}
 	return nil
 }
@@ -303,6 +347,7 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 	for _, q := range qs {
 		s.c.Queue.StopSubject(ctx, q.ID)
 	}
+	s.c.Queue.StopSubject(ctx, id)
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM homework WHERE id = ?`, id); err != nil {
 		return err
 	}
@@ -379,6 +424,9 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 		s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: q})
 	}
 	s.publishSet(ctx, homeworkID)
+	// Questions not from the book have nothing to find: the set may be
+	// ready to rank already.
+	s.rankWhenFound(ctx, homeworkID)
 	s.c.Queue.Wake()
 	return out, nil
 }
@@ -630,6 +678,8 @@ func (s *Service) RemoveQuestion(ctx context.Context, id string) error {
 		}
 	}
 	s.publishSet(ctx, q.HomeworkID)
+	// Difficulty is against the rest of the set, so the rest is ranked again.
+	s.rankWhenFound(ctx, q.HomeworkID)
 	return nil
 }
 
@@ -648,7 +698,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 	}
 	// Memory lines stay with saved rounds, which a retry of the same
 	// problem carries on from; the guide clears them with the rounds.
-	set := `reason = '', failure = '', hint = '[]', walkthrough = '[]',
+	set := `attempts = attempts + 1, reason = '', failure = '', hint = '[]', walkthrough = '[]',
 		memory = CASE WHEN rounds = '[]' THEN '[]' ELSE memory END, updated_at = ?`
 	args := []any{db.Now()}
 	// What's left to do, and the state it waits in: the step that failed,
@@ -728,9 +778,19 @@ func (s *Service) WriteGuide(ctx context.Context, id string) (Question, error) {
 
 // ---------------------------------------------------------------- events
 
+// filled is a set with its bar, pace and time left put on.
+func (s *Service) filled(ctx context.Context, h Summary) (Summary, error) {
+	one := []Summary{h}
+	err := s.fillSummaries(ctx, one)
+	return one[0], err
+}
+
 func (s *Service) publishSet(ctx context.Context, id string) (Summary, error) {
 	h, err := getSummary(ctx, s.c.DB, id)
 	if err != nil {
+		return Summary{}, err
+	}
+	if h, err = s.filled(ctx, h); err != nil {
 		return Summary{}, err
 	}
 	s.c.Events.Publish(EventHomeworkChanged, HomeworkChanged{Homework: h})
@@ -745,6 +805,11 @@ func (s *Service) publishQuestion(ctx context.Context, id string) (Question, err
 	if q.Question.Usage, err = usage.For(ctx, s.c.DB, usage.SubjectQuestion, id); err != nil {
 		return Question{}, err
 	}
+	one := []Question{q.Question}
+	if err = s.fillSeconds(ctx, one); err != nil {
+		return Question{}, err
+	}
+	q.Question.Seconds = one[0].Seconds
 	s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: q.Question})
 	return q.Question, nil
 }

@@ -65,7 +65,7 @@ export function AppShell({
             <span
               aria-hidden={!scrolledTitle}
               className={cn(
-                'transition-opacity duration-150 ease-out motion-reduce:transition-none',
+                'transition-opacity duration-200 ease-out motion-reduce:transition-none',
                 scrolledTitle ? 'opacity-100' : 'opacity-0',
               )}
             >

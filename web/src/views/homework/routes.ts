@@ -130,6 +130,7 @@ export function homeworkRoutes(w: World): Route[] {
         // sees a second failure before the guide lands.
         const failure = w.retryFails
         w.retryFails = undefined
+        w.patch(q.id, { attempts: (q.attempts ?? 0) + 1, failedAt: undefined }, true)
         restart(q.id, r.text ? { inBook: false, text: r.text, statement: runs(r.text), page: undefined } : r.page ? { page: r.page } : {}, failure && { fail: { at: 'writing', failure, reason: w.retryReason } })
         return question(q.id)
       },

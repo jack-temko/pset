@@ -20,6 +20,36 @@ export interface Summary {
   total: number /* int */;
   done: number /* int */;
   createdAt: string;
+  /**
+   * Bar is one entry per question, in order, for the set's progress bar
+   * on the list (which does not carry the questions themselves).
+   */
+  bar?: BarEntry[];
+  /**
+   * Estimate is the time left at the student's pace, and Timed how
+   * many finished questions it learned the pace from. Absent until it
+   * has two to go on (estimate.go).
+   */
+  estimate?: Estimate;
+  timed?: number /* int */;
+}
+/**
+ * Estimate is the time left on a set at the student's pace, in seconds,
+ * and the range it could fall in.
+ */
+export interface Estimate {
+  seconds: number /* int */;
+  low: number /* int */;
+  high: number /* int */;
+}
+/**
+ * BarEntry is a question as the set's bar shows it: done, failed, and as
+ * wide as it is hard (Weight is its difficulty, 0 until ranked).
+ */
+export interface BarEntry {
+  done: boolean;
+  failed?: boolean;
+  weight?: number /* int */;
 }
 /**
  * List is a book's sets, or the due list across books.
@@ -185,6 +215,25 @@ export interface Question {
    */
   revealed: string[];
   done: boolean;
+  /**
+   * Difficulty is how hard it is against the rest of its set, 1 to 5,
+   * which gives it its share of the set's progress bar. Absent until
+   * the set has been ranked (rank.go).
+   */
+  difficulty?: number /* int */;
+  /**
+   * Seconds is the time spent on it with it open in the walkthrough,
+   * as of this snapshot (a stretch being worked is saved every half
+   * minute, so it runs a little behind). Absent until there is some.
+   */
+  seconds?: number /* int */;
+  /**
+   * Attempts is how many times it has been tried again after failing,
+   * and FailedAt (RFC 3339) when it last failed, while it is failed: so a
+   * second failure says it is one, and how long ago.
+   */
+  attempts?: number /* int */;
+  failedAt?: string;
   /**
    * UpdatedAt is when its state (or its statement, or a stage) last
    * changed: while it waits, when the wait began.

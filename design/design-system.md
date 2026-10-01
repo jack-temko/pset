@@ -169,7 +169,10 @@ delete asks first. Two rules keep that consistent:
 
 - **One menu per thing.** A thing's actions live in one "⋯" Menu beside
   where it's named: the book's beside its title in the top bar, a
-  homework set's in the walkthrough's header. The destructive act is
+  homework set's in the walkthrough's header, and (2026-09-30) a question's
+  on its label row. Every one is the same Menu: a radius-lg card of
+  full-bleed 40px rows, joined flush to its trigger, one open at a time
+  (`web/src/components/menu/README.md`). The destructive act is
   last, below a divider, in destructive ink. Edit dialogs only edit;
   none carries a delete.
 - **A delete asks where you asked.** A **ConfirmPopover** opens under
@@ -213,14 +216,15 @@ without it silently pushes the layout taller instead of scrolling.
 
 ## Motion
 
-Motion is functional and fast: **150ms, ease-out**. It exists to make a
-state change legible, never to decorate. Two movements exist, and no
-others:
+Motion is functional and fast: **200ms, ease-out** for a state change and **100ms** for a hover (2026-09-30, Jack; both were 150ms and instant). It exists to make a
+state change legible, never to decorate. One movement exists beyond
+colour and opacity, and no others:
 
 - **A book cover lifts 4px** off the shelf on hover, with `shadow-lift`.
-- **Veiled content resolves**: blur and opacity easing back to nothing
-  when a hint or a walkthrough is revealed, and easing part of the way
-  on hover.
+
+(There was a second: frosted content resolving when a hint was revealed.
+The Veil was removed with the homework redesign, 2026-09-30, and a
+question's help is now rows that open in place: the Disclosure.)
 
 Everything else is a colour or opacity change, and a hover's is
 instant (below).
@@ -231,7 +235,7 @@ a search index. The **Skeleton shimmers** where content is on its way.
 Work that can be counted gets a determinate bar instead, and something
 merely queued gets the word "Queued" and no motion at all: nothing is
 happening to it yet. Anything that isn't waiting must not borrow the
-meaning, which is why the Veil never shimmers.
+meaning.
 
 **Nothing flickers either** (2026-09-24). A state that may be over in a
 moment (a wait between two of the engine's steps, a request in flight)
@@ -246,19 +250,19 @@ draws a **Skeleton** first: shimmering `muted` blocks at the size and
 count of what's coming, inline in real line boxes so a skeleton row and
 the row that replaces it measure the same.
 
-**Hover shows at once** (2026-09-25). A hover wash or ink change has no
-transition: it's there the instant the pointer is, and gone the instant
-it leaves. Faded, a list swept with the pointer lit each row late and
-left a trail fading behind it, and crossing the hairline between two
-rows blinked both: Jack saw it as jitter and lag ("It seems to jitter
-and flash away sometimes. Almost looks like its lagging. Its also quite
-slow."). The fade stays for changes of state, which happen once and are
-worth seeing happen: a checkbox's tick, a radio's dot, a transcript step
-easing back, the veil resolving, the cover lifting, a tooltip appearing.
+**Hover fades in over 100ms** (2026-09-30, Jack: "give hover a short fade", reversing
+2026-09-25). A hover wash or ink change used to be instant, because a slower fade left a
+swept list lighting rows late and trailing behind the pointer ("It seems to jitter and flash
+away sometimes. Almost looks like its lagging. Its also quite slow."). The fade is now 100ms
+ease-out, short enough that a swept list keeps up, and it is one rule in the base layer
+(`web/src/index.css`, `:where(button, a, ...)`), so a hover class needs no transition of its
+own. Changes of state, which happen once and are worth seeing happen (a checkbox's tick, a
+radio's dot, a transcript step easing back, the cover lifting, a tooltip or a menu appearing),
+take 200ms.
 
-Anything that moves states `transition duration-150 ease-out` explicitly,
-paired with `motion-reduce:transition-none`. A hover class leaves it
-off.
+Anything that moves for a change of state says `transition duration-200 ease-out` explicitly,
+paired with `motion-reduce:transition-none`. A hover class says nothing: the base layer does
+it.
 
 ## Writing
 
@@ -289,6 +293,6 @@ not silently disagree.
 | Counters and chips sit at **15px** | The baseline's Box and ActionList previews set them at 12px, which contradicts the system's own type floor. The floor wins. |
 | The Counter's fill is translucent ink, not `muted` | It sits on `card-header`, the surface where `muted` is weakest even after the correction (1.24:1). Ink at 20% gives it 1.50:1 and inverts with the theme for free. |
 | The date field is the browser's native `<input type="date">` | It is the one control in the app we don't draw. A correct, keyboard-reachable, locale-aware calendar is a large component to build and an easy one to build slightly wrong, and the value it carries is a date, not a brand moment. |
-| Blur has **two** meanings, and they never share a layer | The Veil blurs content *you could read*, to say "not yet". A dialog's scrim blurs a *screen you are no longer on*, to say "not here". One is 6px on the content itself, the other 2px on a backdrop behind a card. |
+| Blur has **one** meaning now | A dialog's scrim blurs a *screen you are no longer on*, to say "not here": 2px on a backdrop behind a card. (It had two until the Veil, which blurred content you could read to say "not yet", was removed, 2026-09-30.) |
 | Night's `chart-1` and `chart-2` re-stepped to L 0.56 and 0.66 | At the baseline's 0.70 and 0.72 both sat above the dark lightness band and the pair measured dE 12.9 for normal vision, below the 15 floor: two lines in a plot read as one colour. Validated against the Night card: all five checks pass, dE 18.7 normal, 17.6 deutan. |
 | `card-header` left at its baseline value | It is 1.08:1 against `card` and cannot improve without reading as a different surface. But it always carries a border, and that hairline is what separates the band. |

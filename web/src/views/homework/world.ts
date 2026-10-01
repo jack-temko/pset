@@ -1,8 +1,9 @@
-import type { Assignment, AssignmentRead, Detail, Failure, Question, Summary } from '@/api/homework'
+import type { Assignment, AssignmentRead, Detail, Estimate, Failure, Question, Summary } from '@/api/homework'
 import type { Book } from '@/api/library'
 import type { Block, Run } from '@/api/gen/doc'
 import type { Usage } from '@/api/gen/usage'
 import type { ScenarioContext } from '@/views/mock/scenario'
+import type { HomeworkSet, Q } from './progress'
 import { COVERS } from '@/lib/covers'
 
 const t = (text: string): Run => ({ t: text })
@@ -135,26 +136,30 @@ export interface QuestionInit {
   notes?: Run[][]
   inBook?: boolean
   text?: string
+  /** How hard it is against the rest of its set, 1 to 5 (the ranking step's score). */
+  difficulty?: number
+  /** Seconds the student has spent on it in the walkthrough. */
+  seconds?: number
 }
 
 let ids = 0
 export const nextId = (prefix: string) => `${prefix}-${++ids}`
 
 /** A question as the server would send it in a given state. */
-export function makeQuestion(init: QuestionInit): Question {
+export function makeQuestion(init: QuestionInit): Q {
   const sample = sampleFor(init.label)
   const found = !['pending', 'locating'].includes(init.state) || init.state === 'failed'
   const guided = init.state === 'ready' || init.state === 'unwritten'
   const inBook = init.inBook ?? true
-  const q: Question = {
+  const q: Q = {
     id: nextId('q'),
     homeworkId: init.homeworkId,
     position: init.position,
     text: init.text ?? init.label,
     inBook,
     label: init.label,
-    statement: found && sample ? sample.statement : [],
-    page: found && sample && inBook ? sample.page : undefined,
+    statement: found ? (sample ? sample.statement : inBook ? [t(`Exercise ${init.label}, from the chapter’s problems.`)] : []) : [],
+    page: found && inBook ? (sample ? sample.page : 120 + init.position) : undefined,
     figures: found && sample?.figure ? [{ label: 'Fig. 4.109' }] : [],
     hint: init.state === 'ready' || init.state === 'writing' ? HINT : [],
     walkthrough: init.state === 'ready' ? WALKTHROUGH : [],
@@ -171,6 +176,10 @@ export function makeQuestion(init: QuestionInit): Question {
     memory: [],
     revealed: init.revealed ?? [],
     done: init.done ?? false,
+    difficulty: init.difficulty,
+    seconds: init.seconds,
+    // A question that starts failed failed a couple of minutes ago.
+    failedAt: init.state === 'failed' ? new Date(Date.now() - 2 * 60_000).toISOString() : undefined,
     updatedAt: new Date().toISOString(),
     rev: 1,
   }
@@ -179,6 +188,20 @@ export function makeQuestion(init: QuestionInit): Question {
 
 export function makeRead(over: Partial<AssignmentRead> & Pick<AssignmentRead, 'state' | 'source'>): AssignmentRead {
   return { id: nextId('read'), bookId: BOOK_ID, createdAt: '', updatedAt: new Date().toISOString(), ...over }
+}
+
+/**
+ * What the backend will send as a set's estimate, worked out on the mock's
+ * questions the way the real one will: the student's seconds per unit of
+ * difficulty on what has been timed, times the difficulty left, with a
+ * range either side. Nothing until two questions have been timed.
+ */
+export function mockEstimate(qs: Q[]): Estimate | undefined {
+  const timed = qs.filter((q) => (q.seconds ?? 0) > 0)
+  if (timed.length < 2) return undefined
+  const perUnit = timed.reduce((n, q) => n + (q.seconds ?? 0), 0) / timed.reduce((n, q) => n + (q.difficulty ?? 1), 0)
+  const left = qs.filter((q) => !q.done).reduce((n, q) => n + (q.difficulty ?? 1), 0) * perUnit
+  return left > 0 ? { seconds: left, low: left * 0.8, high: left * 1.2 } : undefined
 }
 
 export function makeSet(title: string, dueOffset: number | null, over: Partial<Summary> = {}): Summary {
@@ -220,7 +243,7 @@ export const READ_ASSIGNMENT: Assignment = {
  */
 export class World {
   sets: Summary[] = []
-  questions: Question[] = []
+  questions: Q[] = []
   reads: AssignmentRead[] = []
   private ctx: ScenarioContext
   private started = Date.now()
@@ -246,10 +269,17 @@ export class World {
     this.ctx.after(Math.max(0, v - this.vnow()), fn)
   }
 
-  summary(id: string): Summary {
+  summary(id: string): HomeworkSet {
     const h = this.sets.find((x) => x.id === id)!
     const qs = this.questions.filter((q) => q.homeworkId === id)
-    return { ...h, total: qs.length, done: qs.filter((q) => q.done).length }
+    return {
+      ...h,
+      total: qs.length,
+      done: qs.filter((q) => q.done).length,
+      estimate: mockEstimate(qs),
+      timed: qs.filter((q) => (q.seconds ?? 0) > 0).length,
+      bar: [...qs].sort((a, b) => a.position - b.position).map((q) => ({ done: q.done, failed: q.state === 'failed', weight: q.difficulty })),
+    }
   }
 
   detail(id: string): Detail {
@@ -292,7 +322,7 @@ export class World {
       v += 2600
       if (opts.fail?.at === 'locating') {
         this.finderFree = v
-        step(v, { state: 'failed', failure: opts.fail.failure, reason: opts.fail.reason, activity: undefined })
+        step(v, { state: 'failed', failure: opts.fail.failure, reason: opts.fail.reason, activity: undefined, failedAt: new Date().toISOString() })
         return
       }
       this.finderFree = v
@@ -319,7 +349,7 @@ export class World {
     v += 3200
     if (opts.fail?.at === 'writing') {
       this.writerFree = v
-      step(v, { state: 'failed', failure: opts.fail.failure, reason: opts.fail.reason, activity: undefined })
+      step(v, { state: 'failed', failure: opts.fail.failure, reason: opts.fail.reason, activity: undefined, failedAt: new Date().toISOString() })
       return
     }
     this.writerFree = v

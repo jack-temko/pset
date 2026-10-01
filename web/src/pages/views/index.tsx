@@ -8,6 +8,7 @@ import { SegmentedControl } from '@/components/segmented-control'
 import { GalleryShell } from '@/pages/gallery/shell'
 import { Markdown } from '@/pages/gallery/markdown'
 import type { Traffic } from '@/views/mock/server'
+import { grillSummary } from '@/views/grill'
 import { VIEWS } from '@/views/registry'
 import type { Handoff } from '@/views/types'
 import { Log } from './log'
@@ -34,12 +35,14 @@ export function Views() {
   const [traffic, setTraffic] = useState<Traffic[]>([])
   const [handoffs, setHandoffs] = useState<Handoff[]>([])
   const [spec, setSpec] = useState<{ id: string; text: string } | null>(null)
+  const [grill, setGrill] = useState<{ id: string; text: string } | null>(null)
   const entry = VIEWS.find((v) => v.id === view)
 
   useEffect(() => {
     if (!entry) return
     let live = true
     entry.spec().then((text) => live && setSpec({ id: entry.id, text }))
+    entry.grill?.().then((text) => live && setGrill({ id: entry.id, text }))
     return () => {
       live = false
     }
@@ -60,6 +63,11 @@ export function Views() {
   const scenario = entry.scenarios.find((s) => s.id === params.get('scenario')) ?? entry.scenarios[0]
   const speed = params.get('speed') === '4' ? 4 : 1
   const wide = !!entry.wideLabel && params.get('wide') === '1'
+  // What the column beside the view shows: its spec, its grill's summary
+  // (what was decided and why), or the whole grill with the Q&A log.
+  const mode = entry.wireframes && params.get('mode') === 'wireframes' ? 'wireframes' : 'live'
+  const Wireframes = entry.wireframes
+  const doc = entry.grill && ['grill', 'log'].includes(params.get('doc') ?? '') ? params.get('doc') : 'spec'
   const set = (key: string, value: string | null) =>
     setParams(
       (p) => {
@@ -84,6 +92,19 @@ export function Views() {
       entry={entry}
       toolbar={
         <div className="flex flex-wrap items-center justify-end gap-3">
+          {entry.wireframes && (
+            <SegmentedControl
+              label="Mode"
+              value={mode}
+              onChange={(v) => set('mode', v === 'live' ? null : v)}
+              options={[
+                { value: 'live', label: 'Live' },
+                { value: 'wireframes', label: 'Wireframes' },
+              ]}
+            />
+          )}
+          {mode === 'live' && (
+            <>
           <select
             aria-label="Scenario"
             value={scenario.id}
@@ -117,9 +138,15 @@ export function Views() {
             <RotateCcw />
             Replay
           </Button>
+            </>
+          )}
         </div>
       }
     >
+      {mode === 'wireframes' && Wireframes ? (
+        <Wireframes />
+      ) : (
+        <>
       <p className="text-sm text-muted-foreground">
         <span className="font-medium text-foreground">{scenario.title}.</span> {scenario.note}
       </p>
@@ -136,8 +163,26 @@ export function Views() {
           />
           <Log handoffs={handoffs} traffic={traffic} />
         </div>
-        {spec?.id === entry.id && <Markdown source={spec.text} />}
+        <div className="min-w-0 space-y-4">
+          {entry.grill && (
+            <SegmentedControl
+              label="Document"
+              value={doc as 'spec' | 'grill' | 'log'}
+              onChange={(v) => set('doc', v === 'spec' ? null : v)}
+              options={[
+                { value: 'spec', label: 'Spec' },
+                { value: 'grill', label: 'Grill' },
+                { value: 'log', label: 'Full log' },
+              ]}
+            />
+          )}
+          {doc === 'spec' && spec?.id === entry.id && <Markdown source={spec.text} />}
+          {doc === 'grill' && grill?.id === entry.id && <Markdown source={grillSummary(grill.text)} />}
+          {doc === 'log' && grill?.id === entry.id && <Markdown source={grill.text} />}
+        </div>
       </div>
+        </>
+      )}
     </GalleryShell>
   )
 }

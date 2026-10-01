@@ -18,7 +18,7 @@ export function BookTile({ book }: { book: Book }) {
         title={book.title}
         author={book.author}
         hue={book.cover}
-        className="transition duration-150 ease-out group-hover:-translate-y-1 group-hover:shadow-lift motion-reduce:transition-none"
+        className="transition duration-200 ease-out group-hover:-translate-y-1 group-hover:shadow-lift motion-reduce:transition-none"
       />
     </Link>
   )

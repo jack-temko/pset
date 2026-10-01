@@ -37,7 +37,7 @@ views/<name>/spec.md
 `harness.props` (a set to open on). `play` starts the timeline once the view is on
 screen. `views/homework/` is the worked example; copy its shape.
 
-## Extracting a view from a screen (`new <name>`)
+## Extracting a view from a screen (`extract`)
 
 1. Move the view's components out of the screen file verbatim (an AST or careful
    cut, not a rewrite), fixing imports. Behaviour must not change.
@@ -55,7 +55,20 @@ screen. `views/homework/` is the worked example; copy its shape.
    particular to this view).
 6. Add the entry to `views/registry.ts` (`id`, `title`, `group`, `note`,
    `scenarios`, `spec`, `Stage`, optional `wideLabel`).
-7. Write `spec.md` from the code and the harness log, then run `audit`.
+7. Write `spec.md` from the code and the harness log, then run the read-only audit (`tweak` with no target).
+
+## The stage swaps the view the way the screen does
+
+A log that only records a handoff "out" can never show that the way back is broken.
+Where the real screen swaps the view out (the workspace panel's Ask | Homework tabs
+unmount each other), the stage must swap it too: a stand-in for the other side (a stub
+Ask pane showing the question's chip) and the real way back. Logic both the screen and
+the stage need (what the panel remembers across a swap) lives in the view's folder and
+is imported by both, never copied into the stage, so the harness runs the real code.
+
+Make state survive what a student does: sample ids are deterministic per play (`set-1`,
+not a counter that keeps counting), and a stage that keeps state across a reload uses a
+`sessionStorage` key that Replay clears, so a reload can be tested for real.
 
 ## Keeping the simulator honest
 
@@ -66,5 +79,7 @@ screen. `views/homework/` is the worked example; copy its shape.
 - Fixtures are typed against `web/src/api/gen/`, so a contract change breaks the
   build here first. Keep sample content realistic (real-looking labels, math as
   runs, a figure) so layout is judged on real content.
+- A scenario's mock must send what the real server sends. A kinder sentence in the mock
+  than the server's hides the very problem the scenario exists to show.
 - When a route the view needs is missing, the view shows an error and the log
   shows a 404: that is the signal to add the route, not to loosen the mock.

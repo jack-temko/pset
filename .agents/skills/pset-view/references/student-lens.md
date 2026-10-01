@@ -51,7 +51,9 @@ a redesign has to beat. Note the exits and the re-entry after a break.
 
 - Drive it, do not just read it: the scenarios exist so the awkward states are
   reachable (`slow`, `failed`, `mid-flow-reload`, `return-after-break`).
-- Do the main flow **keyboard only** once, and **in Night**, before writing the
+- Count the **tab stops** from opening the view to the main action and put the number in
+`budget`; recount it every run (one log said 6, the real count was 9). Do the main
+flow **keyboard only** once, and **in Night**, before writing the
   log. A view that passes in Paper at a mouse's pace often fails there.
 - Judge at 1280 wide. Below 1024 the app shows a gate; it is desktop only.
 - Look for what is missing as much as what is wrong: no way to see the set at a
@@ -62,8 +64,8 @@ a redesign has to beat. Note the exits and the re-entry after a break.
 One table in the spec, kept across runs: fixed rows are marked, unfixed rows carry
 to the next run. A row is:
 
-| id | where | what goes wrong for a tired student | severity | fix | status |
-|---|---|---|---|---|---|
+| id | where | what goes wrong for a tired student | severity | fix | status | shown in |
+|---|---|---|---|---|---|---|
 
 - **id**: `F<n>`, never reused.
 - **where**: the element or moment, findable in a scenario.
@@ -76,8 +78,12 @@ to the next run. A row is:
 - **status**: `open`, `fixed (branch)`, `raise with Jack` (it contradicts a locked
   decision), `dropped (why)`.
 
-Every row names a scenario that shows it. A finding that cannot be shown in a
-scenario needs a scenario first.
+Every row names, in its last column, the scenario that shows it. A finding that
+cannot be shown in a scenario needs a scenario first.
+
+**A finding that belongs to a neighbouring view** (Ask's composer not taking focus
+is Ask's, not Homework's) is logged with the owning view named in `where`, and moved
+to that view's spec when it is extracted. Do not fix another view's behaviour in passing.
 
 ## What to propose, in order
 

@@ -134,7 +134,7 @@ func (s *Service) PointOut(ctx context.Context, id string, boxes []Box) (Questio
 	}
 	s.c.Queue.StopSubject(ctx, id)
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `UPDATE questions SET boxes = ?, in_book = 1, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]',
+		if _, err := tx.ExecContext(ctx, `UPDATE questions SET attempts = attempts + (state = 'failed'), boxes = ?, in_book = 1, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]',
 			hint = '[]', walkthrough = '[]', rounds = '[]', reading = '[]', reading_edited = 0, memory = '[]',
 			state = 'pending', failure = '', reason = '', activity = '', updated_at = ? WHERE id = ?`,
 			mustJSON(boxes), db.Now(), id); err != nil {

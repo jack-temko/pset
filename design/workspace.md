@@ -22,7 +22,7 @@ bar's middle names the book.
 - **Focus** widens the panel to 800 by collapsing the rail and taking a
   little of the scan (2026-09-26: 440 + 320 read cramped for a
   walkthrough); the scan shrinks but stays visible. The toggle sits right of the panel's tabs.
-- The panel is always open, and remembers **per book** which tab it showed.
+- The panel is always open. *(2026-09-30, R10: it used to remember per book which tab it showed; a book now always opens on Homework, at the list, and both tabs stay mounted so Ask and back keeps the place within a visit. See the redesign section below.)*
 
 ## Time
 
@@ -220,10 +220,10 @@ built.
   out. The outline and the chip are one state: it lives while the chip
   lives (across tabs), and ✕, Esc, clicking the outlined element again
   or sending drops both; the sent turn keeps an inert chip as its
-  record. Page chips still jump and drag still copies; veiled content
-  selects once lifted, and a block still streaming once finished. One
-  element outlines at a time, held above the documents (a page shows
-  two: a hint and a walkthrough).
+  record. Page chips still jump and drag still copies; a row's content
+  selects once it is open, and a block still streaming once finished.
+  One element outlines at a time, held above the documents (a page
+  shows two: a hint and a walkthrough).
 - Empty conversation: a prompt line plus one short sentence of what the
   agent can do. No generated suggestions.
 - One running conversation per book (locked earlier).
@@ -234,6 +234,10 @@ built.
 > and friction log are in `web/src/views/homework/spec.md`, next to the live view
 > and its scenarios; where they disagree with what follows, the spec (and the code)
 > win. This section keeps the decisions and how they were reached.
+>
+> **Redesigned 2026-09-30** (`web/src/views/homework/grill.md`, decisions D1 to D35).
+> The redesign's own section is at the end of this one; earlier entries that it
+> changed carry a dated note saying so, with the reversal's number (R1 to R11).
 
 - **List → walkthrough**, both in the panel: the book's assignments as
   rows (Box + Door), opening one fills the panel with its walkthrough,
@@ -364,8 +368,8 @@ built.
     whose dates would all share one name.
 - **Not every question is in the book.** A professor's own problem still
   needs a walkthrough. An unchecked row skips the engine's locate stage:
-  it gets **no page chip and no scan jump**, and is otherwise identical:
-  same statement, same two veiled stages, same Complete.
+  it gets **no Show in book** (2026-09-30: it had no page chip), and is
+  otherwise identical: same statement, same three rows, same one button.
 - **Progressive rows**: questions appear as they are located, each with a
   quiet working state until its guide is ready ("Finding it in the
   book…", or "Writing the guide…" when there is nothing to find),
@@ -388,7 +392,8 @@ built.
   question is still being found, the menu item carries a muted hint, "3
   still being found", since those print as a bare label. It never stops
   you printing.
-- Walkthrough per question: two veiled stages and a Complete checkbox,
+- Walkthrough per question: three rows that open in place and one primary
+  button (2026-09-30; it was two veiled stages and a Complete checkbox),
   detailed below. Reveals and marks persist; progress is questions
   marked done.
 - **Print produces a worksheet** (2026-09-21): each question's statement
@@ -396,7 +401,9 @@ built.
   nothing spoiled on paper. The engine renders it as a PDF (`hwpdf.go`,
   questionScale/figureScale) and it **opens in a new tab**; printing and
   saving happen there.
-- **The walkthrough header** (2026-09-21) keeps what you read: back, the
+- **The walkthrough header** *(2026-09-30, R7: the count is now a menu of the
+  questions, the time left sits beside it and a difficulty-weighted bar is the
+  row's bottom edge; see the redesign section)* (2026-09-21) keeps what you read: back, the
   set's title, "3 of 8", and a **"⋯" menu** for what you do to the set:
   Add questions, Box one on the page, Edit
   homework, Print worksheet, then **Turn in** below a
@@ -405,12 +412,15 @@ built.
   Label says so in the bar.
 - **A Home due-row lands straight in that walkthrough** at
   `/books/{sha}/homework/{id}`, on the **first question not yet
-  complete**, where you'd pick up. The scan doesn't move; it only ever
+  complete**, where you'd pick up (2026-09-30: and a set already all done
+  opens on its finish page). The scan doesn't move; it only ever
   jumps on demand.
 
 ### Walkthrough (2026-09-18 grill)
 
-- **One question at a time**: prev/next plus a "3 of 8" position row.
+- **One question at a time** *(2026-09-30, R6: the prev and next arrows and the
+  position row are gone; the header's count opens a list of the questions and the
+  keyboard's arrows browse)*: prev/next plus a "3 of 8" position row.
   440px is one problem's screenful; focus is the point.
 - **Statement = extracted text + figure crops** (math rendered), never a
   flat page image.
@@ -422,7 +432,9 @@ built.
   leaving out points and page hints, and **Edit** changes them; the
   guide follows them over the book, so a change writes it again. A
   question without notes shows a quiet **Add your professor's
-  instructions**. Notes, the reading and the statement are stored as
+  instructions**. *(2026-09-30, D8 and D19: the box is read-only, and the question's
+  menu, Edit or Add the professor's instructions, is the one way to change
+  them; a question without notes shows nothing.)* Notes, the reading and the statement are stored as
   runs (math split out, KaTeX-checked); editing shows the string form,
   math in `\(..\)`, and saving sends it back as text. The Box is the same one as the figure's reading
   (`EditableLines`).
@@ -433,7 +445,9 @@ built.
   likeliest way for a guide to be wrong, so the reading is out in the
   open, where a glance against the figure catches it. It shows its
   first four lines, the rest behind a Door. It is not veiled: it says
-  what the problem is, not how to solve it.
+  what the problem is, not how to solve it. *(2026-09-30, D3: it is out only
+  when the reading is flagged "Check it", or when the question's menu asks
+  for it.)*
   - **Correct** turns it into a text box, a fact a line. **Save and
     rewrite the guide** writes the guide again from the student's lines,
     which the writer is told are the student's and win over its own
@@ -462,8 +476,9 @@ built.
 - **Boxing a problem on the page** (2026-09-25): the way to show where
   a problem is when finding can't. Two ways in, one tool: **Box one on
   the page** in the set's menu adds a question, and **Show me where it
-  is** (a failed find's first way out, and a quiet "Not the right
-  problem?" line under a found one) shows where an existing question
+  is** (a failed find's first way out, and, since 2026-09-30, "This isn't
+  the right problem" in the question's menu, where a quiet "Not the right
+  problem?" line under a found one used to be) shows where an existing question
   really is. The scan then draws instead of panning: drag a box around
   the problem's words, then around each figure, as many as it takes for
   a problem over two pages or columns. Words are a solid primary box,
@@ -481,9 +496,11 @@ built.
   boxes. Esc cancels. Done reads the words from the boxes (the statement
   and the number), keeps the figures from their own pages, and carries
   on as any found question does; a new one opens in the walkthrough.
-- **Scan jumps on demand**: a page chip in the question header; opening a
+- **Scan jumps on demand** *(2026-09-30, R5: the page chip is gone; a **Show in
+  book** button on the question's label row takes the scan to the page, and
+  choosing a question still never moves it)*: a page chip in the question header; opening a
   question never moves the scan by itself.
-- **Three stages, all veiled**: *hint*, *walkthrough* and *answers*
+- **Three stages, all veiled** *(superseded 2026-09-30: rows that open in place, the Veil removed; web/src/views/homework/grill.md, D23 and R9)*: *hint*, *walkthrough* and *answers*
   (2026-09-29): the walkthrough carries the working, and the Answers
   veil collects every part's `answer` block, so a student can check
   paper work without seeing the working. Each sits behind frosted glass
@@ -510,7 +527,10 @@ built.
   guide yet." with **Write the guide**, which queues it. Nothing writes
   one unasked, and correcting the notes or the reading of such a
   question only saves them.
-- **Complete is a checkbox**, not a button, and it does exactly one
+- **Complete is a checkbox** *(2026-09-30, R1 and R2: replaced by one primary
+  button that is Next question, Mark incomplete or Skip for now; Next marks the
+  question done and moves to the next unfinished one, and the last one ends on a
+  finish page. Done is still as easy to take back: Mark incomplete, in place)*, not a button, and it does exactly one
   thing: marks the question done. It never advances: you move on when
   you decide to, not when the app decides for you, and unchecking is
   the undo. Progress is the count of checked questions, shown in the
@@ -550,7 +570,8 @@ built.
   ("Type the page number first.").
 - **Sets are editable: add, remove and reorder.** The controls sit inline
   on the question you are looking at (move up, move down, remove, as
-  quiet icon buttons beside its page chip) because the walkthrough is
+  quiet icon buttons beside its page chip; *since 2026-09-30, R4, they are in
+  the question's menu*) because the walkthrough is
   the only view of the set there is. **Remove asks first** (2026-09-24),
   in a confirm under the trash: "Remove 3.A.4? Its guide and your
   progress on it go with it." The confirm belongs to that question:
@@ -558,7 +579,8 @@ built.
 - **Turned in is a checkable item in the header's menu** (2026-09-21):
   the set-level twin of Complete, and like it a fact you can take back.
   It lives with the set's actions, away from Complete in the footer, so
-  the two are never confused. Turned-in sets drop to their own group at the
+  the two are never confused. *(2026-09-30, R3: Turn in also appears on the
+  finish page, as its one primary; it stays in the menu, and is taken back there.)* Turned-in sets drop to their own group at the
   list's bottom and leave Home's due list; unchecking brings them back.
 - **A list's last row adds to it** (2026-09-21, replacing a `+` on an
   "Assignments" header). The homework list has no header of its own: the
@@ -568,6 +590,71 @@ built.
   more" or "add one". Where the thing isn't a list in a Box, the `+`
   stays: import on Home's shelf. (Add questions lives in the walkthrough
   header's menu.)
+
+### Redesign (2026-09-30)
+
+`web/src/views/homework/grill.md` has every decision with its why, the log of
+the questions and the reversals; this is the screen as it is now, and
+`web/src/views/homework/spec.md` is its anatomy and states.
+
+- **The mission** (Jack): picking up a set after a long day of class. Each
+  question is hard and long, so the current one is the center of attention;
+  but it is nice to see how far along you are. Progress and the time left are
+  always in view; everything else is one click away.
+- **The header is one row and carries progress.** Back, the set's title, the
+  count ("2 of 8"), the time left in gray, the set's menu. The bottom edge of the
+  row is a **difficulty-weighted bar**: one segment per question, as wide as it is
+  hard, filled when done, half for the one you are on, in warning ink when failed.
+  It is not a control. The **count is a labelled Menu** listing the questions, each
+  with a check when done, a spinner and its stage ("Finding it", "Writing the guide") while it is
+  worked on ("Queued" while it waits), an alert icon when failed, and no words for the rest; the
+  current one is washed and in primary ink (post-build, Jack: the blue tint was too dark, and no
+  outline); it is how you jump, and "All done" opens the finish page once every one is.
+- **The time left is never confidently wrong.** It shows nothing until two
+  questions have been timed, reads "about 1 h 40 m left" rounded to five minutes,
+  shows a range when the spread is wide, and is never a live countdown. Time per
+  question is the homework time with the question open in the walkthrough,
+  counted as stretches are (20 minutes of no input ends one: it is worked on paper),
+  overlaps once.
+- **The question row**: its label, a check when done, **Show in book** (only when
+  it has a page), and the **question's menu**: Move up, Move down, This isn't the
+  right problem, Edit or Add the professor's instructions, Check how the figure
+  reads, What the guide remembered, and Remove this question last, in destructive
+  ink, asking first.
+- **Help is three rows**, Hint, Walkthrough and Answers, that open in place and say
+  how long each is ("2 lines", "5 steps", "2 answers"). Rows not written yet say
+  Writing, or Waiting when nothing is happening to the question yet, and cannot be
+  opened. What you open stays open. The keys 1 2 3 open and close them. The frosted
+  Veil is gone, and with it the blur that said "not yet".
+- **One primary button.** **Next question** marks the question done and goes to the
+  next unfinished one, wrapping round the end; on a done question it is **Mark
+  incomplete**, which takes the mark back in place; on one that cannot be finished
+  yet (being written, failed, no guide) it is **Skip for now**, which moves on and
+  marks nothing. **Ask about this** sits beside it.
+- **The keyboard**: left and right browse, 1 2 3 open the rows, Enter on the focused
+  button. Off while typing, in a menu or in a dialog.
+- **The finish page** fills the panel once the last unfinished question is done: a line
+  for the hour (Home's seven stretches, lines of its own), total time and time per
+  question, a bar of time per question with the longest marked, the two hardest,
+  and **Turn in** as the one primary, with **Back to list**. With no timing yet it is
+  the line and the way out. It leaves out what help was used, what is due next and
+  any comparison with earlier sets: it reports, it does not grade or nag.
+- **Focus is two columns**: the question, Show in book and the notes stay on the left
+  while the help scrolls on the right. Its toggle's icon is the two-column one.
+- **The list**: each set carries its bar, "n of m done" and the time left (its due line
+  when that is not known). A book always opens on the Homework list, and the panel
+  keeps both tabs mounted, so Ask about a question and back is the same question,
+  where it was, within a visit; a reload is a new visit. Opening a set lands on its
+  next unfinished question.
+- **Every dropdown is one Menu**: a radius-lg card with full-bleed 40px rows (the
+  hover wash fills the row to the card's edge, no padding), 256px at least, joined
+  flush to its trigger as one shape, a labelled trigger, the current
+  row washed and in primary ink, only one open at a time. Motion across the app: 200ms for a state change,
+  a 100ms fade for a hover (design-system.md, Motion).
+- **Backend, built after the UI** (`ideas/homework-redesign.md`, phase B): difficulty
+  per question from a ranking step after find (a heuristic if the model is down),
+  seconds per question, the estimate, `attempts` and `failedAt`. Until then the
+  view runs on the mock server's sample data.
 
 ## Panel header
 

@@ -1,12 +1,10 @@
-import { useState } from 'react'
 import { Check, Clock, TriangleAlert } from 'lucide-react'
 import { Box, BoxRow } from '@/components/box'
 import { Button } from '@/components/button'
 import { Flash } from '@/components/flash'
 import { HomeworkStatusLabel } from '@/components/homework-status'
 import { Label } from '@/components/label'
-import { MathDisplay, MathInline } from '@/components/transcript'
-import { Veil } from '@/components/veil'
+import { ProgressBar } from '@/components/progress-bar'
 import { Spinner } from '@/components/spinner'
 import { Skeleton } from '@/components/skeleton'
 import { UsageLine } from '@/components/usage'
@@ -51,35 +49,6 @@ const USAGE_WIDE: Usage = {
   ],
   total: { ms: 211000, tokens: 1265323, cost: 12.34603, calls: 14 },
   failed: 0,
-}
-
-/** The Veil needs state to be worth looking at. */
-function VeilDemo() {
-  const [shown, setShown] = useState(false)
-  return (
-    <div className="space-y-2">
-      <p className="text-xs text-muted-foreground uppercase">walkthrough</p>
-      <Veil label="Show walkthrough" revealed={shown} onReveal={() => setShown(true)}>
-        <div className="space-y-3 text-base">
-          <p>
-            With <MathInline tex="\dim V = 1" /> a nonzero <MathInline tex="w" /> spans, so{' '}
-            <MathInline tex="Tw = \lambda w" /> for some scalar. Any{' '}
-            <MathInline tex="v = c\,w" /> then gives
-          </p>
-          <MathDisplay tex="Tv = T(c\,w) = c\,Tw = c\,\lambda w = \lambda v." />
-        </div>
-      </Veil>
-      {shown && (
-        <button
-          type="button"
-          onClick={() => setShown(false)}
-          className="text-xs text-muted-foreground underline underline-offset-2"
-        >
-          Reset the demo
-        </button>
-      )}
-    </div>
-  )
 }
 
 export const feedbackSections: ComponentEntry[] = [
@@ -231,16 +200,34 @@ export const feedbackSections: ComponentEntry[] = [
     ),
   },
   {
-    id: 'veil',
-    title: 'Veil',
+    id: 'progress-bar',
+    title: 'ProgressBar',
     group: 'Feedback',
-    note: "Frosted glass over content that exists but shouldn't be read yet. Click anywhere to lift it.",
-    docs: ['veil'],
+    note: 'How far along a set is, as a slim bar cut into its questions, each as wide as it is hard. It says; the count beside it is the control.',
+    docs: ['progress-bar'],
     Demo: () => (
       <>
-        <Shelf label="veiled">
+        <Shelf label="weighted by difficulty">
+          <div className="w-panel space-y-2">
+            <ProgressBar
+              label="2 of 8 done"
+              segments={[
+                { mark: 'done', weight: 2 },
+                { mark: 'done', weight: 2 },
+                { mark: 'current', weight: 4 },
+                { mark: 'waiting', weight: 3 },
+                { mark: 'waiting', weight: 1 },
+                { mark: 'failed', weight: 1 },
+                { mark: 'waiting', weight: 3 },
+                { mark: 'waiting', weight: 2 },
+              ]}
+            />
+            <p className="text-xs text-muted-foreground">Done, current, waiting and failed; wider means harder.</p>
+          </div>
+        </Shelf>
+        <Shelf label="no weights">
           <div className="w-panel">
-            <VeilDemo />
+            <ProgressBar label="3 of 6 done" segments={['done', 'done', 'done', 'current', 'waiting', 'waiting'].map((mark) => ({ mark: mark as 'done' }))} />
           </div>
         </Shelf>
       </>

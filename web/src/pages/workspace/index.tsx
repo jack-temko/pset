@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowUp, Brain, ChevronRight, Focus, Pencil, RotateCcw, Square, Trash2 } from 'lucide-react'
+import { ArrowUp, Brain, ChevronRight, Columns2, Pencil, RotateCcw, Square, Trash2 } from 'lucide-react'
 
 import { AppShell } from '@/components/shell'
 import { AutoTextarea } from '@/components/input'
@@ -47,23 +47,6 @@ import { cn, plural } from '@/lib/utils'
  */
 
 type Tab = 'ask' | 'homework'
-
-/** The panel remembers which face it showed, per book. A blocked
- *  localStorage just means it forgets. */
-function readTab(bookId: string): Tab {
-  try {
-    return localStorage.getItem(`pset-panel-tab:${bookId}`) === 'homework' ? 'homework' : 'ask'
-  } catch {
-    return 'ask'
-  }
-}
-function writeTab(bookId: string, tab: Tab) {
-  try {
-    localStorage.setItem(`pset-panel-tab:${bookId}`, tab)
-  } catch {
-    /* forgetting is fine */
-  }
-}
 
 // ---------------------------------------------------------------- rail
 
@@ -173,7 +156,7 @@ function Rail({
                 RAIL_CHEVRON[Math.min(depth, RAIL_CHEVRON.length - 1)],
               )}
             >
-              <ChevronRight className={cn('size-4 transition-transform duration-150 motion-reduce:transition-none', isOpen && 'rotate-90')} />
+              <ChevronRight className={cn('size-4 transition-transform duration-200 motion-reduce:transition-none', isOpen && 'rotate-90')} />
             </button>
           )}
         </div>
@@ -451,7 +434,7 @@ function Scan({
           wake()
         }}
         className={cn(
-          'absolute bottom-6 left-1/2 flex h-control -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-1 text-xs text-muted-foreground shadow-floating transition-opacity duration-150 ease-out focus-within:opacity-100 motion-reduce:transition-none',
+          'absolute bottom-6 left-1/2 flex h-control -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-1 text-xs text-muted-foreground shadow-floating transition-opacity duration-200 ease-out focus-within:opacity-100 motion-reduce:transition-none',
           pillAwake ? 'opacity-100' : 'opacity-0',
         )}
       >
@@ -609,6 +592,7 @@ function AskTab({
   bookId,
   bookTitle,
   about,
+  visible,
   onClearAbout,
   onJump,
   selection,
@@ -620,6 +604,8 @@ function AskTab({
   /** The context chip riding the composer: a question's "Ask about
    *  this", or a selection from a guide or an earlier answer. */
   about: About | null
+  /** Whether its tab is the one showing: it stays mounted behind Homework. */
+  visible: boolean
   onClearAbout: () => void
   onJump: (page: number) => void
   selection: PendingSel | null
@@ -648,7 +634,7 @@ function AskTab({
   useLayoutEffect(() => {
     const el = scroller.current
     if (el && pinned.current) el.scrollTop = el.scrollHeight
-  }, [list])
+  }, [list, visible])
 
   const send = (question: string, withAbout: About | null) => {
     if (!question.trim() || running) return
@@ -781,6 +767,7 @@ function Panel({
   bookId,
   bookTitle,
   onActive,
+  onQuestion,
   homework,
   focus,
   onFocusToggle,
@@ -791,6 +778,8 @@ function Panel({
   bookTitle: string
   /** Where the student last worked, for the week's time. */
   onActive: (kind: ActivityKind) => void
+  /** The homework question on screen, or null, for counting its time. */
+  onQuestion: (id: string | null) => void
   /** A homework set named in the URL opens the Homework tab on it. */
   homework?: string
   focus: boolean
@@ -800,7 +789,10 @@ function Panel({
   width?: number
 }) {
   const navigate = useNavigate()
-  const [tab, setTab] = useState<Tab>(() => (homework ? 'homework' : readTab(bookId)))
+  // A book always opens on Homework, at the list (or on the set the URL
+  // names). Both tabs stay mounted, so Ask about a question and Homework
+  // again is the same question, scrolled where it was; a reload is a new visit.
+  const [tab, setTab] = useState<Tab>('homework')
   // The context chip riding the composer, and the selection it came
   // from (a guide element or an answer element): one chip at a time,
   // and the two live and go together, so the outline on the document
@@ -815,10 +807,7 @@ function Panel({
   const pickSelection = (next: PendingSel) => setPending((p) => (p.sel ? { about: null, sel: next } : p))
   const askAbout = (a: About, sel: PendingSel | null) => setPending({ about: a, sel })
   const clearAbout = () => setPending({ about: null, sel: null })
-  const pick = (t: Tab) => {
-    setTab(t)
-    writeTab(bookId, t)
-  }
+  const pick = setTab
 
   return (
     <aside
@@ -847,21 +836,23 @@ function Panel({
           onClick={onFocusToggle}
           className={cn(focus && 'bg-muted/50 text-foreground')}
         >
-          <Focus />
+          <Columns2 />
         </IconButton>
       </div>
-      {tab === 'ask' ? (
+      <div className={cn('flex min-h-0 flex-1 flex-col', tab !== 'ask' && 'hidden')}>
         <AskTab
           bookId={bookId}
           bookTitle={bookTitle}
           about={about}
+          visible={tab === 'ask'}
           onClearAbout={clearAbout}
           onJump={onJump}
           selection={selection}
           onPickSelection={pickSelection}
           onSelect={askAbout}
         />
-      ) : (
+      </div>
+      <div className={cn('flex min-h-0 flex-1 flex-col', tab !== 'homework' && 'hidden')}>
         <HomeworkTab
           bookId={bookId}
           initialSet={homework}
@@ -874,8 +865,10 @@ function Panel({
           onClearAbout={clearAbout}
           selection={selection}
           onOpenSettings={() => navigate('/settings#connections')}
+          onQuestion={onQuestion}
+          wide={focus}
         />
-      )}
+      </div>
     </aside>
   )
 }
@@ -954,7 +947,14 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   // Time counts toward what you last touched: the panel's tab, or the
   // book itself.
   const activity = useRef<ActivityKind>('reading')
-  const study = useStudyTime(book.id, () => activity.current)
+  // The homework question on screen, when one is: its time is counted for it.
+  const openQuestion = useRef<string | null>(null)
+  const onQuestion = useCallback((id: string | null) => void (openQuestion.current = id), [])
+  const study = useStudyTime(
+    book.id,
+    () => activity.current,
+    () => openQuestion.current ?? undefined,
+  )
 
   return (
     <Pages value={pages}>
@@ -1046,6 +1046,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                 bookId={book.id}
                 bookTitle={book.title}
                 onActive={(k) => (activity.current = k)}
+                onQuestion={onQuestion}
                 homework={homework}
                 focus={focus}
                 onFocusToggle={() => setFocus((f) => !f)}

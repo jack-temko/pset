@@ -54,9 +54,17 @@ Project skills live in `.agents/skills/<name>/` (a `SKILL.md` with `name`
 and `description` frontmatter, plus a `references/` folder), the
 vendor-neutral place any harness can read. `.claude/skills` is a symlink
 to it for Claude Code: edit the skill in `.agents/skills`, never a copy.
-`pset-view` is how a screen's views (the ones on `/views`) are fixed,
-redesigned and documented one by one: start from the student's flow, then the
-code, the docs and the merge. Its design is `ideas/views-gallery.md`.
+Two skills, independent of each other:
+
+- `grill` interviews the user in weighted batches (recommended option first, four
+  questions a batch) until a decision or spec is ironed out, then writes a one-page
+  summary they can read at a glance. Use it for a redesign, a feature, what to cut,
+  an architecture choice or positioning: anything with decisions only the user can make.
+- `pset-view` works on one view on `/views`, judged from the tired student's point of
+  view. Modes: `redesign` (grills first, using `grill`, stops for the user's OK, then
+  builds, verifies, photographs and documents), `tweak` (a bug or one friction row) and
+  `extract` (put a view still inside its screen onto `/views`). Its design is
+  `ideas/views-gallery.md` and `ideas/grill-skill.md`.
 
 This file is the one set of agent instructions. `CLAUDE.md` only imports
 it (`@AGENTS.md`); put nothing else there.

@@ -1,27 +1,39 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Box, BoxRow } from '@/components/box'
+import { ProgressBar } from '@/components/progress-bar'
 import { DoorAction } from '@/components/door'
 import { HomeworkStatusLabel } from '@/components/homework-status'
 import { Skeleton } from '@/components/skeleton'
 import { HomeworkDialog } from '@/pages/workspace/dialogs'
 import { AddHomeworkDialog } from '@/pages/workspace/add-homework'
 import { AssignmentReads } from '@/pages/workspace/assignment-reads'
-import { useBookHomework, useDeleteHomework, useHomeworkSet, useUpdateHomework, type Summary } from '@/api/homework'
+import { useBookHomework, useDeleteHomework, useHomeworkSet, useUpdateHomework } from '@/api/homework'
 import type { About } from '@/api/ask'
 import type { PendingSel } from '@/components/document/selection'
 import { dueLine, dueStatus } from '@/lib/due'
 import { cn } from '@/lib/utils'
+import { setBarLabel, listSegments, timeLeftWords, type HomeworkSet } from './progress'
 import { Walkthrough } from './walkthrough'
 
-/** A set's row in the list. */
-function SetRow({ h, onOpen }: { h: Summary; onOpen: () => void }) {
+/** A set's row in the list: its title, the bar (as in its header), how many
+ *  are done and how long is left, or when it is due when that is not known.
+ *  A turned-in set is a fact, so no bar. */
+function SetRow({ h, onOpen, bar = true }: { h: HomeworkSet; onOpen: () => void; bar?: boolean }) {
   const status = dueStatus(h)
+  const left = timeLeftWords(h)
   return (
     <BoxRow
       onClick={onOpen}
       title={h.title}
-      description={`${h.done} of ${h.total} questions · ${dueLine(h)}`}
+      description={
+        <span className="block space-y-2 pt-1">
+          {bar && h.total > 0 && <ProgressBar segments={listSegments(h)} label={setBarLabel(h)} />}
+          <span className="block tabular-nums">
+            {h.done} of {h.total} done · {left ?? dueLine(h)}
+          </span>
+        </span>
+      }
       trailing={<HomeworkStatusLabel status={status} />}
     />
   )
@@ -38,6 +50,8 @@ export function HomeworkTab({
   onClearAbout,
   selection,
   onOpenSettings,
+  onQuestion,
+  wide,
 }: {
   bookId: string
   /** From the URL: Home's due list opens a set directly. */
@@ -48,6 +62,11 @@ export function HomeworkTab({
   onClearAbout: () => void
   selection: PendingSel | null
   onOpenSettings: () => void
+  /** The question on screen, or null when none is (the list, the finish
+   *  page): the workspace counts time against it. */
+  onQuestion?: (id: string | null) => void
+  /** Focus: the walkthrough lays out in two columns. */
+  wide?: boolean
 }) {
   const list = useBookHomework(bookId)
   const remove = useDeleteHomework()
@@ -58,7 +77,7 @@ export function HomeworkTab({
   const [editing, setEditing] = useState(false)
   const openSet = useHomeworkSet(openId).data?.homework
   const updateOpen = useUpdateHomework(openId ?? '')
-  const sets = list.data
+  const sets = list.data as HomeworkSet[] | undefined
   const active = (sets ?? []).filter((h) => !h.turnedInAt)
   const turnedIn = (sets ?? []).filter((h) => h.turnedInAt)
 
@@ -77,6 +96,8 @@ export function HomeworkTab({
           onClearAbout={onClearAbout}
           selection={selection}
           onOpenSettings={onOpenSettings}
+          onQuestion={onQuestion}
+          wide={wide}
         />
         {openSet && (
           <HomeworkDialog
@@ -135,7 +156,7 @@ export function HomeworkTab({
           <p className="text-xs text-muted-foreground">Turned in</p>
           <Box>
             {turnedIn.map((h) => (
-              <SetRow key={h.id} h={h} onOpen={() => setOpenId(h.id)} />
+              <SetRow key={h.id} h={h} bar={false} onOpen={() => setOpenId(h.id)} />
             ))}
           </Box>
         </>

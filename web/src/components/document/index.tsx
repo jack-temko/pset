@@ -217,12 +217,14 @@ export function Document({
   const outlined = ask?.selected ?? null
   const scope: Scope = { ask, hover, outlined }
 
-  // Esc lets go; an open menu or dialog takes Esc first.
+  // Esc lets go; what takes keys itself (a text box, a menu, a dialog)
+  // takes Esc first.
   useEffect(() => {
     if (!ask || !outlined) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (e.defaultPrevented || document.querySelector('[role="menu"], [role="dialog"]')) return
+      if (e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable="true"]')) return
       ask.onClear()
     }
     document.addEventListener('keydown', onKey)

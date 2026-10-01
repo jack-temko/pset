@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Focus } from 'lucide-react'
+import { Columns2 } from 'lucide-react'
 
 import { useAddBoxed, usePointOut } from '@/api/homework'
+import type { About } from '@/api/ask'
 import { IconButton } from '@/components/button'
 import type { PendingSel } from '@/components/document/selection'
 import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
@@ -27,6 +28,25 @@ function BoxingStandIn() {
   )
 }
 
+/** The Ask tab, as far as this view goes: what arrives with "Ask about this".
+ *  The real one is the workspace's; here it only shows the chip the question
+ *  would carry, so going there and back can be judged. */
+function AskStub({ about }: { about: About | null }) {
+  return (
+    <div className="min-h-0 flex-1 space-y-3 p-card">
+      <p className="text-xs text-muted-foreground">The Ask tab is the workspace's. Here it shows what it would be given.</p>
+      {about ? (
+        <div className="space-y-1 rounded-md border bg-card p-3 text-sm">
+          <p className="font-medium">Asking about {about.label}</p>
+          <p className="text-muted-foreground">{about.text.slice(0, 160)}</p>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">Nothing to ask about yet.</p>
+      )}
+    </div>
+  )
+}
+
 /**
  * The homework view where the workspace puts it: the panel's column, under
  * its Ask | Homework header, with the providers the workspace gives it (the
@@ -37,8 +57,12 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
   const pages = useMemo(() => new PageMap(BOOK.pageRuns), [])
   const addBoxed = useAddBoxed()
   const pointOut = usePointOut()
-  // The panel holds the pending selection above its tab; here it stays
-  // in the stage, and every way out logs the handoff.
+  // As in the workspace: opens on Homework, and both tabs stay mounted, so
+  // Ask and back is the same question, in the same place.
+  const [tab, setTab] = useState<'ask' | 'homework'>('homework')
+  const [about, setAbout] = useState<About | null>(null)
+  // The pending selection, held here as the workspace's panel holds it
+  // above the tabs; every way out logs the handoff.
   const [selection, setSelection] = useState<PendingSel | null>(null)
 
   return (
@@ -62,34 +86,43 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
           >
             <div className="flex h-row shrink-0 items-center justify-between border-b px-card">
               <UnderlineNav className="-mb-px h-full">
-                <UnderlineTab active={false} onClick={() => harness.handoff({ to: 'Ask', what: 'Switch to the Ask tab' })}>
+                <UnderlineTab active={tab === 'ask'} onClick={() => setTab('ask')}>
                   Ask
                 </UnderlineTab>
-                <UnderlineTab active onClick={() => {}}>
+                <UnderlineTab active={tab === 'homework'} onClick={() => setTab('homework')}>
                   Homework
                 </UnderlineTab>
               </UnderlineNav>
               <IconButton variant="ghost" size="sm" aria-label="Focus on the panel" disabled>
-                <Focus />
+                <Columns2 />
               </IconButton>
             </div>
             <BoxingStandIn />
-            <HomeworkTab
-              bookId={BOOK_ID}
-              initialSet={harness.props.initialSet as string | undefined}
-              onJump={(page) => harness.handoff({ to: 'Page scan', what: 'Jump to a page', carries: `PDF page ${page}` })}
-              onAskAbout={(about, sel) => {
-                setSelection(sel ?? null)
-                harness.handoff({ to: 'Ask', what: 'Ask about this question', carries: `${about.label}: ${about.text.slice(0, 70)}` })
-              }}
-              onPickSelection={(sel) => setSelection(sel)}
-              onClearAbout={() => {
-                setSelection(null)
-                harness.handoff({ to: 'Ask', what: 'Drop the context chip', carries: 'the chip and its outline go together' })
-              }}
-              selection={selection}
-              onOpenSettings={() => harness.handoff({ to: 'Settings', what: 'Open Settings', carries: 'the connections section' })}
-            />
+            <div className={cn('flex min-h-0 flex-1 flex-col', tab !== 'ask' && 'hidden')}>
+              <AskStub about={about} />
+            </div>
+            <div className={cn('flex min-h-0 flex-1 flex-col', tab !== 'homework' && 'hidden')}>
+              <HomeworkTab
+                bookId={BOOK_ID}
+                initialSet={harness.props.initialSet as string | undefined}
+                onJump={(page) => harness.handoff({ to: 'Page scan', what: 'Jump to a page', carries: `PDF page ${page}` })}
+                onAskAbout={(a, sel) => {
+                  harness.handoff({ to: 'Ask', what: 'Ask about this question', carries: `${a.label}: ${a.text.slice(0, 70)}` })
+                  setAbout(a)
+                  setSelection(sel ?? null)
+                  setTab('ask')
+                }}
+                onPickSelection={(sel) => setSelection(sel)}
+                onClearAbout={() => {
+                  setSelection(null)
+                  setAbout(null)
+                  harness.handoff({ to: 'Ask', what: 'Drop the context chip', carries: 'the chip and its outline go together' })
+                }}
+                selection={selection}
+                onOpenSettings={() => harness.handoff({ to: 'Settings', what: 'Open Settings', carries: 'the connections section' })}
+                wide={harness.wide}
+              />
+            </div>
           </aside>
         </BookHereContext>
       </BoxingProvider>
