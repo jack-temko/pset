@@ -189,16 +189,29 @@ func (r *run) messages(ctx context.Context) ([]llm.Message, error) {
 		done = done[len(done)-historyTurns:]
 	}
 	for _, t := range done {
-		msgs = append(msgs, llm.TextMessage("user", questionText(t)), llm.TextMessage("assistant", flatten(t.Answer, r.book.Pages)))
+		msgs = append(msgs, llm.TextMessage("user", questionText(t, historyAbout)), llm.TextMessage("assistant", flatten(t.Answer, r.book.Pages)))
 	}
-	return append(msgs, llm.TextMessage("user", questionText(r.t))), nil
+	return append(msgs, llm.TextMessage("user", questionText(r.t, 0))), nil
 }
 
-func questionText(t row) string {
+// historyAbout is how much of what an earlier turn was about the model
+// is shown again: the turn's answer already speaks to it, and a whole
+// part selected once would otherwise ride along on every turn after.
+const historyAbout = 600
+
+// questionText is the question with what the student had open when they
+// asked it: the label they saw on the chip, and its text (a problem, or
+// a problem and exactly what they selected, which says what it is
+// itself). `max` cuts that text, if above zero.
+func questionText(t row, max int) string {
 	if t.AboutText == "" {
 		return t.Question
 	}
-	return fmt.Sprintf("%s\n\n(This is about the homework problem %s: %s)", t.Question, t.About, t.AboutText)
+	about := t.AboutText
+	if r := []rune(about); max > 0 && len(r) > max {
+		about = string(r[:max]) + "…"
+	}
+	return fmt.Sprintf("%s\n\n(What the student had open when asking, \"%s\":\n%s)", t.Question, t.About, about)
 }
 
 // flatten turns a stored answer back into what the model wrote: the

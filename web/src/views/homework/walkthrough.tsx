@@ -15,7 +15,7 @@ import { ProfessorNotes } from '@/pages/workspace/notes'
 import { useBoxing } from '@/pages/workspace/boxing-state'
 import { figureURL, outstanding, questionStep, toFind, useHomeworkSet, useRemoveQuestion, useRedoReading, useRetryQuestion, useWriteGuide, useUpdateHomework, useUpdateQuestion, worksheetURL, type Question } from '@/api/homework'
 import { Runs } from '@/components/document'
-import { guideAbout, questionSource, type PendingSel } from '@/components/document/selection'
+import { guideAbout, heldSel, pendingOf, questionSource, type PendingSel } from '@/components/document/selection'
 import { runsSource, runsText } from '@/components/document/runs'
 import type { About } from '@/api/ask'
 import { useTimeLeft } from '@/lib/eta'
@@ -596,11 +596,8 @@ export function Walkthrough({
                   onOpenChange={toggleRow}
                   onJump={onJump}
                   ask={{
-                    selected: (stage) => {
-                      const source = questionSource(q.id, stage)
-                      return selection?.source === source ? selection.sel : null
-                    },
-                    pick: (stage, sel) => onPickSelection({ source: questionSource(q.id, stage), sel }),
+                    selected: (stage, blocks) => heldSel(selection, questionSource(q.id, stage), blocks, pages),
+                    pick: (stage, sel, blocks) => onPickSelection(pendingOf(questionSource(q.id, stage), blocks, sel, pages)),
                     ask: (stage, sel, blocks) =>
                       onAskAbout(
                         guideAbout({
@@ -611,7 +608,7 @@ export function Walkthrough({
                           stage,
                           pages,
                         }),
-                        { source: questionSource(q.id, stage), sel },
+                        pendingOf(questionSource(q.id, stage), blocks, sel, pages),
                       ),
                     clear: onClearAbout,
                   }}
@@ -628,7 +625,7 @@ export function Walkthrough({
       </div>
 
       <div className="flex shrink-0 items-center justify-between border-t p-card">
-        <Button variant="ghost" size="sm" onClick={() => onAskAbout({ label: q.label, text: runsSource(q.statement) || q.text })}>
+        <Button variant="ghost" size="sm" onClick={() => onAskAbout({ label: q.label, text: `The homework problem ${q.label}:\n${runsSource(q.statement) || q.text}` })}>
           Ask about this
         </Button>
         {/* The one primary button: done is as easy to take back as to

@@ -108,7 +108,7 @@ export function WorkedSteps({
           </div>
           {s.why && <p className="pl-7 text-xs text-muted-foreground">{s.why}</p>}
           {linePick && selState(linePick.scope, linePick.line(i)) === 'outlined' && (
-            <SelToolbar sel={linePick.line(i)} noun={`line ${i + 1}`} scope={linePick.scope} inside />
+            <SelToolbar sel={linePick.line(i)} noun={`line ${i + 1}`} scope={linePick.scope} place={i === 0 ? 'inside' : 'rule'} />
           )}
         </li>
       ))}
