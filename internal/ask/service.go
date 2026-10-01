@@ -69,6 +69,10 @@ func New(c Config) *Service {
 
 const maxQuestion = 8000
 
+// maxAbout bounds what a chip carries: a problem and a selection from
+// its guide, a whole part at most.
+const maxAbout = 40000
+
 // Turns is a book's conversation, oldest first.
 func (s *Service) Turns(ctx context.Context, bookID string) ([]Turn, error) {
 	if _, err := s.c.Library.Book(ctx, bookID); err != nil {
@@ -117,6 +121,9 @@ func (s *Service) Ask(ctx context.Context, bookID string, q Question) (Turn, err
 	about, aboutText := "", ""
 	if q.About != nil {
 		about, aboutText = strings.TrimSpace(q.About.Label), strings.TrimSpace(q.About.Text)
+		if len(aboutText) > maxAbout {
+			return Turn{}, httpx.Invalid("about", "That selection is too long to ask about. Pick a smaller piece.")
+		}
 	}
 	id := uuid.NewString()
 	now := db.Now()

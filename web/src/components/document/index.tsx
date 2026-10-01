@@ -218,13 +218,16 @@ export function Document({
   const scope: Scope = { ask, hover, outlined }
 
   // Esc lets go; what takes keys itself (a text box, a menu, a dialog)
-  // takes Esc first.
+  // takes Esc first. The Ask composer is the one text box that doesn't:
+  // asking leaves focus in it, and the chip it carries goes with Esc
+  // (`data-esc-lets-go`).
   useEffect(() => {
     if (!ask || !outlined) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (e.defaultPrevented || document.querySelector('[role="menu"], [role="dialog"]')) return
-      if (e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable="true"]')) return
+      const field = e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable="true"]')
+      if (field && !field.hasAttribute('data-esc-lets-go')) return
       ask.onClear()
     }
     document.addEventListener('keydown', onKey)
@@ -237,8 +240,7 @@ export function Document({
       onMouseOver={
         ask
           ? (e) => {
-              const el = (e.target as Element).closest('[data-sel]')
-              const next = el?.getAttribute('data-sel') ?? null
+              const next = selUnder(e.target as Element)
               setHover((was) => (was === next ? was : next))
             }
           : undefined
@@ -247,13 +249,13 @@ export function Document({
       onClick={
         ask
           ? (e) => {
-              // Page chips, links and the toolbar's own buttons keep
-              // their clicks, and a drag that took the words isn't a
-              // pick. The innermost [data-sel] under the pointer is
-              // what the student pointed at.
-              if (e.target instanceof Element && e.target.closest('button, a')) return
+              // Page chips, links and the toolbar (buttons and the card
+              // around them) keep their clicks, and a drag that took the
+              // words isn't a pick. What's under the pointer is what the
+              // student pointed at.
+              if (e.target instanceof Element && e.target.closest('button, a, [data-sel-toolbar]')) return
               if (window.getSelection()?.toString()) return
-              const sel = (e.target as Element).closest('[data-sel]')?.getAttribute('data-sel')
+              const sel = selUnder(e.target as Element)
               if (!sel) return
               // Clicking the outlined one lets go, chip and all.
               if (sel === outlined) ask.onClear()
@@ -268,6 +270,19 @@ export function Document({
       {before?.(blocks.length)}
     </div>
   )
+}
+
+/** What a pointer over `el` points at: the innermost element, or a
+ *  heading, which stands for its whole group. The group's own whitespace
+ *  (the gaps between its blocks) points at nothing, so a stray click or a
+ *  press that ends on another block never takes a whole part. */
+function selUnder(el: Element): string | null {
+  const hit = el.closest('[data-sel], [data-sel-head]')
+  if (!hit) return null
+  const head = hit.getAttribute('data-sel-head')
+  if (head) return head
+  const sel = hit.getAttribute('data-sel')
+  return sel && /^[ps]\d/.test(sel) ? null : sel
 }
 
 function SectionView({
@@ -292,7 +307,12 @@ function SectionView({
       {before?.(section.index)}
       {/* A part header selects its whole part. */}
       <Selectable sel={selPart(section.index)} scope={scope} className={cn(look.reading ? 'space-y-6' : 'space-y-3')}>
-        <PartHeader label={section.part.label} title={<Runs runs={section.part.title} onJump={look.onJump} />} first={first} />
+        <PartHeader
+          label={section.part.label}
+          title={<Runs runs={section.part.title} onJump={look.onJump} />}
+          first={first}
+          headSel={scope.ask ? selPart(section.index) : undefined}
+        />
         {body}
       </Selectable>
     </section>
@@ -329,7 +349,11 @@ function GroupView({
       {before?.(group.index)}
       {/* A step heading selects its whole step. */}
       <Selectable sel={selStep(group.index)} scope={scope} className={gap}>
-        <StepHeading number={group.number} title={<Runs runs={group.step.title} onJump={look.onJump} />} />
+        <StepHeading
+          number={group.number}
+          title={<Runs runs={group.step.title} onJump={look.onJump} />}
+          headSel={scope.ask ? selStep(group.index) : undefined}
+        />
         {items}
       </Selectable>
     </div>

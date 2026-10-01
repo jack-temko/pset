@@ -19,10 +19,11 @@ import { TITLE, helpMeta, helpRows, type HelpName } from './help-meta'
  * walkthrough's answer rows, which stay selectable in place.
  */
 export type HelpAsk = {
-  /** The pending selection for a stage's document, if it holds it. */
-  selected: (stage: 'hint' | 'walkthrough') => Sel | null
+  /** The pending selection for a stage's document, if it holds it and
+   *  the element still reads as when it was picked. */
+  selected: (stage: 'hint' | 'walkthrough', blocks: Block[]) => Sel | null
   /** A click picked an element of a stage's document. */
-  pick: (stage: 'hint' | 'walkthrough', sel: Sel) => void
+  pick: (stage: 'hint' | 'walkthrough', sel: Sel, blocks: Block[]) => void
   /** The toolbar's button on a picked element: compose the About and
    *  hand it up with the selection. */
   ask: (stage: 'hint' | 'walkthrough', sel: Sel, blocks: Block[]) => void
@@ -55,8 +56,8 @@ export function HelpRows({
         const wiring: AskWiring | undefined =
           ask && name !== 'answers'
             ? {
-                selected: ask.selected(stage),
-                onPick: (sel) => ask.pick(stage, sel),
+                selected: ask.selected(stage, blocks),
+                onPick: (sel) => ask.pick(stage, sel, blocks),
                 onAsk: (sel) => ask.ask(stage, sel, blocks),
                 onClear: ask.clear,
               }
