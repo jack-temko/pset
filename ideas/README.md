@@ -40,6 +40,7 @@ pointing, then importing, because the importer feeds the same finder.
 | [Grill skill](grill-skill.md) | Done | any | A standalone `grill` skill that interviews you in weighted batches until a spec is ironed out, and pset-view's gates for grilling a view before any code: purpose, flow and layout, behavior, data. |
 | [Time remaining estimate](time-remaining-estimate.md) | Idea | any | A time left on a homework set from the student's own pace and an LLM-written difficulty index per question. Mocked in the redesign until this is built. |
 | [Homework redesign](homework-redesign.md) | Done | any | The whole homework panel redesigned from the tired student's side: a header that carries progress, one primary button, rows that open in place, a finish page, Focus in two columns, and the backend it needs (difficulty, time per question, the time-left estimate). Its spec is `web/src/views/homework/spec.md`. |
+| [Git workflow](git-workflow-grill.md) | Planned | any | `dev` for all development, `main` for releases friends run, every change by pull request with `make check` required, and a tag that starts the binary build. Grilled; waiting for Jack's OK. |
 | [Loose ends](loose-ends.md) | Idea | any | Small things noticed along the way. |
 | [Model usage](model-usage.md) | Done | any | What each finished job cost: model, time, tokens and dollars on one quiet line, a light popover behind it. |
 | [Audit fixes](audit-fixes.md) | Done | any | The 2026-09-29 audit, one branch per finding: leaks, restart, local-only API, docs. |
