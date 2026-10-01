@@ -30,7 +30,7 @@ import {
 import { ApiError } from '@/api/client'
 import { useBookHomework, useAddBoxed, usePointOut } from '@/api/homework'
 import { BlockSkeleton, Document } from '@/components/document'
-import { answerAbout, turnSource, type PendingSel } from '@/components/document/selection'
+import { answerAbout, asked, heldSel, NOTHING_PENDING, pendingOf, picked, sent, turnSource, type Pending, type PendingSel } from '@/components/document/selection'
 import { useStudyTime, type Kind as ActivityKind } from '@/api/activity'
 import { StudyTimer } from './study-timer'
 import { useAsk, useClearTurns, useStopTurn, useTurns, type About, type LiveTurn } from '@/api/ask'
@@ -551,12 +551,12 @@ function TurnView({
             onJump={onJump}
             before={feed}
             ask={{
-              selected: selection?.source === source ? selection.sel : null,
-              onPick: (sel) => onPickSelection({ source, sel }),
+              selected: heldSel(selection, source, t.answer, pages),
+              onPick: (sel) => onPickSelection(pendingOf(source, t.answer, sel, pages)),
               onAsk: (sel) =>
                 onSelect(
                   answerAbout({ question: t.question, about: t.about || undefined, blocks: t.answer, sel, pages }),
-                  { source, sel },
+                  pendingOf(source, t.answer, sel, pages),
                 ),
               onClear: onClearAbout,
             }}
@@ -594,6 +594,7 @@ function AskTab({
   about,
   visible,
   onClearAbout,
+  onSent,
   onJump,
   selection,
   onPickSelection,
@@ -607,6 +608,8 @@ function AskTab({
   /** Whether its tab is the one showing: it stays mounted behind Homework. */
   visible: boolean
   onClearAbout: () => void
+  /** A turn went out carrying this chip (or none): the chip is spent. */
+  onSent: (about: About | null) => void
   onJump: (page: number) => void
   selection: PendingSel | null
   onPickSelection: (selection: PendingSel) => void
@@ -636,15 +639,19 @@ function AskTab({
     if (el && pinned.current) el.scrollTop = el.scrollHeight
   }, [list, visible])
 
-  const send = (question: string, withAbout: About | null) => {
-    if (!question.trim() || running) return
+  // `own` is the composer's own words going out; a retry of an earlier
+  // question is not, and leaves the draft and the chip alone. Only the
+  // chip that went out is spent, and only the words that went out are
+  // cleared: what was staged or typed while it was in flight stays.
+  const send = (question: string, withAbout: About | null, own = false) => {
+    if (!question.trim() || running || ask.isPending) return
     pinned.current = true
     ask.mutate(
       { question, about: withAbout ?? undefined },
       {
         onSuccess: () => {
-          setText('')
-          onClearAbout()
+          if (own) setText((now) => (now === question ? '' : now))
+          onSent(withAbout)
         },
       },
     )
@@ -714,7 +721,7 @@ function AskTab({
           <div className="mb-2">
             <FailedTurn
               reason={ask.error.message}
-              onRetry={() => send(text, about)}
+              onRetry={() => send(text, about, true)}
               onSetup={
                 ask.error instanceof ApiError && ask.error.code === 'not_configured'
                   ? () => navigate('/settings#connections')
@@ -728,11 +735,12 @@ function AskTab({
           onSubmit={(e) => {
             e.preventDefault()
             if (running) stop.mutate(running.id)
-            else send(text, about)
+            else send(text, about, true)
           }}
         >
           <AutoTextarea
             rows={1}
+            data-esc-lets-go
             value={text}
             placeholder="Ask about this book…"
             onChange={(e) => {
@@ -743,7 +751,7 @@ function AskTab({
               // Enter sends; Shift+Enter is a new line.
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
-                send(text, about)
+                send(text, about, true)
               }
             }}
             className="flex-1"
@@ -799,14 +807,12 @@ function Panel({
   // and the chip above the composer are one state. The selection is
   // held here, above the tabs, because a page shows two documents (a
   // hint and a walkthrough) and at most one element outlines at a time.
-  const [pending, setPending] = useState<{ about: About | null; sel: PendingSel | null }>({ about: null, sel: null })
+  const [pending, setPending] = useState<Pending>(NOTHING_PENDING)
   const { about, sel: selection } = pending
-  // A pick not yet asked about retires the chip of the selection it
-  // replaces (its About describes the old element); a question's chip
-  // ("Ask about this", no selection) stays through a pick.
-  const pickSelection = (next: PendingSel) => setPending((p) => (p.sel ? { about: null, sel: next } : p))
-  const askAbout = (a: About, sel: PendingSel | null) => setPending({ about: a, sel })
-  const clearAbout = () => setPending({ about: null, sel: null })
+  const pickSelection = (next: PendingSel) => setPending((p) => picked(p, next))
+  const askAbout = (a: About, sel: PendingSel | null) => setPending(asked(a, sel))
+  const clearAbout = () => setPending(NOTHING_PENDING)
+  const spendAbout = (spent: About | null) => setPending((p) => sent(p, spent))
   const pick = setTab
 
   return (
@@ -846,6 +852,7 @@ function Panel({
           about={about}
           visible={tab === 'ask'}
           onClearAbout={clearAbout}
+          onSent={spendAbout}
           onJump={onJump}
           selection={selection}
           onPickSelection={pickSelection}

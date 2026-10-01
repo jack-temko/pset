@@ -32,12 +32,55 @@ export function parseSel(sel: Sel): Parsed | null {
 }
 
 /** A pending selection held above the document it came from: which
- *  document owns the outline while its chip rides the composer. */
-export type PendingSel = { source: string; sel: Sel }
+ *  document owns the outline while its chip rides the composer, and the
+ *  text it was when picked. A key is an index, so a guide rewritten
+ *  under it would move the outline onto whatever now sits there; the
+ *  outline shows only while the element still reads as it did. */
+export type PendingSel = { source: string; sel: Sel; text: string }
 
 /** The documents that select, named. */
 export const questionSource = (questionId: string, stage: 'hint' | 'walkthrough') => `q:${questionId}:${stage}`
 export const turnSource = (turnId: string) => `turn:${turnId}`
+
+// ---------------------------------------------------------------- pending
+
+/** What the composer's chip and a document's outline are, together: the
+ *  chip's About, and the selection it came from (none for a question's
+ *  own "Ask about this"). One state, so the two cannot disagree. */
+export type Pending = { about: About | null; sel: PendingSel | null }
+
+export const NOTHING_PENDING: Pending = { about: null, sel: null }
+
+/** A click picked an element. It retires the chip of the selection it
+ *  replaces (that About describes the old element); a question's chip,
+ *  which has no selection, stays through a pick. */
+export function picked(p: Pending, next: PendingSel): Pending {
+  return { about: p.sel ? null : p.about, sel: next }
+}
+
+/** The toolbar's button: the chip and the selection it came from. */
+export function asked(about: About, sel: PendingSel | null): Pending {
+  return { about, sel }
+}
+
+/** A turn went out carrying `about`. Only that chip is consumed: a pick
+ *  made while it was in flight, or a retry that carried nothing, leaves
+ *  what the student has staged alone. */
+export function sent(p: Pending, about: About | null): Pending {
+  return about !== null && p.about === about ? NOTHING_PENDING : p
+}
+
+/** The pending selection a document is to outline: its own, and only
+ *  while the element still reads as when it was picked. */
+export function heldSel(p: PendingSel | null, source: string, blocks: Block[], pages?: PageMap): Sel | null {
+  if (!p || p.source !== source) return null
+  return selectionText(blocks, p.sel, pages) === p.text ? p.sel : null
+}
+
+/** A pick, remembered with what it was. */
+export function pendingOf(source: string, blocks: Block[], sel: Sel, pages?: PageMap): PendingSel {
+  return { source, sel, text: selectionText(blocks, sel, pages) }
+}
 
 // ---------------------------------------------------------------- nouns
 
@@ -268,6 +311,17 @@ export function guideAbout(p: {
   }
 }
 
+/** An answer selection's chip: a few of its words, except where the
+ *  words would be TeX (an equation, a derivation, a plot) or there are
+ *  none, which are named instead ("equation", "line 3"). */
+function answerLabel(blocks: Block[], sel: Sel, what: string): string {
+  const p = parseSel(sel)
+  const block = p ? blocks[p.index] : undefined
+  const named = p?.kind === 'block' && (p.line !== undefined || ['math', 'derivation', 'plot'].includes(block?.type ?? ''))
+  const excerpt = named ? '' : excerptOf(what)
+  return excerpt || nounOf(sel, block).replace(/^this /, '')
+}
+
 /** The About a selection from an earlier answer becomes: the chip is an
  *  excerpt (answers have no parts to name), and the text gives that
  *  turn's question, which the conversation's short history may have
@@ -285,7 +339,7 @@ export function answerAbout(p: {
   const of = path ? `${path} of an earlier answer` : 'part of an earlier answer'
   const was = p.about ? `, which you answered about ${p.about}` : ''
   return {
-    label: excerptOf(what),
+    label: answerLabel(p.blocks, p.sel, what),
     text: `The student is looking at ${of}, to the question "${p.question}"${was}. They selected:\n\n${what}`,
   }
 }

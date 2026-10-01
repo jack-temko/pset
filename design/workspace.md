@@ -218,9 +218,16 @@ built.
   is chipped by an excerpt of its words, and its text gives that turn's
   question, which the conversation's short history may have scrolled
   out. The outline and the chip are one state: it lives while the chip
-  lives (across tabs), and ✕, Esc, clicking the outlined element again
-  or sending drops both; the sent turn keeps an inert chip as its
-  record. Page chips still jump and drag still copies; a row's content
+  lives (across tabs), and ✕, Esc (also from the composer, where asking
+  leaves focus), clicking the outlined element again or sending drops
+  both; sending spends only the chip that went out, so a retry of an
+  earlier question, or a pick made while a send is in flight, leaves
+  what is staged alone. The outline shows only while its element still
+  reads as when it was picked (a guide redone underneath goes quiet; the
+  chip keeps its snapshot). A part or step is picked by its heading, not
+  by the whitespace between its blocks. The sent turn keeps an inert chip
+  as its record. A chip carries at most 40,000 characters; an earlier
+  turn's is shown to the model in its first 600 only. Page chips still jump and drag still copies; a row's content
   selects once it is open, and a block still streaming once finished.
   One element outlines at a time, held above the documents (a page
   shows two: a hint and a walkthrough).

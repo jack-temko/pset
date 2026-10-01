@@ -68,16 +68,36 @@ export function selLook(state: SelState): string | undefined {
  * Menu's card, floating): the ask, its button naming what it asks about,
  * and a way to let go.
  */
-export function SelToolbar({ sel, noun, scope, inside }: { sel: Sel; noun: string; scope: Scope; inside?: boolean }) {
+export function SelToolbar({
+  sel,
+  noun,
+  scope,
+  place = 'above',
+}: {
+  sel: Sel
+  noun: string
+  scope: Scope
+  /** Where it floats: `above` the element, down to the leading of its
+   *  first line (the toolbar must not sit on the words it asks about);
+   *  `rule`, straddling the border above a line of a card; `inside`,
+   *  for the card's first line, whose top edge clips what floats. */
+  place?: 'above' | 'rule' | 'inside'
+}) {
   const ask = scope.ask
   if (!ask) return null
   return (
     <div
+      data-sel-toolbar
       className={cn(
         'absolute right-0 z-10 flex h-control-sm w-max items-center gap-1 rounded-md border bg-card pr-1 pl-1 text-xs text-foreground shadow-floating',
         // A card with its own rounded frame (a derivation) clips what
-        // floats above its top edge, so a line's toolbar sits inside it.
-        inside ? 'top-1' : 'top-0 -translate-y-1/2',
+        // floats above its top edge, so its first line's toolbar sits
+        // inside it; every other line's straddles the rule above it,
+        // off the math. A block's floats above, its bottom edge in the
+        // leading above its first line (about 6px of the reading size).
+        place === 'inside' && 'top-1',
+        place === 'rule' && 'top-0 -translate-y-1/2',
+        place === 'above' && 'top-0 -translate-y-[calc(100%-6px)]',
       )}
     >
       <button

@@ -109,6 +109,20 @@ Mostly frontend: selection plumbing in `Document` and the transcript
 tab flip (already half there), serialization (~60 lines). The server
 grows the context composition only. A few hundred lines, no migration.
 
+### Review fixes (2026-09-30, branch `selection-review-fixes`)
+
+A post-merge adversarial review found the first pick dropped in the
+workspace panel (the pending state ignored a pick when nothing was
+selected), Esc dead after asking (focus sits in the composer), a send
+that spent whatever was staged rather than the chip that went out, a
+wrapper that told the tutor an answer's excerpt was a "homework
+problem", selections resent in full on every later turn, outlines that
+moved onto the wrong element when a guide was redone, whole-group picks
+from whitespace, and TeX chips. Fixed; the state is pure functions in
+`selection.ts` (`picked`, `asked`, `sent`, `heldSel`) with tests.
+Not done: a keyboard path to pick an element (every element a tab stop
+is a design question), and Esc also cancelling boxing when both are up.
+
 ### Deferred
 
 - Selecting several elements ("compare line 3 with line 7").

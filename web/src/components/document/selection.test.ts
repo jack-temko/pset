@@ -7,8 +7,14 @@ import {
   answerAbout,
   blockText,
   chipOf,
+  asked,
   excerptOf,
   guideAbout,
+  heldSel,
+  NOTHING_PENDING,
+  pendingOf,
+  picked,
+  sent,
   nounOf,
   parseSel,
   pathOf,
@@ -148,7 +154,8 @@ describe('the About a selection becomes', () => {
 
   it('labels a selection from an answer with an excerpt, and names the turn it came from', () => {
     const about = answerAbout({ question: 'Why does every operator have one?', about: '4.72', blocks: DOC, sel: selBlock(3) })
-    expect(about.label).toBe('1. (2-\\lambda)^2 - 1 (A diff…')
+    // A derivation's words would be TeX, so the chip names it instead.
+    expect(about.label).toBe('derivation')
     expect(about.text).toBe(
       [
         'The student is looking at part (a), step 1 of an earlier answer, to the question "Why does every operator have one?", which you answered about 4.72. They selected:',
@@ -157,5 +164,50 @@ describe('the About a selection becomes', () => {
         '2. \\[\\lambda = 1\\]',
       ].join('\n'),
     )
+  })
+})
+
+describe('answer chips', () => {
+  const chip = (blocks: Block[], sel: string) => answerAbout({ question: 'q', blocks, sel }).label
+
+  it('gives words as a few words, and TeX or nothing as a name', () => {
+    expect(chip(DOC, selBlock(1))).toBe('We need \\det(A - \\lambda I)…')
+    expect(chip(DOC, selLine(3, 1))).toBe('line 2')
+    expect(chip([{ type: 'math', tex: '\\frac{a}{b}' }], selBlock(0))).toBe('equation')
+    expect(chip([{ type: 'para', text: [] }], selBlock(0))).toBe('paragraph')
+  })
+})
+
+describe('the pending selection', () => {
+  const about = { label: 'x', text: 'y' }
+  const sel = pendingOf('q:1:walkthrough', DOC, selBlock(1), PAGES)
+
+  it('a first pick lands, whatever chip is riding', () => {
+    expect(picked(NOTHING_PENDING, sel)).toEqual({ about: null, sel })
+    // A question's chip has no selection of its own and stays.
+    expect(picked({ about, sel: null }, sel)).toEqual({ about, sel })
+  })
+
+  it('a pick retires the chip of the selection it replaces', () => {
+    expect(picked({ about, sel: pendingOf('q:1:walkthrough', DOC, selBlock(4), PAGES) }, sel)).toEqual({ about: null, sel })
+  })
+
+  it('sending spends only the chip that went out', () => {
+    const staged = { about, sel }
+    expect(sent(staged, about)).toBe(NOTHING_PENDING)
+    // Another chip staged while it was in flight, or a retry that
+    // carried none, leaves the staged one alone.
+    expect(sent(asked({ ...about }, sel), about).about).not.toBeNull()
+    expect(sent(staged, null)).toBe(staged)
+  })
+
+  it('the outline belongs to its document and to what it still reads as', () => {
+    expect(heldSel(sel, 'q:1:walkthrough', DOC, PAGES)).toBe('b1')
+    expect(heldSel(sel, 'q:2:walkthrough', DOC, PAGES)).toBeNull()
+    expect(heldSel(null, 'q:1:walkthrough', DOC, PAGES)).toBeNull()
+    // The guide rewritten under the same index: the outline goes quiet
+    // rather than land on something the student never picked.
+    const rewritten = DOC.map((b, i) => (i === 1 ? { type: 'para' as const, text: t('Something else.') } : b))
+    expect(heldSel(sel, 'q:1:walkthrough', rewritten, PAGES)).toBeNull()
   })
 })

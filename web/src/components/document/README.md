@@ -33,9 +33,20 @@ about line 4"). Spec: `ideas/asking-about-a-selection.md`; the flow on
   the chip's About outlives it as the sent turn's record).
 - The pointer is owned by the **document's root**: the innermost
   `[data-sel]` under the pointer is what hovers and what a click picks,
-  so a block inside a step washes alone. Buttons and links keep their
-  clicks (page chips still jump), a drag that took words isn't a pick,
-  and Esc lets go unless a menu or dialog takes it first.
+  so a block inside a step washes alone. A part or step is picked by
+  its **heading** (`data-sel-head`), never by the whitespace between its
+  blocks, so a stray click or a press that ends on another block picks
+  nothing. Buttons, links and the toolbar (`data-sel-toolbar`, padding
+  included) keep their clicks (page chips still jump), a drag that took
+  words isn't a pick, and Esc lets go unless a menu or dialog takes it
+  first. A text box takes its own Esc, except the Ask composer
+  (`data-esc-lets-go`): asking leaves focus there, and the chip goes
+  with Esc.
+- The held selection remembers its **text** (`PendingSel.text`), and
+  `heldSel` outlines it only while the element still reads that way: a
+  key is an index, and a guide redone under it would otherwise move the
+  outline onto something never picked. The chip keeps its snapshot
+  either way.
 - **`guideAbout` / `answerAbout`** compose the About a selection
   becomes: the chip names the question and the place ("4.72 · (a).1
   line 3", or an excerpt for an answer), and the text gives the model

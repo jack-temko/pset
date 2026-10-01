@@ -204,7 +204,7 @@ func TestTurnSearchesComputesAndAnswers(t *testing.T) {
 				sawImage = true
 			}
 		}
-		if strings.Contains(m.Content.Text(), "homework problem 5.A.1") {
+		if strings.Contains(m.Content.Text(), `"5.A.1"`) && strings.Contains(m.Content.Text(), "Show λ is an eigenvalue.") {
 			sawAbout = true
 		}
 	}
@@ -322,5 +322,27 @@ func TestOldFailedTurnsGetTheirKind(t *testing.T) {
 		if err := d.QueryRowContext(ctx, `SELECT failure FROM turns WHERE id = ?`, id).Scan(&got); err != nil || got != want {
 			t.Errorf("%s: failure %q (%v), want %q", id, got, err, want)
 		}
+	}
+}
+
+func TestWhatAChipCarriesIsBoundedAndNotRepeatedInFull(t *testing.T) {
+	e := newEnv(t)
+	var er httpx.Error
+	huge := About{Label: "3.A", Text: strings.Repeat("x", maxAbout+1)}
+	if code := e.do(t, "POST", "/api/books/b1/turns", Question{Question: "Why?", About: &huge}, &er); code != 422 || er.Field != "about" {
+		t.Fatalf("too long: %d %+v", code, er)
+	}
+
+	// The turn being asked gets all of it; an earlier turn only a taste,
+	// since its answer already spoke to it.
+	long := row{Turn: Turn{Question: "Why?", About: "3.A · (a).2"}, AboutText: strings.Repeat("é", historyAbout*3)}
+	if now := questionText(long, 0); !strings.Contains(now, long.AboutText) || !strings.Contains(now, `"3.A · (a).2"`) {
+		t.Fatalf("current turn lost its context: %q", now[:80])
+	}
+	if then := questionText(long, historyAbout); strings.Count(then, "é") != historyAbout || !strings.Contains(then, "…") {
+		t.Fatalf("history kept %d runes", strings.Count(then, "é"))
+	}
+	if short := questionText(row{Turn: Turn{Question: "Hi"}}, historyAbout); short != "Hi" {
+		t.Fatalf("no context, still wrapped: %q", short)
 	}
 }

@@ -19,9 +19,20 @@ import { cn } from '@/lib/utils'
  * before, so a long guide has visible seams; the first part of a guide
  * passes `first` and has none, since nothing is above it to separate from.
  */
-export function PartHeader({ label, title, first }: { label: string; title: ReactNode; first?: boolean }) {
+export function PartHeader({
+  label,
+  title,
+  first,
+  headSel,
+}: {
+  label: string
+  title: ReactNode
+  first?: boolean
+  /** The selection key a click on the heading picks (a document that selects). */
+  headSel?: string
+}) {
   return (
-    <header className={cn('space-y-1', !first && 'border-t pt-6')}>
+    <header data-sel-head={headSel} className={cn('space-y-1', !first && 'border-t pt-6')}>
       <p className="text-xs tracking-wide text-primary">{label}</p>
       <h2 className="font-heading text-2xl">{title}</h2>
     </header>
@@ -33,9 +44,9 @@ export function PartHeader({ label, title, first }: { label: string; title: Reac
  * in each part; the number is Inter in the primary ink and sits before the
  * serif title, on its baseline.
  */
-export function StepHeading({ number, title }: { number: number; title: ReactNode }) {
+export function StepHeading({ number, title, headSel }: { number: number; title: ReactNode; headSel?: string }) {
   return (
-    <h3 className="flex items-baseline gap-3 font-heading text-xl">
+    <h3 data-sel-head={headSel} className="flex items-baseline gap-3 font-heading text-xl">
       <span className="font-sans text-xs text-primary tabular-nums">{number}</span>
       {title}
     </h3>
