@@ -1,6 +1,6 @@
 # Git workflow: grill
 
-- status: approved (2026-10-01); built in steps, see the end
+- status: built (2026-10-01), except the runner, which is its own grill
 - date: 2026-10-01
 - brief: how PSet's changes are branched, checked, merged and released, from Jack's side (one person, several agent sessions at once, friends who run releases)
 - sources: AGENTS.md, `.github/workflows/ci.yml`, the Makefile, `git log`, the repo's GitHub settings (public, no branch protection, merge commits, no PRs ever), memory notes branch-worktree-workflow, pset-github and no-commit-attribution
@@ -61,7 +61,6 @@ Taken at the recommended default; overrule any.
 - **The runner** (what it builds, for which platforms, the WSL and macOS backend changes) is the next conversation.
 - Whether a macOS runner is free for a public repo, and what it costs if it is not.
 - With strict up-to-date and several agents landing together, CI may re-run often; there is no merge queue on a personal repo. Watch it, and relax D11 if it hurts.
-- The repo shows as public on GitHub while the memory note says private. Confirm which it should be before the rulesets and the runner are set up.
 - Whether anyone else (a friend contributing) will ever need write access, which changes D6.
 
 ## Reversals
@@ -73,14 +72,15 @@ Taken at the recommended default; overrule any.
 ## Frontier
 Empty. Everything left is assumed or open above.
 
-## To build once this is approved
-Nothing is built yet. In order:
-1. Branch `dev` from today's `main`; make it the default branch.
-2. Change `ci.yml` to trigger on PRs into `dev` and `main` and pushes to both, and add the release-only build and `govulncheck` for PRs into `main`.
-3. Rulesets on `dev` and `main` (PR required, the check required, up to date, no direct pushes, owner bypass); auto-delete head branches; squash merge only on `dev`.
-4. Rewrite the `AGENTS.md` git sections and the memory notes.
-5. Replace `main` with an empty root and a README (the force-push, by Jack or with his bypass).
-6. Then the runner, as its own grill.
+## Built (2026-10-01)
+1. `dev` cut from `main`, the empty release root merged under it (so `main` is an ancestor of `dev` and a release is a plain pull request), `dev` made the default branch. Done.
+2. `ci.yml` runs on pull requests and pushes to `dev` and `main`; `release-build` and `vulnerabilities` run only for `main`. Done (pull request 1, the first change to go through the new flow).
+3. Rulesets on `dev` (squash only, a green `check`, up to date, no direct pushes, no deletion or force-push) and `main` (merge commit only, `check`, `release-build` and `vulnerabilities`, the same). Repo admin can bypass only by way of a pull request, never by a direct push. Branches are deleted on merge; auto-merge and "update branch" are on. Done.
+4. `AGENTS.md` git section and the memory notes rewritten. Done.
+5. `main` replaced with an empty root and a README, by force-push; its old history is inside `dev`. Done.
+6. The runner: its own grill, next.
+
+**Not tested:** that a direct push is refused. The rules read back as active through the API, but the harness would not let me probe them with a push. **Note:** agents run on Jack's GitHub login, so "no bypass for agents" is a rule in `AGENTS.md`, not something GitHub can tell apart from Jack.
 
 ## Log
 
