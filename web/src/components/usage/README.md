@@ -1,58 +1,39 @@
 # UsageLine
 
-What a finished job spent, on one quiet line where the thing it produced
-lives: a question's walkthrough (its find, its figure read and its guide
-together), an assignment read's row, one Ask turn. The pointer is already
-there; the numbers are one press away and nothing else ever moves.
+What a finished job spent, as one muted line where the thing it produced
+lives: a question's guide (its find, its figure read and its guide
+together), an assignment read's row, one Ask answer. It is text, not a
+control: nothing to press, nothing that moves.
 
-- **The line** is a button, `text-xs text-muted-foreground`, hovering to
-  `text-foreground` underlined: the model that did the most of the work
-  (the most tokens — usually the writer), a dot, the time, and a
-  `ChevronDown` a quarter-turn when it's open. `aria-expanded` and
-  `aria-haspopup="dialog"` say what it does before it's done.
-- **The card** is the ConfirmPopover's geometry with none of its asking:
-  at least `w-80` and as wide as its numbers need (never past the window),
-  `card`, hairline border, `shadow-floating`, radius-md, under
-  the line (over it when there's no room, right-aligned, clamped, portal
-  to the body), and it **follows its line on scroll and resize** — the
-  transcript streams under it, and a popover that detached would point at
-  nothing. No buttons, no `alertdialog`, no focus move: Esc closes it and
-  a press anywhere else closes it, but a press inside only selects, so
-  the numbers are copyable.
-- **The numbers** are a `tabular-nums` table, mono for the machine
-  strings: one row per model that answered, time then tokens then cost,
-  and a Total row carrying the call count. Tokens are exact with
-  separators (the card is where precision lives). **Time is the calls'
-  durations added up**, so calls made at once count in full; the line's
-  `title` and the card's last note say so. A call that failed, was stopped
-  or came from a provider that reports nothing has no tokens or cost, though
-  a failed one still bills: a row or Total with any marks its figures `≥`,
-  a row with none counted shows "–" (never a zero, which would say free),
-  and the note says how many. A paid call under $0.0001 reads "<$0.0001";
-  "$0.0000" is exactly nothing, a local model.
+`deepseek-v4 +1 · 25s · 11,016 tokens · $0.0047`
+
+- **The order** is the model, the time, the tokens, the cost. The model is
+  the one that did the most of the work (the most tokens, usually the
+  writer), with `+N` for how many more served the job; the `title` names
+  them all. Cost is last because it is the number to skim past.
+- **`text-xs text-muted-foreground`, `tabular-nums`**, inline: it sits in a
+  sentence (`wrapDescription` rows) or, given `className="block"`, on its own
+  line under a guide or an answer. It wraps between its parts, never inside one.
 - **The formatting** is `web/src/lib/usage-format.ts`, with tests: `clock`,
-  `cost`, `tokens`, `shortModel`, `atLeast`.
-
-**`UsageText`** is the same spending as one muted, non-interactive line, for
-where the spending is plain on the page (a question's guide in the homework
-walkthrough): `deepseek-v4 +1 · 25s · 11,016 tokens · $0.0047`. The order is
-the card's columns and the student's: the model that did the most (and how
-many more served the job), the time, the tokens, the cost last. It carries
-the card's marks (`≥` when a call reported nothing, a dash for nothing at
-all) and a `title` naming every model. Use `UsageLine` where the numbers are
-machinery beside prose (an Ask answer, an assignment read).
+  `cost`, `tokens`, `shortModel`, `atLeast`. Tokens are exact with
+  separators. **Time is the calls' durations added up**, so calls made at
+  once count in full (the `title` says so).
+- **Marks:** a call that failed, was stopped or came from a provider that
+  reports nothing has no tokens or cost, though a failed one still bills: when
+  any call is uncounted, tokens and cost read `≥ n`, and a figure with nothing
+  counted is "–" (never a zero, which would say free). A paid call under
+  $0.0001 reads "<$0.0001"; "$0.0000" is exactly nothing, a local model.
+- It is `data-copy-skip`: an answer's copy button leaves it out.
 
 **It appears only after the job has finished** (ready or failed, done,
 stopped, failed) and only when at least one call was made; nothing shows
 while it runs, where the working lines already say how it's going. Every
-row is a rerun or retry included: the money was really spent.
+call is counted, a rerun or retry included: the money was really spent.
 
-**Esc** closes the card and stops there, except from a text field: an Esc
-typed in the composer is the composer's too. The line names the card with
-`aria-controls` while it's open.
+**Changed 2026-09-30** (Jack, in the homework redesign): it was a button
+(`deepseek-v4 · 25s ▾`) that opened a popover with one row per model and a
+Total. The numbers now sit on the page; the per-model split is the `title`.
 
-**Don't:** reuse the ConfirmPopover for it (that one asks a question,
-steals focus and vanishes); put actions in the card (it informs); show it
-for a job still running; or abbreviate the tokens ("21k" belongs nowhere
-here). Book imports record their calls but don't surface them yet — the
-shelf row is busy and the cost is one-time per book.
+**Don't:** show it for a job still running; abbreviate the tokens ("21k"
+belongs nowhere here); put actions on it. Book imports record their calls
+but don't surface them yet.

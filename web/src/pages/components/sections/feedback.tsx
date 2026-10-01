@@ -7,7 +7,7 @@ import { Label } from '@/components/label'
 import { ProgressBar } from '@/components/progress-bar'
 import { Spinner } from '@/components/spinner'
 import { Skeleton } from '@/components/skeleton'
-import { UsageLine, UsageText } from '@/components/usage'
+import { UsageLine } from '@/components/usage'
 import type { Usage } from '@/api/gen/usage'
 import type { ComponentEntry } from './types'
 import { Shelf } from './shared'
@@ -86,7 +86,7 @@ export const feedbackSections: ComponentEntry[] = [
     id: 'usage',
     title: 'Usage',
     group: 'Feedback',
-    note: 'What a finished job spent, on one quiet line: model · time, a light popover behind it that informs rather than asks. One row per model, a Total with the call count, a footnote when a call failed.',
+    note: 'What a finished job spent, as one muted line: model, time, tokens, cost. Plain text where the thing it describes is; a ≥ marks a minimum when a call reported nothing.',
     docs: ['usage'],
     Demo: () => (
       <>
@@ -95,30 +95,14 @@ export const feedbackSections: ComponentEntry[] = [
             <UsageLine usage={USAGE} />
           </div>
         </Shelf>
-        <Shelf label="as plain text (a question's page)">
-          <div className="space-y-2 py-1">
-            <UsageText usage={USAGE} />
-            <UsageText usage={USAGE_FAILED} />
-          </div>
-        </Shelf>
-        <Shelf label="open">
-          <div className="h-64">
-            <UsageLine usage={USAGE} defaultOpen />
-          </div>
-        </Shelf>
         <Shelf label="a failed call, and one the provider didn't count">
           <div className="py-1">
             <UsageLine usage={USAGE_FAILED} />
           </div>
         </Shelf>
-        <Shelf label="open: a minimum">
-          <div className="h-64">
-            <UsageLine usage={USAGE_FAILED} defaultOpen />
-          </div>
-        </Shelf>
-        <Shelf label="open: the widest">
-          <div className="h-64">
-            <UsageLine usage={USAGE_WIDE} defaultOpen />
+        <Shelf label="the widest">
+          <div className="py-1">
+            <UsageLine usage={USAGE_WIDE} />
           </div>
         </Shelf>
       </>

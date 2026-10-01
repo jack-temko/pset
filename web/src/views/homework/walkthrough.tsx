@@ -6,7 +6,7 @@ import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/c
 import { ProgressBar } from '@/components/progress-bar'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
-import { UsageText } from '@/components/usage'
+import { UsageLine } from '@/components/usage'
 import { AddHomeworkDialog } from '@/pages/workspace/add-homework'
 import { useBookHere } from '@/pages/workspace/book-here'
 import { MemoryLines } from '@/pages/workspace/memory'
@@ -563,7 +563,7 @@ export function Walkthrough({
               <FailedQuestion q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} onOpenSettings={onOpenSettings} />
               {/* What the failed attempt spent: the calls cost even when
                   the guide didn't land. */}
-              {q.usage && <UsageText usage={q.usage} />}
+              {q.usage && <UsageLine usage={q.usage} className="block" />}
             </>
           ) : (
             <>
@@ -621,7 +621,7 @@ export function Walkthrough({
               {/* What the whole production spent — find, figure read, guide
                   — once it's over. A question still being written keeps its
                   working lines and shows nothing here. */}
-              {(q.state === 'ready' || q.state === 'unwritten') && q.usage && <UsageText usage={q.usage} />}
+              {(q.state === 'ready' || q.state === 'unwritten') && q.usage && <UsageLine usage={q.usage} className="block" />}
             </>
           )}
         </div>

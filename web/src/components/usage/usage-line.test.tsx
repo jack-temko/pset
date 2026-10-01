@@ -3,16 +3,16 @@ import { createRoot } from 'react-dom/client'
 import { describe, expect, it } from 'vitest'
 
 import type { Usage } from '@/api/gen/usage'
-import { UsageText } from '.'
+import { UsageLine } from '.'
 
 // React reads this to know updates are wrapped in act().
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
-/** The text of a UsageText, rendered. */
+/** The text of a UsageLine, rendered. */
 function textOf(u: Usage): string {
   const host = document.createElement('div')
   const root = createRoot(host)
-  act(() => root.render(<UsageText usage={u} />))
+  act(() => root.render(<UsageLine usage={u} />))
   const text = host.textContent ?? ''
   act(() => root.unmount())
   return text
@@ -28,7 +28,7 @@ const usage = (over: Partial<Usage> = {}): Usage => ({
   ...over,
 })
 
-describe('UsageText', () => {
+describe('UsageLine', () => {
   it('reads model, time, tokens, cost, in that order, with the other models counted', () => {
     expect(textOf(usage())).toBe('deepseek-v4 +1·25s·11,016 tokens·$0.0047')
   })

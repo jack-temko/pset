@@ -563,7 +563,7 @@ function TurnView({
           />
           {/* What answering spent, once the turn is over; while it runs
               the step feed is already saying how it's going. */}
-          {t.state !== 'running' && t.usage && <UsageLine usage={t.usage} />}
+          {t.state !== 'running' && t.usage && <UsageLine usage={t.usage} className="block" />}
           {thinking && t.steps.length === 0 && <Thinking />}
           {t.pending && (
             <BlockSkeleton type={t.pending.type} runs={t.pending.runs} repairing={t.pending.repairing} onJump={onJump} />
@@ -581,7 +581,7 @@ function TurnView({
       {/* A turn that ended before it wrote a thing (the first call refused, a
           stop at once) has no reply to end with the line, and its calls still
           cost time: it follows the note instead. */}
-      {!hasReply && t.state !== 'running' && t.usage && <UsageLine usage={t.usage} />}
+      {!hasReply && t.state !== 'running' && t.usage && <UsageLine usage={t.usage} className="block" />}
     </>
   )
 }

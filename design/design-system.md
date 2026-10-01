@@ -186,7 +186,7 @@ delete asks first. Two rules keep that consistent:
   once, since each is one sentence and the tutor's own saves have Undo;
   and Dismiss on a failed import, which holds nothing of yours yet.
 
-**Informing, not asking** (2026-09-29). The same geometry serves the
+**Informing, not asking** *(2026-09-30, Jack: superseded for usage. What a job spent is now one muted line of text on the page, model, time, tokens, cost, with no popover; `web/src/components/usage/README.md`. The geometry below is kept for the next thing that wants to inform from a line.)* (2026-09-29). The same geometry serves the
 opposite job: a quiet line ("gpt-6-luna · 14s") may open a light popover
 that informs rather than asks — what a finished job spent, one row per
 model, time, tokens, dollars. It is the ConfirmPopover's card (`w-80`,
