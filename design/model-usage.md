@@ -25,6 +25,11 @@ per book); its calls are recorded, so surfacing them later is only UI.
 
 ## The element
 
+> **Changed 2026-09-30** (Jack, in the homework redesign): the line is plain muted text,
+> `model · time · tokens · cost`, not a button that opens a popover; the popover and its
+> per-model card are gone, and the per-model split is the line's `title`. What follows
+> describes the first version; `web/src/components/usage/README.md` is current.
+
 `web/src/components/usage/`, exporting `UsageLine`, with its README and
 demos on `/components` (closed and open, both themes).
 
