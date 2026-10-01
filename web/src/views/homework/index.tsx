@@ -10,6 +10,7 @@ import { AddHomeworkDialog } from '@/pages/workspace/add-homework'
 import { AssignmentReads } from '@/pages/workspace/assignment-reads'
 import { useBookHomework, useDeleteHomework, useHomeworkSet, useUpdateHomework } from '@/api/homework'
 import type { About } from '@/api/ask'
+import type { PendingSel } from '@/components/document/selection'
 import { dueLine, dueStatus } from '@/lib/due'
 import { cn } from '@/lib/utils'
 import { setBarLabel, listSegments, timeLeftWords, type HomeworkSet } from './progress'
@@ -45,6 +46,9 @@ export function HomeworkTab({
   initialSet,
   onJump,
   onAskAbout,
+  onPickSelection,
+  onClearAbout,
+  selection,
   onOpenSettings,
   onQuestion,
   wide,
@@ -53,7 +57,10 @@ export function HomeworkTab({
   /** From the URL: Home's due list opens a set directly. */
   initialSet?: string
   onJump: (page: number) => void
-  onAskAbout: (about: About) => void
+  onAskAbout: (about: About, selection?: PendingSel) => void
+  onPickSelection: (selection: PendingSel) => void
+  onClearAbout: () => void
+  selection: PendingSel | null
   onOpenSettings: () => void
   /** The question on screen, or null when none is (the list, the finish
    *  page): the workspace counts time against it. */
@@ -85,6 +92,9 @@ export function HomeworkTab({
           onBack={() => setOpenId(null)}
           onJump={onJump}
           onAskAbout={onAskAbout}
+          onPickSelection={onPickSelection}
+          onClearAbout={onClearAbout}
+          selection={selection}
           onOpenSettings={onOpenSettings}
           onQuestion={onQuestion}
           wide={wide}

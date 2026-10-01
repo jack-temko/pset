@@ -203,6 +203,27 @@ built.
   parsed and a block that could not be made valid show as their source,
   muted, never red. No page-excerpt card: page chips already jump the
   scan to the real page.
+- **Asking about a selection** (2026-09-30): every element of a guide
+  or an answer is selectable. Hover washes it quietly, a click outlines
+  it, and a small toolbar on the outline (the boxing toolbar's shape)
+  offers **Ask about this {noun}**, the noun naming what was pointed at
+  ("this table", "line 4"): a block, one line of a derivation, or a
+  part or step heading, which selects its whole group. Asking lands the
+  chip in the composer (flipping to Ask from a walkthrough), the box
+  empty and focused. The chip is one, absorbing the question's: it
+  names the question and the place ("About 3.A.4 · (a).2 line 3 ×"),
+  and the model gets the whole problem, the selection's exact text
+  (snapshotted when picked, so a rewritten guide can't change what was
+  asked) and where it sits in words. A selection from an earlier answer
+  is chipped by an excerpt of its words, and its text gives that turn's
+  question, which the conversation's short history may have scrolled
+  out. The outline and the chip are one state: it lives while the chip
+  lives (across tabs), and ✕, Esc, clicking the outlined element again
+  or sending drops both; the sent turn keeps an inert chip as its
+  record. Page chips still jump and drag still copies; a row's content
+  selects once it is open, and a block still streaming once finished.
+  One element outlines at a time, held above the documents (a page
+  shows two: a hint and a walkthrough).
 - Empty conversation: a prompt line plus one short sentence of what the
   agent can do. No generated suggestions.
 - One running conversation per book (locked earlier).

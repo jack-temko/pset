@@ -15,6 +15,7 @@ import { ProfessorNotes } from '@/pages/workspace/notes'
 import { useBoxing } from '@/pages/workspace/boxing-state'
 import { figureURL, outstanding, questionStep, toFind, useHomeworkSet, useRemoveQuestion, useRedoReading, useRetryQuestion, useWriteGuide, useUpdateHomework, useUpdateQuestion, worksheetURL, type Question } from '@/api/homework'
 import { Runs } from '@/components/document'
+import { guideAbout, questionSource, type PendingSel } from '@/components/document/selection'
 import { runsSource, runsText } from '@/components/document/runs'
 import type { About } from '@/api/ask'
 import { useTimeLeft } from '@/lib/eta'
@@ -107,6 +108,9 @@ export function Walkthrough({
   onBack,
   onJump,
   onAskAbout,
+  onPickSelection,
+  onClearAbout,
+  selection,
   onOpenSettings,
   onQuestion,
   wide = false,
@@ -120,7 +124,17 @@ export function Walkthrough({
   onDelete: () => void
   onBack: () => void
   onJump: (page: number) => void
-  onAskAbout: (about: About) => void
+  /** "Ask about this" on the question, or the toolbar on a selection:
+   *  one context chip at a time, the selection replacing (or being
+   *  replaced by) whatever was there. */
+  onAskAbout: (about: About, selection?: PendingSel) => void
+  /** A click picked an element of the guide: the outline before
+   *  anything is asked. */
+  onPickSelection: (selection: PendingSel) => void
+  /** The chip's ✕, Esc, or sending: the selection goes with the chip. */
+  onClearAbout: () => void
+  /** The pending selection, for the outline while its chip rides. */
+  selection: PendingSel | null
   onOpenSettings: () => void
 }) {
   const pages = usePages()
@@ -574,7 +588,34 @@ export function Walkthrough({
                   </Button>
                 </div>
               ) : (
-                <HelpRows key={q.id} q={q} queued={queued} open={open} onOpenChange={toggleRow} onJump={onJump} />
+                <HelpRows
+                  key={q.id}
+                  q={q}
+                  queued={queued}
+                  open={open}
+                  onOpenChange={toggleRow}
+                  onJump={onJump}
+                  ask={{
+                    selected: (stage) => {
+                      const source = questionSource(q.id, stage)
+                      return selection?.source === source ? selection.sel : null
+                    },
+                    pick: (stage, sel) => onPickSelection({ source: questionSource(q.id, stage), sel }),
+                    ask: (stage, sel, blocks) =>
+                      onAskAbout(
+                        guideAbout({
+                          question: q.label,
+                          problem: runsSource(q.statement) || q.text,
+                          blocks,
+                          sel,
+                          stage,
+                          pages,
+                        }),
+                        { source: questionSource(q.id, stage), sel },
+                      ),
+                    clear: onClearAbout,
+                  }}
+                />
               )}
               {showMemory && set && <MemoryLines bookId={set.bookId} lines={q.memory} />}
               {/* What the whole production spent — find, figure read, guide

@@ -4,6 +4,7 @@ import { Columns2 } from 'lucide-react'
 import { useAddBoxed, usePointOut } from '@/api/homework'
 import type { About } from '@/api/ask'
 import { IconButton } from '@/components/button'
+import type { PendingSel } from '@/components/document/selection'
 import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
 import { BoxingBar, BoxingProvider } from '@/pages/workspace/boxing'
 import { useBoxing } from '@/pages/workspace/boxing-state'
@@ -60,6 +61,9 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
   // Ask and back is the same question, in the same place.
   const [tab, setTab] = useState<'ask' | 'homework'>('homework')
   const [about, setAbout] = useState<About | null>(null)
+  // The pending selection, held here as the workspace's panel holds it
+  // above the tabs; every way out logs the handoff.
+  const [selection, setSelection] = useState<PendingSel | null>(null)
 
   return (
     <Pages value={pages}>
@@ -102,11 +106,19 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
                 bookId={BOOK_ID}
                 initialSet={harness.props.initialSet as string | undefined}
                 onJump={(page) => harness.handoff({ to: 'Page scan', what: 'Jump to a page', carries: `PDF page ${page}` })}
-                onAskAbout={(a) => {
+                onAskAbout={(a, sel) => {
                   harness.handoff({ to: 'Ask', what: 'Ask about this question', carries: `${a.label}: ${a.text.slice(0, 70)}` })
                   setAbout(a)
+                  setSelection(sel ?? null)
                   setTab('ask')
                 }}
+                onPickSelection={(sel) => setSelection(sel)}
+                onClearAbout={() => {
+                  setSelection(null)
+                  setAbout(null)
+                  harness.handoff({ to: 'Ask', what: 'Drop the context chip', carries: 'the chip and its outline go together' })
+                }}
+                selection={selection}
                 onOpenSettings={() => harness.handoff({ to: 'Settings', what: 'Open Settings', carries: 'the connections section' })}
                 wide={harness.wide}
               />

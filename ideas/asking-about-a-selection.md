@@ -2,7 +2,17 @@
 
 ## Status
 
-**Planned** · grilled 2026-09-30; waiting its turn. No dependencies.
+**Done** · shipped 2026-09-30 (branch `asking-about-a-selection`). Spec
+in `design/workspace.md`, "Ask" ("Asking about a selection"); the look
+in `design/design-system.md`. Built as decided, with one answer the
+grill left open: the pick is held above the documents (a page shows
+two: a hint and a walkthrough), so at most one element outlines at a
+time, and picking a new element retires the chip of the selection it
+replaces. The grill knew the guide as three veiled stages; the stages
+became rows that open in place the same day, so the wiring landed in
+the rows' documents instead, and a row's content selects once it is
+open. The server is untouched: the About the frontend composes
+already carries everything, and the loop's own wrapper phrases it.
 
 ## Information
 

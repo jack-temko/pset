@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import katex from 'katex'
 
+import { SelToolbar, selLook, selState, type Scope } from '@/components/document/selectable'
+import type { Sel } from '@/components/document/selection'
 import { MATH_OPTIONS } from '@/lib/math'
 import { cn } from '@/lib/utils'
 
@@ -67,12 +69,26 @@ export function Statement({
  * A derivation, all of it shown, numbered. One line of math per step,
  * each with a short note on why when the move isn't obvious. It's an
  * answer, not practice: the walkthrough is where things are hidden.
+ *
+ * With `linePick` (from a document that selects), one line of the chain
+ * is a selection of its own: the smallest thing a student can point at
+ * and ask why of.
  */
-export function WorkedSteps({ steps }: { steps: { math: string; why?: ReactNode; raw?: boolean }[] }) {
+export function WorkedSteps({
+  steps,
+  linePick,
+}: {
+  steps: { math: string; why?: ReactNode; raw?: boolean }[]
+  linePick?: { scope: Scope; line: (n: number) => Sel }
+}) {
   return (
     <ol className="divide-y divide-border-muted overflow-hidden rounded-md border bg-card">
       {steps.map((s, i) => (
-        <li key={i} className="space-y-1 px-card py-2">
+        <li
+          key={i}
+          data-sel={linePick?.line(i)}
+          className={cn('space-y-1 px-card py-2', linePick && selLook(selState(linePick.scope, linePick.line(i))))}
+        >
           {/* The number centres on its line of math, however tall the
               fractions make it; the reason sits under the math, not the
               number. */}
@@ -91,6 +107,9 @@ export function WorkedSteps({ steps }: { steps: { math: string; why?: ReactNode;
             )}
           </div>
           {s.why && <p className="pl-7 text-xs text-muted-foreground">{s.why}</p>}
+          {linePick && selState(linePick.scope, linePick.line(i)) === 'outlined' && (
+            <SelToolbar sel={linePick.line(i)} noun={`line ${i + 1}`} scope={linePick.scope} inside />
+          )}
         </li>
       ))}
     </ol>

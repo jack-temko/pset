@@ -75,6 +75,7 @@ budget: open a set in 1 click from the list. Per question with a written guide: 
 - Move up or down, Remove (asks first under its row), This isn't the right problem (starts boxing), Edit the professor's instructions (opens the notes box, prefilled): in the question menu.
 - Turn in: on the finish page, or a check item in the set menu; taken back by choosing it again.
 - Try again, Look there, Use this text, Show me where it is: the failed question's ways out.
+- Ask about a selection: hover washes an element of an open row's guide (a block, a derivation line, a part or step heading, which takes its whole group), a click outlines it, the toolbar's button composes the About (the question and the exact selection) and hands it up as the chip; Esc, the toolbar's or the chip's ✕, or clicking the outlined element again drops outline and chip together (design/workspace.md, "Asking about a selection").
 
 ## handoffs
 
