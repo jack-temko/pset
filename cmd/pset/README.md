@@ -9,7 +9,11 @@ queue, serve the API and the embedded SPA. Layering and contracts:
 
 - `-addr`: listen address, default `127.0.0.1:8420`
 - `-data`: data directory; empty means `$PSET_DATA`, then
-  `$XDG_DATA_HOME/pset` or `~/.local/share/pset`
+  `~/Library/Application Support/pset` on a Mac, else `$XDG_DATA_HOME/pset`
+  or `~/.local/share/pset` (`internal/platform`). A Mac's older data in
+  `~/.local/share/pset` is not moved; Health says where it is.
+- `-open`: open the default browser once serving, default on (under WSL, the
+  Windows browser). `make dev` turns it off.
 - `-verbose`: debug logging
 - `-version`: print and exit
 

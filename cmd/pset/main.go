@@ -30,6 +30,7 @@ import (
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/memory"
 	"github.com/jackt/pset/internal/pagenum"
+	"github.com/jackt/pset/internal/platform"
 	"github.com/jackt/pset/internal/settings"
 	"github.com/jackt/pset/internal/usage"
 	"github.com/jackt/pset/web"
@@ -41,7 +42,8 @@ var Version = "0.1.0-dev"
 func main() {
 	fs := flag.NewFlagSet("pset", flag.ExitOnError)
 	addr := fs.String("addr", "127.0.0.1:8420", "listen address")
-	dataDir := fs.String("data", "", "data directory (default: $PSET_DATA, then ~/.local/share/pset)")
+	dataDir := fs.String("data", "", "data directory (default: $PSET_DATA, then ~/Library/Application Support/pset on a Mac, else ~/.local/share/pset)")
+	open := fs.Bool("open", true, "open the browser once PSet is serving")
 	verbose := fs.Bool("verbose", false, "log debug detail")
 	showVersion := fs.Bool("version", false, "print the version and exit")
 	fs.Parse(os.Args[1:])
@@ -61,12 +63,12 @@ func main() {
 	if err != nil {
 		fail(err)
 	}
-	if err := serve(*addr, dir, log); err != nil {
+	if err := serve(*addr, dir, *open, log); err != nil {
 		fail(err)
 	}
 }
 
-func serve(addr, dir string, log *slog.Logger) error {
+func serve(addr, dir string, open bool, log *slog.Logger) error {
 	dbPath := filepath.Join(dir, "pset.db")
 	d, err := db.Open(dbPath)
 	if err != nil {
@@ -185,6 +187,13 @@ func serve(addr, dir string, log *slog.Logger) error {
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- srv.Serve(ln) }()
 	fmt.Printf("PSet serving at http://%s (data in %s)\n", addr, dir)
+	if open {
+		// The server is up and the port is ours: the page will load. A machine
+		// with no way to open a browser is not an error, it just isn't opened.
+		if err := platform.OpenBrowser(platform.BrowserURL(addr)); err != nil {
+			log.Info("couldn't open a browser; open the address above yourself", "err", err)
+		}
+	}
 
 	select {
 	case err := <-serveErr:
@@ -215,15 +224,11 @@ func resolveDataDir(flagValue string) (string, error) {
 		dir = os.Getenv("PSET_DATA")
 	}
 	if dir == "" {
-		base := os.Getenv("XDG_DATA_HOME")
-		if base == "" {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return "", err
-			}
-			base = filepath.Join(home, ".local", "share")
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
 		}
-		dir = filepath.Join(base, "pset")
+		dir = platform.DataDir(platform.Current, home, os.Getenv("XDG_DATA_HOME"))
 	}
 	dir, err := filepath.Abs(dir)
 	if err != nil {
