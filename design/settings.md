@@ -6,7 +6,7 @@ Decisions from the 2026-09-21 grill; each is settled, not open.
 ## Shape
 
 One page, stacked, in this order: **You · Connections · Health ·
-Appearance · Reset**, then one mono line: `pset <version> · /path/to/data`. No
+Updates · Appearance · Reset**, then one mono line: `pset <version> · /path/to/data`. No
 navigation: two fields and five checks don't need any. The top bar's
 middle is empty; the h1 says where you are.
 
@@ -78,6 +78,25 @@ A check that fails and can be fixed (data dir, database, and Ollama
 running without its model, which Fix downloads) gets a **Fix** button,
 which repairs it and runs the check again. One that can't (a missing tool, Ollama
 not running) says how to install or start it.
+
+## Updates
+
+*(2026-10-02, the release runner grill: `ideas/release-runner-grill.md`, D8 to D10.)*
+A Box: **PSet 0.1.0** with what the last check found under it, and a **Check
+for updates** button. Pressing it is the one time PSet contacts GitHub (the README's
+promise is "your endpoints, and GitHub when you press Check"). When a newer
+release is out, the release's notes show under the row and a footer has the
+**Update to 0.2.0** button. It downloads the release, checks its checksums against
+a signature made by PSet's release key (built into the program) and the file against
+those checksums, runs the new program once to see it is the version it should be,
+replaces the program in place and restarts PSet; the page reloads when it is back.
+If guides or answers are running or waiting, the footer says they resume after the
+restart. A new version that changes the database copies it aside first, on its first
+start (`<data>/backups`, the newest three kept), however it was installed. There is
+no rollback of the program: if an update will not start, the one-line installer puts
+a good one back and leaves the library alone. A build from source, an install in a
+folder it cannot write, or one with no release key says why it cannot update and
+keeps the button off. Windows is not supported.
 
 ## Appearance
 

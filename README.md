@@ -19,7 +19,8 @@ page scan:
 It runs on your machine as one small server with the web app built in.
 Your books, notes and conversations stay in a local folder; the only
 things that leave it are the requests PSet makes to the chat and
-embeddings endpoints you configure.
+embeddings endpoints you configure, and, when you press Check for
+updates in Settings, a request to GitHub.
 
 PSet is built for laptops and desktops: below a 1024px-wide window it
 asks you to come back on a bigger screen.

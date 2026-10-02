@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -169,3 +171,63 @@ func Now() string { return At(time.Now()) }
 
 // At is a time as a stamp.
 func At(t time.Time) string { return t.UTC().Format(Stamp) }
+
+// keepBackups is how many database backups are kept.
+const keepBackups = 3
+
+// BackupBeforeMigrating copies the database aside, to dir/backups, when
+// migrations are about to change one that already has data (a first start has
+// nothing to protect). The copy is a consistent snapshot (VACUUM INTO), named
+// for when it was made and the version that is about to change the schema,
+// and only the newest few are kept. It returns where the copy went, or "" when
+// nothing needed backing up.
+func BackupBeforeMigrating(ctx context.Context, d *sql.DB, migs []Migration, dir, version string) (string, error) {
+	pending, err := Pending(ctx, d, migs)
+	if err != nil {
+		return "", err
+	}
+	if len(pending) == 0 || len(pending) == len(migs) {
+		return "", nil
+	}
+	backups := filepath.Join(dir, "backups")
+	if err := os.MkdirAll(backups, 0o700); err != nil {
+		return "", err
+	}
+	name := "pset-" + time.Now().UTC().Format("20060102-150405") + "-before-" + safeLabel(version) + ".db"
+	path := filepath.Join(backups, name)
+	if _, err := d.ExecContext(ctx, `VACUUM INTO ?`, path); err != nil {
+		return "", fmt.Errorf("backing up the database: %w", err)
+	}
+	pruneBackups(backups)
+	return path, nil
+}
+
+// safeLabel keeps a version fit to go in a file name.
+func safeLabel(s string) string {
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '.', r == '-':
+			return r
+		}
+		return '_'
+	}, s)
+}
+
+// pruneBackups deletes all but the newest few (the names sort by time).
+func pruneBackups(dir string) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	var names []string
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasPrefix(e.Name(), "pset-") && strings.HasSuffix(e.Name(), ".db") {
+			names = append(names, e.Name())
+		}
+	}
+	sort.Strings(names)
+	for len(names) > keepBackups {
+		os.Remove(filepath.Join(dir, names[0]))
+		names = names[1:]
+	}
+}

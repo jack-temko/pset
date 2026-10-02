@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/platform"
 	"github.com/jackt/pset/internal/settings"
+	"github.com/jackt/pset/internal/update"
 	"github.com/jackt/pset/internal/usage"
 	"github.com/jackt/pset/web"
 )
@@ -63,9 +65,27 @@ func main() {
 	if err != nil {
 		fail(err)
 	}
+	exe, _ := update.Executable()
 	if err := serve(*addr, dir, *open, log); err != nil {
 		fail(err)
 	}
+	if restarting.Load() {
+		// Served and shut down cleanly: the program on disk is the new one.
+		// Same arguments, but the page is already open, so not another browser.
+		args := append([]string{os.Args[0]}, append([]string{"-open=false"}, os.Args[1:]...)...)
+		fail(fmt.Errorf("PSet was updated but couldn't start itself again (start it yourself): %w", syscall.Exec(exe, args, os.Environ())))
+	}
+}
+
+// restarting is set when an update has replaced the program and PSet has been
+// asked to start the new one once it has shut down.
+var restarting atomic.Bool
+
+// restartSelf asks for a clean shutdown (the same path as Ctrl+C: running jobs
+// go back to queued and resume), after which main starts the new program.
+func restartSelf() {
+	restarting.Store(true)
+	syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
 }
 
 func serve(addr, dir string, open bool, log *slog.Logger) error {
@@ -89,6 +109,13 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 		activity.Migrations(),
 	)
 	ctx := context.Background()
+	// A new version that changes an existing library's schema backs it up
+	// first, whichever way it was installed.
+	if backup, err := db.BackupBeforeMigrating(ctx, d, migrations, dir, Version); err != nil {
+		return err
+	} else if backup != "" {
+		log.Info("this version updates the database: a copy of it was kept", "backup", backup)
+	}
 	if err := db.Migrate(ctx, d, migrations); err != nil {
 		return err
 	}
@@ -152,6 +179,15 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	tutor.Routes(mux)
 	memories.Routes(mux)
 	clock.Routes(mux)
+	updater := update.New(update.Config{
+		Version: Version, PublicKey: update.PublicKey,
+		Busy: func(ctx context.Context) (n int, err error) {
+			err = d.QueryRowContext(ctx, `SELECT count(*) FROM jobs WHERE state IN ('queued', 'running')`).Scan(&n)
+			return
+		},
+		Restart: restartSelf,
+	})
+	updater.Routes(mux)
 	mux.HandleFunc("GET /api/events", bus.Handler)
 	mux.HandleFunc("/api/", httpx.NotFoundAPI)
 	mux.Handle("/", httpx.SPAFrom(web.Dist, "dist"))
