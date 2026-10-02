@@ -8,7 +8,7 @@ Programs that live with the code but aren't the app.
 | `findertest` | Measures finding: Jack's real misses, the professors' references and the typed forms, run against his books, checked against known pages. |
 | `assignmenttest` | Measures reading assignments: ten made-up documents built as they'd arrive (PDFs, web pages it serves, pasted text), scored on due dates, labels, notes and the problems written out. |
 | `samplegen` | Generates the sample books in `testdata/`, byte for byte (`tools/samplegen/README.md`). |
-| `release` | `make release VERSION=x.y.z`: the macOS tarball (`tools/release/README.txt` is what a user reads). |
+| `release` | `make release VERSION=x.y.z`: every release file in `dist/` (Linux and macOS tarballs, `install.sh`, `SHA256SUMS`). `tools/release/README-linux.txt` and `README-macos.txt` are what a user reads. |
 | `verify-classes.mjs` | After `npm run build`, checks every theme utility used in `web/src` exists in the built CSS (the Tailwind theme is locked down, so a wrong class fails silently). |
 
 ## findertest and assignmenttest

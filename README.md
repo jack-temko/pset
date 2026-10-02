@@ -57,12 +57,21 @@ ollama pull nomic-embed-text
 
 ## Install
 
-**On a Mac**, skip building: download `pset-<version>-macos.tar.gz` from
-the [Releases](https://github.com/jack-temko/pset/releases) page, open
-it, and run `bash setup.sh` in that folder. It installs the dependencies
-with Homebrew (and Homebrew itself, if needed), pulls the embeddings
-model, and picks the binary for your Mac. Then double-click
-`PSet.command`. `make release VERSION=x.y.z` builds that tarball.
+**On a Mac, Linux or WSL (Debian and Ubuntu)**, skip building. One command
+downloads the latest release for your machine, checks it against the release's
+checksums, installs poppler, tesseract and Ollama, pulls the embeddings model, puts
+`pset` in `~/.local/bin` and starts it, opening your browser:
+
+```bash
+curl -fsSL https://github.com/jack-temko/pset/releases/latest/download/install.sh | sh
+```
+
+Run the same command again to update. Or download the tarball for your machine
+(`pset-<version>-linux-amd64.tar.gz`, `-linux-arm64`, or `-macos` for both Mac
+kinds) from the [Releases](https://github.com/jack-temko/pset/releases) page,
+open it and run `sh setup.sh` (`bash setup.sh` on a Mac). On a Mac the program is
+unsigned: `setup.sh` clears the flag macOS puts on downloads, or right-click it
+and choose Open once. `make release VERSION=x.y.z` builds all of them into `dist/`.
 
 To build it yourself:
 
