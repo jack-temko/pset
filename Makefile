@@ -38,6 +38,7 @@ build:
 	cd web && npm run build
 	go build -o pset ./cmd/pset
 
-# macOS release tarball in dist/: make release VERSION=0.1.0
+# Every release file in dist/ (Linux and macOS tarballs, install.sh, SHA256SUMS):
+# make release VERSION=0.1.0
 release:
 	tools/release/build.sh $(VERSION)
