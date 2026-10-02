@@ -116,3 +116,9 @@ Nothing is built yet. In order, each its own pull request into `dev`:
 - When you press Check and a newer version exists, what happens? Options: Shows it, then an Update button (Recommended) / Check installs at once. Answer: **Shows it, then an Update button (Recommended)**.
 - What goes in the first release (v0.1.0)? Options: Everything, updater included (Recommended) / Updater in the second release. Answer: **Everything, updater included (Recommended)**.
 - Do you have a Mac you can try a release on before friends do? Options: No, rely on the runner's check / Yes, I can test / A friend will test. Answer: **Yes, I can test**.
+
+## Built so far (2026-10-02)
+1. Backend (PR 4): `internal/platform`, the browser opening, per-OS hints, the Mac data folder.
+2. Release scripts (PR 5): `build.sh`, `install.sh`, the Linux and macOS setup scripts and READMEs.
+3. The runner (this change): `.github/workflows/release.yml` (tag or manual run: build, smoke-test on Linux and a Mac, sign, publish), `tools/release/sign`, `internal/releasesign` and `tools/release/smoke.sh`. The first manual run on GitHub is how it is proved.
+4. The updater, then Jack's steps (the key, the old tag, the `v*` ruleset, `v0.1.0-rc.1`, `v0.1.0`): next.
