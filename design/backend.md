@@ -388,6 +388,17 @@ Settings screen already shows it.
 **Page scans render on demand**, per width bucket, cached under the data
 directory and served `immutable`. Zoom asks for a bigger bucket.
 
+**Updating itself** (2026-10-02, `internal/update`, `internal/releasesign`): on a
+press of Check, `GET api.github.com/repos/jack-temko/pset/releases/latest`; on a
+press of Update, the release's `SHA256SUMS` and `SHA256SUMS.sig`, then this
+machine's tarball. The signature (Ed25519 over the checksum file, key built into
+the program, private half a repository secret) is checked first, then the tarball
+against the signed checksums, then the program is taken out of the tarball, run
+once as `-version`, and renamed over the running file (the process keeps its old
+copy). PSet then restarts as it does for Ctrl+C (running jobs back to queued) and
+`exec`s the new program with `-open=false`. Before migrating an existing database
+a new version copies it to `<data>/backups` (VACUUM INTO, newest three kept).
+
 **Time spent is stretches of study** (2026-09-29, replacing heartbeats,
 which counted only with input in the last two minutes: homework is
 worked on paper, and the week came out short). While the workspace tab

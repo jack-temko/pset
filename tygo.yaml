@@ -78,6 +78,11 @@ packages:
     enum_style: union
     output_path: web/src/api/gen/memory.ts
     frontmatter: "// Generated from internal/memory/wire.go by tygo. Do not edit."
+  - path: github.com/jackt/pset/internal/update
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/update.ts
+    frontmatter: "// Generated from internal/update/wire.go by tygo. Do not edit."
   - path: github.com/jackt/pset/internal/activity
     include_files: [wire.go]
     enum_style: union

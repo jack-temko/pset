@@ -121,4 +121,5 @@ Nothing is built yet. In order, each its own pull request into `dev`:
 1. Backend (PR 4): `internal/platform`, the browser opening, per-OS hints, the Mac data folder.
 2. Release scripts (PR 5): `build.sh`, `install.sh`, the Linux and macOS setup scripts and READMEs.
 3. The runner (this change): `.github/workflows/release.yml` (tag or manual run: build, smoke-test on Linux and a Mac, sign, publish), `tools/release/sign`, `internal/releasesign` and `tools/release/smoke.sh`. The first manual run on GitHub is how it is proved.
-4. The updater, then Jack's steps (the key, the old tag, the `v*` ruleset, `v0.1.0-rc.1`, `v0.1.0`): next.
+4. The updater (this change): `internal/update`, Settings > Updates, and the database backup before a migration. It cannot work until the public key is built in: `go run ./tools/release/sign -setup` makes the key, stores the secret and prints the public half for `internal/update/key.go`.
+5. Jack's steps: the key, deleting the old tag, a `v*` ruleset, `v0.1.0-rc.1`, `v0.1.0`.

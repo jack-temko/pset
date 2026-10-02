@@ -27,10 +27,11 @@ import { applyTheme, getTheme, type Theme } from '@/lib/theme'
 import { cn, plural } from '@/lib/utils'
 import { ConfirmPopover } from '@/components/confirm'
 import { useClearActivity } from '@/api/activity'
+import { Updates } from './updates'
 
 /**
  * Settings: one document page, stacked. You, the OpenRouter key, Health,
- * Appearance, then the one destructive act in the app, then a line saying
+ * Updates, Appearance, then the one destructive act in the app, then a line saying
  * what this is and where its files live.
  *
  * Spec: design/settings.md.
@@ -575,6 +576,10 @@ export function Settings() {
 
         <Section title="Health">
           <Health />
+        </Section>
+
+        <Section title="Updates">
+          <Updates />
         </Section>
 
         <Section title="Appearance">
