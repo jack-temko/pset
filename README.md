@@ -93,7 +93,8 @@ Then open <http://127.0.0.1:8420>.
 | Flag | Default | |
 |---|---|---|
 | `-addr` | `127.0.0.1:8420` | Where to listen. |
-| `-data` | `$PSET_DATA`, else `~/.local/share/pset` | Where your library lives. |
+| `-data` | `$PSET_DATA`, else `~/Library/Application Support/pset` on a Mac, else `~/.local/share/pset` | Where your library lives. |
+| `-open` | on | Open your browser once PSet is serving (under WSL, your Windows browser). `-open=false` turns it off. |
 | `-verbose` | off | Debug logging. |
 | `-version` | | Print the version and exit. |
 
@@ -152,7 +153,7 @@ note says who saved it: you, the tutor, or PSet.
 
 ## Your data
 
-Everything is under the data folder (`~/.local/share/pset` by default):
+Everything is under the data folder (`~/.local/share/pset` by default, `~/Library/Application Support/pset` on a Mac):
 `pset.db` (SQLite, including your settings and API key), `books/` (your
 PDFs), `cache/` (rendered pages), and `logs/llm.jsonl`, which records
 every request made to the models, with the model's reply. Back up or

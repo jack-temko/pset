@@ -27,7 +27,7 @@ func TestBusyPortLeavesRunningJobsAlone(t *testing.T) {
 
 	// The first attempt makes the database; then a job is running in it, as
 	// the first copy would have it.
-	if err := serve(addr, dir, log); err == nil {
+	if err := serve(addr, dir, false, log); err == nil {
 		t.Fatal("serve listened on a taken port")
 	}
 	d, err := db.Open(filepath.Join(dir, "pset.db"))
@@ -40,7 +40,7 @@ func TestBusyPortLeavesRunningJobsAlone(t *testing.T) {
 	}
 
 	for range 500 {
-		if err := serve(addr, dir, log); err == nil {
+		if err := serve(addr, dir, false, log); err == nil {
 			t.Fatal("serve listened on a taken port")
 		}
 	}

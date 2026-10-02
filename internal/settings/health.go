@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/platform"
 )
 
 // The local checks, in the order the screen lists them. OpenRouter isn't
@@ -86,7 +87,7 @@ func (s *Service) checkOllama(ctx context.Context) HealthCheck {
 	defer cancel()
 	have, err := s.c.Dialer.Ollama(ctx)
 	if err != nil {
-		c.Detail = "not running. Install it from ollama.com and start it"
+		c.Detail = "not running. " + platform.OllamaHint(platform.Current)
 		return c
 	}
 	for _, m := range have {
@@ -116,7 +117,30 @@ func (s *Service) checkDataDir() HealthCheck {
 	}
 	c.OK = true
 	c.Detail = dir + " is writable"
+	if old := oldMacData(dir); old != "" {
+		c.Detail += ". Data from an earlier version is still in " + old + ": PSet did not move it. Copy it here to bring it over"
+	}
 	return c
+}
+
+// oldMacData is the folder an earlier PSet kept its library in on a Mac,
+// when there is one with a database in it that is not this one; else "".
+func oldMacData(dir string) string {
+	if platform.Current != platform.Mac {
+		return ""
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	old := platform.OldMacDataDir(home)
+	if old == dir {
+		return ""
+	}
+	if _, err := os.Stat(filepath.Join(old, "pset.db")); err != nil {
+		return ""
+	}
+	return old
 }
 
 func (s *Service) checkDatabase(ctx context.Context) HealthCheck {
@@ -145,13 +169,10 @@ func (s *Service) checkDatabase(ctx context.Context) HealthCheck {
 	return c
 }
 
-// installHint is the command that installs a package on this OS: apt's
-// name on Linux, Homebrew's on macOS.
+// installHint is the command that installs a package on this machine: apt's
+// name on Linux and WSL, Homebrew's on macOS.
 func installHint(apt, brew string) string {
-	if runtime.GOOS == "darwin" {
-		return "brew install " + brew
-	}
-	return "sudo apt install " + apt
+	return platform.InstallHint(platform.Current, apt, brew)
 }
 
 func (s *Service) checkTool(id, name, bin, install string) HealthCheck {
