@@ -1,0 +1,552 @@
+// Package library is books: importing a PDF into one, its pages and
+// scans, its contents, and search over it. Spec: design/import.md and
+// design/workspace.md.
+package library
+
+import (
+	"context"
+	"crypto/sha256"
+	"database/sql"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/events"
+	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/jobs"
+	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/pagenum"
+	"github.com/jackt/pset/internal/usage"
+)
+
+// Models is where the saved model connections come from (settings).
+type Models interface {
+	LLM(ctx context.Context) (llm.Config, error)
+}
+
+// Queue is what the library needs from the job queue.
+type Queue interface {
+	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
+	// Wake starts what was enqueued, once its transaction has committed.
+	Wake()
+	StopSubject(ctx context.Context, subject string) error
+	Handle(kind, lane string, h jobs.Handler)
+	Resumable(kind string)
+}
+
+type Config struct {
+	DB      *sql.DB
+	DataDir string
+	Events  events.Publisher
+	Queue   Queue
+	Models  Models
+	Tools   Tools
+	// ForgetCalls, if set, runs as a book is removed, while its questions
+	// and turns can still be named: the usage rows spent on them are
+	// deleted with it. Their tables belong to other features, which
+	// supply this.
+	ForgetCalls func(ctx context.Context, bookID string) error
+}
+
+type Service struct {
+	c     Config
+	scans *scanCache
+	pacer *pacer
+}
+
+// Importing a book is two jobs in one lane, one at a time: examining it
+// (title, pages, digital or scanned), then preparing it (reading a scan,
+// the contents, search). Every queued book is examined first, then
+// digital books are prepared ahead of scans, and preparing is resumable:
+// a scan's reading steps aside for a book ahead of it and carries on
+// after, having lost at most the page it was on.
+const (
+	// JobExamine keeps the name of the one import job it grew out of, so
+	// an import queued before the split still runs.
+	JobExamine = "import"
+	JobPrepare = "prepare"
+	LaneImport = "import"
+)
+
+// Priorities in the import lane; a scan prepares at 0.
+const (
+	examineFirst = 2
+	digitalFirst = 1
+)
+
+// examineJob is a book's first import job.
+func examineJob(id string) jobs.Spec {
+	return jobs.Spec{Kind: JobExamine, Subject: id, Priority: examineFirst, Payload: importPayload{BookID: id}}
+}
+
+func New(c Config) *Service {
+	if c.Tools.Metadata == nil {
+		c.Tools = LiveTools()
+	}
+	s := &Service{c: c, scans: newScanCache(filepath.Join(c.DataDir, "cache", "pages"), c.Tools.PageImage)}
+	s.pacer = newPacer()
+	c.Queue.Handle(JobExamine, LaneImport, s.runExamine)
+	c.Queue.Handle(JobPrepare, LaneImport, s.runPrepare)
+	// It saves every page read and every batch embedded as it goes.
+	c.Queue.Resumable(JobPrepare)
+	if err := fillCovers(context.Background(), c.DB); err != nil {
+		slog.Error("library: giving books their colours", "err", err)
+	}
+	if err := fillPageRuns(context.Background(), c.DB); err != nil {
+		slog.Error("library: working out books' page numbers", "err", err)
+	}
+	if err := fillProblems(context.Background(), c.DB); err != nil {
+		slog.Error("library: working out how books number their problems", "err", err)
+	}
+	return s
+}
+
+func (s *Service) booksDir() string { return filepath.Join(s.c.DataDir, "books") }
+
+func (s *Service) pdfPath(id string) string { return filepath.Join(s.booksDir(), id+".pdf") }
+
+// List is every book, in the order they were added.
+func (s *Service) List(ctx context.Context) ([]Book, error) { return listBooks(ctx, s.c.DB) }
+
+// Get is one book.
+func (s *Service) Get(ctx context.Context, id string) (Book, error) {
+	r, err := getBook(ctx, s.c.DB, id)
+	if errors.Is(err, errNotFound) {
+		return Book{}, httpx.NotFound("book")
+	}
+	return r.Book, err
+}
+
+// Upload stages a PDF, hashing it on the way in. A book already on the
+// shelf is refused with its id, so the UI can open it instead; otherwise
+// the book is queued and its import enqueued in the same transaction.
+func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Book, error) {
+	cfg, err := s.c.Models.LLM(ctx)
+	if err != nil {
+		return Book{}, err
+	}
+	// Preparing needs OpenRouter (for the contents) and ends in search,
+	// which needs Ollama: refuse now, not forty minutes into reading the
+	// pages.
+	if err := preparable(ctx, cfg); err != nil {
+		return Book{}, err
+	}
+	if err := os.MkdirAll(s.booksDir(), 0o700); err != nil {
+		return Book{}, err
+	}
+	tmp, err := os.CreateTemp(s.booksDir(), ".upload-*")
+	if err != nil {
+		return Book{}, err
+	}
+	defer os.Remove(tmp.Name()) // a no-op once renamed
+	h := sha256.New()
+	head := &headSniffer{}
+	if _, err := io.Copy(io.MultiWriter(tmp, h, head), r); err != nil {
+		tmp.Close()
+		return Book{}, fmt.Errorf("stage upload: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return Book{}, err
+	}
+	if !head.isPDF() {
+		return Book{}, httpx.Invalid("file", "That isn't a PDF.")
+	}
+	sha := hex.EncodeToString(h.Sum(nil))
+	if existing, err := bookBySHA(ctx, s.c.DB, sha); err == nil {
+		return Book{}, httpx.Errorf(httpx.CodeDuplicateBook, "%s is already on your shelf.", existing.Title).About(existing.ID)
+	} else if !errors.Is(err, errNotFound) {
+		return Book{}, err
+	}
+
+	id := uuid.NewString()
+	if err := os.Rename(tmp.Name(), s.pdfPath(id)); err != nil {
+		return Book{}, err
+	}
+	// The colours are counted before the transaction, which then only
+	// writes: a read that turns into a write fails outright (SQLITE_BUSY,
+	// snapshot) when a running import commits in between, and a wait
+	// doesn't help. Two uploads at once may pick the same colour; that's
+	// all a race costs.
+	used, err := coversInUse(ctx, s.c.DB)
+	if err != nil {
+		os.Remove(s.pdfPath(id))
+		return Book{}, err
+	}
+	now := db.Now()
+	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO books (id, sha256, title, cover, state, created_at, updated_at) VALUES (?, ?, ?, ?, 'queued', ?, ?)`,
+			id, sha, filenameTitle(filename), pickCover(sha, used), now, now); err != nil {
+			return err
+		}
+		_, err := s.c.Queue.Enqueue(ctx, tx, examineJob(id))
+		return err
+	})
+	if err != nil {
+		os.Remove(s.pdfPath(id))
+		// Two uploads of the same file at once: the second loses the race
+		// on the unique sha and is the duplicate after all.
+		if existing, e := bookBySHA(ctx, s.c.DB, sha); e == nil {
+			return Book{}, httpx.Errorf(httpx.CodeDuplicateBook, "%s is already on your shelf.", existing.Title).About(existing.ID)
+		}
+		return Book{}, err
+	}
+	s.c.Queue.Wake()
+	return s.publish(ctx, id)
+}
+
+// headSniffer keeps the first bytes of a stream, to check it's a PDF.
+type headSniffer struct{ b []byte }
+
+func (h *headSniffer) Write(p []byte) (int, error) {
+	if n := 1024 - len(h.b); n > 0 {
+		h.b = append(h.b, p[:min(n, len(p))]...)
+	}
+	return len(p), nil
+}
+
+// isPDF looks for the header anywhere in the first KB, as readers allow.
+func (h *headSniffer) isPDF() bool { return strings.Contains(string(h.b), "%PDF-") }
+
+// filenameTitle is the title until the PDF's own metadata is read: the
+// filename's stem, separators turned into spaces.
+func filenameTitle(name string) string {
+	base := strings.TrimSuffix(filepath.Base(name), filepath.Ext(name))
+	t := strings.Join(strings.FieldsFunc(base, func(r rune) bool {
+		return r == '-' || r == '_' || r == '.' || r == ' ' || r == '+'
+	}), " ")
+	if t == "" {
+		return "Untitled"
+	}
+	return t
+}
+
+// Update edits title, author, numbering or colour. An edit to the name or
+// the numbering marks it as the student's: a retried import never
+// overwrites it.
+func (s *Service) Update(ctx context.Context, id string, p BookPatch) (Book, error) {
+	cur, err := s.Get(ctx, id)
+	if err != nil {
+		return Book{}, err
+	}
+	if p.Title != nil {
+		t := strings.TrimSpace(*p.Title)
+		if t == "" {
+			return Book{}, httpx.Invalid("title", "A book needs a title.")
+		}
+		cur.Title = t
+	}
+	if p.Author != nil {
+		cur.Author = strings.TrimSpace(*p.Author)
+	}
+	if p.PageRuns != nil {
+		if err := checkRuns(p.PageRuns, cur.PageCount); err != nil {
+			return Book{}, err
+		}
+		cur.PageRuns = pagenum.New(p.PageRuns).Runs()
+	}
+	var problems string
+	if p.Problems != nil {
+		st, err := patchProblems(cur.Problems, *p.Problems)
+		if err != nil {
+			return Book{}, err
+		}
+		b, _ := json.Marshal(st)
+		problems = string(b)
+	}
+	if p.Cover != nil {
+		if !validCover(*p.Cover) {
+			return Book{}, httpx.Invalid("cover", "That isn't one of the cover colours.")
+		}
+		cur.Cover = *p.Cover
+	}
+	// Only the name and the numbering are the student's to guard: a
+	// retried import never writes over them. A colour is never rewritten
+	// anyway.
+	named := p.Title != nil || p.Author != nil
+	numbered := p.PageRuns != nil
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET title = ?, author = ?, page_runs = ?, page_offset = ?, cover = ?,
+		edited = edited OR ?, pages_edited = pages_edited OR ?, updated_at = ? WHERE id = ?`,
+		cur.Title, cur.Author, runsJSON(cur.PageRuns), cur.PageRuns[0].Offset, cur.Cover, named, numbered, db.Now(), id); err != nil {
+		return Book{}, err
+	}
+	if problems != "" {
+		if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET problem_style = ? WHERE id = ?`, problems, id); err != nil {
+			return Book{}, err
+		}
+	}
+	return s.publish(ctx, id)
+}
+
+// Remove takes a book off the shelf: its import stops, its rows go (and
+// with them, by cascade, everything that hangs off it), and its files go.
+// It is also how a failed import is dismissed.
+func (s *Service) Remove(ctx context.Context, id string) error {
+	if _, err := s.Get(ctx, id); err != nil {
+		return err
+	}
+	if err := s.c.Queue.StopSubject(ctx, id); err != nil {
+		return err
+	}
+	// The import's own calls, and, through the hook, the ones the book's
+	// questions and turns owe — all before the rows they hang off go.
+	if err := usage.Forget(ctx, s.c.DB, usage.SubjectBook, id); err != nil {
+		return err
+	}
+	if s.c.ForgetCalls != nil {
+		if err := s.c.ForgetCalls(ctx, id); err != nil {
+			return err
+		}
+	}
+	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM books WHERE id = ?`, id); err != nil {
+		return err
+	}
+	os.Remove(s.pdfPath(id))
+	s.scans.drop(id)
+	s.c.Events.Publish(EventBookRemoved, BookRemoved{ID: id})
+	return nil
+}
+
+// Stop ends a queued or preparing import. The book stays as a failed row,
+// so Try again is the undo.
+func (s *Service) Stop(ctx context.Context, id string) (Book, error) {
+	b, err := s.Get(ctx, id)
+	if err != nil {
+		return Book{}, err
+	}
+	if b.State.Kind != StateQueued && b.State.Kind != StatePreparing {
+		return b, nil
+	}
+	if err := s.c.Queue.StopSubject(ctx, id); err != nil {
+		return Book{}, err
+	}
+	reason := "Stopped."
+	if b.State.Kind == StateQueued && b.Kind == KindUnknown {
+		// Nothing has happened to it yet; an examined book has begun.
+		reason = "Cancelled before it started."
+	}
+	if err := setState(ctx, s.c.DB, id, BookState{Kind: StateFailed, Reason: reason}); err != nil {
+		return Book{}, err
+	}
+	return s.publish(ctx, id)
+}
+
+// preparable refuses when a book couldn't be prepared: it needs an
+// OpenRouter key, and Ollama answering. Ollama is asked for real, since
+// it's a program on this machine that may not be running.
+func preparable(ctx context.Context, cfg llm.Config) error {
+	if !cfg.ChatReady() {
+		return httpx.Errorf(httpx.CodeNotConfigured, "Add your OpenRouter key in Settings first. Books need it to be prepared.")
+	}
+	if !cfg.EmbedReady() {
+		return httpx.Errorf(httpx.CodeNotConfigured, noOllama)
+	}
+	probe, cancel := context.WithTimeout(ctx, ollamaProbe)
+	defer cancel()
+	if _, err := llm.Open(cfg).Embed(probe, []string{"probe"}); err != nil {
+		return httpx.Errorf(httpx.CodeNotConfigured, noOllama)
+	}
+	return nil
+}
+
+// noOllama is what an import says when Ollama doesn't answer.
+const noOllama = "PSet can't reach Ollama, which searches your books. Settings, under Health, says how to start it."
+
+// ollamaProbe is how long an upload waits on Ollama: long enough for it
+// to load the model from disk on a first call.
+const ollamaProbe = 30 * time.Second
+
+// Retry queues a failed import again. Whatever the last run finished
+// (pages read, vectors built) is kept and skipped.
+func (s *Service) Retry(ctx context.Context, id string) (Book, error) {
+	b, err := s.Get(ctx, id)
+	if err != nil {
+		return Book{}, err
+	}
+	if b.State.Kind != StateFailed {
+		return Book{}, httpx.Errorf(httpx.CodeInvalid, "Only a book that failed to import can be tried again.")
+	}
+	cfg, err := s.c.Models.LLM(ctx)
+	if err != nil {
+		return Book{}, err
+	}
+	if err := preparable(ctx, cfg); err != nil {
+		return Book{}, err
+	}
+	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		if err := setState(ctx, tx, id, BookState{Kind: StateQueued}); err != nil {
+			return err
+		}
+		_, err := s.c.Queue.Enqueue(ctx, tx, examineJob(id))
+		return err
+	})
+	if err != nil {
+		return Book{}, err
+	}
+	s.c.Queue.Wake()
+	return s.publish(ctx, id)
+}
+
+// Contents is the book's structure as the rail shows it: every level
+// the contents gives, as a tree.
+func (s *Service) Contents(ctx context.Context, id string) (Contents, error) {
+	if _, err := s.Get(ctx, id); err != nil {
+		return Contents{}, err
+	}
+	secs, err := loadSections(ctx, s.c.DB, id)
+	if err != nil {
+		return Contents{}, err
+	}
+	return buildContents(secs), nil
+}
+
+func buildContents(secs []section) Contents {
+	top := 0
+	for _, s := range secs {
+		if top == 0 || s.Level < top {
+			top = s.Level
+		}
+	}
+	i := 0
+	out := Contents{Entries: nestContents(secs, &i, top-1)}
+	// A book whose only structure is the whole-book fallback has no rail.
+	if len(out.Entries) == 1 && len(out.Entries[0].Children) == 0 {
+		out.Entries = []ContentsEntry{}
+	}
+	return out
+}
+
+// nestContents takes the entries from secs[*i] on that sit deeper than
+// parent: each one, with the deeper entries after it as its children. A
+// skipped level (a 1 followed by a 3) still nests under the 1.
+func nestContents(secs []section, i *int, parent int) []ContentsEntry {
+	out := []ContentsEntry{}
+	for *i < len(secs) && secs[*i].Level > parent {
+		s, id := secs[*i], fmt.Sprintf("e%d", *i)
+		*i++
+		out = append(out, ContentsEntry{ID: id, Title: s.Title, Page: s.StartPage, Children: nestContents(secs, i, s.Level)})
+	}
+	return out
+}
+
+// Count is Reset's dry run.
+func (s *Service) Count(ctx context.Context) (books, pages int, err error) {
+	err = s.c.DB.QueryRowContext(ctx, `SELECT count(*), coalesce(sum(page_count), 0) FROM books`).Scan(&books, &pages)
+	return
+}
+
+// publish reads a book back and announces it.
+func (s *Service) publish(ctx context.Context, id string) (Book, error) {
+	b, err := s.Get(ctx, id)
+	if err != nil {
+		return Book{}, err
+	}
+	s.c.Events.Publish(EventBookChanged, BookChanged{Book: b})
+	return b, nil
+}
+
+// ---------------------------------------------------------------- for other features
+
+// Search ranks a ready book's pages for a query, best first, fusing
+// full-text and vector rankings. With no embeddings set up it is text
+// search alone.
+func (s *Service) Search(ctx context.Context, bookID, query string, k int) ([]int, error) {
+	fts, err := searchFTS(ctx, s.c.DB, bookID, query, searchDepth)
+	if err != nil {
+		return nil, err
+	}
+	var vec []int
+	cfg, err := s.c.Models.LLM(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if cfg.EmbedReady() {
+		q, err := llm.Open(cfg).Embed(ctx, []string{query})
+		switch {
+		case ctx.Err() != nil:
+			return nil, ctx.Err()
+		case err != nil:
+			// Ollama stopped or is slow: the text ranking still answers, and
+			// a tutor that can't search at all is worse than one that
+			// searches by words.
+			slog.Warn("search: embedding the query failed; ranking by text alone", "book", bookID, "err", err)
+		default:
+			rows, err := vectors(ctx, s.c.DB, bookID, cfg.EmbedModel)
+			if err != nil {
+				return nil, err
+			}
+			vec = rankByVector(q[0], rows, searchDepth)
+		}
+	}
+	return rrfMerge(fts, vec, k), nil
+}
+
+// PageText is one page's text.
+func (s *Service) PageText(ctx context.Context, bookID string, page int) (string, error) {
+	return pageText(ctx, s.c.DB, bookID, page)
+}
+
+// PageJPEG is one page rendered at about width pixels.
+func (s *Service) PageJPEG(ctx context.Context, bookID string, page, width int) ([]byte, error) {
+	r, err := getBook(ctx, s.c.DB, bookID)
+	if err != nil {
+		return nil, err
+	}
+	return s.scans.get(ctx, r, s.pdfPath(bookID), page, width)
+}
+
+// PDFPath is where a book's file lives, for features that read it
+// directly (the worksheet crops).
+func (s *Service) PDFPath(bookID string) string { return s.pdfPath(bookID) }
+
+// PageTexts is every page's text, index i holding PDF page i+1.
+func (s *Service) PageTexts(ctx context.Context, bookID string) ([]string, error) {
+	b, err := getBook(ctx, s.c.DB, bookID)
+	if err != nil {
+		return nil, err
+	}
+	pages, err := loadPages(ctx, s.c.DB, bookID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, b.PageCount)
+	for _, p := range pages {
+		if p.Number >= 1 && p.Number <= b.PageCount {
+			out[p.Number-1] = p.Text
+		}
+	}
+	return out, nil
+}
+
+// ChapterSpan is the PDF pages chapter n runs across, from the contents:
+// the first top-level entry titled "Chapter 3..." or "3 ...". ok is false
+// when no entry names it.
+func (s *Service) ChapterSpan(ctx context.Context, bookID string, n int) (start, end int, ok bool, err error) {
+	secs, err := loadSections(ctx, s.c.DB, bookID)
+	if err != nil {
+		return 0, 0, false, err
+	}
+	start, end, ok = chapterSpan(secs, n)
+	return start, end, ok, nil
+}
+
+func chapterSpan(secs []section, n int) (int, int, bool) {
+	re := regexp.MustCompile(`(?i)^\s*(?:chapter\s+)?` + strconv.Itoa(n) + `(?:$|[\s.:·\-])`)
+	for _, sec := range secs {
+		if re.MatchString(sec.Title) {
+			return sec.StartPage, sec.EndPage, sec.EndPage >= sec.StartPage
+		}
+	}
+	return 0, 0, false
+}

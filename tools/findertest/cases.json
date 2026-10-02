@@ -1,0 +1,42 @@
+{
+  "note": "Where Jack's books keep the problems his courses assign. Pages are PDF pages, checked by hand against the text. Run with: go run ./tools/findertest -addr http://127.0.0.1:8420",
+  "books": [
+    {
+      "title": "Elementary Differential Equations",
+      "sha256": "d92ff7d9ebf1d875",
+      "cases": [
+        { "text": "Chapter 3.1 Problem 7", "want": { "3.1 #7": 123 } },
+        { "text": "Chapter 3.1 Problem 6", "want": { "3.1 #6": 123 } },
+        { "text": "Chapter 3.2 Problem 1", "want": { "3.2 #1": 133 } },
+        { "text": "3.2 #4", "want": { "3.2 #4": 133 } },
+        { "text": "Section 3.2 #19", "want": { "3.2 #19": 133 } },
+        { "text": "2.2 #2", "want": { "2.2 #2": 52 } },
+        { "text": "2.5 #6", "want": { "2.5 #6": 81 } },
+        { "text": "2.6 #1", "want": { "2.6 #1": 89 } },
+        { "text": "Page 8 Problem 7", "want": { "p. 8 #7": 20 } },
+        { "text": "Page 33 Problem 7", "want": { "p. 33 #7": 45 } },
+        { "text": "1.1: 1, 7, (4 pts each)", "want": { "1.1 #1": 20, "1.1 #7": 20 } }
+      ]
+    },
+    {
+      "title": "Fundamentals of Electric Circuits",
+      "sha256": "37423067e944b097",
+      "cases": [
+        { "text": "4.27", "want": { "4.27": 189 } },
+        { "text": "4.25 (no PSpice or MulitSim)", "want": { "4.25": 189 } },
+        { "text": "4.39 , 4.43 , 4.44", "want": { "4.39": 190, "4.43": 191, "4.44": 191 } },
+        { "text": "4.62", "want": { "4.62": 193 } }
+      ]
+    },
+    {
+      "title": "Probability and Stochastic Processes",
+      "sha256": "bb92fe87bf484a96",
+      "cases": [
+        { "text": "Problem 2.1.4, p. 57.", "want": { "2.1.4": 75 } },
+        { "text": "Problem 2.2.4, p. 59.", "want": { "2.2.4": 77 } },
+        { "text": "Problem 2.3.4, p. 60. Express your answer in terms of p.", "want": { "2.3.4": 78 } },
+        { "text": "2.4.2", "want": { "2.4.2": 79 } }
+      ]
+    }
+  ]
+}

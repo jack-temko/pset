@@ -1,0 +1,859 @@
+// Package homework is problem sets: a set belongs to a book, its questions
+// are located in the book (or not, for one that isn't in it) and given a
+// hint and a walkthrough. Spec: design/workspace.md, "Homework".
+package homework
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"github.com/jackt/pset/internal/pagenum"
+	"github.com/jackt/pset/internal/probnum"
+	"slices"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/jackt/pset/internal/agent"
+	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/events"
+	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/jobs"
+	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/usage"
+)
+
+// Book is what homework needs to know about a book.
+type Book struct {
+	ID        string
+	Title     string
+	PageCount int
+	Pages     pagenum.Map
+	// Problems is how the book numbers its problems; the zero Style when
+	// it isn't known.
+	Problems probnum.Style
+	// Parts is its numbered chapters and sections, from the contents.
+	Parts []probnum.Part
+}
+
+// span is the PDF pages a numbered chapter or section runs across.
+func (b Book) span(number string) (start, end int, ok bool) {
+	for _, p := range b.Parts {
+		if p.Number == number && p.End >= p.Start {
+			return p.Start, p.End, true
+		}
+	}
+	return 0, 0, false
+}
+
+// partOf is the most specific numbered part a PDF page is in: the
+// section, else the chapter.
+func (b Book) partOf(page int) (probnum.Part, bool) {
+	var best probnum.Part
+	found := false
+	for _, p := range b.Parts {
+		if page >= p.Start && page <= p.End && (!found || strings.Count(p.Number, ".") > strings.Count(best.Number, ".")) {
+			best, found = p, true
+		}
+	}
+	return best, found
+}
+
+// Library is what homework reads from books. Page numbers are PDF pages.
+type Library interface {
+	Book(ctx context.Context, id string) (Book, error)
+	Search(ctx context.Context, bookID, query string, k int) ([]int, error)
+	PageText(ctx context.Context, bookID string, page int) (string, error)
+	PageTexts(ctx context.Context, bookID string) ([]string, error)
+	PageJPEG(ctx context.Context, bookID string, page, width int) ([]byte, error)
+}
+
+// Settings is the model connection and who's studying.
+type Settings interface {
+	LLM(ctx context.Context) (llm.Config, error)
+	Name(ctx context.Context) string
+}
+
+// Memory is the book's memory: the walkthrough writer's notes, and where
+// locate has found each chapter's problems. Pages are PDF pages.
+type Memory interface {
+	agent.Memory
+	ProblemsSeen(ctx context.Context, bookID string, chapter int) (Problems, error)
+	SawProblem(ctx context.Context, bookID string, pages pagenum.Map, chapter int, label string, page int) error
+}
+
+// Problems is where a chapter's problems have been found, and the memory
+// that says so.
+type Problems struct {
+	MemoryID string
+	Text     string
+	Seen     []Seen
+}
+
+// Seen is one problem found: its label and page.
+type Seen struct {
+	Label string
+	Page  int
+}
+
+// Time is how long the student has spent on questions: the stretches of
+// study with each one open, in seconds.
+type Time interface {
+	QuestionSeconds(ctx context.Context, ids []string) (map[string]int, error)
+}
+
+type Queue interface {
+	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
+	// Wake starts what was enqueued, once its transaction has committed.
+	Wake()
+	StopSubject(ctx context.Context, subject string) error
+	Handle(kind, lane string, h jobs.Handler)
+}
+
+type Config struct {
+	DB       *sql.DB
+	Events   events.Publisher
+	Queue    Queue
+	Library  Library
+	Settings Settings
+	// Memory is the book's memory; nil runs without one.
+	Memory Memory
+	// Time is the time spent on each question; nil says none was.
+	Time Time
+}
+
+type Service struct {
+	c Config
+	// rankMu makes "is a ranking already waiting, if not queue one" one step.
+	rankMu sync.Mutex
+}
+
+// A question is a job per step: finding it in the book, reading its
+// figures when it has any, then writing its guide. All share one lane
+// (two at a time), and a queued find or reading always starts before a
+// queued guide, so a set's questions are found first and its worksheet
+// is whole early, and its readings are there to check while the guides
+// wait.
+const (
+	JobLocate    = "locate"
+	JobRead      = "read"
+	JobGuide     = "guide"
+	LaneQuestion = "question"
+)
+
+// locateFirst is a find's priority in the lane, and a reading's: ahead
+// of every queued guide, even ones queued before the question was added.
+const locateFirst = 1
+
+func New(c Config) *Service {
+	s := &Service{c: c}
+	c.Queue.Handle(JobLocate, LaneQuestion, s.runLocate)
+	c.Queue.Handle(JobRead, LaneQuestion, s.runRead)
+	c.Queue.Handle(JobGuide, LaneQuestion, s.runGuide)
+	c.Queue.Handle(JobRank, LaneQuestion, s.runRank)
+	c.Queue.Handle(JobAssignment, LaneAssignment, s.runAssignmentRead)
+	return s
+}
+
+// Caps: enough for any real assignment, small enough that a paste of a
+// whole chapter is caught.
+const (
+	maxTitle     = 200
+	maxDrafts    = 40
+	maxDraftText = 4000
+)
+
+// ---------------------------------------------------------------- sets
+
+// ForBook lists a book's sets, newest first.
+func (s *Service) ForBook(ctx context.Context, bookID string) ([]Summary, error) {
+	if _, err := s.c.Library.Book(ctx, bookID); err != nil {
+		return nil, err
+	}
+	hs, err := listSummaries(ctx, s.c.DB, `WHERE h.book_id = ? ORDER BY h.created_at DESC`, bookID)
+	if err != nil {
+		return nil, err
+	}
+	return hs, s.fillSummaries(ctx, hs)
+}
+
+// Due lists every set not yet turned in, across books: dated ones by date,
+// then the undated, newest first.
+func (s *Service) Due(ctx context.Context) ([]Summary, error) {
+	hs, err := listSummaries(ctx, s.c.DB, `WHERE h.turned_in_at = ''
+		ORDER BY h.due_date = '', h.due_date, h.created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	return hs, s.fillSummaries(ctx, hs)
+}
+
+func (s *Service) Create(ctx context.Context, bookID string, in Input) (Summary, error) {
+	if _, err := s.c.Library.Book(ctx, bookID); err != nil {
+		return Summary{}, err
+	}
+	title, err := cleanTitle(in.Title)
+	if err != nil {
+		return Summary{}, err
+	}
+	due, err := cleanDate(in.DueDate)
+	if err != nil {
+		return Summary{}, err
+	}
+	id := uuid.NewString()
+	now := db.Now()
+	if _, err := s.c.DB.ExecContext(ctx, `INSERT INTO homework (id, book_id, title, due_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		id, bookID, title, due, now, now); err != nil {
+		return Summary{}, err
+	}
+	return s.publishSet(ctx, id)
+}
+
+func cleanTitle(t string) (string, error) {
+	t = strings.Join(strings.Fields(t), " ")
+	if t == "" {
+		return "", httpx.Invalid("title", "Give it a title.")
+	}
+	if len([]rune(t)) > maxTitle {
+		return "", httpx.Invalid("title", "Keep the title under %d characters.", maxTitle)
+	}
+	return t, nil
+}
+
+func cleanDate(d string) (string, error) {
+	d = strings.TrimSpace(d)
+	if d == "" {
+		return "", nil
+	}
+	if _, err := time.Parse("2006-01-02", d); err != nil {
+		return "", httpx.Invalid("dueDate", "That isn't a date.")
+	}
+	return d, nil
+}
+
+func (s *Service) Get(ctx context.Context, id string) (Detail, error) {
+	h, err := getSummary(ctx, s.c.DB, id)
+	if errors.Is(err, errNotFound) {
+		return Detail{}, httpx.NotFound("homework set")
+	}
+	if err != nil {
+		return Detail{}, err
+	}
+	if h, err = s.filled(ctx, h); err != nil {
+		return Detail{}, err
+	}
+	qs, err := listQuestions(ctx, s.c.DB, id)
+	if err != nil {
+		return Detail{}, err
+	}
+	if err := fillUsage(ctx, s.c.DB, qs); err != nil {
+		return Detail{}, err
+	}
+	if err := s.fillSeconds(ctx, qs); err != nil {
+		return Detail{}, err
+	}
+	return Detail{Homework: h, Questions: qs}, nil
+}
+
+// fillUsage puts each question's spending on it, one grouped query for
+// the set. A question with no calls keeps nil, and no line is drawn.
+func fillUsage(ctx context.Context, d *sql.DB, qs []Question) error {
+	ids := make([]string, len(qs))
+	for i, q := range qs {
+		ids[i] = q.ID
+	}
+	uses, err := usage.ForSubjects(ctx, d, usage.SubjectQuestion, ids)
+	if err != nil {
+		return err
+	}
+	for i, q := range qs {
+		qs[i].Usage = uses[q.ID]
+	}
+	return nil
+}
+
+// fillSeconds puts the time spent on each question on it, one query for
+// the set. A question with none keeps zero, which the wire leaves out.
+func (s *Service) fillSeconds(ctx context.Context, qs []Question) error {
+	if s.c.Time == nil {
+		return nil
+	}
+	got, err := s.c.Time.QuestionSeconds(ctx, questionIDs(qs))
+	if err != nil {
+		return err
+	}
+	for i, q := range qs {
+		qs[i].Seconds = got[q.ID]
+	}
+	return nil
+}
+
+func (s *Service) Update(ctx context.Context, id string, p Patch) (Summary, error) {
+	// Read and write in one transaction, which holds the write lock from
+	// its start: two patches of different fields each read the set as it
+	// was, and the second write put the first one's field back.
+	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		h, err := getSummary(ctx, tx, id)
+		if errors.Is(err, errNotFound) {
+			return httpx.NotFound("homework set")
+		}
+		if err != nil {
+			return err
+		}
+		if p.Title != nil {
+			if h.Title, err = cleanTitle(*p.Title); err != nil {
+				return err
+			}
+		}
+		if p.DueDate != nil {
+			if h.DueDate, err = cleanDate(*p.DueDate); err != nil {
+				return err
+			}
+		}
+		if p.TurnedIn != nil {
+			switch {
+			case *p.TurnedIn && h.TurnedInAt == "":
+				h.TurnedInAt = db.Now()
+			case !*p.TurnedIn:
+				h.TurnedInAt = ""
+			}
+		}
+		_, err = tx.ExecContext(ctx, `UPDATE homework SET title = ?, due_date = ?, turned_in_at = ?, updated_at = ? WHERE id = ?`,
+			h.Title, h.DueDate, h.TurnedInAt, db.Now(), id)
+		return err
+	})
+	if err != nil {
+		return Summary{}, err
+	}
+	return s.publishSet(ctx, id)
+}
+
+// Delete removes a set and its questions, stopping any still being
+// written.
+func (s *Service) Delete(ctx context.Context, id string) error {
+	h, err := getSummary(ctx, s.c.DB, id)
+	if errors.Is(err, errNotFound) {
+		return httpx.NotFound("homework set")
+	}
+	if err != nil {
+		return err
+	}
+	qs, err := listQuestions(ctx, s.c.DB, id)
+	if err != nil {
+		return err
+	}
+	for _, q := range qs {
+		s.c.Queue.StopSubject(ctx, q.ID)
+	}
+	s.c.Queue.StopSubject(ctx, id)
+	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM homework WHERE id = ?`, id); err != nil {
+		return err
+	}
+	// The questions went with the set; their calls go with them.
+	if err := usage.ForgetAll(ctx, s.c.DB, usage.SubjectQuestion, questionIDs(qs)); err != nil {
+		return err
+	}
+	s.c.Events.Publish(EventHomeworkRemoved, HomeworkRemoved{ID: id, BookID: h.BookID})
+	return nil
+}
+
+// questionIDs is a list of questions as their ids.
+func questionIDs(qs []Question) []string {
+	out := make([]string, len(qs))
+	for i, q := range qs {
+		out[i] = q.ID
+	}
+	return out
+}
+
+// ---------------------------------------------------------------- questions
+
+// Add appends drafts to a set, all at once, and queues each one's first
+// step: finding it, or writing the guide of one that isn't in the book.
+// Blank drafts are dropped: an empty row in the dialog means nothing.
+func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([]Question, error) {
+	h, err := getSummary(ctx, s.c.DB, homeworkID)
+	if errors.Is(err, errNotFound) {
+		return nil, httpx.NotFound("homework set")
+	} else if err != nil {
+		return nil, err
+	}
+	book, err := s.c.Library.Book(ctx, h.BookID)
+	if err != nil {
+		return nil, err
+	}
+	var keep []splitRow
+	for _, d := range drafts {
+		d.Text = strings.TrimSpace(d.Text)
+		if d.Text == "" {
+			continue
+		}
+		if len(d.Text) > maxDraftText {
+			return nil, httpx.Invalid("drafts", "One of these is too long for a single question.")
+		}
+		keep = append(keep, splitDraft(d, book.Problems)...)
+	}
+	if len(keep) == 0 {
+		return nil, httpx.Invalid("drafts", "Write at least one question.")
+	}
+	if len(keep) > maxDrafts {
+		return nil, httpx.Invalid("drafts", "That's more than %d questions at once. Add them in smaller batches.", maxDrafts)
+	}
+	// Each question is read back inside the transaction that made it, so
+	// the answer is the questions as added, not whatever a worker has made
+	// of them since.
+	var out []Question
+	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		var last int
+		if err := tx.QueryRowContext(ctx, `SELECT coalesce(max(position), 0) FROM questions WHERE homework_id = ?`, homeworkID).Scan(&last); err != nil {
+			return err
+		}
+		out, err = s.insertQuestions(ctx, tx, homeworkID, last, keep)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	// Said before the worker is woken, so the stream says "added" ahead of
+	// what the worker does next. That's the usual order, not a promise (the
+	// queue's backstop poll can still get in first), and the client keeps
+	// the higher Rev whichever order they land in.
+	for _, q := range out {
+		s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: q})
+	}
+	s.publishSet(ctx, homeworkID)
+	// Questions not from the book have nothing to find: the set may be
+	// ready to rank already.
+	s.rankWhenFound(ctx, homeworkID)
+	s.c.Queue.Wake()
+	return out, nil
+}
+
+// splitRow is one question a draft becomes, with its label and the
+// professor's notes it carries.
+type splitRow struct {
+	Draft
+	label string
+	notes []string
+}
+
+// insertQuestions adds questions after position `after` in a set, moving
+// any that follow down, each queued for its first step. Inside tx.
+func (s *Service) insertQuestions(ctx context.Context, tx *sql.Tx, homeworkID string, after int, keep []splitRow) ([]Question, error) {
+	if _, err := tx.ExecContext(ctx, `UPDATE questions SET position = position + ? WHERE homework_id = ? AND position > ?`,
+		len(keep), homeworkID, after); err != nil {
+		return nil, err
+	}
+	now := db.Now()
+	var out []Question
+	for i, d := range keep {
+		id := uuid.NewString()
+		label, statement := d.label, ""
+		if !d.InBook {
+			// Its own words are its statement; nothing to find.
+			statement = d.Text
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, notes, state, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
+			id, homeworkID, after+i+1, d.Text, d.InBook, label, mustJSON(runsOf(statement)), mustJSON(runLists(orEmpty(d.notes))), now, now); err != nil {
+			return nil, err
+		}
+		if _, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, d.InBook)); err != nil {
+			return nil, err
+		}
+		q, err := getQuestion(ctx, tx, id)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, q.Question)
+	}
+	return out, nil
+}
+
+// splitDraft reads a draft as the book references it names, in the
+// book's style: one question each, labelled the book's way ("1.1: 1, 7"
+// is 1.1 #1 and 1.1 #7). A draft that isn't a reference stays as it is.
+func splitDraft(d Draft, style probnum.Style) []splitRow {
+	type draft = splitRow
+	refs, ok := ParseRefs(d.Text, style)
+	if !d.InBook || !ok {
+		return []draft{{d, labelFromText(d.Text), nil}}
+	}
+	if len(refs) == 1 {
+		return []draft{{d, refs[0].Label(style), notesOf(refs[0])}}
+	}
+	out := make([]draft, 0, len(refs))
+	for _, r := range refs {
+		text := r.Label(style)
+		if r.Part != "" {
+			text += r.Part
+		}
+		if r.Note != "" {
+			text += " (" + r.Note + ")"
+		}
+		out = append(out, draft{Draft{Text: text, InBook: true}, r.Label(style), notesOf(r)})
+	}
+	return out
+}
+
+// labelFromText stands in for the book's own label until the question is
+// located: the first line, short.
+func labelFromText(text string) string {
+	first, _, _ := strings.Cut(strings.TrimSpace(text), "\n")
+	first = strings.TrimSpace(first)
+	if r := []rune(first); len(r) > 40 {
+		return strings.TrimSpace(string(r[:39])) + "…"
+	}
+	return first
+}
+
+// UpdateQuestion applies what the walkthrough changes directly.
+func (s *Service) UpdateQuestion(ctx context.Context, id string, p QuestionPatch) (Question, error) {
+	q, err := getQuestion(ctx, s.c.DB, id)
+	if errors.Is(err, errNotFound) {
+		return Question{}, httpx.NotFound("question")
+	}
+	if err != nil {
+		return Question{}, err
+	}
+	if p.Reading != nil || p.Reread {
+		return s.redoReading(ctx, q, p.Reading)
+	}
+	if p.Notes != nil {
+		return s.setNotes(ctx, q, *p.Notes)
+	}
+	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		if p.Reveal != nil {
+			stage := *p.Reveal
+			if stage != "hint" && stage != "walkthrough" && stage != "answers" {
+				return httpx.Invalid("reveal", "There's no stage called %q.", stage)
+			}
+			if !slices.Contains(q.Revealed, stage) {
+				q.Revealed = append(q.Revealed, stage)
+			}
+			if _, err := tx.ExecContext(ctx, `UPDATE questions SET revealed = ? WHERE id = ?`, mustJSON(q.Revealed), id); err != nil {
+				return err
+			}
+		}
+		if p.Done != nil {
+			doneAt := ""
+			if *p.Done {
+				doneAt = db.Now()
+			}
+			if _, err := tx.ExecContext(ctx, `UPDATE questions SET done_at = ? WHERE id = ?`, doneAt, id); err != nil {
+				return err
+			}
+		}
+		if p.Position != nil {
+			return move(ctx, tx, q.HomeworkID, id, q.Position, *p.Position)
+		}
+		return nil
+	})
+	if err != nil {
+		return Question{}, err
+	}
+	if p.Position != nil {
+		// Every question between the two positions moved.
+		qs, _ := listQuestions(ctx, s.c.DB, q.HomeworkID)
+		for _, other := range qs {
+			if other.ID != id {
+				s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: other})
+			}
+		}
+	}
+	out, err := s.publishQuestion(ctx, id)
+	if p.Done != nil {
+		s.publishSet(ctx, q.HomeworkID)
+	}
+	return out, err
+}
+
+// redoReading puts a new reading of a question's figures in: the
+// student's correction, or, given none, a fresh read. Either way the
+// guide is written again from it, and one written from the old reading,
+// or being written, is stopped and cleared. A guide that hasn't started
+// just waits for the new reading.
+func (s *Service) redoReading(ctx context.Context, q row, corrected *[]string) (Question, error) {
+	if len(q.FigRect) == 0 || q.Page == nil {
+		return Question{}, httpx.Invalid("reading", "This question has no figure to read.")
+	}
+	switch q.State {
+	case StatePending, StateLocating, StateReading:
+		return Question{}, httpx.Invalid("reading", "Its figure is still being read.")
+	}
+	var lines []string
+	if corrected != nil {
+		for _, l := range *corrected {
+			l = strings.TrimSpace(l)
+			l = strings.TrimSpace(strings.TrimPrefix(l, "- "))
+			if l == "" {
+				continue
+			}
+			if len([]rune(l)) > maxReadingLine {
+				return Question{}, httpx.Invalid("reading", "Keep each line under %d characters.", maxReadingLine)
+			}
+			lines = append(lines, l)
+		}
+		if len(lines) == 0 {
+			return Question{}, httpx.Invalid("reading", "Write at least one line.")
+		}
+		if len(lines) > maxReadingLines {
+			return Question{}, httpx.Invalid("reading", "Keep it to %d lines.", maxReadingLines)
+		}
+		if slices.Equal(sources(runLists(lines)), sources(q.Reading)) {
+			return q.Question, nil
+		}
+		// A guide that hasn't started, or isn't asked for, reads the reading when it does.
+		res, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = 1, reading_doubts = '[]', updated_at = ? WHERE id = ? AND state IN (?, ?)`,
+			mustJSON(runLists(lines)), db.Now(), q.ID, StateLocated, StateUnwritten)
+		if err != nil {
+			return Question{}, err
+		}
+		if n, _ := res.RowsAffected(); n == 1 {
+			return s.publishQuestion(ctx, q.ID)
+		}
+	}
+	next, edited := readStep(q.ID), 0
+	if corrected != nil {
+		next, edited = nextStep(q.ID, false), 1
+	}
+	// Corrected or read again, the old readings' disagreements are gone.
+	return s.rewrite(ctx, q, next, `reading = ?, reading_edited = ?, reading_doubts = '[]'`, mustJSON(runLists(orEmpty(lines))), edited)
+}
+
+// move puts a question at position to (1-based), shifting the ones in
+// between.
+func move(ctx context.Context, tx *sql.Tx, homeworkID, id string, from, to int) error {
+	var n int
+	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM questions WHERE homework_id = ?`, homeworkID).Scan(&n); err != nil {
+		return err
+	}
+	if to < 1 || to > n {
+		return httpx.Invalid("position", "Position %d is outside the set (1 to %d).", to, n)
+	}
+	if to == from {
+		return nil
+	}
+	shift := `UPDATE questions SET position = position + 1 WHERE homework_id = ? AND position >= ? AND position < ?`
+	if to > from {
+		shift = `UPDATE questions SET position = position - 1 WHERE homework_id = ? AND position <= ? AND position > ?`
+	}
+	if _, err := tx.ExecContext(ctx, shift, homeworkID, to, from); err != nil {
+		return err
+	}
+	_, err := tx.ExecContext(ctx, `UPDATE questions SET position = ? WHERE id = ?`, to, id)
+	return err
+}
+
+// RemoveQuestion takes a question out of its set, stopping it if it's
+// still being written.
+func (s *Service) RemoveQuestion(ctx context.Context, id string) error {
+	q, err := getQuestion(ctx, s.c.DB, id)
+	if errors.Is(err, errNotFound) {
+		return httpx.NotFound("question")
+	}
+	if err != nil {
+		return err
+	}
+	s.c.Queue.StopSubject(ctx, id)
+	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM questions WHERE id = ?`, id); err != nil {
+			return err
+		}
+		if err := usage.Forget(ctx, tx, usage.SubjectQuestion, id); err != nil {
+			return err
+		}
+		return renumber(ctx, tx, q.HomeworkID)
+	})
+	if err != nil {
+		return err
+	}
+	s.c.Events.Publish(EventQuestionRemoved, QuestionRemoved{ID: id, HomeworkID: q.HomeworkID})
+	qs, _ := listQuestions(ctx, s.c.DB, q.HomeworkID)
+	for _, other := range qs {
+		if other.Position >= q.Position {
+			s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: other})
+		}
+	}
+	s.publishSet(ctx, q.HomeworkID)
+	// Difficulty is against the rest of the set, so the rest is ranked again.
+	s.rankWhenFound(ctx, q.HomeworkID)
+	return nil
+}
+
+// RetryQuestion is a failed question's way out: with the page it's on,
+// or with its own text, which makes it a question that isn't in the book.
+func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Question, error) {
+	q, err := getQuestion(ctx, s.c.DB, id)
+	if errors.Is(err, errNotFound) {
+		return Question{}, httpx.NotFound("question")
+	}
+	if err != nil {
+		return Question{}, err
+	}
+	if q.State != StateFailed {
+		return Question{}, httpx.Errorf(httpx.CodeInvalid, "Only a question that failed can be tried again.")
+	}
+	// Memory lines stay with saved rounds, which a retry of the same
+	// problem carries on from; the guide clears them with the rounds.
+	set := `attempts = attempts + 1, reason = '', failure = '', hint = '[]', walkthrough = '[]',
+		memory = CASE WHEN rounds = '[]' THEN '[]' ELSE memory END, updated_at = ?`
+	args := []any{db.Now()}
+	// What's left to do, and the state it waits in: the step that failed,
+	// unless the retry changes what there is to find.
+	st, find := waiting(q), q.InBook && q.Page == nil
+	switch {
+	case r.Text != nil && strings.TrimSpace(*r.Text) != "":
+		text := strings.TrimSpace(*r.Text)
+		if len(text) > maxDraftText {
+			return Question{}, httpx.Invalid("text", "That's too long for a single question.")
+		}
+		set += `, text = ?, in_book = 0, statement = ?, label = ?, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]', rounds = '[]', reading = '[]', reading_edited = 0, boxes = '[]'`
+		args = append(args, text, mustJSON(runsOf(text)), labelFromText(text))
+		st, find = StatePending, false
+	case r.Page != nil:
+		if !q.InBook {
+			return Question{}, httpx.Invalid("page", "This question isn't in the book, so it has no page.")
+		}
+		b, err := s.c.Library.Book(ctx, q.BookID)
+		if err != nil {
+			return Question{}, err
+		}
+		if *r.Page < 1 || *r.Page > b.PageCount {
+			return Question{}, httpx.Invalid("page", "The book doesn't have that page.")
+		}
+		set += `, pinned_page = ?, page = NULL, rounds = '[]', boxes = '[]'`
+		args = append(args, *r.Page)
+		st, find = StatePending, true
+	default:
+		// The same thing again: after a model outage, say. The guide
+		// carries on from its saved rounds.
+	}
+	set += `, state = ?`
+	args = append(args, st, id)
+	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `UPDATE questions SET `+set+` WHERE id = ?`, args...); err != nil {
+			return err
+		}
+		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, find))
+		return err
+	})
+	if err != nil {
+		return Question{}, err
+	}
+	s.c.Queue.Wake()
+	return s.publishQuestion(ctx, id)
+}
+
+// WriteGuide writes the guide of a question that has none: the guides
+// written before documents were deleted, and nothing writes one until the
+// student asks.
+func (s *Service) WriteGuide(ctx context.Context, id string) (Question, error) {
+	q, err := getQuestion(ctx, s.c.DB, id)
+	if errors.Is(err, errNotFound) {
+		return Question{}, httpx.NotFound("question")
+	}
+	if err != nil {
+		return Question{}, err
+	}
+	if q.State != StateUnwritten {
+		return Question{}, httpx.Errorf(httpx.CodeInvalid, "This question already has a guide, or is being written.")
+	}
+	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `UPDATE questions SET state = ?, failure = '', reason = '', activity = '', updated_at = ? WHERE id = ?`,
+			StateLocated, db.Now(), id); err != nil {
+			return err
+		}
+		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, false))
+		return err
+	})
+	if err != nil {
+		return Question{}, err
+	}
+	s.c.Queue.Wake()
+	return s.publishQuestion(ctx, id)
+}
+
+// ---------------------------------------------------------------- events
+
+// filled is a set with its bar, pace and time left put on.
+func (s *Service) filled(ctx context.Context, h Summary) (Summary, error) {
+	one := []Summary{h}
+	err := s.fillSummaries(ctx, one)
+	return one[0], err
+}
+
+func (s *Service) publishSet(ctx context.Context, id string) (Summary, error) {
+	h, err := getSummary(ctx, s.c.DB, id)
+	if err != nil {
+		return Summary{}, err
+	}
+	if h, err = s.filled(ctx, h); err != nil {
+		return Summary{}, err
+	}
+	s.c.Events.Publish(EventHomeworkChanged, HomeworkChanged{Homework: h})
+	return h, nil
+}
+
+func (s *Service) publishQuestion(ctx context.Context, id string) (Question, error) {
+	q, err := getQuestion(ctx, s.c.DB, id)
+	if err != nil {
+		return Question{}, err
+	}
+	if q.Question.Usage, err = usage.For(ctx, s.c.DB, usage.SubjectQuestion, id); err != nil {
+		return Question{}, err
+	}
+	one := []Question{q.Question}
+	if err = s.fillSeconds(ctx, one); err != nil {
+		return Question{}, err
+	}
+	q.Question.Seconds = one[0].Seconds
+	s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: q.Question})
+	return q.Question, nil
+}
+
+// QuestionsDoneSince counts questions ticked done since a time, and the
+// sets they came from: Home's "questions worked" tile.
+func (s *Service) QuestionsDoneSince(ctx context.Context, since time.Time) (questions, sets int, err error) {
+	err = s.c.DB.QueryRowContext(ctx, `SELECT count(*), count(DISTINCT homework_id) FROM questions WHERE done_at >= ?`,
+		db.At(since)).Scan(&questions, &sets)
+	return
+}
+
+// ForgetBookCalls deletes the usage rows of a book's questions and
+// assignment reads, called as the book is removed, while they can still
+// be named.
+func (s *Service) ForgetBookCalls(ctx context.Context, bookID string) error {
+	questions, err := ids(ctx, s.c.DB, `SELECT q.id FROM questions q JOIN homework h ON h.id = q.homework_id WHERE h.book_id = ?`, bookID)
+	if err != nil {
+		return err
+	}
+	if err := usage.ForgetAll(ctx, s.c.DB, usage.SubjectQuestion, questions); err != nil {
+		return err
+	}
+	reads, err := ids(ctx, s.c.DB, `SELECT id FROM assignment_reads WHERE book_id = ?`, bookID)
+	if err != nil {
+		return err
+	}
+	return usage.ForgetAll(ctx, s.c.DB, usage.SubjectRead, reads)
+}
+
+// ids runs a query for one column of ids.
+func ids(ctx context.Context, d *sql.DB, query string, args ...any) ([]string, error) {
+	rows, err := d.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}

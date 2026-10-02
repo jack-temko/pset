@@ -1,0 +1,296 @@
+// Package llmtest is a fake OpenAI-compatible endpoint for tests: the
+// real llm client talks to it over HTTP, so a feature's integration test
+// exercises the same wire code the app does, with no model anywhere.
+//
+// Embeddings are deterministic: a text's vector is a hash of its words, so
+// texts sharing words land close together and search behaves plausibly.
+// Chat replies come from a script the test writes.
+package llmtest
+
+import (
+	"encoding/json"
+	"hash/fnv"
+	"math"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/jackt/pset/internal/llm"
+)
+
+// Dims is the fake embedding size.
+const Dims = 64
+
+// Reply is one scripted chat answer: text, tool calls, or an HTTP error.
+type Reply struct {
+	Text      string
+	ToolCalls []llm.ToolCall
+	// Reasoning streams first, as a thinking model's reasoning_content.
+	Reasoning string
+	Status    int // non-zero answers with this status and Text as the body
+	// Pause is how long to wait between streamed chunks, to test a
+	// stop mid-answer, or before a whole reply that isn't streamed, to
+	// test a call that stalls.
+	Pause time.Duration
+	// Cut ends the stream after the reasoning, halfway through a chunk,
+	// as an endpoint dropping a long answer does.
+	Cut bool
+	// Split sends each chunk's JSON across two data: lines, which SSE
+	// allows and some endpoints do.
+	Split bool
+	// Unfinished ends the stream after the reasoning on a whole event,
+	// with no finish_reason and no [DONE]: providers drop long streams so.
+	Unfinished bool
+}
+
+// Request is what the server received, for assertions.
+type Request struct {
+	Path string
+	Chat llm.ChatRequest
+}
+
+// Server is the fake endpoint.
+type Server struct {
+	*httptest.Server
+
+	mu        sync.Mutex
+	replies   []Reply
+	fallback  func(llm.ChatRequest) Reply
+	requests  []Request
+	embedErr  int
+	embedPass int
+}
+
+// New starts a server that closes with the test.
+func New(t testing.TB) *Server {
+	s := &Server{}
+	s.Server = httptest.NewServer(http.HandlerFunc(s.serve))
+	t.Cleanup(s.Close)
+	return s
+}
+
+// Config is an llm.Config pointing both sides at the fake.
+func (s *Server) Config() llm.Config {
+	return llm.Config{
+		ChatEndpoint: s.URL, APIKey: "test", ChatModel: "fake-chat",
+		EmbedEndpoint: s.URL, EmbedModel: "fake-embed",
+	}
+}
+
+// Script queues chat replies, answered in order.
+func (s *Server) Script(r ...Reply) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.replies = append(s.replies, r...)
+}
+
+// Fallback answers any chat request the script has run out for. It runs
+// outside the server's lock, so it may block to hold a request open while
+// others are answered; it guards its own state.
+func (s *Server) Fallback(fn func(llm.ChatRequest) Reply) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.fallback = fn
+}
+
+// FailEmbeddings makes every embeddings call answer status (0 to stop).
+func (s *Server) FailEmbeddings(status int) {
+	s.FailEmbeddingsAfter(0, status)
+}
+
+// FailEmbeddingsAfter lets n embeddings calls through, then fails the
+// rest with status: an upload's probe passes, the import's search fails.
+func (s *Server) FailEmbeddingsAfter(n, status int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.embedErr, s.embedPass = status, n
+}
+
+// Requests returns every request so far.
+func (s *Server) Requests() []Request {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]Request(nil), s.requests...)
+}
+
+// Chats is the chat requests alone, in order: what Requests holds less
+// the embeddings calls.
+func (s *Server) Chats() []llm.ChatRequest {
+	var out []llm.ChatRequest
+	for _, r := range s.Requests() {
+		if r.Path != "/embeddings" {
+			out = append(out, r.Chat)
+		}
+	}
+	return out
+}
+
+func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
+	switch {
+	case strings.HasSuffix(r.URL.Path, "/embeddings"):
+		s.embeddings(w, r)
+	case strings.HasSuffix(r.URL.Path, "/chat/completions"):
+		s.chat(w, r)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func (s *Server) embeddings(w http.ResponseWriter, r *http.Request) {
+	var req llm.EmbedRequest
+	json.NewDecoder(r.Body).Decode(&req)
+	s.mu.Lock()
+	s.requests = append(s.requests, Request{Path: "/embeddings"})
+	status := s.embedErr
+	if s.embedPass > 0 {
+		s.embedPass--
+		status = 0
+	}
+	s.mu.Unlock()
+	if status != 0 {
+		http.Error(w, `{"error":"embeddings failed"}`, status)
+		return
+	}
+	type item struct {
+		Index     int       `json:"index"`
+		Embedding []float32 `json:"embedding"`
+	}
+	out := struct {
+		Data []item `json:"data"`
+	}{}
+	for i, text := range req.Input {
+		out.Data = append(out.Data, item{i, Vector(text)})
+	}
+	json.NewEncoder(w).Encode(out)
+}
+
+// Vector is the fake embedding of text: each word adds weight to a few
+// hashed dimensions, and the result is normalized.
+func Vector(text string) []float32 {
+	v := make([]float64, Dims)
+	for _, word := range strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
+		return !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9')
+	}) {
+		h := fnv.New64a()
+		h.Write([]byte(word))
+		x := h.Sum64()
+		for k := range 3 {
+			v[(x>>(k*16))%Dims] += 1
+		}
+	}
+	var norm float64
+	for _, x := range v {
+		norm += x * x
+	}
+	out := make([]float32, Dims)
+	if norm == 0 {
+		out[0] = 1
+		return out
+	}
+	norm = math.Sqrt(norm)
+	for i, x := range v {
+		out[i] = float32(x / norm)
+	}
+	return out
+}
+
+func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
+	var req llm.ChatRequest
+	json.NewDecoder(r.Body).Decode(&req)
+	s.mu.Lock()
+	s.requests = append(s.requests, Request{Path: "/chat/completions", Chat: req})
+	var reply Reply
+	fallback := s.fallback
+	switch {
+	case len(s.replies) > 0:
+		reply, s.replies, fallback = s.replies[0], s.replies[1:], nil
+	case fallback == nil:
+		reply = Reply{Text: "ok"}
+	}
+	s.mu.Unlock()
+	if fallback != nil {
+		reply = fallback(req)
+	}
+
+	if reply.Status != 0 {
+		http.Error(w, reply.Text, reply.Status)
+		return
+	}
+	if !req.Stream {
+		if reply.Pause > 0 {
+			select {
+			case <-r.Context().Done():
+				return
+			case <-time.After(reply.Pause):
+			}
+		}
+		msg := map[string]any{"role": "assistant", "content": reply.Text}
+		if len(reply.ToolCalls) > 0 {
+			msg["tool_calls"] = reply.ToolCalls
+		}
+		json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": msg}}})
+		return
+	}
+	// Streamed: the text in a few chunks, then any tool calls, then [DONE].
+	w.Header().Set("Content-Type", "text/event-stream")
+	flusher, _ := w.(http.Flusher)
+	send := func(delta map[string]any) {
+		b, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": delta}}})
+		if reply.Split {
+			half := len(b) / 2
+			w.Write([]byte("data: " + string(b[:half]) + "\ndata: " + string(b[half:]) + "\n\n"))
+		} else {
+			w.Write([]byte("data: " + string(b) + "\n\n"))
+		}
+		if flusher != nil {
+			flusher.Flush()
+		}
+	}
+	for _, chunk := range chunks(reply.Reasoning, 7) {
+		send(map[string]any{"reasoning_content": chunk})
+	}
+	if reply.Cut {
+		w.Write([]byte(`data: {"choices":[{"delta":{"content":"Th`))
+		return
+	}
+	if reply.Unfinished {
+		return
+	}
+	for _, chunk := range chunks(reply.Text, 7) {
+		if reply.Pause > 0 {
+			select {
+			case <-r.Context().Done():
+				return
+			case <-time.After(reply.Pause):
+			}
+		}
+		send(map[string]any{"content": chunk})
+	}
+	if len(reply.ToolCalls) > 0 {
+		calls := make([]map[string]any, len(reply.ToolCalls))
+		for i, c := range reply.ToolCalls {
+			calls[i] = map[string]any{
+				"index": i, "id": c.ID, "type": "function",
+				"function": map[string]any{"name": c.Function.Name, "arguments": c.Function.Arguments},
+			}
+		}
+		send(map[string]any{"tool_calls": calls})
+	}
+	w.Write([]byte("data: [DONE]\n\n"))
+}
+
+// chunks splits text into pieces of about n runes, so streaming code sees
+// fences and words cut mid-way, as real streams cut them.
+func chunks(text string, n int) []string {
+	r := []rune(text)
+	var out []string
+	for len(r) > 0 {
+		k := min(n, len(r))
+		out = append(out, string(r[:k]))
+		r = r[k:]
+	}
+	return out
+}

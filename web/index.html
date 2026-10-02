@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/pset-mark.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PSet</title>
+    <style>
+      /* The gate's visibility lives here, not in index.css: the stylesheet
+         arrives after first paint, so a gate hidden only there flashes on
+         every load. Its looks stay in index.css. */
+      #pset-gate {
+        display: none;
+      }
+      @media (max-width: 1023px) {
+        #root {
+          display: none;
+        }
+        #pset-gate {
+          display: flex;
+        }
+      }
+    </style>
+    <script>
+      // Resolve the theme before first paint, the same way src/lib/theme.ts
+      // does: only an explicit choice is stored, anything else follows the OS.
+      ;(() => {
+        const stored = localStorage.getItem('pset-theme')
+        const dark =
+          stored === 'light' || stored === 'dark'
+            ? stored === 'dark'
+            : matchMedia('(prefers-color-scheme: dark)').matches
+        document.documentElement.classList.toggle('dark', dark)
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <div id="pset-gate" role="alertdialog" aria-label="PSet needs a wider window">
+      <p class="pset-gate-mark">PSet</p>
+      <h1>This desk needs a bit more room</h1>
+      <p>PSet is built for laptops. Come back with a window at least 1024 pixels wide.</p>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

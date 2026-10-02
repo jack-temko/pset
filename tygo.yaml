@@ -1,0 +1,90 @@
+# Go wire types -> TypeScript. Run with `make gen`; never edit the output.
+packages:
+  - path: github.com/jackt/pset/internal/httpx
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/httpx.ts
+    frontmatter: "// Generated from internal/httpx/wire.go by tygo. Do not edit."
+  - path: github.com/jackt/pset/internal/settings
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/settings.ts
+    frontmatter: "// Generated from internal/settings/wire.go by tygo. Do not edit."
+  - path: github.com/jackt/pset/internal/pagenum
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/pagenum.ts
+    frontmatter: "// Generated from internal/pagenum/wire.go by tygo. Do not edit."
+  - path: github.com/jackt/pset/internal/probnum
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/probnum.ts
+    frontmatter: "// Generated from internal/probnum/wire.go by tygo. Do not edit."
+  - path: github.com/jackt/pset/internal/library
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/library.ts
+    type_mappings:
+      pagenum.Run: "Run"
+      probnum.Style: "Style"
+      probnum.Form: "Form"
+      probnum.Where: "Where"
+    frontmatter: |
+      // Generated from internal/library/wire.go by tygo. Do not edit.
+      import type { Run } from './pagenum'
+      import type { Form, Style, Where } from './probnum'
+
+  - path: github.com/jackt/pset/internal/doc
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/doc.ts
+    frontmatter: |
+      // Generated from internal/doc/wire.go by tygo. Do not edit.
+      /** One plotted point, [x, y]. */
+      export type Point = [number, number]
+      /** One block of a document: the JSON of one of the block types below. */
+      export type Block = HintBlock | PartBlock | StepBlock | ParaBlock | NoteBlock | MathBlock | DerivationBlock | CalloutBlock | StatementBlock | TableBlock | PlotBlock | CodeBlock | AnswerBlock | RawBlock
+  - path: github.com/jackt/pset/internal/usage
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/usage.ts
+    frontmatter: "// Generated from internal/usage/wire.go by tygo. Do not edit."
+  - path: github.com/jackt/pset/internal/homework
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/homework.ts
+    type_mappings:
+      doc.Block: "Block"
+      doc.Run: "Run"
+      usage.Usage: "Usage"
+    frontmatter: |
+      // Generated from internal/homework/wire.go by tygo. Do not edit.
+      import type { Block, Run } from './doc'
+      import type { Usage } from './usage'
+  - path: github.com/jackt/pset/internal/ask
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/ask.ts
+    type_mappings:
+      doc.Block: "Block"
+      doc.Run: "Run"
+      usage.Usage: "Usage"
+    frontmatter: |
+      // Generated from internal/ask/wire.go by tygo. Do not edit.
+      import type { Block, Run } from './doc'
+      import type { Usage } from './usage'
+  - path: github.com/jackt/pset/internal/memory
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/memory.ts
+    frontmatter: "// Generated from internal/memory/wire.go by tygo. Do not edit."
+  - path: github.com/jackt/pset/internal/update
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/update.ts
+    frontmatter: "// Generated from internal/update/wire.go by tygo. Do not edit."
+  - path: github.com/jackt/pset/internal/activity
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/activity.ts
+    frontmatter: "// Generated from internal/activity/wire.go by tygo. Do not edit."
