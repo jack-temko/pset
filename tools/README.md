@@ -9,6 +9,7 @@ Programs that live with the code but aren't the app.
 | `assignmenttest` | Measures reading assignments: ten made-up documents built as they'd arrive (PDFs, web pages it serves, pasted text), scored on due dates, labels, notes and the problems written out. |
 | `samplegen` | Generates the sample books in `testdata/`, byte for byte (`tools/samplegen/README.md`). |
 | `release` | `make release VERSION=x.y.z`: every release file in `dist/` (Linux and macOS tarballs, `install.sh`, `SHA256SUMS`). `tools/release/README-linux.txt` and `README-macos.txt` are what a user reads. |
+| `release/sign`, `release/smoke.sh` | The runner's two helpers (`.github/workflows/release.yml`): `sign` makes the release key pair (`-generate`) and signs `SHA256SUMS`; `smoke.sh` starts a built binary and checks its version, its web page and the API. |
 | `verify-classes.mjs` | After `npm run build`, checks every theme utility used in `web/src` exists in the built CSS (the Tailwind theme is locked down, so a wrong class fails silently). |
 
 ## findertest and assignmenttest
