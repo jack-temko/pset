@@ -91,7 +91,7 @@ no shared key: `key.txt` is retired.
   A new key for his PSet is `request_pset_instance_key`, which writes it
   there itself; deleting any key is `request_openrouter_key_deletion`.
   Both wait for his approval. `list_openrouter_keys` shows every key's
-  spend, never a secret.
+  spend and the latest jobs, never a secret.
 - Without these tools (a cloud session, or the mod not loaded), ask Jack.
   The mod is `~/.claude/mods/openrouter-keys`, loaded in every session
   through `CLAUDE_CODE_PLUGIN_DIRS`; its spec is
