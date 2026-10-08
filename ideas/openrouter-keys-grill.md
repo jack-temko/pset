@@ -1,6 +1,6 @@
 # OpenRouter keys mod: grill
 
-- status: approved; v1 built 2026-10-07 (the mod lives outside the repo, see Build notes)
+- status: approved; v1 built and in use 2026-10-07 (the mod lives outside the repo, see Build notes); v2, the request log, is next
 - date: 2026-10-07
 - brief: a Claude Code mod that lets the agent ask for capped OpenRouter keys that Jack approves, shows every key's spend from the OpenRouter API, deletes keys, and logs PSet's requests. Judged from Jack watching and paying for an agent's work, and from the agent that needs a key to test PSet.
 - sources: `internal/llm/calllog.go`, `cmd/pset/main.go`, `ideas/model-usage.md`, `.gitignore`, the earlier `usage-band` mod, the plugin-authoring API (`$.http`, `$.tool`, `$.fs`, `$.process`, secret `userConfig`), OpenRouter's [key management API](https://openrouter.ai/docs/features/provisioning-api-keys) and [activity endpoint](https://openrouter.ai/docs/api/api-reference/analytics/get-user-activity-grouped-by-endpoint.md), the eval-key rule in Claude's memory
@@ -19,7 +19,7 @@ When an agent needs a model, it calls a mod tool to ask for a key for its worktr
 | # | Decision | Why | Beat |
 |---|---|---|---|
 | D1 | A key's secret is written to `<worktree>/.dev/openrouter.key` (mode 600). The tool result says the path, never the secret. | The secret never enters the transcript; `.dev/` is ignored by git | in the tool result; straight into `.dev/data` settings |
-| D2 | The management key is a secret `userConfig` field of the mod. | Claude Code holds it, outside the repo and the mod folder; the agent never sees it | a file Jack owns |
+| D2 | The management key is kept by the mod, outside the repo (built as the mod's own store, since a secret field can't be set from the pane; see Build notes). | Claude Code holds it, outside the repo and the mod folder; the agent never sees it | a file Jack owns |
 | D3 | Approval is a card in the pane: key name, worktree, why, the suggested cap, buttons for $1, $5 and a custom amount, a daily-reset toggle, then Approve or Deny. A request opens the pane by itself, and the agent waits for the answer. | Jack sets each cap with the reason in front of him | toast plus /keys; plain allow/deny with a fixed cap |
 | D4 | The agent may request a key, ask to raise a cap (needs approval) and delete keys it created. Everything else is Jack's. | Cleanup without clicks; money moves only with Jack | request only; raise caps up to a ceiling on its own |
 | D5 | Each key belongs to one worktree. When that folder is gone, the mod deletes the key and its file. | Nothing lingers after a merge | Jack deletes by hand; expire after a fixed time |
@@ -61,16 +61,23 @@ When an agent needs a model, it calls a mod tool to ask for a key for its worktr
 - Whether `limit_reset` can be set when a key is created, or only by a follow-up PATCH. The docs show it on PATCH only. Check this when building.
 - Whether a management key can also check the account's remaining credit (`/credits`), worth one line in the pane.
 
-### Build notes (v1, 2026-10-07)
-- The mod is `openrouter-keys`, in Claude Code's dev-mods folder for the session that built it (`~/.claude/dev-mods/<session>/openrouter-keys/`), not in this repo. To load it in other sessions, add that folder to `CLAUDE_CODE_PLUGIN_DIRS`, or publish it as a marketplace.
-- A hook gets 10 seconds of its own time, so `request_openrouter_key` can't wait for Jack. It returns at once, and his Approve or Deny reaches the agent as a message (`$.prompt.submit`), which wakes an idle session. This is how D14 works.
-- The push in D14 is sent by the agent: the tool's result tells it to send one. A mod has no push call of its own.
-- The management key is entered once in the pane, which saves it to the mod's secret setting with `$.config.set`. If Claude Code refuses to set a secret field that way, it goes in the mod's settings by hand.
-- The pane has a $1 / $5 / custom cap, a daily-reset toggle, Approve and Deny. Agent keys are listed first, and Delete asks for confirmation inline.
-- Tests: `claude plugin test` refuses Jack's checkout and stray paths, and covers an approved request (a capped POST, the secret written only to the worktree file, a message naming the path and not the secret).
+### Build notes (v1, built 2026-10-07)
+- **Where it lives.** The mod is `~/.claude/mods/openrouter-keys`, outside this repo. Every session loads it through `CLAUDE_CODE_PLUGIN_DIRS` in `~/.claude/settings.json`. AGENTS.md tells agents how to use it.
+- **The management key (D2 changed).** A mod can't set a secret setting: secret `userConfig` fields aren't `/config` rows. Jack pastes the key once in the pane instead, and the mod keeps it in its own store, which Claude Code holds outside the repo and the mod folder. The mod tries the key against OpenRouter before keeping it. A value in the mod's settings, if one is ever set, wins.
+- **Requests don't wait.** A hook gets 10 seconds of its own time, so a request tool returns at once. Jack's Approve or Deny reaches the agent as a message (`$.prompt.submit`), which wakes an idle session. This is how D14 works.
+- **Push.** The agent sends the push itself, as the tool's result tells it to. A mod has no push call.
+- **The request card.** "Limit" and "Resets" are dropdowns: $1, $2, $5, $10, the asked amount, or Custom; and Never, Daily, Weekly or Monthly. Custom shows a "Custom Limit" field with a Set button (a text field always has one). Approve names what it grants ("Approve $4.00 in total") and stays dim and inert until a custom amount is Set. Deny is beside it.
+- **Keys.** Each key is a bordered card: name and owner ("Yours" or the worktree's branch) with Delete, a meter across the full width (Claude's orange, amber from 70%, red from 90%), then spend against the limit and today's spend. Delete asks for confirmation inline.
+- **Usage tiles** at the top: Last 24 hours and Last 7 days, each with spend (Claude's orange) and tokens (a warm grey) large, the request count, and spend per hour or per day as bars. They count every key on the account. They come from OpenRouter's analytics API (`POST /analytics/query`: `total_usage`, `tokens_total`, `request_count`); without it, spend comes from the key list and tokens show as "–". Drawn as SVG on desktop, with theme colors in the terminal.
+- **Colors** are Claude Code's own: the terracotta accent, warm greys, amber and red only for a limit running out.
+- **Added after the grill (2026-10-07, Jack's request).** `list_openrouter_keys` (every key, never a secret); `request_openrouter_key_deletion` (any key, by hash, approved in a red card); `request_pset_instance_key` (a key for Jack's own PSet: on approval the mod creates it, named "pset: Jack's library", and writes it into `~/.local/share/pset/pset.db`, the `chat` row's `apiKey`, on sqlite3's stdin, keeping the row's other fields). The agent never sees that key.
+- **The PSet workspace only (Jack, 2026-10-07).** OpenRouter's key list answers one workspace at a time. The mod finds the workspace named "PSet" and lists, makes and deletes keys there alone (disabled keys included). The usage tiles count that workspace's keys: analytics can't filter by workspace, so the query filters by the keys' hashes, and a deleted key's spend drops out of the tiles.
+- **A press runs once.** Approve, Deny and Delete show "Working…" while their calls run and ignore more presses meanwhile.
+- **Tests** (`claude plugin test`): refusing Jack's checkout and stray paths; an approved worktree key (a limited POST, the secret only in the worktree file, a message naming the path and not the secret); a custom limit counting only once Set; a key for Jack's PSet going in on stdin, never in argv or the message.
+- **Tried for real.** A $1 key was approved, used for one call ($0.000013) and deleted with its file. The automatic delete when a worktree is removed hasn't run against OpenRouter yet.
 
 ## Reversals
-- The eval-key rule (Claude's memory, 2026-09-29/30: use the one key in `key.txt`) is replaced by D12 once the mod works. Jack asked for this ("let it manage keys as well. So if an agent needs one it can request it and I can approve it with a cap").
+- The eval-key rule (Claude's memory, 2026-09-29/30: use the one key in `key.txt`) is replaced by D12; Jack retired `key.txt` on 2026-10-07. Jack asked for this ("let it manage keys as well. So if an agent needs one it can request it and I can approve it with a cap").
 
 ## Disagreements
 None.

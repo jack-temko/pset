@@ -67,6 +67,36 @@ app before calling it done:
   in `design/`. Where a change would contradict a spec, raise it rather
   than quietly diverging.
 
+## Model keys: ask the openrouter-keys mod
+
+Every real model call an agent makes (an eval with `PSET_EVAL_KEY`, `make
+dev` talking to a model, a one-off script) runs on an OpenRouter key Jack
+approved for that worktree, in his PSet workspace on OpenRouter. There is
+no shared key: `key.txt` is retired.
+
+- Call `request_openrouter_key` with the worktree's absolute path, a
+  one-line reason and a limit in dollars (default $1). It returns at once.
+  Jack approves or denies in the OpenRouter keys pane (`/keys`), and his
+  answer arrives as a message. Meanwhile do work that needs no model, and
+  send a push notification if he may be away.
+- An approved key is in `<worktree>/.dev/openrouter.key` (mode 600,
+  ignored by git). Read it only into a variable:
+  `PSET_EVAL_KEY="$(tr -d '[:space:]' < .dev/openrouter.key)"`. For
+  `make dev`, save it through the dev server's `PUT /api/settings`. Never
+  print, copy or commit it.
+- One key per worktree: asking again with a higher limit asks Jack to
+  raise it. Removing the worktree deletes its key; `delete_openrouter_key`
+  deletes it sooner.
+- Never use or read the key in Jack's own library (`~/.local/share/pset`).
+  A new key for his PSet is `request_pset_instance_key`, which writes it
+  there itself; deleting any key is `request_openrouter_key_deletion`.
+  Both wait for his approval. `list_openrouter_keys` shows every key's
+  spend, never a secret.
+- Without these tools (a cloud session, or the mod not loaded), ask Jack.
+  The mod is `~/.claude/mods/openrouter-keys`, loaded in every session
+  through `CLAUDE_CODE_PLUGIN_DIRS`; its spec is
+  `ideas/openrouter-keys-grill.md`.
+
 ## Skills
 
 Project skills live in `.agents/skills/<name>/` (a `SKILL.md` with `name`
