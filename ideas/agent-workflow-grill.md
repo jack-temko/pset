@@ -69,6 +69,8 @@ Flow: `/change <ask>` → triage → tier proposed → you confirm → (planned:
 
 ## Reversals
 
+- D12 (pilot before landing) reversed by Jack on 2026-10-08: "land it now, I'll pull dev". So `/change` is in every session in his checkout; the pilot runs after landing, from `dev`.
+
 ## Disagreements
 
 ## Frontier
