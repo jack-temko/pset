@@ -125,6 +125,9 @@ type Message struct {
 	// instead of redoing it after every tool call. Only OpenRouter gets it
 	// (see shape); the field is its name for it.
 	Reasoning string `json:"reasoning,omitempty"`
+	// ReasoningDetails is OpenRouter's structured reasoning, signatures
+	// included, which Anthropic models need back across tool calls.
+	ReasoningDetails json.RawMessage `json:"reasoning_details,omitempty"`
 }
 
 // TextMessage is a plain-text chat turn.
@@ -235,6 +238,8 @@ type Reply struct {
 	ToolCalls []ToolCall
 	// Reasoning is what a thinking model reasoned before answering.
 	Reasoning string
+	// ReasoningDetails is the same reasoning as OpenRouter structures it.
+	ReasoningDetails json.RawMessage
 	// Usage is what the call cost, when the provider says (OpenRouter
 	// always does; others when they send it).
 	Usage *Usage
@@ -270,6 +275,10 @@ type ChatRequest struct {
 	MaxTokens   int       `json:"max_tokens,omitempty"`
 	Temperature *float64  `json:"temperature,omitempty"`
 	Tools       []Tool    `json:"tools,omitempty"`
+	// ToolChoice is "none" for a round that must answer in words: the
+	// tools stay declared, since a model whose history holds tool calls
+	// may call one anyway when they're gone.
+	ToolChoice string `json:"tool_choice,omitempty"`
 	// ReasoningEffort is how hard a thinking model thinks: "low",
 	// "high" or "max". OpenRouter gets it as Reasoning's effort, and no
 	// other endpoint gets it; see shape. Never sent as is. A plain Job
@@ -419,7 +428,7 @@ func ToolMessage(callID, content string) Message {
 // the transcript replays exactly as the exchange happened, reasoning
 // included.
 func AssistantToolMessage(reply Reply) Message {
-	return Message{Role: "assistant", Content: TextContent(reply.Content), ToolCalls: reply.ToolCalls, Reasoning: reply.Reasoning}
+	return Message{Role: "assistant", Content: TextContent(reply.Content), ToolCalls: reply.ToolCalls, Reasoning: reply.Reasoning, ReasoningDetails: reply.ReasoningDetails}
 }
 
 // openRouter reports whether the endpoint is OpenRouter, the provider
@@ -466,7 +475,7 @@ func (c *Client) shape(ctx context.Context, req ChatRequest) ChatRequest {
 	req.Reasoning, req.Provider, req.SessionID, req.Models = nil, nil, "", nil
 	carries := false
 	for _, m := range req.Messages {
-		if m.Reasoning != "" {
+		if m.Reasoning != "" || len(m.ReasoningDetails) > 0 {
 			carries = true
 			break
 		}
@@ -476,7 +485,7 @@ func (c *Client) shape(ctx context.Context, req ChatRequest) ChatRequest {
 	}
 	msgs := make([]Message, len(req.Messages))
 	for i, m := range req.Messages {
-		m.Reasoning = ""
+		m.Reasoning, m.ReasoningDetails = "", nil
 		msgs[i] = m
 	}
 	req.Messages = msgs
@@ -518,10 +527,11 @@ func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (reply Reply
 	var payload struct {
 		Choices []struct {
 			Message struct {
-				Content          Content    `json:"content"`
-				ToolCalls        []ToolCall `json:"tool_calls"`
-				ReasoningContent string     `json:"reasoning_content"`
-				Reasoning        string     `json:"reasoning"`
+				Content          Content         `json:"content"`
+				ToolCalls        []ToolCall      `json:"tool_calls"`
+				ReasoningContent string          `json:"reasoning_content"`
+				Reasoning        string          `json:"reasoning"`
+				ReasoningDetails json.RawMessage `json:"reasoning_details"`
 			} `json:"message"`
 		} `json:"choices"`
 		Usage *Usage `json:"usage"`
@@ -536,7 +546,7 @@ func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (reply Reply
 	}
 	msg := payload.Choices[0].Message
 	keepHost(req.SessionID, payload.Host)
-	return Reply{Content: msg.Content.text, ToolCalls: normalizeToolCalls(msg.ToolCalls), Reasoning: firstOf(msg.ReasoningContent, msg.Reasoning), Usage: payload.Usage, Host: payload.Host, Model: payload.Model}, nil
+	return Reply{Content: msg.Content.text, ToolCalls: normalizeToolCalls(msg.ToolCalls), Reasoning: firstOf(msg.ReasoningContent, msg.Reasoning), ReasoningDetails: msg.ReasoningDetails, Usage: payload.Usage, Host: payload.Host, Model: payload.Model}, nil
 }
 
 // ChatStream runs a streaming completion and returns the assembled reply
@@ -574,6 +584,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 	// when every event in it parsed.
 	finished := false
 	calls := newToolCallAccumulator()
+	var details []map[string]any
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	// Server-sent events: an event's data may span several data: lines,
@@ -621,9 +632,10 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 			Choices []struct {
 				FinishReason string `json:"finish_reason"`
 				Delta        struct {
-					Content          Content `json:"content"`
-					ReasoningContent string  `json:"reasoning_content"`
-					Reasoning        string  `json:"reasoning"`
+					Content          Content          `json:"content"`
+					ReasoningContent string           `json:"reasoning_content"`
+					Reasoning        string           `json:"reasoning"`
+					ReasoningDetails []map[string]any `json:"reasoning_details"`
 					ToolCalls        []struct {
 						Index    int    `json:"index"`
 						ID       string `json:"id"`
@@ -671,6 +683,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 					req.OnReasoning(r)
 				}
 			}
+			details = mergeDetails(details, choice.Delta.ReasoningDetails)
 			text := choice.Delta.Content.text
 			if text == "" {
 				calls.feed(choice.Delta.ToolCalls)
@@ -695,7 +708,50 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 		return Reply{Content: full.String()}, fmt.Errorf("%w: the stream ended without finishing", ErrStreamCut)
 	}
 	keepHost(req.SessionID, host)
-	return Reply{Content: full.String(), ToolCalls: calls.finish(), Reasoning: reasoning.String(), Usage: usage, Host: host, Model: answered}, nil
+	var rd json.RawMessage
+	if len(details) > 0 {
+		rd, _ = json.Marshal(details)
+	}
+	return Reply{Content: full.String(), ToolCalls: calls.finish(), Reasoning: reasoning.String(), ReasoningDetails: rd, Usage: usage, Host: host, Model: answered}, nil
+}
+
+// mergeDetails folds streamed reasoning_details chunks into whole
+// entries, one per index: text pieces joined, the signature kept.
+func mergeDetails(acc []map[string]any, chunk []map[string]any) []map[string]any {
+	for _, d := range chunk {
+		idx, hasIdx := d["index"].(float64)
+		var found map[string]any
+		if hasIdx {
+			for _, a := range acc {
+				if i, ok := a["index"].(float64); ok && i == idx {
+					found = a
+					break
+				}
+			}
+		}
+		if found == nil {
+			c := map[string]any{}
+			for k, v := range d {
+				c[k] = v
+			}
+			acc = append(acc, c)
+			continue
+		}
+		for k, v := range d {
+			switch k {
+			case "text", "summary", "data":
+				if sv, ok := v.(string); ok {
+					prev, _ := found[k].(string)
+					found[k] = prev + sv
+				}
+			default:
+				if v != nil && v != "" {
+					found[k] = v
+				}
+			}
+		}
+	}
+	return acc
 }
 
 // firstOf is the first non-empty string.

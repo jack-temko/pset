@@ -276,3 +276,55 @@ func TestSessionPrefix(t *testing.T) {
 		t.Fatalf("no session = %q, want none", got)
 	}
 }
+
+// TestReasoningDetailsGoBack: OpenRouter's structured reasoning, streamed
+// in pieces, is put back together (text joined, the signature kept) and
+// sent back on the assistant turn, as Anthropic and Gemini models need to
+// keep their thinking across tool calls. A plain endpoint gets none of it.
+func TestReasoningDetailsGoBack(t *testing.T) {
+	var got map[string]any
+	c := hostedAt(t, "https://openrouter.ai/api/v1", func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		got = nil
+		json.Unmarshal(body, &got)
+		if got["stream"] != true {
+			io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)
+			return
+		}
+		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning\":\"Plan \",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"Plan \",\"format\":\"anthropic-claude-v1\",\"index\":0}]}}]}\n\n")
+		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning\":\"it.\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"it.\",\"index\":0}]}}]}\n\n")
+		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning_details\":[{\"type\":\"reasoning.text\",\"signature\":\"sig\",\"index\":0}]}}]}\n\n")
+		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\n")
+		io.WriteString(w, "data: [DONE]\n\n")
+	})
+	reply, err := c.ChatStreamFull(context.Background(), ChatRequest{Model: "m", Messages: []Message{TextMessage("user", "hi")}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var details []map[string]any
+	if err := json.Unmarshal(reply.ReasoningDetails, &details); err != nil || len(details) != 1 ||
+		details[0]["text"] != "Plan it." || details[0]["signature"] != "sig" || details[0]["format"] != "anthropic-claude-v1" {
+		t.Fatalf("details = %s (%v)", reply.ReasoningDetails, err)
+	}
+	next := []Message{TextMessage("user", "hi"), AssistantToolMessage(reply), ToolMessage("1", "4")}
+	if _, err := c.ChatOnce(context.Background(), ChatRequest{Model: "m", Messages: next}); err != nil {
+		t.Fatal(err)
+	}
+	back, _ := got["messages"].([]any)[1].(map[string]any)["reasoning_details"].([]any)
+	if len(back) != 1 || back[0].(map[string]any)["signature"] != "sig" {
+		t.Errorf("assistant turn sent back %v, want the details with their signature", got["messages"].([]any)[1])
+	}
+
+	plain := hostedAt(t, "https://api.deepseek.com", func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		got = nil
+		json.Unmarshal(body, &got)
+		io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)
+	})
+	if _, err := plain.ChatOnce(context.Background(), ChatRequest{Model: "m", Messages: next}); err != nil {
+		t.Fatal(err)
+	}
+	if d := got["messages"].([]any)[1].(map[string]any)["reasoning_details"]; d != nil {
+		t.Errorf("a plain endpoint got reasoning_details %v", d)
+	}
+}

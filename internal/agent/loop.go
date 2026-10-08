@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/jackt/pset/internal/llm"
@@ -130,6 +131,7 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			done++
 		}
 	}
+	flattened := false
 	retries := cutRetries
 	nudges := emptyNudges
 	for round := done; ; round++ {
@@ -138,9 +140,13 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			sent = append([]llm.Message{llm.TextMessage("system", sys)}, msgs...)
 		}
 		req := llm.ChatRequest{Model: l.Model, Messages: sent, Tools: tools}
-		if round >= rounds {
-			req.Tools = nil
+		final := round >= rounds
+		if final {
+			req.ToolChoice = "none"
 			req.Messages = append(sent, llm.TextMessage("user", "Answer now, with what you've found."))
+			if flattened {
+				req.Tools, req.ToolChoice = nil, ""
+			}
 		}
 		var thinkingSince time.Time
 		wrote := false
@@ -182,9 +188,17 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 		if err != nil {
 			return err
 		}
-		if len(reply.ToolCalls) == 0 || req.Tools == nil {
+		if len(reply.ToolCalls) == 0 || final {
 			if wrote {
 				return nil
+			}
+			// Told to answer, it called a tool anyway (Gemini does, with
+			// tool calls in its history even when told none): ask once more
+			// with the work so far as plain text, no tool turns left in it.
+			if final && len(reply.ToolCalls) > 0 && !flattened && ctx.Err() == nil {
+				flattened = true
+				msgs = flatten(msgs)
+				continue
 			}
 			// A round that only thought: no answer and no tool to call.
 			// It happens now and then; asked, the model writes it.
@@ -229,6 +243,49 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			l.Round(msgs)
 		}
 	}
+}
+
+// flatten is a conversation with its tool rounds written out as text:
+// the first message as it was, then one user message with each call and
+// its result, and the pages looked at. A model with no tool turns in front
+// of it has nothing to call.
+func flatten(msgs []llm.Message) []llm.Message {
+	if len(msgs) == 0 {
+		return msgs
+	}
+	var b strings.Builder
+	b.WriteString("Your work so far, call by call:\n")
+	var images []llm.Part
+	for _, m := range msgs[1:] {
+		switch {
+		case m.Role == "assistant":
+			if t := strings.TrimSpace(m.Content.Text()); t != "" {
+				fmt.Fprintf(&b, "\nYou wrote: %s\n", t)
+			}
+			for _, c := range m.ToolCalls {
+				fmt.Fprintf(&b, "\nYou called %s(%s)\n", c.Function.Name, c.Function.Arguments)
+			}
+		case m.Role == "tool":
+			fmt.Fprintf(&b, "Result:\n%s\n", m.Content.Text())
+		default:
+			if t := m.Content.Text(); t != "" {
+				fmt.Fprintf(&b, "\n%s\n", t)
+			}
+			for _, p := range m.Content.Parts() {
+				if p.Type == "text" {
+					fmt.Fprintf(&b, "\n%s\n", p.Text)
+				} else {
+					images = append(images, p)
+				}
+			}
+		}
+	}
+	b.WriteString("\nThe tools are gone now. Write your answer from this work.")
+	content := llm.PartsContent(llm.TextPart(b.String()))
+	for _, p := range images {
+		content.AppendPart(p)
+	}
+	return []llm.Message{msgs[0], {Role: "user", Content: content}}
 }
 
 // onlyRemembers is a round whose calls all save to memory.

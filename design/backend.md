@@ -372,7 +372,7 @@ cover what a student needs:
 | `search_pages` | Hybrid full-text and vector search; returns pages and snippets. |
 | `read_page` | The text of a page range, capped. |
 | `view_page` | Puts a page image into the model's context: figures, tables, garbled text. |
-| `compute` | `mathx` evaluate or solve, so worked arithmetic is checked, not guessed. |
+| `compute` | `mathx` evaluate or solve, so worked arithmetic is checked, not guessed. Takes a list of expressions in one call (2026-10-08): every model batched them, and DeepSeek's guides cost half as much. |
 
 Each tool call is a step on the feed, in the present tense while it runs
 and the past tense with its count when done. The "About" chip sends the

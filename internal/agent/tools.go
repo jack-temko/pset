@@ -26,8 +26,8 @@ var Tools = []llm.Tool{
 		json.RawMessage(`{"type":"object","properties":{"page":{"type":"integer","description":"The printed page number."},"to":{"type":"integer","description":"The last page, to read a range."}},"required":["page"]}`)),
 	llm.NewTool("view_page", "Look at a page as an image: for figures, diagrams, tables, or text the page's text layer garbles.",
 		json.RawMessage(`{"type":"object","properties":{"page":{"type":"integer","description":"The printed page number."}},"required":["page"]}`)),
-	llm.NewTool("compute", "Evaluate an arithmetic expression exactly: fractions stay fractions. Use it for every calculation instead of doing it in your head. Syntax: + - * / ^, parentheses, sqrt, exp, ln, log10, sin, cos, tan, pi, e.",
-		json.RawMessage(`{"type":"object","properties":{"expression":{"type":"string"}},"required":["expression"]}`)),
+	llm.NewTool("compute", "Evaluate arithmetic expressions exactly: fractions stay fractions. Use it for every calculation instead of doing it in your head, and send every expression you need in one call: each comes back on its own line, numbered. Syntax: + - * / ^, parentheses, sqrt, exp, ln, log10, sin, cos, tan, pi, e.",
+		json.RawMessage(`{"type":"object","properties":{"expressions":{"type":"array","items":{"type":"string"},"description":"The expressions, as many as you need."},"expression":{"type":"string","description":"A single expression; use expressions for several."}}}`)),
 	llm.NewTool("solve_linear", "Solve a system of linear equations A x = b exactly. Each entry of A and b is itself an expression (fractions, sqrt, j for the imaginary unit).",
 		json.RawMessage(`{"type":"object","properties":{"a":{"type":"array","items":{"type":"array","items":{"type":"string"}},"description":"The coefficient matrix, row by row."},"b":{"type":"array","items":{"type":"string"},"description":"The right-hand side."}},"required":["a","b"]}`)),
 }
@@ -48,12 +48,13 @@ func (l *Loop) tool(ctx context.Context, call llm.ToolCall) (string, []llm.Part)
 		}
 	}
 	var args struct {
-		Query      string     `json:"query"`
-		Page       int        `json:"page"`
-		To         int        `json:"to"`
-		Expression string     `json:"expression"`
-		A          [][]string `json:"a"`
-		B          []string   `json:"b"`
+		Query       string     `json:"query"`
+		Page        int        `json:"page"`
+		To          int        `json:"to"`
+		Expression  string     `json:"expression"`
+		Expressions []string   `json:"expressions"`
+		A           [][]string `json:"a"`
+		B           []string   `json:"b"`
 	}
 	if err := json.Unmarshal([]byte(call.Function.Arguments), &args); err != nil {
 		return "Error: the arguments weren't valid JSON.", nil
@@ -129,6 +130,24 @@ func (l *Loop) tool(ctx context.Context, call llm.ToolCall) (string, []llm.Part)
 		}
 
 	case "compute":
+		if len(args.Expressions) > 0 {
+			exprs := args.Expressions
+			if e := strings.TrimSpace(args.Expression); e != "" {
+				exprs = append([]string{e}, exprs...)
+			}
+			l.step(fmt.Sprintf("Computing %s…", plural(len(exprs), "expression")), true)
+			var out strings.Builder
+			for i, e := range exprs {
+				e = strings.TrimSpace(e)
+				if v, err := mathx.Eval(e); err != nil {
+					fmt.Fprintf(&out, "%d. %s = Error: %v\n", i+1, e, err)
+				} else {
+					fmt.Fprintf(&out, "%d. %s = %s\n", i+1, e, v.String())
+				}
+			}
+			l.step(fmt.Sprintf("Computed %s", plural(len(exprs), "expression")), false)
+			return out.String(), nil
+		}
 		e := strings.TrimSpace(args.Expression)
 		l.step("Computing…", true)
 		v, err := mathx.Eval(e)
