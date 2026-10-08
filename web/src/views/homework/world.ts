@@ -173,7 +173,6 @@ export function makeQuestion(init: QuestionInit): Q {
     notes: init.notes ?? [],
     boxes: [],
     usage: guided ? usage : undefined,
-    memory: [],
     revealed: init.revealed ?? [],
     done: init.done ?? false,
     difficulty: init.difficulty,

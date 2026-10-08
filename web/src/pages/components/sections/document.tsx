@@ -59,7 +59,7 @@ const readingLine = (t: string) => [{ t }]
 const READ_QUESTION: Question = {
   id: 'q-read', homeworkId: 'h1', position: 1, text: '4.72', inBook: true, label: '4.72',
   statement: [], page: 194, figures: [{ label: 'Figure 4.138' }], hint: [], walkthrough: [],
-  state: 'ready', memory: [], readingEdited: false, readingDoubts: [], notes: [], boxes: [],
+  state: 'ready', readingEdited: false, readingDoubts: [], notes: [], boxes: [],
   revealed: [], done: false, activity: '', reason: '', updatedAt: '', rev: 1,
   reading: [
     'Node L: top of the 4 A source, top of the 2 Ω, left end of the 4 Ω.',

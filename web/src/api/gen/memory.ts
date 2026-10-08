@@ -4,19 +4,6 @@
 // source: wire.go
 
 /**
- * Kind is what a memory is about.
- */
-/**
- * KindBook is anything about the book: where a result lives, how it's
- * laid out.
- */
-export const KindBook = "book";
-/**
- * KindPreference is how the student wants answers.
- */
-export const KindPreference = "preference";
-export type Kind = typeof KindBook | typeof KindPreference;
-/**
  * Source is who saved a memory.
  */
 /**
@@ -24,23 +11,19 @@ export type Kind = typeof KindBook | typeof KindPreference;
  */
 export const SourceYou = "you";
 /**
- * SourceTutor is the model, on its own judgement.
+ * SourceTutor is the model, on its own judgement. Nothing saves as it
+ * now, but the preferences it saved before stay.
  */
 export const SourceTutor = "tutor";
+export type Source = typeof SourceYou | typeof SourceTutor;
 /**
- * SourcePSet is code: the problem ranges locate records.
- */
-export const SourcePSet = "pset";
-export type Source = typeof SourceYou | typeof SourceTutor | typeof SourcePSet;
-/**
- * Memory is one sentence about one book. Page is a PDF page.
+ * Memory is one preference about one book: a sentence on how the student
+ * wants answers.
  */
 export interface Memory {
   id: string;
   bookId: string;
-  kind: Kind;
   text: string;
-  page?: number /* int */;
   source: Source;
   createdAt: string;
 }
@@ -54,9 +37,7 @@ export interface Memories {
  * NewMemory is POST /api/books/{id}/memories: one the student adds.
  */
 export interface NewMemory {
-  kind: Kind;
   text: string;
-  page?: number /* int */;
 }
 export const EventSaved = "memory.saved";
 export const EventRemoved = "memory.removed";

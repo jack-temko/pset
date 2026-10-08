@@ -1064,7 +1064,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
             </div>
           </AppShell>
 
-          <MemoryDialog open={memoryOpen} bookId={book.id} onClose={() => setMemoryOpen(false)} onJump={jump} />
+          <MemoryDialog open={memoryOpen} bookId={book.id} onClose={() => setMemoryOpen(false)} />
 
           <BookDialog
             open={editingBook}

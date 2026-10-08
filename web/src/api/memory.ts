@@ -5,12 +5,11 @@ import { on } from './events'
 import type { Memories, Memory, NewMemory, Removed, Saved } from './gen/memory'
 
 export type { Memory, NewMemory, Source } from './gen/memory'
-export type { Kind as MemoryKind } from './gen/memory'
 
 /**
- * A book's memory: what the tutor knows about it from working in it.
- * Saves arrive as `memory.saved` (the tutor's, mid-answer, as well as
- * yours) and deletes as `memory.removed`. Spec: design/memory.md.
+ * A book's memory: how the student wants answers. Saves arrive as
+ * `memory.saved` (Ask's, mid-answer, as well as yours) and deletes as
+ * `memory.removed`. Spec: design/memory.md.
  */
 export const memoryKeys = { list: (bookId: string) => ['memories', bookId] as const }
 
