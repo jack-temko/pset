@@ -27,7 +27,9 @@ Steps, from inside the worktree:
 2. `gh pr create --base dev --title "<title>" --body "<body>"`. If a PR already
    exists for the branch, use it.
 3. `gh pr checks --watch`. If `gh pr view --json mergeStateStatus` says the branch is
-   behind, `gh pr update-branch` and watch the new run.
+   behind, update it with
+   `gh api -X PUT repos/jack-temko/pset/pulls/<number>/update-branch` (this `gh` has no
+   `pr update-branch`), wait a few seconds for the new run to start, and watch it.
 4. When every check is green: `gh pr merge --squash --delete-branch`. Its local
    cleanup can fail because `dev` is checked out in Jack's checkout; that is fine.
    Confirm with `gh pr view --json state` that the state is `MERGED`.
