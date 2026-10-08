@@ -184,6 +184,8 @@ func TestTheRangeNarrowsWithMoreFinishedAndOnlyForASteadyStudent(t *testing.T) {
 func TestSetsCarryTheirBarAndTheTimeLeft(t *testing.T) {
 	e := newEnv(t)
 	e.llm.Fallback(ranker(func(string) llmtest.Reply { return llmtest.Reply{Text: "no scores"} }))
+	times := &spent{}
+	e.svc.c.Time = times
 	h := e.newSet(t)
 	qs := e.add(t, h.ID,
 		Draft{Text: "One, written here.", InBook: false}, Draft{Text: "Two, written here.", InBook: false},
@@ -202,7 +204,7 @@ func TestSetsCarryTheirBarAndTheTimeLeft(t *testing.T) {
 	if before.Homework.Estimate != nil || before.Homework.Timed != 0 {
 		t.Fatalf("an estimate with nothing timed: %+v", before.Homework)
 	}
-	e.svc.c.Time = spent{qs[0].ID: 600, qs[1].ID: 600}
+	times.set(map[string]int{qs[0].ID: 600, qs[1].ID: 600})
 	e.do(t, "PATCH", "/api/questions/"+qs[1].ID, QuestionPatch{Done: &yes}, nil)
 
 	var d Detail
