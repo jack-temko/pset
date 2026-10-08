@@ -3,6 +3,7 @@ package homework
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -194,13 +195,26 @@ func TestRankListCarriesWhatMakesAQuestionLong(t *testing.T) {
 	}
 }
 
-// spent is a Time with a fixed answer.
-type spent map[string]int
+// spent is a Time the test fills in as it goes. The question jobs read it
+// while they publish, which can be after a question shows as ready, so it is
+// installed before any question is added and changed only under its lock.
+type spent struct {
+	mu      sync.Mutex
+	seconds map[string]int
+}
 
-func (s spent) QuestionSeconds(_ context.Context, ids []string) (map[string]int, error) {
+func (s *spent) set(seconds map[string]int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.seconds = seconds
+}
+
+func (s *spent) QuestionSeconds(_ context.Context, ids []string) (map[string]int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	out := map[string]int{}
 	for _, id := range ids {
-		if n := s[id]; n > 0 {
+		if n := s.seconds[id]; n > 0 {
 			out[id] = n
 		}
 	}
@@ -209,11 +223,13 @@ func (s spent) QuestionSeconds(_ context.Context, ids []string) (map[string]int,
 
 func TestQuestionsCarryTheTimeSpentOnThem(t *testing.T) {
 	e := newEnv(t)
+	times := &spent{}
+	e.svc.c.Time = times
 	h := e.newSet(t)
 	qs := e.add(t, h.ID, Draft{Text: "First, written here.", InBook: false}, Draft{Text: "Second, written here.", InBook: false})
 	e.wait(t, qs[0].ID, StateReady)
 	e.wait(t, qs[1].ID, StateReady)
-	e.svc.c.Time = spent{qs[0].ID: 1260}
+	times.set(map[string]int{qs[0].ID: 1260})
 	var d Detail
 	e.do(t, "GET", "/api/homework/"+h.ID, nil, &d)
 	if d.Questions[0].Seconds != 1260 || d.Questions[1].Seconds != 0 {
