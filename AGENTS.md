@@ -103,7 +103,7 @@ Project skills live in `.agents/skills/<name>/` (a `SKILL.md` with `name`
 and `description` frontmatter, plus a `references/` folder), the
 vendor-neutral place any harness can read. `.claude/skills` is a symlink
 to it for Claude Code: edit the skill in `.agents/skills`, never a copy.
-Two skills, independent of each other:
+Three skills:
 
 - `grill` interviews the user in weighted batches (recommended option first, four
   questions a batch) until a decision or spec is ironed out, then writes a one-page
@@ -114,6 +114,31 @@ Two skills, independent of each other:
   builds, verifies, photographs and documents), `tweak` (a bug or one friction row) and
   `extract` (put a view still inside its screen onto `/views`). Its design is
   `ideas/views-gallery.md` and `ideas/grill-skill.md`.
+- `change` takes one change from ask to merged on `dev`, splitting the work by model
+  (below). Jack starts it with `/change`; it uses the other two when a change needs a
+  grill.
+
+## Models and agents
+
+Opus judges, Sonnet builds, Haiku does the mechanical work, so no model pays twice to
+read the same code. `/change` runs in an Opus session: it sizes the change, proposes
+a tier (quick, planned, grilled) for Jack to confirm, plans, and judges the result.
+The workers are Claude Code subagents in `.claude/agents/` (Claude-specific, so they
+live there, not in `.agents/`):
+
+| Agent | Model | Job |
+|---|---|---|
+| `Explore` | Haiku | every codebase search (replaces the built-in one) |
+| `builder` | Sonnet | builds the plan in the worktree; stops and reports when stuck |
+| `checker` | Haiku | `make check`, returning only the failures |
+| `reviewer` | Sonnet | reads the plan and the diff; escalates risky or unsure changes |
+| `opus-reviewer` | Opus | the second review, for escalated changes |
+| `shooter` | Haiku | screenshots of changed UI states, Paper and Night |
+| `lander` | Haiku | push, PR into `dev`, CI, squash-merge, worktree removal |
+
+Outside `/change`, the same split holds: search with `Explore`, and hand mechanical
+work to `checker` or `lander` instead of doing it on Opus. Spec and reasons:
+`ideas/agent-workflow-grill.md`.
 
 This file is the one set of agent instructions. `CLAUDE.md` only imports
 it (`@AGENTS.md`); put nothing else there.
