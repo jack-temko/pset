@@ -67,6 +67,22 @@ Problems heading to its end, a chapter's problems, or a cited page and
 its neighbours. The page whose text has the problem's own line ("7."
 after the section's heading, "4.25 ...", "2.1.4 ...") comes first, then
 the pages memory points to, then the rest of the span, a few at a time.
+
+**Where the text can't say, the contents and the Reader do** (2026-10-08).
+A chapter whose pages have no text, or lost it, has no heading or
+problem line to go by: it used to be shown from its first page, its
+teaching, 16 pages at most, so the problems at its end were never
+reached and a worked practice problem with the same number was taken
+(4.69, 10.47, 13.47, 16.49 in the circuits book). Now the contents'
+"Problems" entry inside the part (`probnum.Part.ProblemsStart`) comes
+right after the exact hits, and without one the span is shown from its
+end back. The Finder's label isn't the check any more: it echoed the
+number it was asked for on a practice problem's page, and copied the
+prompt's example ("3.36") on the right one. The Reader is: writing the
+problem out, it replies NOT ON THIS PAGE when the page shows another
+problem, a practice problem with the number, or the section before's
+problem (printed above the section's heading), and the find asks again
+with the rest of the batch, less that page.
 Each page shown to the model carries its printed page and section, and
 the model is told how the book prints the number, since a problems page
 rarely prints its section. A pick outside the span is another problem
