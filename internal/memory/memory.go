@@ -1,6 +1,7 @@
 // Package memory is how the student wants answers for a book: units,
-// notation, how much working to show. It stores and serves; it knows nothing of the model or of
-// homework, which reach it through adapters. Spec: design/memory.md.
+// notation, how much working to show. It stores and serves; it knows
+// nothing of the model or of homework, which reach it through adapters.
+// Spec: design/memory.md.
 package memory
 
 import (

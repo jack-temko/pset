@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/probnum"
@@ -28,6 +29,7 @@ import (
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
+	"github.com/jackt/pset/internal/memory"
 	"github.com/jackt/pset/internal/usage"
 )
 
@@ -175,6 +177,7 @@ func newEnvWith(t *testing.T, mem agent.Memory) *env {
 	t.Cleanup(func() { d.Close() })
 	migs := append(jobs.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
 	migs = append(migs, usage.Migrations()...)
+	migs = append(migs, memory.Migrations()...)
 	migs = append(migs, Migrations()...)
 	if err := db.Migrate(context.Background(), d, migs); err != nil {
 		t.Fatal(err)
@@ -598,20 +601,20 @@ func TestGuideComputesAndShowsWhatItsDoing(t *testing.T) {
 	}
 }
 
-// memory is a book's preferences in a slice, counting what is saved.
-type memory struct {
+// prefs is a book's preferences in a slice, counting what is saved.
+type prefs struct {
 	mu    sync.Mutex
 	notes []agent.Note
 	saves int
 }
 
-func (m *memory) Notes(context.Context, string) ([]agent.Note, error) {
+func (m *prefs) Notes(context.Context, string) ([]agent.Note, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return append([]agent.Note(nil), m.notes...), nil
 }
 
-func (m *memory) Remember(_ context.Context, _ string, n agent.NewNote) (agent.Note, string, error) {
+func (m *prefs) Remember(_ context.Context, _ string, n agent.NewNote) (agent.Note, string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.saves++
@@ -620,23 +623,63 @@ func (m *memory) Remember(_ context.Context, _ string, n agent.NewNote) (agent.N
 	return note, agent.Saved, nil
 }
 
-func (m *memory) Forget(context.Context, string, string) (agent.Note, error) {
+func (m *prefs) Forget(context.Context, string, string) (agent.Note, error) {
 	return agent.Note{}, nil
 }
 
-// A find remembers nothing: a second find in the chapter takes the path it
-// would on a fresh book.
+// storedMemory is the real memory service as the writer's loop reads it.
+type storedMemory struct{ *memory.Service }
+
+func (m storedMemory) Notes(ctx context.Context, bookID string) ([]agent.Note, error) {
+	ms, err := m.ForPrompt(ctx, bookID)
+	var out []agent.Note
+	for _, x := range ms {
+		out = append(out, agent.Note{ID: x.ID, Text: x.Text, Source: string(x.Source)})
+	}
+	return out, err
+}
+
+func (m storedMemory) Remember(context.Context, string, agent.NewNote) (agent.Note, string, error) {
+	return agent.Note{}, "", errors.New("the writer cannot remember")
+}
+
+func (m storedMemory) Forget(context.Context, string, string) (agent.Note, error) {
+	return agent.Note{}, errors.New("the writer cannot forget")
+}
+
+// A find remembers nothing: after two finds in a chapter the memories
+// table is as it was, and the second took the path it would on a fresh book.
 func TestAFindWritesNothingToMemory(t *testing.T) {
-	mem := &memory{}
-	e := newEnvWith(t, mem)
+	e := newEnv(t)
+	d := e.svc.c.DB
+	mem := memory.New(d, e.events)
+	if _, _, err := mem.Save(context.Background(), "b1", memory.Save{Text: "Use SI units.", Source: memory.SourceYou}); err != nil {
+		t.Fatal(err)
+	}
+	e.svc.c.Memory = storedMemory{mem}
+	dump := func() string {
+		var out string
+		rows, err := d.Query(`SELECT id || '|' || text || '|' || source || '|' || updated_at FROM memories ORDER BY id`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var r string
+			rows.Scan(&r)
+			out += r + "\n"
+		}
+		return out
+	}
+	before := dump()
 	h := e.newSet(t)
 	first := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
 	second := e.wait(t, e.add(t, h.ID, Draft{Text: "3.35", InBook: true})[0].ID, StateReady)
 	if first.Page == nil || second.Page == nil {
 		t.Fatalf("not located: %v %v", first.Page, second.Page)
 	}
-	if mem.saves != 0 || len(mem.notes) != 0 {
-		t.Fatalf("memory changed: %d saves, %v", mem.saves, mem.notes)
+	if after := dump(); after != before {
+		t.Fatalf("memories changed:\nbefore %safter %s", before, after)
 	}
 }
 

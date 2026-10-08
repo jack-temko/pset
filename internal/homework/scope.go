@@ -205,8 +205,9 @@ const (
 )
 
 // findInScope looks for a reference's problem where it must be: the
-// pages whose text has its line, then the rest, a batch at a time. A pick outside the scope is someone else's
-// problem with the same number, and doesn't count.
+// pages whose text has its line, then the rest, a batch at a time. A pick
+// outside the scope is someone else's problem with the same number, and
+// doesn't count.
 func (s *Service) findInScope(ctx context.Context, m model, book Book, q row, sc scope) (location, bool, error) {
 	var pages []int
 	for _, p := range sc.pages {

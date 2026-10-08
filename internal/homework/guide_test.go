@@ -54,7 +54,7 @@ func TestGuideSeesTheFiguresNotThePage(t *testing.T) {
 // The writer reads the student's preferences, and has no way to save one:
 // only Ask does.
 func TestWriterReadsPreferencesButCannotRemember(t *testing.T) {
-	mem := &memory{notes: []agent.Note{{ID: "n1abcdef", Text: "Use V_0, V_1 for nodal voltages.", Source: "you"}}}
+	mem := &prefs{notes: []agent.Note{{ID: "n1abcdef", Text: "Use V_0, V_1 for nodal voltages.", Source: "you"}}}
 	e := newEnvWith(t, mem)
 	h := e.newSet(t)
 	e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
