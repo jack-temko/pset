@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 	"time"
 
@@ -86,6 +87,9 @@ type Loop struct {
 	// far, for a caller that saves it to carry on after a restart: Run
 	// takes those messages back and goes on from the next round.
 	Round func(msgs []llm.Message)
+	// Extra is tools the caller adds beside the book's: the guide's
+	// check_reading.
+	Extra []Tool
 	// Complete reports whether the answer written so far is whole. A
 	// round that completes it and calls only remember ends the run once
 	// the saves are done: asked again, a model only adds a sign-off to
@@ -102,12 +106,15 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 	if rounds == 0 {
 		rounds = 8
 	}
-	tools := Tools
+	tools := slices.Clone(Tools)
 	if l.Memory != nil {
-		tools = append(append([]llm.Tool{}, Tools...), rememberTool(l.Student))
+		tools = append(tools, rememberTool(l.Student))
 		if l.Student {
 			tools = append(tools, forgetTool)
 		}
+	}
+	for _, t := range l.Extra {
+		tools = append(tools, t.Def)
 	}
 	l.seen = map[int]bool{}
 	for _, p := range l.Shown {

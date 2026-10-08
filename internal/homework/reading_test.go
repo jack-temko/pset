@@ -45,7 +45,7 @@ func TestAFigureIsReadSettledAndTheGuideWrittenFromIt(t *testing.T) {
 		}
 	}
 	text := openingText(guideRequests(e)[0])
-	if !strings.Contains(text, "- 2 A current source from A to B") || !strings.Contains(text, "the reading is right") {
+	if !strings.Contains(text, "- 2 A current source from A to B") || !strings.Contains(text, "call check_reading") {
 		t.Fatalf("the guide wasn't written from the reading:\n%s", text)
 	}
 }

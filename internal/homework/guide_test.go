@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/agent"
+	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
 )
@@ -195,5 +196,64 @@ func TestAGuideEndsWhenItsFinishedAndRemembers(t *testing.T) {
 	}
 	if len(mem.notes) != 1 || len(q.Memory) != 1 {
 		t.Fatalf("notes %v, memory lines %v", mem.notes, q.Memory)
+	}
+}
+
+// A writer that sees the figure show something the reading has wrong
+// calls check_reading: the figures are read again with that point looked
+// at closely, the new reading is saved and comes back to work from, and a
+// second call gets no second reading.
+func TestTheWriterCanHaveTheFiguresReadAgain(t *testing.T) {
+	e := newEnv(t)
+	var mu sync.Mutex
+	round := 0
+	var settles []string
+	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
+		sys := req.Messages[0].Content.Text()
+		if strings.Contains(sys, "several readings") {
+			var text strings.Builder
+			for _, p := range req.Messages[1].Content.Parts() {
+				text.WriteString(p.Text)
+			}
+			mu.Lock()
+			settles = append(settles, text.String())
+			mu.Unlock()
+			if strings.Contains(text.String(), "questioned this point") {
+				return llmtest.Reply{Text: "- Node A: top of $R_1$.\n- 120 V source from B to A, + at A.\n\nDiffered:\n- The source: 12 V in one reading, 120 V in two; it is 120 V."}
+			}
+		}
+		if !isGuide(req) {
+			return fakeModel(req)
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		if round++; round <= 2 {
+			return llmtest.Reply{ToolCalls: []llm.ToolCall{call("c", "check_reading", `{"concern":"The figure shows 120 V; the reading says 12 V."}`)}}
+		}
+		return llmtest.Reply{Text: guide}
+	})
+	h := e.newSet(t)
+	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
+
+	if len(q.Reading) != 2 || !strings.Contains(doc.Plain(q.Reading[1]), "120 V source") {
+		t.Fatalf("reading %v: the checked one should be saved", q.Reading)
+	}
+	reqs := guideRequests(e)
+	var results []string
+	for _, m := range reqs[len(reqs)-1].Messages {
+		if m.Role == "tool" {
+			results = append(results, m.Content.Text())
+		}
+	}
+	if len(results) != 2 || !strings.Contains(results[0], "120 V source") || !strings.Contains(results[1], "read again already") {
+		t.Fatalf("tool results %q", results)
+	}
+	if !strings.Contains(reqs[0].Messages[1].Content.Parts()[0].Text, "call check_reading") {
+		t.Fatal("the writer wasn't told it can have the reading checked")
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(settles) != 2 || !strings.Contains(settles[1], "The figure shows 120 V") {
+		t.Fatalf("%d settles; the second should carry the questioned point", len(settles))
 	}
 }
