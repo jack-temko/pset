@@ -29,8 +29,8 @@ there's nothing to test, so it writes straight away.
 **One Box, OpenRouter, with one field: the API key** (2026-09-29). PSet
 picks its models, so there's nothing else to choose: no provider, no
 endpoint, no model. Under the key, a quiet line in muted ink says which
-model does which job ("PSet picks the models. Guides and Ask: `deepseek/…`
-· Finding problems: `perceptron/…` · Reading figures: `openai/…`"), each
+model does which job ("PSet picks the models. Guides and Ask: `anthropic/…`
+· Finding problems: `perceptron/…` · Reading figures: `google/…`"), each
 job kept whole on a line, the model names in mono. It's said, not
 chosen; design/backend.md, "Models", says why each. The key's hint says
 where it comes from and that it pays for those models.
