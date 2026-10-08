@@ -97,7 +97,7 @@ replacing a pencil and a memory icon) holds what you do to the book:
   opens with the same line and **Check it**, which closes it and opens
   the Book dialog: asked once, where it matters. The Add questions
   placeholder uses the book's own example ("A reference like 1.1 #7").
-- **Memory** opens what the tutor remembers about the book
+- **Memory** opens the student's preferences for the book
   (design/memory.md).
 - **Remove book**, last, below a divider, in destructive ink. It asks
   first in a confirm under its row, with the menu kept open behind it,
@@ -626,7 +626,7 @@ the questions and the reversals; this is the screen as it is now, and
 - **The question row**: its label, a check when done, **Show in book** (only when
   it has a page), and the **question's menu**: Move up, Move down, This isn't the
   right problem, Edit or Add the professor's instructions, Check how the figure
-  reads, What the guide remembered, and Remove this question last, in destructive
+  reads, and Remove this question last, in destructive
   ink, asking first.
 - **Help is three rows**, Hint, Walkthrough and Answers, that open in place and say
   how long each is ("2 lines", "5 steps", "2 answers"). Rows not written yet say

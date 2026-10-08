@@ -15,7 +15,6 @@ const q = (over: Partial<Question> = {}): Question => ({
   hint: [],
   walkthrough: [],
   state: 'pending',
-  memory: [],
   reading: [],
   readingEdited: false,
   readingDoubts: [],

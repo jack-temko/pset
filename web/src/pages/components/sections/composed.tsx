@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Button } from '@/components/button'
 import { Box } from '@/components/box'
 import { Field, Input } from '@/components/input'
 import { ASSIGNMENT, ASSIGNMENT_SETS } from '@/components/fixtures'
@@ -10,8 +12,34 @@ import { QuestionRows, emptyRow, type QuestionRow } from '@/pages/workspace/dial
 import { StudyTimer } from '@/pages/workspace/study-timer'
 import { reviewOf } from '@/pages/workspace/import-state'
 import type { AssignmentRead } from '@/api/homework'
+import { memoryKeys, type Memory } from '@/api/memory'
+import { MemoryDialog } from '@/pages/workspace/memory'
 import type { ComponentEntry } from './types'
 import { Shelf } from './shared'
+
+const PREFERENCES: Memory[] = [
+  { id: 'a1', bookId: 'demo', text: 'Use V_0, V_1 for nodal voltages.', source: 'you', createdAt: '2026-10-08T09:00:00Z' },
+  { id: 'a2', bookId: 'demo', text: 'Give answers in SI units.', source: 'you', createdAt: '2026-10-06T09:00:00Z' },
+  { id: 'a3', bookId: 'demo', text: 'Show every step of the algebra.', source: 'tutor', createdAt: '2026-10-02T09:00:00Z' },
+]
+
+/** The Memory dialog on a client of its own, seeded so nothing is fetched. */
+function MemoryDemo({ empty }: { empty?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [client] = useState(() => {
+    const c = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } })
+    c.setQueryData(memoryKeys.list('demo'), empty ? [] : PREFERENCES)
+    return c
+  })
+  return (
+    <QueryClientProvider client={client}>
+      <Button variant="outline" onClick={() => setOpen(true)}>
+        Open Memory{empty ? ' (empty)' : ''}
+      </Button>
+      <MemoryDialog open={open} bookId="demo" onClose={() => setOpen(false)} />
+    </QueryClientProvider>
+  )
+}
 
 /** The boxing bar, in a session with a box already drawn. */
 function BoxingDemo() {
@@ -207,6 +235,23 @@ export const composedSections: ComponentEntry[] = [
               ))}
             </Box>
           </div>
+        </Shelf>
+      </>
+    ),
+  },
+  {
+    id: 'memory',
+    title: 'Memory',
+    group: 'Composed',
+    note: "The book's preferences, opened from Memory in the book's menu: add a sentence at the top, and below it every preference with who saved it (You, or Tutor for older ones) and when, and Delete. Deletes are immediate, so the one button is Done.",
+    docs: ['memory-dialog'],
+    Demo: () => (
+      <>
+        <Shelf label="empty">
+          <MemoryDemo empty />
+        </Shelf>
+        <Shelf label="three preferences">
+          <MemoryDemo />
         </Shelf>
       </>
     ),

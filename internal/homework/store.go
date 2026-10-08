@@ -126,6 +126,8 @@ CREATE INDEX assignment_reads_book ON assignment_reads (book_id, created_at);`},
 		// it last failed, so a second failure can say it is a second.
 		{Name: "homework/16", SQL: `ALTER TABLE questions ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE questions ADD COLUMN failed_at TEXT NOT NULL DEFAULT ''`},
+		// A walkthrough no longer shows what it did with the book's memory.
+		{Name: "homework/17", SQL: `ALTER TABLE questions DROP COLUMN memory`},
 	}
 }
 
@@ -236,14 +238,14 @@ func (f figure) on(q row) int {
 }
 
 const questionCols = `q.id, q.homework_id, q.position, q.text, q.in_book, q.label, q.statement, q.page, q.pinned_page,
-	q.rect, q.figures, q.hint, q.walkthrough, q.state, q.reason, q.revealed, q.done_at, q.activity, q.memory, q.failure, q.reading, q.reading_edited, q.reading_doubts, q.boxes, q.notes, q.difficulty, q.attempts, q.failed_at, q.updated_at, q.rev, h.book_id`
+	q.rect, q.figures, q.hint, q.walkthrough, q.state, q.reason, q.revealed, q.done_at, q.activity, q.failure, q.reading, q.reading_edited, q.reading_doubts, q.boxes, q.notes, q.difficulty, q.attempts, q.failed_at, q.updated_at, q.rev, h.book_id`
 
 func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	var r row
 	var page, pinned sql.NullInt64
-	var rect, figs, statement, hint, walk, revealed, doneAt, memory, reading, doubts, boxes, notes string
+	var rect, figs, statement, hint, walk, revealed, doneAt, reading, doubts, boxes, notes string
 	err := s.Scan(&r.ID, &r.HomeworkID, &r.Position, &r.Text, &r.InBook, &r.Label, &statement, &page, &pinned,
-		&rect, &figs, &hint, &walk, &r.State, &r.Reason, &revealed, &doneAt, &r.Activity, &memory, &r.Failure, &reading, &r.ReadingEdited, &doubts, &boxes, &notes, &r.Difficulty, &r.Attempts, &r.FailedAt, &r.UpdatedAt, &r.Rev, &r.BookID)
+		&rect, &figs, &hint, &walk, &r.State, &r.Reason, &revealed, &doneAt, &r.Activity, &r.Failure, &reading, &r.ReadingEdited, &doubts, &boxes, &notes, &r.Difficulty, &r.Attempts, &r.FailedAt, &r.UpdatedAt, &r.Rev, &r.BookID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
 	}
@@ -269,8 +271,6 @@ func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	json.Unmarshal([]byte(hint), &r.Hint)
 	json.Unmarshal([]byte(walk), &r.Walkthrough)
 	json.Unmarshal([]byte(revealed), &r.Revealed)
-	r.Memory = []MemoryLine{}
-	json.Unmarshal([]byte(memory), &r.Memory)
 	r.Reading = decodeRunLists(reading)
 	r.ReadingDoubts = decodeRunLists(doubts)
 	r.Boxes = []Box{}

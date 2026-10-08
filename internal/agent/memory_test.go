@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/jackt/pset/internal/pagenum"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -36,11 +37,7 @@ func (n *notes) Remember(_ context.Context, _ string, in NewNote) (Note, string,
 	if in.Text == "refuse" {
 		return Note{}, "", errors.New("that memory is the student's own")
 	}
-	source := "tutor"
-	if in.FromStudent {
-		source = "you"
-	}
-	note := Note{ID: "abcdef123", Kind: in.Kind, Text: in.Text, Page: in.Page, Source: source}
+	note := Note{ID: "abcdef123", Text: in.Text, Source: "you"}
 	n.list = append(n.list, note)
 	return note, Saved, nil
 }
@@ -54,10 +51,8 @@ func call(id, name, args string) llm.ToolCall {
 func TestRememberReachesTheNextRound(t *testing.T) {
 	fake := llmtest.New(t)
 	fake.Script(
-		llmtest.Reply{ToolCalls: []llm.ToolCall{call("1", "remember", `{"kind":"book","text":"Theorem 1.5 is Cauchy-Schwarz.","page":22,"from_student":true}`)}},
-		llmtest.Reply{ToolCalls: []llm.ToolCall{call("2", "remember", `{"kind":"book","text":"refuse"}`)}},
-		// No kind: it's about the book.
-		llmtest.Reply{ToolCalls: []llm.ToolCall{call("3", "remember", `{"text":"Problems close each section."}`)}},
+		llmtest.Reply{ToolCalls: []llm.ToolCall{call("1", "remember", `{"text":"Use V_0, V_1 for nodal voltages."}`)}},
+		llmtest.Reply{ToolCalls: []llm.ToolCall{call("2", "remember", `{"text":"refuse"}`)}},
 		llmtest.Reply{Text: "Done."},
 	)
 	mem := &notes{}
@@ -66,7 +61,7 @@ func TestRememberReachesTheNextRound(t *testing.T) {
 	l := &Loop{
 		Client: llm.Open(fake.Config()), Model: "fake-chat", Library: book{},
 		Book:   Book{ID: "b1", PageCount: 100, Pages: pagenum.Single(10)},
-		System: "You are a tutor.", Memory: mem,
+		System: "You are a tutor.", Memory: mem, Student: true,
 		Step:       func(label string, running bool) { steps = append(steps, label) },
 		Remembered: func(n Note, _ string) { saved = append(saved, n) },
 	}
@@ -75,28 +70,56 @@ func TestRememberReachesTheNextRound(t *testing.T) {
 	}
 	reqs := fake.Requests()
 	system := func(i int) string { return reqs[i].Chat.Messages[0].Content.Text() }
-	if !strings.Contains(system(0), "You don't remember anything") {
+	if !strings.Contains(system(0), "don't know the student's preferences") {
 		t.Errorf("round 1 system: %s", system(0))
 	}
-	// Saved in round 1, in the prompt for round 2, on its printed page.
-	if !strings.Contains(system(1), "[abcdef] Book: Theorem 1.5 is Cauchy-Schwarz. (p. 22)") {
+	// Saved in round 1, in the prompt for round 2.
+	if !strings.Contains(system(1), "[abcdef] Use V_0, V_1 for nodal voltages.") {
 		t.Errorf("round 2 system: %s", system(1))
 	}
-	// Outside Ask there is no student to save for: it's the tutor's.
-	if len(saved) != 2 || saved[0].Page != 32 || saved[0].Source != "tutor" || saved[1].Kind != "book" {
+	if len(saved) != 1 || saved[0].Source != "you" {
 		t.Fatalf("saved %+v", saved)
 	}
-	if strings.Contains(system(0), "from_student") {
-		t.Error("walkthrough rules mention from_student")
-	}
+	var tools []string
 	for _, tool := range reqs[0].Chat.Tools {
-		if tool.Function.Name == "forget" {
-			t.Error("forget offered without a student")
-		}
+		tools = append(tools, tool.Function.Name)
 	}
-	want := []string{"Remembering…", "Remembered · Theorem 1.5 is Cauchy-Schwarz · p. 22", "Remembering…", "Didn't remember · that memory is the student's own", "Remembering…", "Remembered · Problems close each section."}
+	if !slices.Contains(tools, "remember") || !slices.Contains(tools, "forget") {
+		t.Errorf("Ask's tools: %v", tools)
+	}
+	want := []string{"Remembering…", "Remembered · Use V_0, V_1 for nodal voltages.", "Remembering…", "Didn't remember · that memory is the student's own"}
 	if strings.Join(steps, "|") != strings.Join(want, "|") {
 		t.Errorf("steps\n got %q\nwant %q", steps, want)
+	}
+}
+
+// Outside Ask the model reads the preferences and cannot save or remove
+// one, even if it calls remember anyway.
+func TestOnlyAskSaves(t *testing.T) {
+	fake := llmtest.New(t)
+	fake.Script(
+		llmtest.Reply{ToolCalls: []llm.ToolCall{call("1", "remember", `{"text":"Use SI."}`)}},
+		llmtest.Reply{Text: "Done."},
+	)
+	mem := &notes{list: []Note{{ID: "abcdef123", Text: "Show every step.", Source: "you"}}}
+	l := &Loop{
+		Client: llm.Open(fake.Config()), Model: "fake-chat", Library: book{},
+		Book: Book{ID: "b1"}, System: "Write the guide.", Memory: mem,
+	}
+	if err := l.Run(context.Background(), []llm.Message{llm.TextMessage("user", "hi")}); err != nil {
+		t.Fatal(err)
+	}
+	reqs := fake.Requests()
+	if system := reqs[0].Chat.Messages[0].Content.Text(); !strings.Contains(system, "Show every step.") || strings.Contains(system, "remember") {
+		t.Errorf("system: %s", system)
+	}
+	for _, tool := range reqs[0].Chat.Tools {
+		if tool.Function.Name == "remember" || tool.Function.Name == "forget" {
+			t.Errorf("%s offered without a student", tool.Function.Name)
+		}
+	}
+	if len(mem.list) != 1 {
+		t.Errorf("a save got through: %+v", mem.list)
 	}
 }
 

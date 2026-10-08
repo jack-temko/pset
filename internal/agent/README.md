@@ -18,9 +18,6 @@ guide checks its work exactly as an answer does.
 - **Carrying on**: `Round` hands the caller the conversation after each
   tool round. Given those messages back, `Run` goes on from the next
   round, counting the ones before toward `Rounds`.
-- **Finished answers**: with `Complete` set, a round that completes the
-  answer and calls only `remember` ends the run once the saves are done,
-  rather than asking again and getting a sign-off tacked on.
 - **Pages in view**: `Shown` is the pages the messages already show as
   images. `view_page` on one of those, or on a page viewed earlier in the
   run, points back at it instead of sending the same image again.
@@ -29,9 +26,9 @@ guide checks its work exactly as an answer does.
   too: "Thinking…", then "Thought for 12s". `Writing` fires when a
   round's answer text starts.
 - `Prompt` tells a system prompt how to use the tools.
-- **Memory** (optional): with `Loop.Memory` set, the model gets
-  `remember` (and, with `Student`, `from_student` and `forget`), and
-  `System` goes out each round with memory's rules and every note after
-  it, read fresh, so a save by one loop reaches another on the same book
-  within a round. Saves are steps ("Remembered · Theorem 1.5 · p. 22"),
-  and `Remembered` hands the caller the note for its Undo.
+- **Memory** (optional): with `Loop.Memory` set, `System` goes out each
+  round with every preference after it, read fresh, so a save in Ask
+  reaches a walkthrough running on the same book within a round. Only
+  with `Student` (Ask) does the model get `remember` and `forget`, and its
+  rules; the walkthrough writer only reads. Saves are steps ("Remembered ·
+  Use SI units"), and `Remembered` hands the caller the note for its Undo.

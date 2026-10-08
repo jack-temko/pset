@@ -205,21 +205,14 @@ const (
 )
 
 // findInScope looks for a reference's problem where it must be: the
-// pages whose text has its line, then the pages memory points to, then
-// the rest, a batch at a time. A pick outside the scope is someone else's
-// problem with the same number, and doesn't count.
-func (s *Service) findInScope(ctx context.Context, m model, book Book, q row, sc scope, remembered []int, problems Problems) (location, bool, error) {
+// pages whose text has its line, then the rest, a batch at a time. A pick
+// outside the scope is someone else's problem with the same number, and
+// doesn't count.
+func (s *Service) findInScope(ctx context.Context, m model, book Book, q row, sc scope) (location, bool, error) {
 	var pages []int
 	for _, p := range sc.pages {
 		if sc.exact[p] {
 			pages = append(pages, p)
-		}
-	}
-	fromMemory := map[int]bool{}
-	for _, p := range remembered {
-		if p >= sc.lo && p <= sc.hi && !slices.Contains(pages, p) {
-			pages = append(pages, p)
-			fromMemory[p] = true
 		}
 	}
 	for _, p := range sc.pages {
@@ -235,18 +228,12 @@ func (s *Service) findInScope(ctx context.Context, m model, book Book, q row, sc
 		}
 		batch := pages[i:min(i+n, len(pages))]
 		i += len(batch)
-		if slices.ContainsFunc(batch, func(p int) bool { return fromMemory[p] }) {
-			s.setActivity(ctx, q.ID, "Checking pages from memory…")
-		}
 		loc, ok, err := s.locateOnce(ctx, m, book, q, batch, sc.hint)
 		if err != nil {
 			return location{}, false, err
 		}
 		if ok && loc.Page >= sc.lo && loc.Page <= sc.hi {
 			loc.Label = sc.ref.Label(book.Problems)
-			if fromMemory[loc.Page] {
-				loc.FromMemory = &problems
-			}
 			return loc, true, nil
 		}
 	}

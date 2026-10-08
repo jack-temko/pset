@@ -9,7 +9,6 @@ import { Spinner } from '@/components/spinner'
 import { UsageLine } from '@/components/usage'
 import { AddHomeworkDialog } from '@/pages/workspace/add-homework'
 import { useBookHere } from '@/pages/workspace/book-here'
-import { MemoryLines } from '@/pages/workspace/memory'
 import { FigureReading } from '@/pages/workspace/reading'
 import { ProfessorNotes } from '@/pages/workspace/notes'
 import { useBoxing } from '@/pages/workspace/boxing-state'
@@ -157,7 +156,7 @@ export function Walkthrough({
   // behind the question's menu until asked for. And the help rows: a
   // question's open rows start as the ones it was left with.
   const [editingNotes, setEditingNotes] = useState<string | null>(null)
-  const [peeked, setPeeked] = useState<Record<string, ('reading' | 'memory')[]>>({})
+  const [peeked, setPeeked] = useState<Record<string, 'reading'[]>>({})
   const [rowsOpen, setRowsOpen] = useState<Record<string, string[]>>({})
 
   const set = detail.data?.homework as HomeworkSet | undefined
@@ -383,13 +382,12 @@ export function Walkthrough({
   }
 
   // The figure's reading is out in the open only when it is flagged, and
-  // the guide's memory lines only when asked for, from the question's menu.
+  // asked for from the question's menu otherwise.
   const peek = peeked[q.id] ?? []
-  const peekAt = (what: 'reading' | 'memory') => setPeeked((all) => ({ ...all, [q.id]: [...(all[q.id] ?? []), what] }))
+  const peekAt = (what: 'reading') => setPeeked((all) => ({ ...all, [q.id]: [...(all[q.id] ?? []), what] }))
   const readingReady = q.figures.length > 0 && q.page !== undefined && !['pending', 'locating', 'reading'].includes(q.state)
   const flagged = !q.readingEdited && q.readingDoubts.length > 0
   const showReading = readingReady && (flagged || peek.includes('reading'))
-  const showMemory = q.memory.length > 0 && peek.includes('memory')
 
   // What the one button does, and where it leads: done is marked and the
   // next question not yet done comes up, round the end; a skipped one is
@@ -464,7 +462,7 @@ export function Walkthrough({
               </Button>
             )}
             {/* What you do to this question: order, what it is, what the
-                professor said, what the guide read and remembered. */}
+                professor said, what the guide read. */}
             <Menu label="Question actions">
               {at > 0 && (
                 <MenuItem icon={<ChevronUp />} onSelect={() => move(-1)}>
@@ -494,9 +492,6 @@ export function Walkthrough({
                 <MenuItem icon={<Check />} onSelect={() => peekAt('reading')}>
                   Check how the figure reads
                 </MenuItem>
-              )}
-              {q.memory.length > 0 && !showMemory && (
-                <MenuItem onSelect={() => peekAt('memory')}>What the guide remembered</MenuItem>
               )}
               <MenuDivider />
               <MenuConfirmItem
@@ -614,7 +609,6 @@ export function Walkthrough({
                   }}
                 />
               )}
-              {showMemory && set && <MemoryLines bookId={set.bookId} lines={q.memory} />}
               {/* What the whole production spent — find, figure read, guide
                   — once it's over. A question still being written keeps its
                   working lines and shows nothing here. */}

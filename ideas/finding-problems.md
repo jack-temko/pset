@@ -78,7 +78,8 @@ code, the call log and the page text:
    searched, rather than accepting a confident wrong answer.
 5. **Memory keyed the book's way**: Boyce's problems remembered as
    "3.1.7", so memory's ranges predict where a section's other problems
-   are.
+   are. *Removed 2026-10-08: memory no longer holds problem ranges or
+   steers a find; see [memory-preferences-only](memory-preferences-only.md).*
 
 Search stays, as the last tier, for references that name no number.
 

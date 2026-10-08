@@ -33,5 +33,5 @@ key, an account out of credit: Settings), `unavailable` (OpenRouter busy),
 puts the job back to queued, and its turn starts over from the question.
 
 `GET /api/books/{id}/turns` lists the conversation; `DELETE` clears it
-(`turns.cleared`). The tutor's memory of the book is `internal/memory`,
+(`turns.cleared`). The student's preferences for the book are `internal/memory`,
 reached through the agent loop.

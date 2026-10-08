@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/probnum"
@@ -28,6 +29,7 @@ import (
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
+	"github.com/jackt/pset/internal/memory"
 	"github.com/jackt/pset/internal/usage"
 )
 
@@ -166,7 +168,7 @@ func fakeModel(req llm.ChatRequest) llmtest.Reply {
 
 func newEnv(t *testing.T) *env { return newEnvWith(t, nil) }
 
-func newEnvWith(t *testing.T, mem Memory) *env {
+func newEnvWith(t *testing.T, mem agent.Memory) *env {
 	t.Helper()
 	d, err := db.Open(filepath.Join(t.TempDir(), "pset.db"))
 	if err != nil {
@@ -175,6 +177,7 @@ func newEnvWith(t *testing.T, mem Memory) *env {
 	t.Cleanup(func() { d.Close() })
 	migs := append(jobs.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
 	migs = append(migs, usage.Migrations()...)
+	migs = append(migs, memory.Migrations()...)
 	migs = append(migs, Migrations()...)
 	if err := db.Migrate(context.Background(), d, migs); err != nil {
 		t.Fatal(err)
@@ -598,91 +601,85 @@ func TestGuideComputesAndShowsWhatItsDoing(t *testing.T) {
 	}
 }
 
-// memory is a book memory in a map: the problems locate saw, and the
-// walkthrough writer's notes.
-type memory struct {
+// prefs is a book's preferences in a slice, counting what is saved.
+type prefs struct {
 	mu    sync.Mutex
-	seen  map[int][]Seen
 	notes []agent.Note
+	saves int
 }
 
-func (m *memory) Notes(context.Context, string) ([]agent.Note, error) {
+func (m *prefs) Notes(context.Context, string) ([]agent.Note, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return append([]agent.Note(nil), m.notes...), nil
 }
 
-func (m *memory) Remember(_ context.Context, _ string, n agent.NewNote) (agent.Note, string, error) {
+func (m *prefs) Remember(_ context.Context, _ string, n agent.NewNote) (agent.Note, string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	note := agent.Note{ID: fmt.Sprintf("note%d", len(m.notes)), Kind: n.Kind, Text: n.Text, Page: n.Page, Source: "tutor"}
+	m.saves++
+	note := agent.Note{ID: fmt.Sprintf("note%d", len(m.notes)), Text: n.Text, Source: "you"}
 	m.notes = append(m.notes, note)
 	return note, agent.Saved, nil
 }
 
-func (m *memory) Forget(context.Context, string, string) (agent.Note, error) {
+func (m *prefs) Forget(context.Context, string, string) (agent.Note, error) {
 	return agent.Note{}, nil
 }
 
-func (m *memory) ProblemsSeen(_ context.Context, _ string, chapter int) (Problems, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if len(m.seen[chapter]) == 0 {
-		return Problems{}, nil
+// storedMemory is the real memory service as the writer's loop reads it.
+type storedMemory struct{ *memory.Service }
+
+func (m storedMemory) Notes(ctx context.Context, bookID string) ([]agent.Note, error) {
+	ms, err := m.ForPrompt(ctx, bookID)
+	var out []agent.Note
+	for _, x := range ms {
+		out = append(out, agent.Note{ID: x.ID, Text: x.Text, Source: string(x.Source)})
 	}
-	return Problems{MemoryID: "range3", Text: "Chapter 3's problems include one on p. 1.", Seen: m.seen[chapter]}, nil
+	return out, err
 }
 
-func (m *memory) SawProblem(_ context.Context, _ string, _ pagenum.Map, chapter int, label string, page int) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.seen[chapter] = append(m.seen[chapter], Seen{Label: label, Page: page})
-	return nil
+func (m storedMemory) Remember(context.Context, string, agent.NewNote) (agent.Note, string, error) {
+	return agent.Note{}, "", errors.New("the writer cannot remember")
 }
 
-func TestMemoryFindsTheNextProblemAndKeepsTheWritersNotes(t *testing.T) {
-	mem := &memory{seen: map[int][]Seen{}}
-	e := newEnvWith(t, mem)
-	var mu sync.Mutex
-	var guideRound int
-	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
-		if strings.Contains(req.Messages[0].Content.Text(), "You write the guide") {
-			mu.Lock()
-			guideRound++
-			round := guideRound
-			mu.Unlock()
-			if round == 1 {
-				return llmtest.Reply{ToolCalls: []llm.ToolCall{{ID: "1", Type: "function", Function: llm.ToolCallFunc{
-					Name: "remember", Arguments: `{"kind":"book","text":"Ohm's law is stated on p. 0.","page":0}`}}}}
-			}
+func (m storedMemory) Forget(context.Context, string, string) (agent.Note, error) {
+	return agent.Note{}, errors.New("the writer cannot forget")
+}
+
+// A find remembers nothing: after two finds in a chapter the memories
+// table is as it was, and the second took the path it would on a fresh book.
+func TestAFindWritesNothingToMemory(t *testing.T) {
+	e := newEnv(t)
+	d := e.svc.c.DB
+	mem := memory.New(d, e.events)
+	if _, _, err := mem.Save(context.Background(), "b1", memory.Save{Text: "Use SI units.", Source: memory.SourceYou}); err != nil {
+		t.Fatal(err)
+	}
+	e.svc.c.Memory = storedMemory{mem}
+	dump := func() string {
+		var out string
+		rows, err := d.Query(`SELECT id || '|' || text || '|' || source || '|' || updated_at FROM memories ORDER BY id`)
+		if err != nil {
+			t.Fatal(err)
 		}
-		return fakeModel(req)
-	})
+		defer rows.Close()
+		for rows.Next() {
+			var r string
+			rows.Scan(&r)
+			out += r + "\n"
+		}
+		return out
+	}
+	before := dump()
 	h := e.newSet(t)
-	first := e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0]
-	q := e.wait(t, first.ID, StateReady)
-	if got := mem.seen[3]; len(got) != 1 || got[0] != (Seen{Label: "3.36", Page: 3}) {
-		t.Fatalf("seen %+v", got)
+	first := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
+	second := e.wait(t, e.add(t, h.ID, Draft{Text: "3.35", InBook: true})[0].ID, StateReady)
+	if first.Page == nil || second.Page == nil {
+		t.Fatalf("not located: %v %v", first.Page, second.Page)
 	}
-	// The writer's save is a line under the walkthrough.
-	if len(q.Memory) != 1 || q.Memory[0].Use != MemoryUseSaved || q.Memory[0].MemoryID != "note0" {
-		t.Fatalf("memory lines %+v", q.Memory)
-	}
-	// Found by the text layer: nothing to credit memory with.
-	for _, l := range q.Memory {
-		if l.Use == MemoryUseFound {
-			t.Fatal("an exact find credited to memory")
-		}
-	}
-
-	// 3.37 isn't in the text layer at all: only memory knows where to look.
-	second := e.add(t, h.ID, Draft{Text: "3.37", InBook: true})[0]
-	q = e.wait(t, second.ID, StateReady)
-	if q.Page == nil || *q.Page != 3 {
-		t.Fatalf("located %+v", q.Page)
-	}
-	if len(q.Memory) == 0 || q.Memory[0].Use != MemoryUseFound || q.Memory[0].MemoryID != "range3" {
-		t.Fatalf("memory lines %+v", q.Memory)
+	if after := dump(); after != before {
+		t.Fatalf("memories changed:\nbefore %safter %s", before, after)
 	}
 }
 

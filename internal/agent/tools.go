@@ -49,14 +49,12 @@ func (l *Loop) tool(ctx context.Context, call llm.ToolCall) (string, []llm.Part)
 			return t.Run(ctx, call.Function.Arguments), nil
 		}
 	}
-	if l.Memory != nil {
+	if l.Memory != nil && l.Student {
 		switch call.Function.Name {
 		case "remember":
 			return l.remember(ctx, call.Function.Arguments), nil
 		case "forget":
-			if l.Student {
-				return l.forget(ctx, call.Function.Arguments), nil
-			}
+			return l.forget(ctx, call.Function.Arguments), nil
 		}
 	}
 	var args struct {

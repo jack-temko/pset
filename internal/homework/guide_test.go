@@ -52,29 +52,22 @@ func TestGuideSeesTheFiguresNotThePage(t *testing.T) {
 	}
 }
 
-// The pages memory names, where a search for the problem lands, open the
-// guide, so the writer doesn't spend a round reading them.
-func TestMemorysPagesOpenTheGuide(t *testing.T) {
-	mem := &memory{seen: map[int][]Seen{}, notes: []agent.Note{
-		{ID: "n1", Kind: "book", Text: "Ohm's law is on p. 0.", Page: 2},
-		{ID: "n2", Kind: "book", Text: "Answers are at the back.", Page: 4},
-	}}
+// The writer reads the student's preferences, and has no way to save one:
+// only Ask does.
+func TestWriterReadsPreferencesButCannotRemember(t *testing.T) {
+	mem := &prefs{notes: []agent.Note{{ID: "n1abcdef", Text: "Use V_0, V_1 for nodal voltages.", Source: "you"}}}
 	e := newEnvWith(t, mem)
-	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
-		if strings.Contains(req.Messages[0].Content.Text(), "You write out one homework problem") {
-			return llmtest.Reply{Text: "Use Ohm's law to find the voltage across $R_2$."}
-		}
-		return fakeModel(req)
-	})
 	h := e.newSet(t)
 	e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
 
-	text := guideRequests(e)[0].Messages[1].Content.Parts()[0].Text
-	if !strings.Contains(text, "Your memory points to these pages") || !strings.Contains(text, "Ohm's law says V = IR.") {
-		t.Fatalf("memory's page didn't open the guide:\n%s", text)
+	req := guideRequests(e)[0]
+	if system := req.Messages[0].Content.Text(); !strings.Contains(system, "Use V_0, V_1 for nodal voltages.") {
+		t.Fatalf("the writer's system prompt lacks the preference:\n%s", system)
 	}
-	if strings.Contains(text, "Answers to selected problems") {
-		t.Fatalf("a remembered page the search didn't find came too:\n%s", text)
+	for _, tool := range req.Tools {
+		if tool.Function.Name == "remember" || tool.Function.Name == "forget" {
+			t.Fatalf("the writer was offered %s", tool.Function.Name)
+		}
 	}
 }
 
@@ -165,37 +158,6 @@ func TestAGuideCarriesOnAfterARestart(t *testing.T) {
 	}
 	if saved, _ := savedRounds(context.Background(), e.svc.c.DB, id); len(saved) != 0 {
 		t.Fatalf("a finished guide kept its rounds: %d", len(saved))
-	}
-}
-
-// A guide that's finished when the writer saves a memory is finished:
-// asking again only gets a sign-off tacked onto the walkthrough.
-func TestAGuideEndsWhenItsFinishedAndRemembers(t *testing.T) {
-	mem := &memory{seen: map[int][]Seen{}}
-	e := newEnvWith(t, mem)
-	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
-		if !isGuide(req) {
-			return fakeModel(req)
-		}
-		if len(req.Messages) > 2 {
-			return llmtest.Reply{Text: "The guide above is complete, good luck!"}
-		}
-		return llmtest.Reply{Text: guide, ToolCalls: []llm.ToolCall{
-			call("r1", "remember", `{"kind":"book","page":0,"text":"Ohm's law is in Chapter 3."}`),
-		}}
-	})
-	h := e.newSet(t)
-	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
-	if n := len(guideRequests(e)); n != 1 {
-		t.Fatalf("asked the writer %d times", n)
-	}
-	for _, b := range q.Walkthrough {
-		if strings.Contains(string(b), "good luck") {
-			t.Fatalf("sign-off in the walkthrough: %s", b)
-		}
-	}
-	if len(mem.notes) != 1 || len(q.Memory) != 1 {
-		t.Fatalf("notes %v, memory lines %v", mem.notes, q.Memory)
 	}
 }
 

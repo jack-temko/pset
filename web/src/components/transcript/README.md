@@ -64,7 +64,7 @@ answer.
 A step line can carry **one action** after a middle dot, drawn with
 **`StepAction`**: text in the line's own size, primary ink, underlined on
 hover. It exists for the remember step's **Undo** ("Remembered ·
-Theorem 1.5 · p. 22 · Undo"), and a line never gets two.
+Use SI units · Undo"), and a line never gets two.
 
 ## Guide pieces (`guide.tsx`)
 

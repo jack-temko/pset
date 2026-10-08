@@ -1,16 +1,13 @@
-// Package memory is what the tutor knows about a book from working in it:
-// where things are, how the book is laid out, and how the student wants
-// answers. It stores and serves; it knows nothing of the model or of
-// homework, which reach it through adapters. Spec: design/memory.md.
+// Package memory is how the student wants answers for a book: units,
+// notation, how much working to show. It stores and serves; it knows
+// nothing of the model or of homework, which reach it through adapters.
+// Spec: design/memory.md.
 package memory
 
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/jackt/pset/internal/pagenum"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -38,7 +35,14 @@ CREATE TABLE memories (
 	updated_at TEXT NOT NULL
 );
 CREATE INDEX memories_book ON memories (book_id, created_at);
-CREATE UNIQUE INDEX memories_key ON memories (book_id, key) WHERE key != '';`}}
+CREATE UNIQUE INDEX memories_key ON memories (book_id, key) WHERE key != '';`},
+		// Memory holds preferences only: the book's notes and the problem
+		// ranges are deleted, and with them the page and the keys.
+		{Name: "memory/2", SQL: `DELETE FROM memories WHERE kind = 'book' OR source = 'pset';
+DROP INDEX memories_key;
+ALTER TABLE memories DROP COLUMN key;
+ALTER TABLE memories DROP COLUMN detail;
+ALTER TABLE memories DROP COLUMN page`}}
 }
 
 type Service struct {
@@ -53,18 +57,13 @@ const MaxText = 300
 
 var errNotFound = errors.New("not found")
 
-const cols = `id, book_id, kind, text, page, source, created_at`
+const cols = `id, book_id, text, source, created_at`
 
 func scan(s interface{ Scan(...any) error }) (Memory, error) {
 	var m Memory
-	var page sql.NullInt64
-	err := s.Scan(&m.ID, &m.BookID, &m.Kind, &m.Text, &page, &m.Source, &m.CreatedAt)
+	err := s.Scan(&m.ID, &m.BookID, &m.Text, &m.Source, &m.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return m, errNotFound
-	}
-	if page.Valid {
-		p := int(page.Int64)
-		m.Page = &p
 	}
 	return m, err
 }
@@ -91,18 +90,16 @@ func (s *Service) get(ctx context.Context, id string) (Memory, error) {
 	return scan(s.db.QueryRowContext(ctx, `SELECT `+cols+` FROM memories WHERE id = ?`, id))
 }
 
-// Add is one the student writes in the memory menu.
+// Add is a preference the student writes in the memory menu.
 func (s *Service) Add(ctx context.Context, bookID string, n NewMemory) (Memory, error) {
-	m, _, err := s.Save(ctx, bookID, Save{Kind: n.Kind, Text: n.Text, Page: n.Page, Source: SourceYou})
+	m, _, err := s.Save(ctx, bookID, Save{Text: n.Text, Source: SourceYou})
 	return m, err
 }
 
-// Save is a memory from anyone. Replaces, when set, is the id (or the
+// Save is a preference from anyone. Replaces, when set, is the id (or the
 // start of it) of a memory to overwrite.
 type Save struct {
-	Kind     Kind
 	Text     string
-	Page     *int
 	Source   Source
 	Replaces string
 }
@@ -129,16 +126,10 @@ var (
 func (s *Service) Save(ctx context.Context, bookID string, in Save) (Memory, Outcome, error) {
 	text := strings.Join(strings.Fields(in.Text), " ")
 	switch {
-	case in.Kind != KindBook && in.Kind != KindPreference:
-		return Memory{}, "", httpx.Invalid("kind", "A memory is about the book or a preference.")
 	case text == "":
 		return Memory{}, "", httpx.Invalid("text", "Write what to remember.")
 	case utf8.RuneCountInString(text) > MaxText:
 		return Memory{}, "", httpx.Invalid("text", "Keep it to a sentence or two (%d characters at most).", MaxText)
-	case in.Page != nil && *in.Page < 1:
-		return Memory{}, "", httpx.Invalid("page", "That isn't a page.")
-	case in.Page != nil && in.Kind != KindBook:
-		return Memory{}, "", httpx.Invalid("page", "Only a memory about the book has a page.")
 	}
 	norm := normalize(text)
 
@@ -166,8 +157,8 @@ func (s *Service) Save(ctx context.Context, bookID string, in Save) (Memory, Out
 	now := db.Now()
 	if old != nil {
 		// A replacement keeps its place in time as the newest thing known.
-		if _, err := s.db.ExecContext(ctx, `UPDATE memories SET kind = ?, text = ?, norm = ?, page = ?, source = ?, key = '', detail = 'null', created_at = ?, updated_at = ? WHERE id = ?`,
-			in.Kind, text, norm, in.Page, in.Source, now, now, old.ID); err != nil {
+		if _, err := s.db.ExecContext(ctx, `UPDATE memories SET text = ?, norm = ?, source = ?, created_at = ?, updated_at = ? WHERE id = ?`,
+			text, norm, in.Source, now, now, old.ID); err != nil {
 			return Memory{}, "", err
 		}
 		m, err := s.get(ctx, old.ID)
@@ -177,8 +168,8 @@ func (s *Service) Save(ctx context.Context, bookID string, in Save) (Memory, Out
 		return m, OutcomeReplaced, err
 	}
 	id := uuid.NewString()
-	if _, err := s.db.ExecContext(ctx, `INSERT INTO memories (id, book_id, kind, text, norm, page, source, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, bookID, in.Kind, text, norm, in.Page, in.Source, now, now); err != nil {
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO memories (id, book_id, kind, text, norm, source, created_at, updated_at)
+		VALUES (?, ?, 'preference', ?, ?, ?, ?, ?)`, id, bookID, text, norm, in.Source, now, now); err != nil {
 		// The one constraint an insert can break is the book.
 		return Memory{}, "", httpx.NotFound("book")
 	}
@@ -304,103 +295,4 @@ func pick(newestFirst []Memory) []Memory {
 		chars += len(m.Text)
 	}
 	return out
-}
-
-// ---------------------------------------------------------------- problems
-
-// Seen is one problem locate found: its label and PDF page.
-type Seen struct {
-	Label string `json:"label"`
-	Page  int    `json:"page"`
-}
-
-func problemsKey(chapter int) string { return fmt.Sprintf("problems/%d", chapter) }
-
-// Problems is where locate has found a chapter's problems, and the
-// memory that says so.
-type Problems struct {
-	MemoryID string
-	Text     string
-	Seen     []Seen
-}
-
-// ProblemsSeen is a chapter's Problems; none seen yet is the zero value.
-func (s *Service) ProblemsSeen(ctx context.Context, bookID string, chapter int) (Problems, error) {
-	var p Problems
-	var detail string
-	err := s.db.QueryRowContext(ctx, `SELECT id, text, detail FROM memories WHERE book_id = ? AND key = ?`, bookID, problemsKey(chapter)).
-		Scan(&p.MemoryID, &p.Text, &detail)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Problems{}, nil
-	}
-	if err != nil {
-		return Problems{}, err
-	}
-	json.Unmarshal([]byte(detail), &p.Seen)
-	return p, nil
-}
-
-// SawProblem records where a problem is, in the chapter's one PSet
-// memory, and rewrites its sentence to the range seen so far. pages
-// turns PDF pages into the printed ones the sentence names.
-func (s *Service) SawProblem(ctx context.Context, bookID string, pages pagenum.Map, chapter int, label string, page int) error {
-	if chapter < 1 || label == "" || page < 1 {
-		return nil
-	}
-	key := problemsKey(chapter)
-	p, err := s.ProblemsSeen(ctx, bookID, chapter)
-	if err != nil {
-		return err
-	}
-	seen := p.Seen
-	found := false
-	for i, p := range seen {
-		if p.Label == label {
-			if p.Page == page {
-				return nil
-			}
-			seen[i].Page, found = page, true
-		}
-	}
-	if !found {
-		seen = append(seen, Seen{Label: label, Page: page})
-	}
-	lo, hi := seen[0].Page, seen[0].Page
-	for _, p := range seen {
-		lo, hi = min(lo, p.Page), max(hi, p.Page)
-	}
-	// What's been seen, not a claim about the whole chapter.
-	text := fmt.Sprintf("Chapter %d has problems on %s.", chapter, printedRange(lo, hi, pages))
-	detail, _ := json.Marshal(seen)
-	now := db.Now()
-	// The range is PSet's, so a matching sentence of the tutor's doesn't
-	// stop it; its norm is keyed apart from theirs.
-	_, err = s.db.ExecContext(ctx, `INSERT INTO memories (id, book_id, kind, text, norm, page, source, key, detail, created_at, updated_at)
-		VALUES (?, ?, 'book', ?, ?, ?, 'pset', ?, ?, ?, ?)
-		ON CONFLICT (book_id, key) WHERE key != '' DO UPDATE SET text = excluded.text, norm = excluded.norm, page = excluded.page, detail = excluded.detail, updated_at = excluded.updated_at`,
-		uuid.NewString(), bookID, text, key+" "+normalize(text), lo, key, string(detail), now, now)
-	if err != nil {
-		return err
-	}
-	var id string
-	if err := s.db.QueryRowContext(ctx, `SELECT id FROM memories WHERE book_id = ? AND key = ?`, bookID, key).Scan(&id); err != nil {
-		return err
-	}
-	if m, err := s.get(ctx, id); err == nil {
-		s.events.Publish(EventSaved, Saved{Memory: m})
-	}
-	return nil
-}
-
-func printedRange(lo, hi int, pages pagenum.Map) string {
-	name := func(p int) string {
-		if n, ok := pages.Printed(p); ok {
-			return fmt.Sprint(n)
-		}
-		return fmt.Sprintf("PDF page %d", p)
-	}
-	if lo == hi {
-		return "p. " + name(lo)
-	}
-	return fmt.Sprintf("p. %s–%s", name(lo), name(hi))
 }

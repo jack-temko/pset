@@ -7,7 +7,7 @@ shipped the same day.
 ## Surfaces
 
 - **Question walkthrough**: the last line of the question's scroll body,
-  after the memory lines. Shows for `ready`, `failed` and `unwritten`
+  after the walkthrough. Shows for `ready`, `failed` and `unwritten`
   questions that have calls; a question still being written keeps its
   working lines and shows nothing.
 - **Assignment read row**: joined to the row's description after a dot
