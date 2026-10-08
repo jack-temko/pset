@@ -259,11 +259,12 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 	if pin.Image < 1 || pin.Image > len(order) {
 		return location{}, false, nil
 	}
-	// A page that only mentions the problem ("See Problem 14") isn't it:
-	// the number the Finder read must be the one asked for.
+	// The Finder's label isn't the check: it echoes the number it was
+	// asked for on a page with a practice problem of that number, and
+	// copies the prompt's example ("3.36") on the right page (3.2 #19 in
+	// the DE book). The Reader is, below.
 	if ref, ok := questionRef(book, q); ok && !sameNumber(pin.Label, ref.Number) {
-		slog.Info("locate: the problem found has another number", "question", q.ID, "label", pin.Label, "want", ref.Number)
-		return location{}, false, nil
+		slog.Info("locate: the Finder's label has another number; the Reader will check", "question", q.ID, "label", pin.Label, "want", ref.Number)
 	}
 	loc := location{Page: order[pin.Image-1], Label: strings.TrimSpace(pin.Label)}
 	// The boxes fit to what's printed, on the page as the model saw it.
@@ -296,12 +297,40 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 	if loc.Statement, err = s.writeOut(ctx, m, book, loc, urls[pin.Image-1], q); err != nil {
 		return location{}, false, err
 	}
+	// The Reader, looking at the page to write the problem out, is the
+	// check: a page that only mentions the problem ("See Problem 14"), or
+	// shows a worked example or practice problem with its number, isn't
+	// it. The rest of the batch is asked again without the page: the
+	// right one was often beside it (3.2 #4, 9.3 #23 in the DE book).
+	if notOnPage(loc.Statement) {
+		slog.Info("locate: the Reader didn't see the problem on the page found", "question", q.ID, "page", loc.Page)
+		return s.locateWithout(ctx, m, book, q, pages, loc.Page, hint)
+	}
 	loc.Figures = s.checkFigures(ctx, m, book, q, loc)
 	if r, ok := s.wholeText(ctx, m, book, q, loc, urls[pin.Image-1], page); ok {
 		loc.Rect = &r
 	}
 	return loc, true, nil
 }
+
+// locateWithout asks the Finder again about a batch less a page it
+// picked wrongly; none is found when that was the batch's last page.
+func (s *Service) locateWithout(ctx context.Context, m model, book Book, q row, pages []int, wrong int, hint string) (location, bool, error) {
+	rest := slices.DeleteFunc(slices.Clone(pages), func(p int) bool { return p == wrong })
+	if len(rest) == 0 || len(rest) == len(pages) {
+		return location{}, false, nil
+	}
+	return s.locateOnce(ctx, m, book, q, rest, hint)
+}
+
+// notOnPage is a write-out that says the page doesn't show the problem.
+func notOnPage(statement string) bool {
+	return strings.HasPrefix(strings.ToUpper(strings.Trim(strings.TrimSpace(statement), "*_ ")), notOnPageReply)
+}
+
+// notOnPageReply is what the Reader writes when the page doesn't show
+// the problem (statementPrompt).
+const notOnPageReply = "NOT ON THIS PAGE"
 
 // bigEnough is a box that can hold a figure: the Finder has boxed the
 // words "Figure 7.1.4" in a problem's text and called that the figure.

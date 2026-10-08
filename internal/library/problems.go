@@ -3,6 +3,8 @@ package library
 import (
 	"context"
 	"encoding/json"
+	"regexp"
+	"strings"
 
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/httpx"
@@ -28,14 +30,47 @@ func (s *Service) Parts(ctx context.Context, bookID string) ([]probnum.Part, err
 	if err != nil {
 		return nil, err
 	}
+	return partsOf(secs), nil
+}
+
+// partsOf is the numbered chapters and sections of a book's contents,
+// each with where its problems are when an entry says.
+func partsOf(secs []section) []probnum.Part {
 	var parts []probnum.Part
 	for _, sec := range secs {
 		if n := probnum.PartNumber(sec.Title); n != "" {
 			parts = append(parts, probnum.Part{Number: n, Title: sec.Title, Start: sec.StartPage, End: sec.EndPage})
 		}
 	}
-	return parts, nil
+	// A "Problems" entry belongs to the most specific numbered part it
+	// starts in: where that part's problems are, whatever its text layer
+	// says.
+	for _, sec := range secs {
+		if probnum.PartNumber(sec.Title) != "" || !problemsTitle.MatchString(sec.Title) || sec.EndPage < sec.StartPage {
+			continue
+		}
+		best := -1
+		for i, p := range parts {
+			if sec.StartPage >= p.Start && sec.StartPage <= p.End &&
+				(best < 0 || strings.Count(p.Number, ".") > strings.Count(parts[best].Number, ".")) {
+				best = i
+			}
+		}
+		if best < 0 {
+			continue
+		}
+		p := &parts[best]
+		if p.ProblemsStart == 0 || sec.StartPage < p.ProblemsStart {
+			p.ProblemsStart = sec.StartPage
+		}
+		p.ProblemsEnd = max(p.ProblemsEnd, sec.EndPage)
+	}
+	return parts
 }
+
+// problemsTitle is a contents entry for a part's problems: "Problems",
+// "Comprehensive Problems", "Exercises".
+var problemsTitle = regexp.MustCompile(`(?i)^\s*(comprehensive\s+|review\s+|supplementary\s+|additional\s+)?(problems|exercises)\s*$`)
 
 // saveProblems stores a detected style, never over one the student
 // confirmed.

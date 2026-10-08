@@ -29,7 +29,12 @@ Reply with only JSON, no prose and no code fence:
 const statementPrompt = `You write out one homework problem from an image of a textbook page, for a tutor who can't see
 the page. The tutor works from your words alone, so leave out nothing the problem needs.
 
-Reply with only the problem's text, exactly as the book words it. Leave out its own number, even
+If the page doesn't show this problem (it shows another problem, or a worked example or practice
+problem with the same number, or only mentions it), reply with only: NOT ON THIS PAGE
+A problem printed above its section's heading on the page, or under another section's problems
+heading, is the other section's problem, even with the same number.
+
+Otherwise reply with only the problem's text, exactly as the book words it. Leave out its own number, even
 where it sits after shared text or in front of its equation, and any mark printed by the number
 (an asterisk, a star, an icon):
 - Every part, each with the book's own letter or number (a., b., c.), as printed. A part's letter

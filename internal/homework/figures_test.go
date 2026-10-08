@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
 )
@@ -164,5 +165,51 @@ func TestTheTextBoxIsAskedForInBoxingMode(t *testing.T) {
 	r, _ := getQuestion(context.Background(), e.svc.c.DB, q.ID)
 	if !asked || r.Rect == nil {
 		t.Fatalf("asked %v, rect %+v", asked, r.Rect)
+	}
+}
+
+// The Finder's label echoes the number it was asked for, so a page with a
+// practice problem of that number passes its check. The Reader, writing
+// the problem out, says the page doesn't show it, and the find goes on to
+// the next pages instead of saving its complaint as the problem.
+func TestAPageTheReaderRejectsIsPassedOver(t *testing.T) {
+	e := newEnv(t)
+	var writes atomic.Int32
+	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
+		if strings.Contains(req.Messages[0].Content.Text(), "You write out one homework problem") {
+			if writes.Add(1) == 1 {
+				return llmtest.Reply{Text: "NOT ON THIS PAGE"}
+			}
+			return llmtest.Reply{Text: "Find the mesh currents in Figure 3.7."}
+		}
+		return fakeModel(req)
+	})
+	h := e.newSet(t)
+	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
+	if got := doc.Plain(q.Statement); got != "Find the mesh currents in Figure 3.7." {
+		t.Fatalf("statement %q", got)
+	}
+	if writes.Load() != 2 || requestsTo(e, "You find one homework problem") < 2 {
+		t.Fatalf("%d write-outs, %d finds: the rejected page should send the find on", writes.Load(), requestsTo(e, "You find one homework problem"))
+	}
+}
+
+// The Finder's label doesn't veto a page: it copies the prompt's example
+// on the right page. A pick with another number is written out, and kept
+// when the Reader finds the problem on it.
+func TestAWrongLabelIsLeftToTheReader(t *testing.T) {
+	e := newEnv(t)
+	var finds atomic.Int32
+	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
+		if strings.Contains(req.Messages[0].Content.Text(), "You find one homework problem") {
+			finds.Add(1)
+			return llmtest.Reply{Text: `{"image": 1, "label": "3.19", "question_rect": {"x": 0.1, "y": 0.2, "w": 0.8, "h": 0.2}}`}
+		}
+		return fakeModel(req)
+	})
+	h := e.newSet(t)
+	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
+	if finds.Load() != 1 || doc.Plain(q.Statement) != "Find the voltage across R_2." {
+		t.Fatalf("%d finds, statement %q: the first pick should stand", finds.Load(), doc.Plain(q.Statement))
 	}
 }

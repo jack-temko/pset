@@ -20,6 +20,10 @@ type Part struct {
 	Number     string
 	Title      string
 	Start, End int
+	// ProblemsStart and ProblemsEnd are the pages the contents give its
+	// problems, from an unnumbered "Problems" (or "Exercises") entry
+	// inside it; zero when the contents have none.
+	ProblemsStart, ProblemsEnd int
 }
 
 var partNumber = regexp.MustCompile(`(?i)^\s*(?:chapter\s+|section\s+|§\s*)?(\d{1,2}(?:\.\d{1,2}){0,2})(?:[.:\s]|$)`)

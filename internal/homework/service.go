@@ -40,12 +40,18 @@ type Book struct {
 
 // span is the PDF pages a numbered chapter or section runs across.
 func (b Book) span(number string) (start, end int, ok bool) {
+	p, ok := b.part(number)
+	return p.Start, p.End, ok
+}
+
+// part is a numbered chapter or section, from the contents.
+func (b Book) part(number string) (probnum.Part, bool) {
 	for _, p := range b.Parts {
 		if p.Number == number && p.End >= p.Start {
-			return p.Start, p.End, true
+			return p, true
 		}
 	}
-	return 0, 0, false
+	return probnum.Part{}, false
 }
 
 // partOf is the most specific numbered part a PDF page is in: the
