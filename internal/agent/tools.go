@@ -34,9 +34,21 @@ var Tools = []llm.Tool{
 
 const maxReadPages = 3
 
+// Tool is a tool a caller adds to the loop: its definition, and what a
+// call to it answers. Its steps on the feed are its own to make.
+type Tool struct {
+	Def llm.Tool
+	Run func(ctx context.Context, args string) string
+}
+
 // tool runs one call and returns what to tell the model, plus any page
 // images it should see. Every call is a step on the feed.
 func (l *Loop) tool(ctx context.Context, call llm.ToolCall) (string, []llm.Part) {
+	for _, t := range l.Extra {
+		if t.Def.Function.Name == call.Function.Name {
+			return t.Run(ctx, call.Function.Arguments), nil
+		}
+	}
 	if l.Memory != nil && l.Student {
 		switch call.Function.Name {
 		case "remember":

@@ -259,6 +259,8 @@ type Usage struct {
 	Cost             float64 `json:"cost,omitempty"`
 	PromptDetails    struct {
 		CachedTokens int `json:"cached_tokens"`
+		// CacheWriteTokens is what this call put in the cache.
+		CacheWriteTokens int `json:"cache_write_tokens"`
 	} `json:"prompt_tokens_details"`
 	CompletionDetails struct {
 		ReasoningTokens int `json:"reasoning_tokens"`
@@ -292,6 +294,12 @@ type ChatRequest struct {
 	// model's hosts may serve it. shape sets both for OpenRouter only.
 	Reasoning *ReasoningOptions `json:"reasoning,omitempty"`
 	Provider  *ProviderOptions  `json:"provider,omitempty"`
+	// CacheControl is OpenRouter's automatic prompt caching: the prefix a
+	// request shares with the one before (a guide's rounds, a book's Ask
+	// conversation) is billed at a tenth. shape sets it for the models that
+	// cache only when asked (Anthropic's); Gemini and the rest cache on
+	// their own, and asking would buy Gemini's paid explicit cache.
+	CacheControl *CacheControl `json:"cache_control,omitempty"`
 	// SessionID groups a job's calls on OpenRouter, where a guide's
 	// rounds and repairs, or a book's whole conversation, read as one
 	// session; it also keeps them on one host, which keeps its cache warm.
@@ -317,6 +325,16 @@ type ReasoningOptions struct {
 // ProviderOptions is OpenRouter's say in which hosts serve a model: which
 // to try first (Order, falling back to the rest), at what precision, and
 // how to rank the rest (Sort).
+// CacheControl is a prompt cache request: "ephemeral" is five minutes.
+type CacheControl struct {
+	Type string `json:"type"`
+}
+
+// cachesWhenAsked is a model that caches its prompt only when the request
+// asks: Anthropic's. Without it Haiku's guides cached nothing, and their
+// input was over half their cost.
+func cachesWhenAsked(model string) bool { return strings.HasPrefix(model, "anthropic/") }
+
 type ProviderOptions struct {
 	Order         []string `json:"order,omitempty"`
 	Quantizations []string `json:"quantizations,omitempty"`
@@ -464,6 +482,9 @@ func (c *Client) shape(ctx context.Context, req ChatRequest) ChatRequest {
 				req.Reasoning = &ReasoningOptions{Enabled: true}
 			}
 		}
+		if req.CacheControl == nil && cachesWhenAsked(req.Model) {
+			req.CacheControl = &CacheControl{Type: "ephemeral"}
+		}
 		if req.Provider == nil {
 			req.Provider = &ProviderOptions{Quantizations: fullPrecision, Sort: fastestFirst}
 			if h := hostFor(req.SessionID); h != "" {
@@ -472,7 +493,7 @@ func (c *Client) shape(ctx context.Context, req ChatRequest) ChatRequest {
 		}
 		return req
 	}
-	req.Reasoning, req.Provider, req.SessionID, req.Models = nil, nil, "", nil
+	req.Reasoning, req.Provider, req.SessionID, req.Models, req.CacheControl = nil, nil, "", nil, nil
 	carries := false
 	for _, m := range req.Messages {
 		if m.Reasoning != "" || len(m.ReasoningDetails) > 0 {

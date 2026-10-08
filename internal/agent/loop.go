@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 	"time"
 
@@ -85,6 +86,9 @@ type Loop struct {
 	// far, for a caller that saves it to carry on after a restart: Run
 	// takes those messages back and goes on from the next round.
 	Round func(msgs []llm.Message)
+	// Extra is tools the caller adds beside the book's: the guide's
+	// check_reading.
+	Extra []Tool
 
 	// seen is the pages in view this run: Shown, and every view_page.
 	seen map[int]bool
@@ -96,9 +100,12 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 	if rounds == 0 {
 		rounds = 8
 	}
-	tools := Tools
+	tools := slices.Clone(Tools)
 	if l.Memory != nil && l.Student {
-		tools = append(append([]llm.Tool{}, Tools...), rememberTool, forgetTool)
+		tools = append(tools, rememberTool, forgetTool)
+	}
+	for _, t := range l.Extra {
+		tools = append(tools, t.Def)
 	}
 	l.seen = map[int]bool{}
 	for _, p := range l.Shown {

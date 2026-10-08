@@ -328,3 +328,38 @@ func TestReasoningDetailsGoBack(t *testing.T) {
 		t.Errorf("a plain endpoint got reasoning_details %v", d)
 	}
 }
+
+// TestAnthropicModelsAskForCaching: an Anthropic model on OpenRouter asks
+// for the automatic prompt cache, since it caches nothing otherwise; a
+// Gemini model doesn't (it caches on its own, and asking buys its paid
+// cache), and neither does a plain endpoint.
+func TestAnthropicModelsAskForCaching(t *testing.T) {
+	var got map[string]any
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		got = nil
+		json.Unmarshal(body, &got)
+		io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":9000,"completion_tokens":5,"prompt_tokens_details":{"cached_tokens":8000,"cache_write_tokens":900}}}`)
+	}
+	or := hostedAt(t, "https://openrouter.ai/api/v1", handler)
+	for model, want := range map[string]bool{"anthropic/claude-haiku-5.5": true, "google/gemini-3.8-flash": false, "deepseek/deepseek-v4.1-flash": false} {
+		reply, err := or.ChatOnceFull(context.Background(), ChatRequest{Model: model, Messages: []Message{TextMessage("user", "hi")}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		cc, asked := got["cache_control"].(map[string]any)
+		if asked != want || (want && cc["type"] != "ephemeral") {
+			t.Errorf("%s: cache_control %v, want asked %v", model, got["cache_control"], want)
+		}
+		if reply.Usage.PromptDetails.CachedTokens != 8000 || reply.Usage.PromptDetails.CacheWriteTokens != 900 {
+			t.Errorf("%s: usage %+v", model, reply.Usage.PromptDetails)
+		}
+	}
+	plain := hostedAt(t, "https://api.deepseek.com", handler)
+	if _, err := plain.ChatOnce(context.Background(), ChatRequest{Model: "anthropic/claude-haiku-5.5", Messages: []Message{TextMessage("user", "hi")}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := got["cache_control"]; ok {
+		t.Errorf("a plain endpoint got cache_control %v", got["cache_control"])
+	}
+}

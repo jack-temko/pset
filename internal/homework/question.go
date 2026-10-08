@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -257,7 +258,7 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 // question never fails over its reading.
 func (s *Service) read(ctx context.Context, m model, book Book, q row) error {
 	s.setState(ctx, q.ID, StateReading, "")
-	lines, doubts, err := s.readFigures(ctx, m, book, q)
+	lines, doubts, err := s.readFigures(ctx, m, book, q, "")
 	if err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -290,7 +291,7 @@ func (s *Service) read(ctx context.Context, m model, book Book, q row) error {
 // the same way twice; settled, the hardest five came out right ten times
 // in ten. A reading that fails is left out, and when the settling fails
 // the first reading stands. None when there are no figures to read.
-func (s *Service) readFigures(ctx context.Context, m model, book Book, q row) (lines, doubts []string, err error) {
+func (s *Service) readFigures(ctx context.Context, m model, book Book, q row, focus string) (lines, doubts []string, err error) {
 	if q.Page == nil {
 		return nil, nil, nil
 	}
@@ -302,6 +303,10 @@ func (s *Service) readFigures(ctx context.Context, m model, book Book, q row) (l
 		content := llm.PartsContent(llm.TextPart(fmt.Sprintf("The problem:\n\n%s\n\nIts figures follow.", source(q.Statement))))
 		for _, p := range append(slices.Clone(figs), extra...) {
 			content.AppendPart(p)
+		}
+		if focus != "" {
+			content.AppendPart(llm.TextPart("The tutor working from an earlier reading questioned this point: " + focus +
+				"\nLook at it in the figures closely and read what they show. The earlier reading may have been right."))
 		}
 		return m.client.ChatOnce(ctx, llm.Reader.Ask(llm.ChatRequest{ReasoningEffort: effort, Messages: []llm.Message{
 			llm.TextMessage("system", system),
@@ -501,6 +506,7 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 			},
 		})
 		loop := &agent.Loop{
+			Extra:  s.readingCheck(m, book, q),
 			Client: m.client, Model: m.name, Library: s.c.Library,
 			Book:   agent.Book{ID: book.ID, Title: book.Title, PageCount: book.PageCount, Pages: book.Pages},
 			Rounds: guideRounds,
@@ -553,6 +559,49 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 	}
 	return fail(FailureGeneration, nil, "The walkthrough for %s came back missing a part. Trying again usually works.", problemName(q))
 }
+
+// readingCheck is the guide writer's check_reading: when it sees the
+// figures show something the reading has wrong, the figures are read
+// again, three times and settled, with that point looked at closely, and
+// the new reading is saved and handed back to work from. On 4.71 the
+// writer saw 120v_o where the reading had 12v_o and could only hedge.
+// Once a guide; none when there's no reading to check, or the student
+// wrote it.
+func (s *Service) readingCheck(m model, book Book, q row) []agent.Tool {
+	if len(q.Reading) == 0 || q.ReadingEdited || len(q.FigRect) == 0 {
+		return nil
+	}
+	var once sync.Once
+	return []agent.Tool{{Def: checkReadingTool, Run: func(ctx context.Context, args string) string {
+		answer := "The figures were read again already. Work from that reading."
+		once.Do(func() {
+			var a struct {
+				Concern string `json:"concern"`
+			}
+			json.Unmarshal([]byte(args), &a)
+			s.setActivity(ctx, q.ID, "Reading the figures again…")
+			lines, doubts, err := s.readFigures(ctx, m, book, q, strings.TrimSpace(a.Concern))
+			if err != nil || len(lines) == 0 {
+				answer = "The figures couldn't be read again. Work from the reading you have."
+				return
+			}
+			if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_doubts = ?, updated_at = ? WHERE id = ? AND reading_edited = 0`,
+				mustJSON(runLists(lines)), mustJSON(runLists(orEmpty(doubts))), db.Now(), q.ID); err != nil {
+				slog.Warn("guide: save the checked reading", "question", q.ID, "err", err)
+			}
+			s.publishQuestion(ctx, q.ID)
+			answer = "The figures, read again with that point looked at closely. Work from this reading, not the first one:\n" + bullets(lines)
+			if len(doubts) > 0 {
+				answer += "Where the readings differed, now settled:\n" + bullets(doubts)
+			}
+		})
+		return answer
+	}}}
+}
+
+var checkReadingTool = llm.NewTool("check_reading",
+	"Have the figures read again, carefully, when they plainly show something the reading has wrong: a value, a direction, which end is +, what joins to what. Say what you see and what the reading says. Returns the figures read again, which you then work from. Once a guide.",
+	json.RawMessage(`{"type":"object","properties":{"concern":{"type":"string","description":"What the figure shows and what the reading says instead."}},"required":["concern"]}`))
 
 // guideRounds bounds the writer's tool rounds: enough to look up the
 // theory and check every number, not enough to wander.
@@ -643,7 +692,7 @@ func readingText(q row) string {
 	if len(q.Reading) == 0 {
 		return ""
 	}
-	lead := "How the figures read, checked line by line against them. Work from this reading, not your own look at the figures: where the two seem to disagree, the reading is right."
+	lead := "How the figures read, checked line by line against them. Work from this reading. If the figures plainly show something it has wrong (a value, a direction, which end is +, what joins to what), call check_reading with what you see, before you set up any equations: don't work from your own reading instead, and don't call it over wording or node names."
 	if q.ReadingEdited {
 		lead = "How the figures read, as the student corrected it. Work from this reading: it is the problem, even where you would read the figures differently."
 	}

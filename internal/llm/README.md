@@ -68,7 +68,11 @@ host:
   Anthropic and Gemini models need the details: without them Haiku 5.5
   lost its plan every round and failed a quarter of hard guides
   (2026-10-07); `provider: {quantizations: [fp8, fp16,
-  bf16, fp32, unknown], sort: "throughput"}`, so no host running 4-bit
+  bf16, fp32, unknown], sort: "throughput"}`; for Anthropic models,
+  `cache_control: {type: "ephemeral"}`, OpenRouter's automatic prompt
+  cache, which the others don't need (Gemini caches on its own) and
+  Haiku's guides did without: 62% of their input now comes from the
+  cache, and a guide costs 29% less (2026-10-08), so no host running 4-bit
   weights serves PSet and the fastest host comes first (a model's hosts
   differ several times over in speed);
   and `session_id` from the context (`WithSession`), which groups a job's
