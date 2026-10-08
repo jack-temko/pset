@@ -354,7 +354,7 @@ func TestInBookQuestionIsLocatedThenGuided(t *testing.T) {
 			for _, tool := range r.Chat.Tools {
 				names = append(names, tool.Function.Name)
 			}
-			if strings.Join(names, ",") != "search_pages,read_page,view_page,compute,solve_linear" {
+			if strings.Join(names, ",") != "search_pages,read_page,view_page,compute,solve_linear,check_reading" {
 				t.Fatalf("guide tools %v", names)
 			}
 		}

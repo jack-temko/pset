@@ -108,10 +108,21 @@ its 2 A source backwards. Three things fixed it:
   fixed but its right arrows talked out of. Settled, the set's hardest
   five figures came out right ten times in ten.
 - **The guide works from the reading**, which opens its brief under the
-  figures: "where your own look at the figures disagrees, the reading
-  is right". The student sees the reading and can correct it
+  figures. The student sees the reading and can correct it
   (design/workspace.md); a corrected reading writes the guide again and
   is the student's word, over the figure.
+- **The writer can have the reading checked** (2026-10-08). It used to
+  be told the reading was right wherever the two disagreed, so when
+  Haiku saw 4.71's 120v_o under a reading that said 12v_o, it could only
+  hedge. Now, when the figures plainly show something the reading has
+  wrong, it calls `check_reading` with what it sees: the figures are
+  read again, three times and settled, with that point looked at
+  closely (and told the first reading may have been right), the new
+  reading is saved for the student to see, and it comes back as the
+  tool's answer to work from. Once a guide; not offered for a reading
+  the student wrote. On 22 hard guides from Luna's readings it was
+  called twice, both on real misreads (4.71's source, Figure 7.6.6's
+  capacitor arrow), both put right, for $0.03; no false alarms.
 
 A reading that fails leaves none, and the guide reads the figures itself.
 
