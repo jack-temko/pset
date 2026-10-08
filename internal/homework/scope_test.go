@@ -142,3 +142,60 @@ func TestStatementName(t *testing.T) {
 		}
 	}
 }
+
+// A chapter whose pages have no text (a scan, pages that lost their text)
+// is looked through where its problems are: the contents' "Problems"
+// pages when they list them, else from the chapter's end back. Its first
+// pages are teaching, whose practice problems carry numbers like the
+// problems' own, and the first batches never reached the end before.
+func TestScopeWithoutTextStartsWhereTheProblemsAre(t *testing.T) {
+	pages := make([]string, 60)
+	part := probnum.Part{Number: "3", Title: "Chapter 3 Methods of Analysis", Start: 5, End: 50}
+	book := Book{
+		ID: "b", PageCount: len(pages), Pages: pagenum.Single(0),
+		Problems: probnum.Style{Form: probnum.FormChapter, Where: probnum.WhereChapter},
+		Parts:    []probnum.Part{part},
+	}
+	ref, _ := ParseRefs("3.53", book.Problems)
+
+	sc, ok := scopeOf(book, ref[0], pages)
+	if !ok || sc.pages[0] != 51 || sc.pages[1] != 50 {
+		t.Fatalf("without the contents' problems: pages %v, want the chapter's end first", sc.pages)
+	}
+
+	part.ProblemsStart, part.ProblemsEnd = 38, 49
+	book.Parts = []probnum.Part{part}
+	sc, ok = scopeOf(book, ref[0], pages)
+	if !ok || sc.pages[0] != 38 || sc.pages[12] != 50 {
+		t.Fatalf("with them: pages %v, want 38 to 50 first", sc.pages)
+	}
+	for _, p := range sc.pages[:scopeMax] {
+		if p < 30 {
+			t.Fatalf("pages %v: p. %d, teaching, is in the first %d", sc.pages, p, scopeMax)
+		}
+	}
+	if len(sc.pages) != 47 || sc.lo != 5 || sc.hi != 51 {
+		t.Fatalf("scope %d pages, %d to %d: every page of the chapter stays a candidate", len(sc.pages), sc.lo, sc.hi)
+	}
+}
+
+// Text that has the problems' heading still decides, ahead of the
+// contents.
+func TestScopeTextHeadingStillLeads(t *testing.T) {
+	pages := make([]string, 60)
+	for i := range pages {
+		pages[i] = "Text about circuits."
+	}
+	pages[39] = "Problems\n3.1 Find the current."
+	pages[44] = "3.53 Find the mesh currents in the circuit of Fig. 3.98."
+	book := Book{
+		ID: "b", PageCount: len(pages), Pages: pagenum.Single(0),
+		Problems: probnum.Style{Form: probnum.FormChapter, Where: probnum.WhereChapter},
+		Parts:    []probnum.Part{{Number: "3", Title: "Chapter 3", Start: 5, End: 50, ProblemsStart: 38, ProblemsEnd: 49}},
+	}
+	ref, _ := ParseRefs("3.53", book.Problems)
+	sc, ok := scopeOf(book, ref[0], pages)
+	if !ok || sc.pages[0] != 45 || !sc.exact[45] || sc.pages[1] != 38 {
+		t.Fatalf("pages %v: want the problem's own line, then the contents' problems", sc.pages)
+	}
+}

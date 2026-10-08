@@ -58,21 +58,28 @@ func scopeOf(book Book, ref Ref, pages []string) (scope, bool) {
 	var start, end int
 	var ok bool
 	var line *regexp.Regexp
-	var name string
+	var name, used string
+	span := func(number string) (int, int, bool) {
+		s, e, ok := book.span(number)
+		if ok {
+			used = number
+		}
+		return s, e, ok
+	}
 	switch {
 	case ref.Section != "":
 		name = "Section " + ref.Section
 		if st.Where == probnum.WhereChapter {
 			// Kept together at the chapter's end, grouped by section.
-			start, end, ok = book.span(ref.Chapter)
+			start, end, ok = span(ref.Chapter)
 			name = "chapter " + ref.Chapter
 		}
 		if !ok {
-			start, end, ok = book.span(ref.Section)
+			start, end, ok = span(ref.Section)
 			name = "Section " + ref.Section
 		}
 		if !ok {
-			start, end, ok = book.span(ref.Chapter)
+			start, end, ok = span(ref.Chapter)
 			name = "chapter " + ref.Chapter
 		}
 		switch st.Form {
@@ -91,7 +98,7 @@ func scopeOf(book Book, ref Ref, pages []string) (scope, bool) {
 				ref.Name(st), ref.Number, heading, ref.Section, name, ref.Number)
 		}
 	case ref.Chapter != "":
-		start, end, ok = book.span(ref.Chapter)
+		start, end, ok = span(ref.Chapter)
 		name = "chapter " + ref.Chapter
 		line = regexp.MustCompile(`^\s*` + regexp.QuoteMeta(ref.Chapter+"."+ref.Number) + `\.?\s+\S`)
 		sc.hint = fmt.Sprintf("It is %s, printed as \"%s.%s\" among chapter %s's problems.", ref.Name(st), ref.Chapter, ref.Number, ref.Chapter)
@@ -103,14 +110,25 @@ func scopeOf(book Book, ref Ref, pages []string) (scope, bool) {
 	sc.lo, sc.hi = start, end
 	sc.where = fmt.Sprintf("%s (%s to %s)", name, book.Pages.Name(start), book.Pages.Name(end))
 
+	// Where the contents put the part's problems, when they list them.
+	var probLo, probHi int
+	if p, ok := book.part(used); ok && p.ProblemsStart >= start && p.ProblemsStart <= end {
+		probLo, probHi = p.ProblemsStart, min(max(p.ProblemsEnd, p.ProblemsStart)+scopeSlack, end)
+	}
+
 	// The problems begin at the span's first problem heading; the
-	// problem's own line after it is the best evidence there is.
-	from := start
+	// problem's own line after it is the best evidence there is. Without
+	// a heading in the text (a scan, a page that lost its text), the
+	// contents' problems are where they begin.
+	from, headed := start, false
 	for p := start; p <= end; p++ {
 		if hasHeading(pages[p-1]) {
-			from = p
+			from, headed = p, true
 			break
 		}
+	}
+	if !headed && probLo > 0 {
+		from = probLo
 	}
 	var hits []int
 	for p := from; p <= end; p++ {
@@ -135,9 +153,17 @@ func scopeOf(book Book, ref Ref, pages []string) (scope, bool) {
 		add(p)
 		sc.exact[p] = true
 	}
-	for p := from; p <= end; p++ {
+	for p := probLo; probLo > 0 && p <= probHi; p++ {
 		add(p)
 	}
+	if headed {
+		for p := from; p <= end; p++ {
+			add(p)
+		}
+	}
+	// Then from the end back: problems close a chapter or section, and
+	// its first pages are its teaching, whose worked examples and
+	// practice problems carry numbers like the problems' own.
 	for p := end; p >= start; p-- {
 		add(p)
 	}
