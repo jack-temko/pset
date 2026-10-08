@@ -125,11 +125,8 @@ func (s *Service) setNotes(ctx context.Context, q row, lines []string) (Question
 func (s *Service) rewrite(ctx context.Context, q row, next jobs.Spec, set string, args ...any) (Question, error) {
 	s.c.Queue.StopSubject(ctx, q.ID)
 	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
-		// Memory lines go with the guide they came from, but for the one
-		// that found the problem; the new guide starts its own.
-		args := append(args, MemoryUseFound, StateLocated, db.Now(), q.ID)
+		args := append(args, StateLocated, db.Now(), q.ID)
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET `+set+`, hint = '[]', walkthrough = '[]', rounds = '[]',
-			memory = coalesce((SELECT json_group_array(json(value)) FROM json_each(memory) WHERE json_extract(value, '$.use') = ?), '[]'),
 			state = ?, failure = '', reason = '', activity = '', updated_at = ? WHERE id = ?`, args...); err != nil {
 			return err
 		}

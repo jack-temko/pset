@@ -163,7 +163,7 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	clock := activity.New(d, nil)
 	sets = homework.New(homework.Config{
 		DB: d, Events: bus, Queue: queue, Library: homeworkLibrary{books}, Settings: cfg,
-		Memory: homeworkMemory{agentMemory{memories}}, Time: clock,
+		Memory: agentMemory{memories}, Time: clock,
 	})
 	clock.SetHomework(sets)
 
@@ -296,16 +296,13 @@ func (l askLibrary) Book(ctx context.Context, id string) (ask.Book, error) {
 	return ask.Book{ID: b.ID, Title: b.Title, PageCount: b.PageCount, Pages: pagenum.New(b.PageRuns)}, err
 }
 
-// agentMemory is the book's memory as the tutor's loop reads and writes
-// it: notes in, remember and forget out.
+// agentMemory is the book's preferences as the tutor's loop reads and
+// writes them: notes in, remember and forget out. Only the student's Ask
+// saves, so everything it remembers is theirs.
 type agentMemory struct{ *memory.Service }
 
 func note(m memory.Memory) agent.Note {
-	n := agent.Note{ID: m.ID, Kind: string(m.Kind), Text: m.Text, Source: string(m.Source)}
-	if m.Page != nil {
-		n.Page = *m.Page
-	}
-	return n
+	return agent.Note{ID: m.ID, Text: m.Text, Source: string(m.Source)}
 }
 
 func (a agentMemory) Notes(ctx context.Context, bookID string) ([]agent.Note, error) {
@@ -318,32 +315,13 @@ func (a agentMemory) Notes(ctx context.Context, bookID string) ([]agent.Note, er
 }
 
 func (a agentMemory) Remember(ctx context.Context, bookID string, n agent.NewNote) (agent.Note, string, error) {
-	in := memory.Save{Kind: memory.Kind(n.Kind), Text: n.Text, Source: memory.SourceTutor, Replaces: n.Replaces}
-	if n.FromStudent {
-		in.Source = memory.SourceYou
-	}
-	if n.Page > 0 {
-		in.Page = &n.Page
-	}
-	m, outcome, err := a.Save(ctx, bookID, in)
+	m, outcome, err := a.Save(ctx, bookID, memory.Save{Text: n.Text, Source: memory.SourceYou, Replaces: n.Replaces})
 	return note(m), string(outcome), err
 }
 
 func (a agentMemory) Forget(ctx context.Context, bookID, ref string) (agent.Note, error) {
 	m, err := a.Service.Forget(ctx, bookID, ref)
 	return note(m), err
-}
-
-// homeworkMemory adds the problem ranges locate keeps.
-type homeworkMemory struct{ agentMemory }
-
-func (h homeworkMemory) ProblemsSeen(ctx context.Context, bookID string, chapter int) (homework.Problems, error) {
-	p, err := h.Service.ProblemsSeen(ctx, bookID, chapter)
-	out := homework.Problems{MemoryID: p.MemoryID, Text: p.Text}
-	for _, s := range p.Seen {
-		out.Seen = append(out.Seen, homework.Seen{Label: s.Label, Page: s.Page})
-	}
-	return out, err
 }
 
 func concat(lists ...[]db.Migration) []db.Migration {

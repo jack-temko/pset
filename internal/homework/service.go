@@ -82,28 +82,6 @@ type Settings interface {
 	Name(ctx context.Context) string
 }
 
-// Memory is the book's memory: the walkthrough writer's notes, and where
-// locate has found each chapter's problems. Pages are PDF pages.
-type Memory interface {
-	agent.Memory
-	ProblemsSeen(ctx context.Context, bookID string, chapter int) (Problems, error)
-	SawProblem(ctx context.Context, bookID string, pages pagenum.Map, chapter int, label string, page int) error
-}
-
-// Problems is where a chapter's problems have been found, and the memory
-// that says so.
-type Problems struct {
-	MemoryID string
-	Text     string
-	Seen     []Seen
-}
-
-// Seen is one problem found: its label and page.
-type Seen struct {
-	Label string
-	Page  int
-}
-
 // Time is how long the student has spent on questions: the stretches of
 // study with each one open, in seconds.
 type Time interface {
@@ -124,8 +102,9 @@ type Config struct {
 	Queue    Queue
 	Library  Library
 	Settings Settings
-	// Memory is the book's memory; nil runs without one.
-	Memory Memory
+	// Memory is the book's memory, whose preferences the walkthrough writer
+	// reads; nil runs without one.
+	Memory agent.Memory
 	// Time is the time spent on each question; nil says none was.
 	Time Time
 }
@@ -702,10 +681,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 	if q.State != StateFailed {
 		return Question{}, httpx.Errorf(httpx.CodeInvalid, "Only a question that failed can be tried again.")
 	}
-	// Memory lines stay with saved rounds, which a retry of the same
-	// problem carries on from; the guide clears them with the rounds.
-	set := `attempts = attempts + 1, reason = '', failure = '', hint = '[]', walkthrough = '[]',
-		memory = CASE WHEN rounds = '[]' THEN '[]' ELSE memory END, updated_at = ?`
+	set := `attempts = attempts + 1, reason = '', failure = '', hint = '[]', walkthrough = '[]', updated_at = ?`
 	args := []any{db.Now()}
 	// What's left to do, and the state it waits in: the step that failed,
 	// unless the retry changes what there is to find.

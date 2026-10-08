@@ -201,10 +201,6 @@ func (s *Service) withModel(ctx context.Context, q row, step func(context.Contex
 // guide is queued in the same write, so a found question is never left
 // without one.
 func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
-	// A run starts its memory lines over: a requeued one left some.
-	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET memory = '[]' WHERE id = ?`, q.ID); err != nil {
-		return err
-	}
 	s.setState(ctx, q.ID, StateLocating, "")
 	// A reference the parser couldn't read, rewritten by the model in the
 	// book's form first, if it can be.
@@ -232,7 +228,6 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 	if statement == "" {
 		statement = q.Text
 	}
-	s.sawProblem(ctx, book, q, loc)
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET page = ?, label = ?, statement = ?, rect = ?, figures = ?, rounds = '[]', reading = '[]', reading_edited = 0, reading_doubts = '[]', state = ?, activity = '', updated_at = ? WHERE id = ?`,
 			loc.Page, label, mustJSON(runsOf(statement)), mustJSON(loc.Rect), mustJSON(loc.Figures), StateLocated, db.Now(), q.ID); err != nil {
@@ -440,18 +435,6 @@ func orEmpty(lines []string) []string {
 
 // write writes a question's guide, found or never looked for.
 func (s *Service) write(ctx context.Context, m model, book Book, q row) error {
-	// A run starts its own memory lines over (a requeued one left some),
-	// keeping the line the find wrote, unless it carries on a guide's
-	// saved rounds: then the lines are theirs.
-	kept := []MemoryLine{}
-	for _, l := range q.Memory {
-		if l.Use == MemoryUseFound {
-			kept = append(kept, l)
-		}
-	}
-	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET memory = ? WHERE id = ? AND rounds = '[]'`, mustJSON(kept), q.ID); err != nil {
-		return err
-	}
 	s.setState(ctx, q.ID, StateWriting, "")
 	return s.writeGuide(ctx, m, book, q)
 }
@@ -522,14 +505,7 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 			Book:   agent.Book{ID: book.ID, Title: book.Title, PageCount: book.PageCount, Pages: book.Pages},
 			Rounds: guideRounds,
 			System: guideSystem(),
-			Memory: s.memory(),
-			Remembered: func(n agent.Note, outcome string) {
-				use := MemoryUseSaved
-				if outcome == agent.Replaced {
-					use = MemoryUseUpdated
-				}
-				s.addMemoryLine(ctx, q.ID, MemoryLine{MemoryID: n.ID, Use: use, Text: n.Text, Page: pageOrNil(n.Page)})
-			},
+			Memory: s.c.Memory,
 			Step: func(label string, running bool) {
 				if running {
 					s.setActivity(ctx, q.ID, label)
@@ -541,8 +517,7 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 				parser.Reset()
 				hintSaved = false
 			},
-			Shown:    shown,
-			Complete: parser.Complete,
+			Shown: shown,
 			Round: func(all []llm.Message) {
 				rounds = slices.Clone(all[1:])
 				if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET rounds = ? WHERE id = ?`, mustJSON(rounds), q.ID); err != nil {
@@ -582,62 +557,6 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 // guideRounds bounds the writer's tool rounds: enough to look up the
 // theory and check every number, not enough to wander.
 const guideRounds = 10
-
-// memory is the loop's memory, or none: a nil Memory must stay a nil
-// interface once it's an agent.Memory.
-func (s *Service) memory() agent.Memory {
-	if s.c.Memory == nil {
-		return nil
-	}
-	return s.c.Memory
-}
-
-func pageOrNil(p int) *int {
-	if p < 1 {
-		return nil
-	}
-	return &p
-}
-
-// addMemoryLine puts a line under the question's walkthrough.
-func (s *Service) addMemoryLine(ctx context.Context, id string, l MemoryLine) {
-	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET memory = json_insert(memory, '$[#]', json(?)) WHERE id = ?`, mustJSON(l), id); err != nil {
-		slog.Error("question: memory line", "question", id, "err", err)
-		return
-	}
-	s.publishQuestion(ctx, id)
-}
-
-// problemLabel is the label of the problem a question names, as a range
-// memory keys it ("3.36"), and its chapter.
-func problemLabel(labels ...string) (string, int, bool) {
-	for _, l := range labels {
-		if label, ok := questionLabel(l); ok {
-			if ch, ok := labelChapter(label); ok {
-				return label, ch, true
-			}
-		}
-	}
-	return "", 0, false
-}
-
-// sawProblem tells memory where a located problem is, and says so under
-// the walkthrough when a remembered range found it.
-func (s *Service) sawProblem(ctx context.Context, book Book, q row, loc location) {
-	if s.c.Memory == nil {
-		return
-	}
-	if loc.FromMemory != nil {
-		s.addMemoryLine(ctx, q.ID, MemoryLine{MemoryID: loc.FromMemory.MemoryID, Use: MemoryUseFound, Text: loc.FromMemory.Text})
-	}
-	label, chapter, ok := problemLabel(loc.Label, q.Label, q.Text)
-	if !ok {
-		return
-	}
-	if err := s.c.Memory.SawProblem(ctx, book.ID, book.Pages, chapter, label, loc.Page); err != nil {
-		slog.Warn("question: remember problem", "question", q.ID, "err", err)
-	}
-}
 
 // setActivity shows what the writer is doing on the walkthrough's working
 // line.
@@ -694,11 +613,7 @@ func (s *Service) guideUser(ctx context.Context, book Book, q row) (llm.Message,
 			}
 		}
 	}
-	if theory := s.theory(ctx, book, q); theory != "" {
-		fmt.Fprintf(&b, "\nThe book is %q. Your memory points to these pages for this problem's theory; search and read it for anything more.\n%s", book.Title, theory)
-	} else {
-		fmt.Fprintf(&b, "\nThe book is %q: search and read it for the theory the problem rests on.\n", book.Title)
-	}
+	fmt.Fprintf(&b, "\nThe book is %q: search and read it for the theory the problem rests on.\n", book.Title)
 	if len(parts) == 0 {
 		return llm.TextMessage("user", b.String()), shown, nil
 	}
@@ -754,68 +669,6 @@ func (s *Service) figureParts(ctx context.Context, book Book, q row) []llm.Part 
 		parts = append(parts, llm.TextPart(label+":"), llm.ImagePart("data:image/jpeg;base64,"+base64.StdEncoding.EncodeToString(img)))
 	}
 	return parts
-}
-
-// theoryPages bounds the pages memory puts in a guide's opening message.
-const theoryPages = 2
-
-// theoryDepth is how far down a search for the problem a remembered page
-// may rank. A problem's words match the problem pages around it best, so
-// the theory it rests on sits lower than a question's would.
-const theoryDepth = 30
-
-// theory is the text of the pages memory points to for a problem, so the
-// writer starts with them instead of spending a round, and all the
-// thinking a round costs, reading them. A page qualifies when a book
-// memory names it, it's in the problem's chapter, and a search for the
-// problem finds it: memory says the page is worth reading, the chapter
-// and the search that it's this problem's.
-func (s *Service) theory(ctx context.Context, book Book, q row) string {
-	if s.c.Memory == nil || doc.Empty(q.Statement) {
-		return ""
-	}
-	_, chapter, ok := problemLabel(q.Label, q.Text)
-	if !ok {
-		return ""
-	}
-	start, end, ok := book.span(fmt.Sprint(chapter))
-	if !ok {
-		return ""
-	}
-	notes, err := s.c.Memory.Notes(ctx, book.ID)
-	if err != nil {
-		return ""
-	}
-	named := map[int]bool{}
-	for _, n := range notes {
-		if n.Kind == "book" && n.Page >= start && n.Page <= end && (q.Page == nil || n.Page != *q.Page) {
-			named[n.Page] = true
-		}
-	}
-	if len(named) == 0 {
-		return ""
-	}
-	hits, err := s.c.Library.Search(ctx, book.ID, doc.Plain(q.Statement), theoryDepth)
-	if err != nil {
-		slog.Warn("guide: theory search", "question", q.ID, "err", err)
-		return ""
-	}
-	var b strings.Builder
-	n := 0
-	for _, p := range hits {
-		if !named[p] {
-			continue
-		}
-		text, err := s.c.Library.PageText(ctx, book.ID, p)
-		if err != nil || strings.TrimSpace(text) == "" {
-			continue
-		}
-		fmt.Fprintf(&b, "\n%s:\n%s\n", book.Pages.Name(p), clip(text, 5000))
-		if n++; n == theoryPages {
-			break
-		}
-	}
-	return b.String()
 }
 
 func clip(s string, n int) string {

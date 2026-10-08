@@ -22,9 +22,6 @@ type location struct {
 	Statement string
 	Rect      *pdf.Rect
 	Figures   []figure
-	// FromMemory is the range memory that led to the page, when it was
-	// one of its pages and nothing exact had pointed there.
-	FromMemory *Problems
 }
 
 // locate runs the ladder: a page the student pinned is the only
@@ -43,20 +40,7 @@ func (s *Service) locate(ctx context.Context, m model, book Book, q row) (locati
 		return loc, nil
 	}
 
-	// Memory's pages: where the problems seen so far in this chapter put
-	// this one.
-	var problems Problems
-	var remembered []int
 	ref, hasRef := questionRef(book, q)
-	labels := []string{q.Text, q.Label}
-	if hasRef {
-		labels = append([]string{ref.Label(book.Problems)}, labels...)
-	}
-	if label, chapter, ok := problemLabel(labels...); ok && s.c.Memory != nil {
-		if p, err := s.c.Memory.ProblemsSeen(ctx, book.ID, chapter); err == nil {
-			problems, remembered = p, rememberedPages(p.Seen, label)
-		}
-	}
 
 	// A reference the book's numbering can place is looked for where it
 	// must be, and only there: the same number elsewhere is another
@@ -67,7 +51,7 @@ func (s *Service) locate(ctx context.Context, m model, book Book, q row) (locati
 			return location{}, err
 		}
 		if sc, ok := scopeOf(book, ref, texts); ok {
-			loc, found, err := s.findInScope(ctx, m, book, q, sc, remembered, problems)
+			loc, found, err := s.findInScope(ctx, m, book, q, sc)
 			if err != nil {
 				return location{}, err
 			}
@@ -78,39 +62,23 @@ func (s *Service) locate(ctx context.Context, m model, book Book, q row) (locati
 		}
 	}
 
-	// Memory's pages go after the exact tiers: a few in the first round,
-	// the rest in the wider one.
 	tried := map[int]bool{}
-	for i, k := range []int{firstRound, widerRound} {
-		take := len(remembered)
-		if i == 0 {
-			take = min(take, firstRemembered)
-		}
-		cands, exact, err := s.candidates(ctx, book, q.Text, k, tried, remembered[:take])
+	for _, k := range []int{firstRound, widerRound} {
+		cands, err := s.candidates(ctx, book, q.Text, k, tried)
 		if err != nil {
 			return location{}, err
 		}
 		if len(cands) == 0 {
 			break
 		}
-		fromMemory := map[int]bool{}
 		for _, p := range cands {
 			tried[p] = true
-			if slices.Contains(remembered, p) && !exact[p] {
-				fromMemory[p] = true
-			}
-		}
-		if len(fromMemory) > 0 {
-			s.setActivity(ctx, q.ID, "Checking pages from memory…")
 		}
 		loc, ok, err := s.locateOnce(ctx, m, book, q, cands, "")
 		if err != nil {
 			return location{}, err
 		}
 		if ok {
-			if fromMemory[loc.Page] {
-				loc.FromMemory = &problems
-			}
 			return loc, nil
 		}
 	}
@@ -143,17 +111,13 @@ func (s *Service) locate(ctx context.Context, m model, book Book, q row) (locati
 const (
 	firstRound = 6
 	widerRound = 10
-	// firstRemembered is how many of memory's pages the first round shows.
-	firstRemembered = 3
 )
 
 // candidates picks the pages a locate round looks at, exact before
 // fuzzy: a printed page the question cites, pages that open a line with
-// its label, the pages memory points to, then search. exact is what the
-// first two tiers found.
-func (s *Service) candidates(ctx context.Context, book Book, text string, k int, exclude map[int]bool, remembered []int) ([]int, map[int]bool, error) {
+// its label, then search.
+func (s *Service) candidates(ctx context.Context, book Book, text string, k int, exclude map[int]bool) ([]int, error) {
 	var out []int
-	exact := map[int]bool{}
 	seen := map[int]bool{}
 	add := func(p int) {
 		if p >= 1 && p <= book.PageCount && !exclude[p] && !seen[p] && len(out) < k {
@@ -165,7 +129,6 @@ func (s *Service) candidates(ctx context.Context, book Book, text string, k int,
 		// The page cited, then the pages either side: a problem runs over
 		// onto the next page, and a student's page number can be one off.
 		at := book.Pages.Nearest(printed)
-		exact[at] = true
 		add(at)
 		add(at + 1)
 		add(at - 1)
@@ -173,24 +136,20 @@ func (s *Service) candidates(ctx context.Context, book Book, text string, k int,
 	if label, ok := questionLabel(text); ok {
 		texts, err := s.c.Library.PageTexts(ctx, book.ID)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		for _, p := range labelScan(texts, label) {
-			exact[p] = true
 			add(p)
 		}
 	}
-	for _, p := range remembered {
-		add(p)
-	}
 	hits, err := s.c.Library.Search(ctx, book.ID, text, k+len(exclude))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	for _, p := range hits {
 		add(p)
 	}
-	return out, exact, nil
+	return out, nil
 }
 
 // pinnedHint is what the model is told about a pinned page's problem: the

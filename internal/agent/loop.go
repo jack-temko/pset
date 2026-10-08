@@ -54,11 +54,10 @@ type Loop struct {
 	// System is the system prompt. Run sends it ahead of the messages,
 	// with memory's rules and notes after it, fresh every round.
 	System string
-	// Memory, when set, gives the model remember, and the notes go in the
-	// prompt.
+	// Memory, when set, puts the student's preferences in the prompt.
 	Memory Memory
-	// Student says the student is in the conversation (Ask): remember can
-	// save as theirs, and forget exists.
+	// Student says the student is in the conversation (Ask): only then
+	// does the model have remember and forget.
 	Student bool
 	// Remembered fires after remember saves (Saved) or replaces
 	// (Replaced) a note, once its step is finished.
@@ -86,11 +85,6 @@ type Loop struct {
 	// far, for a caller that saves it to carry on after a restart: Run
 	// takes those messages back and goes on from the next round.
 	Round func(msgs []llm.Message)
-	// Complete reports whether the answer written so far is whole. A
-	// round that completes it and calls only remember ends the run once
-	// the saves are done: asked again, a model only adds a sign-off to
-	// an answer that was finished.
-	Complete func() bool
 
 	// seen is the pages in view this run: Shown, and every view_page.
 	seen map[int]bool
@@ -103,11 +97,8 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 		rounds = 8
 	}
 	tools := Tools
-	if l.Memory != nil {
-		tools = append(append([]llm.Tool{}, Tools...), rememberTool(l.Student))
-		if l.Student {
-			tools = append(tools, forgetTool)
-		}
+	if l.Memory != nil && l.Student {
+		tools = append(append([]llm.Tool{}, Tools...), rememberTool, forgetTool)
 	}
 	l.seen = map[int]bool{}
 	for _, p := range l.Shown {
@@ -213,8 +204,7 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 			// Whatever it said before reaching for a tool ends its line.
 			l.Delta("\n")
 		}
-		finished := onlyRemembers(reply.ToolCalls) && l.Complete != nil && l.Complete()
-		if wrote && l.Aside != nil && !finished {
+		if wrote && l.Aside != nil {
 			l.Aside()
 		}
 		msgs = append(msgs, llm.AssistantToolMessage(reply))
@@ -235,9 +225,6 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 				content.AppendPart(p)
 			}
 			msgs = append(msgs, llm.Message{Role: "user", Content: content})
-		}
-		if wrote && finished {
-			return nil
 		}
 		if l.Round != nil {
 			l.Round(msgs)
@@ -286,16 +273,6 @@ func flatten(msgs []llm.Message) []llm.Message {
 		content.AppendPart(p)
 	}
 	return []llm.Message{msgs[0], {Role: "user", Content: content}}
-}
-
-// onlyRemembers is a round whose calls all save to memory.
-func onlyRemembers(calls []llm.ToolCall) bool {
-	for _, c := range calls {
-		if c.Function.Name != "remember" {
-			return false
-		}
-	}
-	return len(calls) > 0
 }
 
 // cutRetries is how many cut-off rounds one run asks again.

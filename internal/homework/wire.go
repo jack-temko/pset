@@ -158,9 +158,6 @@ type Question struct {
 	// guide — spent on model calls, once it has finished; nil until it
 	// has made a call, and nothing is drawn.
 	Usage *usage.Usage `json:"usage,omitempty"`
-	// Memory is what writing this guide did with the book's memory: what
-	// it saved, and a remembered range that found the problem.
-	Memory []MemoryLine `json:"memory"`
 	// Revealed names the stages the student has lifted the veil on: hint,
 	// walkthrough, answers.
 	Revealed []string `json:"revealed"`
@@ -185,25 +182,6 @@ type Question struct {
 	// changed. Of two snapshots of one question, the higher Rev is newer:
 	// the client keeps it, whichever arrives last.
 	Rev int `json:"rev"`
-}
-
-// MemoryUse is what a guide did with a memory.
-type MemoryUse string
-
-const (
-	MemoryUseSaved   MemoryUse = "saved"
-	MemoryUseUpdated MemoryUse = "updated"
-	MemoryUseFound   MemoryUse = "found"
-)
-
-// MemoryLine is one line under a walkthrough: a memory the writer saved
-// or updated (with Undo), or one locate found the problem by. Page is a
-// PDF page.
-type MemoryLine struct {
-	MemoryID string    `json:"memoryId"`
-	Use      MemoryUse `json:"use"`
-	Text     string    `json:"text"`
-	Page     *int      `json:"page,omitempty"`
 }
 
 // Detail is GET /api/homework/{id}.
