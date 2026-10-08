@@ -12,8 +12,7 @@ assignment", "The professor's notes", "Boxing a problem on the page") and
 set, ordered by `position`; the statement, professor's notes, page,
 `pinned_page`, `rect` and `figures` once found, the boxes the student drew,
 the figure `reading` and its `reading_doubts`, the `hint` and
-`walkthrough` blocks, `revealed`, saved tool `rounds` and the `memory` lines
-its guide made, `state`, `failure` and `reason`, and a `rev` that a
+`walkthrough` blocks, `revealed`, saved tool `rounds`, `state`, `failure` and `reason`, and a `rev` that a
 trigger bumps on every change so no write can forget it), and
 `assignment_reads` (an imported PDF, page or text being read in the
 background, and its result until the student reviews it). Both cascade
@@ -66,7 +65,7 @@ looked for there and only there (`scope.go`): a section's pages from its
 Problems heading to its end, a chapter's problems, or a cited page and
 its neighbours. The page whose text has the problem's own line ("7."
 after the section's heading, "4.25 ...", "2.1.4 ...") comes first, then
-the pages memory points to, then the rest of the span, a few at a time.
+then the rest of the span, a few at a time.
 
 **Where the text can't say, the contents and the Reader do** (2026-10-08).
 A chapter whose pages have no text, or lost it, has no heading or
@@ -90,7 +89,7 @@ with the same number and doesn't count; a reference that can't be found
 there fails as "Looked through Section 3.1 (p. 106 to p. 112)...", rather
 than landing on a wrong page. References that name no numbers, and
 books without contents, keep the older ladder: exact tiers, search,
-memory, then a sweep of the chapter.
+then a sweep of the chapter.
 
 **Figures are read out before the guide** (2026-09-24). A misread
 figure was the likeliest way for a guide to be wrong: the 4.25 guide had
@@ -117,9 +116,8 @@ A reading that fails leaves none, and the guide reads the figures itself.
 
 **The writer sees the problem's figures, not its page.** A problem with
 figures opens with them cut from the page (as the walkthrough shows
-them, from the wider render); one without gets the page. The pages memory names that a search
-for the problem also finds open the guide too, so the writer doesn't
-spend a round reading them. Each tool round is saved on the question as
+them, from the wider render); one without gets the page. The writer reads the student's
+preferences from memory but cannot save one. Each tool round is saved on the question as
 it finishes, so a restart, or a retry of the same problem, carries on
 from the last round instead of starting over. A model's reasoning goes
 back with its turn through OpenRouter, so it carries on from its own

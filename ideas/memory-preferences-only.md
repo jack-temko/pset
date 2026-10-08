@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress, branch `memory-preferences-only`.
+**Done** · branch `memory-preferences-only` (2026-10-08). Spec in `design/memory.md`.
 
 ## Information
 

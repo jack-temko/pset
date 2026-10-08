@@ -32,10 +32,10 @@ budget: open a set in 1 click from the list. Per question with a written guide: 
   - `AddHomeworkDialog`, `HomeworkDialog` (edit title and date)
 - `Walkthrough` (one set), keyed by the set
   - header, one row: Back, set title (truncates), Turned in label, the count as a `Menu` ("Questions": each question with a check when done, a spinner and its stage ("Writing the guide") while it is being worked on, an alert icon when failed, the current one washed and in primary ink, "All done" once every one is, which opens the finish page), time left in gray, the set `Menu` (Add questions, Box one on the page, Edit, Print worksheet, Turn in, Delete); the `ProgressBar` is the row's bottom edge
-  - question row: label, done check, **Show in book** button (only when it has a page), question `Menu` (Move up, Move down, This isn't the right problem, Edit or Add the professor's instructions, Check how the figure reads, What the guide remembered, Remove this question)
+  - question row: label, done check, **Show in book** button (only when it has a page), question `Menu` (Move up, Move down, This isn't the right problem, Edit or Add the professor's instructions, Check how the figure reads, Remove this question)
   - statement (`Runs`), figures, `ProfessorNotes` (read-only box; its editing state is opened from the question menu), `FigureReading` (only when flagged "Check it", or asked for)
   - `FailedQuestion` (title, reason, the ways out by failure kind, paste-the-problem fallback)
-  - `WorkingLine` or a waiting sentence; `HelpRows` (three `Disclosure` rows; Writing or Waiting while they are not there yet); `MemoryLines` (only when asked for); `UsageLine`
+  - `WorkingLine` or a waiting sentence; `HelpRows` (three `Disclosure` rows; Writing or Waiting while they are not there yet); `UsageLine`
   - footer: Ask about this, and the one primary button (`Button`, primary for Next question, outline for the others)
   - Focus: the same pieces in two columns, the question on the left, the help on the right
 - `Finish`: greeting line (`greetings.ts`, Home's seven stretches), two `StatTile`s, the time-per-question bars, `Box` of the hardest, footer with Back to list and Turn in
@@ -113,7 +113,7 @@ What the view computes itself, from the questions: the marks, "n of m", where Ne
 - **Skip for now never marks anything done.** A question that cannot be finished yet is not finished. It keeps coming back until it is done.
 - **Rows that open in place, not veils.** The length is said in words before you open it, and what you opened stays open. Rejected: frosted glass (Jack: "I don't like the frosted").
 - **One way to edit the professor's notes.** The question's menu; the box is read-only. Rejected: a second Edit button on the box.
-- **Hidden until asked:** the figure's reading (unless flagged), the guide's memory lines, move and remove, the notes prompt, "Not the right problem?". The student rarely needs them; the question menu holds them.
+- **Hidden until asked:** the figure's reading (unless flagged), move and remove, the notes prompt, "Not the right problem?". The student rarely needs them; the question menu holds them.
 - **The estimate must never be confidently wrong.** Nothing until two questions are timed; "about"; rounded to five minutes; a range when the spread is wide; never a live countdown. The guard lives in `timeLeftWords` and in the backend's estimate, and a test feeds timed sets to check its error.
 - **A book opens on the Homework list, and both tabs stay mounted.** Ask and back is the same question with nothing to remember; a reload resets, on purpose.
 - **A wait shows only once it has lasted** (`useSettled`), so a step that takes a moment never flashes a state.

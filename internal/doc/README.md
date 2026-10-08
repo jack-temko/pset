@@ -51,8 +51,7 @@ document**: text a guide writes in a round that ends in tool calls is
 narration and is dropped (`agent.Loop.Aside`), and so is text before the
 first block ("Here is the guide."). Ask's blocks may come between tool
 calls; its step feed records how many blocks were written when each call
-ran. A guide is `Complete` once a hint and an answer have arrived, so a
-guide that writes itself and then calls `remember` is finished.
+ran. A guide is `Complete` once a hint and an answer have arrived.
 
 **Checks, in order, for each block:** its schema; the split; TeX or a
 math delimiter left in plain text; every math run, `tex` field and
@@ -102,7 +101,7 @@ so the endpoint's implicit cache holds the long prefix.
 
 **The wipe** (migrations `homework/12` and `ask/2`, 2026-09-29): every
 Ask turn deleted; every question's `hint`, `walkthrough`, `revealed`,
-saved rounds and the memory lines its guide made cleared, and a question
+saved rounds cleared, and a question
 that had a guide set to `unwritten`; statements, notes and readings
 re-split into runs. Books, sets, questions, due dates and Complete marks
 stay. An `unwritten` question offers **Write the guide**

@@ -183,7 +183,7 @@ delete asks first. Two rules keep that consistent:
   from a menu, the menu stays open behind it. A delete that is a single
   inline control (a question's trash, the conversation's Clear) asks the
   same way. Two things don't ask: a Memory, deleted in its dialog at
-  once, since each is one sentence and the tutor's own saves have Undo;
+  once, since each is one sentence and Ask's saves have Undo;
   and Dismiss on a failed import, which holds nothing of yours yet.
 
 **Informing, not asking** *(2026-09-30, Jack: superseded for usage. What a job spent is now one muted line of text on the page, model, time, tokens, cost, with no popover; `web/src/components/usage/README.md`. The geometry below is kept for the next thing that wants to inform from a line.)* (2026-09-29). The same geometry serves the

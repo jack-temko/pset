@@ -20,7 +20,7 @@ internal/
   library           books, import, pages, scans, contents, search
   homework          sets, questions, locate, walkthroughs, due, worksheet PDF
   ask               turns, the tutor's turn as a job
-  memory            what the tutor keeps about a book and the student
+  memory            the student's preferences for a book
   settings          the key, health, reset, about
   activity          stretches of study, the week's stats
   agent             the tool loop Ask and homework guides both run: the tools,
