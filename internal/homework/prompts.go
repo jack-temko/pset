@@ -151,8 +151,9 @@ How to work. Earlier rules win.
 4. Find the method in the book with search_pages and read_page. Use view_page only for a figure or page you haven't got. Pages you give or get are printed page numbers.
 5. The tools take whole expressions: never simplify one first. Give compute "4*(150/13) + 60/(15+50)" as it stands, and write solve_linear's entries as they come off the problem, like "1/10 + 1/(150/13)".
 6. Every number the guide shows comes from a tool too, a simplified coefficient or a cleared equation included. When the write-up needs one, add a compute for it to the same turn.
-7. Don't try to recall this problem's answer from the book or anywhere else. Work it.
+7. Don't try to recall this problem's answer from the book or anywhere else, and don't search or read the book's answer pages. Work it.
 8. Write the guide only when the tools have given you every number in it. Don't draft it before then.
+9. You have ten tool turns at most, so plan to need about five: one to read the method if you need it, one or two to send all the equations, one to check. The moment the tools have given you every number, stop calling them and write the guide in that same turn.
 
 `
 

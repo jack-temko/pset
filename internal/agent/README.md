@@ -6,11 +6,15 @@ guide checks its work exactly as an answer does.
 - **Tools** (printed page numbers in and out; the library speaks PDF
   pages, and each tool converts once): `search_pages`, `read_page` (up to
   three pages), `view_page` (the image goes into the model's context as
-  the next user message), `compute` and `solve_linear` (mathx, exact).
+  the next user message), `compute` (a list of expressions in one call,
+  a numbered line each) and `solve_linear` (mathx, exact).
 - **`Loop.Run`** streams a round, runs any tool calls, and goes again,
-  until the model answers without a tool or `Rounds` runs out (then it's
-  told to answer with what it has). Each assistant turn keeps its
-  reasoning, which the llm client sends back to endpoints that take it.
+  until the model answers without a tool or `Rounds` runs out. Then it's
+  told to answer with what it has, the tools still declared and
+  `tool_choice: "none"`; a model that calls one anyway (Gemini did) is
+  asked once more with its work written out as plain text and no tools.
+  Each assistant turn keeps its reasoning, which the llm client sends
+  back to endpoints that take it.
 - **Carrying on**: `Round` hands the caller the conversation after each
   tool round. Given those messages back, `Run` goes on from the next
   round, counting the ones before toward `Rounds`.

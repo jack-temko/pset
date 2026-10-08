@@ -61,8 +61,12 @@ host:
 
 - **OpenRouter** (`openrouter.ai`): `reasoning: {effort}` (or `{enabled:
   true}` when no effort is asked for); the model's reasoning sent back on
-  its assistant turns as `reasoning`, so it carries on from its own
-  thinking after each tool call; `provider: {quantizations: [fp8, fp16,
+  its assistant turns as `reasoning`, and as `reasoning_details` (the
+  structured blocks, signatures included, put back together from the
+  stream), so it carries on from its own thinking after each tool call.
+  Anthropic and Gemini models need the details: without them Haiku 5.5
+  lost its plan every round and failed a quarter of hard guides
+  (2026-10-07); `provider: {quantizations: [fp8, fp16,
   bf16, fp32, unknown], sort: "throughput"}`, so no host running 4-bit
   weights serves PSet and the fastest host comes first (a model's hosts
   differ several times over in speed);
