@@ -16,14 +16,15 @@ when they were tested side by side (design/backend.md, "Models"):
 
 | Job | Model | Falls back to |
 |---|---|---|
-| `Writer`: guides, Ask, assignment reads, contents, repairs | `deepseek/deepseek-v4.1-flash` | |
+| `Writer`: guides, Ask, assignment reads, contents, repairs | `anthropic/claude-haiku-5.5` | `deepseek/deepseek-v4.1-flash` |
 | `Finder`: finds a problem on its pages, boxes it and its figures | `perceptron/perceptron-mk1.5`, plain | `z-ai/glm-5.3-flash` |
-| `Reader`: writes out a problem's words and reads its figures | `openai/gpt-6-luna` | `z-ai/glm-5.3-flash` |
+| `Reader`: writes out a problem's words and reads its figures | `google/gemini-3.8-flash` | `openai/gpt-6-luna` |
 
 `Job.Ask` fills a request in for its job. **Fallbacks** go to OpenRouter
 as `models`, after the model itself: OpenRouter tries the next when one
 fails or is rate limited. The Finder's model has one host, and OpenRouter
-held a new account to 20 calls a minute of the Reader's, which a problem
+held a new account to 20 calls a minute of Luna, the Reader's fallback and
+the Reader before Gemini, which a problem
 set's readings go over. That limit isn't published anywhere: it came back
 in the 429's own words ("new accounts are limited to 20 requests per
 minute for this model"), and a burst of 60 calls got 9 through. Whether

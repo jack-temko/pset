@@ -29,22 +29,27 @@ type Job struct {
 
 var (
 	// Writer writes: guides, Ask's answers, assignment reads, a book's
-	// contents, and the document's repairs. It taught best, with the
-	// book's theorems cited and notes where a student trips.
-	Writer = Job{Name: "Guides and Ask", Model: "deepseek/deepseek-v4.1-flash"}
+	// contents, and the document's repairs. On 22 hard guides (2026-10-08)
+	// it got 20 right, for $0.0075 a guide in 26 s; DeepSeek, the Writer
+	// before it and now behind it, got 18 for three times the price. It
+	// needs its signed reasoning back between tool rounds
+	// (reasoning_details), or it loses its plan.
+	Writer = Job{Name: "Guides and Ask", Model: "anthropic/claude-haiku-5.5",
+		Fallbacks: []string{"deepseek/deepseek-v4.1-flash"}}
 	// Finder finds a problem on its pages and boxes it and its figures.
 	// It boxed every figure of 23, in two seconds; thinking made it
 	// slower and worse. It has one host.
 	Finder = Job{Name: "Finding problems", Model: "perceptron/perceptron-mk1.5",
 		Fallbacks: []string{"z-ai/glm-5.3-flash"}, Plain: true}
 	// Reader writes out what a page shows: a problem's words, and its
-	// figures as facts. It read every circuit right, for a tenth of the
-	// Writer's price. OpenRouter held the eval key's account, a new one,
-	// to 20 calls a minute of it ("new accounts are limited to 20
-	// requests per minute for this model", its 429 said; it isn't
-	// published), which a problem set's readings go over.
-	Reader = Job{Name: "Reading figures", Model: "openai/gpt-6-luna",
-		Fallbacks: []string{"z-ai/glm-5.3-flash"}}
+	// figures as facts. On the scanned DE book and the circuits book
+	// (2026-10-08) it wrote out 44 problems of 44 right and read 27
+	// figures of 28, where Luna, the Reader before it and now behind it,
+	// got 38 and 24, and misread the same figures every time (a 120v_o
+	// read as 12v_o), which the three readings can't catch. It costs
+	// about 8 times Luna: $0.0016 a problem, $0.019 a figure.
+	Reader = Job{Name: "Reading figures", Model: "google/gemini-3.8-flash",
+		Fallbacks: []string{"openai/gpt-6-luna"}}
 )
 
 // Jobs is every job, in the order Settings lists them.

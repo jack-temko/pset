@@ -321,11 +321,23 @@ and the probability book, through the eval key:
   box stands. It's one more call, $0.001 to $0.002 and 3 to 7 s. OCR was
   tried first as the anchor, and Tesseract read the direction fields of
   a scanned page as text and lost the problem numbers around them.
-- **Reader**, `openai/gpt-6-luna`, with GLM-5.3-Flash behind it. Thirteen
-  circuits read into netlists and graded by solving them: 13 right of 13,
-  then 16 of 16, at $0.0004 a reading; DeepSeek got 11 and 36 of 39, at
-  nine times the price. It writes out each found problem, and reads the
-  figures, three times and then settled.
+- **Reader**, `google/gemini-3.8-flash`, with Luna behind it
+  (2026-10-08). It writes out each found problem, and reads the figures,
+  three times and then settled. On 22 hard problems, 11 from the scanned
+  differential equations book and 11 circuits, two runs each: every
+  write-out right (44 of 44; Luna 38, Haiku 5.5 37) and 27 figures of 28
+  (Luna 24, Haiku 26). Luna's misses repeated run after run: 4.71's
+  120v_o read as 12v_o all three times, Figure 7.6.6's capacitor arrow
+  backwards twice. A misread that every reading shares gets past the
+  settling, so a Reader that misses at random is worth more than its
+  count. It costs about 8 times Luna, $0.0016 a write-out and $0.019 a
+  figure: a set of 10 problems with 5 figures reads for about $0.11.
+  It once wrote displayed math as a bare `\begin{align*}`, 1 in 44.
+
+  **Before** (2026-09-29): `openai/gpt-6-luna`, with GLM-5.3-Flash behind
+  it. Thirteen circuits read into netlists and graded by solving them: 13
+  right of 13, then 16 of 16, at $0.0004 a reading; DeepSeek got 11 and 36
+  of 39, at nine times the price.
 
   **Writing a problem out** (2026-09-29) keeps what the tutor needs and
   nothing else. The book's part letters as printed: a part a. that is
@@ -338,12 +350,19 @@ and the probability book, through the eval key:
   Twelve problems from both books, the differential equations book's
   shared lists, a lead-in part and a run's intro among them, came out
   right; before, two in six lost what they needed.
-- **Writer**, `deepseek/deepseek-v4.1-flash`. Six guides each: DeepSeek 5
-  right, 5 s to 2.5 min, $0.14; Luna 5 right, 20 s to 2 min, $0.04; GLM 6
-  right but 4 to 13 minutes, $0.13. DeepSeek's teach best: the book's
-  theorems cited, notes where a student trips, checks. Luna's are plainer,
-  and OpenRouter held a new account to 20 calls a minute of it (not
-  published; its 429 said so), which six guides at once went over.
+- **Writer**, `anthropic/claude-haiku-5.5`, with DeepSeek behind it
+  (2026-10-08). On the same 22 hard problems, every Writer starting from
+  the same readings: Haiku 20 right, $0.0075 a guide, 26 s (slowest 66 s);
+  Gemini 3.8 Flash 20, $0.12, 117 s; DeepSeek 18, $0.021, 32 s (slowest
+  278 s). Haiku teaches more plainly: 14 citations of the book across the
+  22, DeepSeek 49, Gemini 71. It needs its signed reasoning back between
+  tool rounds (OpenRouter's `reasoning_details`): without it, it lost its
+  plan and got 14. Sonnet 5.5 wasn't tried: 20 times Haiku's price.
+
+  **Before** (2026-09-29): `deepseek/deepseek-v4.1-flash`. Six guides
+  each: DeepSeek 5 right, 5 s to 2.5 min, $0.14; Luna 5 right, 20 s to 2
+  min, $0.04; GLM 6 right but 4 to 13 minutes, $0.13. DeepSeek's taught
+  best: the book's theorems cited, notes where a student trips, checks.
 
 A self-reported confidence was tried on the readings and doesn't tell:
 wrong readings claimed 88 to 96 out of 100, right ones 78 to 100. Three
