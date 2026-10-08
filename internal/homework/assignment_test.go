@@ -234,10 +234,15 @@ func TestReadingAnAssignmentFromAWebPage(t *testing.T) {
 	if e.do(t, "GET", "/api/books/b1/assignments/reads", nil, &list); len(list.Reads) != 1 || list.Reads[0].ID != r.ID {
 		t.Fatalf("reads %+v", list)
 	}
-	if !slices.ContainsFunc(e.events.all(), func(ev string) bool {
+	// The event follows the saved state, so a busy machine can see the
+	// state first: it's waited for, not looked for once.
+	readyEvent := func(ev string) bool {
 		return strings.HasPrefix(ev, EventReadChanged) && strings.Contains(ev, `"state":"ready"`)
-	}) {
-		t.Fatalf("no ready event: %v", e.events.all())
+	}
+	for deadline := time.Now().Add(5 * time.Second); !slices.ContainsFunc(e.events.all(), readyEvent); time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("no ready event: %v", e.events.all())
+		}
 	}
 
 	// A page that isn't there fails on the read, said plainly; one that
