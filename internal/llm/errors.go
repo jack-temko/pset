@@ -61,7 +61,9 @@ var (
 		Action: errs.ActionRetry,
 		Status: http.StatusBadGateway,
 	})
-	modelUnreachable = errs.Define(errs.Entry{
+	// ModelUnreachable is a call that never got an answer: no connection, or
+	// no reply in time.
+	ModelUnreachable = errs.Define(errs.Entry{
 		ID:     "model.unreachable",
 		What:   "PSet couldn't reach OpenRouter.",
 		Why:    "The internet connection is down, or OpenRouter didn't answer in time.",

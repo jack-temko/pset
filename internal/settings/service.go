@@ -11,12 +11,13 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 )
 
@@ -112,7 +113,7 @@ const maxName = 60
 func (s *Service) SaveProfile(ctx context.Context, p Profile) (Profile, error) {
 	p.Name = strings.Join(strings.Fields(p.Name), " ")
 	if len([]rune(p.Name)) > maxName {
-		return Profile{}, httpx.Invalid("name", "Keep it under %d characters.", maxName)
+		return Profile{}, nameTooLong.New("max", strconv.Itoa(maxName)).OnField("name")
 	}
 	return p, save(ctx, s.c.DB, keyProfile, p)
 }
@@ -151,7 +152,7 @@ func (s *Service) Test(ctx context.Context, in KeyInput) (TestResult, error) {
 	defer cancel()
 	key := strings.TrimSpace(in.APIKey)
 	if key == "" {
-		return TestResult{}, httpx.Invalid("apiKey", "Paste your OpenRouter key first.")
+		return TestResult{}, keyEmpty.New().OnField("apiKey")
 	}
 	if err := s.c.Dialer.Chat(ctx, key); err != nil {
 		return TestResult{}, explain(err)
@@ -173,31 +174,19 @@ func (s *Service) Save(ctx context.Context, in KeyInput) (SaveResult, error) {
 	return SaveResult{Settings: cur, Detail: r.Detail}, err
 }
 
-// explain turns a failed test into what to do about it: on the key when
-// the key is the trouble, else said in general.
+// explain turns a failed test into what to do about it: the cause is in the
+// chain (a refused key, no credit, no connection), and the notice points at
+// the key field.
 func explain(err error) error {
-	var le *llm.CallError
-	if errors.As(err, &le) {
-		switch {
-		case llm.OutOfCredit(le.Status, le.Body):
-			return httpx.Errorf(httpx.CodeBadKey, "This account is out of credit (%d). Top it up at openrouter.ai, then test again.", le.Status).OnField("apiKey")
-		case le.Status == 401 || le.Status == 403:
-			return httpx.Errorf(httpx.CodeBadKey, "OpenRouter refused this key (%d).", le.Status).OnField("apiKey")
-		case le.Status == 404 || strings.Contains(strings.ToLower(le.Body), "model"):
-			return httpx.Errorf(httpx.CodeBadModel, "OpenRouter doesn't know a model PSet uses (%d). PSet needs an update.", le.Status)
-		default:
-			return httpx.Errorf(httpx.CodeUnreachable, "OpenRouter answered with an error (%d). Try again in a minute.", le.Status)
+	var cause *errs.Error
+	if !errors.As(err, &cause) {
+		var ne net.Error
+		var ue *url.Error
+		if errors.Is(err, context.DeadlineExceeded) || errors.As(err, &ne) || errors.As(err, &ue) {
+			err = llm.ModelUnreachable.Wrap(err)
 		}
 	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return httpx.Errorf(httpx.CodeUnreachable, "OpenRouter didn't answer in time. Try again in a minute.")
-	}
-	var ne net.Error
-	var ue *url.Error
-	if errors.As(err, &ne) || errors.As(err, &ue) {
-		return httpx.Errorf(httpx.CodeUnreachable, "Can't reach OpenRouter. Check the internet connection.")
-	}
-	return httpx.Errorf(httpx.CodeUnreachable, "The test failed: %v", err)
+	return testFailed.Wrap(err).OnField("apiKey")
 }
 
 // About is the version and where the data lives.

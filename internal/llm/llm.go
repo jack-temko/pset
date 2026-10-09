@@ -989,7 +989,7 @@ func (c *Client) doWithRetry(ctx context.Context, url string, body any) (*http.R
 		}
 		resp, err := c.http.Do(httpReq)
 		if err != nil {
-			return nil, modelUnreachable.Wrap(fmt.Errorf("model request failed: %w", err))
+			return nil, ModelUnreachable.Wrap(fmt.Errorf("model request failed: %w", err))
 		}
 		if resp.StatusCode == http.StatusOK {
 			return resp, nil
