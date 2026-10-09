@@ -117,6 +117,7 @@ function UsageDetail({
       open={open}
       onClose={onClose}
       name={name}
+      kind={source.kind}
       detail={detail ?? q.data}
       loading={detail === undefined && q.isPending}
       error={detail === undefined && q.isError}

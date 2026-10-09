@@ -20,24 +20,24 @@ skeleton draws its last known count (3 the first time); D7 numbers in a sentence
 prefetched and hold a fixed-width slot; A1 every font preloaded; A2 the book usage
 aggregate prefetches as the pointer reaches the Book actions menu; A3 usage stays
 cached and refreshes on events; A4 the fade is opacity only, ease-out, off under
-reduced motion; D9 when content and skeleton differ in height by more than 2px,
-`Loaded` morphs the box from one to the other over 200ms ease-out while the skeleton
-fades out and the content fades in (cached data and reduced motion: instant).
+reduced motion; D9 (a height morph for a mismatched skeleton) was tried and dropped: it jittered.
+The skeleton and content crossfade in one grid cell instead, skeletons are made
+exact, and the jump check enforces it.
 
 ### Files
 
 - `web/src/components/loaded/index.tsx` (new): `Loaded<T>({ query, skeleton,
   children: (data: T) => ReactNode, className? })`, taking a TanStack query result.
-  - Pending: renders `skeleton` always, so its space is held from the first frame.
-    For the first 300ms (`GRACE_MS` from `lib/settled.ts`) the skeleton is invisible
-    (`visibility: hidden`, still in layout); after that it shimmers.
-  - Data: renders `children(data)`. If the first render was pending, the content gets
-    the `fade-in` utility; if data was there at first render (cached), no fade.
-  - Morph (D9): the skeleton's height is kept while it shows; on data the content renders
-    in a wrapper at that height (overflow hidden) with the skeleton on top fading out, then
-    the height eases to the content's and the skeleton goes. Within 2px: no morph.
-  - Error: one line of muted destructive text, inside the same box.
-  - `aria-busy` on its element while pending.
+  - Pending: renders `skeleton` in a layer, so its space is held from the first frame.
+    For the first 300ms (`GRACE_MS` from `lib/settled.ts`) it is transparent (still in
+    layout); then it fades in over 150ms and shimmers.
+  - Data: `children(data)` in a content element that never remounts. Data inside the grace
+    or cached at first render shows at once, no fade. Otherwise skeleton and content share
+    one grid cell and crossfade over 150ms (content 0 to 1 on top, skeleton 1 to 0
+    underneath), then the skeleton unmounts. Reduced motion: instant.
+  - Error (only when there is no data): one `role="status"` line, `errorText` (neutral
+    default). `aria-busy` on the wrapper while pending.
+  - D9, a height morph, was built and dropped: it jittered and flashed.
 - `web/src/components/loaded/index.test.tsx` (new): skeleton in layout but hidden
   during the grace and visible after it (fake timers); content fades only after a
   pending first render; cached data renders without the fade; `aria-busy`; error.
@@ -70,9 +70,10 @@ fades out and the content fades in (cached data and reduced motion: instant).
   width is the last shown text's length in `ch` (`useLastCount`-style, saved per
   key), so the sentence never reflows.
 - `web/src/main.tsx` (or `index.html`): preload the three font families at start
-  (`document.fonts.load` for each family's normal style, not awaited, or
-  `<link rel=preload>` for the woff2 files if Vite exposes stable URLs in dev and
-  build); pick the one that works in both and say which.
+  (`document.fonts.load` for each family's normal style, not awaited; chosen over
+  `<link rel=preload>` because it works the same in dev and build). Only the latin and
+  latin-ext subsets load at start (the app's text and figures); Greek, Cyrillic and
+  Vietnamese load on first use.
 - `web/src/pages/components/sections/feedback.tsx`: a `Loaded` entry with a demo
   (buttons for pending, loaded, cached, error; a slow mode) and its README as docs.
   Fix the Skeleton entry's note (:276), which says it doesn't pulse; it shimmers.

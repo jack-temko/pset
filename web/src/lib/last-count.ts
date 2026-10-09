@@ -31,3 +31,29 @@ export function useLastCount(key: string, count?: number, fallback = 3): number 
   }, [key, count])
   return last
 }
+
+/**
+ * The same for a list's shape, not just its length: whatever small JSON value
+ * the skeleton needs to draw rows the way the content did (which rows had a
+ * second line, say). `fallback` is drawn when nothing valid is saved.
+ */
+export function useLastShape<T>(key: string, shape: T | undefined, fallback: T): T {
+  const [last] = useState<T>(() => {
+    try {
+      const raw = localStorage.getItem(storeKey(key))
+      return raw === null ? fallback : (JSON.parse(raw) as T)
+    } catch {
+      return fallback
+    }
+  })
+  const json = shape === undefined ? undefined : JSON.stringify(shape)
+  useEffect(() => {
+    if (json === undefined) return
+    try {
+      localStorage.setItem(storeKey(key), json)
+    } catch {
+      // Storage may be off; the skeleton then draws the fallback.
+    }
+  }, [key, json])
+  return last
+}

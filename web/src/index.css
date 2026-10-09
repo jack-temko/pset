@@ -388,6 +388,16 @@
         animation: none;
     }
 }
+@keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+@utility fade-out {
+    animation: fade-out 150ms ease-out forwards;
+    @media (prefers-reduced-motion: reduce) {
+        animation: none;
+    }
+}
 @utility skeleton {
     background-color: var(--muted);
     background-image: linear-gradient(

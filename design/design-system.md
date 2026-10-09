@@ -285,27 +285,28 @@ fade, `aria-busy` and the error line, so screens cannot drift apart.
 
 | Surface | Before data | When it arrives |
 |---|---|---|
-| Dialog, popover | Prefetched; else opens at final size with a skeleton | 150ms fade in place |
-| Page section, list | Skeleton in the real layout, at the last known count | 150ms fade in place |
+| Dialog, popover | Prefetched (so far the usage dialogs and Reset everything); else opens at final size with a skeleton | 150ms crossfade in place |
+| Page section, list | Skeleton in the real layout, at the last known count | 150ms crossfade in place |
 | Value in a sentence | Prefetched; else a slot of fixed width | The number appears, nothing reflows |
 | Any wait under 300ms | Nothing drawn | Content at once |
 | Cached data | Content at once, no fade | |
 
-- **The fade is 150ms**, opacity only, ease-out (`fade-in` in `index.css`), and off under
-  reduced motion. Content that replaces a skeleton fades; cached content never does.
-- **A mismatched skeleton morphs** (D9): if the content's height is more than 2px off the
-  skeleton's, `Loaded` eases the box between them over 200ms ease-out while the skeleton
-  fades out and the content fades in. Cached data and reduced motion skip it. It is a
-  safety net, not a licence: the CI check still fails a skeleton off by more than 2px.
-- **Overlays prefetch**: as the pointer or focus reaches the trigger (a usage line, the
-  Book actions menu), so the dialog usually opens complete. Usage stays cached and
+- **The fade is 150ms**, opacity only, ease-out (`fade-in`, `fade-out` in `index.css`), and
+  off under reduced motion. A skeleton that was seen crossfades with its content in one grid
+  cell, so no frame is empty; data inside the 300ms grace, and cached data, appear at once.
+  The skeleton itself fades in over 150ms when the grace ends.
+- **Skeletons are exact, not morphed.** A height animation between a skeleton and its content
+  was tried (D9, 2026-10-09) and dropped: it jittered. The skeleton must be the content's
+  size, and the jump check (`make jumps`) reports one that isn't; the CI guard comes in part 2.
+- **Overlays prefetch**: so far only the usage dialogs, as the pointer or focus reaches the
+  trigger (a usage line, the Book actions menu), so the dialog usually opens complete. Usage stays cached and
   refreshes from the event stream, so a second open is instant.
 - **A list's skeleton draws the count it showed last time**, saved per list in the browser
   (`useLastCount`), 3 the first time.
 - **A number in a sentence** is fetched with the page; while missing, it holds a slot as
   wide (in `ch`) as the text it showed last time.
-- **Every font starts loading at app start** (`main.tsx`), so none arrives after first paint
-  and reflows the screen.
+- **The latin and latin-ext subsets of every font start loading at app start** (`main.tsx`),
+  so none of the text and figures arrives after first paint and reflows the screen.
 
 **Hover fades in over 100ms** (2026-09-30, Jack: "give hover a short fade", reversing
 2026-09-25). A hover wash or ink change used to be instant, because a slower fade left a

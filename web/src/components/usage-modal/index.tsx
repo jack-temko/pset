@@ -6,7 +6,7 @@ import { Dialog } from '@/components/dialog'
 import { Loaded } from '@/components/loaded'
 import { Skeleton } from '@/components/skeleton'
 import { Table, type TableColumn } from '@/components/table'
-import { useLastCount } from '@/lib/last-count'
+import { useLastCount, useLastShape } from '@/lib/last-count'
 import { callSeconds, clock, cost, shortModel, timeOfDay, tokens } from '@/lib/usage-format'
 import { cn } from '@/lib/utils'
 
@@ -25,7 +25,7 @@ export function Fig({ text, partial, inline }: { text: string; partial: boolean;
   if (inline) {
     return (
       <>
-        <span aria-hidden className="font-sans text-muted-foreground">
+        <span aria-hidden className="font-sans leading-none text-muted-foreground">
           ≥{' '}
         </span>
         <span className="sr-only">at least </span>
@@ -57,7 +57,7 @@ function TotalsSkeleton() {
       {totalLabels.map((k) => (
         <div key={k}>
           <dt className="text-xs text-muted-foreground">{k}</dt>
-          <dd className="font-medium">
+          <dd className="figure font-medium">
             <Skeleton className="h-3 w-12" />
           </dd>
         </div>
@@ -67,9 +67,18 @@ function TotalsSkeleton() {
 }
 
 /** A table's header with `rows` placeholder rows, laid out as the real one is. */
-function TableSkeleton<T>({ columns, rows, caption }: { columns: TableColumn<T>[]; rows: number; caption: string }) {
-  const bare = columns.map((c) => ({ key: c.key, header: c.header, width: c.width, numeric: c.numeric, cell: () => <Skeleton className="h-3 w-10" /> }))
-  return <Table dense caption={caption} columns={bare} rows={Array.from({ length: rows }, (_, i) => i)} rowKey={String} />
+function TableSkeleton<T>({ columns, rows, caption }: { columns: TableColumn<T>[]; rows: number | number[]; caption: string }) {
+  // `rows` is a count, or one flag per row: 1 when the row had a second line.
+  const flags = (typeof rows === 'number' ? Array.from({ length: rows }, () => 0) : rows).map((flag, i) => ({ flag, i }))
+  const bare = columns.map((c, i) => ({
+    key: c.key,
+    header: c.header,
+    width: c.width,
+    numeric: c.numeric,
+    cell: () => <Skeleton className="h-3 w-10" />,
+    secondary: i === 0 ? (r: { flag: number }) => (r.flag ? <Skeleton className="h-2 w-24" /> : undefined) : undefined,
+  }))
+  return <Table dense caption={caption} columns={bare} rows={flags} rowKey={(r) => String(r.i)} />
 }
 
 function Totals({ total }: { total: DetailTotal }) {
@@ -175,6 +184,31 @@ export function DetailBody({ detail }: { detail: Detail }) {
   )
 }
 
+/** What a breakdown looked like, for the skeleton: per stage row and per call
+ *  row, 1 when it had a second line (a shared mark, an error, tools). */
+type Shape = { stages: number[]; runs: number[][] }
+const fallbackShape: Shape = { stages: [0, 0, 0], runs: [[0, 0, 0]] }
+const shapeOf = (d: Detail): Shape => ({
+  stages: d.stages.map((st) => (st.shared ? 1 : 0)),
+  runs: d.runs.map((r) => r.calls.map((c) => (c.error || c.tools ? 1 : 0))),
+})
+
+/** The breakdown before it arrives: the stages table and a table for each run. */
+function BreakdownSkeleton({ shape }: { shape: Shape }) {
+  return (
+    <>
+      <Section title="Stages">
+        <TableSkeleton columns={stageColumns} rows={shape.stages} caption="Stages" />
+      </Section>
+      {shape.runs.map((calls, i) => (
+        <Section key={i} title="Calls">
+          <TableSkeleton columns={callColumns(false)} rows={calls} caption="Calls" />
+        </Section>
+      ))}
+    </>
+  )
+}
+
 /** A detail's stages table and, under it, every call grouped by run. */
 function Breakdown({ detail }: { detail: Detail }) {
   // The column only when some call counted any: a provider that doesn't
@@ -200,7 +234,8 @@ function Body<T>({ state, skeleton, children }: { state: State<T>; skeleton: Rea
   return (
     <Loaded
       className="space-y-4"
-      query={{ data: state.data ?? null, isPending: !!state.loading, isError: !!state.error }}
+      errorText="Couldn't load the details. Close this and try again."
+      query={{ data: state.data, isPending: !!state.loading, isError: !!state.error }}
       skeleton={skeleton}
     >
       {(data) => (data ? children(data as T) : <p className="text-sm text-muted-foreground">No model calls were made.</p>)}
@@ -217,11 +252,12 @@ export function UsageModal({
   open,
   onClose,
   name,
+  kind = 'job',
   detail,
   loading,
   error,
-}: { open: boolean; onClose: () => void; name: string } & State<Detail> & { detail?: Detail | null }) {
-  const stageRows = useLastCount('usage-stages', detail?.stages.length)
+}: { open: boolean; onClose: () => void; name: string; kind?: string } & State<Detail> & { detail?: Detail | null }) {
+  const shape = useLastShape<Shape>(`usage-shape-${kind}`, detail ? shapeOf(detail) : undefined, fallbackShape)
   return (
     <Dialog
       open={open}
@@ -239,9 +275,7 @@ export function UsageModal({
         skeleton={
           <>
             <TotalsSkeleton />
-            <Section title="Stages">
-              <TableSkeleton columns={stageColumns} rows={stageRows} caption="Stages" />
-            </Section>
+            <BreakdownSkeleton shape={shape} />
           </>
         }
       >
@@ -275,6 +309,7 @@ export function BookUsageDialog({
   error,
 }: { open: boolean; onClose: () => void; title: string } & State<BookUsage>) {
   const kindRows = useLastCount('usage-book-kinds', data?.kinds.length)
+  const importShape = useLastShape<Shape | null>('usage-book-import', data ? (data.import ? shapeOf(data.import) : null) : undefined, null)
   return (
     <Dialog
       open={open}
@@ -295,6 +330,12 @@ export function BookUsageDialog({
             <Section title="By kind">
               <TableSkeleton columns={kindColumns} rows={kindRows} caption="Usage by kind" />
             </Section>
+            {importShape && (
+              <>
+                <h3 className="pt-2 text-sm font-semibold">Import</h3>
+                <BreakdownSkeleton shape={importShape} />
+              </>
+            )}
           </>
         }
       >

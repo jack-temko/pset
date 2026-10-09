@@ -42,8 +42,17 @@ export const prefetchUsageDetail = (client: QueryClient, source: UsageSource) =>
 /** The same for a book's usage aggregate. */
 export const prefetchBookUsage = (client: QueryClient, bookId: string) => client.prefetchQuery(bookQuery(bookId))
 
-// A job that finished, or a book that changed, has spent something: mark
-// every cached usage stale. What is open refetches and swaps in place; the
+// A job that finished, or a book that changed or lost something, has changed
+// what was spent: mark every cached usage stale. What is open refetches and swaps in place; the
 // rest refetches when it is next opened, showing the old figures meanwhile.
-const stale = (_: unknown, qc: QueryClient) => void qc.invalidateQueries({ queryKey: ['usage'] })
-for (const type of ['question.changed', 'assignment.changed', 'turn.changed', 'book.changed']) on(type, stale)
+const stale = (_: unknown, qc: QueryClient) => void qc.invalidateQueries({ queryKey: ['usage'] }, { cancelRefetch: false })
+for (const type of [
+  'question.changed',
+  'question.removed',
+  'assignment.changed',
+  'assignment.removed',
+  'homework.removed',
+  'turn.changed',
+  'turns.cleared',
+  'book.changed',
+]) on(type, stale)

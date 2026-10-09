@@ -23,6 +23,8 @@ const show = (q: Q) =>
     ),
   )
 const box = () => host.firstElementChild as HTMLElement
+const skeletonLayer = () => host.querySelector<HTMLElement>('[aria-hidden]')
+const contentLayer = () => box().lastElementChild as HTMLElement | null
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -40,9 +42,9 @@ describe('Loaded', () => {
   it('holds the skeleton in layout but hidden during the grace, then shows it', () => {
     show(pending)
     expect(host.querySelector('[data-testid=sk]')).not.toBeNull()
-    expect(box().className).toContain('invisible')
+    expect(skeletonLayer()?.className).toContain('opacity-0')
     act(() => void vi.advanceTimersByTime(GRACE_MS))
-    expect(box().className).not.toContain('invisible')
+    expect(skeletonLayer()?.className).toContain('opacity-100')
   })
 
   it('is busy while pending', () => {
@@ -50,88 +52,70 @@ describe('Loaded', () => {
     expect(box().getAttribute('aria-busy')).toBe('true')
   })
 
-  it('fades content that replaces a skeleton', () => {
+  it('crossfades content over a skeleton that was seen, then drops the skeleton', () => {
     show(pending)
+    act(() => void vi.advanceTimersByTime(GRACE_MS))
     show(loaded)
-    expect(host.textContent).toBe('hello')
-    expect(box().className).toContain('fade-in')
+    expect(skeletonLayer()?.className).toContain('fade-out')
+    expect(contentLayer()?.className).toContain('fade-in')
     expect(box().hasAttribute('aria-busy')).toBe(false)
+    act(() => void vi.advanceTimersByTime(200))
+    expect(skeletonLayer()).toBeNull()
+    expect(host.textContent).toBe('hello')
+  })
+
+  it('keeps the same content element through the crossfade', () => {
+    show(pending)
+    act(() => void vi.advanceTimersByTime(GRACE_MS))
+    show(loaded)
+    const before = contentLayer()
+    act(() => void vi.advanceTimersByTime(200))
+    expect(contentLayer()).toBe(before)
+  })
+
+  it('shows data that lands inside the grace at once, with no skeleton and no fade', () => {
+    show(pending)
+    act(() => void vi.advanceTimersByTime(100))
+    show(loaded)
+    expect(skeletonLayer()).toBeNull()
+    expect(contentLayer()?.className).not.toContain('fade-in')
+    expect(host.textContent).toBe('hello')
   })
 
   it('shows cached data at once, without the fade', () => {
     show(loaded)
     expect(host.textContent).toBe('hello')
-    expect(box().className).not.toContain('fade-in')
+    expect(skeletonLayer()).toBeNull()
+    expect(contentLayer()?.className).not.toContain('fade-in')
+  })
+
+  it('swaps instantly under reduced motion', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }))
+    show(pending)
+    act(() => void vi.advanceTimersByTime(GRACE_MS))
+    show(loaded)
+    expect(skeletonLayer()).toBeNull()
+    expect(contentLayer()?.className).not.toContain('fade-in')
+    vi.unstubAllGlobals()
+  })
+
+  it('starts the grace again when a new wait begins', () => {
+    show(pending)
+    act(() => void vi.advanceTimersByTime(GRACE_MS))
+    show(loaded)
+    act(() => void vi.advanceTimersByTime(200))
+    show(pending)
+    expect(skeletonLayer()?.className).toContain('opacity-0')
   })
 
   it('says one line when the query failed', () => {
     show(failed)
     expect(host.textContent).toMatch(/Couldn't load/)
-  })
-})
-
-/** jsdom has no layout: a box's height is the data-h of its first child. */
-function mockHeights() {
-  Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
-    configurable: true,
-    get(this: HTMLElement) {
-      return Number((this.firstElementChild as HTMLElement | null)?.dataset.h ?? 0)
-    },
-  })
-}
-
-describe('Loaded morph', () => {
-  const sized = (q: Q, skeletonH: number, contentH: number) =>
-    act(() =>
-      root.render(
-        <Loaded query={q} skeleton={<span data-h={skeletonH}>...</span>}>
-          {(d) => <span data-h={contentH}>{d}</span>}
-        </Loaded>,
-      ),
-    )
-  const frame = () => act(() => void vi.advanceTimersByTime(20))
-
-  beforeEach(mockHeights)
-  afterEach(() => {
-    delete (HTMLElement.prototype as { offsetHeight?: number }).offsetHeight
-    vi.unstubAllGlobals()
+    expect(host.querySelector('[role=status]')).not.toBeNull()
   })
 
-  it('morphs from the skeleton height to the content height when they differ', () => {
-    sized(pending, 100, 40)
-    sized(loaded, 100, 40)
-    frame()
-    const morph = host.querySelector<HTMLElement>('[data-morph]')
-    expect(morph).not.toBeNull()
-    expect(morph!.style.height).toBe('40px')
-    expect(morph!.style.transition).toContain('200ms')
-    act(() => void vi.advanceTimersByTime(300))
-    expect(host.querySelector('[data-morph]')).toBeNull()
-    expect(host.textContent).toBe('hello')
-  })
-
-  it('skips the morph when the heights are within 2px', () => {
-    sized(pending, 100, 101)
-    sized(loaded, 100, 101)
-    frame()
-    expect(host.querySelector('[data-morph]')).toBeNull()
-    expect(box().className).toContain('fade-in')
-  })
-
-  it('does not morph cached data', () => {
-    sized(loaded, 100, 40)
-    frame()
-    expect(host.querySelector('[data-morph]')).toBeNull()
-    expect(box().className).not.toContain('fade-in')
-  })
-
-  it('neither morphs nor fades under reduced motion', () => {
-    vi.stubGlobal('matchMedia', () => ({ matches: true }))
-    sized(pending, 100, 40)
-    sized(loaded, 100, 40)
-    frame()
-    expect(host.querySelector('[data-morph]')).toBeNull()
-    expect(box().className).not.toContain('fade-in')
+  it('does not show the error line when there is data to show', () => {
+    show({ data: 'hello', isPending: false, isError: true })
     expect(host.textContent).toBe('hello')
   })
 })
