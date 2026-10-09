@@ -105,8 +105,20 @@ func snapshot(args []string) error {
 		}
 	}()
 
-	// The source is opened read-only; VACUUM INTO writes only the copy.
-	ro, err := sql.Open("sqlite", "file:"+filepath.Join(src, "pset.db")+"?mode=ro&_pragma=busy_timeout(5000)")
+	// The source is opened read-only; VACUUM INTO writes only the copy. With a
+	// -wal beside the database a PSet has it open, and a plain read-only
+	// connection reads through the WAL. Without one, a read-only open of a WAL
+	// database would create -wal and -shm in the source, so it is opened
+	// immutable, which touches nothing.
+	mode := "mode=ro&immutable=1"
+	if _, err := os.Stat(filepath.Join(src, "pset.db-wal")); err == nil {
+		mode = "mode=ro&_pragma=busy_timeout(5000)"
+	}
+	before, err := listing(src)
+	if err != nil {
+		return err
+	}
+	ro, err := sql.Open("sqlite", "file:"+filepath.Join(src, "pset.db")+"?"+mode)
 	if err != nil {
 		return err
 	}
@@ -141,6 +153,10 @@ func snapshot(args []string) error {
 	if err := Check(ctx, d, tmp); err != nil {
 		d.Close()
 		return err
+	}
+	if after, err := listing(src); err != nil || after != before {
+		d.Close()
+		return fmt.Errorf("the source %s changed during the snapshot (err %v)", src, err)
 	}
 	m, err := manifest(ctx, d, src, tmp)
 	d.Close()
@@ -182,6 +198,28 @@ func snapshot(args []string) error {
 		fmt.Println()
 	}
 	return nil
+}
+
+// listing is every file under root with its size and mtime, and every
+// directory's name: what must be the same before and after a snapshot.
+func listing(root string) (string, error) {
+	var b strings.Builder
+	err := filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		st, err := e.Info()
+		if err != nil {
+			return err
+		}
+		if st.IsDir() {
+			fmt.Fprintf(&b, "%s/\n", p)
+		} else {
+			fmt.Fprintf(&b, "%s %d %d\n", p, st.Size(), st.ModTime().UnixNano())
+		}
+		return nil
+	})
+	return b.String(), err
 }
 
 func manifest(ctx context.Context, d *sql.DB, src, dir string) (Manifest, error) {
