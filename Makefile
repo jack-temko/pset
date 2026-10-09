@@ -84,7 +84,8 @@ jumps:
 
 # The jump guard CI runs: the audit on the public fixture library
 # (tools/fixturelib, no key, no model), then web/scripts/jumps/check.mjs, which
-# exits 1 on any jump not in allow.json. A UI change passes this before its PR.
+# exits 1 on any jump not in allow.json. The default is the core profile (hand-written
+# scenarios, 2 runs); FULL=1 adds discovery and 3 runs, and is what runs nightly.
 jumps-check:
 	tools/jumps.sh --check
 
