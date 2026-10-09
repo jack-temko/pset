@@ -30,8 +30,8 @@ const detail: Detail = {
     { name: 'Rank', attempts: 1, calls: 1, ms: 1_000, tokensIn: 400, tokensOut: 100, cost: 0.0001, shared: 3 },
   ],
   runs: [
-    { label: 'Run 1', calls: [{ at: '2026-09-29T10:00:00Z', stage: 'Guide', asked: 'x/model-a', answered: 'y/model-b', ms: 4_000, tokensIn: 100, tokensOut: 10, cost: 0.001 }] },
-    { label: 'Run 2', calls: [{ at: '2026-09-29T10:05:00Z', stage: 'Guide', asked: 'x/model-a', ms: 800, error: 'timeout' }] },
+    { label: 'Run 1', calls: [{ id: 1, at: '2026-09-29T10:00:00Z', stage: 'Guide', asked: 'x/model-a', answered: 'y/model-b', ms: 4_000, tokensIn: 100, tokensOut: 10, cost: 0.001 }] },
+    { label: 'Run 2', calls: [{ id: 2, at: '2026-09-29T10:05:00Z', stage: 'Guide', asked: 'x/model-a', ms: 800, error: 'timeout' }] },
   ],
 }
 
@@ -62,6 +62,32 @@ describe('UsageModal', () => {
   })
 })
 
+describe('UsageModal calls', () => {
+  const twin = { at: '2026-09-29T10:00:00Z', stage: 'Figures', asked: 'a/b', answered: 'a/b', ms: 0 }
+  it('keeps calls that look alike apart, keyed by their row', () => {
+    const d: Detail = { ...detail, runs: [{ label: 'Calls', calls: [{ id: 1, ...twin }, { id: 2, ...twin }] }] }
+    const text = textOf(<UsageModal open onClose={noop} name="x" detail={d} />)
+    expect(text.split('Figures').length - 1).toBe(2)
+  })
+
+  it('shows the reasoning column only when a call counted reasoning', () => {
+    const none: Detail = { ...detail, runs: [{ label: 'Calls', calls: [{ id: 1, ...twin }] }] }
+    const some: Detail = { ...detail, runs: [{ label: 'Calls', calls: [{ id: 1, ...twin, reasoning: 120 }] }] }
+    const headers = (d: Detail) => {
+      const host = document.createElement('div')
+      document.body.append(host)
+      const root = createRoot(host)
+      act(() => root.render(<UsageModal open onClose={noop} name="x" detail={d} />))
+      const th = [...document.querySelectorAll('dialog table:last-of-type th')].map((t) => t.textContent)
+      act(() => root.unmount())
+      host.remove()
+      return th
+    }
+    expect(headers(none)).not.toContain('Reasoning')
+    expect(headers(some)).toContain('Reasoning')
+  })
+})
+
 describe('BookUsageDialog', () => {
   const book: BookUsage = {
     total: { ms: 20_000, tokensIn: 40_000, tokensOut: 6_000, cost: 0.01, calls: 9, failed: 0 },
@@ -73,7 +99,7 @@ describe('BookUsageDialog', () => {
     import: {
       total: { ms: 8_000, cost: 0.003, calls: 3, failed: 0 },
       stages: [{ name: 'Naming', attempts: 1, calls: 1, ms: 2_000, cost: 0.001 }, { name: 'Contents', attempts: 1, calls: 2, ms: 6_000, cost: 0.002 }],
-      runs: [{ label: 'Calls', calls: [{ at: '2026-09-29T10:00:00Z', stage: 'Naming', asked: 'a/b', ms: 2_000, cost: 0.001 }] }],
+      runs: [{ label: 'Calls', calls: [{ id: 3, at: '2026-09-29T10:00:00Z', stage: 'Naming', asked: 'a/b', ms: 2_000, cost: 0.001 }] }],
     },
   }
 

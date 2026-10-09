@@ -5,17 +5,19 @@ import (
 	"database/sql"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // CallRow is one stored call, as the detail reads it.
 type CallRow struct {
+	ID                                            int64
 	At, Stage, Run, Tools, Asked, Answered, Error string
 	Ms                                            int64
 	TokensIn, TokensOut, Reasoning, Cached        *int
 	Cost                                          *float64
 }
 
-const callColumns = `at, coalesce(stage, ''), coalesce(run, ''), coalesce(tools, ''), model, coalesce(answered, ''), ms,
+const callColumns = `id, at, coalesce(stage, ''), coalesce(run, ''), coalesce(tools, ''), model, coalesce(answered, ''), ms,
 	prompt_tokens, completion_tokens, reasoning_tokens, cached_tokens, cost, coalesce(error, '')`
 
 func scanCalls(rows *sql.Rows) ([]CallRow, error) {
@@ -25,7 +27,7 @@ func scanCalls(rows *sql.Rows) ([]CallRow, error) {
 		var c CallRow
 		var in, outTok, reasoning, cached sql.NullInt64
 		var cost sql.NullFloat64
-		if err := rows.Scan(&c.At, &c.Stage, &c.Run, &c.Tools, &c.Asked, &c.Answered, &c.Ms, &in, &outTok, &reasoning, &cached, &cost, &c.Error); err != nil {
+		if err := rows.Scan(&c.ID, &c.At, &c.Stage, &c.Run, &c.Tools, &c.Asked, &c.Answered, &c.Ms, &in, &outTok, &reasoning, &cached, &cost, &c.Error); err != nil {
 			return nil, err
 		}
 		c.TokensIn, c.TokensOut, c.Reasoning, c.Cached = nullInt(in), nullInt(outTok), nullInt(reasoning), nullInt(cached)
@@ -97,8 +99,9 @@ func Build(own, shared []CallRow, n int) *Detail {
 	var order []string
 	stages := map[string]*stageAcc{}
 	var runOrder []string
+	var sharedKey string
 	runs := map[string]*Run{}
-	add := func(rows []CallRow, share int) {
+	add := func(rows []CallRow, shared bool, share int) {
 		for _, c := range rows {
 			name := c.Stage
 			if name == "" {
@@ -106,7 +109,10 @@ func Build(own, shared []CallRow, n int) *Detail {
 			}
 			st := stages[name]
 			if st == nil {
-				st = &stageAcc{Stage: Stage{Name: name, Shared: share}, runs: map[string]bool{}}
+				st = &stageAcc{Stage: Stage{Name: name}, runs: map[string]bool{}}
+				if shared && share > 1 {
+					st.Shared = share
+				}
 				stages[name] = st
 				order = append(order, name)
 			}
@@ -135,23 +141,29 @@ func Build(own, shared []CallRow, n int) *Detail {
 			t.Cost = addFloat(t.Cost, c.Cost)
 
 			key := c.Run
-			if share > 0 {
+			if shared {
 				key = "\x00shared"
 			}
 			r := runs[key]
 			if r == nil {
-				r = &Run{Shared: share}
+				r = &Run{}
+				if share > 1 {
+					r.Shared = share
+				}
 				runs[key] = r
 				runOrder = append(runOrder, key)
+				if shared {
+					sharedKey = key
+				}
 			}
 			r.Calls = append(r.Calls, Call{
-				At: c.At, Stage: name, Tools: c.Tools, Asked: c.Asked, Answered: c.Answered, Ms: c.Ms,
+				ID: c.ID, At: c.At, Stage: name, Tools: c.Tools, Asked: c.Asked, Answered: c.Answered, Ms: c.Ms,
 				TokensIn: c.TokensIn, TokensOut: c.TokensOut, Reasoning: c.Reasoning, Cached: c.Cached, Cost: c.Cost, Error: c.Error,
 			})
 		}
 	}
-	add(own, 0)
-	add(shared, n)
+	add(own, false, 0)
+	add(shared, true, n)
 	for _, name := range order {
 		st := stages[name]
 		st.Attempts = len(st.runs)
@@ -161,9 +173,12 @@ func Build(own, shared []CallRow, n int) *Detail {
 	num := 0
 	for _, key := range runOrder {
 		r := runs[key]
-		if r.Shared > 0 {
+		switch {
+		case key == sharedKey && r.Shared > 1:
 			r.Label = fmt.Sprintf("Difficulty ranking, shared with %d questions", r.Shared)
-		} else {
+		case key == sharedKey:
+			r.Label = "Difficulty ranking"
+		default:
 			num++
 			r.Label = fmt.Sprintf("Run %d", num)
 		}
@@ -171,12 +186,13 @@ func Build(own, shared []CallRow, n int) *Detail {
 	}
 	if num == 1 {
 		for i := range d.Runs {
-			if d.Runs[i].Shared == 0 {
+			if d.Runs[i].Label == "Run 1" {
 				d.Runs[i].Label = "Calls"
 			}
 		}
 	}
-	sort.SliceStable(d.Runs, func(i, j int) bool { return d.Runs[i].Shared == 0 && d.Runs[j].Shared > 0 })
+	// The shared ranking last, whichever call came first.
+	sort.SliceStable(d.Runs, func(i, j int) bool { return !isRanking(d.Runs[i].Label) && isRanking(d.Runs[j].Label) })
 	return d
 }
 
@@ -202,39 +218,54 @@ func addFloat(sum, v *float64) *float64 {
 	return sum
 }
 
-// AddShare puts a set's ranking on a question's line: each model's share
-// (1/n of the ranking's figures) joins the rows, calls uncounted in the
-// question's own call count. A question with no calls of its own keeps
+// AddShare puts a set's ranking on a question's line, the same share the
+// modal shows: the ranking's calls divided by Share, each model's part
+// joining the rows, and the calls, failures and uncounted calls joining the
+// total as the modal counts them. A question with no calls of its own keeps
 // nil: it has nothing to show a share of.
-func AddShare(u, rank *Usage, n int) *Usage {
-	if u == nil || rank == nil || n < 1 {
+func AddShare(u *Usage, rank []CallRow, n int) *Usage {
+	if u == nil || len(rank) == 0 {
 		return u
 	}
-	for _, r := range rank.Rows {
-		share := UsageRow{Model: r.Model, Ms: r.Ms / int64(n), Uncounted: 0}
-		if r.Tokens != nil {
-			t := *r.Tokens / n
-			share.Tokens = &t
+	for _, c := range Share(rank, n) {
+		who := c.Answered
+		if who == "" {
+			who = c.Asked
 		}
-		if r.Cost != nil {
-			c := *r.Cost / float64(n)
-			share.Cost = &c
+		var tok *int
+		if c.TokensIn != nil {
+			t := *c.TokensIn
+			if c.TokensOut != nil {
+				t += *c.TokensOut
+			}
+			tok = &t
 		}
-		merged := false
-		for i := range u.Rows {
-			if u.Rows[i].Model == share.Model {
-				u.Rows[i].Ms += share.Ms
-				u.Rows[i].Tokens = addInt(u.Rows[i].Tokens, share.Tokens)
-				u.Rows[i].Cost = addFloat(u.Rows[i].Cost, share.Cost)
-				merged = true
+		i := -1
+		for j := range u.Rows {
+			if u.Rows[j].Model == who {
+				i = j
 			}
 		}
-		if !merged {
-			u.Rows = append(u.Rows, share)
+		if i < 0 {
+			u.Rows = append(u.Rows, UsageRow{Model: who})
+			i = len(u.Rows) - 1
 		}
-		u.Total.Ms += share.Ms
-		u.Total.Tokens = addInt(u.Total.Tokens, share.Tokens)
-		u.Total.Cost = addFloat(u.Total.Cost, share.Cost)
+		row := &u.Rows[i]
+		row.Ms += c.Ms
+		row.Calls++
+		row.Tokens = addInt(row.Tokens, tok)
+		row.Cost = addFloat(row.Cost, c.Cost)
+		u.Total.Ms += c.Ms
+		u.Total.Calls++
+		u.Total.Tokens = addInt(u.Total.Tokens, tok)
+		u.Total.Cost = addFloat(u.Total.Cost, c.Cost)
+		if c.TokensIn == nil {
+			row.Uncounted++
+			u.Total.Uncounted++
+		}
+		if c.Error != "" {
+			u.Failed++
+		}
 	}
 	return u
 }
@@ -303,3 +334,5 @@ func countSubjects(ctx context.Context, q queryer, typ, from, bookID string) (in
 	}
 	return n, err
 }
+
+func isRanking(label string) bool { return strings.HasPrefix(label, "Difficulty ranking") }

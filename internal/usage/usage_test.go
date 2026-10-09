@@ -483,9 +483,8 @@ func TestRankingIsSharedAndCountedOnceInTheBook(t *testing.T) {
 
 	// The line takes the same share.
 	line, _ := For(ctx, d, SubjectQuestion, "q1")
-	rankLine, _ := For(ctx, d, SubjectSet, "h1")
-	line = AddShare(line, rankLine, 2)
-	if *line.Total.Cost != 0.0025 || line.Total.Ms != 5000 || line.Total.Calls != 1 {
+	line = AddShare(line, rank, 2)
+	if *line.Total.Cost != 0.0025 || line.Total.Ms != 5000 || line.Total.Calls != 2 {
 		t.Fatalf("line %+v", line.Total)
 	}
 
@@ -509,5 +508,68 @@ func TestRankingIsSharedAndCountedOnceInTheBook(t *testing.T) {
 	}
 	if none, err := ForBook(ctx, d, "nobook"); err != nil || none != nil {
 		t.Fatalf("a book with no calls: %v, %v", none, err)
+	}
+}
+
+// The line and the modal take the same share of the ranking, to the last
+// rounding: for a set of 3, with a ranking that doesn't divide evenly and a
+// call that reported nothing, the line's total is the modal's total.
+func TestTheLineAndTheModalAgreeOnTheShare(t *testing.T) {
+	d := newDB(t)
+	ctx := context.Background()
+	sink := Sink(d)
+	put := func(typ, id, stage string, ms int64, us *llm.Usage, errText string) {
+		c := call("2026-09-29T10:00:00Z", typ, id, "m", "m", ms, us, errText)
+		c.Stage, c.Run = stage, "r"
+		sink(c)
+	}
+	put(SubjectQuestion, "q1", "Guide", 4000, &llm.Usage{PromptTokens: 1000, CompletionTokens: 100, Cost: 0.002}, "")
+	put(SubjectSet, "h1", "Rank", 2001, &llm.Usage{PromptTokens: 1000, CompletionTokens: 7, Cost: 0.001}, "")
+	put(SubjectSet, "h1", "Rank", 1000, nil, "rate limited (429)")
+
+	own, _ := Calls(ctx, d, SubjectQuestion, "q1")
+	rank, _ := Calls(ctx, d, SubjectSet, "h1")
+	modal := Build(own, Share(rank, 3), 3)
+	line, _ := For(ctx, d, SubjectQuestion, "q1")
+	line = AddShare(line, rank, 3)
+
+	tokens := *modal.Total.TokensIn + *modal.Total.TokensOut
+	if line.Total.Ms != modal.Total.Ms || *line.Total.Tokens != tokens || *line.Total.Cost != *modal.Total.Cost ||
+		line.Total.Calls != modal.Total.Calls || line.Total.Uncounted != modal.Total.Uncounted || line.Failed != modal.Total.Failed {
+		t.Fatalf("line %+v failed %d, modal %+v", line.Total, line.Failed, modal.Total)
+	}
+	if modal.Total.Uncounted != 1 || modal.Total.Failed != 1 {
+		t.Fatalf("the ranking's failed call must pass through: %+v", modal.Total)
+	}
+}
+
+// A set of one has nothing to share: no "shared with 1 questions".
+func TestARankingAloneIsNotShared(t *testing.T) {
+	rank := []CallRow{{ID: 1, Stage: "Rank", Run: "r", Ms: 1000}}
+	own := []CallRow{{ID: 2, Stage: "Guide", Run: "r", Ms: 1000}}
+	d := Build(own, Share(rank, 1), 1)
+	if d.Stages[1].Shared != 0 || d.Runs[1].Shared != 0 || d.Runs[1].Label != "Difficulty ranking" {
+		t.Fatalf("%+v %+v", d.Stages, d.Runs)
+	}
+	d = Build(own, Share(rank, 3), 3)
+	if d.Stages[1].Shared != 3 || d.Runs[1].Label != "Difficulty ranking, shared with 3 questions" {
+		t.Fatalf("%+v %+v", d.Stages, d.Runs)
+	}
+}
+
+// A call keyed by its row id, and a count the provider left out is stored
+// absent, not as a zero.
+func TestCallsHaveIDsAndAbsentCountsStayAbsent(t *testing.T) {
+	d := newDB(t)
+	sink := Sink(d)
+	sink(call("2026-09-29T10:00:00Z", SubjectQuestion, "q1", "m", "m", 0, &llm.Usage{PromptTokens: 10, CompletionTokens: 1}, ""))
+	sink(call("2026-09-29T10:00:00Z", SubjectQuestion, "q1", "m", "m", 0, nil, "boom"))
+	rows, _ := Calls(context.Background(), d, SubjectQuestion, "q1")
+	if len(rows) != 2 || rows[0].ID == rows[1].ID || rows[0].Reasoning != nil || rows[0].Cached != nil {
+		t.Fatalf("rows %+v", rows)
+	}
+	det := Build(rows, nil, 0)
+	if det.Total.Reasoning != nil || det.Total.Cached != nil || det.Runs[0].Calls[0].ID != rows[0].ID {
+		t.Fatalf("detail %+v", det.Total)
 	}
 }

@@ -255,9 +255,9 @@ func fillUsage(ctx context.Context, d *sql.DB, qs []Question) error {
 	}
 	// Each takes an even share of the set's ranking, which no question
 	// owns.
-	var rank *usage.Usage
+	var rank []usage.CallRow
 	if len(qs) > 0 {
-		if rank, err = usage.For(ctx, d, usage.SubjectSet, qs[0].HomeworkID); err != nil {
+		if rank, err = usage.Calls(ctx, d, usage.SubjectSet, qs[0].HomeworkID); err != nil {
 			return err
 		}
 	}
@@ -800,7 +800,7 @@ func (s *Service) publishQuestion(ctx context.Context, id string) (Question, err
 	}
 	if set, n, err := s.setOf(ctx, id); err != nil {
 		return Question{}, err
-	} else if rank, err := usage.For(ctx, s.c.DB, usage.SubjectSet, set); err != nil {
+	} else if rank, err := usage.Calls(ctx, s.c.DB, usage.SubjectSet, set); err != nil {
 		return Question{}, err
 	} else {
 		q.Question.Usage = usage.AddShare(q.Question.Usage, rank, n)

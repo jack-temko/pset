@@ -9,7 +9,7 @@ Box of rows; a Table is for figures.
 - **Header row**: a `card-header` band, `text-xs` 500 in muted ink, with a
   border under it. Column names are short nouns, sentence case.
 - **Body rows**: `text-sm`, `spacing-2` above and below and `spacing-4`
-  beside each cell, so a one-line row is 40px, the height of a Box row.
+  beside each cell, so a one-line row is about 37px, a little tighter than a Box row.
   Rows are divided by `border-muted`. Cells don't wrap: a table too wide
   for its frame scrolls sideways instead. No zebra stripes, no vertical rules.
 - **Numeric columns** (`numeric`) align right, header included, in tabular

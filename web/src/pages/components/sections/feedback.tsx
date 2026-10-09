@@ -70,23 +70,23 @@ const DETAIL: UsageDetail = {
     {
       label: 'Run 1',
       calls: [
-        { at: '2026-10-08T14:02:11Z', stage: 'Find', asked: 'z-ai/perceptron-mk1.5', answered: 'z-ai/perceptron-mk1.5', ms: 2100, tokensIn: 8200, tokensOut: 1212, cost: 0.0004 },
-        { at: '2026-10-08T14:02:14Z', stage: 'Figures', asked: 'openai/gpt-6-luna', answered: 'openai/gpt-6-luna', ms: 1500, tokensIn: 5400, tokensOut: 900, cost: 0.0003 },
-        { at: '2026-10-08T14:02:17Z', stage: 'Figures', asked: 'openai/gpt-6-luna', answered: 'openai/gpt-6-luna', ms: 2500, tokensIn: 4000, tokensOut: 1000, cost: 0.0006 },
-        { at: '2026-10-08T14:02:20Z', stage: 'Guide', tools: 'search_pages,read_page', asked: 'anthropic/claude-haiku-5.5', answered: 'anthropic/claude-haiku-5.5', ms: 7000, tokensIn: 7000, tokensOut: 1800, reasoning: 1400, cached: 5000, cost: 0.0018 },
+        { id: 1, at: '2026-10-08T14:02:11Z', stage: 'Find', asked: 'z-ai/perceptron-mk1.5', answered: 'z-ai/perceptron-mk1.5', ms: 2100, tokensIn: 8200, tokensOut: 1212, cost: 0.0004 },
+        { id: 2, at: '2026-10-08T14:02:14Z', stage: 'Figures', asked: 'openai/gpt-6-luna', answered: 'openai/gpt-6-luna', ms: 1500, tokensIn: 5400, tokensOut: 900, cost: 0.0003 },
+        { id: 3, at: '2026-10-08T14:02:17Z', stage: 'Figures', asked: 'openai/gpt-6-luna', answered: 'openai/gpt-6-luna', ms: 2500, tokensIn: 4000, tokensOut: 1000, cost: 0.0006 },
+        { id: 4, at: '2026-10-08T14:02:20Z', stage: 'Guide', tools: 'search_pages,read_page', asked: 'anthropic/claude-haiku-5.5', answered: 'anthropic/claude-haiku-5.5', ms: 7000, tokensIn: 7000, tokensOut: 1800, reasoning: 1400, cached: 5000, cost: 0.0018 },
       ],
     },
     {
       label: 'Run 2',
       calls: [
-        { at: '2026-10-08T14:09:01Z', stage: 'Guide', asked: 'anthropic/claude-haiku-5.5', ms: 900, error: 'rate limited (429)' },
-        { at: '2026-10-08T14:09:03Z', stage: 'Guide', asked: 'anthropic/claude-haiku-5.5', answered: 'deepseek/deepseek-v4.1-flash', ms: 6100, tokensIn: 5000, tokensOut: 1900, reasoning: 1700, cached: 7000, cost: 0.0015 },
+        { id: 5, at: '2026-10-08T14:09:01Z', stage: 'Guide', asked: 'anthropic/claude-haiku-5.5', ms: 900, error: 'rate limited (429)' },
+        { id: 6, at: '2026-10-08T14:09:03Z', stage: 'Guide', asked: 'anthropic/claude-haiku-5.5', answered: 'deepseek/deepseek-v4.1-flash', ms: 6100, tokensIn: 5000, tokensOut: 1900, reasoning: 1700, cached: 7000, cost: 0.0015 },
       ],
     },
     {
       label: 'Difficulty ranking, shared with 4 questions',
       shared: 4,
-      calls: [{ at: '2026-10-08T14:02:30Z', stage: 'Rank', asked: 'openai/gpt-6-luna', answered: 'openai/gpt-6-luna', ms: 1300, tokensIn: 1400, tokensOut: 88, cost: 0.0003 }],
+      calls: [{ id: 7, at: '2026-10-08T14:02:30Z', stage: 'Rank', asked: 'openai/gpt-6-luna', answered: 'openai/gpt-6-luna', ms: 1300, tokensIn: 1400, tokensOut: 88, cost: 0.0003 }],
     },
   ],
 }
@@ -110,8 +110,8 @@ const BOOK_USAGE: BookUsage = {
       {
         label: 'Calls',
         calls: [
-          { at: '2026-10-07T09:00:02Z', stage: 'Naming', asked: 'anthropic/claude-haiku-5.5', answered: 'anthropic/claude-haiku-5.5', ms: 2700, tokensIn: 4600, tokensOut: 300, cost: 0.0006 },
-          { at: '2026-10-07T09:00:06Z', stage: 'Contents', asked: 'anthropic/claude-haiku-5.5', answered: 'anthropic/claude-haiku-5.5', ms: 13_000, tokensIn: 23_000, tokensOut: 3_600, cost: 0.0032 },
+          { id: 8, at: '2026-10-07T09:00:02Z', stage: 'Naming', asked: 'anthropic/claude-haiku-5.5', answered: 'anthropic/claude-haiku-5.5', ms: 2700, tokensIn: 4600, tokensOut: 300, cost: 0.0006 },
+          { id: 9, at: '2026-10-07T09:00:06Z', stage: 'Contents', asked: 'anthropic/claude-haiku-5.5', answered: 'anthropic/claude-haiku-5.5', ms: 13_000, tokensIn: 23_000, tokensOut: 3_600, cost: 0.0032 },
         ],
       },
     ],
@@ -167,7 +167,7 @@ export const feedbackSections: ComponentEntry[] = [
     id: 'table',
     title: 'Table',
     group: 'Feedback',
-    note: 'A quiet table for figures you read across a row: muted header, 40px rows, right-aligned tabular numbers, an optional second line, and a soft error row. It scrolls sideways inside its own frame when too wide.',
+    note: 'A quiet table for figures you read across a row: muted header, compact rows, right-aligned tabular numbers, an optional second line, and a soft error row. It scrolls sideways inside its own frame when too wide.',
     docs: ['table'],
     Demo: () => (
       <>
@@ -178,7 +178,7 @@ export const feedbackSections: ComponentEntry[] = [
         </Shelf>
         <Shelf label="secondary line, error row">
           <div className="w-full min-w-0">
-            <Table caption="Calls" columns={CALL_COLUMNS} rows={DEMO_CALLS} rowKey={(c) => c.at} error={(c) => !!c.error} />
+            <Table caption="Calls" columns={CALL_COLUMNS} rows={DEMO_CALLS} rowKey={(c) => String(c.id)} error={(c) => !!c.error} />
           </div>
         </Shelf>
         <Shelf label="too wide: scrolls">

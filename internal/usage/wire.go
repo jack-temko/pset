@@ -101,6 +101,9 @@ type Run struct {
 // that replied (empty when none did). Tools names the tools the reply
 // asked for. A failed call has an Error and no counts.
 type Call struct {
+	// ID is the call's row, which keys it: calls made in the same second are
+	// otherwise alike.
+	ID        int64    `json:"id"`
 	At        string   `json:"at"`
 	Stage     string   `json:"stage"`
 	Tools     string   `json:"tools,omitempty"`

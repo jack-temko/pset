@@ -237,7 +237,8 @@ func calls(ctx context.Context, d *sql.DB, now time.Time) error {
 	for _, c := range cs {
 		var in, out, reasoning, cached, cost any
 		if c.err == "" {
-			in, out, reasoning, cached, cost = c.in, c.out, c.reasoning, c.cached, c.cost
+			in, out, cost = c.in, c.out, c.cost
+			reasoning, cached = nullZero(c.reasoning), nullZero(c.cached)
 		}
 		_, err := d.ExecContext(ctx, `INSERT INTO calls (at, subject_type, subject_id, model, answered, ms, prompt_tokens, completion_tokens, cost, host, session, error,
 				stage, run, tools, reasoning_tokens, cached_tokens) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?)`,
@@ -255,4 +256,12 @@ func nullIf(s string) any {
 		return nil
 	}
 	return s
+}
+
+// nullZero is a count a provider didn't report: stored absent, as the sink does.
+func nullZero(n int) any {
+	if n == 0 {
+		return nil
+	}
+	return n
 }

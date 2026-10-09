@@ -55,7 +55,7 @@ HTMLDialogElement.prototype.close = function () {
 const detail: Detail = {
   total: { ms: 24_600, tokensIn: 9_000, tokensOut: 2_016, cost: 0.0047, calls: 2, failed: 1 },
   stages: [{ name: 'Guide', attempts: 2, calls: 2, ms: 24_600, tokensIn: 9_000, tokensOut: 2_016, cost: 0.0047 }],
-  runs: [{ label: 'Calls', calls: [{ at: '2026-09-29T10:00:00Z', stage: 'Guide', asked: 'a/b', ms: 900, error: 'rate limited (429)' }] }],
+  runs: [{ label: 'Calls', calls: [{ id: 1, at: '2026-09-29T10:00:00Z', stage: 'Guide', asked: 'a/b', ms: 900, error: 'rate limited (429)' }] }],
 }
 
 describe('UsageTrigger', () => {

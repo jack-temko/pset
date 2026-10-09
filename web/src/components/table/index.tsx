@@ -18,7 +18,7 @@ export interface TableColumn<T> {
 
 /**
  * A quiet data table for rows you read across: a `card-header` header row
- * in `text-xs` muted ink, body rows 40px tall like a Box's (8px above and below, 16px beside each cell) divided by
+ * in `text-xs` muted ink, body rows about 37px tall (`spacing-2` above and below, 16px beside each cell) divided by
  * `border-muted`, `text-sm` cells. Numeric columns align right in tabular
  * figures so digits line up. A cell may carry a muted second line. A row
  * in `error` takes a light `destructive-soft` tint; only its secondary

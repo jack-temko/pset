@@ -95,7 +95,9 @@ func Sink(d *sql.DB) func(llm.Call) {
 		var prompt, completion, cost, reasoning, cached any
 		if c.Usage != nil {
 			prompt, completion, cost = c.Usage.PromptTokens, c.Usage.CompletionTokens, c.Usage.Cost
-			reasoning, cached = c.Usage.CompletionDetails.ReasoningTokens, c.Usage.PromptDetails.CachedTokens
+			// A zero is how Go reads a count the provider left out; it is stored as
+			// absent, since a reported zero says no more than that.
+			reasoning, cached = zeroIsNull(c.Usage.CompletionDetails.ReasoningTokens), zeroIsNull(c.Usage.PromptDetails.CachedTokens)
 		}
 		var errText any
 		if c.Error != "" {
@@ -116,6 +118,13 @@ func Sink(d *sql.DB) func(llm.Call) {
 			slog.Error("usage: record call", "subject", c.SubjectType+"/"+c.SubjectID, "err", err)
 		}
 	}
+}
+
+func zeroIsNull(n int) any {
+	if n == 0 {
+		return nil
+	}
+	return n
 }
 
 // nullable is an empty string as SQL NULL: the column says whether the

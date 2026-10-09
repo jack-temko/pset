@@ -59,7 +59,7 @@ const stageColumns: TableColumn<Stage>[] = [
  *  it when a fallback served. A call nobody answered shows the one asked. */
 const modelOf = (c: Call) => shortModel(c.answered || c.asked)
 
-const callColumns: TableColumn<Call>[] = [
+const callColumns = (withReasoning: boolean): TableColumn<Call>[] => [
   { key: 'at', header: 'Time', errorInk: true, cell: (c) => <span className="font-mono text-xs">{timeOfDay(c.at)}</span> },
   { key: 'stage', header: 'Stage', cell: (c) => c.stage, secondary: (c) => c.error || (c.tools ? c.tools.split(',').join(', ') : undefined) },
   {
@@ -71,7 +71,7 @@ const callColumns: TableColumn<Call>[] = [
   { key: 'ms', header: 'ms', numeric: true, cell: (c) => c.ms.toLocaleString('en-US') },
   { key: 'in', header: 'Tokens in', numeric: true, cell: (c) => tokens(c.tokensIn) },
   { key: 'out', header: 'Tokens out', numeric: true, cell: (c) => tokens(c.tokensOut) },
-  { key: 'reasoning', header: 'Reasoning', numeric: true, cell: (c) => tokens(c.reasoning) },
+  ...(withReasoning ? [{ key: 'reasoning', header: 'Reasoning', numeric: true, cell: (c: Call) => tokens(c.reasoning) }] : []),
   { key: 'cost', header: 'Cost', numeric: true, cell: (c) => cost(c.cost) },
 ]
 
@@ -86,6 +86,9 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 /** A detail's stages table and, under it, every call grouped by run. */
 function Breakdown({ detail }: { detail: Detail }) {
+  // The column only when some call counted any: a provider that doesn't
+  // report reasoning has nothing to show.
+  const hasReasoning = detail.runs.some((r) => r.calls.some((c) => c.reasoning !== undefined))
   return (
     <>
       <Section title="Stages">
@@ -93,7 +96,7 @@ function Breakdown({ detail }: { detail: Detail }) {
       </Section>
       {detail.runs.map((run, i) => (
         <Section key={i} title={detail.runs.length > 1 || run.shared ? run.label : 'Calls'}>
-          <Table caption={run.label} columns={callColumns} rows={run.calls} rowKey={(c) => [c.at, c.stage, c.asked, c.answered, c.ms, c.tokensIn, c.cost].join()} error={(c) => !!c.error} />
+          <Table caption={run.label} columns={callColumns(hasReasoning)} rows={run.calls} rowKey={(c) => String(c.id)} error={(c) => !!c.error} />
         </Section>
       ))}
     </>

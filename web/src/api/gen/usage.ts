@@ -127,6 +127,11 @@ export interface Run {
  * asked for. A failed call has an Error and no counts.
  */
 export interface Call {
+  /**
+   * ID is the call's row, which keys it: calls made in the same second are
+   * otherwise alike.
+   */
+  id: number /* int64 */;
   at: string;
   stage: string;
   tools?: string;
