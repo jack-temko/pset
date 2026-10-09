@@ -157,7 +157,10 @@ async function runOne(browser, app, sc, mode, opts) {
 /** Open a page, then find what on it opens something: buttons that say they
  *  have a popup or expand, and inside each opened menu the items that are
  *  plain actions. Each becomes a scenario. Nothing is clicked beyond opening. */
-const DESTRUCTIVE = /delete|remove|reset|clear|erase|discard|sign out|quit/i
+// Items that change data or leave the page are not opened; a menu of
+// navigation (a list of questions) is sampled, not walked.
+const DESTRUCTIVE = /delete|remove|reset|clear|erase|discard|sign out|quit|move |turn in|mark |undo|print/i
+const MAX_ITEMS = 5
 const TRIGGERS = 'button[aria-haspopup], button[aria-expanded]'
 const MAX_EXPANDERS = 8
 
@@ -201,8 +204,7 @@ async function discoverOverlays(browser, app, pages) {
         const items = await page.evaluate(() =>
           window.__jumps.visible('[role=menuitem]').map((el) => (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 50)),
         )
-        for (const name of [...new Set(items)]) {
-          if (!name || DESTRUCTIVE.test(name)) continue
+        for (const name of [...new Set(items)].filter((n) => n && !DESTRUCTIVE.test(n)).slice(0, MAX_ITEMS)) {
           found.push({
             name: `${pg.name}: ${t.label} > ${name}`,
             label: `${t.label} > ${name}`,
