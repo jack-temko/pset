@@ -82,7 +82,14 @@ func fixture(t *testing.T) (string, *sql.DB) {
 	exec(t, d, `INSERT INTO turns (id, book_id, question, state, created_at, updated_at) VALUES ('t1', 'b1', 'why', 'done', ?, ?)`, ts, ts)
 	exec(t, d, `INSERT INTO memories (id, book_id, kind, text, norm, source, created_at, updated_at) VALUES ('m1', 'b1', 'k', 't', 't', 's', ?, ?)`, ts, ts)
 	exec(t, d, `INSERT INTO study (id, book_id, kind, started, ended) VALUES ('s1', 'b1', 'read', ?, ?)`, ts, ts)
-	exec(t, d, `INSERT INTO calls (at, subject_type, subject_id, model, ms) VALUES (?, 'turn', 't1', 'm', 1)`, ts)
+	for n := 2; n <= 6; n++ {
+		at := fmt.Sprintf("2026-03-0%dT00:00:00Z", n)
+		exec(t, d, `INSERT INTO turns (id, book_id, question, state, created_at, updated_at) VALUES (?, 'b1', 'why', 'done', ?, ?)`, fmt.Sprint("t", n), at, at)
+	}
+	// Calls: kept = qk, setk, book, tk; dropped = qd, setd, read, td.
+	for _, c := range [][2]string{{"question", "q5"}, {"question", "q1"}, {"set", "h5"}, {"set", "h1"}, {"book", "b1"}, {"turn", "t6"}, {"turn", "t1"}, {"read", "r1"}} {
+		exec(t, d, `INSERT INTO calls (at, subject_type, subject_id, model, ms) VALUES (?, ?, ?, 'm', 1)`, ts, c[0], c[1])
+	}
 	exec(t, d, `INSERT INTO forgotten (subject_type, subject_id, at) VALUES ('turn', 't0', ?)`, ts)
 	exec(t, d, `INSERT INTO jobs (id, kind, lane, state, created_at, updated_at) VALUES ('j1', 'k', 'l', 'queued', ?, ?)`, ts, ts)
 	exec(t, d, `INSERT INTO settings (key, value, updated_at) VALUES ('chat', '{"model":"m/one","apiKey":"sk-secret-00000000000"}', ?)`, ts)
@@ -117,6 +124,19 @@ func TestStripKeepsTheSampleAndDropsTheRest(t *testing.T) {
 	if err := Check(ctx, d, dir, file, []string{"books"}); err == nil {
 		t.Error("check passed with a removed secret still in the file")
 	}
+	exec(t, d, `INSERT INTO calls (at, subject_type, subject_id, model, ms, session) VALUES ('2026-01-01T00:00:00Z', 'book', 'b1', 'm', 1, 'ask-0123456789abcdef0123')`)
+	if err := Check(ctx, d, dir, file, secrets); err != nil {
+		t.Errorf("an ask- session id was taken for a key: %v", err)
+	}
+	exec(t, d, `DELETE FROM calls WHERE session = 'ask-0123456789abcdef0123'`)
+	// A prefixed key right after a letter is still a key.
+	exec(t, d, `INSERT INTO calls (at, subject_type, subject_id, model, ms, session) VALUES ('2026-01-01T00:00:00Z', 'book', 'b1', 'm', 1, ?)`, "\x03\x81Ask-or-v1-"+strings.Repeat("ab12", 16))
+	exec(t, d, `PRAGMA wal_checkpoint(TRUNCATE)`)
+	if err := Check(ctx, d, dir, file, secrets); err == nil {
+		t.Error("check passed with an sk-or- key after a letter")
+	}
+	exec(t, d, `DELETE FROM calls WHERE session LIKE '%sk-or-v1-%'`)
+	exec(t, d, `VACUUM`)
 	var st5, st4 string
 	d.QueryRow(`SELECT state FROM questions WHERE id = 'q5'`).Scan(&st5)
 	d.QueryRow(`SELECT state FROM questions WHERE id = 'q4'`).Scan(&st4)
@@ -145,7 +165,24 @@ func TestStripKeepsTheSampleAndDropsTheRest(t *testing.T) {
 	if n := count(t, d, `SELECT count(*) FROM questions`); n != 3 {
 		t.Errorf("questions = %d, want 3", n)
 	}
-	for _, tbl := range []string{"assignment_reads", "turns", "memories", "study", "calls", "forgotten", "jobs"} {
+	if n := count(t, d, `SELECT count(*) FROM turns`); n != 4 {
+		t.Errorf("turns = %d, want the newest 4", n)
+	}
+	if n := count(t, d, `SELECT count(*) FROM turns WHERE id IN ('t3','t4','t5','t6')`); n != 4 {
+		t.Errorf("newest turns not kept")
+	}
+	if n := count(t, d, `SELECT count(*) FROM calls`); n != 4 {
+		t.Errorf("calls = %d, want 4", n)
+	}
+	if n := count(t, d, `SELECT count(*) FROM calls WHERE subject_id IN ('q5','h5','b1','t6')`); n != 4 {
+		t.Errorf("the kept subjects' calls did not all survive")
+	}
+	exec(t, d, `INSERT INTO calls (at, subject_type, subject_id, model, ms) VALUES ('2026-01-01T00:00:00Z', 'question', 'gone', 'm', 1)`)
+	if err := Check(ctx, d, dir, file, secrets); err == nil {
+		t.Error("check passed with an orphan call")
+	}
+	exec(t, d, `DELETE FROM calls WHERE subject_id = 'gone'`)
+	for _, tbl := range []string{"assignment_reads", "memories", "study", "forgotten", "jobs"} {
 		if n := count(t, d, "SELECT count(*) FROM "+tbl); n != 0 {
 			t.Errorf("%s has %d rows", tbl, n)
 		}
