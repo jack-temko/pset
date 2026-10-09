@@ -46,9 +46,13 @@ fmt-check:
 	npm --prefix web exec -- oxfmt --check
 	go tool shfmt -d $(SH_FILES)
 
-# Linters, all errors, no warnings: Go through golangci-lint (.golangci.yml).
+# Linters, all errors, no warnings: Go through golangci-lint (.golangci.yml),
+# shell through shellcheck (a pinned release, fetched once), the workflows
+# through actionlint.
 lint:
 	go tool golangci-lint run
+	tools/shellcheck.sh $(SH_FILES)
+	go tool actionlint
 
 # Every check that runs without a browser or a model: the Go tests, the
 # web's types, unit tests and lint. Tests that need poppler or tesseract

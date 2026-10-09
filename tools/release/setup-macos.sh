@@ -47,6 +47,8 @@ xattr -dr com.apple.quarantine "$HOME/.local/bin/pset" . 2>/dev/null || true
 case ":$PATH:" in
 *":$HOME/.local/bin:"*) ;;
 *)
+	# The line written into .zprofile keeps $HOME and $PATH unexpanded.
+	# shellcheck disable=SC2016
 	printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >>"$HOME/.zprofile"
 	echo "    Added ~/.local/bin to your PATH; open a new Terminal window to use  pset  from anywhere."
 	;;
