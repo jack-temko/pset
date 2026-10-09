@@ -28,14 +28,14 @@
 
 ## Frontier
 
-Parked after batch 2. Resume here once the linter change has merged into dev (rebase this branch first).
+Parked after batch 2. Resume here once `lint-everything` has merged into dev (rebase this branch first).
 
 - F1 (gate: shape, high) How an error looks: one ErrorNotice with what / why / fix plus an action button, inline vs flash vs toast per surface. Show live mockups on /views from real components (no ASCII).
 - F2 (shape, high) Catalog entries carry a machine action (open Settings, Retry, go to the book) that the UI renders as a button?
 - F3 (behavior, high) Field validation errors: full catalog entries or a short form with just a message by the field?
 - F4 (behavior, medium) Background surfaces (import Reason, homework Failure, jobs Error, model usage red rows) migrate to catalog ids: all now, or in phases?
 - F5 (delivery, medium) Errors table: schema, retention, what context is stored (no keys or prompt text), dev page location (/errors next to /components?).
-- F6 (delivery, medium) The lint rule's exact shape, given what the linter change picked.
+- F6 (delivery, medium) The lint rule's exact shape. Linter session (2026-10-09): formatting merged as #31; linting is branch `lint-everything` with golangci-lint v2.14.0 as a go.mod tool. Build the rule as a golangci-lint module plugin (`golangci-lint custom`) or a go/analysis analyzer it loads. wrapcheck and errorlint were left off for this change to turn on, since it defines how errors wrap.
 - F7 (tail) What would make Jack regret this in a month; what he'd cut if halved.
 
 ## Log
