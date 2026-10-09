@@ -19,6 +19,10 @@ export async function discover(app) {
   };
   const { books } = await get('/api/books');
   let best = null;
+  // The set that shows every question state is told apart by its title: the
+  // other scenarios avoid it, since its queued and working questions show a
+  // spinner in the Questions menu for good.
+  const everyState = (h) => /every state/i.test(h.title);
   const sets = [];
   const listsOf = [];
   for (const b of books) {
@@ -33,6 +37,7 @@ export async function discover(app) {
   // "Usage details" scenarios: its set, and its place in the Questions menu.
   let usageQuestion = null;
   for (const h of sets) {
+    if (everyState(h)) continue;
     const { questions } = await get(`/api/homework/${h.id}`);
     const i = (questions ?? []).findIndex(
       (q) => q.usage && (q.state === 'ready' || q.state === 'unwritten'),
@@ -53,9 +58,7 @@ export async function discover(app) {
   }
 
   // One of each variant the views have (src/variants.ts), where the library
-  // holds it. The set that shows every question state is told apart by its
-  // title so the in-progress set is a plain one.
-  const everyState = (h) => /every state/i.test(h.title);
+  // holds it.
   const setOf = (pick) => sets.find(pick) ?? null;
   const inProgressSet = setOf(
     (h) => !h.turnedInAt && h.done < h.total && !everyState(h),
@@ -111,7 +114,9 @@ export async function discover(app) {
   // question if there is one, else the one with the most questions.
   const set =
     usageQuestion?.set ??
-    best?.homework.slice().sort((a, b) => b.total - a.total)[0] ??
+    best?.homework
+      .filter((h) => !everyState(h))
+      .sort((a, b) => b.total - a.total)[0] ??
     null;
   return {
     book,
