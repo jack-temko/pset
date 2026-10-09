@@ -164,6 +164,17 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
+/** A job's totals and breakdown, the loaded body without the dialog around it
+ *  (the /components demo of what loading used to look like uses it). */
+export function DetailBody({ detail }: { detail: Detail }) {
+  return (
+    <>
+      <Totals total={detail.total} />
+      <Breakdown detail={detail} />
+    </>
+  )
+}
+
 /** A detail's stages table and, under it, every call grouped by run. */
 function Breakdown({ detail }: { detail: Detail }) {
   // The column only when some call counted any: a provider that doesn't

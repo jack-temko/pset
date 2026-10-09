@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Check, Clock, TriangleAlert } from 'lucide-react'
 import { Box, BoxRow } from '@/components/box'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/button'
+import { Dialog } from '@/components/dialog'
 import { Flash } from '@/components/flash'
 import { HomeworkStatusLabel } from '@/components/homework-status'
 import { Label } from '@/components/label'
@@ -11,7 +13,7 @@ import { Spinner } from '@/components/spinner'
 import { Skeleton } from '@/components/skeleton'
 import { Table, type TableColumn } from '@/components/table'
 import { UsageTrigger } from '@/components/usage'
-import { BookUsageDialog, UsageModal } from '@/components/usage-modal'
+import { BookUsageDialog, DetailBody, UsageModal } from '@/components/usage-modal'
 import { clock, cost, shortModel, timeOfDay, tokens } from '@/lib/usage-format'
 import type { BookUsage, Detail as UsageDetail, Usage } from '@/api/gen/usage'
 import type { ComponentEntry } from './types'
@@ -398,13 +400,26 @@ export const feedbackSections: ComponentEntry[] = [
 
 type LoadedState = 'pending' | 'loaded' | 'cached' | 'error'
 
-/** Loaded with a query faked by four buttons. Each press remounts it, so the
- *  first render is the state pressed: pending waits (the grace, then the
- *  shimmer), loaded waits 1.2s then arrives and fades, cached is there at
- *  once, error fails. */
+const LATENCIES = [200, 800, 2000] as const
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+const ROWS = ['Problem 3.14', 'Problem 3.15', 'Problem 3.16']
+
+/** Loaded with a query faked by four buttons, and a real request that
+ *  takes as long as you choose. Each press remounts the box, so the first
+ *  render is the state pressed. */
 function LoadedDemo() {
+  const client = useQueryClient()
   const [run, setRun] = useState<{ n: number; state: LoadedState }>({ n: 0, state: 'pending' })
   const press = (state: LoadedState) => setRun((r) => ({ n: r.n + 1, state }))
+  const [latency, setLatency] = useState<number>(800)
+  const [sim, setSim] = useState<{ n: number; cached: boolean } | null>(null)
+  const replay = (cached: boolean) =>
+    setSim((s) => {
+      const n = (s?.n ?? 0) + 1
+      if (cached) client.setQueryData(['loaded-demo', n], ROWS)
+      return { n, cached }
+    })
+  const [dialog, setDialog] = useState<{ n: number; mode: 'before' | 'after' } | null>(null)
   return (
     <>
       <Shelf label="state">
@@ -419,7 +434,84 @@ function LoadedDemo() {
       <Shelf label="the box">
         <LoadedBox key={run.n} state={run.state} />
       </Shelf>
+      <Shelf label="simulate a request">
+        <div className="flex flex-wrap items-center gap-2">
+          {LATENCIES.map((ms) => (
+            <Button key={ms} variant={latency === ms ? 'primary' : 'outline'} onClick={() => setLatency(ms)}>
+              {ms >= 1000 ? `${ms / 1000}s` : `${ms}ms`}
+            </Button>
+          ))}
+          <Button onClick={() => replay(false)}>Replay</Button>
+          <Button variant="outline" onClick={() => replay(true)}>
+            Replay cached
+          </Button>
+        </div>
+        {sim && <SimBox key={sim.n} id={sim.n} latency={latency} />}
+      </Shelf>
+      <Shelf label="usage dialog, before and after (uses the latency above)">
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setDialog((d) => ({ n: (d?.n ?? 0) + 1, mode: 'before' }))}>
+            Before
+          </Button>
+          <Button variant="outline" onClick={() => setDialog((d) => ({ n: (d?.n ?? 0) + 1, mode: 'after' }))}>
+            After
+          </Button>
+        </div>
+        {dialog && <DemoDialog key={dialog.n} id={dialog.n} mode={dialog.mode} latency={latency} onClose={() => setDialog(null)} />}
+      </Shelf>
     </>
+  )
+}
+
+/** A real query that resolves after `latency`, through Loaded. A cached run
+ *  was seeded before it mounted, so it never waits. */
+function SimBox({ id, latency }: { id: number; latency: number }) {
+  const query = useQuery({
+    queryKey: ['loaded-demo', id],
+    queryFn: async () => {
+      await sleep(latency)
+      return ROWS
+    },
+  })
+  return (
+    <Loaded
+      className="mt-2 w-panel space-y-2"
+      query={query}
+      skeleton={ROWS.map((r) => (
+        <p key={r} className="text-sm">
+          <Skeleton className="h-3 w-full" />
+        </p>
+      ))}
+    >
+      {(rows) => rows.map((r) => <p key={r} className="text-sm">{r}</p>)}
+    </Loaded>
+  )
+}
+
+/** The usage dialog as it was (a spinner line, then the table: it grows) or
+ *  as it is (the table's skeleton at final size, then a fade). */
+function DemoDialog({ id, mode, latency, onClose }: { id: number; mode: 'before' | 'after'; latency: number; onClose: () => void }) {
+  const q = useQuery({
+    queryKey: ['loaded-demo-usage', id],
+    queryFn: async () => {
+      await sleep(latency)
+      return DETAIL
+    },
+    gcTime: 0,
+  })
+  if (mode === 'after') return <UsageModal open onClose={onClose} name="Problem 3.14" detail={q.data} loading={q.isPending} />
+  return (
+    <Dialog open onClose={onClose} title="Usage · Problem 3.14" width="table" footer={<Button variant="outline" onClick={onClose}>Close</Button>}>
+      {q.data ? (
+        <div className="space-y-4">
+          <DetailBody detail={q.data} />
+        </div>
+      ) : (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Spinner /> Loading the details…
+        </p>
+      )}
+    </Dialog>
   )
 }
 
@@ -431,7 +523,7 @@ function LoadedBox({ state }: { state: LoadedState }) {
     return () => clearTimeout(t)
   }, [state])
   const query = {
-    data: arrived ? ['Problem 3.14', 'Problem 3.15', 'Problem 3.16'] : undefined,
+    data: arrived ? ROWS : undefined,
     isPending: state === 'pending' || (state === 'loaded' && !arrived),
     isError: state === 'error',
   }
@@ -439,8 +531,8 @@ function LoadedBox({ state }: { state: LoadedState }) {
     <Loaded
       className="w-panel space-y-2"
       query={query}
-      skeleton={[0, 1, 2].map((i) => (
-        <p key={i} className="text-sm">
+      skeleton={ROWS.map((r) => (
+        <p key={r} className="text-sm">
           <Skeleton className="h-3 w-full" />
         </p>
       ))}
