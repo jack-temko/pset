@@ -74,6 +74,8 @@ type ManifestBook struct {
 	Title    string        `json:"title"`
 	PDFBytes int64         `json:"pdfBytes"`
 	Sets     []ManifestSet `json:"sets"`
+	Calls    int           `json:"calls"`
+	Turns    int           `json:"turns"`
 }
 
 type ManifestSet struct {
@@ -331,6 +333,15 @@ func manifest(ctx context.Context, d *sql.DB, src, dir string) (Manifest, error)
 			mb.Sets = append(mb.Sets, s)
 		}
 		sr.Close()
+		if err := d.QueryRowContext(ctx, `SELECT
+			(SELECT count(*) FROM turns WHERE book_id = ?1),
+			(SELECT count(*) FROM calls c WHERE (c.subject_type = 'book' AND c.subject_id = ?1)
+				OR (c.subject_type = 'turn' AND c.subject_id IN (SELECT id FROM turns WHERE book_id = ?1))
+				OR (c.subject_type = 'set' AND c.subject_id IN (SELECT id FROM homework WHERE book_id = ?1))
+				OR (c.subject_type = 'question' AND c.subject_id IN (SELECT q.id FROM questions q JOIN homework h ON h.id = q.homework_id WHERE h.book_id = ?1)))`,
+			b.id).Scan(&mb.Turns, &mb.Calls); err != nil {
+			return m, err
+		}
 		m.Books = append(m.Books, mb)
 	}
 	m.DBBytes = size(filepath.Join(dir, "pset.db"))

@@ -19,8 +19,7 @@ const setsPerBook = 3
 // dropped are the tables the snapshot empties. A table a later migration
 // removed is skipped, so the list may name more than a given library has.
 var dropped = []string{
-	"assignment_reads", "turns", "memories", "study", "heartbeats",
-	"calls", "forgotten", "jobs",
+	"assignment_reads", "memories", "study", "heartbeats", "forgotten", "jobs",
 }
 
 // kept are the tables the snapshot keeps (pages_fts and its shadow tables
@@ -28,8 +27,12 @@ var dropped = []string{
 // migration adds stops the snapshot until someone decides what to do with it.
 var kept = []string{
 	"books", "pages", "sections", "embeddings", "homework", "questions",
-	"settings", "schema_migrations",
+	"settings", "schema_migrations", "turns", "calls",
 }
+
+// turnsPerBook is how many Ask turns the snapshot keeps for each book: two
+// exchanges, enough for an answer with a usage line.
+const turnsPerBook = 4
 
 func isKept(name string) bool {
 	if strings.HasPrefix(name, "pages_fts") || strings.HasPrefix(name, "sqlite_") {
@@ -65,7 +68,8 @@ var inFlight = `('locating', 'reading', 'writing')`
 
 // Strip removes from an open copy of a library everything the test library
 // does not keep: the dropped tables, every homework set past the newest three
-// of its book, and every secret in settings. Questions caught mid-step in a kept
+// of its book, all but the newest four Ask turns of a book, the calls of
+// whatever else is gone, and every secret in settings. Questions caught mid-step in a kept
 // set go back to waiting, as the app puts them back on shutdown. Foreign keys
 // must be on, so a removed set takes its questions with it. It returns the
 // secret values it removed, for Check to look for; never print them.
@@ -90,6 +94,12 @@ func Strip(ctx context.Context, d *sql.DB) ([]string, error) {
 	if _, err := tx.ExecContext(ctx, `DELETE FROM homework WHERE id NOT IN (`+keptSets+`)`); err != nil {
 		return nil, fmt.Errorf("drop old sets: %w", err)
 	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM turns WHERE id NOT IN (`+keptTurns+`)`); err != nil {
+		return nil, fmt.Errorf("drop old turns: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM calls WHERE NOT (`+callHeld+`)`); err != nil {
+		return nil, fmt.Errorf("drop calls: %w", err)
+	}
 	// What the app's waiting() does: found means located, else pending.
 	if _, err := tx.ExecContext(ctx, `UPDATE questions SET activity = '',
 		state = CASE WHEN page IS NOT NULL THEN 'located' ELSE 'pending' END
@@ -111,6 +121,19 @@ func Strip(ctx context.Context, d *sql.DB) ([]string, error) {
 var keptSets = fmt.Sprintf(`SELECT id FROM (
 	SELECT id, row_number() OVER (PARTITION BY book_id ORDER BY created_at DESC, id DESC) AS n FROM homework
 ) WHERE n <= %d`, setsPerBook)
+
+// keptTurns selects the ids of the turns to keep: per book, the newest four.
+var keptTurns = fmt.Sprintf(`SELECT id FROM (
+	SELECT id, row_number() OVER (PARTITION BY book_id ORDER BY created_at DESC, id DESC) AS n FROM turns
+) WHERE n <= %d`, turnsPerBook)
+
+// callHeld is true for a calls row whose subject the snapshot holds: a
+// question, set, turn or book it keeps. Any other subject (an assignment
+// read, a type this list does not know) is not held.
+const callHeld = `(subject_type = 'question' AND subject_id IN (SELECT id FROM questions))
+	OR (subject_type = 'set' AND subject_id IN (SELECT id FROM homework))
+	OR (subject_type = 'turn' AND subject_id IN (SELECT id FROM turns))
+	OR (subject_type = 'book' AND subject_id IN (SELECT id FROM books))`
 
 // secretWords mark a settings field as a secret by its name, wherever it
 // sits in a row (chat, embeddings or profile) and however deep, so an older
@@ -244,7 +267,7 @@ func stripSecrets(ctx context.Context, tx *sql.Tx) ([]string, error) {
 // Check verifies a stripped library: d is its open database, file the path of
 // that database and dir the folder holding books/. It fails on a table the
 // snapshot has no decision about, a secret-named field left in settings, a row
-// in a dropped table, a book with more than three sets, a question without its
+// in a dropped table, a book with more than three sets or four turns, a call without its subject, a question without its
 // set, a book without its PDF, and any of the removed secrets (or a key-shaped
 // "sk-" string) in the database file's bytes. d must have no WAL pending, or
 // the file scan misses what is in it.
@@ -317,6 +340,18 @@ func Check(ctx context.Context, d *sql.DB, dir, file string, secrets []string) e
 	}
 	if n > 0 {
 		fail("%d questions are mid-step", n)
+	}
+	if err := d.QueryRowContext(ctx, `SELECT count(*) FROM calls WHERE NOT (`+callHeld+`)`).Scan(&n); err != nil {
+		return err
+	}
+	if n > 0 {
+		fail("%d calls point at a subject the snapshot does not hold", n)
+	}
+	if err := d.QueryRowContext(ctx, `SELECT count(*) FROM (SELECT book_id FROM turns GROUP BY book_id HAVING count(*) > ?)`, turnsPerBook).Scan(&n); err != nil {
+		return err
+	}
+	if n > 0 {
+		fail("%d books have more than %d turns", n, turnsPerBook)
 	}
 	brows, err := d.QueryContext(ctx, `SELECT id FROM books`)
 	if err != nil {
