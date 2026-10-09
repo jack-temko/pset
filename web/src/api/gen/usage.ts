@@ -62,3 +62,109 @@ export interface UsageTotal {
    */
   uncounted?: number /* int */;
 }
+/**
+ * Detail is everything a modal shows about one job: the totals, the
+ * stages they split into, and every call, grouped by run. It is fetched
+ * when the modal opens; lists carry only the Usage line.
+ */
+export interface Detail {
+  total: DetailTotal;
+  stages: Stage[];
+  /**
+   * Runs are the subject's runs in order: the first find, a retry, a
+   * rewrite after notes. A job that never reran has one.
+   */
+  runs: Run[];
+}
+/**
+ * DetailTotal is the calls added up, tokens split into what went in and
+ * what came out. Tokens, reasoning and cached are the counted calls'
+ * sums and absent when no call reported (never a zero); with any
+ * Uncounted they are a minimum.
+ */
+export interface DetailTotal {
+  ms: number /* int64 */;
+  tokensIn?: number /* int */;
+  tokensOut?: number /* int */;
+  reasoning?: number /* int */;
+  cached?: number /* int */;
+  cost?: number /* float64 */;
+  calls: number /* int */;
+  failed: number /* int */;
+  uncounted?: number /* int */;
+}
+/**
+ * Stage is one part of a job (Find, Figures, Guide, Round 2, Naming)
+ * with what its calls spent across every run. Attempts is the runs that
+ * made calls in it. Shared is how many questions a stage shared with
+ * when its figures are a share of one call set (the difficulty ranking);
+ * zero for a stage that is the subject's own.
+ */
+export interface Stage {
+  name: string;
+  attempts: number /* int */;
+  calls: number /* int */;
+  failed?: number /* int */;
+  ms: number /* int64 */;
+  tokensIn?: number /* int */;
+  tokensOut?: number /* int */;
+  reasoning?: number /* int */;
+  cost?: number /* float64 */;
+  uncounted?: number /* int */;
+  shared?: number /* int */;
+}
+/**
+ * Run is the calls of one run, in time order.
+ */
+export interface Run {
+  label: string;
+  shared?: number /* int */;
+  calls: Call[];
+}
+/**
+ * Call is one model call. Asked is the model requested, Answered the one
+ * that replied (empty when none did). Tools names the tools the reply
+ * asked for. A failed call has an Error and no counts.
+ */
+export interface Call {
+  at: string;
+  stage: string;
+  tools?: string;
+  asked: string;
+  answered?: string;
+  ms: number /* int64 */;
+  tokensIn?: number /* int */;
+  tokensOut?: number /* int */;
+  reasoning?: number /* int */;
+  cached?: number /* int */;
+  cost?: number /* float64 */;
+  error?: string;
+}
+/**
+ * BookUsage is what a whole book has cost: the total, a row for each
+ * kind of thing that spent it, and the import's own stages and calls.
+ */
+export interface BookUsage {
+  total: DetailTotal;
+  kinds: Kind[];
+  /**
+   * Import is the book's import (naming, contents), nil when it made no
+   * call.
+   */
+  import?: Detail;
+}
+/**
+ * Kind is one kind of thing's share of a book: its questions, its Ask
+ * answers, its assignment reads, its import.
+ */
+export interface Kind {
+  /**
+   * Kind is "questions", "ask", "reads", "import" or "ranking".
+   */
+  kind: string;
+  /**
+   * Items is how many things of the kind spent anything.
+   */
+  items: number /* int */;
+  total: DetailTotal;
+}

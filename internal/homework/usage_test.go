@@ -102,6 +102,12 @@ func TestAReadsCallsAreRecordedOnIt(t *testing.T) {
 	if len(list.Reads) != 1 || list.Reads[0].Usage == nil || list.Reads[0].Usage.Total.Calls != len(made) {
 		t.Fatalf("reads %+v for %d calls", list.Reads, len(made))
 	}
+	// The modal's detail: one stage, Read, in one run.
+	var d usage.Detail
+	if code := e.do(t, "GET", "/api/assignment-reads/"+r.ID+"/usage", nil, &d); code != 200 ||
+		len(d.Stages) != 1 || d.Stages[0].Name != "Read" || len(d.Runs) != 1 {
+		t.Fatalf("read detail %d %+v", code, d)
+	}
 }
 
 // Removing a question while a model call for it is in flight: the job is
@@ -170,5 +176,96 @@ func TestForgetBookCallsTakesTheQuestionsAndReadsWithIt(t *testing.T) {
 	e.svc.c.DB.QueryRow(`SELECT count(*) FROM calls`).Scan(&n)
 	if n != 0 {
 		t.Fatalf("%d rows recorded for subjects of a removed book", n)
+	}
+}
+
+// Each step of a question's production names its stage, and the steps of
+// one find share a run: the detail the modal fetches has the stages in
+// order and one run.
+func TestAQuestionsCallsCarryTheirStageAndRun(t *testing.T) {
+	e := newEnv(t)
+	calls := recordCalls(t, e.svc.c.DB)
+	h := e.newSet(t)
+	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
+
+	stages := map[string]bool{}
+	runs := map[string]bool{}
+	for _, c := range calls() {
+		if c.Stage == "" || c.Run == "" {
+			t.Fatalf("a call without a stage or run: %+v", c)
+		}
+		stages[c.Stage] = true
+		runs[c.Run] = true
+	}
+	if !stages["Find"] || !stages["Guide"] {
+		t.Fatalf("stages %v, want Find and Guide", stages)
+	}
+	if len(runs) != 1 {
+		t.Fatalf("runs %v, want the steps of one find to share one", runs)
+	}
+
+	var d usage.Detail
+	if code := e.do(t, "GET", "/api/questions/"+q.ID+"/usage", nil, &d); code != 200 {
+		t.Fatalf("usage %d", code)
+	}
+	if len(d.Runs) != 1 || len(d.Stages) < 2 || d.Total.Calls != len(calls()) {
+		t.Fatalf("detail %+v", d)
+	}
+
+	// A retry is a run of its own.
+	e.svc.setFailed(context.Background(), q.ID, FailureGeneration, "Something went wrong.")
+	if code := e.do(t, "POST", "/api/questions/"+q.ID+"/retry", Retry{}, nil); code != 200 {
+		t.Fatalf("retry %d", code)
+	}
+	e.wait(t, q.ID, StateReady)
+	e.do(t, "GET", "/api/questions/"+q.ID+"/usage", nil, &d)
+	if len(d.Runs) < 2 {
+		t.Fatalf("runs %d after a retry, want at least 2: %+v", len(d.Runs), calls())
+	}
+}
+
+// A set's ranking is shared: every question's modal carries an even share
+// of it, marked as shared, and the set's own calls stay whole.
+func TestARankingIsSharedAmongTheSetsQuestions(t *testing.T) {
+	e := newEnv(t)
+	ctx := context.Background()
+	recordCalls(t, e.svc.c.DB)
+	h := e.newSet(t)
+	a := e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0]
+	b := e.add(t, h.ID, Draft{Text: "3.37", InBook: true})[0]
+	e.wait(t, a.ID, StateReady)
+	e.wait(t, b.ID, StateReady)
+	sink := usage.Sink(e.svc.c.DB)
+	cost := 0.0010
+	sink(llm.Call{At: "2030-01-01T00:00:00Z", SubjectType: usage.SubjectSet, SubjectID: h.ID, Model: "m", Answered: "m", Ms: 2000,
+		Stage: "Rank", Run: "r", Usage: &llm.Usage{PromptTokens: 800, CompletionTokens: 200, Cost: cost}})
+
+	d, err := e.svc.QuestionUsage(ctx, a.ID)
+	if err != nil || d == nil {
+		t.Fatalf("detail %v, %v", d, err)
+	}
+	var rank *usage.Stage
+	for i := range d.Stages {
+		if d.Stages[i].Name == "Rank" {
+			rank = &d.Stages[i]
+		}
+	}
+	if rank == nil || rank.Shared != 2 || rank.Cost == nil || *rank.Cost != cost/2 || *rank.TokensIn != 400 {
+		t.Fatalf("rank stage %+v, want half of the ranking, shared with 2", rank)
+	}
+	// The line carries the share too.
+	var list Detail
+	e.do(t, "GET", "/api/homework/"+h.ID, nil, &list)
+	for _, q := range list.Questions {
+		// The test model reports no cost of its own, so the line's cost is
+		// the share alone.
+		if q.Usage == nil || q.Usage.Total.Cost == nil || *q.Usage.Total.Cost != cost/2 {
+			t.Fatalf("line %+v does not carry half the ranking", q.Usage)
+		}
+	}
+	// Removing the set takes the ranking with it.
+	e.do(t, "DELETE", "/api/homework/"+h.ID, nil, nil)
+	if u, err := usage.For(ctx, e.svc.c.DB, usage.SubjectSet, h.ID); err != nil || u != nil {
+		t.Fatalf("the removed set's ranking %v, %v", u, err)
 	}
 }

@@ -63,3 +63,37 @@ func TestATurnsCallsAreRecordedOnIt(t *testing.T) {
 		t.Fatalf("usage %+v for %d calls", got.Usage, len(made))
 	}
 }
+
+// A turn's calls are staged by round, each round naming the tools it
+// asked for, and its detail is served at /api/turns/{id}/usage.
+func TestATurnsCallsAreStagedByRound(t *testing.T) {
+	e := newEnv(t)
+	calls := recordCalls(t, e.svc.c.DB)
+	e.llm.Script(
+		llmtest.Reply{ToolCalls: []llm.ToolCall{call("c1", "search_pages", `{"query":"eigenvalue"}`)}},
+		llmtest.Reply{Text: answer},
+	)
+	var turn Turn
+	e.do(t, "POST", "/api/books/b1/turns", Question{Question: "What's an eigenvalue?"}, &turn)
+	e.wait(t, turn.ID, TurnDone)
+
+	var rounds []string
+	for _, c := range calls() {
+		if c.Run == "" {
+			t.Fatalf("a call without a run: %+v", c)
+		}
+		if c.Stage == "Round 1" {
+			if c.Tools != "search_pages" {
+				t.Fatalf("round 1 tools %q, want search_pages", c.Tools)
+			}
+		}
+		rounds = append(rounds, c.Stage)
+	}
+	if len(rounds) < 2 || rounds[0] != "Round 1" || rounds[1] != "Round 2" {
+		t.Fatalf("stages %v, want Round 1 then Round 2", rounds)
+	}
+	var d usage.Detail
+	if code := e.do(t, "GET", "/api/turns/"+turn.ID+"/usage", nil, &d); code != 200 || len(d.Runs) != 1 || d.Total.Calls != len(rounds) {
+		t.Fatalf("detail %d %+v", code, d)
+	}
+}

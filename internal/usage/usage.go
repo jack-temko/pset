@@ -24,6 +24,9 @@ const (
 	SubjectRead     = "read"
 	SubjectTurn     = "turn"
 	SubjectBook     = "book"
+	// SubjectSet is a homework set: the difficulty ranking of its questions,
+	// which belongs to no one question and is shared among them.
+	SubjectSet = "set"
 )
 
 // Migrations: one row per call. The rows go when their subject does; the
@@ -59,7 +62,16 @@ CREATE TABLE forgotten (
 	subject_id   TEXT NOT NULL,
 	at           TEXT NOT NULL,
 	PRIMARY KEY (subject_type, subject_id)
-);`}}
+);`},
+		// What each call was a part of: its stage and run (new columns, old
+		// rows keep NULLs and read as unlabelled), the tools its reply asked
+		// for, and the reasoning and cached tokens the provider counted.
+		{Name: "usage/3", SQL: `
+ALTER TABLE calls ADD COLUMN stage TEXT;
+ALTER TABLE calls ADD COLUMN run TEXT;
+ALTER TABLE calls ADD COLUMN tools TEXT;
+ALTER TABLE calls ADD COLUMN reasoning_tokens INTEGER;
+ALTER TABLE calls ADD COLUMN cached_tokens INTEGER;`}}
 }
 
 // execer is what the sink and the cleanup write through, so they can run
@@ -80,9 +92,10 @@ type queryer interface {
 func Sink(d *sql.DB) func(llm.Call) {
 	return func(c llm.Call) {
 		ctx := context.Background()
-		var prompt, completion, cost any
+		var prompt, completion, cost, reasoning, cached any
 		if c.Usage != nil {
 			prompt, completion, cost = c.Usage.PromptTokens, c.Usage.CompletionTokens, c.Usage.Cost
+			reasoning, cached = c.Usage.CompletionDetails.ReasoningTokens, c.Usage.PromptDetails.CachedTokens
 		}
 		var errText any
 		if c.Error != "" {
@@ -92,11 +105,13 @@ func Sink(d *sql.DB) func(llm.Call) {
 		// ran: the mark and the insert are one statement, so a removal
 		// can't slip between checking and writing.
 		if _, err := d.ExecContext(ctx, `INSERT INTO calls
-			(at, subject_type, subject_id, model, answered, ms, prompt_tokens, completion_tokens, cost, host, session, error)
-			SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+			(at, subject_type, subject_id, model, answered, ms, prompt_tokens, completion_tokens, cost, host, session, error,
+				stage, run, tools, reasoning_tokens, cached_tokens)
+			SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 			WHERE NOT EXISTS (SELECT 1 FROM forgotten WHERE subject_type = ? AND subject_id = ?)`,
 			c.At, c.SubjectType, c.SubjectID, c.Model, nullable(c.Answered), c.Ms,
 			prompt, completion, cost, nullable(c.Host), nullable(c.Session), errText,
+			nullable(c.Stage), nullable(c.Run), nullable(c.Tools), reasoning, cached,
 			c.SubjectType, c.SubjectID); err != nil {
 			slog.Error("usage: record call", "subject", c.SubjectType+"/"+c.SubjectID, "err", err)
 		}

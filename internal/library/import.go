@@ -125,6 +125,7 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 	}
 	ctx = llm.WithSession(ctx, fmt.Sprintf("book-%s-%s", p.BookID, j.Kind))
 	ctx = llm.WithSubject(ctx, llm.Subject{Type: usage.SubjectBook, ID: p.BookID})
+	ctx = llm.WithStage(llm.WithRun(ctx, j.ID), "Contents")
 	b, err := getBook(ctx, s.c.DB, p.BookID)
 	if errors.Is(err, errNotFound) {
 		return nil
@@ -382,7 +383,7 @@ func (s *Service) index(ctx context.Context, b row, path, kind string, pages []s
 		return err
 	}
 	printed := findContentsPages(pages)
-	if err := s.nameBook(ctx, m, b, path, pages, printed); err != nil {
+	if err := s.nameBook(llm.WithStage(ctx, "Naming"), m, b, path, pages, printed); err != nil {
 		return err
 	}
 	if len(secs) == 0 {

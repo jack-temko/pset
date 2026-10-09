@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // How hard each question of a set is, against the others in it, 1 to 5:
@@ -70,7 +71,7 @@ func (s *Service) runRank(ctx context.Context, j jobs.Job) error {
 	if len(qs) == 0 {
 		return nil
 	}
-	scores, err := s.rank(llm.WithSession(ctx, "rank-"+p.SetID), qs)
+	scores, err := s.rank(rankContext(ctx, p.SetID), qs)
 	if err != nil {
 		return err
 	}
@@ -228,4 +229,12 @@ func heuristicScores(qs []Question) map[string]int {
 		out[q.ID] = 1 + int(math.Round(4*(raw[i]-lo)/(hi-lo)))
 	}
 	return out
+}
+
+// rankContext is the context a set's ranking runs under: its calls are
+// the set's, shared among its questions in the usage modal.
+func rankContext(ctx context.Context, setID string) context.Context {
+	ctx = llm.WithSession(ctx, "rank-"+setID)
+	ctx = llm.WithSubject(ctx, llm.Subject{Type: usage.SubjectSet, ID: setID})
+	return llm.WithStage(ctx, "Rank")
 }

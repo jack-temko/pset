@@ -63,6 +63,9 @@ type Loop struct {
 	// Remembered fires after remember saves (Saved) or replaces
 	// (Replaced) a note, once its step is finished.
 	Remembered func(n Note, outcome string)
+	// Stage, when set, names a round for the usage modal ("Round 2"); the
+	// calls of a loop without one keep the stage the caller's context has.
+	Stage func(round int) string
 	// Rounds bounds the tool rounds; past it the model answers with what
 	// it has.
 	Rounds int
@@ -139,6 +142,10 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 		}
 		req := llm.ChatRequest{Model: l.Model, Messages: sent, Tools: tools}
 		final := round >= rounds
+		callCtx := ctx
+		if l.Stage != nil {
+			callCtx = llm.WithStage(ctx, l.Stage(round+1))
+		}
 		if final {
 			req.ToolChoice = "none"
 			req.Messages = append(sent, llm.TextMessage("user", "Answer now, with what you've found."))
@@ -161,7 +168,7 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 				l.step("Thinking…", true)
 			}
 		}
-		reply, err := l.Client.ChatStreamFull(ctx, req, func(delta string) error {
+		reply, err := l.Client.ChatStreamFull(callCtx, req, func(delta string) error {
 			if !wrote {
 				endThinking()
 				wrote = true

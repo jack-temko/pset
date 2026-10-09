@@ -355,3 +355,159 @@ func TestSweepClearsOldMarksAndUnattributedCalls(t *testing.T) {
 		t.Errorf("%d marks left, want only the one from just now", marks)
 	}
 }
+
+// The stage, run, tools and reasoning columns are added to a database that
+// already has calls: old rows survive untouched and read as "Other".
+func TestMigrationKeepsExistingCalls(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "pset.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { d.Close() })
+	ctx := context.Background()
+	old := Migrations()[:2]
+	if err := db.Migrate(ctx, d, old); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Exec(`INSERT INTO calls (at, subject_type, subject_id, model, ms, prompt_tokens, completion_tokens, cost)
+		VALUES ('2026-09-29T10:00:00Z', 'question', 'q1', 'm', 1500, 100, 20, 0.001)`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Migrate(ctx, d, Migrations()); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := Calls(ctx, d, SubjectQuestion, "q1")
+	if err != nil || len(rows) != 1 || rows[0].Ms != 1500 || *rows[0].TokensIn != 100 || rows[0].Stage != "" || rows[0].Reasoning != nil {
+		t.Fatalf("old row %+v, %v", rows, err)
+	}
+	if got := Build(rows, nil, 0); got.Stages[0].Name != "Other" || got.Total.Calls != 1 {
+		t.Fatalf("detail %+v", got)
+	}
+}
+
+func intp(n int) *int { return &n }
+
+// The sink stores a call's stage, run, tools and the provider's reasoning
+// and cached counts, and the detail groups them: stages in the order they
+// began with their attempts, runs in order, a failed call with its error.
+func TestDetailGroupsCallsByStageAndRun(t *testing.T) {
+	d := newDB(t)
+	sink := Sink(d)
+	ctx := context.Background()
+	u := func(in, out, reasoning, cached int, cost float64) *llm.Usage {
+		x := &llm.Usage{PromptTokens: in, CompletionTokens: out, Cost: cost}
+		x.CompletionDetails.ReasoningTokens, x.PromptDetails.CachedTokens = reasoning, cached
+		return x
+	}
+	mk := func(at, stage, run string, ms int64, us *llm.Usage, errText string) llm.Call {
+		c := call(at, SubjectQuestion, "q1", "m", "m", ms, us, errText)
+		c.Stage, c.Run = stage, run
+		return c
+	}
+	sink(mk("2026-09-29T10:00:00Z", "Find", "r1", 2000, u(800, 100, 0, 0, 0.0004), ""))
+	sink(mk("2026-09-29T10:00:03Z", "Guide", "r1", 6000, u(5000, 1200, 900, 3000, 0.002), ""))
+	sink(mk("2026-09-29T10:01:00Z", "Guide", "r2", 900, nil, "rate limited (429)"))
+	sink(mk("2026-09-29T10:01:02Z", "Guide", "r2", 5000, u(5200, 1000, 700, 3500, 0.0018), ""))
+	tooled := mk("2026-09-29T10:01:09Z", "Round 2", "r2", 100, u(1, 1, 0, 0, 0), "")
+	tooled.Tools = "search_pages,read_page"
+	sink(tooled)
+
+	rows, err := Calls(ctx, d, SubjectQuestion, "q1")
+	if err != nil || len(rows) != 5 {
+		t.Fatalf("calls %d, %v", len(rows), err)
+	}
+	if rows[1].Reasoning == nil || *rows[1].Reasoning != 900 || *rows[1].Cached != 3000 || rows[4].Tools != "search_pages,read_page" {
+		t.Fatalf("stored %+v / %+v", rows[1], rows[4])
+	}
+	got := Build(rows, nil, 0)
+	if len(got.Runs) != 2 || got.Runs[0].Label != "Run 1" || got.Runs[1].Label != "Run 2" || len(got.Runs[1].Calls) != 3 {
+		t.Fatalf("runs %+v", got.Runs)
+	}
+	if got.Stages[0].Name != "Find" || got.Stages[1].Name != "Guide" || got.Stages[1].Attempts != 2 || got.Stages[1].Calls != 3 || got.Stages[1].Failed != 1 || got.Stages[1].Uncounted != 1 {
+		t.Fatalf("stages %+v", got.Stages)
+	}
+	if got.Total.Calls != 5 || got.Total.Failed != 1 || got.Total.Uncounted != 1 || *got.Total.TokensIn != 11001 || *got.Total.Reasoning != 1600 {
+		t.Fatalf("total %+v", got.Total)
+	}
+	if got.Runs[1].Calls[1].Error != "" || got.Runs[1].Calls[0].Error != "rate limited (429)" {
+		t.Fatalf("errors %+v", got.Runs[1].Calls)
+	}
+}
+
+// A set's ranking is split evenly among its questions (A3): each takes
+// 1/n of the figures, it sits last as its own shared stage and run, and
+// the book's total counts the whole once.
+func TestRankingIsSharedAndCountedOnceInTheBook(t *testing.T) {
+	d := newDB(t)
+	ctx := context.Background()
+	for _, q := range []string{
+		`CREATE TABLE homework (id TEXT, book_id TEXT)`, `CREATE TABLE questions (id TEXT, homework_id TEXT)`,
+		`CREATE TABLE turns (id TEXT, book_id TEXT)`, `CREATE TABLE assignment_reads (id TEXT, book_id TEXT)`,
+		`INSERT INTO homework VALUES ('h1', 'b1')`, `INSERT INTO questions VALUES ('q1', 'h1'), ('q2', 'h1')`,
+		`INSERT INTO turns VALUES ('t1', 'b1')`, `INSERT INTO assignment_reads VALUES ('r1', 'b1')`,
+	} {
+		if _, err := d.Exec(q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sink := Sink(d)
+	put := func(typ, id, stage string, ms int64, in int, cost float64) {
+		c := call("2026-09-29T10:00:00Z", typ, id, "m", "m", ms, &llm.Usage{PromptTokens: in, CompletionTokens: 0, Cost: cost}, "")
+		c.Stage, c.Run = stage, "r"
+		sink(c)
+	}
+	put(SubjectQuestion, "q1", "Guide", 4000, 1000, 0.002)
+	put(SubjectQuestion, "q2", "Guide", 3000, 800, 0.0016)
+	put(SubjectSet, "h1", "Rank", 2000, 600, 0.001)
+	put(SubjectTurn, "t1", "Round 1", 1000, 500, 0.0005)
+	put(SubjectRead, "r1", "Read", 500, 300, 0.0003)
+	put(SubjectBook, "b1", "Naming", 700, 200, 0.0001)
+	put(SubjectBook, "b1", "Contents", 900, 400, 0.0002)
+
+	own, _ := Calls(ctx, d, SubjectQuestion, "q1")
+	rank, _ := Calls(ctx, d, SubjectSet, "h1")
+	q1 := Build(own, Share(rank, 2), 2)
+	last := q1.Stages[len(q1.Stages)-1]
+	if last.Name != "Rank" || last.Shared != 2 || *last.Cost != 0.0005 || *last.TokensIn != 300 || last.Ms != 1000 {
+		t.Fatalf("shared stage %+v", last)
+	}
+	if lr := q1.Runs[len(q1.Runs)-1]; lr.Shared != 2 || len(lr.Calls) != 1 {
+		t.Fatalf("shared run %+v", lr)
+	}
+	// Both questions' shares add up to the whole ranking.
+	own2, _ := Calls(ctx, d, SubjectQuestion, "q2")
+	q2 := Build(own2, Share(rank, 2), 2)
+	if sum := *q1.Stages[1].Cost + *q2.Stages[1].Cost; sum != 0.001 {
+		t.Fatalf("shares add to %v, want the whole 0.001", sum)
+	}
+
+	// The line takes the same share.
+	line, _ := For(ctx, d, SubjectQuestion, "q1")
+	rankLine, _ := For(ctx, d, SubjectSet, "h1")
+	line = AddShare(line, rankLine, 2)
+	if *line.Total.Cost != 0.0025 || line.Total.Ms != 5000 || line.Total.Calls != 1 {
+		t.Fatalf("line %+v", line.Total)
+	}
+
+	b, err := ForBook(ctx, d, "b1")
+	if err != nil || b == nil {
+		t.Fatalf("book %v, %v", b, err)
+	}
+	if *b.Total.Cost != 0.0002+0.0001+0.0016+0.002+0.001+0.0005+0.0003 || b.Total.Calls != 7 {
+		t.Fatalf("book total %+v (the ranking must count once)", b.Total)
+	}
+	kinds := map[string]Kind{}
+	for _, k := range b.Kinds {
+		kinds[k.Kind] = k
+	}
+	if kinds["questions"].Items != 2 || kinds["questions"].Total.Calls != 2 || kinds["ranking"].Total.Calls != 1 ||
+		kinds["ask"].Items != 1 || kinds["reads"].Items != 1 || kinds["import"].Total.Calls != 2 {
+		t.Fatalf("kinds %+v", kinds)
+	}
+	if b.Import == nil || len(b.Import.Stages) != 2 || b.Import.Stages[0].Name != "Naming" {
+		t.Fatalf("import %+v", b.Import)
+	}
+	if none, err := ForBook(ctx, d, "nobook"); err != nil || none != nil {
+		t.Fatalf("a book with no calls: %v, %v", none, err)
+	}
+}

@@ -253,8 +253,16 @@ func fillUsage(ctx context.Context, d *sql.DB, qs []Question) error {
 	if err != nil {
 		return err
 	}
+	// Each takes an even share of the set's ranking, which no question
+	// owns.
+	var rank *usage.Usage
+	if len(qs) > 0 {
+		if rank, err = usage.For(ctx, d, usage.SubjectSet, qs[0].HomeworkID); err != nil {
+			return err
+		}
+	}
 	for i, q := range qs {
-		qs[i].Usage = uses[q.ID]
+		qs[i].Usage = usage.AddShare(uses[q.ID], rank, len(qs))
 	}
 	return nil
 }
@@ -338,6 +346,9 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 	}
 	// The questions went with the set; their calls go with them.
 	if err := usage.ForgetAll(ctx, s.c.DB, usage.SubjectQuestion, questionIDs(qs)); err != nil {
+		return err
+	}
+	if err := usage.Forget(ctx, s.c.DB, usage.SubjectSet, id); err != nil {
 		return err
 	}
 	s.c.Events.Publish(EventHomeworkRemoved, HomeworkRemoved{ID: id, BookID: h.BookID})
@@ -787,6 +798,13 @@ func (s *Service) publishQuestion(ctx context.Context, id string) (Question, err
 	if q.Question.Usage, err = usage.For(ctx, s.c.DB, usage.SubjectQuestion, id); err != nil {
 		return Question{}, err
 	}
+	if set, n, err := s.setOf(ctx, id); err != nil {
+		return Question{}, err
+	} else if rank, err := usage.For(ctx, s.c.DB, usage.SubjectSet, set); err != nil {
+		return Question{}, err
+	} else {
+		q.Question.Usage = usage.AddShare(q.Question.Usage, rank, n)
+	}
 	one := []Question{q.Question}
 	if err = s.fillSeconds(ctx, one); err != nil {
 		return Question{}, err
@@ -815,6 +833,13 @@ func (s *Service) ForgetBookCalls(ctx context.Context, bookID string) error {
 	if err := usage.ForgetAll(ctx, s.c.DB, usage.SubjectQuestion, questions); err != nil {
 		return err
 	}
+	sets, err := ids(ctx, s.c.DB, `SELECT id FROM homework WHERE book_id = ?`, bookID)
+	if err != nil {
+		return err
+	}
+	if err := usage.ForgetAll(ctx, s.c.DB, usage.SubjectSet, sets); err != nil {
+		return err
+	}
 	reads, err := ids(ctx, s.c.DB, `SELECT id FROM assignment_reads WHERE book_id = ?`, bookID)
 	if err != nil {
 		return err
@@ -838,4 +863,35 @@ func ids(ctx context.Context, d *sql.DB, query string, args ...any) ([]string, e
 		out = append(out, id)
 	}
 	return out, rows.Err()
+}
+
+// QuestionUsage is everything a question ever spent: its own calls, every
+// run, and its even share of its set's ranking. Nil when it made no call.
+func (s *Service) QuestionUsage(ctx context.Context, id string) (*usage.Detail, error) {
+	own, err := usage.Calls(ctx, s.c.DB, usage.SubjectQuestion, id)
+	if err != nil {
+		return nil, err
+	}
+	set, n, err := s.setOf(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	rank, err := usage.Calls(ctx, s.c.DB, usage.SubjectSet, set)
+	if err != nil {
+		return nil, err
+	}
+	if len(own) == 0 {
+		return nil, nil
+	}
+	return usage.Build(own, usage.Share(rank, n), n), nil
+}
+
+// setOf is the set a question is in and how many questions it has.
+func (s *Service) setOf(ctx context.Context, questionID string) (set string, n int, err error) {
+	err = s.c.DB.QueryRowContext(ctx, `SELECT homework_id, (SELECT count(*) FROM questions WHERE homework_id = q.homework_id) FROM questions q WHERE id = ?`,
+		questionID).Scan(&set, &n)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", 0, nil
+	}
+	return set, n, err
 }

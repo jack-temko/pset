@@ -22,6 +22,35 @@ import (
 
 type questionPayload struct {
 	QuestionID string `json:"questionId"`
+	// Run is the run this step belongs to, set by the step that queued it
+	// (a find queues a figure read and a guide in its own run); empty for
+	// a step that starts one (a retry, a rewrite after notes), which then
+	// takes its own job's id.
+	Run string `json:"run,omitempty"`
+}
+
+// chained is a step queued from inside a run: the same run as the one
+// queuing it.
+func chained(spec jobs.Spec, run string) jobs.Spec {
+	if p, ok := spec.Payload.(questionPayload); ok {
+		p.Run = run
+		spec.Payload = p
+	}
+	return spec
+}
+
+// stageOf is what a question's job step is called in the usage modal.
+func stageOf(kind string, boxed bool) string {
+	switch kind {
+	case JobRead:
+		return "Figures"
+	case JobGuide:
+		return "Guide"
+	}
+	if boxed {
+		return "Boxed read"
+	}
+	return "Find"
 }
 
 // failure is a question failure in words for the student: it becomes the
@@ -130,6 +159,11 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 	// was spent on this question.
 	ctx = llm.WithSession(ctx, fmt.Sprintf("question-%s-%s", p.QuestionID, j.Kind))
 	ctx = llm.WithSubject(ctx, llm.Subject{Type: usage.SubjectQuestion, ID: p.QuestionID})
+	run := p.Run
+	if run == "" {
+		run = j.ID
+	}
+	ctx = llm.WithRun(ctx, run)
 	q, err := getQuestion(ctx, s.c.DB, p.QuestionID)
 	if errors.Is(err, errNotFound) {
 		return nil
@@ -137,6 +171,7 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 	if err != nil {
 		return err
 	}
+	ctx = llm.WithStage(ctx, stageOf(j.Kind, len(q.Boxes) > 0))
 	err = s.withModel(ctx, q, step)
 	settle := context.WithoutCancel(ctx)
 	switch {
@@ -238,6 +273,7 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 		if len(loc.Figures) > 0 {
 			next = readStep(q.ID)
 		}
+		next = chained(next, llm.RunOf(ctx))
 		_, err := s.c.Queue.Enqueue(ctx, tx, next)
 		return err
 	})
@@ -271,7 +307,7 @@ func (s *Service) read(ctx context.Context, m model, book Book, q row) error {
 			mustJSON(runLists(orEmpty(lines))), mustJSON(runLists(orEmpty(doubts))), StateLocated, db.Now(), q.ID); err != nil {
 			return err
 		}
-		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(q.ID, false))
+		_, err := s.c.Queue.Enqueue(ctx, tx, chained(nextStep(q.ID, false), llm.RunOf(ctx)))
 		return err
 	})
 	if err != nil {
