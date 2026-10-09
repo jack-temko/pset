@@ -253,7 +253,9 @@ async function main() {
 
   const found = await discover(app)
   let list = scenarios(found)
-  const named = (s) => !v.only || s.name === v.only || slug(s.name) === slug(v.only)
+  // --only takes scenario names (or their slugs), comma separated.
+  const only = (v.only ?? '').split(',').map(slug).filter(Boolean)
+  const named = (s) => only.length === 0 || only.includes(slug(s.name))
 
   const browser = await chromium.launch()
   const rows = []
@@ -265,9 +267,10 @@ async function main() {
     }
     // --only names a hand-written scenario without discovering; any other name
     // is looked for among the discovered ones.
-    if (!v['no-discover'] && (!v.only || v['discover-only'] || !list.some(named))) {
+    if (!v['no-discover'] && (!v.only || v['discover-only'] || only.some((o) => !list.some((s) => slug(s.name) === o)))) {
       const handwritten = new Set(list.map(stepKey))
-      const pages = list.filter((s) => !s.skip && !s.steps)
+      // With --only, just the pages the discovered scenarios live on.
+      const pages = list.filter((s) => !s.skip && !s.steps && (!v.only || /^(Book|Homework set), cold load$/.test(s.name)))
       const extra = (await discoverOverlays(browser, app, pages)).filter((d) => !handwritten.has(stepKey(d)))
       for (const d of extra) list.push({ ...d, discovered: true })
       process.stderr.write(`discovered ${extra.length} overlays\n`)
