@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress, branch `test-library-usage`.
+Done (2026-10-09), branch `test-library-usage`.
 
 ## Information
 
