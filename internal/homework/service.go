@@ -420,6 +420,8 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 		s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: q})
 	}
 	s.publishSet(ctx, homeworkID)
+	// The others' shares of the set's ranking are now over more questions.
+	s.publishSetQuestions(ctx, homeworkID)
 	// Questions not from the book have nothing to find: the set may be
 	// ready to rank already.
 	s.rankWhenFound(ctx, homeworkID)
@@ -667,12 +669,8 @@ func (s *Service) RemoveQuestion(ctx context.Context, id string) error {
 		return err
 	}
 	s.c.Events.Publish(EventQuestionRemoved, QuestionRemoved{ID: id, HomeworkID: q.HomeworkID})
-	qs, _ := listQuestions(ctx, s.c.DB, q.HomeworkID)
-	for _, other := range qs {
-		if other.Position >= q.Position {
-			s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: other})
-		}
-	}
+	// Everyone left moved up or takes a bigger share of the set's ranking.
+	s.publishSetQuestions(ctx, q.HomeworkID)
 	s.publishSet(ctx, q.HomeworkID)
 	// Difficulty is against the rest of the set, so the rest is ranked again.
 	s.rankWhenFound(ctx, q.HomeworkID)

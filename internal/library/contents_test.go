@@ -272,6 +272,19 @@ func TestScannedBookContentsFromThePrintedContents(t *testing.T) {
 	if code := e.do(t, "GET", "/api/books/"+b.ID+"/usage", nil, &bu); code != 200 || bu.Import == nil {
 		t.Fatalf("book usage %d %+v", code, bu)
 	}
+	// One import is one run: the examination's job id, carried to the preparation.
+	var examine string
+	if err := e.svc.c.DB.QueryRow(`SELECT id FROM jobs WHERE kind = ? AND subject = ?`, JobExamine, b.ID).Scan(&examine); err != nil {
+		t.Fatal(err)
+	}
+	var runs int
+	var run string
+	if err := e.svc.c.DB.QueryRow(`SELECT count(DISTINCT run), min(run) FROM calls WHERE subject_type = ? AND subject_id = ?`, usage.SubjectBook, b.ID).Scan(&runs, &run); err != nil || runs != 1 || run != examine {
+		t.Fatalf("import calls in %d runs (%q), want one, the examination's %q (%v)", runs, run, examine, err)
+	}
+	if len(bu.Import.Runs) != 1 {
+		t.Fatalf("import runs %+v", bu.Import.Runs)
+	}
 	if len(bu.Import.Stages) != 2 || bu.Import.Stages[0].Name != "Naming" || bu.Import.Stages[1].Name != "Contents" || len(bu.Import.Runs) == 0 {
 		t.Fatalf("import stages %+v", bu.Import.Stages)
 	}

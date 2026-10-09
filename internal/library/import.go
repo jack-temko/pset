@@ -19,6 +19,9 @@ import (
 
 type importPayload struct {
 	BookID string `json:"bookId"`
+	// Run is the examination's job id, carried to the preparation so one
+	// import is one run in the book's usage.
+	Run string `json:"run,omitempty"`
 }
 
 // failure is an import failure in words for the student: it becomes the
@@ -77,7 +80,9 @@ func (s *Service) runExamine(ctx context.Context, j jobs.Job) error {
 		if err != nil {
 			return err
 		}
-		prepare := jobs.Spec{Kind: JobPrepare, Subject: b.ID, Payload: importPayload{BookID: b.ID}}
+		// The preparation is the same run as the examination: one import is one
+		// run in the book's usage.
+		prepare := jobs.Spec{Kind: JobPrepare, Subject: b.ID, Payload: importPayload{BookID: b.ID, Run: llm.RunOf(ctx)}}
 		if kind == string(KindDigital) {
 			prepare.Priority = digitalFirst
 		}
@@ -125,7 +130,11 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 	}
 	ctx = llm.WithSession(ctx, fmt.Sprintf("book-%s-%s", p.BookID, j.Kind))
 	ctx = llm.WithSubject(ctx, llm.Subject{Type: usage.SubjectBook, ID: p.BookID})
-	ctx = llm.WithStage(llm.WithRun(ctx, j.ID), "Contents")
+	run := p.Run
+	if run == "" {
+		run = j.ID
+	}
+	ctx = llm.WithStage(llm.WithRun(ctx, run), "Contents")
 	b, err := getBook(ctx, s.c.DB, p.BookID)
 	if errors.Is(err, errNotFound) {
 		return nil

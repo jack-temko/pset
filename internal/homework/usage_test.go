@@ -3,11 +3,14 @@ package homework
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
 	"github.com/jackt/pset/internal/usage"
@@ -267,5 +270,53 @@ func TestARankingIsSharedAmongTheSetsQuestions(t *testing.T) {
 	e.do(t, "DELETE", "/api/homework/"+h.ID, nil, nil)
 	if u, err := usage.For(ctx, e.svc.c.DB, usage.SubjectSet, h.ID); err != nil || u != nil {
 		t.Fatalf("the removed set's ranking %v, %v", u, err)
+	}
+}
+
+// A ranking's cost is shared among the set's questions, so after one every
+// question's line is published again with its new share, not only the
+// questions whose difficulty moved; so are the others when a question is
+// removed (each takes a bigger share).
+func TestEveryQuestionIsRepublishedAfterARankingAndARemoval(t *testing.T) {
+	e := newEnv(t)
+	recordCalls(t, e.svc.c.DB)
+	h := e.newSet(t)
+	qs := e.add(t, h.ID, Draft{Text: "3.36", InBook: true}, Draft{Text: "3.37", InBook: true}, Draft{Text: "3.38", InBook: true})
+	for _, q := range qs {
+		e.wait(t, q.ID, StateReady)
+	}
+	cost := 0.0030
+	usage.Sink(e.svc.c.DB)(llm.Call{At: "2030-01-01T00:00:00Z", SubjectType: usage.SubjectSet, SubjectID: h.ID, Model: "m", Answered: "m", Ms: 3000,
+		Stage: "Rank", Run: "r", Usage: &llm.Usage{PromptTokens: 900, CompletionTokens: 90, Cost: cost}})
+
+	// Every question's latest published line, from the event stream.
+	latest := func() map[string]float64 {
+		got := map[string]float64{}
+		for _, ev := range e.events.all() {
+			if !strings.HasPrefix(ev, EventQuestionChanged+" ") {
+				continue
+			}
+			var c QuestionChanged
+			if json.Unmarshal([]byte(strings.TrimPrefix(ev, EventQuestionChanged+" ")), &c) == nil && c.Question.Usage != nil && c.Question.Usage.Total.Cost != nil {
+				got[c.Question.ID] = *c.Question.Usage.Total.Cost
+			}
+		}
+		return got
+	}
+	job := jobs.Job{Kind: JobRank, Payload: json.RawMessage(`{"setId":"` + h.ID + `"}`)}
+	if err := e.svc.runRank(context.Background(), job); err != nil {
+		t.Fatal(err)
+	}
+	for _, q := range qs {
+		if got := latest()[q.ID]; got != cost/3 {
+			t.Fatalf("question %s was last published with cost %v, want its third %v", q.ID, got, cost/3)
+		}
+	}
+
+	e.do(t, "DELETE", "/api/questions/"+qs[2].ID, nil, nil)
+	for _, q := range qs[:2] {
+		if got := latest()[q.ID]; got != cost/2 {
+			t.Fatalf("after a removal question %s was last published with cost %v, want its half %v", q.ID, got, cost/2)
+		}
 	}
 }

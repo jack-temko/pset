@@ -53,7 +53,7 @@ time (a retry adds calls). From the top:
    and out, reasoning, cost. A failed call is a soft red row with its error
    and no counts. A missing cost never reads as a zero.
 
-A question's total is everything it ever cost, every run. The Table is
+A question's total is everything it ever cost, every run. The ranking is split over every question in the set, including one with no calls of its own (still being found, say), which shows no line to carry its share: the set's question lines can add up to a little less than the ranking cost. The book dialog counts the ranking once and is exact. The Table is
 `web/src/components/table/`.
 
 ## The data

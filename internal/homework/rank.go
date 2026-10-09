@@ -84,9 +84,11 @@ func (s *Service) runRank(ctx context.Context, j jobs.Job) error {
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET difficulty = ? WHERE id = ?`, d, q.ID); err != nil {
 			return err
 		}
-		s.publishQuestion(ctx, q.ID)
 		changed = true
 	}
+	// A ranking's cost is shared among the set's questions, so every line
+	// has a new share, whether or not its difficulty moved.
+	s.publishSetQuestions(ctx, p.SetID)
 	if changed {
 		s.publishSet(ctx, p.SetID)
 	}
