@@ -2,7 +2,7 @@
 
 ## Status
 
-Built on branch `test-library`; Done when merged into `dev`.
+Done. The spec is in `design/backend.md` (Settings and data, "The test library").
 
 ## Information
 
