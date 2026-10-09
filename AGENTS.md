@@ -167,9 +167,13 @@ it (`@AGENTS.md`); put nothing else there.
 Each language follows its own standard: Go through gofmt and goimports, the web
 (TS, CSS, JSON, YAML, Markdown) through oxfmt in Google TS style, shell through
 shfmt. `make fmt` rewrites the repo; `make fmt-check` fails on any diff and
-runs first in `make check`. A hook in `.claude/settings.json` formats each file
-an agent writes or edits (`tools/format-file.sh`), so `make check` should never
-fail on whitespace. Run `make fmt` before committing your own edits. Linting
+runs first in `make check`. A hook in `.claude/settings.json` formats each
+file an agent writes or edits, with the formatters of the worktree the file is
+in (`tools/format-file.sh`; it skips ignored files, such as `web/src/api/gen`,
+and a worktree without `web/node_modules`, and never fails an edit). Files an
+agent writes in a worktree are therefore formatted before `make check`; anything
+else (your own edits, generated files, a shell command that rewrites a file)
+needs `make fmt`. Linting
 (`make lint`) comes in a second change; a `//nolint` will need a reason.
 
 ## Repo hygiene: no artifacts in the repo

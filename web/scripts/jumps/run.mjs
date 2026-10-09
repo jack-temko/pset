@@ -302,7 +302,8 @@ async function discoverOverlays(browser, app, pages) {
         await sleep(300);
         const items = await page.evaluate(() => {
           const all = [...document.querySelectorAll('[role=menuitem]')];
-          return window.__jumps.visible('[role=menuitem]').map((el) => ({
+          const visible = window.__jumps.visible('[role=menuitem]');
+          return visible.map((el) => ({
             name: (el.innerText || '').trim().replace(/\s+/g, ' ').slice(0, 50),
             nth: all.indexOf(el),
           }));
