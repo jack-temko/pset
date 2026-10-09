@@ -237,10 +237,24 @@ describe('BookUsageDialog', () => {
 describe('isShape', () => {
   it('accepts a shape within the caps and nothing else', () => {
     expect(isShape({ stages: [0, 1], runs: [[0], [1, 0]] })).toBe(true)
-    expect(isShape({ stages: Array(13).fill(0), runs: [] })).toBe(false)
+    expect(isShape({ stages: Array(41).fill(0), runs: [] })).toBe(false)
     expect(isShape({ stages: [], runs: Array(5).fill([0]) })).toBe(false)
     expect(isShape({ stages: [2], runs: [] })).toBe(false)
     expect(isShape([1, 2])).toBe(false)
     expect(isShape(null)).toBe(false)
+  })
+})
+
+describe('UsageModal skeleton from the summary', () => {
+  it('draws as many call rows as the job\'s summary counts calls', () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    const summary = { rows: [], total: { ms: 1, calls: 5 }, failed: 0 }
+    act(() => root.render(<UsageModal open onClose={noop} name="x" loading summary={summary} />))
+    const calls = [...document.querySelectorAll('dialog table')].find((t) => t.querySelector('caption')?.textContent === 'Calls')
+    expect(calls?.querySelectorAll('tbody tr').length).toBe(5)
+    act(() => root.unmount())
+    host.remove()
   })
 })

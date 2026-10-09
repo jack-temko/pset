@@ -91,7 +91,7 @@ export function UsageTrigger({
       >
         <UsageSummary usage={usage} after={<ChevronRight className="ml-1 inline size-3 align-[-0.1em]" aria-hidden />} />
       </button>
-      {open && <UsageDetail open source={source} name={name} detail={detail} onClose={() => setOpen(false)} />}
+      {open && <UsageDetail open usage={usage} source={source} name={name} detail={detail} onClose={() => setOpen(false)} />}
     </>
   )
 }
@@ -100,12 +100,14 @@ export function UsageTrigger({
  *  is asked for until it is wanted. */
 function UsageDetail({
   open,
+  usage,
   source,
   name,
   detail,
   onClose,
 }: {
   open: boolean
+  usage: Usage
   source: UsageSource
   name: string
   detail?: React.ComponentProps<typeof UsageModal>['detail']
@@ -118,6 +120,7 @@ function UsageDetail({
       onClose={onClose}
       name={name}
       kind={source.kind}
+      summary={usage}
       detail={detail ?? q.data}
       loading={detail === undefined && q.isPending}
       error={detail === undefined && q.isError}

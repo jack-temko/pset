@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import type { BookUsage, Call, Detail, DetailTotal, Stage } from '@/api/gen/usage'
+import type { BookUsage, Call, Detail, DetailTotal, Stage, Usage } from '@/api/gen/usage'
 import { Button } from '@/components/button'
 import { Dialog } from '@/components/dialog'
 import { Loaded } from '@/components/loaded'
@@ -187,8 +187,15 @@ export function DetailBody({ detail }: { detail: Detail }) {
 /** What a breakdown looked like, for the skeleton: per stage row and per call
  *  row, 1 when it had a second line (a shared mark, an error, tools). */
 type Shape = { stages: number[]; runs: number[][] }
-const fallbackShape: Shape = { stages: [0, 0, 0], runs: [[0, 0, 0]] }
-const MAX_ROWS = 12
+/** What a first open draws before anything is remembered: an Ask turn is one
+ *  stage, a read a couple, a question several (and usually fills the dialog). */
+const fallbackFor = (kind: string): Shape => ({
+  stages: Array(kind === 'turn' ? 1 : kind === 'read' ? 2 : 3).fill(0),
+  runs: [[0, 0, 0]],
+})
+// The dialog caps at 80vh and scrolls, so a skeleton this long fills it; more
+// rows would only be DOM nobody sees.
+const MAX_ROWS = 40
 const MAX_RUNS = 4
 const shapeOf = (d: Detail): Shape => ({
   stages: d.stages.slice(0, MAX_ROWS).map((st) => (st.shared ? 1 : 0)),
@@ -199,6 +206,15 @@ const flags = (x: unknown): x is number[] => Array.isArray(x) && x.length <= MAX
 export const isShape = (x: unknown): x is Shape =>
   typeof x === 'object' && x !== null && flags((x as Shape).stages) && Array.isArray((x as Shape).runs) && (x as Shape).runs.length <= MAX_RUNS && (x as Shape).runs.every(flags)
 const isImportShape = (x: unknown): x is Shape | null => x === null || isShape(x)
+
+/** The shape the job's own summary line implies, before the detail arrives:
+ *  its stages are as many as this kind of job had last time, and its calls
+ *  are the summary's call count in one run, the first `failed` of them with
+ *  an error line. A job that ran more than once will have more tables. */
+const shapeFromSummary = (u: Usage, remembered: Shape): Shape => {
+  const calls = Math.min(u.total.calls, MAX_ROWS)
+  return { stages: remembered.stages, runs: [Array.from({ length: calls }, (_, i) => (i < u.failed ? 1 : 0))] }
+}
 
 /** The breakdown before it arrives: the stages table and a table for each run. */
 function BreakdownSkeleton({ shape }: { shape: Shape }) {
@@ -261,11 +277,13 @@ export function UsageModal({
   onClose,
   name,
   kind = 'job',
+  summary,
   detail,
   loading,
   error,
-}: { open: boolean; onClose: () => void; name: string; kind?: string } & State<Detail> & { detail?: Detail | null }) {
-  const shape = useLastShape<Shape>(`usage-shape-${kind}`, detail ? shapeOf(detail) : undefined, fallbackShape, isShape)
+}: { open: boolean; onClose: () => void; name: string; kind?: string; summary?: Usage } & State<Detail> & { detail?: Detail | null }) {
+  const remembered = useLastShape<Shape>(`usage-shape-${kind}`, detail ? shapeOf(detail) : undefined, fallbackFor(kind), isShape)
+  const shape = summary ? shapeFromSummary(summary, remembered) : remembered
   return (
     <Dialog
       open={open}
