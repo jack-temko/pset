@@ -137,8 +137,17 @@ rm -f "$run/settings.json"
 pids+=($!)
 for _ in $(seq 75); do
 	curl -sf "http://127.0.0.1:$vp/" >/dev/null && break
+	</dev/null >"$run/vite.log" 2>&1 & pids+=($!)
+up=
+for _ in $(seq 300); do
+	curl -sf "http://127.0.0.1:$vp/" >/dev/null && { up=1; break; }
 	sleep 0.2
 done
+if [ -z "$up" ]; then
+	echo "Vite did not answer on port $vp within 60s; its log:" >&2
+	tail -n 30 "$run/vite.log" >&2
+	exit 1
+fi
 
 args=${ARGS:-}
 if [ -n "$check" ] && [ -z "$args" ]; then
