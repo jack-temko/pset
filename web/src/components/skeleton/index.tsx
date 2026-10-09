@@ -17,6 +17,7 @@ export function Skeleton({ className, still }: { className?: string; still?: boo
   return (
     <span
       aria-hidden
+      data-skeleton=""
       className={cn('skeleton inline-block rounded-sm align-middle', className)}
       // Still: the space is held, but nothing is on its way yet (a queued
       // question), so it doesn't borrow the shimmer's "waiting" meaning.

@@ -2,7 +2,7 @@
 # Vite with /api proxied. Go lives in /usr/local/go/bin, nvm's node first.
 export PATH := $(HOME)/.nvm/versions/node/v24.18.0/bin:$(PATH):/usr/local/go/bin
 
-.PHONY: dev test-library seed gen check-gen katex-check test check build release
+.PHONY: dev test-library seed gen check-gen katex-check test check build release jumps
 
 dev:
 	go run ./tools/dev
@@ -47,6 +47,15 @@ check: test check-gen
 build:
 	cd web && npm run build
 	go build -o pset ./cmd/pset
+
+# The layout-jump audit: every screen and overlay, real and slow, on a copy of a
+# library (DATA=<dir>, default ~/.local/share/pset-test-library), with its own
+# server on private ports.
+# Writes /tmp/pset-jumps-<topic>/<time>/report.md. ARGS passes options through:
+# make jumps ARGS="--runs 3 --only memory,edit-book". SRC=<checkout> builds and
+# serves that checkout instead (npm ci there first) while this worktree measures.
+jumps:
+	tools/jumps.sh
 
 # Every release file in dist/ (Linux and macOS tarballs, install.sh, SHA256SUMS):
 # make release VERSION=0.1.0

@@ -15,6 +15,8 @@ ink sweeping across it.
 - **Draw what's coming, as many as are coming.** When the count is known
   (Health always has four checks), draw that many. When it isn't, draw a
   typical amount and accept a small settle.
+- **`data-skeleton`** is on every one, so the layout-jump audit
+  (`make jumps`) can tell when a region is still waiting. It has no style.
 
 **Don't:** use it for work in progress (that's a Spinner or a bar); use
 it for something that loads faster than you can see; show a skeleton and
