@@ -245,7 +245,7 @@ func (s *Service) Apply(ctx context.Context) (Applied, error) {
 	}
 	if err := os.Rename(next, exe); err != nil {
 		cleanup.Remove(next)
-		return Applied{}, httpx.Errorf(httpx.CodeUnreachable, "Nothing was changed. PSet couldn't put the new program in place: %v", err)
+		return Applied{}, httpx.Errorf(httpx.CodeUnreachable, "Nothing was changed. PSet couldn't put the new program in place: %v.", err)
 	}
 	done = true
 	if s.c.Restart != nil {

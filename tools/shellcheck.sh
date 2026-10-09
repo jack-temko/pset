@@ -18,7 +18,8 @@ if [ ! -x "$cache/shellcheck" ]; then
 		exit 1
 		;;
 	esac
-	tmp="$(mktemp -d)"
+	mkdir -p "${cache%/*}"
+	tmp="$(mktemp -d "${cache%/*}/.sc-XXXXXX")"
 	trap 'rm -rf "$tmp"' EXIT
 	curl -fsSL -o "$tmp/sc.tar.xz" "https://github.com/koalaman/shellcheck/releases/download/v$version/shellcheck-v$version.$target.tar.xz"
 	if command -v sha256sum >/dev/null; then
