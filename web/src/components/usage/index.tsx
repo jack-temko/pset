@@ -4,33 +4,28 @@ import { ChevronRight } from 'lucide-react'
 import type { Usage } from '@/api/gen/usage'
 import { useUsageDetail, type UsageSource } from '@/api/usage'
 import { UsageModal } from '@/components/usage-modal'
-import { atLeast, clock, cost, shortModel, tokens } from '@/lib/usage-format'
+import { atLeast, cost, shortModel } from '@/lib/usage-format'
 import { cn } from '@/lib/utils'
 
 /** The line's words: the model that did the most work (and how many more
- *  served the job), the time, the tokens, the cost. Plain inline text that
- *  wraps at its separators, never inside a figure; `after` rides on the last
+ *  served the job) and the cost; the time and tokens are in the modal. Plain
+ *  inline text that wraps at its separator, never inside a figure; `after` rides on the last
  *  figure, so the trigger's chevron wraps with the last word. */
 export function UsageSummary({ usage, className, after }: { usage: Usage; className?: string; after?: React.ReactNode }) {
   const head = usage.rows[0]
   if (!head) return null
   const partial = (usage.total.uncounted ?? 0) > 0
   const more = usage.rows.length - 1
-  const dot = <span aria-hidden> · </span>
   return (
     <span
-      title={`${usage.rows.map((r) => r.model).join(', ')}. Time adds up every call, so calls made at once count in full.`}
+      title={`${usage.rows.map((r) => r.model).join(', ')}. Click for the time, tokens and every call.`}
       className={cn('text-xs tabular-nums', className)}
     >
       <span className="whitespace-nowrap">
         {shortModel(head.model)}
         {more > 0 && ` +${more}`}
       </span>
-      {dot}
-      <span className="whitespace-nowrap">{clock(usage.total.ms)}</span>
-      {dot}
-      <span className="whitespace-nowrap">{atLeast(tokens(usage.total.tokens), partial)} tokens</span>
-      {dot}
+      <span aria-hidden> · </span>
       <span className="whitespace-nowrap">
         {atLeast(cost(usage.total.cost), partial)}
         {after}

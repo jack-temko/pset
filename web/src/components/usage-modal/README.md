@@ -33,7 +33,9 @@ Titled "Usage · " and the job's name ("Problem 3.14", "Ask answer"). From the t
    dash for what it did not report.
 
 A question's total is everything it ever cost, every run included: the money
-was really spent. A `≥` marks a minimum when a call reported nothing.
+was really spent. A `≥` marks a minimum when a call reported nothing: a small muted mark hung
+to the left of the number (`Fig`), so digits line up whether or not a cell
+has it and the cell keeps its right padding.
 
 The detail is fetched when it opens and not kept, since a retry adds calls.
 While it loads there is a Spinner; if it can't, "Couldn't load the details";

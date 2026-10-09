@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { describe, expect, it } from 'vitest'
 
 import type { BookUsage, Detail } from '@/api/gen/usage'
-import { BookUsageDialog, UsageModal } from '.'
+import { BookUsageDialog, Fig, UsageModal } from '.'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 HTMLDialogElement.prototype.showModal = function () {
@@ -71,7 +71,7 @@ describe('UsageModal', () => {
 
   it('marks a minimum when a call reported nothing', () => {
     const partial: Detail = { ...detail, total: { ...detail.total, uncounted: 1 } }
-    expect(textOf(<UsageModal open onClose={noop} name="x" detail={partial} />)).toContain('≥ $0.0031')
+    expect(textOf(<UsageModal open onClose={noop} name="x" detail={partial} />)).toMatch(/\$0\.0031≥/)
   })
 })
 
@@ -112,6 +112,39 @@ describe('UsageModal layout', () => {
     expect(document.querySelector('table')?.className).toContain('table-fixed')
     act(() => root.unmount())
     host.remove()
+  })
+})
+
+describe('Fig', () => {
+  const render = (partial: boolean) => {
+    const host = document.createElement('div')
+    const root = createRoot(host)
+    act(() => root.render(<Fig text="$0.0054" partial={partial} />))
+    return { host, done: () => act(() => root.unmount()) }
+  }
+
+  it('hangs the mark outside the number, so a cell with it and one without share a number box', () => {
+    const marked = render(true)
+    const plain = render(false)
+    const box = marked.host.querySelector('.relative')!
+    // The number is the box's own text; the mark is absolutely placed to its left.
+    expect(box.firstChild?.textContent).toBe('$0.0054')
+    const mark = box.querySelector('[aria-hidden]')!
+    expect(mark.textContent).toBe('≥')
+    expect(mark.className).toMatch(/absolute/)
+    expect(mark.className).toMatch(/right-full/)
+    expect(plain.host.textContent).toBe('$0.0054')
+    expect(plain.host.querySelector('[aria-hidden]')).toBeNull()
+    marked.done()
+    plain.done()
+  })
+
+  it('has no mark on a dash', () => {
+    const host = document.createElement('div')
+    const root = createRoot(host)
+    act(() => root.render(<Fig text="–" partial />))
+    expect(host.textContent).toBe('–')
+    act(() => root.unmount())
   })
 })
 

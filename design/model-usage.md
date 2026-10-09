@@ -27,12 +27,16 @@ when at least one call was made:
 ## The trigger
 
 `web/src/components/usage/`, `UsageTrigger`: today's line (the model that
-did the most work and `+N` for the rest, the time, the tokens, the cost)
+did the most work and `+N` for the rest, and the cost; the time and tokens
+are in the modal)
 as a button, with a small `ChevronRight`. `text-xs`, muted; the line and
 the chevron turn to the accent together on hover and focus-visible. It is
 `data-copy-skip` and keyboard focusable. Formatting is `usage-format.ts`
 (unchanged): time to the second, tokens exact, cost to four decimals, `≥`
-when a call reported nothing, a dash for nothing counted.
+when a call reported nothing, a dash for nothing counted. In the modal's
+tables and totals the `≥` is a small muted mark hung to the left of the
+number (`Fig`), so it never moves the digits or eats the cell's right
+padding.
 
 ## The modal
 

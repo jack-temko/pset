@@ -5,25 +5,42 @@ import { Button } from '@/components/button'
 import { Dialog } from '@/components/dialog'
 import { Spinner } from '@/components/spinner'
 import { Table, type TableColumn } from '@/components/table'
-import { atLeast, callSeconds, clock, cost, shortModel, timeOfDay, tokens } from '@/lib/usage-format'
+import { callSeconds, clock, cost, shortModel, timeOfDay, tokens } from '@/lib/usage-format'
 import { cn } from '@/lib/utils'
 
 /** What a modal is showing: the detail, still on its way, or not coming. */
 type Loaded<T> = { data?: T | null; loading?: boolean; error?: boolean }
 
-/** A figure that is absent is a dash, and a minimum when a call reported
- *  nothing, as everywhere usage is shown. */
-const figure = (n: number | undefined, partial: boolean) => atLeast(tokens(n), partial)
+/** A figure that is a minimum, because a call reported nothing, wears a small
+ *  "≥" hung to the left of its number: absolutely positioned, so it never
+ *  moves the digits or takes the cell's right padding, and the digits of a
+ *  cell with the mark line up with those of one without. A dash (nothing
+ *  counted) has no mark. */
+export function Fig({ text, partial }: { text: string; partial: boolean }) {
+  if (!partial || text === '–') return <>{text}</>
+  return (
+    <span className="relative inline-block">
+      {text}
+      <span aria-hidden className="absolute top-0 right-full mr-1 text-muted-foreground">
+        ≥
+      </span>
+      <span className="sr-only"> at least</span>
+    </span>
+  )
+}
+
+const figure = (n: number | undefined, partial: boolean) => <Fig text={tokens(n)} partial={partial} />
+const money = (d: number | undefined, partial: boolean) => <Fig text={cost(d)} partial={partial} />
 
 function Totals({ total }: { total: DetailTotal }) {
   const partial = (total.uncounted ?? 0) > 0
   // Two rows of four: what happened, then the tokens. Counts a provider left
   // out are left out, without a hole.
-  const cells: [string, string | undefined][] = [
+  const cells: [string, ReactNode][] = [
     ['Time', clock(total.ms)],
     ['Calls', String(total.calls)],
     ['Failed', String(total.failed)],
-    ['Cost', atLeast(cost(total.cost), partial)],
+    ['Cost', money(total.cost, partial)],
     ['Tokens in', figure(total.tokensIn, partial)],
     ['Tokens out', figure(total.tokensOut, partial)],
     ['Cached', total.cached === undefined ? undefined : figure(total.cached, partial)],
@@ -53,9 +70,9 @@ const stageColumns: TableColumn<Stage>[] = [
   { key: 'attempts', header: 'Attempts', width: '5.5rem', numeric: true, cell: (s) => s.attempts },
   { key: 'calls', header: 'Calls', width: '4.5rem', numeric: true, cell: (s) => s.calls },
   { key: 'ms', header: 'Time', width: '5.5rem', numeric: true, cell: (s) => clock(s.ms) },
-  { key: 'in', header: 'Tokens in', width: '7rem', numeric: true, cell: (s) => atLeast(tokens(s.tokensIn), !!s.uncounted) },
-  { key: 'out', header: 'Tokens out', width: '7rem', numeric: true, cell: (s) => atLeast(tokens(s.tokensOut), !!s.uncounted) },
-  { key: 'cost', header: 'Cost', width: '7.5rem', numeric: true, cell: (s) => atLeast(cost(s.cost), !!s.uncounted) },
+  { key: 'in', header: 'Tokens in', width: '7rem', numeric: true, cell: (s) => figure(s.tokensIn, !!s.uncounted) },
+  { key: 'out', header: 'Tokens out', width: '7rem', numeric: true, cell: (s) => figure(s.tokensOut, !!s.uncounted) },
+  { key: 'cost', header: 'Cost', width: '7.5rem', numeric: true, cell: (s) => money(s.cost, !!s.uncounted) },
 ]
 
 /** One call's model: the one that answered, with the one asked for under
@@ -227,7 +244,7 @@ const kindColumns: TableColumn<KindRow>[] = [
   { key: 'items', header: 'Items', width: '5rem', numeric: true, cell: (k) => k.items },
   { key: 'calls', header: 'Calls', width: '4.5rem', numeric: true, cell: (k) => k.total.calls },
   { key: 'ms', header: 'Time', width: '5.5rem', numeric: true, cell: (k) => clock(k.total.ms) },
-  { key: 'in', header: 'Tokens in', width: '7rem', numeric: true, cell: (k) => atLeast(tokens(k.total.tokensIn), !!k.total.uncounted) },
-  { key: 'out', header: 'Tokens out', width: '7rem', numeric: true, cell: (k) => atLeast(tokens(k.total.tokensOut), !!k.total.uncounted) },
-  { key: 'cost', header: 'Cost', width: '7.5rem', numeric: true, cell: (k) => atLeast(cost(k.total.cost), !!k.total.uncounted) },
+  { key: 'in', header: 'Tokens in', width: '7rem', numeric: true, cell: (k) => figure(k.total.tokensIn, !!k.total.uncounted) },
+  { key: 'out', header: 'Tokens out', width: '7rem', numeric: true, cell: (k) => figure(k.total.tokensOut, !!k.total.uncounted) },
+  { key: 'cost', header: 'Cost', width: '7.5rem', numeric: true, cell: (k) => money(k.total.cost, !!k.total.uncounted) },
 ]

@@ -4,15 +4,15 @@ What a finished job spent, as one quiet line that opens the details: where
 the thing it produced lives (a question's guide, an assignment read's row,
 an Ask answer), the line reads
 
-`deepseek-v4 +1 · 25s · 11,016 tokens · $0.0047 ›`
+`deepseek-v4 +1 · $0.0047 ›`
 
 and is a **button**. Clicking it opens the [usage modal](../usage-modal/README.md).
 
 - **The line** is the model that did the most of the work (the most tokens,
-  usually the writer) with `+N` for how many more served the job, the time,
-  the tokens, the cost: the order a student cares about, the number to skim
-  past last. `text-xs`, `tabular-nums`, `text-muted-foreground`; the `title`
-  names every model and says time adds up every call.
+  usually the writer) with `+N` for how many more served the job, and the
+  cost. The time and the tokens are in the modal only: the line is the
+  glance. `text-xs`, `tabular-nums`, `text-muted-foreground`; the `title`
+  names every model.
 - **Inter, never mono.** The line opens a dialog and is not for copying, so
   it is all Inter with tabular figures, its model name included; the
   copyable ids are in the modal.
@@ -25,8 +25,8 @@ and is a **button**. Clicking it opens the [usage modal](../usage-modal/README.m
   read's description) or, with `block`, on a line of its own under a guide or
   an answer. The line wraps between its parts, never inside one.
 - **Marks:** when a call failed, was stopped or came from a provider that
-  reports nothing, tokens and cost read `≥ n` (they are a minimum); a figure
-  with nothing counted is a dash, never a zero, which would say free. A paid
+  reports nothing, the cost reads `≥ $n` (it is a minimum); a figure with
+  nothing counted is a dash, never a zero, which would say free. A paid
   call under $0.0001 reads "<$0.0001".
 - **`data-copy-skip`**: an answer's copy button leaves it out.
 - The formatting is `web/src/lib/usage-format.ts`, with tests.

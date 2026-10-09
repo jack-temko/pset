@@ -248,7 +248,7 @@ export const feedbackSections: ComponentEntry[] = [
     id: 'usage',
     title: 'Usage trigger',
     group: 'Feedback',
-    note: 'What a finished job spent, as one muted line (model, time, tokens, cost) with a chevron, and a button: it opens the usage modal. A ≥ marks a minimum when a call reported nothing.',
+    note: 'What a finished job spent, as one muted line (the model and the cost) with a chevron, and a button: it opens the usage modal. A ≥ marks a minimum when a call reported nothing.',
     docs: ['usage'],
     Demo: () => (
       <>
