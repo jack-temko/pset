@@ -39,6 +39,8 @@ trap stop EXIT
 
 # The copy: database consistently, files as they are (symlinks followed), no
 # logs or backups, no key.
+# A read-only source (the test library) gives a read-only copy: open it first.
+[ -e "$run/data" ] && chmod -R u+w "$run/data"
 rm -rf "$run/data"
 mkdir -p "$run/data" "$run/$stamp"
 # A WAL database opened read-only still creates its -shm and -wal when no PSet
@@ -56,6 +58,7 @@ for d in "$src"/*; do
 	cp -rL "$d" "$run/data/"
 done
 [ "$before" = "$(ls -A "$src")" ] || { echo "the source library's files changed; stopping" >&2; exit 1; }
+chmod -R u+w "$run/data"
 sqlite3 "$run/data/pset.db" "DELETE FROM settings WHERE key IN ('chat', 'embeddings');"
 
 (cd "$root" && go build -o "$run/pset" ./cmd/pset)
