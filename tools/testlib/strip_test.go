@@ -129,6 +129,14 @@ func TestStripKeepsTheSampleAndDropsTheRest(t *testing.T) {
 		t.Errorf("an ask- session id was taken for a key: %v", err)
 	}
 	exec(t, d, `DELETE FROM calls WHERE session = 'ask-0123456789abcdef0123'`)
+	// A prefixed key right after a letter is still a key.
+	exec(t, d, `INSERT INTO calls (at, subject_type, subject_id, model, ms, session) VALUES ('2026-01-01T00:00:00Z', 'book', 'b1', 'm', 1, ?)`, "\x03\x81Ask-or-v1-"+strings.Repeat("ab12", 16))
+	exec(t, d, `PRAGMA wal_checkpoint(TRUNCATE)`)
+	if err := Check(ctx, d, dir, file, secrets); err == nil {
+		t.Error("check passed with an sk-or- key after a letter")
+	}
+	exec(t, d, `DELETE FROM calls WHERE session LIKE '%sk-or-v1-%'`)
+	exec(t, d, `VACUUM`)
 	var st5, st4 string
 	d.QueryRow(`SELECT state FROM questions WHERE id = 'q5'`).Scan(&st5)
 	d.QueryRow(`SELECT state FROM questions WHERE id = 'q4'`).Scan(&st4)

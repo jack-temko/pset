@@ -69,10 +69,11 @@ var inFlight = `('locating', 'reading', 'writing')`
 // Strip removes from an open copy of a library everything the test library
 // does not keep: the dropped tables, every homework set past the newest three
 // of its book, all but the newest four Ask turns of a book, the calls of
-// whatever else is gone, and every secret in settings. Questions caught mid-step in a kept
-// set go back to waiting, as the app puts them back on shutdown. Foreign keys
-// must be on, so a removed set takes its questions with it. It returns the
-// secret values it removed, for Check to look for; never print them.
+// whatever else is gone, and every secret in settings. Questions caught
+// mid-step in a kept set go back to waiting, as the app puts them back on
+// shutdown. Foreign keys must be on, so a removed set takes its questions with
+// it. It returns the secret values it removed, for Check to look for; never
+// print them.
 func Strip(ctx context.Context, d *sql.DB) ([]string, error) {
 	tx, err := d.BeginTx(ctx, nil)
 	if err != nil {
@@ -158,6 +159,10 @@ const minSecret = 8
 // skPattern is what an OpenRouter or OpenAI style key looks like. It starts
 // at a word edge, so the "ask-<id>" session ids in calls are not taken for one.
 var skPattern = regexp.MustCompile(`(?:^|[^A-Za-z0-9])sk-[A-Za-z0-9_-]{16,}`)
+
+// skPrefixed is a key with a known provider prefix (sk-or-, sk-ant-, sk-proj-),
+// matched wherever it sits, even right after another letter.
+var skPrefixed = regexp.MustCompile(`sk-(?:or|ant|proj)-[A-Za-z0-9_-]{16,}`)
 
 // scrub removes every secret-named field from a decoded JSON value, at any
 // depth, and appends the strings it removed to out.
@@ -268,9 +273,10 @@ func stripSecrets(ctx context.Context, tx *sql.Tx) ([]string, error) {
 // Check verifies a stripped library: d is its open database, file the path of
 // that database and dir the folder holding books/. It fails on a table the
 // snapshot has no decision about, a secret-named field left in settings, a row
-// in a dropped table, a book with more than three sets or four turns, a call without its subject, a question without its
-// set, a book without its PDF, and any of the removed secrets (or a key-shaped
-// "sk-" string) in the database file's bytes. d must have no WAL pending, or
+// in a dropped table, a book with more than three sets or four turns, a call
+// without its subject, a question without its set, a book without its PDF, and
+// any of the removed secrets (or a key-shaped "sk-" string) in the database
+// file's bytes. d must have no WAL pending, or
 // the file scan misses what is in it.
 func Check(ctx context.Context, d *sql.DB, dir, file string, secrets []string) error {
 	var errs []error
@@ -379,7 +385,7 @@ func Check(ctx context.Context, d *sql.DB, dir, file string, secrets []string) e
 			fail("a removed secret is still in %s", filepath.Base(file))
 		}
 	}
-	if skPattern.Match(raw) {
+	if skPattern.Match(raw) || skPrefixed.Match(raw) {
 		fail("a key-shaped string (sk-...) is in %s", filepath.Base(file))
 	}
 	if len(errs) > 0 {
