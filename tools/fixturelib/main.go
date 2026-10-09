@@ -154,7 +154,7 @@ func build(ctx context.Context, dir string, now time.Time) error {
 	if err != nil {
 		return err
 	}
-	defer d.Close()
+	defer func() { _ = d.Close() }()
 	var migs []db.Migration
 	for _, ms := range [][]db.Migration{jobs.Migrations(), settings.Migrations(), usage.Migrations(), library.Migrations(),
 		memory.Migrations(), homework.Migrations(), ask.Migrations(), activity.Migrations()} {
@@ -298,7 +298,7 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
