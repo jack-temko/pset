@@ -209,6 +209,7 @@ async function runOne(browser, app, sc, mode, opts) {
       swaps: raw.swaps,
       changes: raw.changes,
       reveals: raw.reveals,
+      variants: raw.variants,
       requests: reqs,
     };
 

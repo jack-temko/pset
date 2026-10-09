@@ -159,6 +159,9 @@
   // blocks (a swap is a sample); the content layer's variant is watched after
   // its reveal (a change is a flash), and reveals are counted per navigation
   // epoch (two in one epoch is a double reveal).
+  // Every data-variant value seen on a content layer and on a skeleton layer,
+  // so a scenario can be checked to have shown the variant it is tagged with.
+  J.variants = { content: [], skeleton: [] };
   J.swaps = [];
   J.changes = [];
   J.reveals = [];
@@ -185,7 +188,16 @@
     };
   };
   const boxes = new WeakMap();
+  const noteVariants = () => {
+    for (const el of document.querySelectorAll('[data-variant]')) {
+      const kind =
+        el.getAttribute('aria-hidden') === 'true' ? 'skeleton' : 'content';
+      const v = el.getAttribute('data-variant');
+      if (v && !J.variants[kind].includes(v)) J.variants[kind].push(v);
+    }
+  };
   const watchBoxes = () => {
+    noteVariants();
     for (const el of document.querySelectorAll(
       '[data-variant]:not([aria-hidden=true])',
     )) {

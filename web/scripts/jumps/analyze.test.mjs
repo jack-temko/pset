@@ -320,3 +320,21 @@ describe('Loaded boxes', () => {
     expect(a.boxes.flashes).toHaveLength(1);
   });
 });
+
+describe('variants seen', () => {
+  it('are passed through and joined across runs', () => {
+    const seen = (content, skeleton) => ({
+      ...base,
+      variants: { content, skeleton },
+    });
+    const a = aggregate([
+      analyzeRun(seen(['a'], ['x'])),
+      analyzeRun(seen(['a', 'b'], [])),
+    ]);
+    expect(a.variantsSeen).toEqual({ content: ['a', 'b'], skeleton: ['x'] });
+    expect(analyzeRun(base).variantsSeen).toEqual({
+      content: [],
+      skeleton: [],
+    });
+  });
+});
