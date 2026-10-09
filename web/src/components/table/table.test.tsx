@@ -65,12 +65,16 @@ describe('Table options', () => {
     const root = createRoot(host)
     const cols: TableColumn<Row>[] = [
       { key: 'a', header: 'A', cell: (r) => r.stage, secondary: (r) => r.model },
-      { key: 'b', header: 'B', wrapSecondary: true, cell: (r) => r.stage, secondary: (r) => r.model },
+      { key: 'b', header: 'B', width: '9rem', wrapSecondary: true, cell: (r) => r.stage, secondary: (r) => r.model },
     ]
     act(() => root.render(<Table caption="x" columns={cols} rows={rows} rowKey={(r) => r.stage} />))
     const [a, b] = [...host.querySelectorAll('tbody tr:first-child td div')]
     expect(a.className).toContain('whitespace-nowrap')
     expect(b.className).toContain('whitespace-normal')
+    // Not wider than its column: a fixed table's secondary line is bounded by the cell.
+    expect(b.className).not.toContain('min-w-40')
+    expect(b.className).toContain('min-w-0')
+    expect(b.className).toContain('max-w-full')
     act(() => root.unmount())
   })
 })
