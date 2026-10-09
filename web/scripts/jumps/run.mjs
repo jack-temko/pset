@@ -183,15 +183,25 @@ async function main() {
         const results = []
         for (let i = 0; i < runs; i++) {
           process.stderr.write(`${sc.name} (${mode}) ${i + 1}/${runs}\n`)
+          // A run that fails (a click that never lands) is tried once more,
+          // then reported as an error rather than ending the audit.
           let r
-          try {
-            r = await runOne(browser, app, sc, mode, { slowMs })
-          } catch (e) {
-            if (e instanceof Missing) {
-              row.skipped = e.message
-              break
+          let failure
+          for (let attempt = 0; attempt < 2 && !r; attempt++) {
+            try {
+              r = await runOne(browser, app, sc, mode, { slowMs })
+            } catch (e) {
+              if (e instanceof Missing) {
+                row.skipped = e.message
+                break
+              }
+              failure = String(e.message ?? e).split('\n')[0]
             }
-            throw e
+          }
+          if (row.skipped) break
+          if (!r) {
+            row.skipped = `failed twice: ${failure}`
+            break
           }
           const base = `${slug(sc.name)}-${mode}-${i + 1}`
           fs.writeFileSync(path.join(out, 'raw', `${base}.json`), JSON.stringify(r.log))
