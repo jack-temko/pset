@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { check, format, MAX_GROWTH_PX, MAX_JUMP } from './check.mjs';
+import {
+  check,
+  format,
+  MAX_BLOCK_PX,
+  MAX_GROWTH_PX,
+  MAX_JUMP,
+  MAX_TOTAL_PX,
+} from './check.mjs';
 
 const agg = (over = {}) => ({
   runs: 3,
@@ -117,5 +124,77 @@ describe('skipped scenarios', () => {
     expect(format(res, 1)).toContain(
       'skipped: Edit book (real): the library has no book',
     );
+  });
+});
+
+describe('skeleton fidelity', () => {
+  const fid = (over = {}) => ({
+    box: 'main > div',
+    skeleton: 'done',
+    content: 'done',
+    blockPx: 0,
+    totalPx: 0,
+    blocks: [3, 3],
+    ...over,
+  });
+  const boxRow = (boxes) =>
+    row({
+      agg: agg({ boxes: { fidelity: [], flashes: [], doubles: [], ...boxes } }),
+    });
+
+  it('passes a skeleton that matches', () => {
+    expect(check(report(boxRow({ fidelity: [fid()] }))).failed).toEqual([]);
+  });
+  it('fails a variant mismatch, naming both', () => {
+    const { failed } = check(
+      report(boxRow({ fidelity: [fid({ skeleton: 'question' })] })),
+    );
+    expect(failed).toHaveLength(1);
+    expect(failed[0].why[0]).toContain(
+      '"question" variant but the content is "done"',
+    );
+  });
+  it('a block is allowed 8px and no more', () => {
+    const at = boxRow({ fidelity: [fid({ blockPx: MAX_BLOCK_PX })] });
+    const over = boxRow({ fidelity: [fid({ blockPx: MAX_BLOCK_PX + 1 })] });
+    expect(check(report(at)).failed).toEqual([]);
+    expect(check(report(over)).failed).toHaveLength(1);
+  });
+  it('the whole is allowed 2px and no more', () => {
+    const at = boxRow({ fidelity: [fid({ totalPx: MAX_TOTAL_PX })] });
+    const over = boxRow({ fidelity: [fid({ totalPx: MAX_TOTAL_PX + 1 })] });
+    expect(check(report(at)).failed).toEqual([]);
+    expect(check(report(over)).failed).toHaveLength(1);
+  });
+});
+
+describe('flashes and double reveals', () => {
+  const boxRow = (boxes) =>
+    row({
+      agg: agg({ boxes: { fidelity: [], flashes: [], doubles: [], ...boxes } }),
+    });
+  it('fails a box whose variant changes after its reveal', () => {
+    const { failed } = check(
+      report(
+        boxRow({
+          flashes: [{ box: 'main > div', from: 'question', to: 'done' }],
+        }),
+      ),
+    );
+    expect(failed[0].why[0]).toContain(
+      '"question" variant to "done" after it was revealed',
+    );
+  });
+  it('fails a box revealed twice in one navigation', () => {
+    const { failed } = check(
+      report(boxRow({ doubles: [{ box: 'main > div', count: 2 }] })),
+    );
+    expect(failed[0].why[0]).toContain(
+      'revealed 2 times without a new navigation',
+    );
+  });
+  it('a row with no box findings, or from before the probe, passes', () => {
+    expect(check(report(boxRow({}))).failed).toEqual([]);
+    expect(check(report(row())).failed).toEqual([]);
   });
 });

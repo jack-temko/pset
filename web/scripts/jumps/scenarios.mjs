@@ -62,8 +62,7 @@ export async function discover(app) {
   for (const b of books) {
     if (b.state !== 'ready') continue;
     const c = await get(`/api/books/${b.id}/contents`);
-    if (!noContentsBook && !(c.entries ?? []).length)
-      noContentsBook = b;
+    if (!noContentsBook && !(c.entries ?? []).length) noContentsBook = b;
     const { turns } = await get(`/api/books/${b.id}/turns`);
     if (!noTurnsBook && !(turns ?? []).length) noTurnsBook = b;
   }
