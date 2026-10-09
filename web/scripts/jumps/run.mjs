@@ -102,7 +102,7 @@ async function runOne(browser, app, sc, mode, opts) {
       await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 60, everyNthFrame: 1 })
       // A reopen opens it, closes it with Escape and opens it again; only the
       // second open is measured (a dialog may refetch each time it mounts).
-      const again = steps[steps.length - 1]?.role === 'menuitem' ? -2 : -1
+      const again = steps[steps.length - 1]?.item || steps[steps.length - 1]?.role === 'menuitem' ? -2 : -1
       const plan = sc.reopen ? [...steps, { key: 'Escape' }, ...steps.slice(again)] : steps
       for (const [i, step] of plan.entries()) {
         if (step.key) {
@@ -162,7 +162,7 @@ async function runOne(browser, app, sc, mode, opts) {
 const DESTRUCTIVE = /delete|remove|reset|clear|erase|discard|sign out|quit|move |turn in|mark |undo|print/i
 const MAX_ITEMS = 5
 const TRIGGERS = 'button[aria-haspopup], button[aria-expanded]'
-const MAX_EXPANDERS = 8
+const MAX_EXPANDERS = 3
 
 async function discoverOverlays(browser, app, pages) {
   const found = []
@@ -178,19 +178,22 @@ async function discoverOverlays(browser, app, pages) {
       const triggers = await page.evaluate((css) => {
         const seen = new Set()
         const out = []
+        const all = [...document.querySelectorAll(css)]
         for (const el of window.__jumps.visible(css)) {
-          const label = (el.getAttribute('aria-label') || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 50)
+          const label = (el.getAttribute('aria-label') || el.innerText || '').trim().replace(/\s+/g, ' ').slice(0, 50)
           if (!label || seen.has(label)) continue
           seen.add(label)
           const popup = el.getAttribute('aria-haspopup')
-          out.push({ label, menu: popup === 'menu', popup: !!popup && popup !== 'false' })
+          out.push({ label, nth: all.indexOf(el), menu: popup === 'menu', popup: !!popup && popup !== 'false' })
         }
         return out
       }, TRIGGERS)
       let expanders = 0
       for (const t of triggers) {
         if (!t.popup && ++expanders > MAX_EXPANDERS) continue
-        const step = { role: 'button', name: t.label }
+        // Found again by its place among the page's triggers, not by its name: an
+        // accessible name can differ from the text it was labelled by.
+        const step = { css: TRIGGERS, nth: t.nth, label: t.label }
         found.push({ name: `${pg.name}: ${t.label}`, label: t.label, url: pg.url, steps: [step] })
         if (!t.menu) continue
         await page.reload({ waitUntil: 'commit' })
@@ -201,15 +204,20 @@ async function discoverOverlays(browser, app, pages) {
           continue
         }
         await sleep(300)
-        const items = await page.evaluate(() =>
-          window.__jumps.visible('[role=menuitem]').map((el) => (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 50)),
-        )
-        for (const name of [...new Set(items)].filter((n) => n && !DESTRUCTIVE.test(n)).slice(0, MAX_ITEMS)) {
+        const items = await page.evaluate(() => {
+          const all = [...document.querySelectorAll('[role=menuitem]')]
+          return window.__jumps
+            .visible('[role=menuitem]')
+            .map((el) => ({ name: (el.innerText || '').trim().replace(/\s+/g, ' ').slice(0, 50), nth: all.indexOf(el) }))
+        })
+        const seenItems = new Set()
+        const wanted = items.filter((i) => i.name && !DESTRUCTIVE.test(i.name) && !seenItems.has(i.name) && seenItems.add(i.name))
+        for (const it of wanted.slice(0, MAX_ITEMS)) {
           found.push({
-            name: `${pg.name}: ${t.label} > ${name}`,
-            label: `${t.label} > ${name}`,
+            name: `${pg.name}: ${t.label} > ${it.name}`,
+            label: `${t.label} > ${it.name}`,
             url: pg.url,
-            steps: [step, { role: 'menuitem', name }],
+            steps: [step, { css: '[role=menuitem]', nth: it.nth, label: it.name, item: true }],
           })
         }
       }
@@ -221,7 +229,7 @@ async function discoverOverlays(browser, app, pages) {
 }
 
 /** The hand-written scenario a discovered one repeats, by its last two steps. */
-const stepKey = (sc) => (sc.steps ?? []).slice(-2).map((s) => s.name ?? s.text ?? s.css).join('>')
+const stepKey = (sc) => (sc.steps ?? []).slice(-2).map((s) => s.name ?? s.text ?? s.label ?? s.css).join('>')
 
 async function main() {
   const { values: v } = parseArgs({
@@ -245,8 +253,7 @@ async function main() {
 
   const found = await discover(app)
   let list = scenarios(found)
-  if (v.only) list = list.filter((s) => s.name === v.only || slug(s.name) === slug(v.only))
-  if (list.length === 0) throw new Error(`no scenario named ${v.only}`)
+  const named = (s) => !v.only || s.name === v.only || slug(s.name) === slug(v.only)
 
   const browser = await chromium.launch()
   const rows = []
@@ -256,7 +263,9 @@ async function main() {
     for (const sc of list.filter((s) => !s.skip && !s.steps).slice(0, 4)) {
       await runOne(browser, app, sc, 'real', { slowMs }).catch(() => {})
     }
-    if (!v['no-discover'] && (!v.only || v['discover-only'])) {
+    // --only names a hand-written scenario without discovering; any other name
+    // is looked for among the discovered ones.
+    if (!v['no-discover'] && (!v.only || v['discover-only'] || !list.some(named))) {
       const handwritten = new Set(list.map(stepKey))
       const pages = list.filter((s) => !s.skip && !s.steps)
       const extra = (await discoverOverlays(browser, app, pages)).filter((d) => !handwritten.has(stepKey(d)))
@@ -273,6 +282,8 @@ async function main() {
         ? [sc, { ...sc, name: `${sc.name}, second open`, reopen: true }]
         : [sc],
     )
+    list = list.filter(named)
+    if (list.length === 0) throw new Error(`no scenario named ${v.only}`)
     for (const sc of list) {
       for (const mode of ['real', 'slow']) {
         const row = { name: sc.name, mode, url: sc.url, trigger: sc.discovered ? sc.label : undefined }

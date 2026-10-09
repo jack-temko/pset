@@ -83,7 +83,7 @@ export function scenarios({ book, set }) {
 
 /** The locator a step names. */
 export function locate(page, step) {
-  if (step.css) return page.locator(step.css).first()
+  if (step.css) return step.nth === undefined ? page.locator(step.css).first() : page.locator(step.css).nth(step.nth)
   if (step.text) return page.getByText(step.text, { exact: true }).first()
   return page.getByRole(step.role, { name: step.name, exact: true }).first()
 }

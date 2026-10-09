@@ -96,7 +96,7 @@ looks the same everywhere.
 **Added after the first report (2026-10-08).**
 
 - Discovery: after each page scenario settles, `run.mjs` finds every visible `button`
-  with `aria-haspopup` or `aria-expanded` (at most 8 plain expanders a page), and in each
+  with `aria-haspopup` or `aria-expanded` (at most 3 plain expanders a page), and in each
   opened menu up to 5 `menuitem`s that are not destructive (delete, remove, reset, clear,
   move, turn in, print...), and measures each as its own scenario: open, measure. Ones
   that repeat a hand-written scenario (same last two steps) are dropped. The report lists
