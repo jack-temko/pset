@@ -35,7 +35,9 @@ Titled "Usage · " and the job's name ("Problem 3.14", "Ask answer"). From the t
 A question's total is everything it ever cost, every run included: the money
 was really spent. A `≥` marks a minimum when a call reported nothing: a small muted mark hung
 to the left of the number (`Fig`), so digits line up whether or not a cell
-has it and the cell keeps its right padding.
+has it and the cell keeps its right padding. In the left-aligned totals it
+sits inline before the number ("≥ 43,800"), so the value starts flush with
+its label.
 
 The detail is fetched when it opens and not kept, since a retry adds calls.
 While it loads there is a Spinner; if it can't, "Couldn't load the details";

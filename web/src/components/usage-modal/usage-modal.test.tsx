@@ -71,7 +71,7 @@ describe('UsageModal', () => {
 
   it('marks a minimum when a call reported nothing', () => {
     const partial: Detail = { ...detail, total: { ...detail.total, uncounted: 1 } }
-    expect(textOf(<UsageModal open onClose={noop} name="x" detail={partial} />)).toMatch(/\$0\.0031≥/)
+    expect(textOf(<UsageModal open onClose={noop} name="x" detail={partial} />)).toMatch(/≥ at least \$0\.0031/)
   })
 })
 
@@ -137,6 +137,15 @@ describe('Fig', () => {
     expect(plain.host.querySelector('[aria-hidden]')).toBeNull()
     marked.done()
     plain.done()
+  })
+
+  it('puts the mark before the number, in the flow, in a left-aligned value', () => {
+    const host = document.createElement('div')
+    const root = createRoot(host)
+    act(() => root.render(<Fig text="43,800" partial inline />))
+    expect(host.querySelector('.absolute')).toBeNull()
+    expect(host.textContent).toMatch(/^≥ at least 43,800$/)
+    act(() => root.unmount())
   })
 
   it('has no mark on a dash', () => {

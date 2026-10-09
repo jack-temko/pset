@@ -16,8 +16,21 @@ type Loaded<T> = { data?: T | null; loading?: boolean; error?: boolean }
  *  moves the digits or takes the cell's right padding, and the digits of a
  *  cell with the mark line up with those of one without. A dash (nothing
  *  counted) has no mark. */
-export function Fig({ text, partial }: { text: string; partial: boolean }) {
+export function Fig({ text, partial, inline }: { text: string; partial: boolean; inline?: boolean }) {
   if (!partial || text === '–') return <>{text}</>
+  // Left-aligned values (the totals) have no padding to hang into: the mark
+  // goes before the number, so the value starts flush with its label.
+  if (inline) {
+    return (
+      <>
+        <span aria-hidden className="text-muted-foreground">
+          ≥{' '}
+        </span>
+        <span className="sr-only">at least </span>
+        {text}
+      </>
+    )
+  }
   return (
     <span className="relative inline-block">
       {text}
@@ -29,8 +42,8 @@ export function Fig({ text, partial }: { text: string; partial: boolean }) {
   )
 }
 
-const figure = (n: number | undefined, partial: boolean) => <Fig text={tokens(n)} partial={partial} />
-const money = (d: number | undefined, partial: boolean) => <Fig text={cost(d)} partial={partial} />
+const figure = (n: number | undefined, partial: boolean, inline?: boolean) => <Fig text={tokens(n)} partial={partial} inline={inline} />
+const money = (d: number | undefined, partial: boolean, inline?: boolean) => <Fig text={cost(d)} partial={partial} inline={inline} />
 
 function Totals({ total }: { total: DetailTotal }) {
   const partial = (total.uncounted ?? 0) > 0
@@ -40,11 +53,11 @@ function Totals({ total }: { total: DetailTotal }) {
     ['Time', clock(total.ms)],
     ['Calls', String(total.calls)],
     ['Failed', String(total.failed)],
-    ['Cost', money(total.cost, partial)],
-    ['Tokens in', figure(total.tokensIn, partial)],
-    ['Tokens out', figure(total.tokensOut, partial)],
-    ['Cached', total.cached === undefined ? undefined : figure(total.cached, partial)],
-    ['Reasoning', total.reasoning === undefined ? undefined : figure(total.reasoning, partial)],
+    ['Cost', money(total.cost, partial, true)],
+    ['Tokens in', figure(total.tokensIn, partial, true)],
+    ['Tokens out', figure(total.tokensOut, partial, true)],
+    ['Cached', total.cached === undefined ? undefined : figure(total.cached, partial, true)],
+    ['Reasoning', total.reasoning === undefined ? undefined : figure(total.reasoning, partial, true)],
   ]
   return (
     <dl className="grid grid-cols-4 gap-x-4 gap-y-2 text-sm">
