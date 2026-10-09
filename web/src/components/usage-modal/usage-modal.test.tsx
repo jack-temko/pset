@@ -115,6 +115,28 @@ describe('UsageModal layout', () => {
   })
 })
 
+describe('UsageModal tool lists', () => {
+  it('keeps the tools on one line with the whole list in a tooltip, and lets an error wrap', () => {
+    const d: Detail = {
+      ...detail,
+      runs: [{ label: 'Calls', calls: [
+        { id: 1, at: '2026-09-29T10:00:00Z', stage: 'Round 2', tools: 'search_pages,read_page', asked: 'a/b', ms: 100 },
+        { id: 2, at: '2026-09-29T10:00:01Z', stage: 'Guide', asked: 'a/b', ms: 100, error: 'rate limited (429)' },
+      ] }],
+    }
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    act(() => root.render(<UsageModal open onClose={noop} name="x" detail={d} />))
+    const tools = document.querySelector('[title="search_pages, read_page"]')!
+    expect(tools.className).toContain('truncate')
+    expect(document.body.textContent).toContain('rate limited (429)')
+    expect(document.querySelector('.truncate[title*="429"]')).toBeNull()
+    act(() => root.unmount())
+    host.remove()
+  })
+})
+
 describe('Fig', () => {
   const render = (partial: boolean) => {
     const host = document.createElement('div')

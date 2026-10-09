@@ -37,5 +37,8 @@ Pass `caption`: it is the table's accessible name and is not drawn.
   column says `wrapSecondary` (an error message), so a model name never
   breaks mid-name.
 
+Body cells align on their first baseline, so a label and a figure share a
+line whether or not a cell has a second line.
+
 **Don't:** put controls in a Table; nest one in a Table; sort or paginate
 here (neither exists yet); use it for layout.

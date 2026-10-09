@@ -100,6 +100,12 @@ describe('Table', () => {
     done()
   })
 
+  it('aligns cells on the first baseline', () => {
+    const { host, done } = render()
+    expect(host.querySelector('tbody td')?.className).toContain('align-baseline')
+    done()
+  })
+
   it('scrolls sideways inside its own frame', () => {
     const { host, done } = render()
     expect((host.firstElementChild as HTMLElement).className).toContain('overflow-x-auto')

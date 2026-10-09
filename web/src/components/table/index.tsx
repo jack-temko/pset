@@ -94,7 +94,7 @@ export function Table<T>({
                   return (
                     <td
                       key={c.key}
-                      className={cn(dense ? 'px-3' : 'px-4', 'py-2 align-top whitespace-nowrap', c.numeric && 'text-right', c.numeric && (c.mono === false ? 'tabular-nums' : 'figure'), !c.numeric && c.mono && 'font-mono tabular-nums', bad && c.errorInk && 'text-destructive', c.className)}
+                      className={cn(dense ? 'px-3' : 'px-4', 'py-2 align-baseline whitespace-nowrap', c.numeric && 'text-right', c.numeric && (c.mono === false ? 'tabular-nums' : 'figure'), !c.numeric && c.mono && 'font-mono tabular-nums', bad && c.errorInk && 'text-destructive', c.className)}
                     >
                       {c.cell(row)}
                       {second != null && <div className={cn('text-xs', c.wrapSecondary ? 'min-w-40 whitespace-normal' : 'whitespace-nowrap', bad ? 'text-destructive' : 'text-muted-foreground')}>{second}</div>}

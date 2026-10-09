@@ -92,6 +92,16 @@ const stageColumns: TableColumn<Stage>[] = [
  *  it when a fallback served. A call nobody answered shows the one asked. */
 const modelOf = (c: Call) => shortModel(c.answered || c.asked)
 
+/** The tools a round called, on one line. */
+function ToolList({ tools }: { tools: string }) {
+  const list = tools.split(',').join(', ')
+  return (
+    <span className="block truncate" title={list}>
+      {list}
+    </span>
+  )
+}
+
 const callColumns = (withReasoning: boolean): TableColumn<Call>[] => [
   { key: 'at', header: 'At', width: '7rem', mono: true, errorInk: true, cell: (c) => timeOfDay(c.at) },
   {
@@ -100,7 +110,9 @@ const callColumns = (withReasoning: boolean): TableColumn<Call>[] => [
     width: '9rem',
     wrapSecondary: true,
     cell: (c) => c.stage,
-    secondary: (c) => c.error || (c.tools ? c.tools.split(',').join(', ') : undefined),
+    // The error may wrap (it matters); the tools stay on one line, cut with an
+    // ellipsis and whole in the tooltip.
+    secondary: (c) => c.error || (c.tools ? <ToolList tools={c.tools} /> : undefined),
   },
   {
     key: 'model',
