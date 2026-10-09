@@ -477,7 +477,17 @@ func orEmpty(lines []string) []string {
 // write writes a question's guide, found or never looked for.
 func (s *Service) write(ctx context.Context, m model, book Book, q row) error {
 	s.setState(ctx, q.ID, StateWriting, "")
-	return s.writeGuide(ctx, m, book, q)
+	hint, walk, err := s.writeGuide(ctx, m, book, q, "")
+	if err != nil {
+		return err
+	}
+	hint, walk = s.crossCheck(ctx, m, book, q, hint, walk)
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET hint = ?, walkthrough = ?, state = 'ready', reason = '', activity = '', rounds = '[]', updated_at = ? WHERE id = ?`,
+		mustJSON(hint), mustJSON(walk), db.Now(), q.ID); err != nil {
+		return err
+	}
+	s.publishQuestion(ctx, q.ID)
+	return nil
 }
 
 // model is one chat connection and the model to ask.
@@ -513,14 +523,21 @@ const guideAttempts = 2
 // saved as it finishes. A guide the app stopped partway, or one asked
 // again after a failure, carries on from its last round rather than
 // thinking the whole problem through again.
-func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) error {
+//
+// recheck, when set, is what the cross-check found: the guide is written
+// again from the start with it, and its rounds aren't saved.
+func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row, recheck string) (hint, walk []doc.Block, err error) {
 	user, shown, err := s.guideUser(ctx, book, q)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	rounds, err := savedRounds(ctx, s.c.DB, q.ID)
-	if err != nil {
-		return err
+	var rounds []llm.Message
+	if recheck == "" {
+		if rounds, err = savedRounds(ctx, s.c.DB, q.ID); err != nil {
+			return nil, nil, err
+		}
+	} else {
+		user.Content.AppendPart(llm.TextPart("\n" + recheck))
 	}
 	for attempt := 1; attempt <= guideAttempts; attempt++ {
 		msgs := append([]llm.Message{user}, rounds...)
@@ -561,6 +578,9 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 			},
 			Shown: shown,
 			Round: func(all []llm.Message) {
+				if recheck != "" {
+					return
+				}
 				rounds = slices.Clone(all[1:])
 				if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET rounds = ? WHERE id = ?`, mustJSON(rounds), q.ID); err != nil {
 					slog.Warn("question: save rounds", "question", q.ID, "err", err)
@@ -571,9 +591,9 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 		parser.Finish()
 		if err != nil {
 			if ctx.Err() != nil {
-				return ctx.Err()
+				return nil, nil, ctx.Err()
 			}
-			return modelDown(err, q)
+			return nil, nil, modelDown(err, q)
 		}
 		if len(parser.Blocks()) > 0 {
 			s.setActivity(ctx, q.ID, "Checking the guide…")
@@ -584,16 +604,10 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row) err
 			slog.Warn("guide missing a part", "question", q.ID, "attempt", attempt, "blocks", len(parser.Blocks()), "hint", len(hint), "answers", len(doc.Answers(walk)))
 			continue
 		}
-		slog.Info("guide written", "question", q.ID, "blocks", len(parser.Blocks()), "raw", parser.Failed(), "repairs", parser.RepairCalls())
-		_, err = s.c.DB.ExecContext(ctx, `UPDATE questions SET hint = ?, walkthrough = ?, state = 'ready', reason = '', activity = '', rounds = '[]', updated_at = ? WHERE id = ?`,
-			mustJSON(hint), mustJSON(walk), db.Now(), q.ID)
-		if err != nil {
-			return err
-		}
-		s.publishQuestion(ctx, q.ID)
-		return nil
+		slog.Info("guide written", "question", q.ID, "blocks", len(parser.Blocks()), "raw", parser.Failed(), "repairs", parser.RepairCalls(), "recheck", recheck != "")
+		return hint, walk, nil
 	}
-	return fail(FailureGeneration, nil, "The walkthrough for %s came back missing a part. Trying again usually works.", problemName(q))
+	return nil, nil, fail(FailureGeneration, nil, "The walkthrough for %s came back missing a part. Trying again usually works.", problemName(q))
 }
 
 // readingCheck is the guide writer's check_reading: when it sees the

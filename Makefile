@@ -2,13 +2,23 @@
 # Vite with /api proxied. Go lives in /usr/local/go/bin, nvm's node first.
 export PATH := $(HOME)/.nvm/versions/node/v24.18.0/bin:$(PATH):/usr/local/go/bin
 
-.PHONY: dev gen check-gen katex-check test check build release
+.PHONY: dev test-library seed gen check-gen katex-check test check build release
 
 dev:
 	go run ./tools/dev
 
 gen:
 	go tool tygo generate
+
+# The test library: a read-only snapshot of Jack's books and a sample of his
+# homework at ~/.local/share/pset-test-library, with no key. `make test-library`
+# refreshes it (Jack runs it, or an agent with his OK); `make seed` copies it
+# into this worktree's .dev/data, which must not have a library yet.
+test-library:
+	go run ./tools/testlib snapshot
+
+seed:
+	go run ./tools/testlib seed .dev/data
 
 # Fails when a wire.go changed and the generated TS wasn't committed.
 check-gen: gen

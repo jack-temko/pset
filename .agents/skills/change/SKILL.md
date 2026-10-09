@@ -1,6 +1,6 @@
 ---
 name: change
-description: Take one change to PSet from ask to merged on dev, with each model doing what it is best at. Opus (this session) triages, proposes a tier for Jack to confirm, plans and judges; Sonnet subagents build and review; Haiku subagents search, check, photograph and land. Use when Jack types /change.
+description: Take one change to PSet from ask to merged on dev, with each model doing what it is best at. Opus (this session) triages, proposes a tier for Jack to confirm, plans and judges; Sonnet subagents build and review; Haiku subagents search, check, photograph and land. Nothing merges until Jack has tried the change and approved it. Use when Jack types /change.
 argument-hint: "[what to change]"
 disable-model-invocation: true
 ---
@@ -22,6 +22,9 @@ agent. The spec and its reasons are in `ideas/agent-workflow-grill.md`.
 - **Never build or fix yourself**, not even a one-liner: send it to the builder.
 - **Subagents cannot ask Jack.** Anything that needs him comes back to you, and you
   ask with the ask-user tool.
+- **Nothing merges without Jack's approval** at step 8, given in this session in his
+  own words. Not a reviewer's, not a subagent's, not an earlier approval of another
+  change or of the plan.
 - Everything in `AGENTS.md` holds: a named worktree per change, PR into `dev`, never
   `main`, never edit Jack's checkout, no attribution lines, no em dashes.
 
@@ -96,17 +99,56 @@ replace a stuck builder with a fresh one.
 4. Problems go to `builder-<topic>`, then the shooter again for the states they touch.
 5. Send Jack the key shots (Paper and Night) with your verdict in a line.
 
-## 7. Land
+## 7. Open the pull request
 
-Before landing, the plan's docs step must be done: `design/` updated for what shipped
-and the `ideas/` file marked Done (or In progress, if more remains).
+Before opening it, the plan's docs step must be done: `design/` updated for what
+shipped and the `ideas/` file marked Done (or In progress, if more remains).
 
-Spawn `lander` with the worktree, a title that says what the change does, and a body
-with what it does, what was checked (checker, reviews, shots) and what was not. If the
-work is one Jack asked to be asked about before merging (the homework redesign), tell
-the lander to stop at green CI, and ask Jack.
+Spawn `lander` in **open** mode with the worktree, a title that says what the change
+does, and a body with what it does, what was checked (checker, reviews, shots) and
+what was not. It pushes and opens the PR into `dev`, so CI runs while Jack tries the
+change. It does not merge.
 
-## 8. Report
+## 8. Jack tries it and approves
+
+This gate is every tier's, quick included. Start the branch's own app:
+
+```sh
+.agents/skills/change/references/try.sh start /home/jackt/dev/pset-<topic>
+```
+
+It builds the branch's server and runs it and Vite on free private ports (never
+8420), on the worktree's own data in `.dev/data`, and prints the link. If the change
+needs model calls, first ask the openrouter-keys mod for a capped key for the
+worktree (`AGENTS.md`, "Model keys"); the script saves it into that server. If trying
+it needs data (a book, an assignment), say what to import, or seed it with a scratch
+import if you can.
+
+Then give Jack, in a few lines: the link, what changed in his terms, **what to try**
+(the plan's Acceptance as steps, or the quick brief's "done looks like"), the key
+shots from step 6, the PR link, and anything not verified. Ask with the ask-user tool:
+
+- **Approve and merge**
+- **Change something** (he says what in the free text)
+- **Park it** (leave the branch, the PR and the worktree; stop the app)
+
+On **change something**: send it to `builder-<topic>` (or, if it changes what the
+change is, amend the plan first and show him). Then `checker`, the `reviewer` again
+if behavior changed, the `shooter` for touched UI states, and `lander` in open mode
+to push. Restart the app with `try.sh start` and come back to this step. Loop until he
+approves or parks.
+
+Only on **approve and merge** go on. Stop the app first:
+`.agents/skills/change/references/try.sh stop /home/jackt/dev/pset-<topic>`.
+
+## 9. Merge
+
+Spawn `lander` in **merge** mode with the worktree and the PR number, and tell it
+Jack approved in this session. It waits for CI, updates the branch if `dev` moved,
+squash-merges, removes the worktree. If the worktree had a key from the mod, removing
+it deletes the key.
+
+## 10. Report
 
 Tell Jack in a few lines: what landed, the PR link, what was checked, what was not,
 and anything a reviewer raised that you chose not to fix.

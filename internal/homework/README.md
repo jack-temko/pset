@@ -125,6 +125,19 @@ its 2 A source backwards. Three things fixed it:
 
 A reading that fails leaves none, and the guide reads the figures itself.
 
+**Every guide's final answers are checked** (2026-10-08, `crosscheck.go`).
+Before a guide is ready, the Checker solves the problem again on its own,
+from what the guide was written from (statement, professor's notes,
+reading, figures) and without the guide, and the Writer at low effort
+compares the two sets of final answers part by part. Where they differ,
+the guide is written again from the start, told each part, what it said
+and what the check got, and to go by its tools, since the check can be
+wrong too. Where the new guide still differs, a quiet note goes under
+that part's answer: "An independent check got a different answer here;
+check this step." A check that can't run leaves the guide as written.
+About $0.010 a guide and 17 s; on 22 hard problems it caught and fixed
+two first drafts (13.47's numbers, 10.2 #24's Gibbs claim).
+
 **The writer sees the problem's figures, not its page.** A problem with
 figures opens with them cut from the page (as the walkthrough shows
 them, from the wider render); one without gets the page. The writer reads the student's
