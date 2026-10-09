@@ -42,7 +42,7 @@ func TestBuildHasEveryAuditTarget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer d.Close()
+	defer func() { _ = d.Close() }()
 
 	if n := count(t, d, `SELECT COUNT(*) FROM books WHERE state = 'ready'`); n != 2 {
 		t.Errorf("ready books = %d, want 2", n)

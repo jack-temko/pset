@@ -49,9 +49,9 @@ is Jack's own books and the repo is public, and a real import needs a key and Ol
     stages and runs, so every usage dialog and usage line has data;
   - settings with no key; deterministic ids and dates (relative to a fixed clock or
     now, whichever the UI needs for "due" to show).
-  The test builds one into a temp dir, starts nothing, and checks with the stores
-  that every scenario's target exists (the audit's usage scenarios need a usage call
-  and an answered turn).
+    The test builds one into a temp dir, starts nothing, and checks with the stores
+    that every scenario's target exists (the audit's usage scenarios need a usage call
+    and an answered turn).
 - `web/scripts/jumps/check.mjs` (new) and `web/scripts/jumps/allow.json` (new, empty
   list, each entry `{ scenario, mode?, reason }`): reads `report.json`, fails on the
   thresholds above and on timeouts, ignores allow-listed rows, prints each offender

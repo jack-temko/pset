@@ -6,8 +6,9 @@
 # (web/scripts/jumps), stops both and prints the report's path.
 #
 # make jumps-check (--check) is the guard: it builds the public fixture library
-# (tools/fixturelib) instead of copying one, runs the audit on it, and exits 1 if anything jumps (web/scripts/jumps/check.mjs). It touches no
-# library of yours and needs no key. The core profile (the default) measures the
+# (tools/fixturelib) instead of copying one, runs the audit on it, and exits 1
+# if anything jumps (web/scripts/jumps/check.mjs). It touches no library of
+# yours and needs no key. The core profile (the default) measures the
 # hand-written scenarios with --runs 2; FULL=1 adds discovery and --runs 3.
 #
 # The source library is only read: the database is copied with VACUUM INTO (it
@@ -21,7 +22,6 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 topic=$(basename "$root")
 topic=${topic#pset-}
-topic=$(basename "$root"); topic=${topic#pset-}
 check=
 [ "${1:-}" = "--check" ] && check=1
 src=${DATA:-$HOME/.local/share/pset-test-library}
@@ -34,11 +34,10 @@ run=/tmp/pset-jumps-$topic
 stamp=$(date +%Y%m%d-%H%M%S)
 export PATH="$HOME/.nvm/versions/node/v24.18.0/bin:$PATH:/usr/local/go/bin"
 
-[ -f "$src/pset.db" ] || {
+[ -n "$check" ] || [ -f "$src/pset.db" ] || {
 	echo "no library at $src (no pset.db)" >&2
 	exit 1
 }
-[ -n "$check" ] || [ -f "$src/pset.db" ] || { echo "no library at $src (no pset.db)" >&2; exit 1; }
 
 free() { # first free port in a range
 	for p in $(seq "$1" "$2"); do
@@ -84,23 +83,16 @@ else
 		sqlite3 "file:$uri?immutable=1" "VACUUM INTO '$run/data/pset.db'"
 	fi
 	for d in "$src"/*; do
-		case $(basename "$d") in pset.db*|logs|backups) continue ;; esac
+		case $(basename "$d") in pset.db* | logs | backups) continue ;; esac
 		cp -rL "$d" "$run/data/"
 	done
-	[ "$before" = "$(ls -A "$src")" ] || { echo "the source library's files changed; stopping" >&2; exit 1; }
+	[ "$before" = "$(ls -A "$src")" ] || {
+		echo "the source library's files changed; stopping" >&2
+		exit 1
+	}
 	chmod -R u+w "$run/data"
 	sqlite3 "$run/data/pset.db" "DELETE FROM settings WHERE key IN ('chat', 'embeddings');"
 fi
-for d in "$src"/*; do
-	case $(basename "$d") in pset.db* | logs | backups) continue ;; esac
-	cp -rL "$d" "$run/data/"
-done
-[ "$before" = "$(ls -A "$src")" ] || {
-	echo "the source library's files changed; stopping" >&2
-	exit 1
-}
-chmod -R u+w "$run/data"
-sqlite3 "$run/data/pset.db" "DELETE FROM settings WHERE key IN ('chat', 'embeddings');"
 
 tree=$root
 [ -n "${SRC:-}" ] && tree=$(cd "$SRC" && pwd)
@@ -115,11 +107,9 @@ fi
 
 sp=$(free 8430 8499)
 vp=$(free 5180 5197)
-setsid "$run/pset" -addr "127.0.0.1:$sp" -data "$run/data" -open=false \
+setsid "$run/pset" -addr "127.0.0.1:$sp" -data "$data" -open=false \
 	</dev/null >"$run/server.log" 2>&1 &
 pids+=($!)
-setsid "$run/pset" -addr "127.0.0.1:$sp" -data "$data" -open=false \
-	</dev/null >"$run/server.log" 2>&1 & pids+=($!)
 for _ in $(seq 50); do
 	curl -sf "http://127.0.0.1:$sp/api/settings" -o "$run/settings.json" && break
 	sleep 0.2
@@ -135,12 +125,12 @@ rm -f "$run/settings.json"
 (cd "$tree/web" && exec env PSET_API_TARGET="http://127.0.0.1:$sp" setsid npx vite --port "$vp" --strictPort) \
 	</dev/null >"$run/vite.log" 2>&1 &
 pids+=($!)
-for _ in $(seq 75); do
-	curl -sf "http://127.0.0.1:$vp/" >/dev/null && break
-	</dev/null >"$run/vite.log" 2>&1 & pids+=($!)
 up=
 for _ in $(seq 300); do
-	curl -sf "http://127.0.0.1:$vp/" >/dev/null && { up=1; break; }
+	curl -sf "http://127.0.0.1:$vp/" >/dev/null && {
+		up=1
+		break
+	}
 	sleep 0.2
 done
 if [ -z "$up" ]; then
