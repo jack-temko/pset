@@ -44,8 +44,14 @@ func TestBuildHasEveryAuditTarget(t *testing.T) {
 	}
 	defer func() { _ = d.Close() }()
 
-	if n := count(t, d, `SELECT COUNT(*) FROM books WHERE state = 'ready'`); n != 2 {
-		t.Errorf("ready books = %d, want 2", n)
+	if n := count(t, d, `SELECT COUNT(*) FROM books WHERE state = 'ready'`); n != 3 {
+		t.Errorf("ready books = %d, want 3", n)
+	}
+	// The scan is the empty variant: no contents, homework or Ask turns.
+	if n := count(t, d, `SELECT COUNT(*) FROM sections WHERE book_id = 'fx-scanned'`) +
+		count(t, d, `SELECT COUNT(*) FROM homework WHERE book_id = 'fx-scanned'`) +
+		count(t, d, `SELECT COUNT(*) FROM turns WHERE book_id = 'fx-scanned'`); n != 0 {
+		t.Errorf("the scanned book holds %d contents, sets or turns, want none", n)
 	}
 	for _, id := range []string{"fx-digital", "fx-flat"} {
 		if _, err := os.Stat(filepath.Join(dir, "books", id+".pdf")); err != nil {
@@ -57,14 +63,20 @@ func TestBuildHasEveryAuditTarget(t *testing.T) {
 		if n := count(t, d, `SELECT COUNT(*) FROM sections WHERE book_id = ?`, id); n == 0 {
 			t.Errorf("%s has no sections", id)
 		}
-		if n := count(t, d, `SELECT COUNT(*) FROM homework WHERE book_id = ? AND turned_in_at = ''  AND due_date != ''`, id); n != 1 {
-			t.Errorf("%s: due sets = %d, want 1", id, n)
+		// One set of each variant: in progress, finished, turned in.
+		if n := count(t, d, `SELECT COUNT(*) FROM homework h WHERE h.book_id = ? AND h.turned_in_at = '' AND h.due_date != ''
+			AND EXISTS (SELECT 1 FROM questions q WHERE q.homework_id = h.id AND q.done_at = '')`, id); n != 1 {
+			t.Errorf("%s: in-progress sets = %d, want 1", id, n)
+		}
+		if n := count(t, d, `SELECT COUNT(*) FROM homework h WHERE h.book_id = ? AND h.turned_in_at = ''
+			AND NOT EXISTS (SELECT 1 FROM questions q WHERE q.homework_id = h.id AND q.done_at = '')`, id); n != 1 {
+			t.Errorf("%s: finished sets = %d, want 1", id, n)
 		}
 		if n := count(t, d, `SELECT COUNT(*) FROM homework WHERE book_id = ? AND turned_in_at != ''`, id); n != 1 {
 			t.Errorf("%s: turned-in sets = %d, want 1", id, n)
 		}
-		if n := count(t, d, `SELECT COUNT(*) FROM questions q JOIN homework h ON h.id = q.homework_id WHERE h.book_id = ?`, id); n != 8 {
-			t.Errorf("%s: questions = %d, want 8", id, n)
+		if n := count(t, d, `SELECT COUNT(*) FROM questions q JOIN homework h ON h.id = q.homework_id WHERE h.book_id = ?`, id); n != 12 {
+			t.Errorf("%s: questions = %d, want 12", id, n)
 		}
 		if n := count(t, d, `SELECT COUNT(*) FROM questions q JOIN homework h ON h.id = q.homework_id WHERE h.book_id = ? AND q.state = 'unwritten'`, id); n == 0 {
 			t.Errorf("%s has no unwritten question", id)
