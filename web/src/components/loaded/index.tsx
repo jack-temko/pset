@@ -1,12 +1,21 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 
-import { GRACE_MS } from '@/lib/settled'
-import { cn } from '@/lib/utils'
+import { GRACE_MS } from '@/lib/settled';
+import { cn } from '@/lib/utils';
 
-const reducedMotion = () => typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const reducedMotion = () =>
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** The part of a TanStack query result `Loaded` reads. */
-type Query<T> = { data: T | undefined; isPending: boolean; isError: boolean }
+type Query<T> = { data: T | undefined; isPending: boolean; isError: boolean };
 
 /**
  * The one way anything that waits on data is drawn. While the query is
@@ -41,79 +50,98 @@ export function Loaded<T>({
   errorText = "Couldn't load this. Try again in a moment.",
   grace = true,
 }: {
-  query: Query<T>
-  skeleton: ReactNode
-  children: (data: T) => ReactNode
-  className?: string
+  query: Query<T>;
+  skeleton: ReactNode;
+  children: (data: T) => ReactNode;
+  className?: string;
   /** The line shown when the query failed and there is nothing to show. */
-  errorText?: string
+  errorText?: string;
   /** Hold the skeleton back for GRACE_MS (the default, for content inside a
    *  page). An overlay passes false: it is new on screen, so its skeleton shows
    *  from the dialog's first frame. */
-  grace?: boolean
+  grace?: boolean;
 }) {
-  const pending = query.isPending
+  const pending = query.isPending;
   // The grace is per wait: it starts again when a new pending phase does.
-  const [aged, setAged] = useState(!grace)
+  const [aged, setAged] = useState(!grace);
   useEffect(() => {
-    if (!pending || !grace) return
-    const t = setTimeout(() => setAged(true), GRACE_MS)
-    return () => clearTimeout(t)
-  }, [pending, grace])
+    if (!pending || !grace) return;
+    const t = setTimeout(() => setAged(true), GRACE_MS);
+    return () => clearTimeout(t);
+  }, [pending, grace]);
 
   // The skeleton stays under the content for the length of the crossfade,
   // but only if it was ever seen.
-  const [wasPending, setWasPending] = useState(pending)
-  const [swapping, setSwapping] = useState(false)
+  const [wasPending, setWasPending] = useState(pending);
+  const [swapping, setSwapping] = useState(false);
   // Where the skeleton's opacity stood when the data landed: its fade-out
   // starts there, so a skeleton still fading in doesn't pop to full first.
-  const layer = useRef<HTMLDivElement>(null)
-  const [fadeFrom, setFadeFrom] = useState('1')
+  const layer = useRef<HTMLDivElement>(null);
+  const [fadeFrom, setFadeFrom] = useState('1');
   if (wasPending !== pending) {
-    setWasPending(pending)
+    setWasPending(pending);
     if (pending) {
-      setAged(!grace)
-      setSwapping(false)
+      setAged(!grace);
+      setSwapping(false);
     } else if (aged && !reducedMotion()) {
-      setFadeFrom(layer.current ? getComputedStyle(layer.current).opacity || '1' : '1')
-      setSwapping(true)
+      setFadeFrom(
+        layer.current ? getComputedStyle(layer.current).opacity || '1' : '1',
+      );
+      setSwapping(true);
     }
   }
   useEffect(() => {
-    if (!swapping) return
-    const t = setTimeout(() => setSwapping(false), 170)
-    return () => clearTimeout(t)
-  }, [swapping])
+    if (!swapping) return;
+    const t = setTimeout(() => setSwapping(false), 170);
+    return () => clearTimeout(t);
+  }, [swapping]);
 
   // The content is built once per data: this component re-renders for its own
   // state (the grace, the swap), and a big table rebuilt each time is what made
   // the crossfade slow.
-  const content = useMemo(() => (pending ? null : children(query.data as T)), [pending, children, query.data])
+  const content = useMemo(
+    () => (pending ? null : children(query.data as T)),
+    [pending, children, query.data],
+  );
 
   if (!pending && query.isError && query.data === undefined) {
     return (
       <p role="status" className="text-sm text-destructive/80">
         {errorText}
       </p>
-    )
+    );
   }
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)]" aria-busy={pending || undefined}>
+    <div
+      className="grid grid-cols-[minmax(0,1fr)]"
+      aria-busy={pending || undefined}
+    >
       {(pending || swapping) && (
         <div
           ref={layer}
           aria-hidden
-          style={swapping ? ({ '--fade-from': fadeFrom } as CSSProperties) : undefined}
+          style={
+            swapping
+              ? ({ '--fade-from': fadeFrom } as CSSProperties)
+              : undefined
+          }
           className={cn(
             className,
             '[grid-area:1/1]',
-            pending ? ['transition-opacity duration-150 ease-out motion-reduce:transition-none', aged ? 'opacity-100' : 'opacity-0'] : 'fade-out pointer-events-none',
+            pending
+              ? [
+                  'transition-opacity duration-150 ease-out motion-reduce:transition-none',
+                  aged ? 'opacity-100' : 'opacity-0',
+                ]
+              : 'fade-out pointer-events-none',
           )}
         >
           {skeleton}
         </div>
       )}
-      <div className={cn(className, '[grid-area:1/1]', swapping && 'fade-in')}>{content}</div>
+      <div className={cn(className, '[grid-area:1/1]', swapping && 'fade-in')}>
+        {content}
+      </div>
     </div>
-  )
+  );
 }

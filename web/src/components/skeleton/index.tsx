@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 /**
  * The shape of content that hasn't arrived yet, at the size it will be,
@@ -13,7 +13,15 @@ import { cn } from '@/lib/utils'
  * Inline by default, so a text-sized skeleton sits inside a line box and
  * the row keeps its real line height. Pass `block` sizes for figures.
  */
-export function Skeleton({ className, still, style }: { className?: string; still?: boolean; style?: React.CSSProperties }) {
+export function Skeleton({
+  className,
+  still,
+  style,
+}: {
+  className?: string;
+  still?: boolean;
+  style?: React.CSSProperties;
+}) {
   return (
     <span
       aria-hidden
@@ -21,7 +29,9 @@ export function Skeleton({ className, still, style }: { className?: string; stil
       className={cn('skeleton inline-block rounded-sm align-middle', className)}
       // Still: the space is held, but nothing is on its way yet (a queued
       // question), so it doesn't borrow the shimmer's "waiting" meaning.
-      style={still ? { ...style, animation: 'none', backgroundImage: 'none' } : style}
+      style={
+        still ? { ...style, animation: 'none', backgroundImage: 'none' } : style
+      }
     />
-  )
+  );
 }

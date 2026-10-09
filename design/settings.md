@@ -82,7 +82,7 @@ not running) says how to install or start it.
 
 ## Updates
 
-*(2026-10-02, the release runner grill: `ideas/release-runner-grill.md`, D8 to D10.)*
+_(2026-10-02, the release runner grill: `ideas/release-runner-grill.md`, D8 to D10.)_
 A Box: **PSet 0.1.0** with what the last check found under it, and a **Check
 for updates** button. Pressing it is the one time PSet contacts GitHub (the README's
 promise is "your endpoints, and GitHub when you press Check"). When a newer

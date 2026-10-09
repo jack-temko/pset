@@ -3,10 +3,7 @@
   "$comment": "A worked chain: one line of bare TeX per step, each with an optional one-sentence reason.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "type",
-    "steps"
-  ],
+  "required": ["type", "steps"],
   "properties": {
     "type": {
       "const": "derivation"
@@ -18,9 +15,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "tex"
-        ],
+        "required": ["tex"],
         "properties": {
           "tex": {
             "type": "string",

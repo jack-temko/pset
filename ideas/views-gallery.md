@@ -5,12 +5,12 @@
 **In progress** (2026-09-30). Three branches, in order; each merges on its
 own.
 
-| Branch | Does | State |
-|---|---|---|
-| `views-plan` | This file, `CLAUDE.md`, and the note in `AGENTS.md`. | Done |
-| `gallery-shell` | `/components` gets a sidebar and one section at a time. | Done |
-| `views-homework` | `/views`, the fetch stub, and the homework pane as the pilot view. | Done |
-| `views-skill` | The `pset-view` skill, written against what the two above built. | Done: written; task 10 tries it |
+| Branch           | Does                                                               | State                           |
+| ---------------- | ------------------------------------------------------------------ | ------------------------------- |
+| `views-plan`     | This file, `CLAUDE.md`, and the note in `AGENTS.md`.               | Done                            |
+| `gallery-shell`  | `/components` gets a sidebar and one section at a time.            | Done                            |
+| `views-homework` | `/views`, the fetch stub, and the homework pane as the pilot view. | Done                            |
+| `views-skill`    | The `pset-view` skill, written against what the two above built.   | Done: written; task 10 tries it |
 
 The skill is written last on purpose: it should describe the gallery and
 the pilot view as they are, not as they were imagined.

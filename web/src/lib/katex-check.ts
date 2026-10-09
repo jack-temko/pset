@@ -1,6 +1,6 @@
-import katex from 'katex'
+import katex from 'katex';
 
-import { MATH_OPTIONS } from './math'
+import { MATH_OPTIONS } from './math';
 
 /**
  * The math check the server runs (goja, in internal/doc): the web app's
@@ -13,12 +13,16 @@ import { MATH_OPTIONS } from './math'
  */
 export function check(tex: string, display: boolean): string {
   try {
-    katex.renderToString(tex, { ...MATH_OPTIONS, displayMode: display, throwOnError: true })
-    return ''
+    katex.renderToString(tex, {
+      ...MATH_OPTIONS,
+      displayMode: display,
+      throwOnError: true,
+    });
+    return '';
   } catch (e) {
-    return e instanceof Error ? e.message : String(e)
+    return e instanceof Error ? e.message : String(e);
   }
 }
 
 /** The KaTeX version bundled, for the test that ties it to package.json. */
-export const version: string = katex.version
+export const version: string = katex.version;

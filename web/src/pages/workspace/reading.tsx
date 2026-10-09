@@ -1,12 +1,12 @@
-import { TriangleAlert } from 'lucide-react'
+import { TriangleAlert } from 'lucide-react';
 
-import { Box, BoxBody, BoxHeader } from '@/components/box'
-import { Button } from '@/components/button'
-import { Label } from '@/components/label'
-import { Runs } from '@/components/document'
-import type { Question } from '@/api/homework'
-import type { Run } from '@/api/gen/doc'
-import { EditableLines } from './editable-lines'
+import { Box, BoxBody, BoxHeader } from '@/components/box';
+import { Button } from '@/components/button';
+import { Label } from '@/components/label';
+import { Runs } from '@/components/document';
+import type { Question } from '@/api/homework';
+import type { Run } from '@/api/gen/doc';
+import { EditableLines } from './editable-lines';
 
 /**
  * How a question's figure reads, one fact a line: the words its guide is
@@ -21,40 +21,41 @@ export function FigureReading({
   onCorrect,
   onReread,
 }: {
-  q: Question
-  onCorrect: (lines: string[]) => void
-  onReread: () => void
+  q: Question;
+  onCorrect: (lines: string[]) => void;
+  onReread: () => void;
 }) {
-  const lines = q.reading ?? []
+  const lines = q.reading ?? [];
   // Saving rewrites a guide that's there or on its way; a guide that
   // hasn't started just waits for the new lines.
-  const rewrites = q.state !== 'located' && q.state !== 'unwritten'
+  const rewrites = q.state !== 'located' && q.state !== 'unwritten';
 
   if (lines.length === 0) {
     // Only a guide already written without one offers a reading: while a
     // question is on its way, its reading is still to come.
-    if (q.state !== 'ready') return null
+    if (q.state !== 'ready') return null;
     return (
       <Box>
         <BoxHeader>The figure, as read</BoxHeader>
         <BoxBody className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            This guide was written without the figure read out first. Reading it takes a minute or two, then
-            the guide is written again from what it says, and you can check every line.
+            This guide was written without the figure read out first. Reading it
+            takes a minute or two, then the guide is written again from what it
+            says, and you can check every line.
           </p>
           <Button variant="outline" size="sm" onClick={onReread}>
             Read the figure
           </Button>
         </BoxBody>
       </Box>
-    )
+    );
   }
 
   // Where the figure's readings disagreed: the likeliest lines to be
   // wrong, so they're named, to check against the figure. Readings that
   // agree are nearly always right; ones that don't nearly always hold a
   // wrong one (design/backend.md, "Models").
-  const doubts = q.readingEdited ? [] : q.readingDoubts
+  const doubts = q.readingEdited ? [] : q.readingDoubts;
 
   return (
     <EditableLines
@@ -81,15 +82,15 @@ export function FigureReading({
           variant="ghost"
           size="sm"
           onClick={() => {
-            stop()
-            onReread()
+            stop();
+            onReread();
           }}
         >
           Read it again
         </Button>
       )}
     />
-  )
+  );
 }
 
 /** What the figure's readings disagreed on, and what was settled: a
@@ -98,7 +99,9 @@ function ReadingDoubts({ doubts }: { doubts: Run[][] }) {
   return (
     <div className="space-y-1 rounded-md bg-warning-soft px-3 py-2">
       <p className="font-medium text-warning">
-        {doubts.length === 1 ? 'The readings disagreed on one point.' : `The readings disagreed on ${doubts.length} points.`}{' '}
+        {doubts.length === 1
+          ? 'The readings disagreed on one point.'
+          : `The readings disagreed on ${doubts.length} points.`}{' '}
         Check {doubts.length === 1 ? 'it' : 'them'} against the figure:
       </p>
       <ul className="list-disc space-y-1 pl-5">
@@ -109,8 +112,9 @@ function ReadingDoubts({ doubts }: { doubts: Run[][] }) {
         ))}
       </ul>
       <p className="text-xs text-muted-foreground">
-        The guide follows the reading below. If the figure shows otherwise, correct it.
+        The guide follows the reading below. If the figure shows otherwise,
+        correct it.
       </p>
     </div>
-  )
+  );
 }

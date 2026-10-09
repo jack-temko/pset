@@ -1,8 +1,8 @@
-import { BoxRow } from '@/components/box'
-import { BookStatus } from '@/components/book-status'
-import { CoverSwatch } from '@/components/book-cover'
-import { Button } from '@/components/button'
-import type { Book } from '@/api/library'
+import { BoxRow } from '@/components/box';
+import { BookStatus } from '@/components/book-status';
+import { CoverSwatch } from '@/components/book-cover';
+import { Button } from '@/components/button';
+import type { Book } from '@/api/library';
 
 /**
  * A book that is on its way to the shelf: its cloth colour, its title,
@@ -24,12 +24,12 @@ export function ImportRow({
   onRetry,
   onDismiss,
 }: {
-  book: Book
-  onStop?: () => void
-  onRetry?: () => void
-  onDismiss?: () => void
+  book: Book;
+  onStop?: () => void;
+  onRetry?: () => void;
+  onDismiss?: () => void;
 }) {
-  const { state } = book
+  const { state } = book;
 
   const trailing =
     state.kind === 'failed' ? (
@@ -49,14 +49,16 @@ export function ImportRow({
       <Button variant="ghost" size="sm" onClick={onStop}>
         Stop
       </Button>
-    ) : null
+    ) : null;
 
   return (
     <BoxRow
       leading={<CoverSwatch hue={book.cover} />}
       title={book.title}
-      description={<BookStatus bookId={book.id} state={state} since={book.updatedAt} />}
+      description={
+        <BookStatus bookId={book.id} state={state} since={book.updatedAt} />
+      }
       trailing={trailing}
     />
-  )
+  );
 }

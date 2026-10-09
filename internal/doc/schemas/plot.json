@@ -3,12 +3,7 @@
   "$comment": "One or two functions on one y-axis, with optional labeled points and vertical guides. A series is an expression in x over a domain, sampled by the server, or explicit points for tabular data.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "type",
-    "x",
-    "y",
-    "series"
-  ],
+  "required": ["type", "x", "y", "series"],
   "properties": {
     "type": {
       "const": "plot"
@@ -30,9 +25,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "label"
-        ],
+        "required": ["label"],
         "properties": {
           "label": {
             "type": "string",
@@ -78,31 +71,20 @@
         },
         "oneOf": [
           {
-            "required": [
-              "expr",
-              "domain"
-            ],
+            "required": ["expr", "domain"],
             "not": {
-              "required": [
-                "points"
-              ]
+              "required": ["points"]
             }
           },
           {
-            "required": [
-              "points"
-            ],
+            "required": ["points"],
             "not": {
               "anyOf": [
                 {
-                  "required": [
-                    "expr"
-                  ]
+                  "required": ["expr"]
                 },
                 {
-                  "required": [
-                    "domain"
-                  ]
+                  "required": ["domain"]
                 }
               ]
             }
@@ -116,9 +98,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "x"
-        ],
+        "required": ["x"],
         "properties": {
           "x": {
             "type": "number"
@@ -138,9 +118,7 @@
     "axis": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "label"
-      ],
+      "required": ["label"],
       "properties": {
         "label": {
           "type": "string",

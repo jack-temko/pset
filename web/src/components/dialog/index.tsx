@@ -1,6 +1,6 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 /**
  * The system's one modal. A native `<dialog>` opened with `showModal()`,
@@ -29,25 +29,25 @@ export function Dialog({
   className,
   children,
 }: {
-  open: boolean
-  onClose: () => void
-  title: string
+  open: boolean;
+  onClose: () => void;
+  title: string;
   /** 400 for a couple of fields, 560 for a stack of rows, 960 for a
    *  table with real columns. No fourth size. */
-  width?: 'default' | 'wide' | 'table'
+  width?: 'default' | 'wide' | 'table';
   /** Required: it carries Cancel, which is the way out. */
-  footer: ReactNode
-  className?: string
-  children: ReactNode
+  footer: ReactNode;
+  className?: string;
+  children: ReactNode;
 }) {
-  const ref = useRef<HTMLDialogElement>(null)
+  const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    if (open && !el.open) el.showModal()
-    if (!open && el.open) el.close()
-  }, [open])
+    const el = ref.current;
+    if (!el) return;
+    if (open && !el.open) el.showModal();
+    if (!open && el.open) el.close();
+  }, [open]);
 
   return (
     <dialog
@@ -55,8 +55,8 @@ export function Dialog({
       // Esc fires `cancel`; letting it through would close the element
       // without telling the caller, so the caller closes it instead.
       onCancel={(e) => {
-        e.preventDefault()
-        onClose()
+        e.preventDefault();
+        onClose();
       }}
       className={cn(
         // The dialog is itself the column: it sizes to its content up to
@@ -64,7 +64,9 @@ export function Dialog({
         // between, so the footer sits at the bottom edge, never mid-dialog.
         'm-auto max-h-[80vh] flex-col overflow-hidden rounded-lg border bg-card p-0 text-card-foreground shadow-floating open:flex',
         'backdrop:bg-foreground/25 backdrop:backdrop-blur-[2px]',
-        { default: 'w-dialog', wide: 'w-dialog-wide', table: 'w-dialog-table' }[width],
+        { default: 'w-dialog', wide: 'w-dialog-wide', table: 'w-dialog-table' }[
+          width
+        ],
         className,
       )}
     >
@@ -78,5 +80,5 @@ export function Dialog({
         {footer}
       </div>
     </dialog>
-  )
+  );
 }

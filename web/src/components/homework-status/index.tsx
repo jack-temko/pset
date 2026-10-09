@@ -1,10 +1,10 @@
-import { Check, Clock, TriangleAlert } from 'lucide-react'
+import { Check, Clock, TriangleAlert } from 'lucide-react';
 
-import { Label } from '@/components/label'
+import { Label } from '@/components/label';
 
 /** What a homework's state is worth saying out loud. Most homework has
  *  none: a set due next week is simply due next week. */
-export type HomeworkStatus = 'soon' | 'overdue' | 'turned-in'
+export type HomeworkStatus = 'soon' | 'overdue' | 'turned-in';
 
 /**
  * A homework's status as a pill, or nothing at all.
@@ -21,7 +21,7 @@ export function HomeworkStatusLabel({ status }: { status?: HomeworkStatus }) {
         <Check />
         Turned in
       </Label>
-    )
+    );
   }
   if (status === 'overdue') {
     return (
@@ -29,7 +29,7 @@ export function HomeworkStatusLabel({ status }: { status?: HomeworkStatus }) {
         <TriangleAlert />
         Overdue
       </Label>
-    )
+    );
   }
   if (status === 'soon') {
     return (
@@ -37,7 +37,7 @@ export function HomeworkStatusLabel({ status }: { status?: HomeworkStatus }) {
         <Clock />
         Due soon
       </Label>
-    )
+    );
   }
-  return null
+  return null;
 }

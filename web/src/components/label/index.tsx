@@ -1,7 +1,7 @@
-import type { ComponentProps } from 'react'
-import { cva, type VariantProps } from 'class-variance-authority'
+import type { ComponentProps } from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 /**
  * The small pill that names a kind or a state in a word or two.
@@ -36,7 +36,7 @@ const labelVariants = cva(
     ],
     defaultVariants: { tone: 'default', filled: false },
   },
-)
+);
 
 export function Label({
   tone,
@@ -44,7 +44,12 @@ export function Label({
   className,
   ...props
 }: ComponentProps<'span'> & VariantProps<typeof labelVariants>) {
-  return <span className={cn(labelVariants({ tone, filled }), className)} {...props} />
+  return (
+    <span
+      className={cn(labelVariants({ tone, filled }), className)}
+      {...props}
+    />
+  );
 }
 
-export { labelVariants }
+export { labelVariants };

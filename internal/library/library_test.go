@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jackt/pset/internal/pagenum"
 	"io"
 	"log/slog"
 	"maps"
@@ -20,6 +19,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/jackt/pset/internal/pagenum"
 
 	"github.com/go-pdf/fpdf"
 

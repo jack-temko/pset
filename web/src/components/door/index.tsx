@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import type { ReactNode } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 /**
  * Two shapes, and the button is always the shape, so the wash and the
@@ -13,24 +13,37 @@ import { cn } from '@/lib/utils'
  *   grid darkening at once reads as a giant button, so there the target
  *   is a pill in the middle of the row.
  */
-export type DoorShape = 'row' | 'pill'
+export type DoorShape = 'row' | 'pill';
 
 const quiet =
-  'flex cursor-pointer items-center justify-center gap-1 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground [&_svg]:size-4'
+  'flex cursor-pointer items-center justify-center gap-1 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground [&_svg]:size-4';
 
 function DoorButton({
   shape,
   className,
   ...props
-}: { shape: DoorShape; className?: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+}: {
+  shape: DoorShape;
+  className?: string;
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   if (shape === 'row') {
-    return <button type="button" className={cn(quiet, 'h-row w-full', className)} {...props} />
+    return (
+      <button
+        type="button"
+        className={cn(quiet, 'h-row w-full', className)}
+        {...props}
+      />
+    );
   }
   return (
     <div className={cn('flex h-row items-center justify-center', className)}>
-      <button type="button" className={cn(quiet, 'h-control-sm rounded-md px-3')} {...props} />
+      <button
+        type="button"
+        className={cn(quiet, 'h-control-sm rounded-md px-3')}
+        {...props}
+      />
     </div>
-  )
+  );
 }
 
 /**
@@ -48,20 +61,25 @@ export function Door({
   shape = 'row',
   className,
 }: {
-  open: boolean
+  open: boolean;
   /** How many there are in all: the door names what it opens onto. */
-  total: number
-  onToggle: () => void
-  shape?: DoorShape
-  className?: string
+  total: number;
+  onToggle: () => void;
+  shape?: DoorShape;
+  className?: string;
 }) {
-  const Chevron = open ? ChevronUp : ChevronDown
+  const Chevron = open ? ChevronUp : ChevronDown;
   return (
-    <DoorButton shape={shape} onClick={onToggle} aria-expanded={open} className={className}>
+    <DoorButton
+      shape={shape}
+      onClick={onToggle}
+      aria-expanded={open}
+      className={className}
+    >
       {open ? 'Show fewer' : `Show all ${total}`}
       <Chevron aria-hidden />
     </DoorButton>
-  )
+  );
 }
 
 /**
@@ -77,16 +95,16 @@ export function DoorAction({
   className,
   children,
 }: {
-  icon: ReactNode
-  onClick: () => void
-  shape?: DoorShape
-  className?: string
-  children: ReactNode
+  icon: ReactNode;
+  onClick: () => void;
+  shape?: DoorShape;
+  className?: string;
+  children: ReactNode;
 }) {
   return (
     <DoorButton shape={shape} onClick={onClick} className={className}>
       {icon}
       {children}
     </DoorButton>
-  )
+  );
 }

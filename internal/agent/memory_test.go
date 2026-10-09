@@ -3,11 +3,12 @@ package agent
 import (
 	"context"
 	"errors"
-	"github.com/jackt/pset/internal/pagenum"
 	"slices"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/jackt/pset/internal/pagenum"
 
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"

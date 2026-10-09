@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react'
-import { Check } from 'lucide-react'
+import type { ReactNode } from 'react';
+import { Check } from 'lucide-react';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 /**
  * A labelled checkbox, for a state that must be as easy to take back as
@@ -18,11 +18,11 @@ export function Checkbox({
   className,
   children,
 }: {
-  checked: boolean
-  onChange: () => void
-  disabled?: boolean
-  className?: string
-  children: ReactNode
+  checked: boolean;
+  onChange: () => void;
+  disabled?: boolean;
+  className?: string;
+  children: ReactNode;
 }) {
   return (
     <button
@@ -40,12 +40,14 @@ export function Checkbox({
         aria-hidden
         className={cn(
           'grid size-4 shrink-0 place-items-center rounded-sm border transition-colors duration-200 ease-out motion-reduce:transition-none',
-          checked ? 'border-primary bg-primary text-primary-foreground' : 'border-input bg-card',
+          checked
+            ? 'border-primary bg-primary text-primary-foreground'
+            : 'border-input bg-card',
         )}
       >
         {checked && <Check className="size-3" />}
       </span>
       {children}
     </button>
-  )
+  );
 }

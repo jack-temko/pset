@@ -34,7 +34,9 @@ Write the Playwright script in a scratch directory under `/tmp/pset-shots/<topic
 never in the repo, and require Playwright by path:
 
 ```js
-const { chromium } = require(process.env.HOME + '/.npm/_npx/e41f203b7505f1fb/node_modules/playwright')
+const { chromium } = require(
+  process.env.HOME + '/.npm/_npx/e41f203b7505f1fb/node_modules/playwright',
+);
 ```
 
 (If that path is gone, `npx playwright install chromium` in the scratch directory.)

@@ -6,7 +6,7 @@ The Go backend, built against the finished UI (grilled and decided
 models. Each package's own `README.md` owns its tables, its endpoints and
 its edge cases.
 
-The UI specs (`workspace.md`, `import.md`, `settings.md`) say *what* each
+The UI specs (`workspace.md`, `import.md`, `settings.md`) say _what_ each
 screen needs; this file says how the backend is shaped to give it.
 
 ## Layers and modules
@@ -52,13 +52,13 @@ feature is then testable with a ten-line fake.
 
 **Inside a feature**, one file per concern:
 
-| File | Holds |
-|---|---|
-| `service.go` | Behaviour. Takes and returns domain types. No HTTP. |
-| `store.go` | Its SQL, and its migrations. |
-| `http.go` | Handlers: decode, call the service, encode. No logic. |
-| `wire.go` | The JSON types the UI sees, and the event names. The only file the TS generator reads. |
-| `README.md` | Contract, tables, edge cases. |
+| File         | Holds                                                                                  |
+| ------------ | -------------------------------------------------------------------------------------- |
+| `service.go` | Behaviour. Takes and returns domain types. No HTTP.                                    |
+| `store.go`   | Its SQL, and its migrations.                                                           |
+| `http.go`    | Handlers: decode, call the service, encode. No logic.                                  |
+| `wire.go`    | The JSON types the UI sees, and the event names. The only file the TS generator reads. |
+| `README.md`  | Contract, tables, edge cases.                                                          |
 
 **Cross-feature deletes** are foreign keys with `ON DELETE CASCADE`: one
 database, so removing a book takes its homework, questions, turns and
@@ -161,24 +161,24 @@ One stream: `GET /api/events` (SSE). Events are small and typed, and
 each names what changed so the client can patch or invalidate exactly
 those queries:
 
-| Event | Carries | Client does |
-|---|---|---|
-| `book.changed` | the book (state: queued, preparing {phase, done?, total?}, ready, failed {reason}) | patch the book |
-| `book.removed` | id | drop it |
-| `homework.changed` | the set's summary | patch the set |
-| `homework.removed` | id, bookId | drop it |
-| `question.changed` | the question, with its `rev` | patch the question |
-| `question.removed` | id, homeworkId | drop it |
-| `assignment.changed` | the assignment read (reading, ready to review, failed) | patch the read |
-| `assignment.removed` | id, bookId | drop it |
-| `turn.changed` | the turn, with the blocks saved so far | patch the turn |
-| `turn.block.start` | turnId, type | that block's skeleton |
-| `turn.block.text` | turnId, runs | append to the open text block |
-| `turn.block.repairing` | turnId, type | "Tidying" |
-| `turn.block` / `.failed` | turnId, block | replace the skeleton (`.failed`: a raw block) |
-| `turns.cleared` | bookId | empty the conversation |
-| `memory.saved` / `.removed` | the memory / id | patch the menu |
-| `reset` | nothing | refetch everything |
+| Event                       | Carries                                                                            | Client does                                   |
+| --------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------- |
+| `book.changed`              | the book (state: queued, preparing {phase, done?, total?}, ready, failed {reason}) | patch the book                                |
+| `book.removed`              | id                                                                                 | drop it                                       |
+| `homework.changed`          | the set's summary                                                                  | patch the set                                 |
+| `homework.removed`          | id, bookId                                                                         | drop it                                       |
+| `question.changed`          | the question, with its `rev`                                                       | patch the question                            |
+| `question.removed`          | id, homeworkId                                                                     | drop it                                       |
+| `assignment.changed`        | the assignment read (reading, ready to review, failed)                             | patch the read                                |
+| `assignment.removed`        | id, bookId                                                                         | drop it                                       |
+| `turn.changed`              | the turn, with the blocks saved so far                                             | patch the turn                                |
+| `turn.block.start`          | turnId, type                                                                       | that block's skeleton                         |
+| `turn.block.text`           | turnId, runs                                                                       | append to the open text block                 |
+| `turn.block.repairing`      | turnId, type                                                                       | "Tidying"                                     |
+| `turn.block` / `.failed`    | turnId, block                                                                      | replace the skeleton (`.failed`: a raw block) |
+| `turns.cleared`             | bookId                                                                             | empty the conversation                        |
+| `memory.saved` / `.removed` | the memory / id                                                                    | patch the menu                                |
+| `reset`                     | nothing                                                                            | refetch everything                            |
 
 `reset` is the bus's own: it is sent to a client that reconnects with an
 id the ring no longer holds, or one this run of the server never issued.
@@ -211,11 +211,11 @@ lane, a subject id, a state (`queued`, `running`, `done`, `failed`,
 kind and publish their own domain events; the queue publishes nothing to
 the UI.
 
-| Lane | Concurrency | Why |
-|---|---|---|
-| `import` | 1 | One at a time: every book examined first, then digital books ahead of scans (below). The UI shows "Queued" for the rest. |
-| `question` | 2 | Two homework steps at once, finds and readings before guides (below). A constant, not a setting. |
-| `turn` | 8, one per book | Many books may be answering at once; each book answers one question at a time (the job's key is the book). |
+| Lane       | Concurrency     | Why                                                                                                                      |
+| ---------- | --------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `import`   | 1               | One at a time: every book examined first, then digital books ahead of scans (below). The UI shows "Queued" for the rest. |
+| `question` | 2               | Two homework steps at once, finds and readings before guides (below). A constant, not a setting.                         |
+| `turn`     | 8, one per book | Many books may be answering at once; each book answers one question at a time (the job's key is the book).               |
 
 **Finds go first** (2026-09-24). A question is up to three jobs in the
 `question` lane: `locate`, which finds it and queues its next step in
@@ -321,6 +321,7 @@ and the probability book, through the eval key:
   box stands. It's one more call, $0.001 to $0.002 and 3 to 7 s. OCR was
   tried first as the anchor, and Tesseract read the direction fields of
   a scanned page as text and lost the problem numbers around them.
+
 - **Reader**, `google/gemini-3.8-flash`, with Luna behind it
   (2026-10-08). It writes out each found problem, and reads the figures,
   three times and then settled. On 22 hard problems, 11 from the scanned
@@ -350,6 +351,7 @@ and the probability book, through the eval key:
   Twelve problems from both books, the differential equations book's
   shared lists, a lead-in part and a run's intro among them, came out
   right; before, two in six lost what they needed.
+
 - **Writer**, `anthropic/claude-haiku-5.5`, with DeepSeek behind it
   (2026-10-08). On the same 22 hard problems, every Writer starting from
   the same readings: Haiku 20 right, $0.0075 a guide, 26 s (slowest 66 s);
@@ -400,12 +402,12 @@ figure, $0.0015 for all four calls.
 The Writer must take images (it looks at pages). Four tools, as few as
 cover what a student needs:
 
-| Tool | Does |
-|---|---|
-| `search_pages` | Hybrid full-text and vector search; returns pages and snippets. |
-| `read_page` | The text of a page range, capped. |
-| `view_page` | Puts a page image into the model's context: figures, tables, garbled text. |
-| `compute` | `mathx` evaluate or solve, so worked arithmetic is checked, not guessed. Takes a list of expressions in one call (2026-10-08): every model batched them, and DeepSeek's guides cost half as much. |
+| Tool           | Does                                                                                                                                                                                              |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search_pages` | Hybrid full-text and vector search; returns pages and snippets.                                                                                                                                   |
+| `read_page`    | The text of a page range, capped.                                                                                                                                                                 |
+| `view_page`    | Puts a page image into the model's context: figures, tables, garbled text.                                                                                                                        |
+| `compute`      | `mathx` evaluate or solve, so worked arithmetic is checked, not guessed. Takes a list of expressions in one call (2026-10-08): every model batched them, and DeepSeek's guides cost half as much. |
 
 Each tool call is a step on the feed, in the present tense while it runs
 and the past tense with its count when done. The "About" chip sends the

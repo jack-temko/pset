@@ -8,13 +8,13 @@ padding, an optional `size-3` icon. **Outlined by default**: the border
 and the text share one ink, so a Label reads as a quiet outline rather
 than a block of colour.
 
-| Tone | Use |
-|---|---|
-| `default` | A kind: Digital, Scanned. Quiet ink. |
+| Tone      | Use                                   |
+| --------- | ------------------------------------- |
+| `default` | A kind: Digital, Scanned. Quiet ink.  |
 | `primary` | Due within the week, the page anchor. |
-| `success` | Turned in, Ready, passing. |
-| `warning` | Due today, usable with warnings. |
-| `danger` | Overdue, failed. |
+| `success` | Turned in, Ready, passing.            |
+| `warning` | Due today, usable with warnings.      |
+| `danger`  | Overdue, failed.                      |
 
 `filled` adds the tone's soft tint as ground, for the one state in a
 list that must jump out ("Needs you"), never as a default.

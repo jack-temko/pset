@@ -1,15 +1,21 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { CircleAlert, CircleCheck } from 'lucide-react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
+import { useNavigate } from 'react-router-dom';
+import { CircleAlert, CircleCheck } from 'lucide-react';
 
-import { AppShell, PageShell, PageTitle } from '@/components/shell'
-import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow } from '@/components/box'
-import { Button } from '@/components/button'
-import { Field, Input } from '@/components/input'
-import { SegmentedControl } from '@/components/segmented-control'
-import { Skeleton } from '@/components/skeleton'
-import { Spinner } from '@/components/spinner'
-import { ApiError } from '@/api/client'
+import { AppShell, PageShell, PageTitle } from '@/components/shell';
+import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow } from '@/components/box';
+import { Button } from '@/components/button';
+import { Field, Input } from '@/components/input';
+import { SegmentedControl } from '@/components/segmented-control';
+import { Skeleton } from '@/components/skeleton';
+import { Spinner } from '@/components/spinner';
+import { ApiError } from '@/api/client';
 import {
   useAbout,
   useFixCheck,
@@ -21,14 +27,14 @@ import {
   useSettings,
   useTestKey,
   type ModelUse,
-} from '@/api/settings'
-import { useLastCount } from '@/lib/last-count'
-import { useSettled, useShowPending } from '@/lib/settled'
-import { applyTheme, getTheme, type Theme } from '@/lib/theme'
-import { cn, plural } from '@/lib/utils'
-import { ConfirmPopover } from '@/components/confirm'
-import { useClearActivity } from '@/api/activity'
-import { Updates } from './updates'
+} from '@/api/settings';
+import { useLastCount } from '@/lib/last-count';
+import { useSettled, useShowPending } from '@/lib/settled';
+import { applyTheme, getTheme, type Theme } from '@/lib/theme';
+import { cn, plural } from '@/lib/utils';
+import { ConfirmPopover } from '@/components/confirm';
+import { useClearActivity } from '@/api/activity';
+import { Updates } from './updates';
 
 /**
  * Settings: one document page, stacked. You, the OpenRouter key, Health,
@@ -44,9 +50,9 @@ type Status =
   | { kind: 'idle' }
   | { kind: 'working'; verb: 'Testing' | 'Saving'; since: number }
   | { kind: 'ok'; text: string }
-  | { kind: 'failed'; text: string }
+  | { kind: 'failed'; text: string };
 
-const KEY_HINT = 'From openrouter.ai/keys. It pays for the models PSet uses.'
+const KEY_HINT = 'From openrouter.ai/keys. It pays for the models PSet uses.';
 
 /**
  * The OpenRouter key, with Test and Save. PSet picks its models; the key
@@ -58,45 +64,64 @@ const KEY_HINT = 'From openrouter.ai/keys. It pays for the models PSet uses.'
  * the test passes, so what's on disk always works. Both are always there;
  * Save sits disabled until there is something to save.
  */
-function KeyBox({ initial, ready, models }: { initial: string; ready: boolean; models: ModelUse[] }) {
-  const [saved, setSaved] = useState(initial)
-  const [value, setValue] = useState(initial)
-  const [error, setError] = useState<string | null>(null)
-  const [status, setStatus] = useState<Status>({ kind: 'idle' })
+function KeyBox({
+  initial,
+  ready,
+  models,
+}: {
+  initial: string;
+  ready: boolean;
+  models: ModelUse[];
+}) {
+  const [saved, setSaved] = useState(initial);
+  const [value, setValue] = useState(initial);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<Status>({ kind: 'idle' });
 
-  const [savedOnce, setSavedOnce] = useState(ready)
-  const dirty = value !== saved || !savedOnce
-  const working = status.kind === 'working'
+  const [savedOnce, setSavedOnce] = useState(ready);
+  const dirty = value !== saved || !savedOnce;
+  const working = status.kind === 'working';
   // OpenRouter often answers in a blink: "Testing…" and the disabled
   // buttons show only once the call has lasted; until then the last
   // verdict stays.
-  const shown = useSettled(status, working ? status.since : null) ?? { kind: 'idle' }
-  const looksWorking = shown.kind === 'working'
+  const shown = useSettled(status, working ? status.since : null) ?? {
+    kind: 'idle',
+  };
+  const looksWorking = shown.kind === 'working';
 
-  const test = useTestKey()
-  const saveKey = useSaveKey()
+  const test = useTestKey();
+  const saveKey = useSaveKey();
 
   const run = async (save: boolean) => {
-    if (working) return
-    setError(null)
-    setStatus({ kind: 'working', verb: save ? 'Saving' : 'Testing', since: Date.now() })
+    if (working) return;
+    setError(null);
+    setStatus({
+      kind: 'working',
+      verb: save ? 'Saving' : 'Testing',
+      since: Date.now(),
+    });
     try {
-      const r = save ? await saveKey.mutateAsync({ apiKey: value }) : await test.mutateAsync({ apiKey: value })
+      const r = save
+        ? await saveKey.mutateAsync({ apiKey: value })
+        : await test.mutateAsync({ apiKey: value });
       if (save) {
-        setSaved(value.trim())
-        setValue(value.trim())
-        setSavedOnce(true)
+        setSaved(value.trim());
+        setValue(value.trim());
+        setSavedOnce(true);
       }
-      setStatus({ kind: 'ok', text: save ? `Saved · ${r.detail}` : r.detail })
+      setStatus({ kind: 'ok', text: save ? `Saved · ${r.detail}` : r.detail });
     } catch (e) {
-      const err = e instanceof ApiError ? e : null
+      const err = e instanceof ApiError ? e : null;
       // A failure that's the key's lands under it; any other (OpenRouter
       // down, the server itself down) says so in the footer.
-      if (err?.field) setError(err.message)
-      const what = save ? 'Not saved: the test failed' : 'Test failed'
-      setStatus({ kind: 'failed', text: err?.field ? what : (err?.message ?? what) })
+      if (err?.field) setError(err.message);
+      const what = save ? 'Not saved: the test failed' : 'Test failed';
+      setStatus({
+        kind: 'failed',
+        text: err?.field ? what : (err?.message ?? what),
+      });
     }
-  }
+  };
 
   return (
     <Box>
@@ -110,13 +135,13 @@ function KeyBox({ initial, ready, models }: { initial: string; ready: boolean; m
             className="font-mono"
             aria-invalid={error !== null || undefined}
             onChange={(e) => {
-              setValue(e.target.value)
+              setValue(e.target.value);
               // Editing the key that failed is the fix in progress.
-              setError(null)
-              if (status.kind !== 'working') setStatus({ kind: 'idle' })
+              setError(null);
+              if (status.kind !== 'working') setStatus({ kind: 'idle' });
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && dirty && !looksWorking) run(true)
+              if (e.key === 'Enter' && dirty && !looksWorking) run(true);
             }}
           />
         </Field>
@@ -125,16 +150,25 @@ function KeyBox({ initial, ready, models }: { initial: string; ready: boolean; m
       <BoxFooter>
         <StatusLine status={shown} />
         <span className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={looksWorking} onClick={() => run(false)}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={looksWorking}
+            onClick={() => run(false)}
+          >
             Test
           </Button>
-          <Button size="sm" disabled={looksWorking || !dirty} onClick={() => run(true)}>
+          <Button
+            size="sm"
+            disabled={looksWorking || !dirty}
+            onClick={() => run(true)}
+          >
             Save
           </Button>
         </span>
       </BoxFooter>
     </Box>
-  )
+  );
 }
 
 /** Which model does which job: said, not chosen. */
@@ -151,7 +185,7 @@ function ModelsLine({ models }: { models: ModelUse[] }) {
         </span>
       ))}
     </p>
-  )
+  );
 }
 
 /** The key Box before the settings arrive: the same rows at their real
@@ -178,20 +212,20 @@ function KeySkeleton() {
         </span>
       </BoxFooter>
     </Box>
-  )
+  );
 }
 
 /** What the last Test or Save found. Nothing until you ask: opening the
  *  page dials nothing. */
 function StatusLine({ status }: { status: Status }) {
-  if (status.kind === 'idle') return <span />
+  if (status.kind === 'idle') return <span />;
   if (status.kind === 'working')
     return (
       <span className="flex items-center gap-2">
         <Spinner className="size-3" label={status.verb} />
         {status.verb}…
       </span>
-    )
+    );
   return (
     <span
       className={
@@ -200,10 +234,14 @@ function StatusLine({ status }: { status: Status }) {
           : 'flex items-center gap-2 text-destructive'
       }
     >
-      {status.kind === 'ok' ? <CircleCheck className="size-4" /> : <CircleAlert className="size-4" />}
+      {status.kind === 'ok' ? (
+        <CircleCheck className="size-4" />
+      ) : (
+        <CircleAlert className="size-4" />
+      )}
       {status.text}
     </span>
-  )
+  );
 }
 
 // ---------------------------------------------------------------- you
@@ -211,13 +249,13 @@ function StatusLine({ status }: { status: Status }) {
 /** The name PSet greets you by, and the tutor calls you. Same shape as a
  *  connection Box: Save appears once there's something to save. */
 function You() {
-  const { data } = useSettings()
-  const saveProfile = useSaveProfile()
-  const savingShown = useShowPending(saveProfile)
-  const [value, setValue] = useState<string | null>(null)
-  const saved = data?.profile.name ?? ''
-  const current = value ?? saved
-  const dirty = data !== undefined && current.trim() !== saved
+  const { data } = useSettings();
+  const saveProfile = useSaveProfile();
+  const savingShown = useShowPending(saveProfile);
+  const [value, setValue] = useState<string | null>(null);
+  const saved = data?.profile.name ?? '';
+  const current = value ?? saved;
+  const dirty = data !== undefined && current.trim() !== saved;
 
   return (
     <Box>
@@ -225,7 +263,11 @@ function You() {
         <Field
           label="Your name"
           hint="Home greets you by it, and so does the tutor. Leave it empty to go without."
-          error={saveProfile.error instanceof ApiError ? saveProfile.error.message : undefined}
+          error={
+            saveProfile.error instanceof ApiError
+              ? saveProfile.error.message
+              : undefined
+          }
         >
           {data ? (
             <Input
@@ -233,11 +275,12 @@ function You() {
               maxLength={60}
               autoComplete="given-name"
               onChange={(e) => {
-                setValue(e.target.value)
-                saveProfile.reset()
+                setValue(e.target.value);
+                saveProfile.reset();
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && dirty && !saveProfile.isPending) saveProfile.mutate({ name: current })
+                if (e.key === 'Enter' && dirty && !saveProfile.isPending)
+                  saveProfile.mutate({ name: current });
               }}
             />
           ) : (
@@ -256,19 +299,31 @@ function You() {
             <span />
           )}
           {dirty && (
-            <Button size="sm" disabled={savingShown} onClick={() => !saveProfile.isPending && saveProfile.mutate({ name: current })}>
+            <Button
+              size="sm"
+              disabled={savingShown}
+              onClick={() =>
+                !saveProfile.isPending && saveProfile.mutate({ name: current })
+              }
+            >
               Save
             </Button>
           )}
         </BoxFooter>
       )}
     </Box>
-  )
+  );
 }
 
 // ---------------------------------------------------------------- health
 
-const HEALTH_NAMES = ['Data directory', 'Database', 'Poppler', 'Tesseract', 'Ollama']
+const HEALTH_NAMES = [
+  'Data directory',
+  'Database',
+  'Poppler',
+  'Tesseract',
+  'Ollama',
+];
 
 /** The checks' details name plumbing ("pdftoppm 24.02.0"); the purpose is
  *  ours to say, keyed by check id. */
@@ -276,69 +331,70 @@ const HEALTH_PURPOSE: Record<string, string> = {
   poppler: 'renders PDF pages',
   tesseract: 'reads scanned pages',
   ollama: 'searches your books',
-}
+};
 
 /** The local system, checked on open, Ollama included: it runs on this
  *  machine. OpenRouter isn't here: its status lives beside the key, so
  *  each fact is said once. */
 function Health() {
-  const { data } = useHealth()
-  const fix = useFixCheck()
-  const checks = data?.checks ?? null
+  const { data } = useHealth();
+  const fix = useFixCheck();
+  const checks = data?.checks ?? null;
   // "Fixing…" only for a fix that takes a while; a quick one just lands.
-  const fixing = useShowPending(fix) ? fix.variables : null
+  const fixing = useShowPending(fix) ? fix.variables : null;
 
   return (
     <Box>
-      {checks === null ? (
-        // The checks are always the same five, so draw five rows at their
-        // real height; the results then land without moving anything.
-        HEALTH_NAMES.map((name) => (
-          <BoxRow
-            key={name}
-            leading={<Skeleton className="size-4 rounded-full" />}
-            title={name}
-            description={<Skeleton className="h-3 w-48" />}
-          />
-        ))
-      ) : (
-        checks.map((c) => (
-          <BoxRow
-            key={c.id}
-            leading={
-              c.ok ? (
-                <CircleCheck className="text-success" aria-label="OK" />
-              ) : (
-                <CircleAlert className="text-warning" aria-label="Needs attention" />
-              )
-            }
-            title={c.name}
-            description={
-              fix.isError && fix.variables === c.id ? (
-                <span className="text-destructive">{fix.error.message}</span>
-              ) : (
-                HEALTH_PURPOSE[c.id]
-                  ? `${c.detail} · ${HEALTH_PURPOSE[c.id]}`
-                  : c.detail
-              )
-            }
-            trailing={
-              !c.ok && c.fixable ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={fixing === c.id}
-                  onClick={() => !fix.isPending && fix.mutate(c.id)}
-                >
-                  {fixing === c.id ? 'Fixing…' : 'Fix'}
-                </Button>
-              ) : undefined
-            }
-          />
-        ))
-      )}
+      {checks === null
+        ? // The checks are always the same five, so draw five rows at their
+          // real height; the results then land without moving anything.
+          HEALTH_NAMES.map((name) => (
+            <BoxRow
+              key={name}
+              leading={<Skeleton className="size-4 rounded-full" />}
+              title={name}
+              description={<Skeleton className="h-3 w-48" />}
+            />
+          ))
+        : checks.map((c) => (
+            <BoxRow
+              key={c.id}
+              leading={
+                c.ok ? (
+                  <CircleCheck className="text-success" aria-label="OK" />
+                ) : (
+                  <CircleAlert
+                    className="text-warning"
+                    aria-label="Needs attention"
+                  />
+                )
+              }
+              title={c.name}
+              description={
+                fix.isError && fix.variables === c.id ? (
+                  <span className="text-destructive">{fix.error.message}</span>
+                ) : HEALTH_PURPOSE[c.id] ? (
+                  `${c.detail} · ${HEALTH_PURPOSE[c.id]}`
+                ) : (
+                  c.detail
+                )
+              }
+              trailing={
+                !c.ok && c.fixable ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={fixing === c.id}
+                    onClick={() => !fix.isPending && fix.mutate(c.id)}
+                  >
+                    {fixing === c.id ? 'Fixing…' : 'Fix'}
+                  </Button>
+                ) : undefined
+              }
+            />
+          ))}
     </Box>
-  )
+  );
 }
 
 // ---------------------------------------------------------------- appearance
@@ -347,10 +403,10 @@ const THEMES = [
   { value: 'light', label: 'Paper' },
   { value: 'dark', label: 'Night' },
   { value: 'system', label: 'System' },
-] as const
+] as const;
 
 function Appearance() {
-  const [theme, setTheme] = useState<Theme>(getTheme)
+  const [theme, setTheme] = useState<Theme>(getTheme);
   return (
     <Box>
       <BoxBody className="flex items-center justify-between gap-4">
@@ -365,13 +421,13 @@ function Appearance() {
           options={THEMES}
           value={theme}
           onChange={(t) => {
-            applyTheme(t)
-            setTheme(t)
+            applyTheme(t);
+            setTheme(t);
           }}
         />
       </BoxBody>
     </Box>
-  )
+  );
 }
 
 // ---------------------------------------------------------------- reset
@@ -385,7 +441,7 @@ function Reset() {
       <ClearActivity />
       <ResetEverything />
     </Box>
-  )
+  );
 }
 
 /** One act in the Reset Box: what it is, what it does, and its button.
@@ -402,21 +458,25 @@ function ResetRow({
   className,
   children,
 }: {
-  title: string
-  description: string
+  title: string;
+  description: string;
   /** The button's label, and the ref its popover hangs from. */
-  action: string
-  actionRef: RefObject<HTMLButtonElement | null>
-  asking: boolean
-  onAsk: () => void
-  className?: string
-  children?: ReactNode
+  action: string;
+  actionRef: RefObject<HTMLButtonElement | null>;
+  asking: boolean;
+  onAsk: () => void;
+  className?: string;
+  children?: ReactNode;
 }) {
   return (
-    <BoxBody className={cn('flex items-center justify-between gap-4', className)}>
+    <BoxBody
+      className={cn('flex items-center justify-between gap-4', className)}
+    >
       <span>
         <span className="block text-sm font-medium">{title}</span>
-        <span className="block text-xs text-muted-foreground">{description}</span>
+        <span className="block text-xs text-muted-foreground">
+          {description}
+        </span>
       </span>
       <Button
         ref={actionRef}
@@ -430,13 +490,13 @@ function ResetRow({
       </Button>
       {children}
     </BoxBody>
-  )
+  );
 }
 
 function ClearActivity() {
-  const [asking, setAsking] = useState(false)
-  const button = useRef<HTMLButtonElement>(null)
-  const clear = useClearActivity()
+  const [asking, setAsking] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  const clear = useClearActivity();
   return (
     <ResetRow
       title="Activity history"
@@ -454,32 +514,35 @@ function ClearActivity() {
           action="Clear history"
           error={clear.isError ? clear.error.message : undefined}
           onCancel={() => setAsking(false)}
-          onConfirm={() => !clear.isPending && clear.mutate(undefined, { onSuccess: () => setAsking(false) })}
+          onConfirm={() =>
+            !clear.isPending &&
+            clear.mutate(undefined, { onSuccess: () => setAsking(false) })
+          }
         />
       )}
     </ResetRow>
-  )
+  );
 }
 
 /** A count in a sentence that hasn't arrived: a slot as wide as the text it
  *  showed last time, so the sentence doesn't reflow when the number lands. */
 function CountSlot({ width }: { width: number }) {
-  return <Skeleton className="h-3" style={{ width: `${width}ch` }} />
+  return <Skeleton className="h-3" style={{ width: `${width}ch` }} />;
 }
 
 /** The app's one total act: everything goes, settings included, as if it
  *  had never been installed. */
 function ResetEverything() {
-  const [asking, setAsking] = useState(false)
-  const button = useRef<HTMLButtonElement>(null)
-  const navigate = useNavigate()
-  const counts = useResetCounts()
-  const books = counts.data && plural(counts.data.books, 'book')
-  const pages = counts.data && plural(counts.data.pages, 'page')
-  const booksWidth = useLastCount('reset-books-width', books?.length, 8)
-  const pagesWidth = useLastCount('reset-pages-width', pages?.length, 8)
-  const reset = useReset()
-  const resetting = useShowPending(reset)
+  const [asking, setAsking] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  const navigate = useNavigate();
+  const counts = useResetCounts();
+  const books = counts.data && plural(counts.data.books, 'book');
+  const pages = counts.data && plural(counts.data.pages, 'page');
+  const booksWidth = useLastCount('reset-books-width', books?.length, 8);
+  const pagesWidth = useLastCount('reset-pages-width', pages?.length, 8);
+  const reset = useReset();
+  const resetting = useShowPending(reset);
   return (
     <ResetRow
       title="Reset PSet"
@@ -504,7 +567,8 @@ function ResetEverything() {
               <span className="tabular-nums">
                 {pages ?? <CountSlot width={pagesWidth} />}
               </span>
-              , every homework set and conversation, and your settings, API key included. There's no undo.
+              , every homework set and conversation, and your settings, API key
+              included. There's no undo.
             </>
           }
           action="Reset everything"
@@ -515,28 +579,29 @@ function ResetEverything() {
             !reset.isPending &&
             reset.mutate(undefined, {
               onSuccess: () => {
-                setAsking(false)
-                navigate('/')
+                setAsking(false);
+                navigate('/');
               },
             })
           }
         />
       )}
     </ResetRow>
-  )
+  );
 }
-
 
 // ---------------------------------------------------------------- page
 
 function Connections() {
-  const { data } = useSettings()
-  if (!data) return <KeySkeleton />
-  return <KeyBox initial={data.apiKey} ready={data.ready.key} models={data.models} />
+  const { data } = useSettings();
+  if (!data) return <KeySkeleton />;
+  return (
+    <KeyBox initial={data.apiKey} ready={data.ready.key} models={data.models} />
+  );
 }
 
 function AboutLine() {
-  const { data } = useAbout()
+  const { data } = useAbout();
   return (
     <p className="font-mono text-xs text-muted-foreground">
       {data ? (
@@ -545,16 +610,24 @@ function AboutLine() {
         <Skeleton className="h-3 w-80" />
       )}
     </p>
-  )
+  );
 }
 
-function Section({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
+function Section({
+  id,
+  title,
+  children,
+}: {
+  id?: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <section id={id} className="scroll-mt-6 space-y-5">
       <h2 className="font-heading text-xl">{title}</h2>
       {children}
     </section>
-  )
+  );
 }
 
 export function Settings() {
@@ -563,13 +636,13 @@ export function Settings() {
   // connection cards resolve, since their loading height shifts everything
   // below and would otherwise leave the target half off screen.
   useEffect(() => {
-    const id = window.location.hash.slice(1)
-    if (!id) return
-    const scroll = () => document.getElementById(id)?.scrollIntoView()
-    scroll()
-    const settle = setTimeout(scroll, 400)
-    return () => clearTimeout(settle)
-  }, [])
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const scroll = () => document.getElementById(id)?.scrollIntoView();
+    scroll();
+    const settle = setTimeout(scroll, 400);
+    return () => clearTimeout(settle);
+  }, []);
   return (
     // No middle of its own: the bar picks up "Settings" once the h1 has
     // scrolled away, and never repeats it while it's on screen.
@@ -604,5 +677,5 @@ export function Settings() {
         <AboutLine />
       </PageShell>
     </AppShell>
-  )
+  );
 }

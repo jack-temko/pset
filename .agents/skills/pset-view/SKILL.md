@@ -24,11 +24,11 @@ cannot aim at a small target.
 `pset-view <view> <mode> [what]`, for example `pset-view homework redesign`,
 `pset-view homework tweak "Back from Ask loses the set"`, `pset-view contents-rail extract`.
 
-| Mode | For | Grill |
-|---|---|---|
-| `redesign` | a view from scratch, or a new flow, layout or behavior | yes, all gates; gate 1 shrinks to a quick confirm when the purpose is clearly unchanged |
-| `tweak` | a bug, a small adjustment, one friction row | no. With no target it is the read-only audit |
-| `extract` | a view still inside its screen, put on `/views` unchanged | no |
+| Mode       | For                                                       | Grill                                                                                   |
+| ---------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `redesign` | a view from scratch, or a new flow, layout or behavior    | yes, all gates; gate 1 shrinks to a quick confirm when the purpose is clearly unchanged |
+| `tweak`    | a bug, a small adjustment, one friction row               | no. With no target it is the read-only audit                                            |
+| `extract`  | a view still inside its screen, put on `/views` unchanged | no                                                                                      |
 
 If the view or mode is missing, ask. If the view is not on `/views` and the mode is
 `redesign`, run `extract` first.

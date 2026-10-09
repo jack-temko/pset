@@ -145,15 +145,15 @@ a tier (quick, planned, grilled) for Jack to confirm, plans, and judges the resu
 The workers are Claude Code subagents in `.claude/agents/` (Claude-specific, so they
 live there, not in `.agents/`):
 
-| Agent | Model | Job |
-|---|---|---|
-| `Explore` | Haiku | every codebase search (replaces the built-in one) |
-| `builder` | Sonnet | builds the plan in the worktree; stops and reports when stuck |
-| `checker` | Haiku | `make check`, returning only the failures |
-| `reviewer` | Sonnet | reads the plan and the diff; escalates risky or unsure changes |
-| `opus-reviewer` | Opus | the second review, for escalated changes |
-| `shooter` | Haiku | screenshots of changed UI states, Paper and Night |
-| `lander` | Haiku | push and open the PR; after Jack approves, CI, squash-merge, worktree removal |
+| Agent           | Model  | Job                                                                           |
+| --------------- | ------ | ----------------------------------------------------------------------------- |
+| `Explore`       | Haiku  | every codebase search (replaces the built-in one)                             |
+| `builder`       | Sonnet | builds the plan in the worktree; stops and reports when stuck                 |
+| `checker`       | Haiku  | `make check`, returning only the failures                                     |
+| `reviewer`      | Sonnet | reads the plan and the diff; escalates risky or unsure changes                |
+| `opus-reviewer` | Opus   | the second review, for escalated changes                                      |
+| `shooter`       | Haiku  | screenshots of changed UI states, Paper and Night                             |
+| `lander`        | Haiku  | push and open the PR; after Jack approves, CI, squash-merge, worktree removal |
 
 Outside `/change`, the same split holds: search with `Explore`, and hand mechanical
 work to `checker` or `lander` instead of doing it on Opus. Spec and reasons:

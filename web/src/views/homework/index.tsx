@@ -1,34 +1,54 @@
-import { useState } from 'react'
-import { Plus } from 'lucide-react'
-import { Box, BoxRow } from '@/components/box'
-import { ProgressBar } from '@/components/progress-bar'
-import { DoorAction } from '@/components/door'
-import { HomeworkStatusLabel } from '@/components/homework-status'
-import { Skeleton } from '@/components/skeleton'
-import { HomeworkDialog } from '@/pages/workspace/dialogs'
-import { AddHomeworkDialog } from '@/pages/workspace/add-homework'
-import { AssignmentReads } from '@/pages/workspace/assignment-reads'
-import { useBookHomework, useDeleteHomework, useHomeworkSet, useUpdateHomework } from '@/api/homework'
-import type { About } from '@/api/ask'
-import type { PendingSel } from '@/components/document/selection'
-import { dueLine, dueStatus } from '@/lib/due'
-import { cn } from '@/lib/utils'
-import { setBarLabel, listSegments, timeLeftWords, type HomeworkSet } from './progress'
-import { Walkthrough } from './walkthrough'
+import { useState } from 'react';
+import { Plus } from 'lucide-react';
+import { Box, BoxRow } from '@/components/box';
+import { ProgressBar } from '@/components/progress-bar';
+import { DoorAction } from '@/components/door';
+import { HomeworkStatusLabel } from '@/components/homework-status';
+import { Skeleton } from '@/components/skeleton';
+import { HomeworkDialog } from '@/pages/workspace/dialogs';
+import { AddHomeworkDialog } from '@/pages/workspace/add-homework';
+import { AssignmentReads } from '@/pages/workspace/assignment-reads';
+import {
+  useBookHomework,
+  useDeleteHomework,
+  useHomeworkSet,
+  useUpdateHomework,
+} from '@/api/homework';
+import type { About } from '@/api/ask';
+import type { PendingSel } from '@/components/document/selection';
+import { dueLine, dueStatus } from '@/lib/due';
+import { cn } from '@/lib/utils';
+import {
+  setBarLabel,
+  listSegments,
+  timeLeftWords,
+  type HomeworkSet,
+} from './progress';
+import { Walkthrough } from './walkthrough';
 
 /** A set's row in the list: its title, the bar (as in its header), how many
  *  are done and how long is left, or when it is due when that is not known.
  *  A turned-in set is a fact, so no bar. */
-function SetRow({ h, onOpen, bar = true }: { h: HomeworkSet; onOpen: () => void; bar?: boolean }) {
-  const status = dueStatus(h)
-  const left = timeLeftWords(h)
+function SetRow({
+  h,
+  onOpen,
+  bar = true,
+}: {
+  h: HomeworkSet;
+  onOpen: () => void;
+  bar?: boolean;
+}) {
+  const status = dueStatus(h);
+  const left = timeLeftWords(h);
   return (
     <BoxRow
       onClick={onOpen}
       title={h.title}
       description={
         <span className="block space-y-2 pt-1">
-          {bar && h.total > 0 && <ProgressBar segments={listSegments(h)} label={setBarLabel(h)} />}
+          {bar && h.total > 0 && (
+            <ProgressBar segments={listSegments(h)} label={setBarLabel(h)} />
+          )}
           <span className="block tabular-nums">
             {h.done} of {h.total} done · {left ?? dueLine(h)}
           </span>
@@ -36,7 +56,7 @@ function SetRow({ h, onOpen, bar = true }: { h: HomeworkSet; onOpen: () => void;
       }
       trailing={<HomeworkStatusLabel status={status} />}
     />
-  )
+  );
 }
 
 /** The homework list: active sets, then turned-in ones under a quiet
@@ -53,33 +73,33 @@ export function HomeworkTab({
   onQuestion,
   wide,
 }: {
-  bookId: string
+  bookId: string;
   /** From the URL: Home's due list opens a set directly. */
-  initialSet?: string
-  onJump: (page: number) => void
-  onAskAbout: (about: About, selection?: PendingSel) => void
-  onPickSelection: (selection: PendingSel) => void
-  onClearAbout: () => void
-  selection: PendingSel | null
-  onOpenSettings: () => void
+  initialSet?: string;
+  onJump: (page: number) => void;
+  onAskAbout: (about: About, selection?: PendingSel) => void;
+  onPickSelection: (selection: PendingSel) => void;
+  onClearAbout: () => void;
+  selection: PendingSel | null;
+  onOpenSettings: () => void;
   /** The question on screen, or null when none is (the list, the finish
    *  page): the workspace counts time against it. */
-  onQuestion?: (id: string | null) => void
+  onQuestion?: (id: string | null) => void;
   /** Focus: the walkthrough lays out in two columns. */
-  wide?: boolean
+  wide?: boolean;
 }) {
-  const list = useBookHomework(bookId)
-  const remove = useDeleteHomework()
-  const [openId, setOpenId] = useState<string | null>(initialSet ?? null)
+  const list = useBookHomework(bookId);
+  const remove = useDeleteHomework();
+  const [openId, setOpenId] = useState<string | null>(initialSet ?? null);
   // New homework, opened fresh or on a read waiting in the list.
-  const [adding, setAdding] = useState(false)
-  const [reviewing, setReviewing] = useState<string | null>(null)
-  const [editing, setEditing] = useState(false)
-  const openSet = useHomeworkSet(openId).data?.homework
-  const updateOpen = useUpdateHomework(openId ?? '')
-  const sets = list.data as HomeworkSet[] | undefined
-  const active = (sets ?? []).filter((h) => !h.turnedInAt)
-  const turnedIn = (sets ?? []).filter((h) => h.turnedInAt)
+  const [adding, setAdding] = useState(false);
+  const [reviewing, setReviewing] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const openSet = useHomeworkSet(openId).data?.homework;
+  const updateOpen = useUpdateHomework(openId ?? '');
+  const sets = list.data as HomeworkSet[] | undefined;
+  const active = (sets ?? []).filter((h) => !h.turnedInAt);
+  const turnedIn = (sets ?? []).filter((h) => h.turnedInAt);
 
   if (openId) {
     return (
@@ -88,7 +108,10 @@ export function HomeworkTab({
           key={openId}
           setId={openId}
           onEdit={() => setEditing(true)}
-          onDelete={() => openSet && remove.mutate(openSet, { onSuccess: () => setOpenId(null) })}
+          onDelete={() =>
+            openSet &&
+            remove.mutate(openSet, { onSuccess: () => setOpenId(null) })
+          }
           onBack={() => setOpenId(null)}
           onJump={onJump}
           onAskAbout={onAskAbout}
@@ -108,7 +131,7 @@ export function HomeworkTab({
           />
         )}
       </>
-    )
+    );
   }
 
   return (
@@ -121,8 +144,8 @@ export function HomeworkTab({
     >
       {sets?.length === 0 && (
         <p className="text-center text-sm text-muted-foreground">
-          No homework here yet. New homework takes your professor's assignment (a file, a web page or
-          pasted text), or the questions you type.
+          No homework here yet. New homework takes your professor's assignment
+          (a file, a web page or pasted text), or the questions you type.
         </p>
       )}
       {/* Assignments reading in the background, or read and waiting to
@@ -130,8 +153,8 @@ export function HomeworkTab({
       <AssignmentReads
         bookId={bookId}
         onReview={(id) => {
-          setReviewing(id)
-          setAdding(true)
+          setReviewing(id);
+          setAdding(true);
         }}
       />
       {/* No header: the tab already says Homework, and a second label on
@@ -140,13 +163,22 @@ export function HomeworkTab({
       <Box>
         {sets === undefined
           ? [0, 1].map((i) => (
-              <BoxRow key={i} title={<Skeleton className="h-3 w-40" />} description={<Skeleton className="h-3 w-48" />} />
+              <BoxRow
+                key={i}
+                title={<Skeleton className="h-3 w-40" />}
+                description={<Skeleton className="h-3 w-48" />}
+              />
             ))
-          : active.map((h) => <SetRow key={h.id} h={h} onOpen={() => setOpenId(h.id)} />)}
+          : active.map((h) => (
+              <SetRow key={h.id} h={h} onOpen={() => setOpenId(h.id)} />
+            ))}
         <DoorAction
           icon={<Plus aria-hidden />}
           onClick={() => setAdding(true)}
-          className={cn((sets === undefined || active.length > 0) && 'border-t border-border-muted')}
+          className={cn(
+            (sets === undefined || active.length > 0) &&
+              'border-t border-border-muted',
+          )}
         >
           New homework
         </DoorAction>
@@ -156,7 +188,12 @@ export function HomeworkTab({
           <p className="text-xs text-muted-foreground">Turned in</p>
           <Box>
             {turnedIn.map((h) => (
-              <SetRow key={h.id} h={h} bar={false} onOpen={() => setOpenId(h.id)} />
+              <SetRow
+                key={h.id}
+                h={h}
+                bar={false}
+                onOpen={() => setOpenId(h.id)}
+              />
             ))}
           </Box>
         </>
@@ -169,11 +206,11 @@ export function HomeworkTab({
         bookId={bookId}
         readId={reviewing}
         onClose={() => {
-          setAdding(false)
-          setReviewing(null)
+          setAdding(false);
+          setReviewing(null);
         }}
         onDone={(made) => made.length === 1 && setOpenId(made[0].id)}
       />
     </div>
-  )
+  );
 }

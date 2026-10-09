@@ -10,64 +10,96 @@
 
 type Band = {
   /** First hour of the band, 0 to 23. It runs until the next band starts. */
-  from: number
+  from: number;
   /** What the band is, for the preview and the tests: "12am to 2am". */
-  label: string
-  lines: string[]
-}
+  label: string;
+  lines: string[];
+};
 
 export const bands: Band[] = [
   {
     from: 0,
     label: '12am to 2am',
-    lines: ['Up late, {name}?', 'Sleep can wait, {name}.', 'Almost there, {name}.'],
+    lines: [
+      'Up late, {name}?',
+      'Sleep can wait, {name}.',
+      'Almost there, {name}.',
+    ],
   },
   {
     from: 3,
     label: '3am to 5am',
-    lines: ['Early start, {name}.', 'Coffee first, {name}.', 'Small steps count, {name}.'],
+    lines: [
+      'Early start, {name}.',
+      'Coffee first, {name}.',
+      'Small steps count, {name}.',
+    ],
   },
   {
     from: 6,
     label: '6am to 10am',
-    lines: ['Good morning, {name}.', 'Rise and shine, {name}.', 'Ready when you are, {name}.'],
+    lines: [
+      'Good morning, {name}.',
+      'Rise and shine, {name}.',
+      'Ready when you are, {name}.',
+    ],
   },
   {
     from: 11,
     label: '11am to 1pm',
-    lines: ['Good to see you, {name}.', 'Noon, {name}. Snacks?', 'Good pace, {name}.'],
+    lines: [
+      'Good to see you, {name}.',
+      'Noon, {name}. Snacks?',
+      'Good pace, {name}.',
+    ],
   },
   {
     from: 14,
     label: '2pm to 4pm',
-    lines: ['Steady on, {name}.', "Snack o'clock, {name}?", 'Stay with it, {name}.'],
+    lines: [
+      'Steady on, {name}.',
+      "Snack o'clock, {name}?",
+      'Stay with it, {name}.',
+    ],
   },
   {
     from: 17,
     label: '5pm to 8pm',
-    lines: ['Good evening, {name}.', 'Welcome back, {name}.', 'Dinner yet, {name}?'],
+    lines: [
+      'Good evening, {name}.',
+      'Welcome back, {name}.',
+      'Dinner yet, {name}?',
+    ],
   },
   {
     from: 21,
     label: '9pm to 11pm',
-    lines: ['Late one, {name}?', 'Winding down, {name}?', 'Still at it, {name}?', 'Rest is progress, {name}.'],
+    lines: [
+      'Late one, {name}?',
+      'Winding down, {name}?',
+      'Still at it, {name}?',
+      'Rest is progress, {name}.',
+    ],
   },
-]
+];
 
 export function bandFor(hour: number): Band {
-  let found = bands[0]
-  for (const b of bands) if (b.from <= hour) found = b
-  return found
+  let found = bands[0];
+  for (const b of bands) if (b.from <= hour) found = b;
+  return found;
 }
 
 /** Fills the name in, or drops `, {name}` when there is none. */
 export function fill(line: string, name: string): string {
-  return name ? line.replace('{name}', name) : line.replace(', {name}', '')
+  return name ? line.replace('{name}', name) : line.replace(', {name}', '');
 }
 
 /** `pick` is a number in [0, 1), so a page can hold one choice for its whole
  *  visit and a test can hold it still. */
 export function greeting(hour: number, name: string, pick: number): string {
-  const { lines } = bandFor(hour)
-  return fill(lines[Math.min(lines.length - 1, Math.floor(pick * lines.length))], name)
+  const { lines } = bandFor(hour);
+  return fill(
+    lines[Math.min(lines.length - 1, Math.floor(pick * lines.length))],
+    name,
+  );
 }

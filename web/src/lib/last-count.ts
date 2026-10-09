@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react';
 
-const storeKey = (key: string) => `pset:last-count:${key}`
+const storeKey = (key: string) => `pset:last-count:${key}`;
 
 function read(key: string, fallback: number): number {
   try {
-    const n = Number(localStorage.getItem(storeKey(key)))
-    return Number.isInteger(n) && n > 0 ? n : fallback
+    const n = Number(localStorage.getItem(storeKey(key)));
+    return Number.isInteger(n) && n > 0 ? n : fallback;
   } catch {
-    return fallback
+    return fallback;
   }
 }
 
@@ -19,17 +19,21 @@ function read(key: string, fallback: number): number {
  * for it when nothing is saved (a width in characters, say, rather than rows). The value returned
  * is the one at mount, so a skeleton on screen doesn't change under itself.
  */
-export function useLastCount(key: string, count?: number, fallback = 3): number {
-  const [last] = useState(() => read(key, fallback))
+export function useLastCount(
+  key: string,
+  count?: number,
+  fallback = 3,
+): number {
+  const [last] = useState(() => read(key, fallback));
   useEffect(() => {
-    if (count === undefined) return
+    if (count === undefined) return;
     try {
-      localStorage.setItem(storeKey(key), String(count))
+      localStorage.setItem(storeKey(key), String(count));
     } catch {
       // Storage may be off; the skeleton then draws 3.
     }
-  }, [key, count])
-  return last
+  }, [key, count]);
+  return last;
 }
 
 /**
@@ -39,25 +43,30 @@ export function useLastCount(key: string, count?: number, fallback = 3): number 
  * fails `valid` (an old version's value, or another page's). The value is the
  * one at mount.
  */
-export function useLastShape<T>(key: string, shape: T | undefined, fallback: T, valid: (x: unknown) => x is T): T {
+export function useLastShape<T>(
+  key: string,
+  shape: T | undefined,
+  fallback: T,
+  valid: (x: unknown) => x is T,
+): T {
   const [last] = useState<T>(() => {
     try {
-      const raw = localStorage.getItem(storeKey(key))
-      if (raw === null) return fallback
-      const saved: unknown = JSON.parse(raw)
-      return valid(saved) ? saved : fallback
+      const raw = localStorage.getItem(storeKey(key));
+      if (raw === null) return fallback;
+      const saved: unknown = JSON.parse(raw);
+      return valid(saved) ? saved : fallback;
     } catch {
-      return fallback
+      return fallback;
     }
-  })
-  const json = shape === undefined ? undefined : JSON.stringify(shape)
+  });
+  const json = shape === undefined ? undefined : JSON.stringify(shape);
   useEffect(() => {
-    if (json === undefined) return
+    if (json === undefined) return;
     try {
-      localStorage.setItem(storeKey(key), json)
+      localStorage.setItem(storeKey(key), json);
     } catch {
       // Storage may be off; the skeleton then draws the fallback.
     }
-  }, [key, json])
-  return last
+  }, [key, json]);
+  return last;
 }

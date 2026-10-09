@@ -1,13 +1,13 @@
-import { useRef, type KeyboardEvent, type ReactNode } from 'react'
+import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 export type RadioRow<T extends string> = {
-  value: T
-  label: ReactNode
+  value: T;
+  label: ReactNode;
   /** A line under the label saying what choosing it means. */
-  hint?: ReactNode
-}
+  hint?: ReactNode;
+};
 
 /**
  * One choice out of a few where each needs explaining: a Box of rows,
@@ -28,17 +28,17 @@ export function RadioRows<T extends string>({
   className,
 }: {
   /** The accessible name of the group. */
-  label: string
-  options: readonly RadioRow<T>[]
+  label: string;
+  options: readonly RadioRow<T>[];
   /** Nothing chosen yet is allowed: a question not answered. */
-  value: T | ''
-  onChange: (value: T) => void
-  className?: string
+  value: T | '';
+  onChange: (value: T) => void;
+  className?: string;
 }) {
-  const refs = useRef<(HTMLButtonElement | null)[]>([])
-  const chosen = options.findIndex((o) => o.value === value)
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const chosen = options.findIndex((o) => o.value === value);
   // With nothing chosen, the first row takes the tab stop.
-  const stop = chosen === -1 ? 0 : chosen
+  const stop = chosen === -1 ? 0 : chosen;
 
   const move = (e: KeyboardEvent, from: number) => {
     const step =
@@ -46,27 +46,30 @@ export function RadioRows<T extends string>({
         ? 1
         : e.key === 'ArrowUp' || e.key === 'ArrowLeft'
           ? -1
-          : 0
-    if (!step) return
-    e.preventDefault()
-    const to = (from + step + options.length) % options.length
-    onChange(options[to].value)
-    refs.current[to]?.focus()
-  }
+          : 0;
+    if (!step) return;
+    e.preventDefault();
+    const to = (from + step + options.length) % options.length;
+    onChange(options[to].value);
+    refs.current[to]?.focus();
+  };
 
   return (
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn('divide-y divide-border-muted overflow-hidden rounded-md border bg-card', className)}
+      className={cn(
+        'divide-y divide-border-muted overflow-hidden rounded-md border bg-card',
+        className,
+      )}
     >
       {options.map((o, i) => {
-        const on = i === chosen
+        const on = i === chosen;
         return (
           <button
             key={o.value}
             ref={(el) => {
-              refs.current[i] = el
+              refs.current[i] = el;
             }}
             type="button"
             role="radio"
@@ -93,11 +96,15 @@ export function RadioRows<T extends string>({
             </span>
             <span className="min-w-0 space-y-1">
               <span className="block text-sm font-medium">{o.label}</span>
-              {o.hint && <span className="block text-xs text-muted-foreground">{o.hint}</span>}
+              {o.hint && (
+                <span className="block text-xs text-muted-foreground">
+                  {o.hint}
+                </span>
+              )}
             </span>
           </button>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

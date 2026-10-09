@@ -10,7 +10,7 @@ eye are already there.
   at the foot of Settings), and never past the window's edge.
 - **One sentence** says what goes: the question in the ink ("Remove
   3.A.4?"), what goes with it muted ("Its guide and your progress on it go
-  with it."). Where what *stays* is the real question, it says that too
+  with it."). Where what _stays_ is the real question, it says that too
   (Clear keeps what the tutor remembers).
 - **Cancel, then the act**, right-aligned, both `sm`. The act is named on
   a `destructive` button ("Remove book", not "OK"). **Focus lands on

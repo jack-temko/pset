@@ -1,15 +1,19 @@
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
-import { segmentWeights, type ProgressMark, type ProgressSegment } from './weights'
+import {
+  segmentWeights,
+  type ProgressMark,
+  type ProgressSegment,
+} from './weights';
 
-export type { ProgressMark, ProgressSegment }
+export type { ProgressMark, ProgressSegment };
 
 const FILL: Record<ProgressMark, string> = {
   done: 'bg-primary',
   current: 'bg-primary/40',
   waiting: 'bg-muted',
   failed: 'bg-warning',
-}
+};
 
 /**
  * How far along a set is, as a slim bar cut into its questions. Each segment
@@ -25,21 +29,24 @@ export function ProgressBar({
   label,
   className,
 }: {
-  segments: ProgressSegment[]
+  segments: ProgressSegment[];
   /** What it says in words: "2 of 8 done". */
-  label: string
-  className?: string
+  label: string;
+  className?: string;
 }) {
-  const weights = segmentWeights(segments)
+  const weights = segmentWeights(segments);
   return (
     <span role="img" aria-label={label} className={cn('flex gap-1', className)}>
       {segments.map((s, i) => (
         <span
           key={i}
           style={{ flexGrow: weights[i], flexBasis: 0 }}
-          className={cn('h-1 rounded-full transition-[flex-grow,background-color] duration-200 ease-out motion-reduce:transition-none', FILL[s.mark])}
+          className={cn(
+            'h-1 rounded-full transition-[flex-grow,background-color] duration-200 ease-out motion-reduce:transition-none',
+            FILL[s.mark],
+          )}
         />
       ))}
     </span>
-  )
+  );
 }

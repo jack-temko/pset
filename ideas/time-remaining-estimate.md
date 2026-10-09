@@ -14,6 +14,7 @@ The set's progress line shows "3 of 8 done" and a time left, computed from the
 student's own pace.
 
 **How to compute it (Jack's design).**
+
 - While the LLM writes a question's walkthrough, it also writes a **difficulty
   index** for that question, relative to the other questions in the same set (the
   hardest question of the set scores highest).
@@ -31,6 +32,7 @@ range when the spread is wide; never nagging. A wrong number at 1am is worse tha
 none, so it stays quiet until it has earned trust.
 
 **What it needs from the backend.**
+
 - `difficulty` on `Question` (wire type in `internal/homework/wire.go`), written by
   the guide's writer; a way to regenerate it when the set changes.
 - Time per question: the activity heartbeats already carry a book and an activity

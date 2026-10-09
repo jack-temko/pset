@@ -7,9 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/jackt/pset/internal/db"
-	"github.com/jackt/pset/internal/jobs"
 	"html"
 	"io"
 	"log/slog"
@@ -21,6 +18,11 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/jobs"
 
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/llm"

@@ -1,7 +1,7 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import type { Block, Run } from '@/api/gen/doc'
-import { Skeleton } from '@/components/skeleton'
+import type { Block, Run } from '@/api/gen/doc';
+import { Skeleton } from '@/components/skeleton';
 import {
   AnswersCard,
   AnswerTable,
@@ -17,12 +17,12 @@ import {
   Statement,
   StepHeading,
   WorkedSteps,
-} from '@/components/transcript'
-import { cn } from '@/lib/utils'
+} from '@/components/transcript';
+import { cn } from '@/lib/utils';
 
-import { selBlock, selLine, selPart, selStep } from './selection'
-import { Selectable, type AskWiring, type Scope } from './selectable'
-import { answersOf, buildTree, type Group, type Section } from './tree'
+import { selBlock, selLine, selPart, selStep } from './selection';
+import { Selectable, type AskWiring, type Scope } from './selectable';
+import { answersOf, buildTree, type Group, type Section } from './tree';
 
 /**
  * A document of blocks, drawn. The server has already split every text
@@ -31,7 +31,7 @@ import { answersOf, buildTree, type Group, type Section } from './tree'
  * source. The tree comes from the part and step markers (see `buildTree`).
  * Spec: design/workspace.md, "Walkthrough".
  */
-type Jump = (pdf: number) => void
+type Jump = (pdf: number) => void;
 
 // ---------------------------------------------------------------- runs
 
@@ -39,32 +39,43 @@ type Jump = (pdf: number) => void
 export function Runs({ runs, onJump }: { runs: Run[]; onJump?: Jump }) {
   // Punctuation right after inline math stays with it: a line may not
   // begin with the comma that follows a formula.
-  const out: ReactNode[] = []
+  const out: ReactNode[] = [];
   for (let i = 0; i < runs.length; i++) {
-    const r = runs[i]
-    const next = runs[i + 1]
-    const glue = r.m !== undefined && !r.d && !r.raw && next?.t !== undefined && !next.code ? /^[,.;:!?)\]]+/.exec(next.t) : null
+    const r = runs[i];
+    const next = runs[i + 1];
+    const glue =
+      r.m !== undefined && !r.d && !r.raw && next?.t !== undefined && !next.code
+        ? /^[,.;:!?)\]]+/.exec(next.t)
+        : null;
     if (glue) {
       out.push(
         <span key={i} className="whitespace-nowrap">
           <RunView r={r} onJump={onJump} />
           {glue[0]}
         </span>,
-      )
-      runs = [...runs.slice(0, i + 1), { ...next, t: next.t!.slice(glue[0].length) }, ...runs.slice(i + 2)]
-      continue
+      );
+      runs = [
+        ...runs.slice(0, i + 1),
+        { ...next, t: next.t!.slice(glue[0].length) },
+        ...runs.slice(i + 2),
+      ];
+      continue;
     }
-    out.push(<RunView key={i} r={r} onJump={onJump} />)
+    out.push(<RunView key={i} r={r} onJump={onJump} />);
   }
-  return <>{out}</>
+  return <>{out}</>;
 }
 
 function RunView({ r, onJump }: { r: Run; onJump?: Jump }) {
   if (r.m !== undefined) {
     if (r.raw)
       // Math that would not parse, even after repair: its source, quiet.
-      return <code className="rounded-sm bg-muted/50 px-1 font-mono text-xs text-muted-foreground">{r.m}</code>
-    return r.d ? <MathDisplay tex={r.m} /> : <MathInline tex={r.m} />
+      return (
+        <code className="rounded-sm bg-muted/50 px-1 font-mono text-xs text-muted-foreground">
+          {r.m}
+        </code>
+      );
+    return r.d ? <MathDisplay tex={r.m} /> : <MathInline tex={r.m} />;
   }
   if (r.cite) {
     return (
@@ -76,30 +87,35 @@ function RunView({ r, onJump }: { r: Run; onJump?: Jump }) {
           </>
         ) : null}
       </>
-    )
+    );
   }
-  const lines = (r.t ?? '').split('\n')
+  const lines = (r.t ?? '').split('\n');
   const text = lines.map((line, i) => (
     <Fragment key={i}>
       {i > 0 && <br />}
       {line}
     </Fragment>
-  ))
-  if (r.code) return <code className="rounded-sm bg-muted/50 px-1 font-mono text-xs">{text}</code>
-  if (r.b) return <strong className="font-semibold">{text}</strong>
-  if (r.i) return <em>{text}</em>
-  return <>{text}</>
+  ));
+  if (r.code)
+    return (
+      <code className="rounded-sm bg-muted/50 px-1 font-mono text-xs">
+        {text}
+      </code>
+    );
+  if (r.b) return <strong className="font-semibold">{text}</strong>;
+  if (r.i) return <em>{text}</em>;
+  return <>{text}</>;
 }
 
 // ---------------------------------------------------------------- blocks
 
 /** What a block is drawn as, plus where it is (`reading`: a guide's
  *  paragraphs read at the guide's size; Ask's stay compact). */
-type Look = { reading?: boolean; onJump?: Jump }
+type Look = { reading?: boolean; onJump?: Jump };
 
 function Para({ runs, look }: { runs: Run[]; look: Look }) {
-  const inner = <Runs runs={runs} onJump={look.onJump} />
-  return look.reading ? <GuidePara>{inner}</GuidePara> : <p>{inner}</p>
+  const inner = <Runs runs={runs} onJump={look.onJump} />;
+  return look.reading ? <GuidePara>{inner}</GuidePara> : <p>{inner}</p>;
 }
 
 /** One block, as a component. `part` and `step` are drawn by the tree; a
@@ -107,43 +123,77 @@ function Para({ runs, look }: { runs: Run[]; look: Look }) {
  *  `pick` is the selection wiring when the block sits in a document
  *  that selects: a derivation passes it down so one of its lines can be
  *  picked on their own. */
-export function BlockView({ block, look, pick }: { block: Block; look: Look; pick?: { scope: Scope; index: number } }) {
-  const jump = look.onJump
+export function BlockView({
+  block,
+  look,
+  pick,
+}: {
+  block: Block;
+  look: Look;
+  pick?: { scope: Scope; index: number };
+}) {
+  const jump = look.onJump;
   switch (block.type) {
     case 'hint':
     case 'para':
-      return <Para runs={block.text} look={look} />
+      return <Para runs={block.text} look={look} />;
     case 'note':
       return (
         <Note>
           <Runs runs={block.text} onJump={jump} />
         </Note>
-      )
+      );
     case 'math':
-      return block.raw ? <RawTeX tex={block.tex} /> : <MathDisplay tex={block.tex} />
+      return block.raw ? (
+        <RawTeX tex={block.tex} />
+      ) : (
+        <MathDisplay tex={block.tex} />
+      );
     case 'derivation':
       return (
         <WorkedSteps
           steps={block.steps.map((s) => ({
             math: s.tex,
             raw: s.raw,
-            why: s.why?.length ? <Runs runs={s.why} onJump={jump} /> : undefined,
+            why: s.why?.length ? (
+              <Runs runs={s.why} onJump={jump} />
+            ) : undefined,
           }))}
-          linePick={pick ? { scope: pick.scope, line: (n: number) => selLine(pick.index, n) } : undefined}
+          linePick={
+            pick
+              ? {
+                  scope: pick.scope,
+                  line: (n: number) => selLine(pick.index, n),
+                }
+              : undefined
+          }
         />
-      )
+      );
     case 'callout':
       return (
-        <Callout tone={block.tone} title={block.title?.length ? <Runs runs={block.title} onJump={jump} /> : undefined}>
+        <Callout
+          tone={block.tone}
+          title={
+            block.title?.length ? (
+              <Runs runs={block.title} onJump={jump} />
+            ) : undefined
+          }
+        >
           <Para runs={block.text} look={look} />
         </Callout>
-      )
+      );
     case 'statement':
       return (
-        <Statement kind={block.kind.charAt(0).toUpperCase() + block.kind.slice(1)} number={block.number} name={block.name} page={block.page} onJump={jump}>
+        <Statement
+          kind={block.kind.charAt(0).toUpperCase() + block.kind.slice(1)}
+          number={block.number}
+          name={block.name}
+          page={block.page}
+          onJump={jump}
+        >
           <Para runs={block.text} look={{ ...look, reading: false }} />
         </Statement>
-      )
+      );
     case 'table':
       return (
         <AnswerTable
@@ -151,34 +201,66 @@ export function BlockView({ block, look, pick }: { block: Block; look: Look; pic
           columns={block.columns.map((c, i) => (
             <Runs key={i} runs={c} onJump={jump} />
           ))}
-          rows={block.rows.map((r) => r.map((cell, i) => <Runs key={i} runs={cell} onJump={jump} />))}
+          rows={block.rows.map((r) =>
+            r.map((cell, i) => <Runs key={i} runs={cell} onJump={jump} />),
+          )}
         />
-      )
+      );
     case 'plot':
-      return <Plot title={block.title ?? ''} x={block.x} y={block.y} series={block.series} marks={block.marks} />
+      return (
+        <Plot
+          title={block.title ?? ''}
+          x={block.x}
+          y={block.y}
+          series={block.series}
+          marks={block.marks}
+        />
+      );
     case 'code':
-      return <CodeBlock code={block.code} language={block.language} />
+      return <CodeBlock code={block.code} language={block.language} />;
     case 'answer':
       // In place, at the end of its part: the same card the Answers veil
       // collects, one row.
       return (
         <AnswersCard
-          answers={[{ label: block.label, children: <Para runs={block.text} look={{ ...look, reading: false }} /> }]}
+          answers={[
+            {
+              label: block.label,
+              children: (
+                <Para runs={block.text} look={{ ...look, reading: false }} />
+              ),
+            },
+          ]}
         />
-      )
+      );
     case 'raw':
       // A block that could not be made valid: what the model wrote, muted.
-      return <CodeBlock code={block.text} language={block.of} />
+      return <CodeBlock code={block.text} language={block.of} />;
     case 'part':
-      return <PartHeader label={block.label} title={<Runs runs={block.title} onJump={jump} />} first />
+      return (
+        <PartHeader
+          label={block.label}
+          title={<Runs runs={block.title} onJump={jump} />}
+          first
+        />
+      );
     case 'step':
-      return <StepHeading number={1} title={<Runs runs={block.title} onJump={jump} />} />
+      return (
+        <StepHeading
+          number={1}
+          title={<Runs runs={block.title} onJump={jump} />}
+        />
+      );
   }
-  return null
+  return null;
 }
 
 function RawTeX({ tex }: { tex: string }) {
-  return <code className="block overflow-x-auto font-mono text-xs text-muted-foreground">{tex}</code>
+  return (
+    <code className="block overflow-x-auto font-mono text-xs text-muted-foreground">
+      {tex}
+    </code>
+  );
 }
 
 // ---------------------------------------------------------------- document
@@ -198,41 +280,47 @@ export function Document({
   before,
   ask,
 }: {
-  blocks: Block[]
-  onJump?: Jump
-  reading?: boolean
-  before?: (index: number) => ReactNode
-  ask?: AskWiring
+  blocks: Block[];
+  onJump?: Jump;
+  reading?: boolean;
+  before?: (index: number) => ReactNode;
+  ask?: AskWiring;
 }) {
-  const tree = useMemo(() => buildTree(blocks), [blocks])
-  const look: Look = { reading, onJump }
-  const gap = reading ? 'space-y-4' : 'space-y-3'
+  const tree = useMemo(() => buildTree(blocks), [blocks]);
+  const look: Look = { reading, onJump };
+  const gap = reading ? 'space-y-4' : 'space-y-3';
   // Hover is read off the DOM (the innermost [data-sel] under the
   // pointer), so a block inside a step washes alone; CSS :hover would
   // light every selectable ancestor at once.
-  const [hover, setHover] = useState<string | null>(null)
+  const [hover, setHover] = useState<string | null>(null);
   // The pick lives above the documents (a page shows two: a hint and a
   // walkthrough), so `ask.selected` is already the one outlined element,
   // whether picked or asked about. This tree only reports clicks.
-  const outlined = ask?.selected ?? null
-  const scope: Scope = { ask, hover, outlined }
+  const outlined = ask?.selected ?? null;
+  const scope: Scope = { ask, hover, outlined };
 
   // Esc lets go; what takes keys itself (a text box, a menu, a dialog)
   // takes Esc first. The Ask composer is the one text box that doesn't:
   // asking leaves focus in it, and the chip it carries goes with Esc
   // (`data-esc-lets-go`).
   useEffect(() => {
-    if (!ask || !outlined) return
+    if (!ask || !outlined) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      if (e.defaultPrevented || document.querySelector('[role="menu"], [role="dialog"]')) return
-      const field = e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable="true"]')
-      if (field && !field.hasAttribute('data-esc-lets-go')) return
-      ask.onClear()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [ask, outlined])
+      if (e.key !== 'Escape') return;
+      if (
+        e.defaultPrevented ||
+        document.querySelector('[role="menu"], [role="dialog"]')
+      )
+        return;
+      const field =
+        e.target instanceof Element &&
+        e.target.closest('input, textarea, select, [contenteditable="true"]');
+      if (field && !field.hasAttribute('data-esc-lets-go')) return;
+      ask.onClear();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [ask, outlined]);
 
   return (
     <div
@@ -240,8 +328,8 @@ export function Document({
       onMouseOver={
         ask
           ? (e) => {
-              const next = selUnder(e.target as Element)
-              setHover((was) => (was === next ? was : next))
+              const next = selUnder(e.target as Element);
+              setHover((was) => (was === next ? was : next));
             }
           : undefined
       }
@@ -253,23 +341,35 @@ export function Document({
               // around them) keep their clicks, and a drag that took the
               // words isn't a pick. What's under the pointer is what the
               // student pointed at.
-              if (e.target instanceof Element && e.target.closest('button, a, [data-sel-toolbar]')) return
-              if (window.getSelection()?.toString()) return
-              const sel = selUnder(e.target as Element)
-              if (!sel) return
+              if (
+                e.target instanceof Element &&
+                e.target.closest('button, a, [data-sel-toolbar]')
+              )
+                return;
+              if (window.getSelection()?.toString()) return;
+              const sel = selUnder(e.target as Element);
+              if (!sel) return;
               // Clicking the outlined one lets go, chip and all.
-              if (sel === outlined) ask.onClear()
-              else ask.onPick(sel)
+              if (sel === outlined) ask.onClear();
+              else ask.onPick(sel);
             }
           : undefined
       }
     >
       {tree.map((section) => (
-        <SectionView key={section.index} section={section} first={section === tree[0]} look={look} gap={gap} before={before} scope={scope} />
+        <SectionView
+          key={section.index}
+          section={section}
+          first={section === tree[0]}
+          look={look}
+          gap={gap}
+          before={before}
+          scope={scope}
+        />
       ))}
       {before?.(blocks.length)}
     </div>
-  )
+  );
 }
 
 /** What a pointer over `el` points at: the innermost element, or a
@@ -277,12 +377,12 @@ export function Document({
  *  (the gaps between its blocks) points at nothing, so a stray click or a
  *  press that ends on another block never takes a whole part. */
 function selUnder(el: Element): string | null {
-  const hit = el.closest('[data-sel], [data-sel-head]')
-  if (!hit) return null
-  const head = hit.getAttribute('data-sel-head')
-  if (head) return head
-  const sel = hit.getAttribute('data-sel')
-  return sel && /^[ps]\d/.test(sel) ? null : sel
+  const hit = el.closest('[data-sel], [data-sel-head]');
+  if (!hit) return null;
+  const head = hit.getAttribute('data-sel-head');
+  if (head) return head;
+  const sel = hit.getAttribute('data-sel');
+  return sel && /^[ps]\d/.test(sel) ? null : sel;
 }
 
 function SectionView({
@@ -293,20 +393,33 @@ function SectionView({
   before,
   scope,
 }: {
-  section: Section
-  first: boolean
-  look: Look
-  gap: string
-  before?: (index: number) => ReactNode
-  scope: Scope
+  section: Section;
+  first: boolean;
+  look: Look;
+  gap: string;
+  before?: (index: number) => ReactNode;
+  scope: Scope;
 }) {
-  const body = section.groups.map((g) => <GroupView key={g.index} group={g} look={look} gap={gap} before={before} scope={scope} />)
-  if (!section.part) return <>{body}</>
+  const body = section.groups.map((g) => (
+    <GroupView
+      key={g.index}
+      group={g}
+      look={look}
+      gap={gap}
+      before={before}
+      scope={scope}
+    />
+  ));
+  if (!section.part) return <>{body}</>;
   return (
     <section className={cn(look.reading ? 'space-y-6' : 'space-y-3')}>
       {before?.(section.index)}
       {/* A part header selects its whole part. */}
-      <Selectable sel={selPart(section.index)} scope={scope} className={cn(look.reading ? 'space-y-6' : 'space-y-3')}>
+      <Selectable
+        sel={selPart(section.index)}
+        scope={scope}
+        className={cn(look.reading ? 'space-y-6' : 'space-y-3')}
+      >
         <PartHeader
           label={section.part.label}
           title={<Runs runs={section.part.title} onJump={look.onJump} />}
@@ -316,7 +429,7 @@ function SectionView({
         {body}
       </Selectable>
     </section>
-  )
+  );
 }
 
 function GroupView({
@@ -326,24 +439,28 @@ function GroupView({
   before,
   scope,
 }: {
-  group: Group
-  look: Look
-  gap: string
-  before?: (index: number) => ReactNode
-  scope: Scope
+  group: Group;
+  look: Look;
+  gap: string;
+  before?: (index: number) => ReactNode;
+  scope: Scope;
 }) {
   const items = group.items.map(({ block, index }) => {
-    const sel = selBlock(index)
+    const sel = selBlock(index);
     return (
       <Fragment key={index}>
         {before?.(index)}
         <Selectable sel={sel} scope={scope} block={block}>
-          <BlockView block={block} look={look} pick={scope.ask ? { scope, index } : undefined} />
+          <BlockView
+            block={block}
+            look={look}
+            pick={scope.ask ? { scope, index } : undefined}
+          />
         </Selectable>
       </Fragment>
-    )
-  })
-  if (!group.step) return <div className={gap}>{items}</div>
+    );
+  });
+  if (!group.step) return <div className={gap}>{items}</div>;
   return (
     <div className={gap}>
       {before?.(group.index)}
@@ -357,13 +474,19 @@ function GroupView({
         {items}
       </Selectable>
     </div>
-  )
+  );
 }
 
 /** The answers of a document as one card: what the Answers veil holds. */
-export function AnswersOf({ blocks, onJump }: { blocks: Block[]; onJump?: Jump }) {
-  const answers = answersOf(blocks)
-  if (answers.length === 0) return null
+export function AnswersOf({
+  blocks,
+  onJump,
+}: {
+  blocks: Block[];
+  onJump?: Jump;
+}) {
+  const answers = answersOf(blocks);
+  if (answers.length === 0) return null;
   return (
     <AnswersCard
       answers={answers.map((a) => ({
@@ -375,7 +498,7 @@ export function AnswersOf({ blocks, onJump }: { blocks: Block[]; onJump?: Jump }
         ),
       }))}
     />
-  )
+  );
 }
 
 // ---------------------------------------------------------------- skeletons
@@ -394,9 +517,16 @@ const NAMES: Record<string, string> = {
   plot: 'a plot',
   code: 'code',
   answer: 'an answer',
-}
+};
 
-const TEXT_BLOCKS = new Set(['hint', 'para', 'note', 'callout', 'statement', 'answer'])
+const TEXT_BLOCKS = new Set([
+  'hint',
+  'para',
+  'note',
+  'callout',
+  'statement',
+  'answer',
+]);
 
 /**
  * A block being written: its skeleton in roughly its own shape, labelled
@@ -411,16 +541,16 @@ export function BlockSkeleton({
   reading,
   onJump,
 }: {
-  type: string
-  runs?: Run[]
-  repairing: boolean
-  reading?: boolean
-  onJump?: Jump
+  type: string;
+  runs?: Run[];
+  repairing: boolean;
+  reading?: boolean;
+  onJump?: Jump;
 }) {
-  const name = NAMES[type] ?? 'a block'
-  const label = repairing ? `Tidying ${name}` : `Writing ${name}`
+  const name = NAMES[type] ?? 'a block';
+  const label = repairing ? `Tidying ${name}` : `Writing ${name}`;
   if (TEXT_BLOCKS.has(type)) {
-    const streaming = (runs?.length ?? 0) > 0
+    const streaming = (runs?.length ?? 0) > 0;
     return (
       <div aria-busy="true" className="space-y-1">
         {streaming ? (
@@ -438,7 +568,7 @@ export function BlockSkeleton({
         )}
         {repairing && <p className="text-xs text-muted-foreground">{label}</p>}
       </div>
-    )
+    );
   }
   if (type === 'part' || type === 'step') {
     return (
@@ -446,23 +576,28 @@ export function BlockSkeleton({
         <Skeleton className={type === 'part' ? 'h-6 w-2/3' : 'h-5 w-1/2'} />
         {repairing && <p className="text-xs text-muted-foreground">{label}</p>}
       </div>
-    )
+    );
   }
-  const rows = type === 'derivation' ? 3 : type === 'table' ? 4 : type === 'code' ? 5 : 2
+  const rows =
+    type === 'derivation' ? 3 : type === 'table' ? 4 : type === 'code' ? 5 : 2;
   return (
     <div className="overflow-hidden rounded-md border bg-card" aria-busy="true">
-      <div className="border-b bg-card-header px-card py-2 text-xs text-muted-foreground">{label}</div>
+      <div className="border-b bg-card-header px-card py-2 text-xs text-muted-foreground">
+        {label}
+      </div>
       {type === 'plot' ? (
         <Skeleton className="m-card block h-48 w-auto rounded-sm" />
       ) : (
         <div className="space-y-2 p-card text-base">
           {Array.from({ length: rows }, (_, i) => (
             <p key={i}>
-              <Skeleton className={i === rows - 1 ? 'h-3 w-2/3' : 'h-3 w-full'} />
+              <Skeleton
+                className={i === rows - 1 ? 'h-3 w-2/3' : 'h-3 w-full'}
+              />
             </p>
           ))}
         </div>
       )}
     </div>
-  )
+  );
 }

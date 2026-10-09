@@ -1,6 +1,6 @@
-import { QueryClient } from '@tanstack/react-query'
+import { QueryClient } from '@tanstack/react-query';
 
-import { ApiError } from './client'
+import { ApiError } from './client';
 
 /**
  * The one query client (and `makeQueryClient`, for /views, which gives
@@ -15,10 +15,12 @@ export const makeQueryClient = () =>
         staleTime: Infinity,
         refetchOnWindowFocus: false,
         // A 4xx won't change by asking again; a dropped connection might.
-        retry: (count, err) => !(err instanceof ApiError && err.status >= 400 && err.status < 500) && count < 2,
+        retry: (count, err) =>
+          !(err instanceof ApiError && err.status >= 400 && err.status < 500) &&
+          count < 2,
       },
       mutations: { retry: false },
     },
-  })
+  });
 
-export const queryClient = makeQueryClient()
+export const queryClient = makeQueryClient();

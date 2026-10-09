@@ -45,15 +45,15 @@ is woken, so nothing streams into a question the page doesn't hold.
 
 ## Files
 
-| File | Holds |
-|---|---|
-| `service.go`, `store.go`, `http.go`, `wire.go` | Sets and questions: behaviour, SQL and migrations, routes, wire types. |
-| `question.go` | The three steps as jobs, failures in words, reading figures, writing guides. |
-| `find.go`, `locate.go`, `scope.go`, `reference.go`, `rewrite.go`, `prompts.go` | Finding a problem: the reference parser, the scope it must lie in, the ladder, the model's part. |
-| `boxes.go` | Boxing: a question made from boxes the student drew, or a failed find pointed out. |
-| `notes.go` | The professor's notes: kept with the question, followed by the guide. |
-| `assignment.go`, `reads.go`, `update.go` | Importing an assignment: reading a file, page or text into rows for review, and updating sets from a document. |
-| `worksheet.go` | The worksheet PDF and figure crops. |
+| File                                                                           | Holds                                                                                                          |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `service.go`, `store.go`, `http.go`, `wire.go`                                 | Sets and questions: behaviour, SQL and migrations, routes, wire types.                                         |
+| `question.go`                                                                  | The three steps as jobs, failures in words, reading figures, writing guides.                                   |
+| `find.go`, `locate.go`, `scope.go`, `reference.go`, `rewrite.go`, `prompts.go` | Finding a problem: the reference parser, the scope it must lie in, the ladder, the model's part.               |
+| `boxes.go`                                                                     | Boxing: a question made from boxes the student drew, or a failed find pointed out.                             |
+| `notes.go`                                                                     | The professor's notes: kept with the question, followed by the guide.                                          |
+| `assignment.go`, `reads.go`, `update.go`                                       | Importing an assignment: reading a file, page or text into rows for review, and updating sets from a document. |
+| `worksheet.go`                                                                 | The worksheet PDF and figure crops.                                                                            |
 
 ## How a problem is found, read and written
 

@@ -5,4 +5,4 @@
  * error. The check (lib/katex-check.ts) throws on any failure; the page
  * shows a failure as its source, never in red.
  */
-export const MATH_OPTIONS = { strict: 'ignore', output: 'html' } as const
+export const MATH_OPTIONS = { strict: 'ignore', output: 'html' } as const;

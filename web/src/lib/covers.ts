@@ -1,6 +1,6 @@
-import type { Cover } from '@/api/library'
+import type { Cover } from '@/api/library';
 
-export type CoverHue = Cover
+export type CoverHue = Cover;
 
 /**
  * The six cloth colours, in the engine's order. A book's colour is picked
@@ -9,4 +9,11 @@ export type CoverHue = Cover
  *
  * The colours themselves are the `--cover-*` tokens in index.css.
  */
-export const COVERS: CoverHue[] = ['indigo', 'teal', 'amber', 'rose', 'violet', 'slate']
+export const COVERS: CoverHue[] = [
+  'indigo',
+  'teal',
+  'amber',
+  'rose',
+  'violet',
+  'slate',
+];

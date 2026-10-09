@@ -44,7 +44,7 @@ this); open one without a title; add a second way to dismiss it.
   creation.
 - **The scrim carries a slight backdrop blur**, which the Veil's notes
   (the Veil is since removed) argued against reusing: the scrim blurs a
-  *whole screen you are no longer on*, to say "not here".
+  _whole screen you are no longer on_, to say "not here".
 - **A native `<dialog>`, not a React portal.** Rejected the portal
   approach because Esc, focus containment and background inertness are
   three chances to get it subtly wrong, and the platform already has

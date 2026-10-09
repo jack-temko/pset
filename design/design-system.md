@@ -26,26 +26,26 @@ gate shows instead.
 OKLCH throughout, two themes: Paper (light) and Night study (dark). Use
 the semantic token, never a raw value; both themes then come free.
 
-| Token | Use |
-|---|---|
-| `background` / `foreground` | The page ground and its ink. |
-| `card` / `card-foreground` | Every Box, dialog and menu. Always with a border. |
-| `card-header` | The header band of a Box and the footer of a dialog. |
-| `rail` | The workspace's contents rail and panel ground. Follows the theme. |
-| `primary` / `primary-foreground` | The one blue: primary buttons, links, the current item. |
-| `primary-soft` | Its only tint: selected rows, the active tab, an anchor chip, a selected document element. |
-| `secondary` / `secondary-foreground` | The secondary button's fill. |
-| `muted` | Quiet fills: ghost hover, skeletons, roundels, progress tracks. A row's hover wash is `muted/50`: hover only signals, it doesn't carry shape, and full muted reads as selection. |
-| `muted-foreground` | Secondary text (leads, hints, meta lines) and icons at rest. |
-| `accent` / `accent-foreground` | Ochre highlight **fill** only. Never as text. |
-| `success` · `warning` · `destructive` | Status, as **ink**: text, icon, border. Never a solid fill. |
-| `*-soft` | The one tint of each status: badges, a failed row's ground, a guide callout's (insight is success, caveat is warning). |
-| `border` | The hairline that does the work of elevation. |
-| `border-muted` | A quieter divider between rows inside a Box. |
-| `input` | Control borders: fields, the outline button. Darker than `border` on purpose. |
-| `ring` | Focus: a solid 2px ring, offset 2px. |
-| `chart-1..5` | Data series, in order. |
-| `cover-*` | The six book-cloth hues. Identical in both themes: a book is an object. A book's hue is picked when it's added (the one fewest books wear, seeded by its hash) and kept; the Book dialog can change it (design/import.md). Every picture of a book (cover, swatch, chart bar) draws the same stored hue. |
+| Token                                 | Use                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `background` / `foreground`           | The page ground and its ink.                                                                                                                                                                                                                                                                             |
+| `card` / `card-foreground`            | Every Box, dialog and menu. Always with a border.                                                                                                                                                                                                                                                        |
+| `card-header`                         | The header band of a Box and the footer of a dialog.                                                                                                                                                                                                                                                     |
+| `rail`                                | The workspace's contents rail and panel ground. Follows the theme.                                                                                                                                                                                                                                       |
+| `primary` / `primary-foreground`      | The one blue: primary buttons, links, the current item.                                                                                                                                                                                                                                                  |
+| `primary-soft`                        | Its only tint: selected rows, the active tab, an anchor chip, a selected document element.                                                                                                                                                                                                               |
+| `secondary` / `secondary-foreground`  | The secondary button's fill.                                                                                                                                                                                                                                                                             |
+| `muted`                               | Quiet fills: ghost hover, skeletons, roundels, progress tracks. A row's hover wash is `muted/50`: hover only signals, it doesn't carry shape, and full muted reads as selection.                                                                                                                         |
+| `muted-foreground`                    | Secondary text (leads, hints, meta lines) and icons at rest.                                                                                                                                                                                                                                             |
+| `accent` / `accent-foreground`        | Ochre highlight **fill** only. Never as text.                                                                                                                                                                                                                                                            |
+| `success` · `warning` · `destructive` | Status, as **ink**: text, icon, border. Never a solid fill.                                                                                                                                                                                                                                              |
+| `*-soft`                              | The one tint of each status: badges, a failed row's ground, a guide callout's (insight is success, caveat is warning).                                                                                                                                                                                   |
+| `border`                              | The hairline that does the work of elevation.                                                                                                                                                                                                                                                            |
+| `border-muted`                        | A quieter divider between rows inside a Box.                                                                                                                                                                                                                                                             |
+| `input`                               | Control borders: fields, the outline button. Darker than `border` on purpose.                                                                                                                                                                                                                            |
+| `ring`                                | Focus: a solid 2px ring, offset 2px.                                                                                                                                                                                                                                                                     |
+| `chart-1..5`                          | Data series, in order.                                                                                                                                                                                                                                                                                   |
+| `cover-*`                             | The six book-cloth hues. Identical in both themes: a book is an object. A book's hue is picked when it's added (the one fewest books wear, seeded by its hash) and kept; the Book dialog can change it (design/import.md). Every picture of a book (cover, swatch, chart bar) draws the same stored hue. |
 
 **Status is ink, not fill.** A status colour sets text, icons and borders;
 its `-soft` tint is the only ground it gets. There is no solid red button.
@@ -90,17 +90,17 @@ sets any other).
 Nine steps, and no others. **15px is the floor**; nothing in the product is
 smaller, chips and counters included.
 
-| Step | Size / line | Role |
-|---|---|---|
-| `text-xs` | 15 / 22 | Labels, badges, timestamps, hints. The floor. |
-| `text-sm` | 16 / 24 | Buttons, rail rows, tabs, table cells. |
-| `text-base` | 17 / 26 | Default UI copy. |
-| `text-reading` | 18 / 30 | Long-form text a student reads. |
-| `text-lg` | 19 / 28 | Card titles (sans 600) and leads (serif italic). |
-| `text-xl` | 21 / 30 | Section heads. |
-| `text-2xl` | 25 / 32 | Panel and dialog titles. |
-| `text-3xl` | 31 / 36 | The one `h1` on a page-shell page. |
-| `text-4xl` | 37 / 40 | The dashboard greeting and empty-state heroes. |
+| Step           | Size / line | Role                                             |
+| -------------- | ----------- | ------------------------------------------------ |
+| `text-xs`      | 15 / 22     | Labels, badges, timestamps, hints. The floor.    |
+| `text-sm`      | 16 / 24     | Buttons, rail rows, tabs, table cells.           |
+| `text-base`    | 17 / 26     | Default UI copy.                                 |
+| `text-reading` | 18 / 30     | Long-form text a student reads.                  |
+| `text-lg`      | 19 / 28     | Card titles (sans 600) and leads (serif italic). |
+| `text-xl`      | 21 / 30     | Section heads.                                   |
+| `text-2xl`     | 25 / 32     | Panel and dialog titles.                         |
+| `text-3xl`     | 31 / 36     | The one `h1` on a page-shell page.               |
+| `text-4xl`     | 37 / 40     | The dashboard greeting and empty-state heroes.   |
 
 **A guide's headings** (2026-09-29) are the one place Newsreader heads
 text a person reads through rather than a screen's title. A part is an
@@ -147,7 +147,7 @@ the page's name**, fading in, so you always know where you are.
 
 **The shell is fixed chrome.** The window itself never scrolls: the shell
 is exactly the viewport, the top bar takes its 64px, and what remains is
-the scroll region. A scrollbar therefore starts *below* the bar rather than
+the scroll region. A scrollbar therefore starts _below_ the bar rather than
 running past it, and the bar cannot drift.
 
 **There are two kinds of screen, and the screen decides, never the
@@ -203,7 +203,7 @@ delete asks first. Two rules keep that consistent:
   once, since each is one sentence and Ask's saves have Undo;
   and Dismiss on a failed import, which holds nothing of yours yet.
 
-**Informing, not asking** *(2026-10-08, Jack: superseded for usage. What a job spent is one muted line with a small chevron that opens a modal of the details; `web/src/components/usage/README.md`, `web/src/components/usage-modal/README.md`, `design/model-usage.md`. The popover geometry that stood here is gone; a thing that wants to inform from a line opens a Dialog.)*
+**Informing, not asking** _(2026-10-08, Jack: superseded for usage. What a job spent is one muted line with a small chevron that opens a modal of the details; `web/src/components/usage/README.md`, `web/src/components/usage-modal/README.md`, `design/model-usage.md`. The popover geometry that stood here is gone; a thing that wants to inform from a line opens a Dialog.)_
 
 **Selecting what you ask about** (2026-09-30). Every element of a live
 document (a guide's stages, an answer) selects. Hover is the hover wash,
@@ -283,13 +283,13 @@ waits on data opens at its final size and is written through one component,
 `Loaded` (`web/src/components/loaded`), which owns the skeleton, the 300ms grace, the
 fade, `aria-busy` and the error line, so screens cannot drift apart.
 
-| Surface | Before data | When it arrives |
-|---|---|---|
-| Dialog, popover | Prefetched (so far the usage dialogs and Reset everything); else opens at final size with a skeleton | 150ms crossfade in place |
-| Page section, list | Skeleton in the real layout, at the last known count | 150ms crossfade in place |
-| Value in a sentence | Prefetched; else a slot of fixed width | The number appears, nothing reflows |
-| Any wait under 300ms | Nothing drawn | Content at once |
-| Cached data | Content at once, no fade | |
+| Surface              | Before data                                                                                          | When it arrives                     |
+| -------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Dialog, popover      | Prefetched (so far the usage dialogs and Reset everything); else opens at final size with a skeleton | 150ms crossfade in place            |
+| Page section, list   | Skeleton in the real layout, at the last known count                                                 | 150ms crossfade in place            |
+| Value in a sentence  | Prefetched; else a slot of fixed width                                                               | The number appears, nothing reflows |
+| Any wait under 300ms | Nothing drawn                                                                                        | Content at once                     |
+| Cached data          | Content at once, no fade                                                                             |                                     |
 
 - **The fade is 150ms**, opacity only, ease-out (`fade-in`, `fade-out` in `index.css`), and
   off under reduced motion. A skeleton that was seen crossfades with its content in one grid
@@ -349,14 +349,14 @@ en dash stays for ranges, as in "p. 142–145".)
 Each is a deliberate change from the v2 artifact, kept here so the two do
 not silently disagree.
 
-| Change | Why |
-|---|---|
-| `muted` and `secondary` darkened: light 0.945 → **0.88**, dark 0.262 → **0.34** | At the baseline values they measured 1.06–1.16:1 against every surface, so ghost hover, skeletons, roundels and the secondary button were near-invisible. The new values are capped by text, not taste: `muted-foreground` on `muted` lands at 4.56:1 light and 4.75:1 dark, and one more step fails 4.5. |
-| The bar is **64px**, the mark **36px**, the wordmark 21px, the icons 24px on 40px buttons | Jack found the whole product read small, so the bar grew with the type. At the old 56px the baseline's 28px mark and 18px name dominated against 20px icons; the icons growing with the lockup keeps the two ends in balance. |
-| The scale is **one step bigger than the baseline's**: 15px floor, 16 for controls, 17 for UI copy | Jack found everything too small to read comfortably. The small steps grew most (+1px on 14–16px is 6–7%), the display steps least (+1px on 30–36px), since the small ones were the ones that needed it. |
-| Counters and chips sit at **15px** | The baseline's Box and ActionList previews set them at 12px, which contradicts the system's own type floor. The floor wins. |
-| The Counter's fill is translucent ink, not `muted` | It sits on `card-header`, the surface where `muted` is weakest even after the correction (1.24:1). Ink at 20% gives it 1.50:1 and inverts with the theme for free. |
-| The date field is the browser's native `<input type="date">` | It is the one control in the app we don't draw. A correct, keyboard-reachable, locale-aware calendar is a large component to build and an easy one to build slightly wrong, and the value it carries is a date, not a brand moment. |
-| Blur has **one** meaning now | A dialog's scrim blurs a *screen you are no longer on*, to say "not here": 2px on a backdrop behind a card. (It had two until the Veil, which blurred content you could read to say "not yet", was removed, 2026-09-30.) |
-| Night's `chart-1` and `chart-2` re-stepped to L 0.56 and 0.66 | At the baseline's 0.70 and 0.72 both sat above the dark lightness band and the pair measured dE 12.9 for normal vision, below the 15 floor: two lines in a plot read as one colour. Validated against the Night card: all five checks pass, dE 18.7 normal, 17.6 deutan. |
-| `card-header` left at its baseline value | It is 1.08:1 against `card` and cannot improve without reading as a different surface. But it always carries a border, and that hairline is what separates the band. |
+| Change                                                                                            | Why                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `muted` and `secondary` darkened: light 0.945 → **0.88**, dark 0.262 → **0.34**                   | At the baseline values they measured 1.06–1.16:1 against every surface, so ghost hover, skeletons, roundels and the secondary button were near-invisible. The new values are capped by text, not taste: `muted-foreground` on `muted` lands at 4.56:1 light and 4.75:1 dark, and one more step fails 4.5. |
+| The bar is **64px**, the mark **36px**, the wordmark 21px, the icons 24px on 40px buttons         | Jack found the whole product read small, so the bar grew with the type. At the old 56px the baseline's 28px mark and 18px name dominated against 20px icons; the icons growing with the lockup keeps the two ends in balance.                                                                             |
+| The scale is **one step bigger than the baseline's**: 15px floor, 16 for controls, 17 for UI copy | Jack found everything too small to read comfortably. The small steps grew most (+1px on 14–16px is 6–7%), the display steps least (+1px on 30–36px), since the small ones were the ones that needed it.                                                                                                   |
+| Counters and chips sit at **15px**                                                                | The baseline's Box and ActionList previews set them at 12px, which contradicts the system's own type floor. The floor wins.                                                                                                                                                                               |
+| The Counter's fill is translucent ink, not `muted`                                                | It sits on `card-header`, the surface where `muted` is weakest even after the correction (1.24:1). Ink at 20% gives it 1.50:1 and inverts with the theme for free.                                                                                                                                        |
+| The date field is the browser's native `<input type="date">`                                      | It is the one control in the app we don't draw. A correct, keyboard-reachable, locale-aware calendar is a large component to build and an easy one to build slightly wrong, and the value it carries is a date, not a brand moment.                                                                       |
+| Blur has **one** meaning now                                                                      | A dialog's scrim blurs a _screen you are no longer on_, to say "not here": 2px on a backdrop behind a card. (It had two until the Veil, which blurred content you could read to say "not yet", was removed, 2026-09-30.)                                                                                  |
+| Night's `chart-1` and `chart-2` re-stepped to L 0.56 and 0.66                                     | At the baseline's 0.70 and 0.72 both sat above the dark lightness band and the pair measured dE 12.9 for normal vision, below the 15 floor: two lines in a plot read as one colour. Validated against the Night card: all five checks pass, dE 18.7 normal, 17.6 deutan.                                  |
+| `card-header` left at its baseline value                                                          | It is 1.08:1 against `card` and cannot improve without reading as a different surface. But it always carries a border, and that hairline is what separates the band.                                                                                                                                      |

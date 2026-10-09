@@ -100,9 +100,9 @@ it; the pages already read are kept, so OCR isn't repeated.
 
 ## Import
 
-A fifth phase, **Read the contents**, between *Read the pages* and
-*Index the sections* (design/import.md). It covers naming, the outline,
-the model calls and the check; *Index the sections* saves them and finds
+A fifth phase, **Read the contents**, between _Read the pages_ and
+_Index the sections_ (design/import.md). It covers naming, the outline,
+the model calls and the check; _Index the sections_ saves them and finds
 how the printed page numbers run (design/workspace.md, "Page
 numbers").
 

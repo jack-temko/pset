@@ -1,11 +1,11 @@
-import type { Question } from '@/api/homework'
-import type { Block } from '@/api/gen/doc'
-import { Box } from '@/components/box'
-import { Disclosure } from '@/components/disclosure'
-import { AnswersOf, Document } from '@/components/document'
-import type { AskWiring } from '@/components/document/selectable'
-import type { Sel } from '@/components/document/selection'
-import { TITLE, helpMeta, helpRows, type HelpName } from './help-meta'
+import type { Question } from '@/api/homework';
+import type { Block } from '@/api/gen/doc';
+import { Box } from '@/components/box';
+import { Disclosure } from '@/components/disclosure';
+import { AnswersOf, Document } from '@/components/document';
+import type { AskWiring } from '@/components/document/selectable';
+import type { Sel } from '@/components/document/selection';
+import { TITLE, helpMeta, helpRows, type HelpName } from './help-meta';
 
 /**
  * The question's help, as three rows that open in place: Hint, Walkthrough,
@@ -21,15 +21,15 @@ import { TITLE, helpMeta, helpRows, type HelpName } from './help-meta'
 export type HelpAsk = {
   /** The pending selection for a stage's document, if it holds it and
    *  the element still reads as when it was picked. */
-  selected: (stage: 'hint' | 'walkthrough', blocks: Block[]) => Sel | null
+  selected: (stage: 'hint' | 'walkthrough', blocks: Block[]) => Sel | null;
   /** A click picked an element of a stage's document. */
-  pick: (stage: 'hint' | 'walkthrough', sel: Sel, blocks: Block[]) => void
+  pick: (stage: 'hint' | 'walkthrough', sel: Sel, blocks: Block[]) => void;
   /** The toolbar's button on a picked element: compose the About and
    *  hand it up with the selection. */
-  ask: (stage: 'hint' | 'walkthrough', sel: Sel, blocks: Block[]) => void
+  ask: (stage: 'hint' | 'walkthrough', sel: Sel, blocks: Block[]) => void;
   /** The one way out: drops the selection and its chip. */
-  clear: () => void
-}
+  clear: () => void;
+};
 
 export function HelpRows({
   q,
@@ -39,20 +39,21 @@ export function HelpRows({
   onJump,
   ask,
 }: {
-  q: Question
+  q: Question;
   /** Nothing is happening to it yet: the rows wait without a spinner. */
-  queued: boolean
-  open: ReadonlySet<string>
-  onOpenChange: (name: HelpName, open: boolean) => void
-  onJump: (page: number) => void
-  ask?: HelpAsk
+  queued: boolean;
+  open: ReadonlySet<string>;
+  onOpenChange: (name: HelpName, open: boolean) => void;
+  onJump: (page: number) => void;
+  ask?: HelpAsk;
 }) {
-  const rows = helpRows(q)
+  const rows = helpRows(q);
   return (
     <Box>
       {rows.map(({ name, blocks }, i) => {
-        const ready = blocks.length > 0
-        const stage = name === 'hint' ? ('hint' as const) : ('walkthrough' as const)
+        const ready = blocks.length > 0;
+        const stage =
+          name === 'hint' ? ('hint' as const) : ('walkthrough' as const);
         const wiring: AskWiring | undefined =
           ask && name !== 'answers'
             ? {
@@ -61,7 +62,7 @@ export function HelpRows({
                 onAsk: (sel) => ask.ask(stage, sel, blocks),
                 onClear: ask.clear,
               }
-            : undefined
+            : undefined;
         return (
           <Disclosure
             key={name}
@@ -74,11 +75,20 @@ export function HelpRows({
             onOpenChange={(o) => onOpenChange(name, o)}
           >
             <div className="space-y-3">
-              {name === 'answers' ? <AnswersOf blocks={q.walkthrough} onJump={onJump} /> : <Document blocks={blocks} onJump={onJump} reading ask={wiring} />}
+              {name === 'answers' ? (
+                <AnswersOf blocks={q.walkthrough} onJump={onJump} />
+              ) : (
+                <Document
+                  blocks={blocks}
+                  onJump={onJump}
+                  reading
+                  ask={wiring}
+                />
+              )}
             </div>
           </Disclosure>
-        )
+        );
       })}
     </Box>
-  )
+  );
 }

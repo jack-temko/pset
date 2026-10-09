@@ -97,27 +97,33 @@ A document is an ordered list of blocks. On the wire and in storage
 each block is an object with a `type`; text fields hold **runs**. The
 model writes the same blocks with plain strings in those fields.
 
-| Block | Model writes | Notes |
-|---|---|---|
-| `hint` | `text` | Guides only, first, exactly one. One or two sentences. |
-| `part` | `label`, `title` | A labeled part of the problem: `"(a)"`, `"3.6.6"`. |
-| `step` | `title` | The renderer numbers steps, restarting in each part. |
-| `para` | `text` | Prose. |
-| `note` | `text` | An aside: small, muted. A sanity check, a "why not the other way", a tidbit. |
-| `math` | `tex` | Display math, bare TeX, no delimiters. |
-| `derivation` | `steps: [{tex, why?}]` | Today's `steps` card: one line of TeX per step, an optional one-sentence reason. |
-| `callout` | `tone`, `title?`, `text` | `insight` (why it's obviously right), `caveat` (a common slip), `check` (verify your work). |
-| `statement` | `kind`, `number`, `name?`, `page`, `text` | A definition or theorem as the book states it. As today. |
-| `table` | `columns`, `rows` | Cells and headers are text. As today. |
-| `plot` | `title?`, `x`, `y`, `series`, `marks?` | As today (series are expressions sampled by `mathx`, or points), plus `marks`: labeled points `{x, y, label?}` and vertical guides `{x, label?}`. |
-| `code` | `language`, `code` | As today. |
-| `answer` | `label?`, `text` | Guides only. The final result of its part, which is its label; one without a part is the whole problem's. |
+| Block        | Model writes                              | Notes                                                                                                                                             |
+| ------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hint`       | `text`                                    | Guides only, first, exactly one. One or two sentences.                                                                                            |
+| `part`       | `label`, `title`                          | A labeled part of the problem: `"(a)"`, `"3.6.6"`.                                                                                                |
+| `step`       | `title`                                   | The renderer numbers steps, restarting in each part.                                                                                              |
+| `para`       | `text`                                    | Prose.                                                                                                                                            |
+| `note`       | `text`                                    | An aside: small, muted. A sanity check, a "why not the other way", a tidbit.                                                                      |
+| `math`       | `tex`                                     | Display math, bare TeX, no delimiters.                                                                                                            |
+| `derivation` | `steps: [{tex, why?}]`                    | Today's `steps` card: one line of TeX per step, an optional one-sentence reason.                                                                  |
+| `callout`    | `tone`, `title?`, `text`                  | `insight` (why it's obviously right), `caveat` (a common slip), `check` (verify your work).                                                       |
+| `statement`  | `kind`, `number`, `name?`, `page`, `text` | A definition or theorem as the book states it. As today.                                                                                          |
+| `table`      | `columns`, `rows`                         | Cells and headers are text. As today.                                                                                                             |
+| `plot`       | `title?`, `x`, `y`, `series`, `marks?`    | As today (series are expressions sampled by `mathx`, or points), plus `marks`: labeled points `{x, y, label?}` and vertical guides `{x, label?}`. |
+| `code`       | `language`, `code`                        | As today.                                                                                                                                         |
+| `answer`     | `label?`, `text`                          | Guides only. The final result of its part, which is its label; one without a part is the whole problem's.                                         |
 
 Runs:
 
 ```json
-[{"t": "since $1 a minute turns "}, {"m": "1/p"}, {"t": " minutes into dollars "},
- {"cite": 108}, {"t": ". "}, {"t": "That's the only reason", "b": true}]
+[
+  { "t": "since $1 a minute turns " },
+  { "m": "1/p" },
+  { "t": " minutes into dollars " },
+  { "cite": 108 },
+  { "t": ". " },
+  { "t": "That's the only reason", "b": true }
+]
 ```
 
 - `{t}` text, with `b` (bold), `i` (italic) or `code` flags.
@@ -220,6 +226,7 @@ network or timer access is given to it.
   - `turn.block.failed {turnId, block}`
 
   The step feed still sits between blocks where tools ran.
+
 - Guides keep `question.stage`, once for the hint and once for the
   whole walkthrough, each as soon as it is complete. The Answers veil is
   derived from the walkthrough's `answer` blocks; it is not a stage.
@@ -356,13 +363,13 @@ and a problem that reads two ways). The scratch build swapped the guide
 system prompt from a file and saved the raw reply; nothing of it is
 merged.
 
-| Prompt | Guides | Answers right | KaTeX failures | Narration or invalid lines | Em dashes |
-|---|---|---|---|---|---|
-| Today's envelope (baseline) | 4 | 4 | 6 (3.7.8's money) | n/a | many |
-| V1: writing guide + phone-plan example | 4 | 4 | 0 | narration in every guide | 64 across V1 and V2 |
-| V2: writing guide only | 4 | 4 | 0 | narration in every guide | (with V1) |
-| V3: V2 + the added rules | 6 | 6 | 0 | 12 invalid lines in one guide, all rescued by the lenient parse | 0 |
-| V4: V3 + the linear-algebra example | 7 | 7 | 0 | none | 0 |
+| Prompt                                 | Guides | Answers right | KaTeX failures    | Narration or invalid lines                                      | Em dashes           |
+| -------------------------------------- | ------ | ------------- | ----------------- | --------------------------------------------------------------- | ------------------- |
+| Today's envelope (baseline)            | 4      | 4             | 6 (3.7.8's money) | n/a                                                             | many                |
+| V1: writing guide + phone-plan example | 4      | 4             | 0                 | narration in every guide                                        | 64 across V1 and V2 |
+| V2: writing guide only                 | 4      | 4             | 0                 | narration in every guide                                        | (with V1)           |
+| V3: V2 + the added rules               | 6      | 6             | 0                 | 12 invalid lines in one guide, all rescued by the lenient parse | 0                   |
+| V4: V3 + the linear-algebra example    | 7      | 7             | 0                 | none                                                            | 0                   |
 
 - **Correctness held everywhere**: \(K = -11/6\) and the cubic CDF;
   not a valid CDF (it falls past \(t = 1+\sqrt{2}\) and exceeds 1);
@@ -459,7 +466,7 @@ Moved to [loose-ends.md](loose-ends.md#from-the-finished-ideas).
 The whole system prompt for guides (V4 above), verbatim. The first
 block is today's guide prompt's "How to work", unchanged.
 
-````text
+```text
 You write the guide for one homework problem: a hint, then a worked solution the student checks their own work against.
 
 How to work. Earlier rules win.
@@ -513,4 +520,4 @@ An example of the form, from a different subject (linear algebra: find the eigen
 {"type":"para","text":"For each \\(\\lambda\\), an eigenvector is any nonzero solution of \\((A - \\lambda I)v = 0\\). For \\(\\lambda = 3\\) the rows of \\(A - 3I\\) are both \\((-1, 1)\\), so \\(v\\) needs equal entries; for \\(\\lambda = 1\\) they are both \\((1, 1)\\), so the entries are opposite."}
 {"type":"callout","tone":"insight","title":"Why they're perpendicular","text":"\\(A\\) is symmetric, and a symmetric matrix always has perpendicular eigenvectors for different eigenvalues. Here \\((1, 1)\\) stretches by 3 and \\((1, -1)\\) is left alone."}
 {"type":"answer","label":"(b)","text":"\\(\\lambda = 3\\): \\(v = (1, 1)\\). \\(\\lambda = 1\\): \\(v = (1, -1)\\)."}
-````
+```

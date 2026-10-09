@@ -1,18 +1,23 @@
-import { Plus, X } from 'lucide-react'
+import { Plus, X } from 'lucide-react';
 
-import { Button, IconButton } from '@/components/button'
-import { Input } from '@/components/input'
-import { PageMap } from '@/lib/pages'
-import { runsOf, type PageAnchor } from './book-numbering'
+import { Button, IconButton } from '@/components/button';
+import { Input } from '@/components/input';
+import { PageMap } from '@/lib/pages';
+import { runsOf, type PageAnchor } from './book-numbering';
 
 /** What a jump in the numbering means, in a sentence. */
-function gapSentence(g: { at: number; missing: number[]; extra: number }): string {
-  if (g.missing.length === 1) return `Printed page ${g.missing[0]} is missing from the scan.`
+function gapSentence(g: {
+  at: number;
+  missing: number[];
+  extra: number;
+}): string {
+  if (g.missing.length === 1)
+    return `Printed page ${g.missing[0]} is missing from the scan.`;
   if (g.missing.length > 1)
-    return `Printed pages ${g.missing[0]}–${g.missing[g.missing.length - 1]} are missing from the scan.`
+    return `Printed pages ${g.missing[0]}–${g.missing[g.missing.length - 1]} are missing from the scan.`;
   return g.extra === 1
     ? `The page before PDF page ${g.at} isn't numbered in the book.`
-    : `The ${g.extra} pages before PDF page ${g.at} aren't numbered in the book.`
+    : `The ${g.extra} pages before PDF page ${g.at} aren't numbered in the book.`;
 }
 
 /**
@@ -26,14 +31,14 @@ export function PageNumbersField({
   pageCount,
   onChange,
 }: {
-  anchors: PageAnchor[]
-  pageCount: number
-  onChange: (next: PageAnchor[]) => void
+  anchors: PageAnchor[];
+  pageCount: number;
+  onChange: (next: PageAnchor[]) => void;
 }) {
-  const parsed = runsOf(anchors, pageCount)
-  const gaps = 'runs' in parsed ? new PageMap(parsed.runs).gaps() : []
+  const parsed = runsOf(anchors, pageCount);
+  const gaps = 'runs' in parsed ? new PageMap(parsed.runs).gaps() : [];
   const set = (i: number, key: keyof PageAnchor, value: string) =>
-    onChange(anchors.map((a, j) => (j === i ? { ...a, [key]: value } : a)))
+    onChange(anchors.map((a, j) => (j === i ? { ...a, [key]: value } : a)));
 
   return (
     <fieldset className="space-y-2">
@@ -90,14 +95,18 @@ export function PageNumbersField({
           </p>
         ))
       )}
-      <Button variant="ghost" size="sm" onClick={() => onChange([...anchors, { pdf: '', printed: '' }])}>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => onChange([...anchors, { pdf: '', printed: '' }])}
+      >
         <Plus />
         Add a jump
       </Button>
       <p className="text-xs text-muted-foreground">
-        Every page number in the app counts from these. Found at import; fix them if the numbers are off, and add
-        a row where they jump.
+        Every page number in the app counts from these. Found at import; fix
+        them if the numbers are off, and add a row where they jump.
       </p>
     </fieldset>
-  )
+  );
 }

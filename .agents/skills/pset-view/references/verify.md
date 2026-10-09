@@ -29,7 +29,9 @@ Chromium and a matching Playwright are already on the machine; require it by pat
 from a scratch script kept outside the repo:
 
 ```js
-const { chromium } = require(process.env.HOME + '/.npm/_npx/e41f203b7505f1fb/node_modules/playwright')
+const { chromium } = require(
+  process.env.HOME + '/.npm/_npx/e41f203b7505f1fb/node_modules/playwright',
+);
 ```
 
 (If that path is gone, `npx playwright install chromium` in a scratch directory.)

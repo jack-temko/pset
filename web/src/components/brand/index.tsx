@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 /**
  * The `{P}` mark: Newsreader's P inside set-builder braces, on a primary
@@ -44,7 +44,7 @@ export function Mark({ className }: { className?: string }) {
         />
       </g>
     </svg>
-  )
+  );
 }
 
 /** The top bar's lockup: the tile mark, then the name as plain text. The
@@ -53,7 +53,9 @@ export function BrandLockup() {
   return (
     <span className="flex items-center gap-3">
       <Mark />
-      <span className="font-heading text-xl font-semibold tracking-tight">PSet</span>
+      <span className="font-heading text-xl font-semibold tracking-tight">
+        PSet
+      </span>
     </span>
-  )
+  );
 }

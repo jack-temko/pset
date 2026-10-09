@@ -1,11 +1,11 @@
-import { useCallback, useState, useSyncExternalStore } from 'react'
+import { useCallback, useState, useSyncExternalStore } from 'react';
 
 /**
  * How long a state that might be over in a moment has to last before it
  * shows. Handoffs between the engine's steps take 5 to 150ms and a local
  * endpoint answers in about 20; a real wait still reads as immediate.
  */
-export const GRACE_MS = 300
+export const GRACE_MS = 300;
 
 /**
  * A value as it should show when it may be brief: a book queued between
@@ -26,16 +26,23 @@ export const GRACE_MS = 300
  * The timing reads the server's clock against the browser's, which is
  * sound only because both run on the same machine.
  */
-export function useSettled<T>(value: T, since: number | null, key?: unknown): T | undefined {
-  const [last, setLast] = useState<{ key: unknown; value: T } | undefined>(undefined)
-  const young = useYoung(since)
+export function useSettled<T>(
+  value: T,
+  since: number | null,
+  key?: unknown,
+): T | undefined {
+  const [last, setLast] = useState<{ key: unknown; value: T } | undefined>(
+    undefined,
+  );
+  const young = useYoung(since);
 
-  if (young) return last && last.key === key ? last.value : undefined
+  if (young) return last && last.key === key ? last.value : undefined;
   // Remember what's shown, to hold it through the next brief value. This
   // is state stored from an earlier render, set while rendering: React
   // re-renders at once and it settles, since the value is the same.
-  if (!last || last.key !== key || last.value !== value) setLast({ key, value })
-  return value
+  if (!last || last.key !== key || last.value !== value)
+    setLast({ key, value });
+  return value;
 }
 
 /**
@@ -44,8 +51,11 @@ export function useSettled<T>(value: T, since: number | null, key?: unknown): T 
  * never blinks. A double submit is still stopped at once, by the caller
  * checking the request's own `isPending`.
  */
-export function useShowPending(m: { isPending: boolean; submittedAt: number }): boolean {
-  return useSettled(m.isPending, m.isPending ? m.submittedAt : null) ?? false
+export function useShowPending(m: {
+  isPending: boolean;
+  submittedAt: number;
+}): boolean {
+  return useSettled(m.isPending, m.isPending ? m.submittedAt : null) ?? false;
 }
 
 /** Whether a value that began at `since` is younger than GRACE_MS. The
@@ -55,11 +65,14 @@ export function useShowPending(m: { isPending: boolean; submittedAt: number }): 
 function useYoung(since: number | null): boolean {
   const subscribe = useCallback(
     (changed: () => void) => {
-      if (since === null) return () => {}
-      const t = setTimeout(changed, Math.max(0, since + GRACE_MS - Date.now()))
-      return () => clearTimeout(t)
+      if (since === null) return () => {};
+      const t = setTimeout(changed, Math.max(0, since + GRACE_MS - Date.now()));
+      return () => clearTimeout(t);
     },
     [since],
-  )
-  return useSyncExternalStore(subscribe, () => since !== null && Date.now() - since < GRACE_MS)
+  );
+  return useSyncExternalStore(
+    subscribe,
+    () => since !== null && Date.now() - since < GRACE_MS,
+  );
 }

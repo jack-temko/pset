@@ -1,27 +1,60 @@
-import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowUp, Brain, ChevronRight, Columns2, Pencil, Receipt, RotateCcw, Square, Trash2 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  ArrowUp,
+  Brain,
+  ChevronRight,
+  Columns2,
+  Pencil,
+  Receipt,
+  RotateCcw,
+  Square,
+  Trash2,
+} from 'lucide-react';
 
-import { AppShell } from '@/components/shell'
-import { AutoTextarea } from '@/components/input'
-import { Button, IconButton } from '@/components/button'
-import { Tooltip } from '@/components/tooltip'
-import { AboutChip, AssistantTurn, ConversationStart, DayDivider, FailedTurn, StoppedNote, Steps, Thinking, UserTurn } from '@/components/transcript'
-import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
-import { Menu, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
-import { ResizeHandle } from '@/components/resize-handle'
-import { Skeleton } from '@/components/skeleton'
-import { UsageTrigger } from '@/components/usage'
-import { BookUsageDialog } from '@/components/usage-modal'
-import { usePrefetchIntent } from '@/lib/prefetch-intent'
-import { prefetchBookUsage, useBookUsage } from '@/api/usage'
-import { BookDialog } from './dialogs'
-import { HomeworkTab } from '@/views/homework'
-import { MemoryDialog, MemoryUndo } from './memory'
-import { BoxingBar, BoxingProvider, PageBoxes } from './boxing'
-import { useBoxing } from './boxing-state'
-import { BookHereContext } from './book-here'
+import { AppShell } from '@/components/shell';
+import { AutoTextarea } from '@/components/input';
+import { Button, IconButton } from '@/components/button';
+import { Tooltip } from '@/components/tooltip';
+import {
+  AboutChip,
+  AssistantTurn,
+  ConversationStart,
+  DayDivider,
+  FailedTurn,
+  StoppedNote,
+  Steps,
+  Thinking,
+  UserTurn,
+} from '@/components/transcript';
+import { UnderlineNav, UnderlineTab } from '@/components/underline-nav';
+import {
+  Menu,
+  MenuConfirmItem,
+  MenuDivider,
+  MenuItem,
+} from '@/components/menu';
+import { ResizeHandle } from '@/components/resize-handle';
+import { Skeleton } from '@/components/skeleton';
+import { UsageTrigger } from '@/components/usage';
+import { BookUsageDialog } from '@/components/usage-modal';
+import { usePrefetchIntent } from '@/lib/prefetch-intent';
+import { prefetchBookUsage, useBookUsage } from '@/api/usage';
+import { BookDialog } from './dialogs';
+import { HomeworkTab } from '@/views/homework';
+import { MemoryDialog, MemoryUndo } from './memory';
+import { BoxingBar, BoxingProvider, PageBoxes } from './boxing';
+import { useBoxing } from './boxing-state';
+import { BookHereContext } from './book-here';
 import {
   pageImageURL,
   useBook,
@@ -30,17 +63,35 @@ import {
   useUpdateBook,
   type Book,
   type ContentsEntry,
-} from '@/api/library'
-import { ApiError } from '@/api/client'
-import { useBookHomework, useAddBoxed, usePointOut } from '@/api/homework'
-import { BlockSkeleton, Document } from '@/components/document'
-import { answerAbout, asked, heldSel, NOTHING_PENDING, pendingOf, picked, sent, turnSource, type Pending, type PendingSel } from '@/components/document/selection'
-import { useStudyTime, type Kind as ActivityKind } from '@/api/activity'
-import { StudyTimer } from './study-timer'
-import { useAsk, useClearTurns, useStopTurn, useTurns, type About, type LiveTurn } from '@/api/ask'
-import { PageMap, Pages, usePages } from '@/lib/pages'
-import { layout, usePanes } from '@/lib/panes'
-import { cn, plural } from '@/lib/utils'
+} from '@/api/library';
+import { ApiError } from '@/api/client';
+import { useBookHomework, useAddBoxed, usePointOut } from '@/api/homework';
+import { BlockSkeleton, Document } from '@/components/document';
+import {
+  answerAbout,
+  asked,
+  heldSel,
+  NOTHING_PENDING,
+  pendingOf,
+  picked,
+  sent,
+  turnSource,
+  type Pending,
+  type PendingSel,
+} from '@/components/document/selection';
+import { useStudyTime, type Kind as ActivityKind } from '@/api/activity';
+import { StudyTimer } from './study-timer';
+import {
+  useAsk,
+  useClearTurns,
+  useStopTurn,
+  useTurns,
+  type About,
+  type LiveTurn,
+} from '@/api/ask';
+import { PageMap, Pages, usePages } from '@/lib/pages';
+import { layout, usePanes } from '@/lib/panes';
+import { cn, plural } from '@/lib/utils';
 
 /**
  * The book workspace: the app's one filled screen. Contents rail, page
@@ -50,7 +101,7 @@ import { cn, plural } from '@/lib/utils'
  * Spec: design/workspace.md.
  */
 
-type Tab = 'ask' | 'homework'
+type Tab = 'ask' | 'homework';
 
 // ---------------------------------------------------------------- rail
 
@@ -68,66 +119,70 @@ function Rail({
   onJump,
   width,
 }: {
-  toc: ContentsEntry[]
+  toc: ContentsEntry[];
   /** Pixels, from the pane layout; the token until it's measured. */
-  width?: number
+  width?: number;
   /** The page the rail highlights: the reader's page, or a jump's
    *  destination until the next scroll moves the page. */
-  page: number
-  onJump: (pdfPage: number) => void
+  page: number;
+  onJump: (pdfPage: number) => void;
 }) {
-  const pages = usePages()
-  const rail = useRef<HTMLElement>(null)
-  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set())
+  const pages = usePages();
+  const rail = useRef<HTMLElement>(null);
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   const shows = (depth: number, parent?: ContentsEntry) =>
-    depth < RAIL_LEVELS || (parent !== undefined && open.has(parent.id))
+    depth < RAIL_LEVELS || (parent !== undefined && open.has(parent.id));
   const toggle = (id: string) =>
     setOpen((o) => {
-      const next = new Set(o)
-      if (!next.delete(id)) next.add(id)
-      return next
-    })
+      const next = new Set(o);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
 
   // The current row is the last one on show, in reading order, that
   // starts at or before the page the scan is showing: a closed section
   // stands in for the rows folded inside it.
   const currentId = (() => {
-    let id: string | undefined
+    let id: string | undefined;
     const walk = (entries: ContentsEntry[], depth: number) => {
       for (const e of entries) {
-        if (e.page <= page) id = e.id
-        if (e.children.length > 0 && shows(depth + 1, e)) walk(e.children, depth + 1)
+        if (e.page <= page) id = e.id;
+        if (e.children.length > 0 && shows(depth + 1, e))
+          walk(e.children, depth + 1);
       }
-    }
-    walk(toc, 0)
-    return id
-  })()
+    };
+    walk(toc, 0);
+    return id;
+  })();
 
   // Keep the current row in view, with a row of room around it. Only the
   // rail scrolls: scrollIntoView would move the whole workspace too.
   useEffect(() => {
-    const el = rail.current
-    const row = el?.querySelector<HTMLElement>('[aria-current]')
-    if (!el || !row) return
-    const room = row.offsetHeight
-    const r = row.getBoundingClientRect()
-    const box = el.getBoundingClientRect()
-    if (r.top < box.top + room) el.scrollTop -= box.top + room - r.top
-    else if (r.bottom > box.bottom - room) el.scrollTop += r.bottom - (box.bottom - room)
-  }, [currentId])
+    const el = rail.current;
+    const row = el?.querySelector<HTMLElement>('[aria-current]');
+    if (!el || !row) return;
+    const room = row.offsetHeight;
+    const r = row.getBoundingClientRect();
+    const box = el.getBoundingClientRect();
+    if (r.top < box.top + room) el.scrollTop -= box.top + room - r.top;
+    else if (r.bottom > box.bottom - room)
+      el.scrollTop += r.bottom - (box.bottom - room);
+  }, [currentId]);
 
   const pageLabel = (pdfPage: number) => (
     <Tooltip label={`PDF page ${pdfPage}`} side="left">
-      <span className="shrink-0 text-xs tabular-nums">{pages.label(pdfPage)}</span>
+      <span className="shrink-0 text-xs tabular-nums">
+        {pages.label(pdfPage)}
+      </span>
     </Tooltip>
-  )
+  );
 
   const row = (e: ContentsEntry, depth: number): ReactNode => {
-    const current = e.id === currentId
+    const current = e.id === currentId;
     // Below the top level, a row with rows under it folds them away. The
     // chevron sits in the row's indent, so titles stay aligned either way.
-    const folds = depth >= RAIL_LEVELS - 1 && e.children.length > 0
-    const isOpen = open.has(e.id)
+    const folds = depth >= RAIL_LEVELS - 1 && e.children.length > 0;
+    const isOpen = open.has(e.id);
     return (
       <div key={e.id}>
         <div className="relative">
@@ -160,34 +215,49 @@ function Rail({
                 RAIL_CHEVRON[Math.min(depth, RAIL_CHEVRON.length - 1)],
               )}
             >
-              <ChevronRight className={cn('size-4 transition-transform duration-200 motion-reduce:transition-none', isOpen && 'rotate-90')} />
+              <ChevronRight
+                className={cn(
+                  'size-4 transition-transform duration-200 motion-reduce:transition-none',
+                  isOpen && 'rotate-90',
+                )}
+              />
             </button>
           )}
         </div>
-        {e.children.length > 0 && shows(depth + 1, e) && e.children.map((c) => row(c, depth + 1))}
+        {e.children.length > 0 &&
+          shows(depth + 1, e) &&
+          e.children.map((c) => row(c, depth + 1))}
       </div>
-    )
-  }
+    );
+  };
 
   return (
-    <aside ref={rail} style={{ width }} className="w-rail shrink-0 overflow-y-auto border-r bg-rail py-4">
+    <aside
+      ref={rail}
+      style={{ width }}
+      className="w-rail shrink-0 overflow-y-auto border-r bg-rail py-4"
+    >
       <nav aria-label="Contents">{toc.map((e) => row(e, 0))}</nav>
     </aside>
-  )
+  );
 }
 
 /** How many levels of the contents show before any are opened. */
-const RAIL_LEVELS = 2
+const RAIL_LEVELS = 2;
 /** Each level's indent, 16px a step after the top's; deeper than the
  *  last holds there, so a very deep book doesn't walk off the rail. */
-const RAIL_INDENT = ['pl-4', 'pl-8', 'pl-12', 'pl-16', 'pl-20']
+const RAIL_INDENT = ['pl-4', 'pl-8', 'pl-12', 'pl-16', 'pl-20'];
 /** The chevron sits in the 24px just before its row's title. */
-const RAIL_CHEVRON = ['left-0', 'left-2', 'left-6', 'left-10', 'left-14']
+const RAIL_CHEVRON = ['left-0', 'left-2', 'left-6', 'left-10', 'left-14'];
 
 /** The rail before the contents arrive: rows at their real height. */
 function RailSkeleton({ width }: { width?: number }) {
   return (
-    <aside style={{ width }} className="w-rail shrink-0 overflow-hidden border-r bg-rail py-4" aria-hidden>
+    <aside
+      style={{ width }}
+      className="w-rail shrink-0 overflow-hidden border-r bg-rail py-4"
+      aria-hidden
+    >
       {[3, 4, 2].map((n, i) => (
         <div key={i}>
           <div className="px-4 py-2 text-sm">
@@ -201,15 +271,15 @@ function RailSkeleton({ width }: { width?: number }) {
         </div>
       ))}
     </aside>
-  )
+  );
 }
 
 // ---------------------------------------------------------------- scan
 
 /** Zoom is relative to fitting the pane's width: 1 is fit, and the
  *  percentage in the pill says so. */
-const ZOOM_MIN = 0.5
-const ZOOM_MAX = 3
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 3;
 
 /**
  * Pages stack in one scrolling pane, edge-to-edge paper. Each is the
@@ -232,133 +302,145 @@ function Scan({
   scrollRef,
   pageRefs,
 }: {
-  bookId: string
+  bookId: string;
   /** Page height over width. */
-  aspect: number
-  pageCount: number
+  aspect: number;
+  pageCount: number;
   /** A PDF index: the scan is the one place that counts in those. */
-  currentPage: number
-  onPageChange: (p: number) => void
-  scrollRef: React.RefObject<HTMLDivElement | null>
-  pageRefs: React.RefObject<Map<number, HTMLDivElement>>
+  currentPage: number;
+  onPageChange: (p: number) => void;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  pageRefs: React.RefObject<Map<number, HTMLDivElement>>;
 }) {
-  const pages = usePages()
+  const pages = usePages();
   // Boxing a problem takes the pointer: a drag draws, and doesn't pan.
-  const boxing = useBoxing()
-  const boxingOn = boxing.target !== null
+  const boxing = useBoxing();
+  const boxingOn = boxing.target !== null;
   // Awake on arrival, asleep shortly after; scroll, hover or focus wake
   // it again.
-  const [pillAwake, setPillAwake] = useState(true)
-  const sleepTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const [zoom, setZoom] = useState(1)
-  const [paneWidth, setPaneWidth] = useState(0)
-  const [dragging, setDragging] = useState(false)
-  const drag = useRef<{ x: number; y: number } | null>(null)
+  const [pillAwake, setPillAwake] = useState(true);
+  const sleepTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const [zoom, setZoom] = useState(1);
+  const [paneWidth, setPaneWidth] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const drag = useRef<{ x: number; y: number } | null>(null);
   // The spot on the page under the pointer, as a fraction of that page, and
   // where the pointer was. After the new size is laid out, the scroll is
   // corrected until that same spot is back under the pointer.
   const anchor = useRef<{
-    node: HTMLDivElement
-    fx: number
-    fy: number
-    x: number
-    y: number
-  } | null>(null)
+    node: HTMLDivElement;
+    fx: number;
+    fy: number;
+    x: number;
+    y: number;
+  } | null>(null);
 
   // A pointer resting on the bar isn't idle: it stays until the pointer
   // leaves, so its button never fades out from under the cursor.
-  const hovered = useRef(false)
+  const hovered = useRef(false);
   const wake = () => {
-    setPillAwake(true)
-    clearTimeout(sleepTimer.current)
-    sleepTimer.current = setTimeout(() => !hovered.current && setPillAwake(false), 1200)
-  }
+    setPillAwake(true);
+    clearTimeout(sleepTimer.current);
+    sleepTimer.current = setTimeout(
+      () => !hovered.current && setPillAwake(false),
+      1200,
+    );
+  };
   // The first sleep: the pill says where you are on arrival, then lets
   // the paper have the frame back.
   useEffect(() => {
-    sleepTimer.current = setTimeout(() => setPillAwake(false), 1200)
-    return () => clearTimeout(sleepTimer.current)
-  }, [])
+    sleepTimer.current = setTimeout(() => setPillAwake(false), 1200);
+    return () => clearTimeout(sleepTimer.current);
+  }, []);
 
   // The fit width follows the pane, which Focus mode resizes.
   useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const ro = new ResizeObserver(() => setPaneWidth(el.clientWidth))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [scrollRef])
+    const el = scrollRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setPaneWidth(el.clientWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [scrollRef]);
 
   // A trackpad pinch arrives as a ctrl+wheel. It has to be a non-passive
   // listener to stop the browser zooming the whole app instead.
   useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
+    const el = scrollRef.current;
+    if (!el) return;
     const onWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey) return
-      e.preventDefault()
-      wake()
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      wake();
       // Measured once per burst: the first event of a pinch fixes the spot,
       // and every later event in the same frame zooms around it.
       if (!anchor.current) {
-        let best: HTMLDivElement | null = null
-        let bestDist = Infinity
+        let best: HTMLDivElement | null = null;
+        let bestDist = Infinity;
         for (const node of pageRefs.current.values()) {
-          const r = node.getBoundingClientRect()
-          const d = e.clientY < r.top ? r.top - e.clientY : e.clientY > r.bottom ? e.clientY - r.bottom : 0
-          if (d < bestDist) (bestDist = d), (best = node)
-          if (d === 0) break
+          const r = node.getBoundingClientRect();
+          const d =
+            e.clientY < r.top
+              ? r.top - e.clientY
+              : e.clientY > r.bottom
+                ? e.clientY - r.bottom
+                : 0;
+          if (d < bestDist) ((bestDist = d), (best = node));
+          if (d === 0) break;
         }
         if (best) {
-          const r = best.getBoundingClientRect()
+          const r = best.getBoundingClientRect();
           anchor.current = {
             node: best,
             fx: (e.clientX - r.left) / r.width,
             fy: (e.clientY - r.top) / r.height,
             x: e.clientX,
             y: e.clientY,
-          }
+          };
         }
       }
-      setZoom((z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z * Math.exp(-e.deltaY * 0.01))))
-    }
-    el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
-  }, [scrollRef])
+      setZoom((z) =>
+        Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z * Math.exp(-e.deltaY * 0.01))),
+      );
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [scrollRef]);
 
   // After layout, before paint: find where the anchored spot ended up and
   // scroll by exactly the difference, so it sits under the pointer again.
   // Measuring the page itself, rather than scaling the scroll, stays exact
   // even though the gaps between pages don't scale and the column recentres.
   useLayoutEffect(() => {
-    const el = scrollRef.current
-    const a = anchor.current
-    if (!el || !a) return
-    const r = a.node.getBoundingClientRect()
-    el.scrollLeft += r.left + a.fx * r.width - a.x
-    el.scrollTop += r.top + a.fy * r.height - a.y
-    anchor.current = null
-  }, [zoom, scrollRef])
+    const el = scrollRef.current;
+    const a = anchor.current;
+    if (!el || !a) return;
+    const r = a.node.getBoundingClientRect();
+    el.scrollLeft += r.left + a.fx * r.width - a.x;
+    el.scrollTop += r.top + a.fy * r.height - a.y;
+    anchor.current = null;
+  }, [zoom, scrollRef]);
 
-  const fitWidth = Math.min(768, Math.max(paneWidth - 48, 0))
-  const width = fitWidth * zoom
-  const percent = Math.round(zoom * 100)
-  const zoomed = percent !== 100
+  const fitWidth = Math.min(768, Math.max(paneWidth - 48, 0));
+  const width = fitWidth * zoom;
+  const percent = Math.round(zoom * 100);
+  const zoomed = percent !== 100;
   // Panning only means something once the pages are wider than the pane.
-  const canPan = width + 48 > paneWidth + 1 && !boxingOn
+  const canPan = width + 48 > paneWidth + 1 && !boxingOn;
 
   const onScroll = () => {
-    wake()
-    const el = scrollRef.current
-    if (!el) return
+    wake();
+    const el = scrollRef.current;
+    if (!el) return;
     // The current page is the one crossing the pane's vertical middle.
-    const middle = el.scrollTop + el.clientHeight / 2
-    let page = 1
+    const middle = el.scrollTop + el.clientHeight / 2;
+    let page = 1;
     for (const [n, node] of pageRefs.current) {
-      if (node.offsetTop <= middle) page = Math.max(page, n)
+      if (node.offsetTop <= middle) page = Math.max(page, n);
     }
-    if (page !== currentPage) onPageChange(page)
-  }
+    if (page !== currentPage) onPageChange(page);
+  };
 
   return (
     <div className="relative min-w-0 flex-1">
@@ -366,21 +448,21 @@ function Scan({
         ref={scrollRef}
         onScroll={onScroll}
         onPointerDown={(e) => {
-          if (!canPan || e.button !== 0) return
-          drag.current = { x: e.clientX, y: e.clientY }
-          setDragging(true)
-          e.currentTarget.setPointerCapture(e.pointerId)
+          if (!canPan || e.button !== 0) return;
+          drag.current = { x: e.clientX, y: e.clientY };
+          setDragging(true);
+          e.currentTarget.setPointerCapture(e.pointerId);
         }}
         onPointerMove={(e) => {
-          if (!drag.current) return
-          const el = e.currentTarget
-          el.scrollLeft -= e.clientX - drag.current.x
-          el.scrollTop -= e.clientY - drag.current.y
-          drag.current = { x: e.clientX, y: e.clientY }
+          if (!drag.current) return;
+          const el = e.currentTarget;
+          el.scrollLeft -= e.clientX - drag.current.x;
+          el.scrollTop -= e.clientY - drag.current.y;
+          drag.current = { x: e.clientX, y: e.clientY };
         }}
         onPointerUp={() => {
-          drag.current = null
-          setDragging(false)
+          drag.current = null;
+          setDragging(false);
         }}
         className={cn(
           // Both axes: a zoomed page is content that can't reflow, the one
@@ -397,8 +479,8 @@ function Scan({
             <div
               key={n}
               ref={(node) => {
-                if (node) pageRefs.current.set(n, node)
-                else pageRefs.current.delete(n)
+                if (node) pageRefs.current.set(n, node);
+                else pageRefs.current.delete(n);
               }}
               className="relative grid place-items-center overflow-hidden rounded-sm border bg-card"
               style={{ aspectRatio: `1 / ${aspect || 11 / 8.5}` }}
@@ -430,12 +512,12 @@ function Scan({
       <div
         hidden={boxingOn}
         onMouseEnter={() => {
-          hovered.current = true
-          wake()
+          hovered.current = true;
+          wake();
         }}
         onMouseLeave={() => {
-          hovered.current = false
-          wake()
+          hovered.current = false;
+          wake();
         }}
         className={cn(
           'absolute bottom-6 left-1/2 flex h-control -translate-x-1/2 items-center gap-1 rounded-md border bg-card px-1 text-xs text-muted-foreground shadow-floating transition-opacity duration-200 ease-out focus-within:opacity-100 motion-reduce:transition-none',
@@ -443,7 +525,10 @@ function Scan({
         )}
       >
         <Tooltip label={`PDF page ${currentPage} of ${pageCount}`}>
-          <span tabIndex={0} className="flex h-control-sm items-center rounded-md px-2 tabular-nums">
+          <span
+            tabIndex={0}
+            className="flex h-control-sm items-center rounded-md px-2 tabular-nums"
+          >
             p. {pages.label(currentPage)}
           </span>
         </Tooltip>
@@ -455,8 +540,8 @@ function Scan({
               size="sm"
               aria-label={`${percent}%, fit to width`}
               onClick={() => {
-                setZoom(1)
-                wake()
+                setZoom(1);
+                wake();
               }}
               className="tabular-nums"
             >
@@ -465,23 +550,26 @@ function Scan({
             </Button>
           </Tooltip>
         ) : (
-          <span className="flex h-control-sm items-center px-2 tabular-nums">{percent}%</span>
+          <span className="flex h-control-sm items-center px-2 tabular-nums">
+            {percent}%
+          </span>
         )}
       </div>
     </div>
-  )
+  );
 }
 
 // ---------------------------------------------------------------- panel
 
 /** A day as a divider says it: "Today", "Yesterday", "Sep 12". */
 function dayLabel(iso: string, now = new Date()): string {
-  const d = new Date(iso)
-  const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
-  const diff = Math.round((day(now) - day(d)) / 86_400_000)
-  if (diff === 0) return 'Today'
-  if (diff === 1) return 'Yesterday'
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const d = new Date(iso);
+  const day = (x: Date) =>
+    new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(now) - day(d)) / 86_400_000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 /**
@@ -504,44 +592,58 @@ function TurnView({
   onSelect,
   onClearAbout,
 }: {
-  t: LiveTurn
-  onJump: (page: number) => void
-  onRetry: () => void
+  t: LiveTurn;
+  onJump: (page: number) => void;
+  onRetry: () => void;
   /** The pending selection, for the outline while its chip rides the
    *  composer. */
-  selection: PendingSel | null
-  onPickSelection: (selection: PendingSel) => void
-  onSelect: (about: About, selection: PendingSel) => void
-  onClearAbout: () => void
+  selection: PendingSel | null;
+  onPickSelection: (selection: PendingSel) => void;
+  onSelect: (about: About, selection: PendingSel) => void;
+  onClearAbout: () => void;
 }) {
-  const navigate = useNavigate()
-  const pages = usePages()
-  const source = turnSource(t.id)
-  const running = t.state === 'running'
-  const last = t.steps[t.steps.length - 1]
-  const lastRunning = !!last?.running
+  const navigate = useNavigate();
+  const pages = usePages();
+  const source = turnSource(t.id);
+  const running = t.state === 'running';
+  const last = t.steps[t.steps.length - 1];
+  const lastRunning = !!last?.running;
   // Waiting on the model with nothing saying so: no call running, no block
   // on its way, and no words since the last step (streaming words say it
   // themselves).
-  const endsInStep = t.steps.some((s) => Math.min(s.after ?? 0, t.answer.length) === t.answer.length)
-  const thinking = running && !lastRunning && !t.pending && (t.answer.length === 0 || endsInStep)
-  const hasReply = t.steps.length > 0 || t.answer.length > 0 || !!t.pending || thinking
+  const endsInStep = t.steps.some(
+    (s) => Math.min(s.after ?? 0, t.answer.length) === t.answer.length,
+  );
+  const thinking =
+    running &&
+    !lastRunning &&
+    !t.pending &&
+    (t.answer.length === 0 || endsInStep);
+  const hasReply =
+    t.steps.length > 0 || t.answer.length > 0 || !!t.pending || thinking;
   // Each step sits after the blocks written when it ran. Turns saved
   // before steps carried a position have none, and land at the top, as
   // they always did.
   const feed = (i: number) => {
-    const at = t.steps.filter((s) => Math.min(s.after ?? 0, t.answer.length) === i)
-    if (at.length === 0) return null
+    const at = t.steps.filter(
+      (s) => Math.min(s.after ?? 0, t.answer.length) === i,
+    );
+    if (at.length === 0) return null;
     return (
       <Steps
         steps={at.map((s) =>
-          s.memoryId ? { label: s.label, action: <MemoryUndo bookId={t.bookId} memoryId={s.memoryId} /> } : s.label,
+          s.memoryId
+            ? {
+                label: s.label,
+                action: <MemoryUndo bookId={t.bookId} memoryId={s.memoryId} />,
+              }
+            : s.label,
         )}
         running={running && lastRunning && at.includes(last)}
         thinking={thinking && i === t.answer.length}
       />
-    )
-  }
+    );
+  };
   return (
     <>
       <UserTurn about={t.about || undefined}>{t.question}</UserTurn>
@@ -556,10 +658,17 @@ function TurnView({
             before={feed}
             ask={{
               selected: heldSel(selection, source, t.answer, pages),
-              onPick: (sel) => onPickSelection(pendingOf(source, t.answer, sel, pages)),
+              onPick: (sel) =>
+                onPickSelection(pendingOf(source, t.answer, sel, pages)),
               onAsk: (sel) =>
                 onSelect(
-                  answerAbout({ question: t.question, about: t.about || undefined, blocks: t.answer, sel, pages }),
+                  answerAbout({
+                    question: t.question,
+                    about: t.about || undefined,
+                    blocks: t.answer,
+                    sel,
+                    pages,
+                  }),
                   pendingOf(source, t.answer, sel, pages),
                 ),
               onClear: onClearAbout,
@@ -567,10 +676,22 @@ function TurnView({
           />
           {/* What answering spent, once the turn is over; while it runs
               the step feed is already saying how it's going. */}
-          {t.state !== 'running' && t.usage && <UsageTrigger usage={t.usage} source={{ kind: 'turn', id: t.id }} name="Ask answer" block />}
+          {t.state !== 'running' && t.usage && (
+            <UsageTrigger
+              usage={t.usage}
+              source={{ kind: 'turn', id: t.id }}
+              name="Ask answer"
+              block
+            />
+          )}
           {thinking && t.steps.length === 0 && <Thinking />}
           {t.pending && (
-            <BlockSkeleton type={t.pending.type} runs={t.pending.runs} repairing={t.pending.repairing} onJump={onJump} />
+            <BlockSkeleton
+              type={t.pending.type}
+              runs={t.pending.runs}
+              repairing={t.pending.repairing}
+              onJump={onJump}
+            />
           )}
         </AssistantTurn>
       )}
@@ -579,15 +700,26 @@ function TurnView({
         <FailedTurn
           reason={t.reason ?? ''}
           onRetry={onRetry}
-          onSetup={t.failure === 'setup' ? () => navigate('/settings#connections') : undefined}
+          onSetup={
+            t.failure === 'setup'
+              ? () => navigate('/settings#connections')
+              : undefined
+          }
         />
       )}
       {/* A turn that ended before it wrote a thing (the first call refused, a
           stop at once) has no reply to end with the line, and its calls still
           cost time: it follows the note instead. */}
-      {!hasReply && t.state !== 'running' && t.usage && <UsageTrigger usage={t.usage} source={{ kind: 'turn', id: t.id }} name="Ask answer" block />}
+      {!hasReply && t.state !== 'running' && t.usage && (
+        <UsageTrigger
+          usage={t.usage}
+          source={{ kind: 'turn', id: t.id }}
+          name="Ask answer"
+          block
+        />
+      )}
     </>
-  )
+  );
 }
 
 /** Ask: the transcript over the composer. An empty conversation is a
@@ -604,70 +736,71 @@ function AskTab({
   onPickSelection,
   onSelect,
 }: {
-  bookId: string
-  bookTitle: string
+  bookId: string;
+  bookTitle: string;
   /** The context chip riding the composer: a question's "Ask about
    *  this", or a selection from a guide or an earlier answer. */
-  about: About | null
+  about: About | null;
   /** Whether its tab is the one showing: it stays mounted behind Homework. */
-  visible: boolean
-  onClearAbout: () => void
+  visible: boolean;
+  onClearAbout: () => void;
   /** A turn went out carrying this chip (or none): the chip is spent. */
-  onSent: (about: About | null) => void
-  onJump: (page: number) => void
-  selection: PendingSel | null
-  onPickSelection: (selection: PendingSel) => void
-  onSelect: (about: About, selection: PendingSel) => void
+  onSent: (about: About | null) => void;
+  onJump: (page: number) => void;
+  selection: PendingSel | null;
+  onPickSelection: (selection: PendingSel) => void;
+  onSelect: (about: About, selection: PendingSel) => void;
 }) {
-  const turns = useTurns(bookId)
-  const ask = useAsk(bookId)
-  const stop = useStopTurn()
-  const clear = useClearTurns(bookId)
-  const navigate = useNavigate()
-  const [text, setText] = useState('')
-  const scroller = useRef<HTMLDivElement | null>(null)
-  const pinned = useRef(true)
-  const composer = useRef<HTMLDivElement | null>(null)
-  const list = turns.data
-  const running = list?.find((t) => t.state === 'running')
+  const turns = useTurns(bookId);
+  const ask = useAsk(bookId);
+  const stop = useStopTurn();
+  const clear = useClearTurns(bookId);
+  const navigate = useNavigate();
+  const [text, setText] = useState('');
+  const scroller = useRef<HTMLDivElement | null>(null);
+  const pinned = useRef(true);
+  const composer = useRef<HTMLDivElement | null>(null);
+  const list = turns.data;
+  const running = list?.find((t) => t.state === 'running');
 
   // The chip arrives with the box empty, so the box takes the focus:
   // the next words typed are your own question.
   useEffect(() => {
-    if (about) composer.current?.querySelector('textarea')?.focus()
-  }, [about])
+    if (about) composer.current?.querySelector('textarea')?.focus();
+  }, [about]);
 
   // Follow the answer as it streams, unless you've scrolled up to read.
   useLayoutEffect(() => {
-    const el = scroller.current
-    if (el && pinned.current) el.scrollTop = el.scrollHeight
-  }, [list, visible])
+    const el = scroller.current;
+    if (el && pinned.current) el.scrollTop = el.scrollHeight;
+  }, [list, visible]);
 
   // `own` is the composer's own words going out; a retry of an earlier
   // question is not, and leaves the draft and the chip alone. Only the
   // chip that went out is spent, and only the words that went out are
   // cleared: what was staged or typed while it was in flight stays.
   const send = (question: string, withAbout: About | null, own = false) => {
-    if (!question.trim() || running || ask.isPending) return
-    pinned.current = true
+    if (!question.trim() || running || ask.isPending) return;
+    pinned.current = true;
     ask.mutate(
       { question, about: withAbout ?? undefined },
       {
         onSuccess: () => {
-          if (own) setText((now) => (now === question ? '' : now))
-          onSent(withAbout)
+          if (own) setText((now) => (now === question ? '' : now));
+          onSent(withAbout);
         },
       },
-    )
-  }
+    );
+  };
 
   return (
     <>
       <div
         ref={scroller}
         onScroll={(e) => {
-          const el = e.currentTarget
-          pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48
+          const el = e.currentTarget;
+          pinned.current =
+            el.scrollHeight - el.scrollTop - el.clientHeight < 48;
         }}
         className="min-h-0 flex-1 overflow-y-auto p-card"
       >
@@ -684,17 +817,20 @@ function AskTab({
           </div>
         ) : list.length === 0 ? (
           <div className="flex h-full flex-col justify-end gap-1 pb-2">
-            <p className="font-heading text-lg">Ask anything about {bookTitle}.</p>
+            <p className="font-heading text-lg">
+              Ask anything about {bookTitle}.
+            </p>
             <p className="text-sm text-muted-foreground">
-              It searches and reads the book, looks at figures, and checks its arithmetic, then answers with the pages it used.
+              It searches and reads the book, looks at figures, and checks its
+              arithmetic, then answers with the pages it used.
             </p>
           </div>
         ) : (
           <div className="space-y-5">
             <ConversationStart onClear={() => clear.mutate()} />
             {list.map((t, i) => {
-              const day = dayLabel(t.createdAt)
-              const newDay = i === 0 || dayLabel(list[i - 1].createdAt) !== day
+              const day = dayLabel(t.createdAt);
+              const newDay = i === 0 || dayLabel(list[i - 1].createdAt) !== day;
               return (
                 <div key={t.id} className="space-y-5">
                   {newDay && <DayDivider label={day} />}
@@ -708,7 +844,7 @@ function AskTab({
                     onClearAbout={onClearAbout}
                   />
                 </div>
-              )
+              );
             })}
           </div>
         )}
@@ -727,7 +863,8 @@ function AskTab({
               reason={ask.error.message}
               onRetry={() => send(text, about, true)}
               onSetup={
-                ask.error instanceof ApiError && ask.error.code === 'not_configured'
+                ask.error instanceof ApiError &&
+                ask.error.code === 'not_configured'
                   ? () => navigate('/settings#connections')
                   : undefined
               }
@@ -737,9 +874,9 @@ function AskTab({
         <form
           className="flex items-end gap-2"
           onSubmit={(e) => {
-            e.preventDefault()
-            if (running) stop.mutate(running.id)
-            else send(text, about, true)
+            e.preventDefault();
+            if (running) stop.mutate(running.id);
+            else send(text, about, true);
           }}
         >
           <AutoTextarea
@@ -748,14 +885,14 @@ function AskTab({
             value={text}
             placeholder="Ask about this book…"
             onChange={(e) => {
-              setText(e.target.value)
-              if (ask.isError) ask.reset()
+              setText(e.target.value);
+              if (ask.isError) ask.reset();
             }}
             onKeyDown={(e) => {
               // Enter sends; Shift+Enter is a new line.
               if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                send(text, about, true)
+                e.preventDefault();
+                send(text, about, true);
               }
             }}
             className="flex-1"
@@ -765,14 +902,19 @@ function AskTab({
               <Square />
             </IconButton>
           ) : (
-            <IconButton type="submit" variant="primary" aria-label="Send" disabled={!text.trim() || ask.isPending}>
+            <IconButton
+              type="submit"
+              variant="primary"
+              aria-label="Send"
+              disabled={!text.trim() || ask.isPending}
+            >
               <ArrowUp />
             </IconButton>
           )}
         </form>
       </div>
     </>
-  )
+  );
 }
 
 function Panel({
@@ -786,42 +928,46 @@ function Panel({
   onJump,
   width,
 }: {
-  bookId: string
-  bookTitle: string
+  bookId: string;
+  bookTitle: string;
   /** Where the student last worked, for the week's time. */
-  onActive: (kind: ActivityKind) => void
+  onActive: (kind: ActivityKind) => void;
   /** The homework question on screen, or null, for counting its time. */
-  onQuestion: (id: string | null) => void
+  onQuestion: (id: string | null) => void;
   /** A homework set named in the URL opens the Homework tab on it. */
-  homework?: string
-  focus: boolean
-  onFocusToggle: () => void
-  onJump: (page: number) => void
+  homework?: string;
+  focus: boolean;
+  onFocusToggle: () => void;
+  onJump: (page: number) => void;
   /** Pixels, from the pane layout; the token until it's measured. */
-  width?: number
+  width?: number;
 }) {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   // A book always opens on Homework, at the list (or on the set the URL
   // names). Both tabs stay mounted, so Ask about a question and Homework
   // again is the same question, scrolled where it was; a reload is a new visit.
-  const [tab, setTab] = useState<Tab>('homework')
+  const [tab, setTab] = useState<Tab>('homework');
   // The context chip riding the composer, and the selection it came
   // from (a guide element or an answer element): one chip at a time,
   // and the two live and go together, so the outline on the document
   // and the chip above the composer are one state. The selection is
   // held here, above the tabs, because a page shows two documents (a
   // hint and a walkthrough) and at most one element outlines at a time.
-  const [pending, setPending] = useState<Pending>(NOTHING_PENDING)
-  const { about, sel: selection } = pending
-  const pickSelection = (next: PendingSel) => setPending((p) => picked(p, next))
-  const askAbout = (a: About, sel: PendingSel | null) => setPending(asked(a, sel))
-  const clearAbout = () => setPending(NOTHING_PENDING)
-  const spendAbout = (spent: About | null) => setPending((p) => sent(p, spent))
-  const pick = setTab
+  const [pending, setPending] = useState<Pending>(NOTHING_PENDING);
+  const { about, sel: selection } = pending;
+  const pickSelection = (next: PendingSel) =>
+    setPending((p) => picked(p, next));
+  const askAbout = (a: About, sel: PendingSel | null) =>
+    setPending(asked(a, sel));
+  const clearAbout = () => setPending(NOTHING_PENDING);
+  const spendAbout = (spent: About | null) => setPending((p) => sent(p, spent));
+  const pick = setTab;
 
   return (
     <aside
-      onPointerDownCapture={() => onActive(tab === 'ask' ? 'asking' : 'homework')}
+      onPointerDownCapture={() =>
+        onActive(tab === 'ask' ? 'asking' : 'homework')
+      }
       onKeyDownCapture={() => onActive(tab === 'ask' ? 'asking' : 'homework')}
       style={{ width }}
       className={cn(
@@ -834,7 +980,10 @@ function Panel({
           <UnderlineTab active={tab === 'ask'} onClick={() => pick('ask')}>
             Ask
           </UnderlineTab>
-          <UnderlineTab active={tab === 'homework'} onClick={() => pick('homework')}>
+          <UnderlineTab
+            active={tab === 'homework'}
+            onClick={() => pick('homework')}
+          >
             Homework
           </UnderlineTab>
         </UnderlineNav>
@@ -849,7 +998,12 @@ function Panel({
           <Columns2 />
         </IconButton>
       </div>
-      <div className={cn('flex min-h-0 flex-1 flex-col', tab !== 'ask' && 'hidden')}>
+      <div
+        className={cn(
+          'flex min-h-0 flex-1 flex-col',
+          tab !== 'ask' && 'hidden',
+        )}
+      >
         <AskTab
           bookId={bookId}
           bookTitle={bookTitle}
@@ -863,14 +1017,19 @@ function Panel({
           onSelect={askAbout}
         />
       </div>
-      <div className={cn('flex min-h-0 flex-1 flex-col', tab !== 'homework' && 'hidden')}>
+      <div
+        className={cn(
+          'flex min-h-0 flex-1 flex-col',
+          tab !== 'homework' && 'hidden',
+        )}
+      >
         <HomeworkTab
           bookId={bookId}
           initialSet={homework}
           onJump={onJump}
           onAskAbout={(a, sel) => {
-            askAbout(a, sel ?? null)
-            pick('ask')
+            askAbout(a, sel ?? null);
+            pick('ask');
           }}
           onPickSelection={pickSelection}
           onClearAbout={clearAbout}
@@ -881,7 +1040,7 @@ function Panel({
         />
       </div>
     </aside>
-  )
+  );
 }
 
 // ------------------------------------------------------------ workspace
@@ -891,96 +1050,122 @@ function WorkspaceMessage({ children }: { children?: ReactNode }) {
   return (
     <AppShell scroll="fill">
       <div className="grid h-full place-items-center bg-muted/40">
-        {children && <p className="text-base text-muted-foreground">{children}</p>}
+        {children && (
+          <p className="text-base text-muted-foreground">{children}</p>
+        )}
       </div>
     </AppShell>
-  )
+  );
 }
 
 export function Workspace() {
-  const { id = '', homework } = useParams<{ id: string; homework?: string }>()
-  const bookQuery = useBook(id)
-  if (bookQuery.error instanceof ApiError && bookQuery.error.code === 'not_found')
-    return <WorkspaceMessage>There is no book here.</WorkspaceMessage>
-  if (bookQuery.error) return <WorkspaceMessage>{bookQuery.error.message}</WorkspaceMessage>
-  if (!bookQuery.data) return <WorkspaceMessage />
+  const { id = '', homework } = useParams<{ id: string; homework?: string }>();
+  const bookQuery = useBook(id);
+  if (
+    bookQuery.error instanceof ApiError &&
+    bookQuery.error.code === 'not_found'
+  )
+    return <WorkspaceMessage>There is no book here.</WorkspaceMessage>;
+  if (bookQuery.error)
+    return <WorkspaceMessage>{bookQuery.error.message}</WorkspaceMessage>;
+  if (!bookQuery.data) return <WorkspaceMessage />;
   if (bookQuery.data.state.kind !== 'ready')
-    return <WorkspaceMessage>This book is still being prepared. It opens once it's on the shelf.</WorkspaceMessage>
-  return <BookWorkspace key={id} book={bookQuery.data} homework={homework} />
+    return (
+      <WorkspaceMessage>
+        This book is still being prepared. It opens once it's on the shelf.
+      </WorkspaceMessage>
+    );
+  return <BookWorkspace key={id} book={bookQuery.data} homework={homework} />;
 }
 
 function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
-  const navigate = useNavigate()
-  const contents = useContents(book.id)
-  const update = useUpdateBook(book.id)
-  const remove = useRemoveBook()
-  const addBoxed = useAddBoxed()
-  const pointOut = usePointOut()
+  const navigate = useNavigate();
+  const contents = useContents(book.id);
+  const update = useUpdateBook(book.id);
+  const remove = useRemoveBook();
+  const addBoxed = useAddBoxed();
+  const pointOut = usePointOut();
 
-  const [focus, setFocus] = useState(false)
+  const [focus, setFocus] = useState(false);
   // The panes' widths, as fractions of the frame, held to their limits.
-  const panes = usePanes()
+  const panes = usePanes();
   // A PDF index: the scan is the one place that counts in those.
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(1);
   // The page a jump landed on holds the rail's highlight until a scroll
   // that moves the page says otherwise.
-  const [pinnedPage, setPinnedPage] = useState<number | null>(null)
-  const [editingBook, setEditingBook] = useState(false)
-  const [memoryOpen, setMemoryOpen] = useState(false)
-  const [usageOpen, setUsageOpen] = useState(false)
-  const bookUsage = useBookUsage(book.id, usageOpen)
-  const queryClient = useQueryClient()
-  const usageIntent = usePrefetchIntent(() => void prefetchBookUsage(queryClient, book.id))
-  const scrollRef = useRef<HTMLDivElement | null>(null)
-  const pageRefs = useRef(new Map<number, HTMLDivElement>())
+  const [pinnedPage, setPinnedPage] = useState<number | null>(null);
+  const [editingBook, setEditingBook] = useState(false);
+  const [memoryOpen, setMemoryOpen] = useState(false);
+  const [usageOpen, setUsageOpen] = useState(false);
+  const bookUsage = useBookUsage(book.id, usageOpen);
+  const queryClient = useQueryClient();
+  const usageIntent = usePrefetchIntent(
+    () => void prefetchBookUsage(queryClient, book.id),
+  );
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const pageRefs = useRef(new Map<number, HTMLDivElement>());
 
-  const pages = useMemo(() => new PageMap(book.pageRuns), [book.pageRuns])
+  const pages = useMemo(() => new PageMap(book.pageRuns), [book.pageRuns]);
   // The jump's own scroll lands a frame later and mustn't unpin it: near
   // the end of the book, or with short pages, the page it settles on
   // isn't the destination.
-  const jumping = useRef(false)
+  const jumping = useRef(false);
   const jumpPdf = (pdf: number) => {
-    setPinnedPage(pdf)
-    jumping.current = true
-    pageRefs.current.get(pdf)?.scrollIntoView()
-    requestAnimationFrame(() => requestAnimationFrame(() => (jumping.current = false)))
-  }
+    setPinnedPage(pdf);
+    jumping.current = true;
+    pageRefs.current.get(pdf)?.scrollIntoView();
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => (jumping.current = false)),
+    );
+  };
   // Every page travels as its PDF page, and only a label says the
   // printed one (lib/pages): a jump is one.
-  const jump = jumpPdf
+  const jump = jumpPdf;
   const settlePage = (p: number) => {
-    setCurrentPage(p)
-    if (p !== pinnedPage && !jumping.current) setPinnedPage(null)
-  }
-  const entries = contents.data?.entries
+    setCurrentPage(p);
+    if (p !== pinnedPage && !jumping.current) setPinnedPage(null);
+  };
+  const entries = contents.data?.entries;
   // The rail holds its place while the contents load, and goes for good
   // when a book has none.
-  const showRail = !focus && (entries === undefined || entries.length > 0)
-  const panelKey = focus ? 'panelFocus' : 'panel'
-  const widths = panes.total > 0 ? layout(panes.total, panes.ratios, focus, showRail) : undefined
-  const homeworkCount = useBookHomework(book.id).data?.length ?? 0
+  const showRail = !focus && (entries === undefined || entries.length > 0);
+  const panelKey = focus ? 'panelFocus' : 'panel';
+  const widths =
+    panes.total > 0
+      ? layout(panes.total, panes.ratios, focus, showRail)
+      : undefined;
+  const homeworkCount = useBookHomework(book.id).data?.length ?? 0;
   // Time counts toward what you last touched: the panel's tab, or the
   // book itself.
-  const activity = useRef<ActivityKind>('reading')
+  const activity = useRef<ActivityKind>('reading');
   // The homework question on screen, when one is: its time is counted for it.
-  const openQuestion = useRef<string | null>(null)
-  const onQuestion = useCallback((id: string | null) => void (openQuestion.current = id), [])
+  const openQuestion = useRef<string | null>(null);
+  const onQuestion = useCallback(
+    (id: string | null) => void (openQuestion.current = id),
+    [],
+  );
   const study = useStudyTime(
     book.id,
     () => activity.current,
     () => openQuestion.current ?? undefined,
-  )
+  );
 
   return (
     <Pages value={pages}>
       <BoxingProvider
         onDone={async (target, boxes) => {
-          if (target.kind === 'add') return (await addBoxed.mutateAsync({ setId: target.setId, boxes })).id
-          await pointOut.mutateAsync({ id: target.questionId, boxes })
+          if (target.kind === 'add')
+            return (await addBoxed.mutateAsync({ setId: target.setId, boxes }))
+              .id;
+          await pointOut.mutateAsync({ id: target.questionId, boxes });
         }}
       >
         <BookHereContext
-          value={{ bookId: book.id, problems: book.problems, editBook: () => setEditingBook(true) }}
+          value={{
+            bookId: book.id,
+            problems: book.problems,
+            editBook: () => setEditingBook(true),
+          }}
         >
           <AppShell
             scroll="fill"
@@ -992,13 +1177,23 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
               <span className="flex items-center gap-2">
                 <span>{book.title}</span>
                 <Menu label="Book actions" intent={usageIntent}>
-                  <MenuItem icon={<Pencil />} onSelect={() => setEditingBook(true)}>
+                  <MenuItem
+                    icon={<Pencil />}
+                    onSelect={() => setEditingBook(true)}
+                  >
                     Edit book
                   </MenuItem>
-                  <MenuItem icon={<Brain />} onSelect={() => setMemoryOpen(true)}>
+                  <MenuItem
+                    icon={<Brain />}
+                    onSelect={() => setMemoryOpen(true)}
+                  >
                     Memory
                   </MenuItem>
-                  <MenuItem icon={<Receipt />} onSelect={() => setUsageOpen(true)} intent={usageIntent}>
+                  <MenuItem
+                    icon={<Receipt />}
+                    onSelect={() => setUsageOpen(true)}
+                    intent={usageIntent}
+                  >
                     Usage
                   </MenuItem>
                   <MenuDivider />
@@ -1007,7 +1202,9 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                     question={`Remove ${book.title}?`}
                     detail={`${plural(homeworkCount, 'homework set')}, the conversation and what the tutor remembers go with it. Importing the PDF again starts fresh.`}
                     action="Remove book"
-                    onConfirm={() => remove.mutate(book.id, { onSuccess: () => navigate('/') })}
+                    onConfirm={() =>
+                      remove.mutate(book.id, { onSuccess: () => navigate('/') })
+                    }
                   >
                     Remove book
                   </MenuConfirmItem>
@@ -1017,60 +1214,71 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
             }
           >
             <div className="flex h-full min-h-0 flex-col">
-              <div ref={panes.frame} className="flex min-h-0 flex-1" onPointerDownCapture={() => (activity.current = 'reading')}>
-              {showRail && (
-                <>
-                  {entries === undefined ? (
-                    <RailSkeleton width={widths?.rail} />
-                  ) : (
-                    <Rail toc={entries} page={pinnedPage ?? currentPage} onJump={jumpPdf} width={widths?.rail} />
-                  )}
-                  {widths && (
-                    <ResizeHandle
-                      label="Resize the contents"
-                      pane="before"
-                      value={widths.rail}
-                      min={widths.railRange[0]}
-                      max={widths.railRange[1]}
-                      onChange={(px) => panes.set('rail', px)}
-                      onCommit={panes.commit}
-                      onReset={() => panes.reset('rail')}
-                    />
-                  )}
-                </>
-              )}
-              <Scan
-                bookId={book.id}
-                aspect={book.aspect}
-                pageCount={book.pageCount}
-                currentPage={currentPage}
-                onPageChange={settlePage}
-                scrollRef={scrollRef}
-                pageRefs={pageRefs}
-              />
-              {widths && (
-                <ResizeHandle
-                  label={focus ? 'Resize the panel in Focus' : 'Resize the panel'}
-                  pane="after"
-                  value={widths.panel}
-                  min={widths.panelRange[0]}
-                  max={widths.panelRange[1]}
-                  onChange={(px) => panes.set(panelKey, px)}
-                  onCommit={panes.commit}
-                  onReset={() => panes.reset(panelKey)}
+              <div
+                ref={panes.frame}
+                className="flex min-h-0 flex-1"
+                onPointerDownCapture={() => (activity.current = 'reading')}
+              >
+                {showRail && (
+                  <>
+                    {entries === undefined ? (
+                      <RailSkeleton width={widths?.rail} />
+                    ) : (
+                      <Rail
+                        toc={entries}
+                        page={pinnedPage ?? currentPage}
+                        onJump={jumpPdf}
+                        width={widths?.rail}
+                      />
+                    )}
+                    {widths && (
+                      <ResizeHandle
+                        label="Resize the contents"
+                        pane="before"
+                        value={widths.rail}
+                        min={widths.railRange[0]}
+                        max={widths.railRange[1]}
+                        onChange={(px) => panes.set('rail', px)}
+                        onCommit={panes.commit}
+                        onReset={() => panes.reset('rail')}
+                      />
+                    )}
+                  </>
+                )}
+                <Scan
+                  bookId={book.id}
+                  aspect={book.aspect}
+                  pageCount={book.pageCount}
+                  currentPage={currentPage}
+                  onPageChange={settlePage}
+                  scrollRef={scrollRef}
+                  pageRefs={pageRefs}
                 />
-              )}
-              <Panel
-                bookId={book.id}
-                bookTitle={book.title}
-                onActive={(k) => (activity.current = k)}
-                onQuestion={onQuestion}
-                homework={homework}
-                focus={focus}
-                onFocusToggle={() => setFocus((f) => !f)}
-                onJump={jump}
-                width={widths?.panel}
-              />
+                {widths && (
+                  <ResizeHandle
+                    label={
+                      focus ? 'Resize the panel in Focus' : 'Resize the panel'
+                    }
+                    pane="after"
+                    value={widths.panel}
+                    min={widths.panelRange[0]}
+                    max={widths.panelRange[1]}
+                    onChange={(px) => panes.set(panelKey, px)}
+                    onCommit={panes.commit}
+                    onReset={() => panes.reset(panelKey)}
+                  />
+                )}
+                <Panel
+                  bookId={book.id}
+                  bookTitle={book.title}
+                  onActive={(k) => (activity.current = k)}
+                  onQuestion={onQuestion}
+                  homework={homework}
+                  focus={focus}
+                  onFocusToggle={() => setFocus((f) => !f)}
+                  onJump={jump}
+                  width={widths?.panel}
+                />
               </div>
             </div>
           </AppShell>
@@ -1083,7 +1291,11 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
             loading={bookUsage.isPending && usageOpen}
             error={bookUsage.isError}
           />
-          <MemoryDialog open={memoryOpen} bookId={book.id} onClose={() => setMemoryOpen(false)} />
+          <MemoryDialog
+            open={memoryOpen}
+            bookId={book.id}
+            onClose={() => setMemoryOpen(false)}
+          />
 
           <BookDialog
             open={editingBook}
@@ -1094,23 +1306,28 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
               problems: book.problems,
               cover: book.cover,
               pages: book.pageCount,
-              imported: new Date(book.addedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+              imported: new Date(book.addedAt).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+              }),
             }}
             onClose={() => setEditingBook(false)}
             onSave={(next) => {
               // Only what changed: a colour alone isn't an edit to the name.
-              const named = next.title !== book.title || next.author !== book.author
-              const numbered = JSON.stringify(next.runs) !== JSON.stringify(pages.runs)
+              const named =
+                next.title !== book.title || next.author !== book.author;
+              const numbered =
+                JSON.stringify(next.runs) !== JSON.stringify(pages.runs);
               update.mutate({
                 ...(named && { title: next.title, author: next.author }),
                 ...(numbered && { pageRuns: next.runs }),
                 ...(next.problems && { problems: next.problems }),
                 ...(next.cover !== book.cover && { cover: next.cover }),
-              })
+              });
             }}
           />
         </BookHereContext>
       </BoxingProvider>
     </Pages>
-  )
+  );
 }

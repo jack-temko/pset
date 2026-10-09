@@ -11,8 +11,8 @@ with the tidied filename as fallback until the model reads the real one
 off the title page (design/contents.md), **refuses up front if the chat
 model or the embeddings endpoint isn't configured** rather than failing
 forty minutes into OCR, and prepares the book in five named phases:
-*Examine the pages · Read the pages · Read the contents · Index the
-sections · Build search*. A scanned book pays for OCR; a digital one
+_Examine the pages · Read the pages · Read the contents · Index the
+sections · Build search_. A scanned book pays for OCR; a digital one
 doesn't. How the contents are read is design/contents.md (2026-09-22).
 
 ## Starting one
@@ -54,13 +54,13 @@ title (the tidied filename until the PDF's metadata, then the title
 page, replaces it), one
 line of status, and the controls for that state.
 
-| state | line | controls |
-|---|---|---|
-| queued | Queued: no spinner, nothing is happening yet | Cancel |
-| queued, a scan that stepped aside | "Queued · 140 of 312 pages read", still, no bar | Cancel |
-| preparing, can count | "Read the pages · 140 of 312 · about 12 minutes left" and a bar | Stop |
-| preparing, can't count | the phase name and a `Spinner`, then "· less than a minute left" once past imports give an estimate | Stop |
-| failed | the engine's own sentence, in destructive ink | **Try again** · Dismiss |
+| state                             | line                                                                                                | controls                |
+| --------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------- |
+| queued                            | Queued: no spinner, nothing is happening yet                                                        | Cancel                  |
+| queued, a scan that stepped aside | "Queued · 140 of 312 pages read", still, no bar                                                     | Cancel                  |
+| preparing, can count              | "Read the pages · 140 of 312 · about 12 minutes left" and a bar                                     | Stop                    |
+| preparing, can't count            | the phase name and a `Spinner`, then "· less than a minute left" once past imports give an estimate | Stop                    |
+| failed                            | the engine's own sentence, in destructive ink                                                       | **Try again** · Dismiss |
 
 - **Time left** (2026-09-22) is for the phase, never the whole import,
   in rounded words that coarsen with distance ("a few seconds", "less

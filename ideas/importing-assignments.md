@@ -17,12 +17,12 @@ the notes kept). What was left open moved to loose-ends.md.
 Homework arrives four ways, and the app takes one (typing references
 into Add questions):
 
-| Source | Shape | Book |
-|---|---|---|
-| Math 220 PDF (LaTeX) | A table: due date, `1.1: 1, 7, (4 pts each)`, notes, points | Boyce, *Differential Equations* |
-| EECS 461 PDF (groff) | A numbered list: `Problem 2.1.4, p. 57.` beside problems written out in full, changes to book problems, reading and quiz lines | Yates/Goodman, *Probability* |
-| EECS 202 web page | A semester table: lecture date, reading pages, due date, `4.27 , 4.32 , 4.25 (no PSpice or MulitSim)` | Alexander/Sadiku, *Electric Circuits* |
-| Photo, or typed text | Whatever's on the board or slide; the text box as today, reworked into this flow | any |
+| Source               | Shape                                                                                                                          | Book                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
+| Math 220 PDF (LaTeX) | A table: due date, `1.1: 1, 7, (4 pts each)`, notes, points                                                                    | Boyce, _Differential Equations_       |
+| EECS 461 PDF (groff) | A numbered list: `Problem 2.1.4, p. 57.` beside problems written out in full, changes to book problems, reading and quiz lines | Yates/Goodman, _Probability_          |
+| EECS 202 web page    | A semester table: lecture date, reading pages, due date, `4.27 , 4.32 , 4.25 (no PSpice or MulitSim)`                          | Alexander/Sadiku, _Electric Circuits_ |
+| Photo, or typed text | Whatever's on the board or slide; the text box as today, reworked into this flow                                               | any                                   |
 
 ### Decided (2026-09-25)
 

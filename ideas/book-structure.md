@@ -32,7 +32,7 @@ dialog edits the runs as rows. What follows is the plan as written.
 
 **Why.** A book has one offset (`books.page_offset`, PDF page = printed
 page + offset). A scan can drop or duplicate a page, and then the offset
-changes partway. In Boyce's *Elementary Differential Equations* printed
+changes partway. In Boyce's _Elementary Differential Equations_ printed
 page 85 is missing from the scan: PDF 96 prints "84", PDF 97 "86". The
 offset is 12 for PDF 13 to 96 and 11 from PDF 97 on. The book stores 11,
 so in chapters 1 and 2 every page chip, jump and citation is one page
@@ -75,11 +75,11 @@ and the student is asked. What follows is the plan as written.
 **Why.** Three of Jack's books, three styles, and the same digits mean
 different things in each:
 
-| Book | Printed as | Restarts | Where | Assignments say |
-|---|---|---|---|---|
-| Alexander/Sadiku, *Electric Circuits* | `4.27` | never in a chapter | end of chapter | `4.27` |
-| Boyce, *Differential Equations* | `7.` under a bare "Problems" | every section | end of each section | `1.1: 1, 7` |
-| Yates/Goodman, *Probability* | `2.1.4` (to confirm) | every section | end of chapter, grouped by section | `Problem 2.1.4, p. 57` |
+| Book                                  | Printed as                   | Restarts           | Where                              | Assignments say        |
+| ------------------------------------- | ---------------------------- | ------------------ | ---------------------------------- | ---------------------- |
+| Alexander/Sadiku, _Electric Circuits_ | `4.27`                       | never in a chapter | end of chapter                     | `4.27`                 |
+| Boyce, _Differential Equations_       | `7.` under a bare "Problems" | every section      | end of each section                | `1.1: 1, 7`            |
+| Yates/Goodman, _Probability_          | `2.1.4` (to confirm)         | every section      | end of chapter, grouped by section | `Problem 2.1.4, p. 57` |
 
 "3.1.7" is section 3.1, problem 7 in two of them and nonsense in the
 third. The finder can't read a reference until it knows.
@@ -114,6 +114,7 @@ Stored per book: the style, the example, and the confidence.
 **Weight.** ~250 lines, and two or three model calls at import.
 
 **Risks and later.**
+
 - OCR garbles numbers (`1. Oy" +8y'` is problem 11), so the text check
   must tolerate gaps and still count a section as fitting.
 - Books mix styles: an appendix with its own problems, "Supplementary

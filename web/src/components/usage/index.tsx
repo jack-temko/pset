@@ -1,23 +1,35 @@
-import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { ChevronRight } from 'lucide-react'
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { ChevronRight } from 'lucide-react';
 
-import type { Usage } from '@/api/gen/usage'
-import { prefetchUsageDetail, useUsageDetail, type UsageSource } from '@/api/usage'
-import { UsageModal } from '@/components/usage-modal'
-import { usePrefetchIntent } from '@/lib/prefetch-intent'
-import { atLeast, cost, shortModel } from '@/lib/usage-format'
-import { cn } from '@/lib/utils'
+import type { Usage } from '@/api/gen/usage';
+import {
+  prefetchUsageDetail,
+  useUsageDetail,
+  type UsageSource,
+} from '@/api/usage';
+import { UsageModal } from '@/components/usage-modal';
+import { usePrefetchIntent } from '@/lib/prefetch-intent';
+import { atLeast, cost, shortModel } from '@/lib/usage-format';
+import { cn } from '@/lib/utils';
 
 /** The line's words: the model that did the most work (and how many more
  *  served the job) and the cost; the time and tokens are in the modal. Plain
  *  inline text that wraps at its separator, never inside a figure; `after` rides on the last
  *  figure, so the trigger's chevron wraps with the last word. */
-export function UsageSummary({ usage, className, after }: { usage: Usage; className?: string; after?: React.ReactNode }) {
-  const head = usage.rows[0]
-  if (!head) return null
-  const partial = (usage.total.uncounted ?? 0) > 0
-  const more = usage.rows.length - 1
+export function UsageSummary({
+  usage,
+  className,
+  after,
+}: {
+  usage: Usage;
+  className?: string;
+  after?: React.ReactNode;
+}) {
+  const head = usage.rows[0];
+  if (!head) return null;
+  const partial = (usage.total.uncounted ?? 0) > 0;
+  const more = usage.rows.length - 1;
   return (
     <span
       title={`${usage.rows.map((r) => r.model).join(', ')}. Click for the time, tokens and every call.`}
@@ -33,7 +45,7 @@ export function UsageSummary({ usage, className, after }: { usage: Usage; classN
         {after}
       </span>
     </span>
-  )
+  );
 }
 
 /**
@@ -56,23 +68,23 @@ export function UsageTrigger({
   block,
   className,
 }: {
-  usage: Usage
-  source: UsageSource
+  usage: Usage;
+  source: UsageSource;
   /** What the modal's title names: "Problem 3.14", "Ask answer". */
-  name: string
-  detail?: React.ComponentProps<typeof UsageModal>['detail']
+  name: string;
+  detail?: React.ComponentProps<typeof UsageModal>['detail'];
   /** On a line of its own, under a guide or an answer. */
-  block?: boolean
-  className?: string
+  block?: boolean;
+  className?: string;
 }) {
-  const [open, setOpen] = useState(false)
-  const client = useQueryClient()
+  const [open, setOpen] = useState(false);
+  const client = useQueryClient();
   // Start the fetch when the pointer rests on the line, or on a press or focus,
   // so the modal usually opens with its data.
   const intent = usePrefetchIntent(() => {
-    if (detail === undefined) void prefetchUsageDetail(client, source)
-  })
-  if (!usage.rows[0]) return null
+    if (detail === undefined) void prefetchUsageDetail(client, source);
+  });
+  if (!usage.rows[0]) return null;
   return (
     <>
       <button
@@ -89,11 +101,28 @@ export function UsageTrigger({
           className,
         )}
       >
-        <UsageSummary usage={usage} after={<ChevronRight className="ml-1 inline size-3 align-[-0.1em]" aria-hidden />} />
+        <UsageSummary
+          usage={usage}
+          after={
+            <ChevronRight
+              className="ml-1 inline size-3 align-[-0.1em]"
+              aria-hidden
+            />
+          }
+        />
       </button>
-      {open && <UsageDetail open usage={usage} source={source} name={name} detail={detail} onClose={() => setOpen(false)} />}
+      {open && (
+        <UsageDetail
+          open
+          usage={usage}
+          source={source}
+          name={name}
+          detail={detail}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </>
-  )
+  );
 }
 
 /** The modal with its detail fetched: mounted only while open, so nothing
@@ -106,14 +135,14 @@ function UsageDetail({
   detail,
   onClose,
 }: {
-  open: boolean
-  usage: Usage
-  source: UsageSource
-  name: string
-  detail?: React.ComponentProps<typeof UsageModal>['detail']
-  onClose: () => void
+  open: boolean;
+  usage: Usage;
+  source: UsageSource;
+  name: string;
+  detail?: React.ComponentProps<typeof UsageModal>['detail'];
+  onClose: () => void;
 }) {
-  const q = useUsageDetail(source, open && detail === undefined)
+  const q = useUsageDetail(source, open && detail === undefined);
   return (
     <UsageModal
       open={open}
@@ -125,5 +154,5 @@ function UsageDetail({
       loading={detail === undefined && q.isPending}
       error={detail === undefined && q.isError}
     />
-  )
+  );
 }

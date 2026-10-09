@@ -13,15 +13,20 @@ set -euo pipefail
 
 cmd=${1:?start or stop}
 wt=$(cd "${2:?worktree path}" && pwd)
-topic=$(basename "$wt"); topic=${topic#pset-}
+topic=$(basename "$wt")
+topic=${topic#pset-}
 run=/tmp/pset-try-$topic
 export PATH="$HOME/.nvm/versions/node/v24.18.0/bin:$PATH:/usr/local/go/bin"
 
 free() { # first free port in a range
 	for p in $(seq "$1" "$2"); do
-		ss -ltn "( sport = :$p )" | grep -q ":$p" || { echo "$p"; return; }
+		ss -ltn "( sport = :$p )" | grep -q ":$p" || {
+			echo "$p"
+			return
+		}
 	done
-	echo "no free port in $1-$2" >&2; exit 1
+	echo "no free port in $1-$2" >&2
+	exit 1
 }
 
 stop() {
@@ -52,7 +57,8 @@ start)
 	sp=$(free 8430 8499)
 	vp=$(free 5180 5197)
 	setsid "$run/pset" -addr "127.0.0.1:$sp" -data "$wt/.dev/data" -open=false \
-		</dev/null >"$run/server.log" 2>&1 & echo $! >"$run/server.pid"
+		</dev/null >"$run/server.log" 2>&1 &
+	echo $! >"$run/server.pid"
 	for _ in $(seq 50); do
 		curl -sf "http://127.0.0.1:$sp/api/settings" >/dev/null && break
 		sleep 0.2
@@ -60,14 +66,15 @@ start)
 	if [ -s "$wt/.dev/openrouter.key" ]; then
 		key=$(tr -d '[:space:]' <"$wt/.dev/openrouter.key")
 		printf '{"apiKey":"%s"}' "$key" | curl -sf -X PUT -H 'Content-Type: application/json' \
-			--data-binary @- "http://127.0.0.1:$sp/api/settings" >/dev/null \
-			&& echo "key: saved from .dev/openrouter.key" || echo "key: save failed (see the app's Settings)"
+			--data-binary @- "http://127.0.0.1:$sp/api/settings" >/dev/null &&
+			echo "key: saved from .dev/openrouter.key" || echo "key: save failed (see the app's Settings)"
 		unset key
 	else
 		echo "key: none (no model calls; ask the keys mod for one if the change needs them)"
 	fi
 	(cd "$wt/web" && exec env PSET_API_TARGET="http://127.0.0.1:$sp" setsid npx vite --port "$vp" --strictPort) \
-		</dev/null >"$run/vite.log" 2>&1 & echo $! >"$run/vite.pid"
+		</dev/null >"$run/vite.log" 2>&1 &
+	echo $! >"$run/vite.pid"
 	for _ in $(seq 75); do
 		curl -sf "http://127.0.0.1:$vp/" >/dev/null && break
 		sleep 0.2
@@ -76,6 +83,7 @@ start)
 	echo "server: 127.0.0.1:$sp, data $wt/.dev/data, logs $run"
 	;;
 *)
-	echo "start or stop" >&2; exit 2
+	echo "start or stop" >&2
+	exit 2
 	;;
 esac

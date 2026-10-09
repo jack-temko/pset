@@ -3,10 +3,7 @@
   "$comment": "An aside the reader can skip: small, muted.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "type",
-    "text"
-  ],
+  "required": ["type", "text"],
   "properties": {
     "type": {
       "const": "note"

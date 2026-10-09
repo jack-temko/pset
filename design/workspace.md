@@ -22,7 +22,7 @@ bar's middle names the book.
 - **Focus** widens the panel to 800 by collapsing the rail and taking a
   little of the scan (2026-09-26: 440 + 320 read cramped for a
   walkthrough); the scan shrinks but stays visible. The toggle sits right of the panel's tabs.
-- The panel is always open. *(2026-09-30, R10: it used to remember per book which tab it showed; a book now always opens on Homework, at the list, and both tabs stay mounted so Ask and back keeps the place within a visit. See the redesign section below.)*
+- The panel is always open. _(2026-09-30, R10: it used to remember per book which tab it showed; a book now always opens on Homework, at the list, and both tabs stay mounted so Ask and back keeps the place within a visit. See the redesign section below.)_
 
 ## Time
 
@@ -47,7 +47,7 @@ does.
 **The numbering runs in stretches** (2026-09-25): from a PDF page on,
 PDF page = printed page + offset, until the next stretch. Most books
 have one; a scan that lost a page has two, one apart (Boyce's
-*Differential Equations* is missing printed page 85). The engine **works
+_Differential Equations_ is missing printed page 85). The engine **works
 the runs out at import** from the numbers printed in heads and feet, and
 the Book dialog can correct them. Every page travels as its PDF page;
 only `lib/pages.ts` (and `internal/pagenum` on the server) turns one into
@@ -409,9 +409,9 @@ built.
   nothing spoiled on paper. The engine renders it as a PDF (`hwpdf.go`,
   questionScale/figureScale) and it **opens in a new tab**; printing and
   saving happen there.
-- **The walkthrough header** *(2026-09-30, R7: the count is now a menu of the
+- **The walkthrough header** _(2026-09-30, R7: the count is now a menu of the
   questions, the time left sits beside it and a difficulty-weighted bar is the
-  row's bottom edge; see the redesign section)* (2026-09-21) keeps what you read: back, the
+  row's bottom edge; see the redesign section)_ (2026-09-21) keeps what you read: back, the
   set's title, "3 of 8", and a **"⋯" menu** for what you do to the set:
   Add questions, Box one on the page, Edit
   homework, Print worksheet, then **Turn in** below a
@@ -426,9 +426,9 @@ built.
 
 ### Walkthrough (2026-09-18 grill)
 
-- **One question at a time** *(2026-09-30, R6: the prev and next arrows and the
+- **One question at a time** _(2026-09-30, R6: the prev and next arrows and the
   position row are gone; the header's count opens a list of the questions and the
-  keyboard's arrows browse)*: prev/next plus a "3 of 8" position row.
+  keyboard's arrows browse)_: prev/next plus a "3 of 8" position row.
   440px is one problem's screenful; focus is the point.
 - **Statement = extracted text + figure crops** (math rendered), never a
   flat page image.
@@ -440,9 +440,9 @@ built.
   leaving out points and page hints, and **Edit** changes them; the
   guide follows them over the book, so a change writes it again. A
   question without notes shows a quiet **Add your professor's
-  instructions**. *(2026-09-30, D8 and D19: the box is read-only, and the question's
+  instructions**. _(2026-09-30, D8 and D19: the box is read-only, and the question's
   menu, Edit or Add the professor's instructions, is the one way to change
-  them; a question without notes shows nothing.)* Notes, the reading and the statement are stored as
+  them; a question without notes shows nothing.)_ Notes, the reading and the statement are stored as
   runs (math split out, KaTeX-checked); editing shows the string form,
   math in `\(..\)`, and saving sends it back as text. The Box is the same one as the figure's reading
   (`EditableLines`).
@@ -453,9 +453,9 @@ built.
   likeliest way for a guide to be wrong, so the reading is out in the
   open, where a glance against the figure catches it. It shows its
   first four lines, the rest behind a Door. It is not veiled: it says
-  what the problem is, not how to solve it. *(2026-09-30, D3: it is out only
+  what the problem is, not how to solve it. _(2026-09-30, D3: it is out only
   when the reading is flagged "Check it", or when the question's menu asks
-  for it.)*
+  for it.)_
   - **Correct** turns it into a text box, a fact a line. **Save and
     rewrite the guide** writes the guide again from the student's lines,
     which the writer is told are the student's and win over its own
@@ -504,11 +504,11 @@ built.
   boxes. Esc cancels. Done reads the words from the boxes (the statement
   and the number), keeps the figures from their own pages, and carries
   on as any found question does; a new one opens in the walkthrough.
-- **Scan jumps on demand** *(2026-09-30, R5: the page chip is gone; a **Show in
+- **Scan jumps on demand** _(2026-09-30, R5: the page chip is gone; a **Show in
   book** button on the question's label row takes the scan to the page, and
-  choosing a question still never moves it)*: a page chip in the question header; opening a
+  choosing a question still never moves it)_: a page chip in the question header; opening a
   question never moves the scan by itself.
-- **Three stages, all veiled** *(superseded 2026-09-30: rows that open in place, the Veil removed; web/src/views/homework/grill.md, D23 and R9)*: *hint*, *walkthrough* and *answers*
+- **Three stages, all veiled** _(superseded 2026-09-30: rows that open in place, the Veil removed; web/src/views/homework/grill.md, D23 and R9)_: _hint_, _walkthrough_ and _answers_
   (2026-09-29): the walkthrough carries the working, and the Answers
   veil collects every part's `answer` block, so a student can check
   paper work without seeing the working. Each sits behind frosted glass
@@ -535,10 +535,10 @@ built.
   guide yet." with **Write the guide**, which queues it. Nothing writes
   one unasked, and correcting the notes or the reading of such a
   question only saves them.
-- **Complete is a checkbox** *(2026-09-30, R1 and R2: replaced by one primary
+- **Complete is a checkbox** _(2026-09-30, R1 and R2: replaced by one primary
   button that is Next question, Mark incomplete or Skip for now; Next marks the
   question done and moves to the next unfinished one, and the last one ends on a
-  finish page. Done is still as easy to take back: Mark incomplete, in place)*, not a button, and it does exactly one
+  finish page. Done is still as easy to take back: Mark incomplete, in place)_, not a button, and it does exactly one
   thing: marks the question done. It never advances: you move on when
   you decide to, not when the app decides for you, and unchecking is
   the undo. Progress is the count of checked questions, shown in the
@@ -574,12 +574,12 @@ built.
     is** first (boxing it on the page, below), then a **Printed page**
     field and **Look there**, then "Not from this book?" to paste it and
     have the guide written from your text alone.
-  Every action is enabled; one with nothing to go on says what it needs
-  ("Type the page number first.").
+    Every action is enabled; one with nothing to go on says what it needs
+    ("Type the page number first.").
 - **Sets are editable: add, remove and reorder.** The controls sit inline
   on the question you are looking at (move up, move down, remove, as
-  quiet icon buttons beside its page chip; *since 2026-09-30, R4, they are in
-  the question's menu*) because the walkthrough is
+  quiet icon buttons beside its page chip; _since 2026-09-30, R4, they are in
+  the question's menu_) because the walkthrough is
   the only view of the set there is. **Remove asks first** (2026-09-24),
   in a confirm under the trash: "Remove 3.A.4? Its guide and your
   progress on it go with it." The confirm belongs to that question:
@@ -587,8 +587,8 @@ built.
 - **Turned in is a checkable item in the header's menu** (2026-09-21):
   the set-level twin of Complete, and like it a fact you can take back.
   It lives with the set's actions, away from Complete in the footer, so
-  the two are never confused. *(2026-09-30, R3: Turn in also appears on the
-  finish page, as its one primary; it stays in the menu, and is taken back there.)* Turned-in sets drop to their own group at the
+  the two are never confused. _(2026-09-30, R3: Turn in also appears on the
+  finish page, as its one primary; it stays in the menu, and is taken back there.)_ Turned-in sets drop to their own group at the
   list's bottom and leave Home's due list; unchecking brings them back.
 - **A list's last row adds to it** (2026-09-21, replacing a `+` on an
   "Assignments" header). The homework list has no header of its own: the

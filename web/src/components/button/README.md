@@ -3,12 +3,12 @@
 The one control for every action. Five variants, three sizes, 32px by
 default.
 
-| Variant | When |
-|---|---|
-| `primary` | The single primary action of a screen region. |
-| `outline` | A secondary action beside a primary one; Retry in error states. |
-| `secondary` | A quiet alternative: Start over, Import another. |
-| `ghost` | Toolbar and icon actions that must not draw the eye. |
+| Variant       | When                                                                                         |
+| ------------- | -------------------------------------------------------------------------------------------- |
+| `primary`     | The single primary action of a screen region.                                                |
+| `outline`     | A secondary action beside a primary one; Retry in error states.                              |
+| `secondary`   | A quiet alternative: Start over, Import another.                                             |
+| `ghost`       | Toolbar and icon actions that must not draw the eye.                                         |
 | `destructive` | Removals only: `destructive` ink on `destructive-soft`, never a solid red. Always confirmed. |
 
 Sizes are Primer's: `sm` 28px at `text-xs`, default 32px at `text-sm`, `lg`

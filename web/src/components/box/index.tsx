@@ -1,15 +1,15 @@
-import type { ComponentProps, ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import type { ComponentProps, ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
-type Tone = 'default' | 'warning' | 'destructive'
+type Tone = 'default' | 'warning' | 'destructive';
 
 const tones: Record<Tone, string> = {
   default: 'border-border bg-card',
   warning: 'border-warning bg-warning-soft',
   destructive: 'border-destructive bg-destructive-soft',
-}
+};
 
 /**
  * The one container: a bordered card surface with an optional header band,
@@ -25,11 +25,22 @@ export function Box({
   ...props
 }: ComponentProps<'div'> & { tone?: Tone }) {
   return (
-    <div className={cn('overflow-hidden rounded-md border', tones[tone], className)} {...props} />
-  )
+    <div
+      className={cn(
+        'overflow-hidden rounded-md border',
+        tones[tone],
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
-export function BoxHeader({ className, children, ...props }: ComponentProps<'div'>) {
+export function BoxHeader({
+  className,
+  children,
+  ...props
+}: ComponentProps<'div'>) {
   return (
     <div
       className={cn(
@@ -40,11 +51,11 @@ export function BoxHeader({ className, children, ...props }: ComponentProps<'div
     >
       {children}
     </div>
-  )
+  );
 }
 
 export function BoxBody({ className, ...props }: ComponentProps<'div'>) {
-  return <div className={cn('p-card text-base', className)} {...props} />
+  return <div className={cn('p-card text-base', className)} {...props} />;
 }
 
 export function BoxFooter({ className, ...props }: ComponentProps<'div'>) {
@@ -56,7 +67,7 @@ export function BoxFooter({ className, ...props }: ComponentProps<'div'>) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 /**
@@ -75,19 +86,19 @@ export function BoxRow({
   className,
   wrapDescription,
 }: {
-  leading?: ReactNode
-  title: ReactNode
-  description?: ReactNode
-  trailing?: ReactNode
-  href?: string
+  leading?: ReactNode;
+  title: ReactNode;
+  description?: ReactNode;
+  trailing?: ReactNode;
+  href?: string;
   /** Makes the whole row a button: same hover wash as a linked row. */
-  onClick?: () => void
-  selected?: boolean
-  className?: string
+  onClick?: () => void;
+  selected?: boolean;
+  className?: string;
   /** Lets the description wrap instead of truncating, for one that ends
    *  in something alive — a control whose tail must never be clipped
    *  under the ellipsis. The read row's spending line. */
-  wrapDescription?: boolean
+  wrapDescription?: boolean;
 }) {
   const content = (
     <>
@@ -99,14 +110,19 @@ export function BoxRow({
       <span className="min-w-0 flex-1">
         <span className="block truncate">{title}</span>
         {description && (
-          <span className={cn('block text-xs text-muted-foreground', !wrapDescription && 'truncate')}>
+          <span
+            className={cn(
+              'block text-xs text-muted-foreground',
+              !wrapDescription && 'truncate',
+            )}
+          >
             {description}
           </span>
         )}
       </span>
       {trailing && <span className="shrink-0">{trailing}</span>}
     </>
-  )
+  );
 
   const classes = cn(
     'flex min-h-row items-center gap-3 border-t border-border-muted px-card py-2 text-sm first:border-t-0',
@@ -115,23 +131,31 @@ export function BoxRow({
     // carry shape, and full muted (1.43:1 on card) reads as selection.
     (href || onClick) && 'cursor-pointer hover:bg-muted/50',
     className,
-  )
+  );
 
   if (href) {
     return (
-      <Link to={href} className={classes} aria-current={selected ? 'page' : undefined}>
+      <Link
+        to={href}
+        className={classes}
+        aria-current={selected ? 'page' : undefined}
+      >
         {content}
       </Link>
-    )
+    );
   }
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={cn(classes, 'w-full text-left')}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(classes, 'w-full text-left')}
+      >
         {content}
       </button>
-    )
+    );
   }
-  return <div className={classes}>{content}</div>
+  return <div className={classes}>{content}</div>;
 }
 
 /**
@@ -152,7 +176,7 @@ export function Counter({ className, ...props }: ComponentProps<'span'>) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 /** A trailing value: mono, at the floor size, figures aligned. */
@@ -162,5 +186,5 @@ export function RowValue({ className, ...props }: ComponentProps<'span'>) {
       className={cn('figure text-xs text-muted-foreground', className)}
       {...props}
     />
-  )
+  );
 }

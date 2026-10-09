@@ -23,29 +23,29 @@ Every language in the repo follows its own documented standard, enforced by one 
 
 ### Decisions
 
-| # | Decision | Why | Beat |
-|---|---|---|---|
-| D1 | Each language follows its own documented standard, with the standard tool's defaults; TS does not imitate Go | Jack: code should look identical to the other code in its language | Go-like TS; tabs-only TS |
-| D2 | Line limit is each standard's default (gofmt: none; the TS formatter's default) | Jack had no preference, and D1 says use each standard | 100 or 120 on both sides |
-| D3 | Every rule is an error that fails make check, or off; no warnings | Warnings pile up unread (23 today) | warnings allowed |
-| D4 | A Claude Code hook formats each file an agent writes | make check never fails on whitespace, and no tokens go to it | make fmt only |
-| D5 | TS follows Google TS style: Prettier output with single quotes, semicolons, 2 spaces, 80 columns | Jack's pick; keeps today's quotes | Prettier defaults (double quotes) |
-| D6 | oxfmt formats TS, JS, CSS, JSON, YAML and Markdown | Prettier's output (same 190 files changed), same Oxc toolchain as oxlint, fast enough for the edit hook | Prettier, Biome |
-| D7 | Go linters: golangci-lint v2 default set (errcheck, govet, staticcheck with all checks, unused, ineffassign) plus revive, misspell, nolintlint; gofmt and goimports as its formatters | Go's documented standards (Effective Go, Code Review Comments); about 625 findings | plus gosec/noctx/bodyclose/unparam/gocritic; default only |
-| D8 | wrapcheck and errorlint wait for the error-catalog change | It defines how errors wrap; avoids touching the same sites twice | turning them on now |
-| D9 | Every existing finding is fixed in this change | Lands at zero, so every rule is an error from day one | baseline (new-from-rev) |
-| D10 | Frontend lint: oxlint with typescript-eslint strict-type-checked rules, react, react-hooks, type-aware, all errors; `strict: true` in tsconfig | The documented rule sets on the fast tool; strict already passes | ESLint + typescript-eslint; oxlint as today |
-| D11 | Shell (shellcheck + shfmt), Markdown, YAML and JSON (oxfmt, actionlint on workflows) and an .editorconfig are all in | Jack chose all four | leaving them unchecked |
-| D12 | Jack's own commits: make fmt or his editor, and make check fails on anything unformatted; no git hook | Nothing new to install | a pre-commit hook (lefthook) |
+| #   | Decision                                                                                                                                                                              | Why                                                                                                     | Beat                                                      |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| D1  | Each language follows its own documented standard, with the standard tool's defaults; TS does not imitate Go                                                                          | Jack: code should look identical to the other code in its language                                      | Go-like TS; tabs-only TS                                  |
+| D2  | Line limit is each standard's default (gofmt: none; the TS formatter's default)                                                                                                       | Jack had no preference, and D1 says use each standard                                                   | 100 or 120 on both sides                                  |
+| D3  | Every rule is an error that fails make check, or off; no warnings                                                                                                                     | Warnings pile up unread (23 today)                                                                      | warnings allowed                                          |
+| D4  | A Claude Code hook formats each file an agent writes                                                                                                                                  | make check never fails on whitespace, and no tokens go to it                                            | make fmt only                                             |
+| D5  | TS follows Google TS style: Prettier output with single quotes, semicolons, 2 spaces, 80 columns                                                                                      | Jack's pick; keeps today's quotes                                                                       | Prettier defaults (double quotes)                         |
+| D6  | oxfmt formats TS, JS, CSS, JSON, YAML and Markdown                                                                                                                                    | Prettier's output (same 190 files changed), same Oxc toolchain as oxlint, fast enough for the edit hook | Prettier, Biome                                           |
+| D7  | Go linters: golangci-lint v2 default set (errcheck, govet, staticcheck with all checks, unused, ineffassign) plus revive, misspell, nolintlint; gofmt and goimports as its formatters | Go's documented standards (Effective Go, Code Review Comments); about 625 findings                      | plus gosec/noctx/bodyclose/unparam/gocritic; default only |
+| D8  | wrapcheck and errorlint wait for the error-catalog change                                                                                                                             | It defines how errors wrap; avoids touching the same sites twice                                        | turning them on now                                       |
+| D9  | Every existing finding is fixed in this change                                                                                                                                        | Lands at zero, so every rule is an error from day one                                                   | baseline (new-from-rev)                                   |
+| D10 | Frontend lint: oxlint with typescript-eslint strict-type-checked rules, react, react-hooks, type-aware, all errors; `strict: true` in tsconfig                                        | The documented rule sets on the fast tool; strict already passes                                        | ESLint + typescript-eslint; oxlint as today               |
+| D11 | Shell (shellcheck + shfmt), Markdown, YAML and JSON (oxfmt, actionlint on workflows) and an .editorconfig are all in                                                                  | Jack chose all four                                                                                     | leaving them unchecked                                    |
+| D12 | Jack's own commits: make fmt or his editor, and make check fails on anything unformatted; no git hook                                                                                 | Nothing new to install                                                                                  | a pre-commit hook (lefthook)                              |
 
 ### The artifact: what runs where
 
-| File type | Formatter | Linter |
-|---|---|---|
-| Go | gofmt + goimports (via `golangci-lint fmt`) | golangci-lint v2 (D7) |
-| TS, TSX, JS, CSS | oxfmt (D5) | oxlint (D10), tsc strict |
-| JSON, YAML, Markdown | oxfmt | actionlint on `.github/workflows` |
-| Shell | shfmt (defaults: tabs) | shellcheck |
+| File type            | Formatter                                   | Linter                            |
+| -------------------- | ------------------------------------------- | --------------------------------- |
+| Go                   | gofmt + goimports (via `golangci-lint fmt`) | golangci-lint v2 (D7)             |
+| TS, TSX, JS, CSS     | oxfmt (D5)                                  | oxlint (D10), tsc strict          |
+| JSON, YAML, Markdown | oxfmt                                       | actionlint on `.github/workflows` |
+| Shell                | shfmt (defaults: tabs)                      | shellcheck                        |
 
 `make fmt` rewrites, `make lint` checks formatting and runs every linter, `make check` runs `make lint` first. The Claude Code hook runs the right formatter on each file an agent writes.
 

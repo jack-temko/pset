@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/jackt/pset/internal/pagenum"
 	"io"
 	"log/slog"
 	"net/http"
@@ -14,6 +13,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/jackt/pset/internal/pagenum"
 
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"

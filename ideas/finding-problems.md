@@ -10,6 +10,7 @@ problems. Spec in `design/backend.md`, "Finding a problem starts from
 its reference". Measured with the [finder test set](finder-tests.md).
 
 Not built, and why:
+
 - **Parts** ("7c") are read and dropped: they belong with the
   [professor's notes](professor-notes.md), which the guide will follow.
 - **The parse isn't shown separately**: the question's label is the
@@ -19,7 +20,7 @@ Not built, and why:
 
 ### Why it misses today (investigated 2026-09-25)
 
-In *Elementary Differential Equations* every reference like "Chapter 3.1
+In _Elementary Differential Equations_ every reference like "Chapter 3.1
 Problem 7" failed or found the wrong problem. Four causes, from the
 code, the call log and the page text:
 
@@ -78,8 +79,8 @@ code, the call log and the page text:
    searched, rather than accepting a confident wrong answer.
 5. **Memory keyed the book's way**: Boyce's problems remembered as
    "3.1.7", so memory's ranges predict where a section's other problems
-   are. *Removed 2026-10-08: memory no longer holds problem ranges or
-   steers a find; see [memory-preferences-only](memory-preferences-only.md).*
+   are. _Removed 2026-10-08: memory no longer holds problem ranges or
+   steers a find; see [memory-preferences-only](memory-preferences-only.md)._
 
 Search stays, as the last tier, for references that name no number.
 
