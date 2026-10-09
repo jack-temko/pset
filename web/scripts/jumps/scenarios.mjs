@@ -223,7 +223,6 @@ export function scenarios({
           click('button', 'Questions'),
           { css: '[role=menuitem]', nth: q?.index, label: q?.label },
         ],
-        variant: `question/${kind}`,
         waits: kind === 'queued' || kind === 'working',
         skip: q ? undefined : `no question is ${kind}`,
       };

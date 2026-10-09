@@ -40,6 +40,14 @@ describe('variant coverage', () => {
     expect(missing).toEqual([]);
   });
 
+  it('every tag names a variant of the manifest', () => {
+    const known = new Set(variantIds());
+    const tags = scenarios(found).flatMap((s) =>
+      s.variant ? [s.variant] : [],
+    );
+    expect(tags.filter((t) => !known.has(t))).toEqual([]);
+  });
+
   it('fails for a variant nobody opens', () => {
     const tagged = new Set(scenarios(found).map((s) => s.variant));
     const manifest = { ...VARIANTS, ask: [...VARIANTS.ask, 'brand-new'] };
