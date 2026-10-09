@@ -102,7 +102,7 @@ async function runOne(browser, app, sc, mode, opts) {
       await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 60, everyNthFrame: 1 })
       // A reopen opens it, closes it with Escape and opens it again; only the
       // second open is measured (a dialog may refetch each time it mounts).
-      const again = steps[steps.length - 2]?.role === 'menuitem' ? -2 : -1
+      const again = steps[steps.length - 1]?.role === 'menuitem' ? -2 : -1
       const plan = sc.reopen ? [...steps, { key: 'Escape' }, ...steps.slice(again)] : steps
       for (const [i, step] of plan.entries()) {
         if (step.key) {
