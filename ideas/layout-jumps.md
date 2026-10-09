@@ -2,8 +2,9 @@
 
 ## Status
 
-In progress, branch `layout-jump-audit` (change 1 of 2: the audit). Change 2, the
-loading standard and its fixes, waits for the audit's first report and a grill on it.
+In progress, branch `layout-jump-audit` (change 1 of 2: the audit, built; `make jumps`
+is documented in `design/design-system.md`). Change 2, the loading standard and its
+fixes, waits for the audit's first report and a grill on it.
 
 ## Information
 

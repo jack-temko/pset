@@ -257,6 +257,20 @@ draws a **Skeleton** first: shimmering `muted` blocks at the size and
 count of what's coming, inline in real line boxes so a skeleton row and
 the row that replaces it measure the same.
 
+`make jumps` measures where this is broken. It drives the real app in Chromium over a
+copy of a library (default `~/.local/share/pset-test-library`, or `DATA=<dir>`), each screen
+and overlay twice: **real** (no added latency) and **slow** (every `/api` request held
+600ms), five runs each. It records the browser's own layout shifts (including those right
+after a click, which Chrome's CLS leaves out) and the size of every dialog, popover and menu
+as it changes, and writes `report.md` under `/tmp/pset-jumps-<topic>/<time>/`. Read the
+table worst first: **jump score** is the sum of layout-shift scores after the click or load
+(median and p95 over the runs); **overlay growth** is how many px an overlay changed from
+its first frame (height plus width), the "opens small, then grows" case; **settle** is the
+time to the last shift, resize, skeleton, spinner or request; **skeleton ms** is how long
+placeholders were on screen; **moved** names the elements that shifted. The screenshots
+below the table are the worst run's first frame and its settled frame. Spec and reasons:
+`ideas/layout-jumps.md`.
+
 **Hover fades in over 100ms** (2026-09-30, Jack: "give hover a short fade", reversing
 2026-09-25). A hover wash or ink change used to be instant, because a slower fade left a
 swept list lighting rows late and trailing behind the pointer ("It seems to jitter and flash
