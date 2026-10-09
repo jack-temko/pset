@@ -421,6 +421,15 @@ Settings screen already shows it.
 **Page scans render on demand**, per width bucket, cached under the data
 directory and served `immutable`. Zoom asks for a bigger bucket.
 
+**The test library** (2026-10-08, `tools/testlib`): a read-only snapshot of
+Jack's books at `~/.local/share/pset-test-library/`, kept outside the repo
+(the PDFs are his textbooks). It holds the books, their pages and renders,
+and his three newest homework sets per book with their questions; no turns,
+memories, activity, usage, jobs or API key. `make test-library` makes it from
+his library, which it only reads; `make seed` copies it into `.dev/data`
+(PDFs and renders hardlinked), and `try.sh start` does the same for an empty
+worktree.
+
 **Updating itself** (2026-10-02, `internal/update`, `internal/releasesign`): on a
 press of Check, `GET api.github.com/repos/jack-temko/pset/releases/latest`; on a
 press of Update, the release's `SHA256SUMS` and `SHA256SUMS.sig`, then this

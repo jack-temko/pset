@@ -105,6 +105,17 @@ no shared key: `key.txt` is retired.
   through `CLAUDE_CODE_PLUGIN_DIRS`; its spec is
   `ideas/openrouter-keys-grill.md`.
 
+## Test library
+
+`~/.local/share/pset-test-library/` is a read-only snapshot of Jack's books and
+textbooks with up to three of his newest homework sets per book (questions and
+guides included), and no key, tutor turns, memories, activity or usage. When a
+test needs a library, run `make seed` in your worktree: it copies the snapshot into
+`.dev/data` in seconds, with no model call (`try.sh start` does it for an empty
+worktree). Never use the snapshot directly or Jack's own library. `make test-library`
+refreshes the snapshot from his library (he runs it, or an agent with his OK).
+Spec: `ideas/test-library.md`.
+
 ## Skills
 
 Project skills live in `.agents/skills/<name>/` (a `SKILL.md` with `name`
