@@ -224,7 +224,7 @@ func listing(root string) (string, error) {
 
 func manifest(ctx context.Context, d *sql.DB, src, dir string) (Manifest, error) {
 	m := Manifest{MadeAt: time.Now().UTC().Format(time.RFC3339), Source: src}
-	if err := d.QueryRowContext(ctx, `SELECT coalesce(max(name), '') FROM schema_migrations`).Scan(&m.SchemaVersion); err != nil {
+	if err := d.QueryRowContext(ctx, `SELECT coalesce((SELECT name FROM schema_migrations ORDER BY applied_at DESC, rowid DESC LIMIT 1), '')`).Scan(&m.SchemaVersion); err != nil {
 		return m, err
 	}
 	rows, err := d.QueryContext(ctx, `SELECT id, title FROM books ORDER BY title`)
