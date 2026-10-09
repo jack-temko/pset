@@ -258,7 +258,9 @@ func addHomework(ctx context.Context, d *sql.DB, b book, now, at time.Time) erro
 		{"fx-hw-" + suffix + "-done", "Problem set 0", now.Add(-72 * time.Hour).Format("2006-01-02"), now.Add(-70 * time.Hour).Format(time.RFC3339)},
 	}
 	guide := blocks(`{"type":"para","text":"Start from the definition on the page the problem points to."}
-{"type":"derivation","steps":[{"tex":"a + b = c","why":"The two parts make the whole."}]}`)
+{"type":"derivation","steps":[{"tex":"a + b = c","why":"The two parts make the whole."}]}
+{"type":"answer","text":"c"}`)
+	hint := blocks(`{"type":"hint","text":"Look for the definition the problem leans on."}`)
 	ts := at.Format(time.RFC3339)
 	for si, s := range sets {
 		if _, err := d.ExecContext(ctx, `INSERT INTO homework (id, book_id, title, due_date, turned_in_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -269,13 +271,13 @@ func addHomework(ctx context.Context, d *sql.DB, b book, now, at time.Time) erro
 			qid := fmt.Sprintf("%s-q%d", s.id, i)
 			label := fmt.Sprintf("%d.%d", si+1, i)
 			text := fmt.Sprintf("Problem %s: use the book to explain the result.", label)
-			state, walk := "ready", guide
+			state, hnt, walk := "ready", hint, guide
 			if i == 3 {
-				state, walk = "unwritten", "[]"
+				state, hnt, walk = "unwritten", "[]", "[]"
 			}
 			if _, err := d.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, page, hint, walkthrough, state, difficulty, created_at, updated_at)
-				VALUES (?, ?, ?, ?, 1, ?, ?, ?, '[]', ?, ?, ?, ?, ?)`,
-				qid, s.id, i, text, label, statement(text), 1+i%b.pages, walk, state, 1+i%5, ts, ts); err != nil {
+				VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				qid, s.id, i, text, label, statement(text), 1+i%b.pages, hnt, walk, state, 1+i%5, ts, ts); err != nil {
 				return err
 			}
 			if state == "ready" {
