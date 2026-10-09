@@ -6,9 +6,9 @@
 #   try.sh stop  <worktree>   stop both
 #
 # Never port 8420 (Jack's own PSet), never his library: data is the worktree's
-# .dev/data (seeded from the test library when empty), logs and PIDs go to /tmp/pset-try-<topic>. If the worktree has a key
-# from the openrouter-keys mod (.dev/openrouter.key), it is saved into this server's
-# settings without being printed.
+# .dev/data (seeded from the test library when empty), logs and PIDs go to
+# /tmp/pset-try-<topic>. If the worktree has a key from the openrouter-keys mod
+# (.dev/openrouter.key), it is saved into this server's settings without being printed.
 set -euo pipefail
 
 cmd=${1:?start or stop}
