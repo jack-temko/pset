@@ -68,6 +68,20 @@ describe('analyzeRun', () => {
     expect(r.settleMs).toBe(600)
   })
 
+  it('keeps one series for an overlay that is renamed mid-run', () => {
+    const r = analyzeRun({
+      ...base,
+      sizes: [
+        { id: 1, name: 'dialog', named: false, t: 1050, w: 400, h: 150 },
+        { id: 1, name: 'Edit homework', named: true, t: 1300, w: 400, h: 260 },
+        { id: 1, name: 'dialog', named: false, t: 1400, w: 400, h: 260 },
+        { id: 2, name: 'Book actions menu', named: true, t: 1100, w: 243, h: 117 },
+      ],
+    })
+    expect(r.overlays).toHaveLength(2)
+    expect(r.overlays[0]).toMatchObject({ name: 'Edit homework', growthPx: 110, settleMs: 400 })
+  })
+
   it('settles when the last skeleton goes, and counts a spinner apart', () => {
     const r = analyzeRun({
       ...base,
@@ -86,6 +100,19 @@ describe('analyzeRun', () => {
   it('a skeleton still there at the end lasts to the end', () => {
     const r = analyzeRun({ ...base, frames: [{ t: 1010, skel: 1, status: 0 }] })
     expect(r.skeletonMs).toBe(2000)
+    expect(r.settleMs).toBe(2000)
+  })
+
+  it('a skeleton already on at t0 counts until it goes, or to the end', () => {
+    const gone = analyzeRun({
+      ...base,
+      frames: [
+        { t: 900, skel: 3, status: 0 },
+        { t: 1300, skel: 0, status: 0 },
+      ],
+    })
+    expect(gone.skeletonMs).toBe(300)
+    expect(analyzeRun({ ...base, frames: [{ t: 900, skel: 3, status: 0 }] }).skeletonMs).toBe(2000)
   })
 
   it('a request that ends last sets the settle time; a timeout is the whole run', () => {

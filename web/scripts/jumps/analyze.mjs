@@ -6,7 +6,8 @@
 //   timedOut  the scenario never settled
 //   origin    the page's performance.timeOrigin; probe times are origin + t
 //   shifts    [{ t, value, hadRecentInput, sources: [{ sel, prev, cur }] }]
-//   sizes     [{ name, t, w, h }]   an overlay's size each time it changed
+//   sizes     [{ id, name, named, t, w, h }]  an overlay's size each time it changed;
+//             id is stable per element, named false when name is only its role
 //   frames    [{ t, skel, status }] skeletons and spinners on screen, on change
 //   requests  [{ start, end }]      wall-clock, end null while in flight
 
@@ -68,13 +69,16 @@ export function analyzeRun(log) {
   const names = new Map()
   for (const z of [...log.sizes].sort((a, b) => a.t - b.t)) {
     if (at(z.t) < log.t0 || z.w === 0 || z.h === 0) continue
-    const list = names.get(z.name) ?? []
+    const key = z.id ?? z.name
+    const list = names.get(key) ?? []
     list.push(z)
-    names.set(z.name, list)
+    names.set(key, list)
   }
-  const overlays = [...names].map(([name, list]) => {
+  const overlays = [...names.values()].map((list) => {
     const first = list[0]
     const last = list[list.length - 1]
+    // Called by the last real name it had, else the last it had at all.
+    const name = (list.filter((z) => z.named !== false).pop() ?? last).name
     return {
       name,
       first: { w: first.w, h: first.h },

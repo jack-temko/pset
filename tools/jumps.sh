@@ -40,11 +40,21 @@ trap stop EXIT
 # logs or backups, no key.
 rm -rf "$run/data"
 mkdir -p "$run/data" "$run/$stamp"
-sqlite3 -readonly "$src/pset.db" "VACUUM INTO '$run/data/pset.db'"
+# A WAL database opened read-only still creates its -shm and -wal when no PSet
+# has it open, so then it is opened immutable, which touches nothing. With a
+# PSet running, -wal exists and the open is a plain read-only one.
+before=$(ls -A "$src")
+uri=${src// /%20}/pset.db
+if [ -e "$src/pset.db-wal" ]; then
+	sqlite3 "file:$uri?mode=ro" "VACUUM INTO '$run/data/pset.db'"
+else
+	sqlite3 "file:$uri?immutable=1" "VACUUM INTO '$run/data/pset.db'"
+fi
 for d in "$src"/*; do
 	case $(basename "$d") in pset.db*|logs|backups) continue ;; esac
 	cp -rL "$d" "$run/data/"
 done
+[ "$before" = "$(ls -A "$src")" ] || { echo "the source library's files changed; stopping" >&2; exit 1; }
 sqlite3 "$run/data/pset.db" "DELETE FROM settings WHERE key IN ('chat', 'embeddings');"
 
 (cd "$root" && go build -o "$run/pset" ./cmd/pset)

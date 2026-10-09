@@ -45,13 +45,25 @@
     if (label) return el.getAttribute('role') === 'menu' ? label + ' menu' : label
     const by = el.getAttribute('aria-labelledby')
     const text = (by && document.getElementById(by)?.textContent) || el.querySelector('h2')?.textContent
-    return (text || el.getAttribute('role') || el.tagName.toLowerCase()).trim().slice(0, 60)
+    return text ? text.trim().slice(0, 60) : ''
+  }
+  const fallback = (el) => el.getAttribute('role') || el.tagName.toLowerCase()
+  // Each overlay keeps one id, so a dialog whose title arrives with its data
+  // is still one series; `name` is what it was last called.
+  const ids = new WeakMap()
+  let nextId = 1
+  const idOf = (el) => {
+    if (!ids.has(el)) ids.set(el, nextId++)
+    return ids.get(el)
   }
   const watched = new WeakSet()
   const ro = new ResizeObserver((entries) => {
     for (const e of entries) {
-      const r = e.target.getBoundingClientRect()
-      J.sizes.push({ name: name(e.target), t: performance.now(), w: Math.round(r.width), h: Math.round(r.height) })
+      // The border box without transforms, so a menu's scale-in isn't growth.
+      const b = e.borderBoxSize?.[0]
+      const w = b ? b.inlineSize : e.target.offsetWidth
+      const h = b ? b.blockSize : e.target.offsetHeight
+      J.sizes.push({ id: idOf(e.target), name: name(e.target) || fallback(e.target), named: !!name(e.target), t: performance.now(), w: Math.round(w), h: Math.round(h) })
       J.last = performance.now()
     }
   })
