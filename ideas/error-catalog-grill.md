@@ -9,16 +9,16 @@
 
 (written at the end; decisions so far)
 
-| # | Decision | Why | Beat |
-|---|---|---|---|
-| D1 | Ids are dotted names per area (`key.out_of_credit`, `book.duplicate`) | readable in code, logs and bug reports | numeric codes, both |
-| D2 | The catalog is one Go file; the server sends id plus params; TS types and a docs page are generated from it | one place to edit | YAML data file, frontend-owned copy |
-| D3 | Every error is in scope, tied into Go error wrapping and logging, so chains can be analysed for smart descriptions | Jack: "tie deeply into the logging/go error handling" | request errors only |
-| D4 | One id per distinct cause (roughly 60 to 80) | each cause has its own fix | per call site, broad codes |
-| D5 | Message composition: what from the outermost catalog error, why and fix from the deepest catalog cause | the fix lives where the cause is known | deepest only, outermost only |
-| D6 | Every shown error gets an incident id, a structured slog line with its full chain, and a row in an errors table; a dev page lists them with counts | understand error paths later | slog only, table only |
-| D7 | The student sees a collapsed Details link with the chain's ids and the incident id, copyable | quiet when tired, there for bug reports | incident id only, nothing |
-| D8 | A general linter (frontend and backend) lands first as its own change; this change then adds a lint rule that handlers return only catalog errors, plus the internal.unexpected fallback | Jack's sequencing | this first with a test guard, both in one change |
+| #   | Decision                                                                                                                                                                                 | Why                                                   | Beat                                             |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------ |
+| D1  | Ids are dotted names per area (`key.out_of_credit`, `book.duplicate`)                                                                                                                    | readable in code, logs and bug reports                | numeric codes, both                              |
+| D2  | The catalog is one Go file; the server sends id plus params; TS types and a docs page are generated from it                                                                              | one place to edit                                     | YAML data file, frontend-owned copy              |
+| D3  | Every error is in scope, tied into Go error wrapping and logging, so chains can be analysed for smart descriptions                                                                       | Jack: "tie deeply into the logging/go error handling" | request errors only                              |
+| D4  | One id per distinct cause (roughly 60 to 80)                                                                                                                                             | each cause has its own fix                            | per call site, broad codes                       |
+| D5  | Message composition: what from the outermost catalog error, why and fix from the deepest catalog cause                                                                                   | the fix lives where the cause is known                | deepest only, outermost only                     |
+| D6  | Every shown error gets an incident id, a structured slog line with its full chain, and a row in an errors table; a dev page lists them with counts                                       | understand error paths later                          | slog only, table only                            |
+| D7  | The student sees a collapsed Details link with the chain's ids and the incident id, copyable                                                                                             | quiet when tired, there for bug reports               | incident id only, nothing                        |
+| D8  | A general linter (frontend and backend) lands first as its own change; this change then adds a lint rule that handlers return only catalog errors, plus the internal.unexpected fallback | Jack's sequencing                                     | this first with a test guard, both in one change |
 
 ## Reversals
 
@@ -41,19 +41,20 @@ Parked after batch 2. Resume here once `lint-everything` has merged into dev (re
   run:
     relative-path-mode: gomod
   linters:
-    enable: [wrapcheck, errorlint]   # added to the existing list
+    enable: [wrapcheck, errorlint] # added to the existing list
     settings:
       wrapcheck:
-        ignore-package-globs: [github.com/jackt/pset/*]   # our own errors already carry their id
+        ignore-package-globs: [github.com/jackt/pset/*] # our own errors already carry their id
         # ignore-sigs: add the catalog constructors (errs.Wrap, errs.New) once named
-      errorlint: {errorf: true, asserts: true, comparison: true}
+      errorlint: { errorf: true, asserts: true, comparison: true }
     exclusions:
       rules:
-        - {path: ^tools/, linters: [wrapcheck]}     # dev tools, never seen by a student
-        - {path: _test\.go$, linters: [wrapcheck]}
+        - { path: ^tools/, linters: [wrapcheck] } # dev tools, never seen by a student
+        - { path: _test\.go$, linters: [wrapcheck] }
   ```
 
   Size: plain wrapcheck + errorlint give 472 findings (462 + 10). With the draft: 234 (wrapcheck 224, errorlint 10: 8 `%v` for errors, 1 `==`, 1 type assertion). Wrapcheck by package: homework 75, library 49, db 17, activity 12, update 11, settings 11, jobs 10, llm 9, memory 6, ask 6, usage 5, doc 4, rest small. Most are database/sql, os and encoding/json errors returned bare; those become the catalog's lowest layer (e.g. `db.*`, `file.*`).
+
 - F8 (note) Names on `lint-everything` to use in the catalog: `llm.LLMError` is now `llm.CallError`; `usage.UsageRow`/`UsageTotal` are `Row`/`Total`; `homework.HomeworkChanged`/`HomeworkRemoved` are `SetChanged`/`SetRemoved`. revive error-strings is on: Go error strings start lowercase with no trailing period, so the catalog's display copy (sentences) must live in catalog entries, never in `error.Error()` text. errcheck is on, with new `internal/cleanup` (logs Close failures) and `internal/testx`. A `StopSubject` error now aborts the delete or rewrite that called it.
 - F7 (tail) What would make Jack regret this in a month; what he'd cut if halved.
 
