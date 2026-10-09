@@ -35,7 +35,7 @@ var (
 		Fix: "Deep fix.", Action: ActionOpenSettings, Status: 402,
 	})
 	mid = Define(Entry{ID: "test.mid", What: "The middle failed.", Status: 409})
-	top = Define(Entry{ID: "test.top", What: "Couldn't do {thing}.", Scope: Screen})
+	top = Define(Entry{ID: "test.top", What: "Couldn't do {thing}.", Scope: ScopeScreen})
 )
 
 func TestResolveComposesOuterWhatDeepestWhyAndFix(t *testing.T) {
@@ -48,7 +48,7 @@ func TestResolveComposesOuterWhatDeepestWhyAndFix(t *testing.T) {
 	if v.Why != "Deep reason for Ada." || v.Fix != "Deep fix." || v.Action != ActionOpenSettings {
 		t.Errorf("why/fix/action: %+v", v)
 	}
-	if v.Scope != Screen {
+	if v.Scope != ScopeScreen {
 		t.Errorf("scope %q: the outermost entry's", v.Scope)
 	}
 	if got := strings.Join(v.Chain, " "); got != "test.top test.mid test.deep" {
@@ -137,7 +137,7 @@ func TestReportKeepsFailuresButNotFieldErrors(t *testing.T) {
 		!strings.Contains(m.got[0].Detail, "secret detail") || m.got[0].Where.Book != "b1" {
 		t.Errorf("failure: %+v %+v", v, m.got)
 	}
-	field := Define(Entry{ID: "test.field_one", What: "Fix this.", Scope: Field})
+	field := Define(Entry{ID: "test.field_one", What: "Fix this.", Scope: ScopeField})
 	v = Report(context.Background(), field.New().OnField("name"), Where{})
 	if v.Incident != "" || len(m.got) != 1 {
 		t.Errorf("field error was kept: %+v", v)

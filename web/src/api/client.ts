@@ -32,6 +32,15 @@ function errorBody(data: unknown, status: number): WireError {
   ) {
     return data as WireError;
   }
+  // The catalog's shape (internal/errs): the sentence is its `what`.
+  if (
+    typeof data === 'object' &&
+    data !== null &&
+    'what' in data &&
+    typeof data.what === 'string'
+  ) {
+    return { code: 'internal', message: data.what };
+  }
   return { code: 'internal', message: `The server answered ${status}.` };
 }
 

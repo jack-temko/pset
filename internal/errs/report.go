@@ -66,7 +66,7 @@ func NewIncident() string {
 // a failure: it is resolved and returned, with no incident and no record.
 func Report(ctx context.Context, err error, where Where) View {
 	v := Resolve(err)
-	if v.Scope == Field {
+	if v.Scope == ScopeField {
 		return v
 	}
 	v.Incident = NewIncident()

@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/jackt/pset/internal/errs"
 )
 
 // LocalOnly makes the server answer the browser on this machine and
@@ -31,13 +33,13 @@ func LocalOnly(listen string, next http.Handler) http.Handler {
 	local := func(hostport string) bool { return isLocalName(hostname(hostport), own) }
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !local(r.Host) {
-			JSON(w, http.StatusForbidden, Errorf(CodeForbidden, "PSet answers only requests addressed to this computer (localhost)."))
+			Fail(w, r, errs.NotLocal.New())
 			return
 		}
 		if origin := r.Header.Get("Origin"); origin != "" && !safeMethod(r.Method) {
 			u, err := url.Parse(origin)
 			if err != nil || !local(u.Host) {
-				JSON(w, http.StatusForbidden, Errorf(CodeForbidden, "PSet takes changes only from its own page."))
+				Fail(w, r, errs.ForeignOrigin.New())
 				return
 			}
 		}

@@ -43,12 +43,20 @@ var (
 		Action: ActionReload,
 		Status: http.StatusNotFound,
 	})
-	// Forbidden is a request that did not come from this computer's own page.
-	Forbidden = Define(Entry{
-		ID:     "request.forbidden",
+	// NotLocal is a request addressed to a name that is not this computer.
+	NotLocal = Define(Entry{
+		ID:     "request.not_local",
 		What:   "PSet refused that request.",
-		Why:    "It didn't come from PSet's own page on this computer.",
-		Fix:    "Open PSet at its own address and try again.",
+		Why:    "PSet answers only requests addressed to this computer, as localhost.",
+		Fix:    "Open PSet at http://localhost and try again.",
+		Status: http.StatusForbidden,
+	})
+	// ForeignOrigin is a change asked for by a page that is not PSet's own.
+	ForeignOrigin = Define(Entry{
+		ID:     "request.foreign_origin",
+		What:   "PSet refused that change.",
+		Why:    "PSet takes changes only from its own page.",
+		Fix:    "Make the change from PSet's own page.",
 		Status: http.StatusForbidden,
 	})
 	// Unreachable is the server not answering at all. It is raised in the
@@ -60,6 +68,6 @@ var (
 		Why:    "The server may have stopped, or the computer went to sleep.",
 		Fix:    "Start PSet again, then try again.",
 		Action: ActionRetry,
-		Scope:  Screen,
+		Scope:  ScopeScreen,
 	})
 )

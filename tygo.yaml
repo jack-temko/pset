@@ -5,6 +5,16 @@ packages:
     enum_style: union
     output_path: web/src/api/gen/httpx.ts
     frontmatter: '// Generated from internal/httpx/wire.go by tygo. Do not edit.'
+  - path: github.com/jackt/pset/internal/errs
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/errs.ts
+    frontmatter: '// Generated from internal/errs/wire.go by tygo. Do not edit.'
+  - path: github.com/jackt/pset/internal/errlog
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/errlog.ts
+    frontmatter: '// Generated from internal/errlog/wire.go by tygo. Do not edit.'
   - path: github.com/jackt/pset/internal/settings
     include_files: [wire.go]
     enum_style: union
