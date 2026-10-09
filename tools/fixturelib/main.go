@@ -282,15 +282,33 @@ func addBook(ctx context.Context, d *sql.DB, dir string, b book, sha string, at 
 
 // addHomework adds a set that is due and one turned in, each with four
 // questions: three with a written guide and one unwritten (the finished and turned-in sets have all four written and done).
+// A homework set of the fixture and what it holds.
+type set struct {
+	id, title, due, turnedIn string
+	finished                 bool // every question marked done
+	// states gives each question its own state (one set shows every state a
+	// question can be in); empty means ready, and the third unwritten unless
+	// finished.
+	states []string
+}
+
+// addHomework adds the sets each book is given (see main): the digital book
+// has every variant of a set and of the homework list, the flat one has no
+// turned-in set (an "active" list) and an empty set.
 func addHomework(ctx context.Context, d *sql.DB, b book, now, at time.Time) error {
 	suffix := strings.TrimPrefix(b.id, "fx-")
-	sets := []struct {
-		id, title, due, turnedIn string
-		finished                 bool // every question marked done
-	}{
-		{"fx-hw-" + suffix + "-due", "Problem set 2", now.Add(36 * time.Hour).Format("2006-01-02"), "", false},
-		{"fx-hw-" + suffix + "-finished", "Problem set 1", now.Add(12 * time.Hour).Format("2006-01-02"), "", true},
-		{"fx-hw-" + suffix + "-done", "Problem set 0", now.Add(-72 * time.Hour).Format("2006-01-02"), now.Add(-70 * time.Hour).Format(time.RFC3339), true},
+	day := func(h int) string { return now.Add(time.Duration(h) * time.Hour).Format("2006-01-02") }
+	due := set{id: "fx-hw-" + suffix + "-due", title: "Problem set 2", due: day(36)}
+	finished := set{id: "fx-hw-" + suffix + "-finished", title: "Problem set 1", due: day(12), finished: true}
+	turnedIn := set{id: "fx-hw-" + suffix + "-done", title: "Problem set 0", due: day(-72), turnedIn: now.Add(-70 * time.Hour).Format(time.RFC3339), finished: true}
+	// One question in each state the engine can leave it in. Nothing is
+	// running: a queued or working one just stays so.
+	everyState := set{id: "fx-hw-" + suffix + "-states", title: "Problem set 3 (every state)", due: day(60),
+		states: []string{"ready", "unwritten", "pending", "writing", "failed"}}
+	empty := set{id: "fx-hw-" + suffix + "-empty", title: "Problem set 4 (empty)", due: day(84), states: []string{}}
+	sets := []set{due, finished, turnedIn, everyState}
+	if b.id == "fx-flat" {
+		sets = []set{due, finished, empty}
 	}
 	guide := blocks(`{"type":"para","text":"Start from the definition on the page the problem points to."}
 {"type":"derivation","steps":[{"tex":"a + b = c","why":"The two parts make the whole."}]}
@@ -302,33 +320,47 @@ func addHomework(ctx context.Context, d *sql.DB, b book, now, at time.Time) erro
 			s.id, b.id, s.title, s.due, s.turnedIn, ts, ts); err != nil {
 			return err
 		}
-		for i := 1; i <= 4; i++ {
-			qid := fmt.Sprintf("%s-q%d", s.id, i)
-			label := fmt.Sprintf("%d.%d", si+1, i)
+		states := s.states
+		if states == nil {
+			states = []string{"ready", "ready", "unwritten", "ready"}
+			if s.finished {
+				states[2] = "ready"
+			}
+		}
+		for i, state := range states {
+			n := i + 1
+			qid := fmt.Sprintf("%s-q%d", s.id, n)
+			label := fmt.Sprintf("%d.%d", si+1, n)
 			text := fmt.Sprintf("Problem %s: use the book to explain the result.", label)
-			state, hnt, walk := "ready", hint, guide
-			if i == 3 && !s.finished {
-				state, hnt, walk = "unwritten", "[]", "[]"
+			hnt, walk := hint, guide
+			if state != "ready" {
+				hnt, walk = "[]", "[]"
 			}
 			// The first two questions of a set show a figure cropped from the
 			// problem's page, with a caption, as a book's problems do.
 			figs := "[]"
-			if i <= 2 {
+			if n <= 2 {
 				figs = fmt.Sprintf(`[{"label":"Figure %s: the arrangement the problem describes","rect":{"x":0.1,"y":0.15,"w":0.8,"h":0.3}}]`, label)
 			}
 			// The current question of an unfinished set has its hint open: a
 			// figure and an open help panel, the tallest a question gets.
 			revealed := "[]"
-			if i == 1 && !s.finished {
+			if n == 1 && !s.finished {
 				revealed = `["hint"]`
 			}
-			doneAt := ""
+			doneAt, reason, failure, activity := "", "", "", ""
 			if s.finished {
 				doneAt = ts
 			}
-			if _, err := d.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, page, figures, revealed, hint, walkthrough, state, difficulty, done_at, created_at, updated_at)
-				VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				qid, s.id, i, text, label, statement(text), 1+i%b.pages, figs, revealed, hnt, walk, state, 1+i%5, doneAt, ts, ts); err != nil {
+			switch state {
+			case "failed":
+				reason, failure = "The guide could not be written.", "generation"
+			case "writing":
+				activity = "Getting started…"
+			}
+			if _, err := d.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, page, figures, revealed, hint, walkthrough, state, reason, failure, activity, difficulty, done_at, created_at, updated_at)
+				VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				qid, s.id, n, text, label, statement(text), 1+n%b.pages, figs, revealed, hnt, walk, state, reason, failure, activity, 1+n%5, doneAt, ts, ts); err != nil {
 				return err
 			}
 			if state == "ready" {

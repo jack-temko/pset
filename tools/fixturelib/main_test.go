@@ -63,20 +63,24 @@ func TestBuildHasEveryAuditTarget(t *testing.T) {
 		if n := count(t, d, `SELECT COUNT(*) FROM sections WHERE book_id = ?`, id); n == 0 {
 			t.Errorf("%s has no sections", id)
 		}
-		// One set of each variant: in progress, finished, turned in.
+		// One set of each variant: in progress, finished, turned in (the flat
+		// book has none turned in, so its list is "active"), and an empty one.
+		plain := ` AND h.id NOT LIKE '%-states' AND h.id NOT LIKE '%-empty'`
 		if n := count(t, d, `SELECT COUNT(*) FROM homework h WHERE h.book_id = ? AND h.turned_in_at = '' AND h.due_date != ''
-			AND EXISTS (SELECT 1 FROM questions q WHERE q.homework_id = h.id AND q.done_at = '')`, id); n != 1 {
+			AND EXISTS (SELECT 1 FROM questions q WHERE q.homework_id = h.id AND q.done_at = '')`+plain, id); n != 1 {
 			t.Errorf("%s: in-progress sets = %d, want 1", id, n)
 		}
 		if n := count(t, d, `SELECT COUNT(*) FROM homework h WHERE h.book_id = ? AND h.turned_in_at = ''
+			AND EXISTS (SELECT 1 FROM questions q WHERE q.homework_id = h.id)
 			AND NOT EXISTS (SELECT 1 FROM questions q WHERE q.homework_id = h.id AND q.done_at = '')`, id); n != 1 {
 			t.Errorf("%s: finished sets = %d, want 1", id, n)
 		}
-		if n := count(t, d, `SELECT COUNT(*) FROM homework WHERE book_id = ? AND turned_in_at != ''`, id); n != 1 {
-			t.Errorf("%s: turned-in sets = %d, want 1", id, n)
+		wantTurnedIn := 1
+		if id == "fx-flat" {
+			wantTurnedIn = 0
 		}
-		if n := count(t, d, `SELECT COUNT(*) FROM questions q JOIN homework h ON h.id = q.homework_id WHERE h.book_id = ?`, id); n != 12 {
-			t.Errorf("%s: questions = %d, want 12", id, n)
+		if n := count(t, d, `SELECT COUNT(*) FROM homework WHERE book_id = ? AND turned_in_at != ''`, id); n != wantTurnedIn {
+			t.Errorf("%s: turned-in sets = %d, want %d", id, n, wantTurnedIn)
 		}
 		if n := count(t, d, `SELECT COUNT(*) FROM questions q JOIN homework h ON h.id = q.homework_id WHERE h.book_id = ? AND q.state = 'unwritten'`, id); n == 0 {
 			t.Errorf("%s has no unwritten question", id)
@@ -113,6 +117,15 @@ func TestBuildHasEveryAuditTarget(t *testing.T) {
 	}
 	if n := count(t, d, `SELECT COUNT(*) FROM questions WHERE figures != '[]' AND revealed LIKE '%hint%' AND done_at = ''`); n == 0 {
 		t.Error("no unfinished question has a figure and its hint open")
+	}
+	// Every state a question can be in, in one set; and a set with no questions.
+	for _, state := range []string{"ready", "unwritten", "pending", "writing", "failed"} {
+		if n := count(t, d, `SELECT COUNT(*) FROM questions WHERE homework_id = 'fx-hw-digital-states' AND state = ?`, state); n != 1 {
+			t.Errorf("the every-state set has %d %s questions, want 1", n, state)
+		}
+	}
+	if n := count(t, d, `SELECT COUNT(*) FROM questions WHERE homework_id = 'fx-hw-flat-empty'`); n != 0 {
+		t.Errorf("the empty set has %d questions", n)
 	}
 	// The audit's usage scenarios look for a finished question and an answered
 	// turn that carry a usage line.
