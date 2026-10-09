@@ -2,7 +2,7 @@
 # Vite with /api proxied. Go lives in /usr/local/go/bin, nvm's node first.
 export PATH := $(HOME)/.nvm/versions/node/v24.18.0/bin:$(PATH):/usr/local/go/bin
 
-.PHONY: dev test-library seed gen check-gen katex-check fmt fmt-check lint test check build release jumps
+.PHONY: dev test-library seed gen check-gen katex-check fmt fmt-check lint test check build release jumps jumps-check
 
 dev:
 	go run ./tools/dev
@@ -81,6 +81,12 @@ build:
 # serves that checkout instead (npm ci there first) while this worktree measures.
 jumps:
 	tools/jumps.sh
+
+# The jump guard CI runs: the audit on the public fixture library
+# (tools/fixturelib, no key, no model), then web/scripts/jumps/check.mjs, which
+# exits 1 on any jump not in allow.json. A UI change passes this before its PR.
+jumps-check:
+	tools/jumps.sh --check
 
 # Every release file in dist/ (Linux and macOS tarballs, install.sh, SHA256SUMS):
 # make release VERSION=0.1.0
