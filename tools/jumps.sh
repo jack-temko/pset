@@ -8,7 +8,9 @@
 # The source library is only read: the database is copied with VACUUM INTO (it
 # may be open in a running PSet), the rest with cp -rL, and the saved API keys
 # are deleted from the copy before the server starts, so no model call can be
-# made. Default DATA is the test library in ~/.local/share/pset-test-library.
+# made. SRC=<checkout> builds the server and runs Vite from that checkout (a
+# detached worktree of another branch, say) while this worktree's audit
+# scripts do the measuring. Default DATA is the test library in ~/.local/share/pset-test-library.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -61,8 +63,10 @@ done
 chmod -R u+w "$run/data"
 sqlite3 "$run/data/pset.db" "DELETE FROM settings WHERE key IN ('chat', 'embeddings');"
 
-(cd "$root" && go build -o "$run/pset" ./cmd/pset)
-[ -d "$root/web/node_modules" ] || (cd "$root/web" && npm ci --silent)
+tree=$root
+[ -n "${SRC:-}" ] && tree=$(cd "$SRC" && pwd)
+(cd "$tree" && go build -o "$run/pset" ./cmd/pset)
+[ -d "$tree/web/node_modules" ] || (cd "$tree/web" && npm ci --silent)
 
 sp=$(free 8430 8499)
 vp=$(free 5180 5197)
@@ -80,7 +84,7 @@ if [ ! -s "$run/settings.json" ] || ! grep -q '"apiKey":""' "$run/settings.json"
 fi
 rm -f "$run/settings.json"
 
-(cd "$root/web" && exec env PSET_API_TARGET="http://127.0.0.1:$sp" setsid npx vite --port "$vp" --strictPort) \
+(cd "$tree/web" && exec env PSET_API_TARGET="http://127.0.0.1:$sp" setsid npx vite --port "$vp" --strictPort) \
 	</dev/null >"$run/vite.log" 2>&1 & pids+=($!)
 for _ in $(seq 75); do
 	curl -sf "http://127.0.0.1:$vp/" >/dev/null && break
