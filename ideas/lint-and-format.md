@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress. Part 1 (formatting) on branch `lint-and-format`; part 2 (linting) on a
+In progress. Part 1 (formatting) built on branch `lint-and-format`, awaiting merge; part 2 (linting) on a
 branch from `dev` once part 1 has merged. Unblocks the error-catalog change, which adds
 its rule on top of part 2.
 

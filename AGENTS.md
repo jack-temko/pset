@@ -162,6 +162,16 @@ work to `checker` or `lander` instead of doing it on Opus. Spec and reasons:
 This file is the one set of agent instructions. `CLAUDE.md` only imports
 it (`@AGENTS.md`); put nothing else there.
 
+## Format and lint
+
+Each language follows its own standard: Go through gofmt and goimports, the web
+(TS, CSS, JSON, YAML, Markdown) through oxfmt in Google TS style, shell through
+shfmt. `make fmt` rewrites the repo; `make fmt-check` fails on any diff and
+runs first in `make check`. A hook in `.claude/settings.json` formats each file
+an agent writes or edits (`tools/format-file.sh`), so `make check` should never
+fail on whitespace. Run `make fmt` before committing your own edits. Linting
+(`make lint`) comes in a second change; a `//nolint` will need a reason.
+
 ## Repo hygiene: no artifacts in the repo
 
 Never leave screenshots, console logs, traces, browser-tool output, or
