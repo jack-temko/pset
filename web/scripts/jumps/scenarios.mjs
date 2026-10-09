@@ -19,16 +19,42 @@ export async function discover(app) {
   }
   const { books } = await get('/api/books')
   let best = null
+  const sets = []
   for (const b of books) {
     const { homework } = await get(`/api/books/${b.id}/homework`)
+    for (const h of homework) sets.push(h)
     if (!best || homework.length > best.homework.length) best = { book: b, homework }
   }
+
+  // The first question that has finished with a usage line, for the
+  // "Usage details" scenarios: its set, and its place in the Questions menu.
+  let usageQuestion = null
+  for (const h of sets) {
+    const { questions } = await get(`/api/homework/${h.id}`)
+    const i = (questions ?? []).findIndex((q) => q.usage && (q.state === 'ready' || q.state === 'unwritten'))
+    if (i >= 0) {
+      usageQuestion = { set: h, index: i, label: questions[i].label }
+      break
+    }
+  }
+  // The first book with an answered Ask turn that has a usage line.
+  let askBook = null
+  for (const b of books) {
+    const { turns } = await get(`/api/books/${b.id}/turns`)
+    if ((turns ?? []).some((t) => t.usage && t.state !== 'running')) {
+      askBook = b
+      break
+    }
+  }
+
   const book = best?.book ?? null
-  const set = best?.homework.slice().sort((a, b) => b.total - a.total)[0] ?? null
-  return { book, set, home: books[0] ?? null }
+  // The set the homework scenarios use: one with a finished, costed
+  // question if there is one, else the one with the most questions.
+  const set = usageQuestion?.set ?? best?.homework.slice().sort((a, b) => b.total - a.total)[0] ?? null
+  return { book, set, home: books[0] ?? null, usageQuestion, askBook }
 }
 
-export function scenarios({ book, set }) {
+export function scenarios({ book, set, usageQuestion, askBook }) {
   const noBook = book ? undefined : 'the library has no book'
   const noSet = !book ? 'the library has no book' : set ? undefined : 'no book has a homework set'
   const noQuestions = noSet ?? (set.total > 0 ? undefined : 'the homework set has no questions')
@@ -60,21 +86,25 @@ export function scenarios({ book, set }) {
     { name: 'Add questions', url: hw, steps: [hwMenu, item('Add questions')], skip: noSet },
     { name: 'Questions menu', url: hw, steps: [click('button', 'Questions')], skip: noQuestions },
     { name: 'Question actions menu', url: hw, steps: [click('button', 'Question actions')], skip: noQuestions },
-    // Not found on a branch without them, or when no job has finished; the
-    // report then says they were skipped. Each is also opened a second time.
+    // The usage line under a finished question and under an answered Ask turn,
+    // each opened twice (the second open is its own row).
     {
       name: 'Usage details (homework set)',
-      url: hw,
-      steps: [{ css: 'button[aria-label^="Usage details for"]' }],
+      url: usageQuestion && `/books/${usageQuestion.set.bookId}/homework/${usageQuestion.set.id}`,
+      steps: [
+        click('button', 'Questions'),
+        { css: '[role=menuitem]', nth: usageQuestion?.index, label: usageQuestion?.label },
+        { css: 'button[aria-label^="Usage details for"]' },
+      ],
       twice: true,
-      skip: noSet,
+      skip: usageQuestion ? undefined : 'no homework question has a finished usage line',
     },
     {
       name: 'Usage details (Ask answer)',
-      url: b,
-      steps: [{ css: 'button[aria-label="Usage details for Ask answer"]' }],
+      url: askBook && `/books/${askBook.id}`,
+      steps: [tab('Ask'), { css: 'button[aria-label="Usage details for Ask answer"]' }],
       twice: true,
-      skip: noBook,
+      skip: askBook ? undefined : 'no book has an answered Ask turn with a usage line',
     },
     { name: 'Clear history popover', url: '/settings', steps: [click('button', 'Clear history')] },
     { name: 'Reset everything popover', url: '/settings', steps: [click('button', 'Reset everything')] },
@@ -83,7 +113,7 @@ export function scenarios({ book, set }) {
 
 /** The locator a step names. */
 export function locate(page, step) {
-  if (step.css) return step.nth === undefined ? page.locator(step.css).first() : page.locator(step.css).nth(step.nth)
+  if (step.css) return step.nth === undefined ? page.locator(step.css).filter({ visible: true }).first() : page.locator(step.css).nth(step.nth)
   if (step.text) return page.getByText(step.text, { exact: true }).first()
   return page.getByRole(step.role, { name: step.name, exact: true }).first()
 }
