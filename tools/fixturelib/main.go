@@ -1,7 +1,8 @@
 // Command fixturelib builds the public fixture library the jump guard
-// (make jumps-check, and CI) audits: two books from testdata/, each with
-// homework sets, written and unwritten guides, answered Ask turns and the
-// usage calls they cost, with no model call, no key and none of Jack's books.
+// (make jumps-check, and CI) audits: three books from testdata/ (one a scan
+// with no contents, homework or Ask turns), homework sets that are in progress,
+// finished and turned in, written and unwritten guides, answered Ask turns and
+// the usage calls they cost, with no model call, no key and none of Jack's books.
 //
 //	go run ./tools/fixturelib DATA_DIR
 //
@@ -64,6 +65,7 @@ type section struct {
 type manifest struct {
 	Digital entry `json:"digital"`
 	Flat    entry `json:"flat"`
+	Scanned entry `json:"scanned"`
 }
 
 type entry struct {
@@ -166,13 +168,19 @@ func build(ctx context.Context, dir string, now time.Time) error {
 	books := []book{
 		{id: "fx-digital", file: m.Digital.File, title: m.Digital.Title, author: m.Digital.Author, kind: "digital", pages: m.Digital.Pages, sections: sections(m.Digital.Outline, m.Digital.Pages)},
 		{id: "fx-flat", file: m.Flat.File, title: m.Flat.Title, author: m.Flat.Author, kind: "digital", pages: m.Flat.Pages, sections: sections(m.Flat.Heads, m.Flat.Pages)},
+		// A scan with no contents, no homework and no Ask turns: the empty
+		// variants of a book's views.
+		{id: "fx-scanned", file: m.Scanned.File, title: "Scanned Notes", author: "", kind: "scanned", pages: m.Scanned.Pages},
 	}
-	shas := map[string]string{"fx-digital": m.Digital.SHA, "fx-flat": m.Flat.SHA}
+	shas := map[string]string{"fx-digital": m.Digital.SHA, "fx-flat": m.Flat.SHA, "fx-scanned": m.Scanned.SHA}
 	for i, b := range books {
 		// Staggered, so the shelf has an order.
 		at := now.Add(-time.Duration(48+i*24) * time.Hour)
 		if err := addBook(ctx, d, dir, b, shas[b.id], at); err != nil {
 			return fmt.Errorf("%s: %w", b.id, err)
+		}
+		if b.kind == "scanned" {
+			continue
 		}
 		if err := addHomework(ctx, d, b, now, at); err != nil {
 			return fmt.Errorf("%s: %w", b.id, err)
@@ -248,14 +256,16 @@ func addBook(ctx context.Context, d *sql.DB, dir string, b book, sha string, at 
 }
 
 // addHomework adds a set that is due and one turned in, each with four
-// questions: three with a written guide and one unwritten.
+// questions: three with a written guide and one unwritten (the finished and turned-in sets have all four written and done).
 func addHomework(ctx context.Context, d *sql.DB, b book, now, at time.Time) error {
 	suffix := strings.TrimPrefix(b.id, "fx-")
 	sets := []struct {
 		id, title, due, turnedIn string
+		finished                 bool // every question marked done
 	}{
-		{"fx-hw-" + suffix + "-due", "Problem set 1", now.Add(36 * time.Hour).Format("2006-01-02"), ""},
-		{"fx-hw-" + suffix + "-done", "Problem set 0", now.Add(-72 * time.Hour).Format("2006-01-02"), now.Add(-70 * time.Hour).Format(time.RFC3339)},
+		{"fx-hw-" + suffix + "-due", "Problem set 2", now.Add(36 * time.Hour).Format("2006-01-02"), "", false},
+		{"fx-hw-" + suffix + "-finished", "Problem set 1", now.Add(12 * time.Hour).Format("2006-01-02"), "", true},
+		{"fx-hw-" + suffix + "-done", "Problem set 0", now.Add(-72 * time.Hour).Format("2006-01-02"), now.Add(-70 * time.Hour).Format(time.RFC3339), true},
 	}
 	guide := blocks(`{"type":"para","text":"Start from the definition on the page the problem points to."}
 {"type":"derivation","steps":[{"tex":"a + b = c","why":"The two parts make the whole."}]}
@@ -272,12 +282,16 @@ func addHomework(ctx context.Context, d *sql.DB, b book, now, at time.Time) erro
 			label := fmt.Sprintf("%d.%d", si+1, i)
 			text := fmt.Sprintf("Problem %s: use the book to explain the result.", label)
 			state, hnt, walk := "ready", hint, guide
-			if i == 3 {
+			if i == 3 && !s.finished {
 				state, hnt, walk = "unwritten", "[]", "[]"
 			}
-			if _, err := d.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, page, hint, walkthrough, state, difficulty, created_at, updated_at)
-				VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				qid, s.id, i, text, label, statement(text), 1+i%b.pages, hnt, walk, state, 1+i%5, ts, ts); err != nil {
+			doneAt := ""
+			if s.finished {
+				doneAt = ts
+			}
+			if _, err := d.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, page, hint, walkthrough, state, difficulty, done_at, created_at, updated_at)
+				VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				qid, s.id, i, text, label, statement(text), 1+i%b.pages, hnt, walk, state, 1+i%5, doneAt, ts, ts); err != nil {
 				return err
 			}
 			if state == "ready" {
