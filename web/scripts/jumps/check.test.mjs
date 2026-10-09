@@ -199,7 +199,7 @@ describe('flashes and double reveals', () => {
   });
 });
 
-describe('a tagged scenario must show its variant', () => {
+describe('a tagged scenario must show its view and variant', () => {
   const seen = (content, skeleton = []) => ({
     variantsSeen: { content, skeleton },
   });
@@ -210,28 +210,47 @@ describe('a tagged scenario must show its variant', () => {
       agg: agg({ ...seen([]), ...a }),
     });
 
-  it('passes when a box showed the variant', () => {
+  it('passes when a box showed the view and variant', () => {
     expect(
-      check(report(tagged({}, seen(['finish', 'question'])))).failed,
+      check(
+        report(
+          tagged({}, seen(['homeworkSet/finish', 'homeworkSet/question'])),
+        ),
+      ).failed,
     ).toEqual([]);
   });
   it('fails when no box did, naming what it saw', () => {
-    const { failed } = check(report(tagged({}, seen(['question']))));
+    const { failed } = check(
+      report(tagged({}, seen(['homeworkSet/question']))),
+    );
     expect(failed).toHaveLength(1);
     expect(failed[0].why[0]).toContain(
-      'no box showed the "finish" variant (saw "question")',
+      'homeworkSet/finish: no box showed that view and variant (saw "homeworkSet/question")',
     );
+  });
+  it('the name alone is not enough: another view with that variant does not count', () => {
+    expect(
+      check(report(tagged({}, seen(['homeworkList/finish'])))).failed,
+    ).toHaveLength(1);
   });
   it('fails when the page has no boxes at all', () => {
     expect(check(report(tagged({}, seen([])))).failed).toHaveLength(1);
   });
   it('a skeleton alone does not count, unless the scenario waits', () => {
-    expect(check(report(tagged({}, seen([], ['finish'])))).failed).toHaveLength(
-      1,
-    );
     expect(
-      check(report(tagged({ waits: true }, seen([], ['finish'])))).failed,
+      check(report(tagged({}, seen([], ['homeworkSet/finish'])))).failed,
+    ).toHaveLength(1);
+    expect(
+      check(report(tagged({ waits: true }, seen([], ['homeworkSet/finish']))))
+        .failed,
     ).toEqual([]);
+  });
+  it('a box with a variant but no view fails, with a clear message, on any row', () => {
+    const { failed } = check(report(row({ agg: agg(seen(['/finish'])) })));
+    expect(failed).toHaveLength(1);
+    expect(failed[0].why[0]).toBe(
+      'a box has data-variant "finish" but no data-view, so its view is unknown',
+    );
   });
   it('a row without a tag, or a skipped one, is not checked', () => {
     expect(check(report(row({ agg: agg(seen([])) }))).failed).toEqual([]);

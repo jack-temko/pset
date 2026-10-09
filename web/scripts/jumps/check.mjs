@@ -50,16 +50,33 @@ export function offences(row) {
       `never settled in ${a.timeouts} of ${a.runs} runs: ${a.waitedOn || 'something'} was still showing at the timeout`,
     );
   }
-  // A scenario tagged with a variant must have shown a box of that variant
-  // ("<view>/<name>": the name is what data-variant holds). One that waits on
-  // purpose may show it only as its skeleton or busy state.
+  // A box with a data-variant must name its view (data-view): without it a
+  // variant cannot be told from another view's of the same name.
+  const seenAll = [
+    ...(a.variantsSeen?.content ?? []),
+    ...(a.variantsSeen?.skeleton ?? []),
+  ];
+  const unviewed = [
+    ...new Set(seenAll.filter((v) => v.startsWith('/')).map((v) => v.slice(1))),
+  ];
+  for (const v of unviewed)
+    out.push(
+      `a box has data-variant "${v}" but no data-view, so its view is unknown`,
+    );
+  // A scenario tagged "<view>/<name>" must have shown a box of that view and
+  // variant. One that waits on purpose may show it only as its skeleton or
+  // busy state.
   if (row.variant && a.variantsSeen) {
-    const name = row.variant.split('/').pop();
     const seen = new Set(a.variantsSeen.content);
     if (row.waits) for (const v of a.variantsSeen.skeleton) seen.add(v);
-    if (!seen.has(name))
+    if (!seen.has(row.variant))
       out.push(
-        `${row.variant}: no box showed the "${name}" variant (saw ${[...seen].map((v) => `"${v}"`).join(', ') || 'none'}), so the scenario checked nothing`,
+        `${row.variant}: no box showed that view and variant (saw ${
+          [...seen]
+            .filter((v) => !v.startsWith('/'))
+            .map((v) => `"${v}"`)
+            .join(', ') || 'none'
+        }), so the scenario checked nothing`,
       );
   }
   for (const x of a.boxes?.fidelity ?? []) {
