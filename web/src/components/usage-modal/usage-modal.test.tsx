@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { describe, expect, it } from 'vitest'
 
 import type { BookUsage, Detail } from '@/api/gen/usage'
-import { BookUsageDialog, Fig, UsageModal } from '.'
+import { BookUsageDialog, Fig, isShape, UsageModal } from '.'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 HTMLDialogElement.prototype.showModal = function () {
@@ -64,7 +64,11 @@ describe('UsageModal', () => {
   })
 
   it('says it is loading, failed, or had no calls', () => {
-    expect(textOf(<UsageModal open onClose={noop} name="x" loading />)).toContain('Loading the details')
+    // Loading holds the layout: the totals' labels and the stages table's header, no spinner line.
+    const loading = textOf(<UsageModal open onClose={noop} name="x" loading />)
+    expect(loading).toContain('Tokens in')
+    expect(loading).toContain('Attempts')
+    expect(loading).not.toContain('Loading')
     expect(textOf(<UsageModal open onClose={noop} name="x" error />)).toContain("Couldn't load")
     expect(textOf(<UsageModal open onClose={noop} name="x" detail={null} />)).toContain('No model calls were made')
   })
@@ -227,5 +231,30 @@ describe('BookUsageDialog', () => {
     for (const k of ['Questions', 'Ask answers', 'Import']) expect(text).toContain(k)
     expect(text).toContain('Naming')
     expect(text).toContain('Contents')
+  })
+})
+
+describe('isShape', () => {
+  it('accepts a shape within the caps and nothing else', () => {
+    expect(isShape({ stages: [0, 1], runs: [[0], [1, 0]] })).toBe(true)
+    expect(isShape({ stages: Array(41).fill(0), runs: [] })).toBe(false)
+    expect(isShape({ stages: [], runs: Array(5).fill([0]) })).toBe(false)
+    expect(isShape({ stages: [2], runs: [] })).toBe(false)
+    expect(isShape([1, 2])).toBe(false)
+    expect(isShape(null)).toBe(false)
+  })
+})
+
+describe('UsageModal skeleton from the summary', () => {
+  it('draws as many call rows as the job\'s summary counts calls', () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    const summary = { rows: [], total: { ms: 1, calls: 5 }, failed: 0 }
+    act(() => root.render(<UsageModal open onClose={noop} name="x" loading summary={summary} />))
+    const calls = [...document.querySelectorAll('dialog table')].find((t) => t.querySelector('caption')?.textContent === 'Calls')
+    expect(calls?.querySelectorAll('tbody tr').length).toBe(5)
+    act(() => root.unmount())
+    host.remove()
   })
 })

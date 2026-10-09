@@ -12,6 +12,7 @@ import { Check, ChevronDown, Ellipsis } from 'lucide-react'
 
 import { Button, IconButton } from '@/components/button'
 import { ConfirmPopover } from '@/components/confirm'
+import type { PrefetchIntent } from '@/lib/prefetch-intent'
 import { cn } from '@/lib/utils'
 
 const Close = createContext<() => void>(() => {})
@@ -38,6 +39,7 @@ export function Menu({
   label,
   trigger,
   align,
+  intent,
   children,
 }: {
   /** The accessible name of the trigger and of the menu. */
@@ -46,6 +48,9 @@ export function Menu({
   trigger?: ReactNode
   /** Which edge of the trigger the card lines up with. */
   align?: 'start' | 'end'
+  /** `usePrefetchIntent`'s handlers, to warm what an item will open as the
+   *  pointer rests on the trigger. */
+  intent?: PrefetchIntent
   children: ReactNode
 }) {
   const [open, setOpen] = useState(false)
@@ -149,6 +154,7 @@ export function Menu({
           aria-label={label}
           aria-haspopup="menu"
           aria-expanded={open}
+          {...intent}
           onClick={() => setOpen((o) => !o)}
           className={cn('tabular-nums', open && 'relative z-[60] rounded-b-none border-border bg-card hover:bg-card')}
         >
@@ -163,6 +169,7 @@ export function Menu({
           aria-label={label}
           aria-haspopup="menu"
           aria-expanded={open}
+          {...intent}
           onClick={() => setOpen((o) => !o)}
           className={cn(open && 'relative z-[60] rounded-b-none border-border bg-card text-foreground hover:bg-card')}
         >
@@ -216,12 +223,15 @@ export function MenuItem({
   hint,
   current,
   onSelect,
+  intent,
   children,
 }: {
   icon?: ReactNode
   hint?: ReactNode
   current?: boolean
   onSelect: () => void
+  /** `usePrefetchIntent`'s handlers for this item. */
+  intent?: PrefetchIntent
   children: ReactNode
 }) {
   const close = useContext(Close)
@@ -231,6 +241,7 @@ export function MenuItem({
       role="menuitem"
       tabIndex={-1}
       aria-current={current || undefined}
+      {...intent}
       className={cn(item, current && 'bg-muted font-medium text-primary [&_svg]:text-primary')}
       onClick={() => {
         close()

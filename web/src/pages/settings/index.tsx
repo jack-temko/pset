@@ -22,6 +22,7 @@ import {
   useTestKey,
   type ModelUse,
 } from '@/api/settings'
+import { useLastCount } from '@/lib/last-count'
 import { useSettled, useShowPending } from '@/lib/settled'
 import { applyTheme, getTheme, type Theme } from '@/lib/theme'
 import { cn, plural } from '@/lib/utils'
@@ -460,13 +461,23 @@ function ClearActivity() {
   )
 }
 
+/** A count in a sentence that hasn't arrived: a slot as wide as the text it
+ *  showed last time, so the sentence doesn't reflow when the number lands. */
+function CountSlot({ width }: { width: number }) {
+  return <Skeleton className="h-3" style={{ width: `${width}ch` }} />
+}
+
 /** The app's one total act: everything goes, settings included, as if it
  *  had never been installed. */
 function ResetEverything() {
   const [asking, setAsking] = useState(false)
   const button = useRef<HTMLButtonElement>(null)
   const navigate = useNavigate()
-  const counts = useResetCounts(asking)
+  const counts = useResetCounts()
+  const books = counts.data && plural(counts.data.books, 'book')
+  const pages = counts.data && plural(counts.data.pages, 'page')
+  const booksWidth = useLastCount('reset-books-width', books?.length, 8)
+  const pagesWidth = useLastCount('reset-pages-width', pages?.length, 8)
   const reset = useReset()
   const resetting = useShowPending(reset)
   return (
@@ -487,11 +498,11 @@ function ResetEverything() {
             <>
               Deletes{' '}
               <span className="tabular-nums">
-                {counts.data ? plural(counts.data.books, 'book') : <Skeleton className="h-3 w-12" />}
+                {books ?? <CountSlot width={booksWidth} />}
               </span>{' '}
               and their{' '}
               <span className="tabular-nums">
-                {counts.data ? plural(counts.data.pages, 'page') : <Skeleton className="h-3 w-16" />}
+                {pages ?? <CountSlot width={pagesWidth} />}
               </span>
               , every homework set and conversation, and your settings, API key included. There's no undo.
             </>

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { get, post, put } from './client'
+import { on } from './events'
 import type {
   About,
   Health,
@@ -63,13 +64,15 @@ export function useFixCheck() {
   })
 }
 
-export const useResetCounts = (enabled: boolean) =>
+/** What a reset would delete. Fetched with the Settings page, so the
+ *  confirmation has its numbers when it opens; it refreshes when books change. */
+export const useResetCounts = () =>
   useQuery({
     queryKey: settingsKeys.resetCounts,
     queryFn: () => get<ResetCounts>('/api/reset'),
-    enabled,
-    staleTime: 0,
   })
+
+for (const type of ['book.changed', 'book.removed']) on(type, (_, qc) => void qc.invalidateQueries({ queryKey: settingsKeys.resetCounts }))
 
 /** A fresh install: the cache goes with it. */
 export function useReset() {

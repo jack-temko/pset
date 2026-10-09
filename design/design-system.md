@@ -278,6 +278,42 @@ another checkout while this worktree measures it, and
 `ARGS="--only home-cold-load,memory"` runs just those scenarios, named by slug. Spec and
 reasons: `ideas/layout-jumps.md`.
 
+**One loading standard** (2026-10-09, `ideas/loading-standard-grill.md`). Everything that
+waits on data opens at its final size and is written through one component,
+`Loaded` (`web/src/components/loaded`), which owns the skeleton, the 300ms grace, the
+fade, `aria-busy` and the error line, so screens cannot drift apart.
+
+| Surface | Before data | When it arrives |
+|---|---|---|
+| Dialog, popover | Prefetched (so far the usage dialogs and Reset everything); else opens at final size with a skeleton | 150ms crossfade in place |
+| Page section, list | Skeleton in the real layout, at the last known count | 150ms crossfade in place |
+| Value in a sentence | Prefetched; else a slot of fixed width | The number appears, nothing reflows |
+| Any wait under 300ms | Nothing drawn | Content at once |
+| Cached data | Content at once, no fade | |
+
+- **The fade is 150ms**, opacity only, ease-out (`fade-in`, `fade-out` in `index.css`), and
+  off under reduced motion. A skeleton that was seen crossfades with its content in one grid
+  cell, so no frame is empty; data inside the 300ms grace, and cached data, appear at once.
+  The skeleton itself fades in over 150ms when the grace ends. The grace is for content
+  inside a page; an overlay (`grace={false}`) shows its skeleton at once, from its first frame.
+- **Skeletons are exact, not morphed.** A height animation between a skeleton and its content
+  was tried (D9, 2026-10-09) and dropped: it jittered. The skeleton must be the content's
+  size, and the jump check (`make jumps`) reports one that isn't; the CI guard comes in part 2.
+- **Overlays prefetch**: so far only the usage dialogs, once the pointer has rested on the
+  trigger for 60ms (`usePrefetchIntent`; at once on a press or keyboard focus, never on a
+  touch hover), so the dialog usually opens complete. Usage stays cached and
+  refreshes from the event stream, so a second open is instant.
+- **A list's skeleton draws the count it showed last time**, saved per list in the browser
+  (`useLastCount`), 3 the first time.
+- **A number in a sentence** is fetched with the page; while missing, it holds a slot as
+  wide (in `ch`) as the text it showed last time.
+- **The latin and latin-ext subsets of every font start loading at app start** (`main.tsx`),
+  so none of the text and figures arrives after first paint and reflows the screen. Each
+  family has a metric-matched system fallback (`Inter Fallback` over Arial, `Newsreader
+  Fallback` over Times New Roman, `JetBrains Mono Fallback` over Courier New; `size-adjust` and
+  the ascent, descent and line-gap overrides in `index.css`) right after it in the font stack,
+  so the swap moves almost nothing.
+
 **Hover fades in over 100ms** (2026-09-30, Jack: "give hover a short fade", reversing
 2026-09-25). A hover wash or ink change used to be instant, because a slower fade left a
 swept list lighting rows late and trailing behind the pointer ("It seems to jitter and flash

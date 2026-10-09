@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowUp, Brain, ChevronRight, Columns2, Pencil, Receipt, RotateCcw, Square, Trash2 } from 'lucide-react'
@@ -13,7 +14,8 @@ import { ResizeHandle } from '@/components/resize-handle'
 import { Skeleton } from '@/components/skeleton'
 import { UsageTrigger } from '@/components/usage'
 import { BookUsageDialog } from '@/components/usage-modal'
-import { useBookUsage } from '@/api/usage'
+import { usePrefetchIntent } from '@/lib/prefetch-intent'
+import { prefetchBookUsage, useBookUsage } from '@/api/usage'
 import { BookDialog } from './dialogs'
 import { HomeworkTab } from '@/views/homework'
 import { MemoryDialog, MemoryUndo } from './memory'
@@ -927,6 +929,8 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   const [memoryOpen, setMemoryOpen] = useState(false)
   const [usageOpen, setUsageOpen] = useState(false)
   const bookUsage = useBookUsage(book.id, usageOpen)
+  const queryClient = useQueryClient()
+  const usageIntent = usePrefetchIntent(() => void prefetchBookUsage(queryClient, book.id))
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const pageRefs = useRef(new Map<number, HTMLDivElement>())
 
@@ -987,14 +991,14 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
               // homework set's included.
               <span className="flex items-center gap-2">
                 <span>{book.title}</span>
-                <Menu label="Book actions">
+                <Menu label="Book actions" intent={usageIntent}>
                   <MenuItem icon={<Pencil />} onSelect={() => setEditingBook(true)}>
                     Edit book
                   </MenuItem>
                   <MenuItem icon={<Brain />} onSelect={() => setMemoryOpen(true)}>
                     Memory
                   </MenuItem>
-                  <MenuItem icon={<Receipt />} onSelect={() => setUsageOpen(true)}>
+                  <MenuItem icon={<Receipt />} onSelect={() => setUsageOpen(true)} intent={usageIntent}>
                     Usage
                   </MenuItem>
                   <MenuDivider />
