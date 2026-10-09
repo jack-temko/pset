@@ -231,7 +231,8 @@ func TestDigitalBookImportsToReady(t *testing.T) {
 	if code := e.upload(t, "linear_algebra-notes.pdf", fixturePDF(t, 3, 12, "Linear Maps"), &up); code != 201 {
 		t.Fatalf("upload %d", code)
 	}
-	if up.Book.State.Kind != StateQueued || up.Book.Title != "linear algebra notes" {
+	// The queue's poll can pick the book up before the upload reads it back.
+	if k := up.Book.State.Kind; (k != StateQueued && k != StatePreparing) || up.Book.Title != "linear algebra notes" {
 		t.Fatalf("queued book %+v", up.Book)
 	}
 	b := e.waitFor(t, up.Book.ID, StateReady)

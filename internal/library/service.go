@@ -202,8 +202,12 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 		}
 		return Book{}, err
 	}
+	// Published before the wake, so the shelf hears "queued" before the
+	// worker's "preparing". The worker also polls, so it can still have
+	// started by the time the book is read back.
+	b, err := s.publish(ctx, id)
 	s.c.Queue.Wake()
-	return s.publish(ctx, id)
+	return b, err
 }
 
 // headSniffer keeps the first bytes of a stream, to check it's a PDF.
