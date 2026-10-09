@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
 import { GRACE_MS } from '@/lib/settled'
 import { cn } from '@/lib/utils'
@@ -85,6 +85,11 @@ export function Loaded<T>({
     return () => clearTimeout(t)
   }, [swapping])
 
+  // The content is built once per data: this component re-renders for its own
+  // state (the grace, the swap), and a big table rebuilt each time is what made
+  // the crossfade slow.
+  const content = useMemo(() => (pending ? null : children(query.data as T)), [pending, children, query.data])
+
   if (!pending && query.isError && query.data === undefined) {
     return (
       <p role="status" className="text-sm text-destructive/80">
@@ -93,7 +98,7 @@ export function Loaded<T>({
     )
   }
   return (
-    <div className="grid" aria-busy={pending || undefined}>
+    <div className="grid grid-cols-[minmax(0,1fr)]" aria-busy={pending || undefined}>
       {(pending || swapping) && (
         <div
           ref={layer}
@@ -108,7 +113,7 @@ export function Loaded<T>({
           {skeleton}
         </div>
       )}
-      <div className={cn(className, '[grid-area:1/1]', swapping && 'fade-in')}>{pending ? null : children(query.data as T)}</div>
+      <div className={cn(className, '[grid-area:1/1]', swapping && 'fade-in')}>{content}</div>
     </div>
   )
 }

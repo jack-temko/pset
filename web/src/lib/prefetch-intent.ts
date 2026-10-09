@@ -22,7 +22,9 @@ export interface PrefetchIntent {
 export function usePrefetchIntent(prefetch: () => void): PrefetchIntent {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const latest = useRef(prefetch)
-  latest.current = prefetch
+  useEffect(() => {
+    latest.current = prefetch
+  })
   const cancel = () => clearTimeout(timer.current)
   useEffect(() => cancel, [])
   const now = () => {
