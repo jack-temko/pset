@@ -23,5 +23,12 @@ Box of rows; a Table is for figures.
 
 Pass `caption`: it is the table's accessible name and is not drawn.
 
+- **`dense`** takes the cells' sides to `spacing-3`, for a table inside a
+  dialog. **Column `width`** (give some, and the table lays out fixed) makes
+  tables with the same columns line up under one another; a column with no
+  width takes what is left. A secondary line stays on one line unless its
+  column says `wrapSecondary` (an error message), so a model name never
+  breaks mid-name.
+
 **Don't:** put controls in a Table; nest one in a Table; sort or paginate
 here (neither exists yet); use it for layout.

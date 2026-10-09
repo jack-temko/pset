@@ -34,12 +34,12 @@ const usage = (over: Partial<Usage> = {}): Usage => ({
 
 describe('UsageSummary', () => {
   it('reads model, time, tokens, cost, in that order, with the other models counted', () => {
-    expect(textOf(usage())).toBe('deepseek-v4 +1·25s·11,016 tokens·$0.0047')
+    expect(textOf(usage())).toBe('deepseek-v4 +1 · 25s · 11,016 tokens · $0.0047')
   })
 
   it('marks a minimum when a call reported nothing, and says nothing for no calls', () => {
     const partial = usage({ total: { ms: 5_000, tokens: 800, cost: 0.001, calls: 2, uncounted: 1 }, rows: [{ model: 'a/b', ms: 5_000, calls: 2 }] })
-    expect(textOf(partial)).toBe('b·5.0s·≥ 800 tokens·≥ $0.0010')
+    expect(textOf(partial)).toBe('b · 5.0s · ≥ 800 tokens · ≥ $0.0010')
     expect(textOf(usage({ rows: [] }))).toBe('')
   })
 })
@@ -76,7 +76,7 @@ describe('UsageTrigger', () => {
   it('is a focusable button reading the line, and opens the details on a click', () => {
     const { host, root } = mount()
     const button = host.querySelector('button')!
-    expect(button.textContent).toBe('deepseek-v4 +1·25s·11,016 tokens·$0.0047')
+    expect(button.textContent).toBe('deepseek-v4 +1 · 25s · 11,016 tokens · $0.0047')
     expect(button.getAttribute('aria-label')).toBe('Usage details for Problem 3.14')
     expect(button.hasAttribute('data-copy-skip')).toBe(true)
     expect(document.querySelector('dialog')).toBeNull()

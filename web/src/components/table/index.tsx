@@ -13,6 +13,13 @@ export interface TableColumn<T> {
   secondary?: (row: T) => ReactNode
   /** Draw the cell in `destructive` ink on an error row. */
   errorInk?: boolean
+  /** A CSS width ("6rem"). Give some and the table lays out fixed, so
+   *  tables with the same columns line up one under another; a column with
+   *  none takes what is left. */
+  width?: string
+  /** Let the secondary line wrap, at its spaces: for text of any length (an
+   *  error). Without, it stays on one line, so a model name never breaks. */
+  wrapSecondary?: boolean
   className?: string
 }
 
@@ -24,7 +31,9 @@ export interface TableColumn<T> {
  * in `error` takes a light `destructive-soft` tint; only its secondary
  * line, and cells marked `errorInk`, read in `destructive`.
  *
- * Wide tables scroll sideways inside their own frame; the page never does.
+ * `dense` tightens the cells' sides to `spacing-3`, for a table inside a
+ * dialog. Wide tables scroll sideways inside their own frame; the page
+ * never does.
  */
 export function Table<T>({
   columns,
@@ -32,6 +41,7 @@ export function Table<T>({
   rowKey,
   error,
   caption,
+  dense,
   className,
 }: {
   columns: TableColumn<T>[]
@@ -41,19 +51,28 @@ export function Table<T>({
   error?: (row: T) => boolean
   /** The table's accessible name. */
   caption: string
+  /** Cells 12px beside, not 16px. */
+  dense?: boolean
   className?: string
 }) {
   return (
     <div className={cn('overflow-x-auto rounded-lg border bg-card', className)}>
-      <table className="w-full border-collapse text-sm">
+      <table className={cn('w-full border-collapse text-sm', columns.some((c) => c.width) && 'table-fixed')}>
         <caption className="sr-only">{caption}</caption>
+        {columns.some((c) => c.width) && (
+          <colgroup>
+            {columns.map((c) => (
+              <col key={c.key} style={c.width ? { width: c.width } : undefined} />
+            ))}
+          </colgroup>
+        )}
         <thead className="bg-card-header">
           <tr className="border-b">
             {columns.map((c) => (
               <th
                 key={c.key}
                 scope="col"
-                className={cn('px-4 py-2 text-xs font-medium whitespace-nowrap text-muted-foreground', c.numeric ? 'text-right tabular-nums' : 'text-left')}
+                className={cn(dense ? 'px-3' : 'px-4', 'py-2 text-xs font-medium whitespace-nowrap text-muted-foreground', c.numeric ? 'text-right tabular-nums' : 'text-left')}
               >
                 {c.header}
               </th>
@@ -70,10 +89,10 @@ export function Table<T>({
                   return (
                     <td
                       key={c.key}
-                      className={cn('px-4 py-2 align-top whitespace-nowrap', c.numeric && 'text-right tabular-nums', bad && c.errorInk && 'text-destructive', c.className)}
+                      className={cn(dense ? 'px-3' : 'px-4', 'py-2 align-top whitespace-nowrap', c.numeric && 'text-right tabular-nums', bad && c.errorInk && 'text-destructive', c.className)}
                     >
                       {c.cell(row)}
-                      {second != null && <div className={cn('min-w-40 text-xs whitespace-normal', bad ? 'text-destructive' : 'text-muted-foreground')}>{second}</div>}
+                      {second != null && <div className={cn('text-xs', c.wrapSecondary ? 'min-w-40 whitespace-normal' : 'whitespace-nowrap', bad ? 'text-destructive' : 'text-muted-foreground')}>{second}</div>}
                     </td>
                   )
                 })}

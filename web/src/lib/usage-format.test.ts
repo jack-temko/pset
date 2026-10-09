@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { atLeast, clock, cost, shortModel, timeOfDay, tokens } from './usage-format'
+import { atLeast, callSeconds, clock, cost, shortModel, timeOfDay, tokens } from './usage-format'
 
 describe('clock', () => {
   it.each([
@@ -72,5 +72,14 @@ describe('timeOfDay', () => {
     const at = new Date(2026, 9, 8, 14, 2, 11).toISOString()
     expect(timeOfDay(at)).toBe('14:02:11')
     expect(timeOfDay('not a time')).toBe('not a time')
+  })
+})
+
+describe('callSeconds', () => {
+  it('is seconds to the hundredth', () => {
+    expect(callSeconds(6370)).toBe('6.37s')
+    expect(callSeconds(900)).toBe('0.90s')
+    expect(callSeconds(0)).toBe('0.00s')
+    expect(callSeconds(187_004)).toBe('187.00s')
   })
 })

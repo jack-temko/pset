@@ -23,6 +23,33 @@ function render() {
   return { host, done: () => act(() => root.unmount()) }
 }
 
+describe('Table options', () => {
+  it('goes fixed when columns give widths, and tightens the cells when dense', () => {
+    const host = document.createElement('div')
+    const root = createRoot(host)
+    const cols: TableColumn<Row>[] = [{ key: 'stage', header: 'Stage', cell: (r) => r.stage }, { key: 'ms', header: 'ms', width: '5rem', numeric: true, cell: (r) => r.ms }]
+    act(() => root.render(<Table dense caption="Calls" columns={cols} rows={rows} rowKey={(r) => r.stage} />))
+    expect(host.querySelector('table')?.className).toContain('table-fixed')
+    expect(host.querySelectorAll('col')[1].style.width).toBe('5rem')
+    expect(host.querySelector('td')?.className).toContain('px-3')
+    act(() => root.unmount())
+  })
+
+  it('keeps a secondary line on one line unless its column lets it wrap', () => {
+    const host = document.createElement('div')
+    const root = createRoot(host)
+    const cols: TableColumn<Row>[] = [
+      { key: 'a', header: 'A', cell: (r) => r.stage, secondary: (r) => r.model },
+      { key: 'b', header: 'B', wrapSecondary: true, cell: (r) => r.stage, secondary: (r) => r.model },
+    ]
+    act(() => root.render(<Table caption="x" columns={cols} rows={rows} rowKey={(r) => r.stage} />))
+    const [a, b] = [...host.querySelectorAll('tbody tr:first-child td div')]
+    expect(a.className).toContain('whitespace-nowrap')
+    expect(b.className).toContain('whitespace-normal')
+    act(() => root.unmount())
+  })
+})
+
 describe('Table', () => {
   it('names itself, heads its columns, and aligns numbers right', () => {
     const { host, done } = render()

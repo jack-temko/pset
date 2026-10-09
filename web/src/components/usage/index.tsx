@@ -8,28 +8,33 @@ import { atLeast, clock, cost, shortModel, tokens } from '@/lib/usage-format'
 import { cn } from '@/lib/utils'
 
 /** The line's words: the model that did the most work (and how many more
- *  served the job), the time, the tokens, the cost. Plain text; the trigger
- *  makes it a button. Nothing without a call. */
-export function UsageSummary({ usage, className }: { usage: Usage; className?: string }) {
+ *  served the job), the time, the tokens, the cost. Plain inline text that
+ *  wraps at its separators, never inside a figure; `after` rides on the last
+ *  figure, so the trigger's chevron wraps with the last word. */
+export function UsageSummary({ usage, className, after }: { usage: Usage; className?: string; after?: React.ReactNode }) {
   const head = usage.rows[0]
   if (!head) return null
   const partial = (usage.total.uncounted ?? 0) > 0
   const more = usage.rows.length - 1
+  const dot = <span aria-hidden> · </span>
   return (
     <span
       title={`${usage.rows.map((r) => r.model).join(', ')}. Time adds up every call, so calls made at once count in full.`}
-      className={cn('inline-flex items-center gap-x-1 text-xs tabular-nums', className)}
+      className={cn('text-xs tabular-nums', className)}
     >
-      <span>
+      <span className="whitespace-nowrap">
         {shortModel(head.model)}
         {more > 0 && ` +${more}`}
       </span>
-      <span aria-hidden>·</span>
+      {dot}
       <span className="whitespace-nowrap">{clock(usage.total.ms)}</span>
-      <span aria-hidden>·</span>
+      {dot}
       <span className="whitespace-nowrap">{atLeast(tokens(usage.total.tokens), partial)} tokens</span>
-      <span aria-hidden>·</span>
-      <span className="whitespace-nowrap">{atLeast(cost(usage.total.cost), partial)}</span>
+      {dot}
+      <span className="whitespace-nowrap">
+        {atLeast(cost(usage.total.cost), partial)}
+        {after}
+      </span>
     </span>
   )
 }
@@ -74,14 +79,13 @@ export function UsageTrigger({
         aria-label={`Usage details for ${name}`}
         onClick={() => setOpen(true)}
         className={cn(
-          block ? 'flex w-fit' : 'inline-flex',
-          'max-w-full cursor-pointer items-center gap-1 rounded-sm text-left align-baseline text-muted-foreground',
+          block ? 'block' : 'inline',
+          'max-w-full cursor-pointer rounded-sm text-left text-muted-foreground',
           'hover:text-primary focus-visible:text-primary',
           className,
         )}
       >
-        <UsageSummary usage={usage} className="flex-wrap" />
-        <ChevronRight className="size-3 shrink-0" aria-hidden />
+        <UsageSummary usage={usage} after={<ChevronRight className="ml-1 inline size-3 align-[-0.1em]" aria-hidden />} />
       </button>
       {open && <Loaded open source={source} name={name} detail={detail} onClose={() => setOpen(false)} />}
     </>

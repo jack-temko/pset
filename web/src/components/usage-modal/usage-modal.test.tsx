@@ -62,6 +62,46 @@ describe('UsageModal', () => {
   })
 })
 
+describe('UsageModal layout', () => {
+  const labels = (d: Detail, sel: string) => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    act(() => root.render(<UsageModal open onClose={noop} name="x" detail={d} />))
+    const out = [...document.querySelectorAll(sel)].map((e) => e.textContent)
+    act(() => root.unmount())
+    host.remove()
+    return out
+  }
+
+  it('lays the totals out as what happened, then the tokens, leaving out counts nobody gave', () => {
+    expect(labels(detail, 'dt')).toEqual(['Time', 'Calls', 'Failed', 'Cost', 'Tokens in', 'Tokens out', 'Cached', 'Reasoning'])
+    const bare: Detail = { ...detail, total: { ...detail.total, cached: undefined, reasoning: undefined } }
+    expect(labels(bare, 'dt')).toEqual(['Time', 'Calls', 'Failed', 'Cost', 'Tokens in', 'Tokens out'])
+  })
+
+  it('shows a call as seconds to the hundredth under Time, and when it started under At', () => {
+    const d: Detail = { ...detail, runs: [{ label: 'Calls', calls: [{ id: 1, at: '2026-09-29T10:00:00Z', stage: 'Guide', asked: 'a/b', ms: 6370, cost: 0.001 }] }] }
+    const heads = labels(d, 'section:last-of-type th')
+    expect(heads.slice(0, 4)).toEqual(['At', 'Stage', 'Model', 'Time'])
+    expect(labels(d, 'section:last-of-type td')).toContain('6.37s')
+  })
+
+  it('gives every run the same fixed columns, so they line up', () => {
+    const cols = (sel: string) => labels(detail, sel)
+    expect(cols('table').length).toBeGreaterThan(1)
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    act(() => root.render(<UsageModal open onClose={noop} name="x" detail={detail} />))
+    const widths = [...document.querySelectorAll('table')].slice(1).map((t) => [...t.querySelectorAll('col')].map((c) => c.style.width).join())
+    expect(new Set(widths).size).toBe(1)
+    expect(document.querySelector('table')?.className).toContain('table-fixed')
+    act(() => root.unmount())
+    host.remove()
+  })
+})
+
 describe('UsageModal calls', () => {
   const twin = { at: '2026-09-29T10:00:00Z', stage: 'Figures', asked: 'a/b', answered: 'a/b', ms: 0 }
   it('keeps calls that look alike apart, keyed by their row', () => {

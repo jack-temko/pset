@@ -5,7 +5,7 @@ import { Button } from '@/components/button'
 import { Dialog } from '@/components/dialog'
 import { Spinner } from '@/components/spinner'
 import { Table, type TableColumn } from '@/components/table'
-import { atLeast, clock, cost, shortModel, timeOfDay, tokens } from '@/lib/usage-format'
+import { atLeast, callSeconds, clock, cost, shortModel, timeOfDay, tokens } from '@/lib/usage-format'
 import { cn } from '@/lib/utils'
 
 /** What a modal is showing: the detail, still on its way, or not coming. */
@@ -15,27 +15,30 @@ type Loaded<T> = { data?: T | null; loading?: boolean; error?: boolean }
  *  nothing, as everywhere usage is shown. */
 const figure = (n: number | undefined, partial: boolean) => atLeast(tokens(n), partial)
 
-function Totals({ total, extra = [] }: { total: DetailTotal; extra?: [string, string][] }) {
+function Totals({ total }: { total: DetailTotal }) {
   const partial = (total.uncounted ?? 0) > 0
-  const cells: [string, string][] = [
+  // Two rows of four: what happened, then the tokens. Counts a provider left
+  // out are left out, without a hole.
+  const cells: [string, string | undefined][] = [
     ['Time', clock(total.ms)],
-    ['Tokens in', figure(total.tokensIn, partial)],
-    ['Tokens out', figure(total.tokensOut, partial)],
-    ['Cost', atLeast(cost(total.cost), partial)],
     ['Calls', String(total.calls)],
     ['Failed', String(total.failed)],
+    ['Cost', atLeast(cost(total.cost), partial)],
+    ['Tokens in', figure(total.tokensIn, partial)],
+    ['Tokens out', figure(total.tokensOut, partial)],
+    ['Cached', total.cached === undefined ? undefined : figure(total.cached, partial)],
+    ['Reasoning', total.reasoning === undefined ? undefined : figure(total.reasoning, partial)],
   ]
-  // Reasoning and cached tokens only when a provider counted any.
-  if (total.reasoning !== undefined) cells.splice(3, 0, ['Reasoning', figure(total.reasoning, partial)])
-  if (total.cached !== undefined) cells.splice(3, 0, ['Cached', figure(total.cached, partial)])
   return (
-    <dl className="grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-x-4 gap-y-2 text-sm">
-      {[...extra, ...cells].map(([k, v]) => (
-        <div key={k}>
-          <dt className="text-xs text-muted-foreground">{k}</dt>
-          <dd className="font-medium tabular-nums">{v}</dd>
-        </div>
-      ))}
+    <dl className="grid grid-cols-4 gap-x-4 gap-y-2 text-sm">
+      {cells.map(([k, v]) =>
+        v === undefined ? null : (
+          <div key={k}>
+            <dt className="text-xs text-muted-foreground">{k}</dt>
+            <dd className="font-medium tabular-nums">{v}</dd>
+          </div>
+        ),
+      )}
     </dl>
   )
 }
@@ -47,12 +50,12 @@ const stageColumns: TableColumn<Stage>[] = [
     cell: (s) => s.name,
     secondary: (s) => (s.shared ? `Shared with ${s.shared} questions` : undefined),
   },
-  { key: 'attempts', header: 'Attempts', numeric: true, cell: (s) => s.attempts },
-  { key: 'calls', header: 'Calls', numeric: true, cell: (s) => s.calls },
-  { key: 'ms', header: 'Time', numeric: true, cell: (s) => clock(s.ms) },
-  { key: 'in', header: 'Tokens in', numeric: true, cell: (s) => atLeast(tokens(s.tokensIn), !!s.uncounted) },
-  { key: 'out', header: 'Tokens out', numeric: true, cell: (s) => atLeast(tokens(s.tokensOut), !!s.uncounted) },
-  { key: 'cost', header: 'Cost', numeric: true, cell: (s) => atLeast(cost(s.cost), !!s.uncounted) },
+  { key: 'attempts', header: 'Attempts', width: '5.5rem', numeric: true, cell: (s) => s.attempts },
+  { key: 'calls', header: 'Calls', width: '4.5rem', numeric: true, cell: (s) => s.calls },
+  { key: 'ms', header: 'Time', width: '5.5rem', numeric: true, cell: (s) => clock(s.ms) },
+  { key: 'in', header: 'Tokens in', width: '6.5rem', numeric: true, cell: (s) => atLeast(tokens(s.tokensIn), !!s.uncounted) },
+  { key: 'out', header: 'Tokens out', width: '6.5rem', numeric: true, cell: (s) => atLeast(tokens(s.tokensOut), !!s.uncounted) },
+  { key: 'cost', header: 'Cost', width: '6.5rem', numeric: true, cell: (s) => atLeast(cost(s.cost), !!s.uncounted) },
 ]
 
 /** One call's model: the one that answered, with the one asked for under
@@ -60,19 +63,26 @@ const stageColumns: TableColumn<Stage>[] = [
 const modelOf = (c: Call) => shortModel(c.answered || c.asked)
 
 const callColumns = (withReasoning: boolean): TableColumn<Call>[] => [
-  { key: 'at', header: 'Time', errorInk: true, cell: (c) => <span className="font-mono text-xs">{timeOfDay(c.at)}</span> },
-  { key: 'stage', header: 'Stage', cell: (c) => c.stage, secondary: (c) => c.error || (c.tools ? c.tools.split(',').join(', ') : undefined) },
+  { key: 'at', header: 'At', width: '5.5rem', errorInk: true, cell: (c) => <span className="font-mono text-xs">{timeOfDay(c.at)}</span> },
+  {
+    key: 'stage',
+    header: 'Stage',
+    width: '9.5rem',
+    wrapSecondary: true,
+    cell: (c) => c.stage,
+    secondary: (c) => c.error || (c.tools ? c.tools.split(',').join(', ') : undefined),
+  },
   {
     key: 'model',
     header: 'Model',
     cell: modelOf,
     secondary: (c) => (c.answered && c.answered !== c.asked ? `asked ${shortModel(c.asked)}` : undefined),
   },
-  { key: 'ms', header: 'ms', numeric: true, cell: (c) => c.ms.toLocaleString('en-US') },
-  { key: 'in', header: 'Tokens in', numeric: true, cell: (c) => tokens(c.tokensIn) },
-  { key: 'out', header: 'Tokens out', numeric: true, cell: (c) => tokens(c.tokensOut) },
-  ...(withReasoning ? [{ key: 'reasoning', header: 'Reasoning', numeric: true, cell: (c: Call) => tokens(c.reasoning) }] : []),
-  { key: 'cost', header: 'Cost', numeric: true, cell: (c) => cost(c.cost) },
+  { key: 'ms', header: 'Time', width: '5rem', numeric: true, cell: (c) => callSeconds(c.ms) },
+  { key: 'in', header: 'Tokens in', width: '6.5rem', numeric: true, cell: (c) => tokens(c.tokensIn) },
+  { key: 'out', header: 'Tokens out', width: '6.5rem', numeric: true, cell: (c) => tokens(c.tokensOut) },
+  ...(withReasoning ? [{ key: 'reasoning', header: 'Reasoning', width: '6rem', numeric: true, cell: (c: Call) => tokens(c.reasoning) }] : []),
+  { key: 'cost', header: 'Cost', width: '6.5rem', numeric: true, cell: (c) => cost(c.cost) },
 ]
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -92,11 +102,11 @@ function Breakdown({ detail }: { detail: Detail }) {
   return (
     <>
       <Section title="Stages">
-        <Table caption="Stages" columns={stageColumns} rows={detail.stages} rowKey={(s) => s.name} />
+        <Table dense caption="Stages" columns={stageColumns} rows={detail.stages} rowKey={(s) => s.name} />
       </Section>
       {detail.runs.map((run, i) => (
         <Section key={i} title={detail.runs.length > 1 || run.shared ? run.label : 'Calls'}>
-          <Table caption={run.label} columns={callColumns(hasReasoning)} rows={run.calls} rowKey={(c) => String(c.id)} error={(c) => !!c.error} />
+          <Table dense caption={run.label} columns={callColumns(hasReasoning)} rows={run.calls} rowKey={(c) => String(c.id)} error={(c) => !!c.error} />
         </Section>
       ))}
     </>
@@ -189,6 +199,7 @@ export function BookUsageDialog({
             <Totals total={data.total} />
             <Section title="By kind">
               <Table
+                dense
                 caption="Usage by kind"
                 columns={kindColumns}
                 rows={data.kinds}
@@ -212,10 +223,10 @@ type KindRow = BookUsage['kinds'][number]
 
 const kindColumns: TableColumn<KindRow>[] = [
   { key: 'kind', header: 'Kind', cell: (k) => kindLabels[k.kind] ?? k.kind },
-  { key: 'items', header: 'Items', numeric: true, cell: (k) => k.items },
-  { key: 'calls', header: 'Calls', numeric: true, cell: (k) => k.total.calls },
-  { key: 'ms', header: 'Time', numeric: true, cell: (k) => clock(k.total.ms) },
-  { key: 'in', header: 'Tokens in', numeric: true, cell: (k) => atLeast(tokens(k.total.tokensIn), !!k.total.uncounted) },
-  { key: 'out', header: 'Tokens out', numeric: true, cell: (k) => atLeast(tokens(k.total.tokensOut), !!k.total.uncounted) },
-  { key: 'cost', header: 'Cost', numeric: true, cell: (k) => atLeast(cost(k.total.cost), !!k.total.uncounted) },
+  { key: 'items', header: 'Items', width: '5rem', numeric: true, cell: (k) => k.items },
+  { key: 'calls', header: 'Calls', width: '4.5rem', numeric: true, cell: (k) => k.total.calls },
+  { key: 'ms', header: 'Time', width: '5.5rem', numeric: true, cell: (k) => clock(k.total.ms) },
+  { key: 'in', header: 'Tokens in', width: '6.5rem', numeric: true, cell: (k) => atLeast(tokens(k.total.tokensIn), !!k.total.uncounted) },
+  { key: 'out', header: 'Tokens out', width: '6.5rem', numeric: true, cell: (k) => atLeast(tokens(k.total.tokensOut), !!k.total.uncounted) },
+  { key: 'cost', header: 'Cost', width: '6.5rem', numeric: true, cell: (k) => atLeast(cost(k.total.cost), !!k.total.uncounted) },
 ]

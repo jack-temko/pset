@@ -57,3 +57,9 @@ export function timeOfDay(at: string): string {
   if (Number.isNaN(d.getTime())) return at
   return d.toLocaleTimeString('en-GB', { hour12: false })
 }
+
+/** One call's duration in seconds to the hundredth: "6.37s". The stages and
+ *  totals round to a readable clock; a call is the precise one. */
+export function callSeconds(ms: number): string {
+  return `${(ms / 1000).toFixed(2)}s`
+}

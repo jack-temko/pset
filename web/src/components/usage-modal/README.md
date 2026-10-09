@@ -9,9 +9,10 @@ Esc), and both hold [Tables](../table/README.md).
 
 Titled "Usage · " and the job's name ("Problem 3.14", "Ask answer"). From the top:
 
-1. **Totals**: time, tokens in and out, cost, calls, failed; cached and
-   reasoning tokens when the provider counted any (reasoning is often most
-   of a thinking model's cost).
+1. **Totals**, two rows of four: time, calls, failed, cost; then tokens in,
+   tokens out, and cached and reasoning tokens when the provider counted
+   any (reasoning is often most of a thinking model's cost), with no hole
+   where one is missing.
 2. **Stages**: stage, attempts (runs that made calls in it), calls, time,
    tokens in and out, cost. A question's are Find (Boxed read when the
    student boxed it), Figures, Guide and Rank; an Ask answer's are its tool
@@ -19,10 +20,14 @@ Titled "Usage · " and the job's name ("Problem 3.14", "Ask answer"). From the t
    belongs to no one question, so each takes an even share, marked "Shared
    with N questions", and the shares add up to the whole.
 3. **Calls**, one table for each run when the job ran more than once (a
-   retry, a rewrite after notes), else one: time of day, stage (with the
-   tools a round called, or the error), model (the one that answered, with
-   "asked X" under it when a fallback served), ms, tokens in, out and
-   reasoning, cost. A failed call is a soft red row with its reason and a
+   retry, a rewrite after notes), else one: when it started (At, time of
+   day), stage (with the tools a round called, or the error), model (the one
+   that answered, with "asked X" under it when a fallback served, never
+   wrapped mid-name), time (seconds to the hundredth, "6.37s"), tokens in,
+   out and reasoning (the column only when some call counted it), cost. The
+   tables are `dense` with the same fixed column widths, so the runs line up
+   and Cost is never cut off at the dialog's 960; sideways scroll is only the
+   fallback. A failed call is a soft red row with its reason and a
    dash for what it did not report.
 
 A question's total is everything it ever cost, every run included: the money
