@@ -93,6 +93,26 @@ looks the same everywhere.
   `VACUUM INTO`, not a plain `cp` of a live file), and the source is only ever read.
   Output defaults to `/tmp/pset-jumps-<topic>/<time>/`, never the repo.
 
+**Added after the first report (2026-10-08).**
+
+- Discovery: after each page scenario settles, `run.mjs` finds every visible `button`
+  with `aria-haspopup` or `aria-expanded` (at most 8 plain expanders a page), and in each
+  opened menu up to 5 `menuitem`s that are not destructive (delete, remove, reset, clear,
+  move, turn in, print...), and measures each as its own scenario: open, measure. Ones
+  that repeat a hand-written scenario (same last two steps) are dropped. The report lists
+  them with `discovered: <trigger label>`. `--no-discover` turns it off.
+- Skeletons and spinners count only while they intersect the viewport (`.skeleton` counts
+  as well as `[data-skeleton]`, so a branch from before the attribute can be measured). Each
+  row names what its settle waited on last: a request URL, or the skeleton, spinner,
+  overlay or shifted element's selector, the most common across the runs.
+- `SRC=<checkout>` on `make jumps` builds the server and runs Vite from that checkout while
+  this worktree's scripts measure it. Used on a detached worktree of another branch, never on
+  a worktree someone else is working in.
+- Usage dialogs (anything discovered or hand-written whose label says usage) are opened
+  twice: the second open, after Escape, is its own row ("..., second open"), since the
+  dialog may refetch each time. Two hand-written scenarios open a `Usage details for ...`
+  trigger on a homework set and on an Ask answer; they are skipped where none exists.
+
 ### Steps
 
 1. `data-skeleton` on Skeleton, and its README line.
