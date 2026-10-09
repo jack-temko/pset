@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react'
 import type { Usage } from '@/api/gen/usage'
 import { prefetchUsageDetail, useUsageDetail, type UsageSource } from '@/api/usage'
 import { UsageModal } from '@/components/usage-modal'
+import { usePrefetchIntent } from '@/lib/prefetch-intent'
 import { atLeast, cost, shortModel } from '@/lib/usage-format'
 import { cn } from '@/lib/utils'
 
@@ -66,11 +67,11 @@ export function UsageTrigger({
 }) {
   const [open, setOpen] = useState(false)
   const client = useQueryClient()
-  // Start the fetch as the pointer or focus reaches the line, so the modal
-  // usually opens with its data.
-  const prefetch = () => {
+  // Start the fetch when the pointer rests on the line, or on a press or focus,
+  // so the modal usually opens with its data.
+  const intent = usePrefetchIntent(() => {
     if (detail === undefined) void prefetchUsageDetail(client, source)
-  }
+  })
   if (!usage.rows[0]) return null
   return (
     <>
@@ -79,8 +80,7 @@ export function UsageTrigger({
         data-copy-skip
         aria-haspopup="dialog"
         aria-label={`Usage details for ${name}`}
-        onPointerEnter={prefetch}
-        onFocus={prefetch}
+        {...intent}
         onClick={() => setOpen(true)}
         className={cn(
           block ? 'block' : 'inline',

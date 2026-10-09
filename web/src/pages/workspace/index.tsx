@@ -14,6 +14,7 @@ import { ResizeHandle } from '@/components/resize-handle'
 import { Skeleton } from '@/components/skeleton'
 import { UsageTrigger } from '@/components/usage'
 import { BookUsageDialog } from '@/components/usage-modal'
+import { usePrefetchIntent } from '@/lib/prefetch-intent'
 import { prefetchBookUsage, useBookUsage } from '@/api/usage'
 import { BookDialog } from './dialogs'
 import { HomeworkTab } from '@/views/homework'
@@ -929,7 +930,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   const [usageOpen, setUsageOpen] = useState(false)
   const bookUsage = useBookUsage(book.id, usageOpen)
   const queryClient = useQueryClient()
-  const prefetchUsage = () => void prefetchBookUsage(queryClient, book.id)
+  const usageIntent = usePrefetchIntent(() => void prefetchBookUsage(queryClient, book.id))
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const pageRefs = useRef(new Map<number, HTMLDivElement>())
 
@@ -990,14 +991,14 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
               // homework set's included.
               <span className="flex items-center gap-2">
                 <span>{book.title}</span>
-                <Menu label="Book actions" onPrefetch={prefetchUsage}>
+                <Menu label="Book actions" intent={usageIntent}>
                   <MenuItem icon={<Pencil />} onSelect={() => setEditingBook(true)}>
                     Edit book
                   </MenuItem>
                   <MenuItem icon={<Brain />} onSelect={() => setMemoryOpen(true)}>
                     Memory
                   </MenuItem>
-                  <MenuItem icon={<Receipt />} onSelect={() => setUsageOpen(true)} onPrefetch={prefetchUsage}>
+                  <MenuItem icon={<Receipt />} onSelect={() => setUsageOpen(true)} intent={usageIntent}>
                     Usage
                   </MenuItem>
                   <MenuDivider />

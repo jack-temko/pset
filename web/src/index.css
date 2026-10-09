@@ -3,6 +3,38 @@
 @import "@fontsource-variable/newsreader";
 @import "@fontsource-variable/jetbrains-mono";
 
+/* Fallbacks for the three web fonts, sized to match them: until a font arrives
+   the text is drawn in a system face scaled and spaced like it, so the swap
+   moves nothing. The numbers come from each family's real metrics against the
+   system face (average character width for size-adjust; ascent, descent and
+   line gap divided by it), worked out once with @capsizecss/metrics; no
+   runtime dependency. The Liberation faces stand in on Linux, where they are
+   metric-compatible with Arial, Times New Roman and Courier New. */
+@font-face {
+    font-family: "Inter Fallback";
+    src: local("Arial"), local("Liberation Sans"), local("Helvetica");
+    size-adjust: 107.12%;
+    ascent-override: 90.44%;
+    descent-override: 22.52%;
+    line-gap-override: 0%;
+}
+@font-face {
+    font-family: "Newsreader Fallback";
+    src: local("Times New Roman"), local("Liberation Serif"), local("Times");
+    size-adjust: 105.48%;
+    ascent-override: 69.68%;
+    descent-override: 25.12%;
+    line-gap-override: 0%;
+}
+@font-face {
+    font-family: "JetBrains Mono Fallback";
+    src: local("Courier New"), local("Liberation Mono"), local("Courier");
+    size-adjust: 99.98%;
+    ascent-override: 102.02%;
+    descent-override: 30%;
+    line-gap-override: 0%;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 /* ── Ink & Paper v2 ───────────────────────────────────────────────────────
@@ -12,9 +44,9 @@
    ──────────────────────────────────────────────────────────────────────── */
 
 @theme inline {
-    --font-heading: "Newsreader Variable", ui-serif, Georgia, serif;
-    --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-    --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, monospace;
+    --font-heading: "Newsreader Variable", "Newsreader Fallback", ui-serif, Georgia, serif;
+    --font-sans: "Inter Variable", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono Variable", "JetBrains Mono Fallback", ui-monospace, SFMono-Regular, monospace;
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
