@@ -6,7 +6,7 @@
 #   try.sh stop  <worktree>   stop both
 #
 # Never port 8420 (Jack's own PSet), never his library: data is the worktree's
-# .dev/data (seeded from the test library when it has none), logs and PIDs go to /tmp/pset-try-<topic>. If the worktree has a key
+# .dev/data (seeded from the test library when empty), logs and PIDs go to /tmp/pset-try-<topic>. If the worktree has a key
 # from the openrouter-keys mod (.dev/openrouter.key), it is saved into this server's
 # settings without being printed.
 set -euo pipefail
@@ -43,7 +43,7 @@ start)
 	(cd "$wt" && go build -o "$run/pset" ./cmd/pset)
 	if [ ! -f "$wt/.dev/data/pset.db" ]; then
 		if [ -f "$HOME/.local/share/pset-test-library/pset.db" ]; then
-			(cd "$wt" && go run ./tools/testlib seed .dev/data) && echo "library: seeded from the test library"
+			(cd "$wt" && go run ./tools/testlib seed .dev/data) && echo "library: seeded from the test library" || echo "library: seed failed, starting empty"
 		else
 			echo "library: empty (no test library; Jack makes one with 'make test-library')"
 		fi

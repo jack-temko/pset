@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/jackt/pset/internal/activity"
@@ -83,8 +85,8 @@ func fixture(t *testing.T) (string, *sql.DB) {
 	exec(t, d, `INSERT INTO calls (at, subject_type, subject_id, model, ms) VALUES (?, 'turn', 't1', 'm', 1)`, ts)
 	exec(t, d, `INSERT INTO forgotten (subject_type, subject_id, at) VALUES ('turn', 't0', ?)`, ts)
 	exec(t, d, `INSERT INTO jobs (id, kind, lane, state, created_at, updated_at) VALUES ('j1', 'k', 'l', 'queued', ?, ?)`, ts, ts)
-	exec(t, d, `INSERT INTO settings (key, value, updated_at) VALUES ('chat', '{"model":"m/one","apiKey":"sk-secret"}', ?)`, ts)
-	exec(t, d, `INSERT INTO settings (key, value, updated_at) VALUES ('embeddings', '{"endpoint":"http://localhost:11434","model":"e/one","api_key":"sk-embed","accessToken":"tok"}', ?)`, ts)
+	exec(t, d, `INSERT INTO settings (key, value, updated_at) VALUES ('chat', '{"model":"m/one","apiKey":"sk-secret-00000000000"}', ?)`, ts)
+	exec(t, d, `INSERT INTO settings (key, value, updated_at) VALUES ('embeddings', '{"endpoint":"http://localhost:11434","model":"e/one","api_key":"sk-embed-0000000000000","accessToken":"tok-1234567890","nested":{"auth":{"password":"pw-1234567890"},"list":[{"secret":"scrt-1234567890","ok":"fine"}]}}', ?)`, ts)
 	exec(t, d, `INSERT INTO settings (key, value, updated_at) VALUES ('profile', '{"name":"Sam"}', ?)`, ts)
 	return dir, d
 }
@@ -93,14 +95,36 @@ func TestStripKeepsTheSampleAndDropsTheRest(t *testing.T) {
 	ctx := context.Background()
 	dir, d := fixture(t)
 
-	if err := Check(ctx, d, dir); err == nil {
+	file := filepath.Join(dir, "pset.db")
+	if err := Check(ctx, d, dir, file, nil); err == nil {
 		t.Fatal("check passed on a db still holding a key")
 	}
-	if err := Strip(ctx, d); err != nil {
+	exec(t, d, `UPDATE questions SET state = 'writing', activity = 'busy', page = 3 WHERE id = 'q5'`)
+	exec(t, d, `UPDATE questions SET state = 'locating' WHERE id = 'q4'`)
+	exec(t, d, `UPDATE questions SET state = 'reading' WHERE id = 'q1'`)
+	secrets, err := Strip(ctx, d)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Check(ctx, d, dir); err != nil {
+	if len(secrets) != 5 {
+		t.Errorf("removed %d secret values, want 5", len(secrets))
+	}
+	exec(t, d, `PRAGMA journal_mode = DELETE`)
+	if err := Check(ctx, d, dir, file, secrets); err != nil {
 		t.Fatal(err)
+	}
+	// The same file with a secret put back is caught by the byte scan.
+	if err := Check(ctx, d, dir, file, []string{"books"}); err == nil {
+		t.Error("check passed with a removed secret still in the file")
+	}
+	var st5, st4 string
+	d.QueryRow(`SELECT state FROM questions WHERE id = 'q5'`).Scan(&st5)
+	d.QueryRow(`SELECT state FROM questions WHERE id = 'q4'`).Scan(&st4)
+	if st5 != "located" || st4 != "pending" {
+		t.Errorf("in-flight questions are %s and %s, want located and pending", st5, st4)
+	}
+	if n := count(t, d, `SELECT count(*) FROM questions WHERE activity != ''`); n != 0 {
+		t.Errorf("%d questions keep their activity", n)
 	}
 
 	if n := count(t, d, `SELECT count(*) FROM books`); n != 1 {
@@ -130,12 +154,12 @@ func TestStripKeepsTheSampleAndDropsTheRest(t *testing.T) {
 	if err := d.QueryRow(`SELECT group_concat(value) FROM settings`).Scan(&v); err != nil {
 		t.Fatal(err)
 	}
-	for _, keep := range []string{"m/one", "e/one", "http://localhost:11434", "Sam"} {
+	for _, keep := range []string{"m/one", "e/one", "http://localhost:11434", "Sam", "fine"} {
 		if !strings.Contains(v, keep) {
 			t.Errorf("non-secret setting %q lost", keep)
 		}
 	}
-	for _, gone := range []string{"apiKey", "sk-secret", "api_key", "sk-embed", "accessToken", "tok\""} {
+	for _, gone := range []string{"apiKey", "sk-secret", "api_key", "sk-embed", "accessToken", "tok-", "pw-", "scrt-", "auth", "\"secret\""} {
 		if strings.Contains(v, gone) {
 			t.Errorf("secret %q still in settings", gone)
 		}
@@ -144,11 +168,107 @@ func TestStripKeepsTheSampleAndDropsTheRest(t *testing.T) {
 
 func TestCheckFailsOnAMissingPDF(t *testing.T) {
 	dir, d := fixture(t)
-	if err := Strip(context.Background(), d); err != nil {
+	if _, err := Strip(context.Background(), d); err != nil {
 		t.Fatal(err)
 	}
 	os.Remove(filepath.Join(dir, "books", "b1.pdf"))
-	if err := Check(context.Background(), d, dir); err == nil {
+	if err := Check(context.Background(), d, dir, filepath.Join(dir, "pset.db"), nil); err == nil {
 		t.Fatal("check passed with a book missing its PDF")
 	}
+}
+
+// snapshotTree is every file under root with its mode and size, for comparing.
+func snapshotTree(t *testing.T, root string) string {
+	t.Helper()
+	var b strings.Builder
+	filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
+		if err != nil {
+			t.Fatal(err)
+		}
+		st, _ := e.Info()
+		fmt.Fprintf(&b, "%s %v %d %d\n", p, st.Mode(), st.Size(), st.ModTime().UnixNano())
+		return nil
+	})
+	return b.String()
+}
+
+func TestSnapshotThenSeed(t *testing.T) {
+	ctx := context.Background()
+	src, d := fixture(t)
+	if err := os.MkdirAll(filepath.Join(src, "cache", "pages", "b1"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "cache", "pages", "b1", "1.png"), []byte("png"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Exec(`PRAGMA journal_mode = DELETE`); err != nil {
+		t.Fatal(err)
+	}
+	d.Close()
+	before := snapshotTree(t, src)
+
+	root := t.TempDir()
+	snap := filepath.Join(root, "lib")
+	t.Cleanup(func() { makeWritable(root) })
+	if err := snapshot([]string{"-from", src, "-to", snap}); err != nil {
+		t.Fatal(err)
+	}
+	if after := snapshotTree(t, src); after != before {
+		t.Errorf("the source changed:\n%s\n--\n%s", before, after)
+	}
+	snapBefore := snapshotTree(t, snap)
+
+	data := filepath.Join(root, "data")
+	if err := seed([]string{data, "-from", snap}); err != nil {
+		t.Fatal(err)
+	}
+	if after := snapshotTree(t, snap); after != snapBefore {
+		t.Errorf("seeding changed the snapshot")
+	}
+	for _, f := range []string{"books/b1.pdf", "cache/pages/b1/1.png"} {
+		st, err := os.Stat(filepath.Join(data, f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n := st.Sys().(*syscall.Stat_t).Nlink; n != 2 {
+			t.Errorf("%s has %d links, want 2", f, n)
+		}
+	}
+	for _, f := range []string{"pset.db", "books/b1.pdf"} {
+		if st, _ := os.Stat(filepath.Join(snap, f)); st.Mode().Perm()&0o222 != 0 {
+			t.Errorf("snapshot %s is writable", f)
+		}
+	}
+	if st, _ := os.Stat(filepath.Join(data, "pset.db")); st.Mode().Perm()&0o200 == 0 {
+		t.Error("the seeded db is not writable")
+	}
+	for _, f := range []string{filepath.Join(snap, "pset.db"), filepath.Join(data, "pset.db")} {
+		raw, _ := os.ReadFile(f)
+		for _, s := range []string{"sk-secret-00000000000", "sk-embed-0000000000000", "tok-1234567890", "pw-1234567890", "scrt-1234567890"} {
+			if strings.Contains(string(raw), s) {
+				t.Errorf("%s holds a secret", f)
+			}
+		}
+	}
+	if _, err := os.Stat(filepath.Join(snap, "MANIFEST.json")); err != nil {
+		t.Error(err)
+	}
+	// A second seed refuses; -force replaces; the snapshot and Jack's dir are never targets.
+	if err := seed([]string{data, "-from", snap}); err == nil {
+		t.Error("seed replaced a library without -force")
+	}
+	if err := seed([]string{"-force", data, "-from", snap}); err != nil {
+		t.Errorf("seed -force: %v", err)
+	}
+	if err := seed([]string{"-force", snap, "-from", snap}); err == nil {
+		t.Error("seed -force went into the snapshot")
+	}
+	link := filepath.Join(root, "link")
+	if err := os.Symlink(snap, link); err != nil {
+		t.Fatal(err)
+	}
+	if err := seed([]string{"-force", link, "-from", snap}); err == nil {
+		t.Error("seed -force went into the snapshot through a symlink")
+	}
+	_ = ctx
 }
