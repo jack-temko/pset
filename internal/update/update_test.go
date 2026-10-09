@@ -18,7 +18,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/releasesign"
 	"github.com/jackt/pset/internal/testx"
 )
@@ -132,8 +131,8 @@ func (f *fixture) tarball() []byte {
 	testx.Check(f.t, testx.Err(tw.Write([]byte("hi"))))
 	testx.Check(f.t, tw.WriteHeader(&tar.Header{Name: f.member, Mode: 0o755, Size: int64(len(f.script)), Typeflag: tar.TypeReg}))
 	testx.Check(f.t, testx.Err(tw.Write([]byte(f.script))))
-	cleanup.Close(tw)
-	cleanup.Close(gz)
+	testx.Check(f.t, tw.Close())
+	testx.Check(f.t, gz.Close())
 	return buf.Bytes()
 }
 

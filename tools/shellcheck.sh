@@ -31,4 +31,7 @@ if [ ! -x "$cache/shellcheck" ]; then
 	mv "$tmp/shellcheck-v$version/shellcheck" "$cache/shellcheck"
 fi
 
-exec "$cache/shellcheck" "$@"
+# Not exec: the EXIT trap has to run to remove the download.
+status=0
+"$cache/shellcheck" "$@" || status=$?
+exit "$status"

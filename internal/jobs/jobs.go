@@ -276,7 +276,9 @@ func (q *Queue) StopSubject(ctx context.Context, subject string) error {
 		}
 		ids = append(ids, id)
 	}
-	cleanup.Close(rows)
+	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
+		return err
+	}
 	for _, id := range ids {
 		if err := q.Stop(ctx, id); err != nil {
 			return err
