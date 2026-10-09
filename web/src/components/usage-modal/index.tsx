@@ -240,6 +240,7 @@ function Breakdown({ detail }: { detail: Detail }) {
 function Body<T>({ state, skeleton, children }: { state: State<T>; skeleton: ReactNode; children: (data: T) => ReactNode }) {
   return (
     <Loaded
+      grace={false}
       className="space-y-4"
       errorText="Couldn't load the details. Close this and try again."
       query={{ data: state.data, isPending: !!state.loading, isError: !!state.error }}

@@ -294,7 +294,8 @@ fade, `aria-busy` and the error line, so screens cannot drift apart.
 - **The fade is 150ms**, opacity only, ease-out (`fade-in`, `fade-out` in `index.css`), and
   off under reduced motion. A skeleton that was seen crossfades with its content in one grid
   cell, so no frame is empty; data inside the 300ms grace, and cached data, appear at once.
-  The skeleton itself fades in over 150ms when the grace ends.
+  The skeleton itself fades in over 150ms when the grace ends. The grace is for content
+  inside a page; an overlay (`grace={false}`) shows its skeleton at once, from its first frame.
 - **Skeletons are exact, not morphed.** A height animation between a skeleton and its content
   was tried (D9, 2026-10-09) and dropped: it jittered. The skeleton must be the content's
   size, and the jump check (`make jumps`) reports one that isn't; the CI guard comes in part 2.

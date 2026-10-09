@@ -31,6 +31,8 @@ exact, and the jump check enforces it.
   - Pending: renders `skeleton` in a layer, so its space is held from the first frame.
     For the first 300ms (`GRACE_MS` from `lib/settled.ts`) it is transparent (still in
     layout); then it fades in over 150ms and shimmers.
+  - `grace?: boolean` (default true): overlays pass `false`, so the skeleton shows from
+    the first frame and data lands as a crossfade even inside 300ms.
   - Data: `children(data)` in a content element that never remounts. Data inside the grace
     or cached at first render shows at once, no fade. Otherwise skeleton and content share
     one grid cell and crossfade over 150ms (content 0 to 1 on top, skeleton 1 to 0

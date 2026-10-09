@@ -18,6 +18,10 @@ usage dialogs; every other screen follows (design-system.md, Motion).
 - **Error:** when the query failed and there is nothing to show, one `role="status"` line of
   muted destructive text (`errorText`, a neutral default). It is not the skeleton's size.
 
+**Overlays pass `grace={false}`.** A dialog or popover is new on screen, so its skeleton shows
+from its first frame (no hidden phase, no fade-in) and data crossfades over it even if it lands
+inside 300ms. The grace is for content inside a page that is already there.
+
 **The skeleton contract:** the same layout and size as the content: the same grid, the same
 table header, the same row count (`useLastCount` gives a list's last known count, 3 the first
 time). If the skeleton is the wrong height, the box jumps when the data lands, which is what

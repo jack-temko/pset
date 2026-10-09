@@ -12,7 +12,8 @@ type Query<T> = { data: T | undefined; isPending: boolean; isError: boolean }
  * The one way anything that waits on data is drawn. While the query is
  * pending it holds the `skeleton`'s space from the first frame: invisible for
  * the first GRACE_MS, so a quick answer never blinks, then fading in over
- * 150ms and shimmering. When the data arrives after the skeleton showed, the
+ * 150ms and shimmering. An overlay passes `grace={false}`: its skeleton is
+ * drawn from the first frame, and data still crossfades in over it. When the data arrives after the skeleton showed, the
  * two crossfade in one grid cell (the content 0 to 1 on top, the skeleton 1
  * to 0 underneath, then it unmounts), so there is no frame where neither is
  * drawn. Data that arrives within the grace, or was cached at the first
@@ -38,6 +39,7 @@ export function Loaded<T>({
   children,
   className,
   errorText = "Couldn't load this. Try again in a moment.",
+  grace = true,
 }: {
   query: Query<T>
   skeleton: ReactNode
@@ -45,15 +47,19 @@ export function Loaded<T>({
   className?: string
   /** The line shown when the query failed and there is nothing to show. */
   errorText?: string
+  /** Hold the skeleton back for GRACE_MS (the default, for content inside a
+   *  page). An overlay passes false: it is new on screen, so its skeleton shows
+   *  from the dialog's first frame. */
+  grace?: boolean
 }) {
   const pending = query.isPending
   // The grace is per wait: it starts again when a new pending phase does.
-  const [aged, setAged] = useState(false)
+  const [aged, setAged] = useState(!grace)
   useEffect(() => {
-    if (!pending) return
+    if (!pending || !grace) return
     const t = setTimeout(() => setAged(true), GRACE_MS)
     return () => clearTimeout(t)
-  }, [pending])
+  }, [pending, grace])
 
   // The skeleton stays under the content for the length of the crossfade,
   // but only if it was ever seen.
@@ -66,7 +72,7 @@ export function Loaded<T>({
   if (wasPending !== pending) {
     setWasPending(pending)
     if (pending) {
-      setAged(false)
+      setAged(!grace)
       setSwapping(false)
     } else if (aged && !reducedMotion()) {
       setFadeFrom(layer.current ? getComputedStyle(layer.current).opacity || '1' : '1')

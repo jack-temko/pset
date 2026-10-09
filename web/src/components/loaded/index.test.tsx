@@ -131,4 +131,37 @@ describe('Loaded', () => {
     expect(skeletonLayer()?.style.getPropertyValue('--fade-from')).toBe('0.4')
     vi.restoreAllMocks()
   })
+
+  describe('without a grace (an overlay)', () => {
+    const showNow = (q: Q) =>
+      act(() =>
+        root.render(
+          <Loaded grace={false} query={q} skeleton={<span>...</span>}>
+            {(d) => <span>{d}</span>}
+          </Loaded>,
+        ),
+      )
+
+    it('draws the skeleton from the first frame', () => {
+      showNow(pending)
+      expect(skeletonLayer()?.className).toContain('opacity-100')
+      expect(skeletonLayer()?.className).not.toContain('opacity-0')
+    })
+
+    it('still crossfades data that lands inside 300ms, since the skeleton was seen', () => {
+      showNow(pending)
+      act(() => void vi.advanceTimersByTime(100))
+      showNow(loaded)
+      expect(skeletonLayer()?.className).toContain('fade-out')
+      expect(contentLayer()?.className).toContain('fade-in')
+      act(() => void vi.advanceTimersByTime(200))
+      expect(skeletonLayer()).toBeNull()
+    })
+
+    it('shows cached data at once', () => {
+      showNow(loaded)
+      expect(skeletonLayer()).toBeNull()
+      expect(contentLayer()?.className).not.toContain('fade-in')
+    })
+  })
 })
