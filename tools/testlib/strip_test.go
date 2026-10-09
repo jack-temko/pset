@@ -272,3 +272,77 @@ func TestSnapshotThenSeed(t *testing.T) {
 	}
 	_ = ctx
 }
+
+func TestSeedAndSnapshotGuards(t *testing.T) {
+	src, d := fixture(t)
+	if _, err := d.Exec(`PRAGMA journal_mode = DELETE`); err != nil {
+		t.Fatal(err)
+	}
+	d.Close()
+	root := t.TempDir()
+	t.Cleanup(func() { makeWritable(root) })
+	snap := filepath.Join(root, "lib")
+
+	// -to must be absent or an earlier snapshot.
+	other := filepath.Join(root, "other")
+	os.MkdirAll(other, 0o755)
+	os.WriteFile(filepath.Join(other, "mine.txt"), []byte("x"), 0o644)
+	if err := snapshot([]string{"-from", src, "-to", other}); err == nil {
+		t.Error("snapshot replaced a directory that is not a test library")
+	}
+	if _, err := os.Stat(filepath.Join(other, "mine.txt")); err != nil {
+		t.Error("snapshot touched a directory that is not a test library")
+	}
+	if err := snapshot([]string{"-from", src, "-to", filepath.Join(root, "a?b")}); err == nil {
+		t.Error("snapshot accepted a path with a ?")
+	}
+	if err := snapshot([]string{"-from", src, "-to", snap}); err != nil {
+		t.Fatal(err)
+	}
+
+	// A seed does not empty books or caches it did not start.
+	data := filepath.Join(root, "data")
+	os.MkdirAll(filepath.Join(data, "books"), 0o700)
+	os.WriteFile(filepath.Join(data, "books", "keep.pdf"), []byte("x"), 0o600)
+	if err := seed([]string{data, "-from", snap}); err == nil {
+		t.Error("seed went over a non-empty books dir with no pset.db")
+	}
+	if _, err := os.Stat(filepath.Join(data, "books", "keep.pdf")); err != nil {
+		t.Error("seed removed a file it did not own")
+	}
+	os.Remove(filepath.Join(data, "books", "keep.pdf"))
+	// A seed that stopped halfway (marker left) is cleared and redone.
+	os.MkdirAll(filepath.Join(data, "cache", "pages"), 0o700)
+	os.WriteFile(filepath.Join(data, "cache", "pages", "half"), []byte("x"), 0o600)
+	os.WriteFile(filepath.Join(data, ".seeding"), nil, 0o600)
+	if err := seed([]string{data, "-from", snap}); err != nil {
+		t.Fatalf("seed after an interrupted seed: %v", err)
+	}
+	if exists(filepath.Join(data, ".seeding")) || exists(filepath.Join(data, "cache", "pages", "half")) {
+		t.Error("an interrupted seed's leftovers remain")
+	}
+
+	// The environment's data dirs are protected, and so are odd paths.
+	t.Setenv("PSET_DATA", filepath.Join(root, "env"))
+	if err := seed([]string{"-force", filepath.Join(root, "env"), "-from", snap}); err == nil {
+		t.Error("seed went into $PSET_DATA")
+	}
+	t.Setenv("PSET_DATA", "")
+	t.Setenv("XDG_DATA_HOME", filepath.Join(root, "xdg"))
+	if err := seed([]string{"-force", filepath.Join(root, "xdg", "pset"), "-from", snap}); err == nil {
+		t.Error("seed went into $XDG_DATA_HOME/pset")
+	}
+	if err := seed([]string{filepath.Join(root, "d#1"), "-from", snap}); err == nil {
+		t.Error("seed accepted a path with a #")
+	}
+
+	// A refresh leaves the files a seeded worktree shares read-only.
+	if err := snapshot([]string{"-from", src, "-to", snap}); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{filepath.Join(data, "books", "b1.pdf"), filepath.Join(snap, "books", "b1.pdf")} {
+		if st, err := os.Stat(f); err != nil || st.Mode().Perm()&0o222 != 0 {
+			t.Errorf("%s is writable or missing after a refresh (%v)", f, err)
+		}
+	}
+}

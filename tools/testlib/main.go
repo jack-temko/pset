@@ -13,6 +13,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -100,6 +101,14 @@ func snapshot(args []string) error {
 	src, dst := mustAbs(*from), mustAbs(*to)
 	if src == dst || inside(dst, src) || inside(src, dst) {
 		return fmt.Errorf("-to %s and -from %s are the same or one is inside the other", dst, src)
+	}
+	if err := plainPath(src, dst); err != nil {
+		return err
+	}
+	if _, err := os.Stat(dst); err == nil {
+		if _, err := os.Stat(filepath.Join(dst, "MANIFEST.json")); err != nil {
+			return fmt.Errorf("%s exists and is not a test library (no MANIFEST.json): not replacing it", dst)
+		}
 	}
 	ctx := context.Background()
 
@@ -195,13 +204,18 @@ func snapshot(args []string) error {
 	// Swap into place: set the old snapshot aside, move the new one in.
 	old := dst + fmt.Sprintf(".old-%d", os.Getpid())
 	if _, err := os.Stat(dst); err == nil {
-		makeWritable(dst)
+		// Directories only: the files are shared with seeded worktrees by
+		// hardlink, and a mode change would reach them.
+		makeDirsWritable(dst)
 		if err := os.Rename(dst, old); err != nil {
+			readOnly(dst)
 			return err
 		}
 	}
 	if err := os.Rename(tmp, dst); err != nil {
-		os.Rename(old, dst)
+		if os.Rename(old, dst) == nil {
+			readOnly(dst)
+		}
 		return err
 	}
 	ok = true
@@ -217,6 +231,16 @@ func snapshot(args []string) error {
 			fmt.Printf(" [%s: %d q]", s.Title, s.Questions)
 		}
 		fmt.Println()
+	}
+	return nil
+}
+
+// plainPath refuses paths SQLite would read as URI syntax.
+func plainPath(paths ...string) error {
+	for _, p := range paths {
+		if strings.ContainsAny(p, "?#%") {
+			return fmt.Errorf("%s has a question mark, hash or percent sign in it: pick a path without", p)
+		}
 	}
 	return nil
 }
@@ -339,7 +363,17 @@ func seed(args []string) error {
 	}
 	// Never seed into the snapshot or Jack's own library, however the path is
 	// spelled, and never into a folder that holds either.
-	for _, protected := range []string{resolve(src), resolve(share("pset"))} {
+	protectedDirs := []string{resolve(src), resolve(share("pset"))}
+	if v := os.Getenv("PSET_DATA"); v != "" {
+		protectedDirs = append(protectedDirs, resolve(v))
+	}
+	if v := os.Getenv("XDG_DATA_HOME"); v != "" {
+		protectedDirs = append(protectedDirs, resolve(filepath.Join(v, "pset")))
+	}
+	if err := plainPath(src, dst); err != nil {
+		return err
+	}
+	for _, protected := range protectedDirs {
 		if dst == protected || inside(dst, protected) || inside(protected, dst) {
 			return fmt.Errorf("%s is, holds or is inside %s: not seeding there", dst, protected)
 		}
@@ -354,13 +388,27 @@ func seed(args []string) error {
 			}
 		}
 	}
-	// A seed that stopped halfway left books or caches but no pset.db.
+	// A seed that stopped halfway left its marker or pset.db.tmp; only then
+	// are its leftover books and caches cleared. Otherwise a folder that
+	// already holds books or caches is not ours to empty.
+	marker := filepath.Join(dst, ".seeding")
+	tmp := filepath.Join(dst, "pset.db.tmp")
+	if exists(marker) || exists(tmp) {
+		for _, n := range []string{"books", "cache"} {
+			if err := os.RemoveAll(filepath.Join(dst, n)); err != nil {
+				return err
+			}
+		}
+	}
 	for _, n := range []string{"books", "cache"} {
-		if err := os.RemoveAll(filepath.Join(dst, n)); err != nil {
-			return err
+		if es, _ := os.ReadDir(filepath.Join(dst, n)); len(es) > 0 {
+			return fmt.Errorf("%s/%s is not empty and has no pset.db: not seeding over it", dst, n)
 		}
 	}
 	if err := os.MkdirAll(dst, 0o700); err != nil {
+		return err
+	}
+	if err := os.WriteFile(marker, nil, 0o600); err != nil {
 		return err
 	}
 	// The database goes last, by rename, so a seed that stops halfway leaves no
@@ -371,7 +419,6 @@ func seed(args []string) error {
 	if err := copyTree(filepath.Join(src, "cache"), filepath.Join(dst, "cache"), true); err != nil {
 		return err
 	}
-	tmp := filepath.Join(dst, "pset.db.tmp")
 	os.Remove(tmp)
 	if err := copyFile(filepath.Join(src, "pset.db"), tmp); err != nil {
 		return err
@@ -389,6 +436,7 @@ func seed(args []string) error {
 	if err := os.Rename(tmp, filepath.Join(dst, "pset.db")); err != nil {
 		return err
 	}
+	os.Remove(marker)
 	fmt.Printf("seeded %s from the test library\n", dst)
 	return nil
 }
@@ -397,6 +445,9 @@ func seed(args []string) error {
 // each file where it can and copies where it can't. Directories are made
 // private and writable whatever the source's mode.
 func copyTree(from, to string, link bool) error {
+	if _, err := os.Stat(from); errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
 	return filepath.WalkDir(from, func(p string, e fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -446,6 +497,20 @@ func readOnly(root string) error {
 			return err
 		}
 		return os.Chmod(p, st.Mode().Perm()&^0o222)
+	})
+}
+
+func exists(p string) bool {
+	_, err := os.Lstat(p)
+	return err == nil
+}
+
+func makeDirsWritable(root string) {
+	filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
+		if err == nil && e.IsDir() {
+			os.Chmod(p, 0o700)
+		}
+		return nil
 	})
 }
 
