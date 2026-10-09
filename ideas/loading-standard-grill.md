@@ -25,7 +25,9 @@ back a jump.
 | D6 | CI fails on any overlay that changes size by more than 2px after opening, or any layout shift above 0.001; deliberate exceptions go in a short named allow-list | "No inconsistencies anywhere" | only worse than dev; Chrome's 0.1 |
 | D7 | Numbers inside a sentence are prefetched with the page; if missing, each holds a fixed-width slot so the sentence never reflows | Keeps the concrete copy | numbers on their own line; drop them |
 | D8 | Two changes: (a) `Loaded`, the usage dialogs, Reset everything, font preloading; (b) every other screen onto `Loaded`, the rest of the spots, then the CI guard on | The worst jump goes first; the guard turns on green | one change; guard first with an allow-list |
-| D9 | When content and its skeleton differ in size, the box morphs from the skeleton's height to the content's over 200ms ease-out while the skeleton fades out and the content fades in; the CI check still fails a skeleton off by more than 2px | Residual mismatch glides instead of snapping, and skeletons still get fixed | morph and allow it; no morph |
+| ~~D9~~ | ~~When content and its skeleton differ in size, the box morphs from the skeleton's height to the content's over 200ms ease-out while the skeleton fades out and the content fades in; the CI check still fails a skeleton off by more than 2px~~ | ~~Residual mismatch glides instead of snapping, and skeletons still get fixed~~ | ~~morph and allow it; no morph~~ |
+
+D9 dropped (2026-10-09): the height animation jittered, flashed and snapped at the end in Jack's look at /components; skeletons are made exact instead, which the jump check enforces. Content crossfades over the skeleton in one place.
 
 ### The artifact: what each surface does
 
@@ -79,6 +81,8 @@ Empty.
 
 ## Log
 
+Note: Q8 (fonts) was assumed, not asked (A1).
+
 ### Batch 1 (2026-10-09)
 
 - Q1 Overlays: "When a dialog or popover needs data, how should it open?" Options: Prefetch, then sized skeleton (Recommended) / Hold until ready / Open now, sized skeleton / Fixed height, then fade. Answer: "Prefetch, then sized skeleton (Recommended)".
@@ -97,3 +101,4 @@ Empty.
 
 - Jack: "can we make the skeletons shrink as they fade out to match the size of the loading text or card?"
 - Q10 Morph: "With the skeleton morphing to the content's size, should the jump check still flag a skeleton that's the wrong size?" Options: Morph, and still flag (Recommended) / Morph, allow it / No morph. Answer: "Morph, and still flag (Recommended)".
+- Jack, on the built morph: "The morph is fucked up, either fix it or drop it if its too much work. It jitters, flashes, and still jumps as it settles slighlty." Answer: "Dropped (Jack delegated the call)."

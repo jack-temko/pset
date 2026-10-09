@@ -4,7 +4,8 @@
 
 In progress, branch `layout-jump-audit` (change 1 of 2: the audit, built; `make jumps`
 is documented in `design/design-system.md`). Change 2, the loading standard and its
-fixes, waits for the audit's first report and a grill on it.
+fixes, is settled in `ideas/loading-standard-grill.md` (approved) and builds on the
+follow-up branch `loading-overlays`.
 
 ## Information
 
@@ -75,12 +76,15 @@ looks the same everywhere.
   the two screenshots of the worst run: its first frame after t0 and its settled
   frame.
 - `web/scripts/jumps/run.mjs`: the CLI. `--url` (the app), `--runs` (default 5),
-  `--slow-ms` (default 600), `--only <scenario>`, `--out <dir>`. Each run is a fresh
+  `--slow-ms` (default 600), `--only <name or slug>` (or a comma list of slugs, e.g.
+  `--only home-cold-load,memory`), `--out <dir>`, `--no-discover` (hand-written
+  scenarios only) and `--discover-only` (print what discovery finds). Each run is a fresh
   browser context at 1440x1000 (cold query cache). `/api/events` and image GETs are
   never delayed. A scenario settles after 750ms with no shift, no resize, no skeleton
   and no request in flight, or times out at 8s (reported as a timeout).
 - `tools/jumps.sh` and a `jumps` target in `Makefile`: copies a library
-  (`DATA=<dir>`, default the worktree's `.dev/data`) to
+  (`DATA=<dir>`, default the test library, `~/.local/share/pset-test-library`; `SRC=<checkout>`
+  builds and serves that checkout while this worktree measures it) to
   `/tmp/pset-jumps-<topic>/data` with `cp -rL`, so no symlink points back into a real
   library; starts the branch's server and Vite on free ports the way
   `.agents/skills/change/references/try.sh` does (server 8430-8499, Vite 5180-5197);
@@ -121,9 +125,9 @@ looks the same everywhere.
 3. `analyze.mjs` and its tests.
 4. All scenarios, `report.mjs`, screenshots.
 5. `tools/jumps.sh` and `make jumps`.
-6. Run it on a copy of Jack's library (`DATA=~/.local/share/pset`, his choice,
-   2026-10-08), real and slow, and leave the report in
-   `/tmp/pset-jumps-layout-jump-audit/` (not committed).
+6. Run it on a copy of the test library (`make jumps`, the default `DATA`; first planned
+   on Jack's own library, changed 2026-10-09 to the read-only snapshot), real and slow,
+   and leave the report in `/tmp/pset-jumps-layout-jump-audit/` (not committed).
 7. Docs: a paragraph under "Nothing jumps" in `design/design-system.md` on
    `make jumps` (what it measures, how to read the report); this file's Status.
 

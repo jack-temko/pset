@@ -49,9 +49,11 @@ build:
 	go build -o pset ./cmd/pset
 
 # The layout-jump audit: every screen and overlay, real and slow, on a copy of a
-# library (DATA=<dir>, default ~/.local/share/pset-test-library), with its own server on private ports.
+# library (DATA=<dir>, default ~/.local/share/pset-test-library), with its own
+# server on private ports.
 # Writes /tmp/pset-jumps-<topic>/<time>/report.md. ARGS passes options through:
-# make jumps DATA=~/.local/share/pset ARGS="--runs 3 --only Memory"
+# make jumps ARGS="--runs 3 --only memory,edit-book". SRC=<checkout> builds and
+# serves that checkout instead (npm ci there first) while this worktree measures.
 jumps:
 	tools/jumps.sh
 

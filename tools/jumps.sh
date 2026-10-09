@@ -16,7 +16,10 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 topic=$(basename "$root"); topic=${topic#pset-}
 src=${DATA:-$HOME/.local/share/pset-test-library}
-[ -d "$src" ] || { echo "no library at $src: make test-library makes the default one" >&2; exit 1; }
+if [ ! -d "$src" ]; then
+	if [ -n "${DATA:-}" ]; then echo "DATA=$DATA is not a directory" >&2; else echo "no library at $src: make test-library makes it" >&2; fi
+	exit 1
+fi
 src=$(cd "$src" && pwd)
 run=/tmp/pset-jumps-$topic
 stamp=$(date +%Y%m%d-%H%M%S)
@@ -66,7 +69,10 @@ sqlite3 "$run/data/pset.db" "DELETE FROM settings WHERE key IN ('chat', 'embeddi
 tree=$root
 [ -n "${SRC:-}" ] && tree=$(cd "$SRC" && pwd)
 (cd "$tree" && go build -o "$run/pset" ./cmd/pset)
-[ -d "$tree/web/node_modules" ] || (cd "$tree/web" && npm ci --silent)
+if [ ! -d "$tree/web/node_modules" ]; then
+	if [ -n "${SRC:-}" ]; then echo "run npm ci in $tree/web first" >&2; exit 1; fi
+fi
+[ -d "$root/web/node_modules" ] || (cd "$root/web" && npm ci --silent)
 
 sp=$(free 8430 8499)
 vp=$(free 5180 5197)

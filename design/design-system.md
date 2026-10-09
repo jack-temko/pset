@@ -268,8 +268,15 @@ table worst first: **jump score** is the sum of layout-shift scores after the cl
 its first frame (height plus width), the "opens small, then grows" case; **settle** is the
 time to the last shift, resize, skeleton, spinner or request; **skeleton ms** is how long
 placeholders were on screen; **moved** names the elements that shifted. The screenshots
-below the table are the worst run's first frame and its settled frame. Spec and reasons:
-`ideas/layout-jumps.md`.
+below the table are the worst run's first frame and its settled frame. A skeleton or
+spinner counts only while it is in the viewport, and the **settle waited on last** column
+names what the settle waited on (a request URL, or the skeleton, spinner, overlay or shifted
+element's selector). The audit also finds each page's overlay triggers and menu items itself
+and measures them as extra scenarios, listed `discovered: <label>` (`--no-discover` skips
+this); usage dialogs are opened twice, the second open its own row. `SRC=<checkout>` serves
+another checkout while this worktree measures it, and
+`ARGS="--only home-cold-load,memory"` runs just those scenarios, named by slug. Spec and
+reasons: `ideas/layout-jumps.md`.
 
 **Hover fades in over 100ms** (2026-09-30, Jack: "give hover a short fade", reversing
 2026-09-25). A hover wash or ink change used to be instant, because a slower fade left a

@@ -3,6 +3,13 @@
 //
 //   node scripts/jumps/run.mjs --url http://localhost:5180 [--runs 5]
 //        [--slow-ms 600] [--only <scenario>] [--out <dir>]
+//        [--no-discover] [--discover-only]
+//
+// --only takes one scenario name or its slug ("home-cold-load"), or a comma
+// list of slugs ("home-cold-load,memory"; the comma form takes slugs only, as
+// names have commas of their own). With --only, discovery looks only at the
+// Book and Homework set pages. --no-discover runs only the hand-written
+// scenarios; --discover-only prints what discovery finds and stops.
 import fs from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
@@ -63,6 +70,9 @@ function trackRequests(page) {
   return { reqs, inflight: () => open.size, lastEnd: () => Math.max(0, ...reqs.map((r) => r.end ?? 0)) }
 }
 
+/** An element's label as discovery reads it. */
+const textOf = (el) => (el.getAttribute('aria-label') || el.innerText || '').trim().replace(/\s+/g, ' ').slice(0, 50)
+
 async function runOne(browser, app, sc, mode, opts) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   try {
@@ -115,6 +125,14 @@ async function runOne(browser, app, sc, mode, opts) {
           await target.waitFor({ state: 'visible', timeout: 4000 })
         } catch {
           throw new Missing(`no ${JSON.stringify(step)} on ${sc.url}`)
+        }
+        // A step found by its place is checked to still be what it was when
+        // discovered, and still not something that changes or removes data.
+        if (step.label) {
+          const now = await target.evaluate(textOf)
+          if (!(now.includes(step.label) || step.label.includes(now)) || DESTRUCTIVE.test(now)) {
+            throw new Missing(`${JSON.stringify(step.label)} is now ${JSON.stringify(now)} on ${sc.url}`)
+          }
         }
         if (i === plan.length - 1) t0 = Date.now()
         await target.click({ timeout: 4000 })
@@ -253,9 +271,13 @@ async function main() {
 
   const found = await discover(app)
   let list = scenarios(found)
-  // --only takes scenario names (or their slugs), comma separated.
-  const only = (v.only ?? '').split(',').map(slug).filter(Boolean)
+  // --only: the whole string is tried as one slug first, then split on commas.
+  const whole = slug(v.only ?? '')
+  const pieces = (v.only ?? '').split(',').map(slug).filter(Boolean)
+  const only = whole ? [whole, ...pieces] : []
   const named = (s) => only.length === 0 || only.includes(slug(s.name))
+  const known = (o) => list.some((s) => slug(s.name) === o)
+  const needDiscovery = !v.only || known(whole) ? !v.only : !pieces.every(known)
 
   const browser = await chromium.launch()
   const rows = []
@@ -267,7 +289,7 @@ async function main() {
     }
     // --only names a hand-written scenario without discovering; any other name
     // is looked for among the discovered ones.
-    if (!v['no-discover'] && (!v.only || v['discover-only'] || only.some((o) => !list.some((s) => slug(s.name) === o)))) {
+    if (!v['no-discover'] && (!v.only || v['discover-only'] || needDiscovery)) {
       const handwritten = new Set(list.map(stepKey))
       // With --only, just the pages the discovered scenarios live on.
       const pages = list.filter((s) => !s.skip && !s.steps && (!v.only || /^(Book|Homework set), cold load$/.test(s.name)))
@@ -286,7 +308,9 @@ async function main() {
         : [sc],
     )
     list = list.filter(named)
-    if (list.length === 0) throw new Error(`no scenario named ${v.only}`)
+    if (list.length === 0) throw new Error(
+        `no scenario named ${v.only}. Discovery covers only the Book and Homework set pages when --only is given; other discovered scenarios need a run without --only.`,
+      )
     for (const sc of list) {
       for (const mode of ['real', 'slow']) {
         const row = { name: sc.name, mode, url: sc.url, trigger: sc.discovered ? sc.label : undefined }
