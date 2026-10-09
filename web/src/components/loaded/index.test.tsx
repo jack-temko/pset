@@ -118,4 +118,17 @@ describe('Loaded', () => {
     show({ data: 'hello', isPending: false, isError: true })
     expect(host.textContent).toBe('hello')
   })
+
+  it('starts the skeleton fade-out from the opacity it had, so a half-faded skeleton does not pop', () => {
+    show(pending)
+    act(() => void vi.advanceTimersByTime(GRACE_MS))
+    const real = window.getComputedStyle
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((el, p) => {
+      const cs = real(el, p)
+      return el === skeletonLayer() ? ({ opacity: '0.4' } as CSSStyleDeclaration) : cs
+    })
+    show(loaded)
+    expect(skeletonLayer()?.style.getPropertyValue('--fade-from')).toBe('0.4')
+    vi.restoreAllMocks()
+  })
 })

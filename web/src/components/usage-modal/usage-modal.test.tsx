@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { describe, expect, it } from 'vitest'
 
 import type { BookUsage, Detail } from '@/api/gen/usage'
-import { BookUsageDialog, Fig, UsageModal } from '.'
+import { BookUsageDialog, Fig, isShape, UsageModal } from '.'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 HTMLDialogElement.prototype.showModal = function () {
@@ -231,5 +231,16 @@ describe('BookUsageDialog', () => {
     for (const k of ['Questions', 'Ask answers', 'Import']) expect(text).toContain(k)
     expect(text).toContain('Naming')
     expect(text).toContain('Contents')
+  })
+})
+
+describe('isShape', () => {
+  it('accepts a shape within the caps and nothing else', () => {
+    expect(isShape({ stages: [0, 1], runs: [[0], [1, 0]] })).toBe(true)
+    expect(isShape({ stages: Array(13).fill(0), runs: [] })).toBe(false)
+    expect(isShape({ stages: [], runs: Array(5).fill([0]) })).toBe(false)
+    expect(isShape({ stages: [2], runs: [] })).toBe(false)
+    expect(isShape([1, 2])).toBe(false)
+    expect(isShape(null)).toBe(false)
   })
 })

@@ -389,7 +389,7 @@
     }
 }
 @keyframes fade-out {
-    from { opacity: 1; }
+    from { opacity: var(--fade-from, 1); }
     to { opacity: 0; }
 }
 @utility fade-out {

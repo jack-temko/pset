@@ -35,13 +35,17 @@ export function useLastCount(key: string, count?: number, fallback = 3): number 
 /**
  * The same for a list's shape, not just its length: whatever small JSON value
  * the skeleton needs to draw rows the way the content did (which rows had a
- * second line, say). `fallback` is drawn when nothing valid is saved.
+ * second line, say). `fallback` is drawn when nothing is saved or what is saved
+ * fails `valid` (an old version's value, or another page's). The value is the
+ * one at mount.
  */
-export function useLastShape<T>(key: string, shape: T | undefined, fallback: T): T {
+export function useLastShape<T>(key: string, shape: T | undefined, fallback: T, valid: (x: unknown) => x is T): T {
   const [last] = useState<T>(() => {
     try {
       const raw = localStorage.getItem(storeKey(key))
-      return raw === null ? fallback : (JSON.parse(raw) as T)
+      if (raw === null) return fallback
+      const saved: unknown = JSON.parse(raw)
+      return valid(saved) ? saved : fallback
     } catch {
       return fallback
     }

@@ -188,10 +188,17 @@ export function DetailBody({ detail }: { detail: Detail }) {
  *  row, 1 when it had a second line (a shared mark, an error, tools). */
 type Shape = { stages: number[]; runs: number[][] }
 const fallbackShape: Shape = { stages: [0, 0, 0], runs: [[0, 0, 0]] }
+const MAX_ROWS = 12
+const MAX_RUNS = 4
 const shapeOf = (d: Detail): Shape => ({
-  stages: d.stages.map((st) => (st.shared ? 1 : 0)),
-  runs: d.runs.map((r) => r.calls.map((c) => (c.error || c.tools ? 1 : 0))),
+  stages: d.stages.slice(0, MAX_ROWS).map((st) => (st.shared ? 1 : 0)),
+  runs: d.runs.slice(0, MAX_RUNS).map((r) => r.calls.slice(0, MAX_ROWS).map((c) => (c.error || c.tools ? 1 : 0))),
 })
+const flags = (x: unknown): x is number[] => Array.isArray(x) && x.length <= MAX_ROWS && x.every((f) => f === 0 || f === 1)
+/** Whether a saved value is a shape within the caps. */
+export const isShape = (x: unknown): x is Shape =>
+  typeof x === 'object' && x !== null && flags((x as Shape).stages) && Array.isArray((x as Shape).runs) && (x as Shape).runs.length <= MAX_RUNS && (x as Shape).runs.every(flags)
+const isImportShape = (x: unknown): x is Shape | null => x === null || isShape(x)
 
 /** The breakdown before it arrives: the stages table and a table for each run. */
 function BreakdownSkeleton({ shape }: { shape: Shape }) {
@@ -257,7 +264,7 @@ export function UsageModal({
   loading,
   error,
 }: { open: boolean; onClose: () => void; name: string; kind?: string } & State<Detail> & { detail?: Detail | null }) {
-  const shape = useLastShape<Shape>(`usage-shape-${kind}`, detail ? shapeOf(detail) : undefined, fallbackShape)
+  const shape = useLastShape<Shape>(`usage-shape-${kind}`, detail ? shapeOf(detail) : undefined, fallbackShape, isShape)
   return (
     <Dialog
       open={open}
@@ -308,8 +315,8 @@ export function BookUsageDialog({
   loading,
   error,
 }: { open: boolean; onClose: () => void; title: string } & State<BookUsage>) {
-  const kindRows = useLastCount('usage-book-kinds', data?.kinds.length)
-  const importShape = useLastShape<Shape | null>('usage-book-import', data ? (data.import ? shapeOf(data.import) : null) : undefined, null)
+  const kindRows = useLastCount('usage-book-kinds', data ? Math.min(data.kinds.length, 12) : undefined)
+  const importShape = useLastShape<Shape | null>('usage-book-import', data ? (data.import ? shapeOf(data.import) : null) : undefined, null, isImportShape)
   return (
     <Dialog
       open={open}

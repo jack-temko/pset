@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
 import { GRACE_MS } from '@/lib/settled'
 import { cn } from '@/lib/utils'
@@ -59,12 +59,17 @@ export function Loaded<T>({
   // but only if it was ever seen.
   const [wasPending, setWasPending] = useState(pending)
   const [swapping, setSwapping] = useState(false)
+  // Where the skeleton's opacity stood when the data landed: its fade-out
+  // starts there, so a skeleton still fading in doesn't pop to full first.
+  const layer = useRef<HTMLDivElement>(null)
+  const [fadeFrom, setFadeFrom] = useState('1')
   if (wasPending !== pending) {
     setWasPending(pending)
     if (pending) {
       setAged(false)
       setSwapping(false)
     } else if (aged && !reducedMotion()) {
+      setFadeFrom(layer.current ? getComputedStyle(layer.current).opacity || '1' : '1')
       setSwapping(true)
     }
   }
@@ -85,7 +90,9 @@ export function Loaded<T>({
     <div className="grid" aria-busy={pending || undefined}>
       {(pending || swapping) && (
         <div
+          ref={layer}
           aria-hidden
+          style={swapping ? ({ '--fade-from': fadeFrom } as CSSProperties) : undefined}
           className={cn(
             className,
             '[grid-area:1/1]',
