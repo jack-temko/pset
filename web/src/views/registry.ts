@@ -1,6 +1,8 @@
 import { HomeworkStage } from './homework/stage';
 import { HomeworkWireframes } from './homework/wireframes';
 import { SCENARIOS as homework } from './homework/scenarios';
+import { ErrorNoticeStage } from './error-notice/stage';
+import { SCENARIOS as errorNotice } from './error-notice/scenarios';
 import type { ViewEntry } from './types';
 
 /** Every view on /views, in the sidebar's order. A view is added here when
@@ -21,6 +23,15 @@ const ALL: ViewEntry[] = [
     Stage: HomeworkStage,
     wideLabel: 'Focus',
     wireframes: HomeworkWireframes,
+  },
+  {
+    id: 'error-notice',
+    title: 'Error notice',
+    group: 'Workspace',
+    note: 'Mockups for the error catalog: inline, banner, toast with dialog, the field line and Settings errors.',
+    scenarios: errorNotice,
+    spec: () => import('./error-notice/spec.md?raw').then((m) => m.default),
+    Stage: ErrorNoticeStage,
   },
 ];
 
