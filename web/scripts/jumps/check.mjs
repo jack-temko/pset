@@ -16,6 +16,10 @@ import { parseArgs } from 'node:util';
 
 export const MAX_GROWTH_PX = 2;
 export const MAX_JUMP = 0.001;
+// A skeleton must match its content: each top-level block within 8px, the whole
+// within 2px, and the same variant.
+export const MAX_BLOCK_PX = 8;
+export const MAX_TOTAL_PX = 2;
 
 const f = (n, d = 3) => (n === 0 ? '0' : Number(n).toFixed(d));
 
@@ -46,6 +50,22 @@ export function offences(row) {
       `never settled in ${a.timeouts} of ${a.runs} runs: ${a.waitedOn || 'something'} was still showing at the timeout`,
     );
   }
+  for (const x of a.boxes?.fidelity ?? []) {
+    if (x.skeleton !== x.content)
+      out.push(
+        `${x.box}: the skeleton is the "${x.skeleton}" variant but the content is "${x.content}"`,
+      );
+    else if (x.blockPx > MAX_BLOCK_PX || x.totalPx > MAX_TOTAL_PX)
+      out.push(
+        `${x.box}: the skeleton is off from its content by ${x.blockPx}px in a block (limit ${MAX_BLOCK_PX}) and ${x.totalPx}px in all (limit ${MAX_TOTAL_PX})`,
+      );
+  }
+  for (const x of a.boxes?.flashes ?? [])
+    out.push(
+      `${x.box}: the content changed from the "${x.from}" variant to "${x.to}" after it was revealed (a flash)`,
+    );
+  for (const x of a.boxes?.doubles ?? [])
+    out.push(`${x.box}: revealed ${x.count} times without a new navigation`);
   return out;
 }
 

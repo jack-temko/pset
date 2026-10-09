@@ -126,7 +126,41 @@ export function analyzeRun(log) {
   const last = events.reduce((a, e) => (e.ms > a.ms ? e : a));
   const settleMs = log.timedOut ? log.end - log.t0 : Math.max(0, last.ms);
 
+  // Loaded boxes: how well each skeleton matched its content, any variant
+  // change after a reveal, and any box revealed twice in one navigation.
+  const after = (list) => (list ?? []).filter((x) => at(x.t) >= log.t0);
+  const fidelity = after(log.swaps).map((w) => {
+    const same = w.skeletonBlocks.length === w.contentBlocks.length;
+    return {
+      box: w.box,
+      skeleton: w.skeleton,
+      content: w.content,
+      blockPx: same
+        ? Math.max(
+            0,
+            ...w.skeletonBlocks.map((h, i) => Math.abs(h - w.contentBlocks[i])),
+          )
+        : 0,
+      blocks: [w.skeletonBlocks.length, w.contentBlocks.length],
+      totalPx: Math.abs(w.skeletonHeight - w.contentHeight),
+    };
+  });
+  const flashes = after(log.changes).map((c) => ({
+    box: c.box,
+    from: c.from,
+    to: c.to,
+  }));
+  const tally = new Map();
+  for (const r of after(log.reveals)) {
+    const k = `${r.box} | ${r.epoch}`;
+    tally.set(k, { box: r.box, count: (tally.get(k)?.count ?? 0) + 1 });
+  }
+  const doubles = [...tally.values()].filter((d) => d.count > 1);
+
   return {
+    fidelity,
+    flashes,
+    doubles,
     jump: round(shifts.reduce((n, s) => n + s.value, 0)),
     shiftCount: shifts.length,
     moved,
@@ -197,5 +231,36 @@ export function aggregate(runs) {
     timeouts: runs.filter((r) => r.timedOut).length,
     moved,
     overlays,
+    boxes: aggregateBoxes(runs),
+  };
+}
+
+/** Box findings over all the runs: the worst fidelity of each box, and every
+ *  flash and double reveal any run saw. */
+function aggregateBoxes(runs) {
+  const worst = new Map();
+  for (const r of runs)
+    for (const f of r.fidelity ?? []) {
+      const k = `${f.box} | ${f.skeleton} | ${f.content}`;
+      const w = worst.get(k);
+      if (!w) worst.set(k, { ...f });
+      else {
+        w.blockPx = Math.max(w.blockPx, f.blockPx);
+        w.totalPx = Math.max(w.totalPx, f.totalPx);
+      }
+    }
+  const once = (lists, key) => [
+    ...new Map(lists.flat().map((x) => [key(x), x])).values(),
+  ];
+  return {
+    fidelity: [...worst.values()],
+    flashes: once(
+      runs.map((r) => r.flashes ?? []),
+      (x) => `${x.box} | ${x.from} | ${x.to}`,
+    ),
+    doubles: once(
+      runs.map((r) => r.doubles ?? []),
+      (x) => x.box,
+    ),
   };
 }

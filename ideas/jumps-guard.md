@@ -32,6 +32,22 @@ is Jack's own books and the repo is public, and a real import needs a key and Ol
   uploads the report and keeps one issue, "Nightly jump check failed", open while it fails.
   `/change` runs the full profile in the worktree before a UI pull request.
 
+- Fidelity, flash and coverage (D10 to D13 of the grill, added after a finished set
+  flashed from a question skeleton to its summary, which the check could not see because
+  a same-size swap moves nothing). During `Loaded`'s crossfade the skeleton and content
+  layers share a grid cell and carry `data-variant`; the probe records, per box at the
+  swap, both variants and the heights of each layer's top-level blocks. The check fails
+  on a variant mismatch, a block more than 8px off (compared only when both layers have
+  the same number of blocks), or a total more than 2px off; on a box whose content
+  variant changes after its reveal; and on a box revealed twice in one navigation.
+  `web/src/variants.ts` (loading-screens) lists each view's variants; the fixture holds
+  one of each and `scenarios.mjs` opens each, tagged `variant: "<view>/<name>"`;
+  `variants.test.mjs` fails when one has no scenario. Until loading-screens merges the
+  manifest is a copy, `web/scripts/jumps/variants.mjs`, to be replaced by an import. Two
+  variants cannot live in the one fixture library and have scenarios that are skipped,
+  listed, with a reason: `home/empty` (needs an empty library) and `settings/key-present`
+  (needs a saved key). The core profile includes every scenario, so every variant.
+
 ### Files
 
 - `tools/fixturelib/main.go` (new) and `main_test.go`: builds a library into a given

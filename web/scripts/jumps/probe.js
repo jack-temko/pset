@@ -151,4 +151,88 @@
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
+
+  // Loaded boxes (components/loaded): a grid whose layers carry data-variant,
+  // the skeleton layer aria-hidden and the content layer not. At the swap, when
+  // the content layer first has content over a skeleton layer still there,
+  // the probe records both variants and the heights of each layer's top-level
+  // blocks (a swap is a sample); the content layer's variant is watched after
+  // its reveal (a change is a flash), and reveals are counted per navigation
+  // epoch (two in one epoch is a double reveal).
+  J.swaps = [];
+  J.changes = [];
+  J.reveals = [];
+  J.epoch = 0;
+  const bump = () => J.epoch++;
+  for (const m of ['pushState', 'replaceState']) {
+    const orig = history[m];
+    history[m] = function (...args) {
+      bump();
+      return orig.apply(this, args);
+    };
+  }
+  addEventListener('popstate', bump);
+
+  const layout = (layer) => {
+    const kids = [...layer.children].map((c) => c.getBoundingClientRect());
+    const total = kids.length
+      ? Math.max(...kids.map((r) => r.bottom)) -
+        Math.min(...kids.map((r) => r.top))
+      : 0;
+    return {
+      blocks: kids.map((r) => Math.round(r.height)),
+      total: Math.round(total),
+    };
+  };
+  const boxes = new WeakMap();
+  const watchBoxes = () => {
+    for (const el of document.querySelectorAll(
+      '[data-variant]:not([aria-hidden=true])',
+    )) {
+      const box = el.parentElement;
+      if (!box) continue;
+      let st = boxes.get(el);
+      if (!st) boxes.set(el, (st = { revealed: false, variant: '' }));
+      const variant = el.getAttribute('data-variant');
+      const has = el.childElementCount > 0;
+      if (has && !st.revealed) {
+        st.revealed = true;
+        st.variant = variant;
+        const t = performance.now();
+        J.reveals.push({ box: sel(box), t, epoch: J.epoch });
+        const skel = box.querySelector(
+          ':scope > [data-variant][aria-hidden=true]',
+        );
+        if (skel) {
+          const a = layout(skel);
+          const b = layout(el);
+          J.swaps.push({
+            box: sel(box),
+            t,
+            skeleton: skel.getAttribute('data-variant'),
+            content: variant,
+            skeletonBlocks: a.blocks,
+            contentBlocks: b.blocks,
+            skeletonHeight: a.total,
+            contentHeight: b.total,
+          });
+        }
+      } else if (!has && st.revealed) {
+        st.revealed = false;
+      } else if (has && st.revealed && variant !== st.variant) {
+        J.changes.push({
+          box: sel(box),
+          t: performance.now(),
+          from: st.variant,
+          to: variant,
+        });
+        st.variant = variant;
+      }
+    }
+  };
+  const watchTick = () => {
+    watchBoxes();
+    requestAnimationFrame(watchTick);
+  };
+  requestAnimationFrame(watchTick);
 })();

@@ -327,7 +327,12 @@ scenario is listed, not failed. A deliberate exception goes in
 to stay empty. The default is the **core** profile (the hand-written scenarios, `--runs 2`),
 which CI runs inside the `check` job when a pull request touches `web/`, `tools/jumps.sh`,
 `tools/fixturelib/` or `web/scripts/jumps/`; `make jumps-check FULL=1` adds discovery and
-`--runs 3`, and runs nightly in CI (`jumps-nightly.yml`, which keeps one issue open while it fails). Spec: `ideas/jumps-guard.md`.
+`--runs 3`, and runs nightly in CI (`jumps-nightly.yml`, which keeps one issue open while it fails). The guard also reads each `Loaded` box at its swap (its layers carry `data-variant`):
+it fails on a skeleton of another variant than its content, a block more than 8px off or a
+total more than 2px off, a box whose variant changes after its reveal, and a box revealed
+twice in one navigation. The fixture holds one instance of every view variant and the audit
+opens each (`web/scripts/jumps/variants.mjs`, a copy of `web/src/variants.ts` until that
+lands; a test fails when a variant has no scenario). Spec: `ideas/jumps-guard.md`.
 
 **Hover fades in over 100ms** (2026-09-30, Jack: "give hover a short fade", reversing
 2026-09-25). A hover wash or ink change used to be instant, because a slower fade left a
