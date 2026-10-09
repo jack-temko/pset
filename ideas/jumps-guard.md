@@ -3,7 +3,9 @@
 ## Status
 
 In progress, branch `jumps-guard` (change 2c of the loading standard). Its CI step
-lands after part 2 (`loading-screens`), so it turns on green.
+lands after part 2 (`loading-screens`), so it turns on green. Built: the fixture,
+`check.mjs`, `make jumps-check`, the CI step and the docs; the CI step is not yet proven
+on a PR run, and its time is not measured (locally the audit takes 26 minutes on WSL).
 
 ## Information
 
