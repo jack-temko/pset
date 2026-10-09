@@ -101,7 +101,7 @@ export function FailedQuestion({
                     setPage(e.target.value)
                     setPageError('')
                   }}
-                  className="font-mono"
+                  className="tabular-nums"
                 />
               </Field>
               {/* Level with the input, under the field's label. */}

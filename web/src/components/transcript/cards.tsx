@@ -446,7 +446,7 @@ export function Plot({
               transform: `translateX(${sx(hx) > width / 2 ? 'calc(-100% - 8px)' : '8px'})`,
             }}
           >
-            <p className="figure text-muted-foreground">
+            <p className="text-muted-foreground tabular-nums">
               {x.label} = {fmt(hx)}
             </p>
             {series.map((s, i) => {
@@ -455,7 +455,7 @@ export function Plot({
                 <p key={s.label} className="flex items-center gap-2">
                   <span className="w-3 rounded-full" style={{ height: 2, background: colors[i] }} />
                   <span className="text-muted-foreground">{s.label}</span>
-                  <span className="ml-auto figure">{fmt(p[1])}</span>
+                  <span className="ml-auto tabular-nums">{fmt(p[1])}</span>
                 </p>
               ) : null
             })}

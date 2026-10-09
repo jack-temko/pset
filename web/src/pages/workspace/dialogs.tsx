@@ -212,7 +212,7 @@ export function BookDialog({
         <Field label="Cover">
           <CoverPicker value={cover} onChange={setCover} />
         </Field>
-        <p className="font-mono text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground tabular-nums">
           {book.pages} PDF pages · imported {book.imported}
         </p>
       </div>
