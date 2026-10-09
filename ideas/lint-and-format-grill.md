@@ -1,6 +1,6 @@
 # Lint and format, repo-wide: grill
 
-- status: awaiting OK
+- status: approved
 - date: 2026-10-09
 - brief: one lint and format setup for Go, TS/React, shell, Markdown, YAML/JSON, so the code reads the same everywhere; judged from Jack reading the code and from agents writing it
 - sources: Makefile, .github/workflows/ci.yml, web/.oxlintrc.json, web/tsconfig*.json, ideas/error-catalog-grill.md (branch error-catalog), measured runs of gofmt, goimports, go vet, oxlint, tsc --strict
@@ -95,3 +95,7 @@ golangci-lint v2.14 default: 450 (errcheck 424, staticcheck 24, ineffassign 1, u
 - How deep does the frontend lint go? oxlint, standard sets (Recommended) / ESLint + typescript-eslint / oxlint as today. Answer: oxlint, standard sets (Recommended)
 - Which other files get checked? (multi) Shell / Markdown / YAML and JSON / .editorconfig. Answer: Shell, Markdown, YAML and JSON, .editorconfig
 - Your own commits: should anything format them before they reach CI? make fmt + CI (Recommended) / Pre-commit hook. Answer: make fmt + CI (Recommended)
+
+### OK
+
+- OK to build this plan? Build it, two PRs (Recommended) / Build it, one PR / Change something. Answer: Build it, two PRs (Recommended)
