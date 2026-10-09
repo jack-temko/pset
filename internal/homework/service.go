@@ -415,13 +415,11 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 	// Said before the worker is woken, so the stream says "added" ahead of
 	// what the worker does next. That's the usual order, not a promise (the
 	// queue's backstop poll can still get in first), and the client keeps
-	// the higher Rev whichever order they land in.
-	for _, q := range out {
-		s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: q})
-	}
-	s.publishSet(ctx, homeworkID)
-	// The others' shares of the set's ranking are now over more questions.
+	// the higher Rev whichever order they land in. Every question in the set
+	// is said, the new ones and the others, whose shares of the set's
+	// ranking are now over more questions.
 	s.publishSetQuestions(ctx, homeworkID)
+	s.publishSet(ctx, homeworkID)
 	// Questions not from the book have nothing to find: the set may be
 	// ready to rank already.
 	s.rankWhenFound(ctx, homeworkID)

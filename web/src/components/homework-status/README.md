@@ -33,8 +33,8 @@ slot; colour the meta line to match the pill.
 - **New**, and it exists because the same rule was about to be written
   twice (once on Home, once in the book panel) and the two would have
   drifted.
-- It replaces a mono `RowValue` holding the date. Mono is for machine
-  strings; "today" and "Friday" are words, and they read as a data dump
+- It replaces a mono `RowValue` holding the date. Mono is for what you would copy
+  and for data (`design-system.md`, Type: "would you copy it"); "today" and "Friday" are words, and they read as a data dump
   in JetBrains Mono.
 - **Two earlier takes were rejected by eye**, both rendered in place
   against real tokens: the date inside an outlined pill on every row

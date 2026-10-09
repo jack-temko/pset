@@ -369,9 +369,9 @@
     from { background-position: 100% 0; }
     to { background-position: -100% 0; }
 }
-/* A data figure: a number in a table or a stat, a readout (the study timer,
-   a page number, a zoom), set in JetBrains Mono with tabular figures. See
-   design-system.md, Type. Copyable identifiers use font-mono alone. */
+/* A data figure: a number in a table or a stat, set in JetBrains Mono with
+   tabular figures. See design-system.md, Type. Copyable identifiers use
+   font-mono alone; readouts you only glance at stay Inter. */
 @utility figure {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;

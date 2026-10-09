@@ -1,6 +1,6 @@
 # Model usage display, reworked: grill
 
-- status: approved
+- status: built
 - date: 2026-10-08
 - brief: rework where and how PSet shows model usage (cost, tokens, time, model) for every model job, and replace the line with something that opens a modal of the job's details; judged from the student's point of view, and Jack's as the one paying
 - sources: web/src/components/usage, web/src/lib/usage-format.ts, internal/usage, internal/llm/calllog.go, homework, ask, library, settings services, design/model-usage.md, design/design-system.md
