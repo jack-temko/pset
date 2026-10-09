@@ -37,10 +37,12 @@ const (
 	EventRemoved = "memory.removed"
 )
 
+// Saved is the event for a memory that was saved or changed.
 type Saved struct {
 	Memory Memory `json:"memory"`
 }
 
+// Removed is the event for a memory that was deleted.
 type Removed struct {
 	ID     string `json:"id"`
 	BookID string `json:"bookId"`

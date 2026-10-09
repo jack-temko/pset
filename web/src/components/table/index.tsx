@@ -155,5 +155,5 @@ const FREE_COLUMN = '10rem';
 function minWidth<T>(columns: TableColumn<T>[]): string {
   const set = columns.filter((c) => c.width).map((c) => c.width);
   const free = columns.length - set.length;
-  return `calc(${[...set, ...Array(free).fill(FREE_COLUMN)].join(' + ')})`;
+  return `calc(${[...set, ...Array.from({ length: free }, () => FREE_COLUMN)].join(' + ')})`;
 }

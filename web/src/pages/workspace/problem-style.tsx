@@ -68,7 +68,7 @@ export function ProblemStyleField({
           label: <span className="tabular-nums">{f.label}</span>,
           // What import found, shown on the option it found.
           hint:
-            example && f.value === style?.form ? (
+            example && f.value === style.form ? (
               <>
                 {f.hint}
                 <span className="block">
@@ -81,7 +81,9 @@ export function ProblemStyleField({
             ),
         }))}
         value={value.form}
-        onChange={(form) => onChange({ ...value, form })}
+        onChange={(form) => {
+          onChange({ ...value, form });
+        }}
       />
       {value.form === 'section' && (
         <div className="space-y-1">
@@ -92,7 +94,9 @@ export function ProblemStyleField({
             label="Where the problems are"
             options={WHERE}
             value={value.where}
-            onChange={(where) => onChange({ ...value, where })}
+            onChange={(where) => {
+              onChange({ ...value, where });
+            }}
           />
         </div>
       )}
@@ -110,7 +114,7 @@ export function ProblemStyleField({
               className="shrink-0"
               onClick={onConfirm}
             >
-              It's right
+              It&apos;s right
             </Button>
           )}
         </div>

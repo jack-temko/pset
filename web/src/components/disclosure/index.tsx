@@ -44,7 +44,9 @@ export function Disclosure({
         aria-controls={busy ? undefined : id}
         aria-keyshortcuts={keys}
         disabled={!!busy}
-        onClick={() => onOpenChange(!open)}
+        onClick={() => {
+          onOpenChange(!open);
+        }}
         className={cn(
           'flex min-h-row w-full items-center gap-3 px-card py-2 text-left text-sm',
           busy ? 'cursor-default' : 'cursor-pointer hover:bg-muted/50',

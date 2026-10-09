@@ -26,7 +26,7 @@ export function UsageSummary({
   className?: string;
   after?: React.ReactNode;
 }) {
-  const head = usage.rows[0];
+  const head = usage.rows.at(0);
   if (!head) return null;
   const partial = (usage.total.uncounted ?? 0) > 0;
   const more = usage.rows.length - 1;
@@ -93,7 +93,9 @@ export function UsageTrigger({
         aria-haspopup="dialog"
         aria-label={`Usage details for ${name}`}
         {...intent}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true);
+        }}
         className={cn(
           block ? 'block' : 'inline',
           'max-w-full cursor-pointer rounded-sm text-left text-muted-foreground',
@@ -118,7 +120,9 @@ export function UsageTrigger({
           source={source}
           name={name}
           detail={detail}
-          onClose={() => setOpen(false)}
+          onClose={() => {
+            setOpen(false);
+          }}
         />
       )}
     </>

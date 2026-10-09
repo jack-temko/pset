@@ -37,9 +37,11 @@ export function Components() {
           <SegmentedControl
             label="Show"
             value={showDocs ? 'docs' : 'demo'}
-            onChange={(v) =>
-              setParams(v === 'docs' ? { view: 'docs' } : {}, { replace: true })
-            }
+            onChange={(v) => {
+              setParams(v === 'docs' ? { view: 'docs' } : {}, {
+                replace: true,
+              });
+            }}
             options={[
               { value: 'demo', label: 'Demo' },
               { value: 'docs', label: 'Docs' },

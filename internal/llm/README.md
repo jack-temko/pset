@@ -112,7 +112,7 @@ rejected, or **credit**, an account with no money left (OpenRouter's
 - `ChatStream(ctx, req, delta)` — invokes `delta` per content fragment and
   returns the assembled text. Delta errors abort the stream.
 - `Embed(ctx, texts)` — one vector per text, input order.
-- Failures return `*LLMError{Status, Body}` (or a wrapped transport error);
+- Failures return `*CallError{Status, Body}` (or a wrapped transport error);
   callers turn these into user-facing messages.
 - `Content` marshals as a string for plain text and as a part array once a
   part is appended — both shapes accepted on decode.

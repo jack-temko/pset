@@ -1,4 +1,5 @@
 import type { Block, PartBlock, StepBlock } from '@/api/gen/doc';
+import { must } from '@/lib/must';
 
 /**
  * A document is a flat list of blocks; `part` and `step` are markers like
@@ -34,9 +35,11 @@ export function buildTree(blocks: Block[]): Section[] {
   let section: Section | undefined;
   let group: Group | undefined;
   let steps = 0;
-  const newGroup = (index: number, step?: StepBlock) => {
-    group = { step, number: step ? ++steps : 0, index, items: [] };
-    section!.groups.push(group);
+  const newGroup = (index: number, step?: StepBlock): Group => {
+    const made: Group = { step, number: step ? ++steps : 0, index, items: [] };
+    group = made;
+    must(section, 'the section').groups.push(made);
+    return made;
   };
   blocks.forEach((block, index) => {
     if (block.type === 'part') {
@@ -54,8 +57,7 @@ export function buildTree(blocks: Block[]): Section[] {
       newGroup(index, block);
       return;
     }
-    if (!group) newGroup(index);
-    group!.items.push({ block, index });
+    (group ?? newGroup(index)).items.push({ block, index });
   });
   return sections;
 }

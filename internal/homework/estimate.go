@@ -3,6 +3,8 @@ package homework
 import (
 	"context"
 	"math"
+
+	"github.com/jackt/pset/internal/cleanup"
 )
 
 // The time left on a set, from how long its finished questions took the
@@ -150,13 +152,13 @@ func (s *Service) fillSummaries(ctx context.Context, hs []Summary) error {
 		var o one
 		var set string
 		if err := rows.Scan(&o.id, &set, &o.Done, &o.failed, &o.Difficulty); err != nil {
-			rows.Close()
+			cleanup.Close(rows)
 			return err
 		}
 		bySet[set] = append(bySet[set], o)
 		ids = append(ids, o.id)
 	}
-	rows.Close()
+	cleanup.Close(rows)
 	if err := rows.Err(); err != nil {
 		return err
 	}

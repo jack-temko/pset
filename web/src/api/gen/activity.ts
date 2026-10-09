@@ -6,8 +6,17 @@
 /**
  * Kind is what the student was doing.
  */
+/**
+ * KindReading is time with a book open.
+ */
 export const KindReading = "reading";
+/**
+ * KindHomework is time on a homework set.
+ */
 export const KindHomework = "homework";
+/**
+ * KindAsking is time asking the tutor.
+ */
 export const KindAsking = "asking";
 export type Kind = typeof KindReading | typeof KindHomework | typeof KindAsking;
 /**

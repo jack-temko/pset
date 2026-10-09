@@ -18,6 +18,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/llm"
 )
 
@@ -141,7 +143,10 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) embeddings(w http.ResponseWriter, r *http.Request) {
 	var req llm.EmbedRequest
-	json.NewDecoder(r.Body).Decode(&req)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	s.mu.Lock()
 	s.requests = append(s.requests, Request{Path: "/embeddings"})
 	status := s.embedErr
@@ -164,7 +169,7 @@ func (s *Server) embeddings(w http.ResponseWriter, r *http.Request) {
 	for i, text := range req.Input {
 		out.Data = append(out.Data, item{i, Vector(text)})
 	}
-	json.NewEncoder(w).Encode(out)
+	cleanup.Log("llmtest: write embeddings", json.NewEncoder(w).Encode(out))
 }
 
 // Vector is the fake embedding of text: each word adds weight to a few
@@ -172,13 +177,13 @@ func (s *Server) embeddings(w http.ResponseWriter, r *http.Request) {
 func Vector(text string) []float32 {
 	v := make([]float64, Dims)
 	for _, word := range strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
-		return !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9')
+		return (r < 'a' || r > 'z') && (r < '0' || r > '9')
 	}) {
 		h := fnv.New64a()
 		h.Write([]byte(word))
 		x := h.Sum64()
 		for k := range 3 {
-			v[(x>>(k*16))%Dims] += 1
+			v[(x>>(k*16))%Dims]++
 		}
 	}
 	var norm float64
@@ -199,7 +204,10 @@ func Vector(text string) []float32 {
 
 func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 	var req llm.ChatRequest
-	json.NewDecoder(r.Body).Decode(&req)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	s.mu.Lock()
 	s.requests = append(s.requests, Request{Path: "/chat/completions", Chat: req})
 	var reply Reply
@@ -231,7 +239,7 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 		if len(reply.ToolCalls) > 0 {
 			msg["tool_calls"] = reply.ToolCalls
 		}
-		json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": msg}}})
+		cleanup.Log("llmtest: write a reply", json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": msg}}}))
 		return
 	}
 	// Streamed: the text in a few chunks, then any tool calls, then [DONE].
@@ -241,9 +249,9 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 		b, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": delta}}})
 		if reply.Split {
 			half := len(b) / 2
-			w.Write([]byte("data: " + string(b[:half]) + "\ndata: " + string(b[half:]) + "\n\n"))
+			httpx.Write(w, []byte("data: "+string(b[:half])+"\ndata: "+string(b[half:])+"\n\n"))
 		} else {
-			w.Write([]byte("data: " + string(b) + "\n\n"))
+			httpx.Write(w, []byte("data: "+string(b)+"\n\n"))
 		}
 		if flusher != nil {
 			flusher.Flush()
@@ -253,7 +261,7 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 		send(map[string]any{"reasoning_content": chunk})
 	}
 	if reply.Cut {
-		w.Write([]byte(`data: {"choices":[{"delta":{"content":"Th`))
+		httpx.Write(w, []byte(`data: {"choices":[{"delta":{"content":"Th`))
 		return
 	}
 	if reply.Unfinished {
@@ -279,7 +287,7 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 		}
 		send(map[string]any{"tool_calls": calls})
 	}
-	w.Write([]byte("data: [DONE]\n\n"))
+	httpx.Write(w, []byte("data: [DONE]\n\n"))
 }
 
 // chunks splits text into pieces of about n runes, so streaming code sees

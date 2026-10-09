@@ -20,7 +20,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/pagenum"
+	"github.com/jackt/pset/internal/testx"
 
 	"github.com/go-pdf/fpdf"
 
@@ -76,7 +78,7 @@ func scannedPDF(t *testing.T, pages int) []byte {
 		f.Rect(100, 100, 200, 200, "F")
 	}
 	var buf bytes.Buffer
-	f.Output(&buf)
+	testx.Check(t, f.Output(&buf))
 	return buf.Bytes()
 }
 
@@ -135,7 +137,7 @@ func newEnv(t *testing.T) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { cleanup.Close(d) })
 	if err := db.Migrate(context.Background(), d, append(append(jobs.Migrations(), usage.Migrations()...), Migrations()...)); err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +149,7 @@ func newEnv(t *testing.T) *env {
 	e.queue = jobs.New(d, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	e.queue.Lane(LaneImport, 1)
 	tools := LiveTools()
-	tools.OCR = func(ctx context.Context, path string, page int) (string, error) {
+	tools.OCR = func(_ context.Context, _ string, page int) (string, error) {
 		e.mu.Lock()
 		fn := e.ocr
 		e.mu.Unlock()
@@ -164,7 +166,12 @@ func newEnv(t *testing.T) *env {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
-	go func() { e.queue.Run(ctx); close(done) }()
+	go func() {
+		if err := e.queue.Run(ctx); err != nil && ctx.Err() == nil {
+			t.Error(err)
+		}
+		close(done)
+	}()
 	t.Cleanup(func() { cancel(); <-done })
 	return e
 }
@@ -180,14 +187,14 @@ func (e *env) upload(t *testing.T, name string, data []byte, out any) int {
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
 	fw, _ := mw.CreateFormFile("file", name)
-	fw.Write(data)
-	mw.Close()
+	testx.Check(t, testx.Err(fw.Write(data)))
+	cleanup.Close(mw)
 	resp, err := http.Post(e.URL+"/api/books", mw.FormDataContentType(), &body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
-	json.NewDecoder(resp.Body).Decode(out)
+	defer cleanup.Close(resp.Body)
+	testx.Check(t, json.NewDecoder(resp.Body).Decode(out))
 	return resp.StatusCode
 }
 
@@ -195,16 +202,16 @@ func (e *env) do(t *testing.T, method, path string, body, out any) int {
 	t.Helper()
 	var buf bytes.Buffer
 	if body != nil {
-		json.NewEncoder(&buf).Encode(body)
+		testx.Check(t, json.NewEncoder(&buf).Encode(body))
 	}
 	req, _ := http.NewRequest(method, e.URL+path, &buf)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer cleanup.Close(resp.Body)
 	if out != nil {
-		json.NewDecoder(resp.Body).Decode(out)
+		testx.Check(t, json.NewDecoder(resp.Body).Decode(out))
 	}
 	return resp.StatusCode
 }
@@ -399,7 +406,7 @@ func TestStopWhileReading(t *testing.T) {
 	// The reading is held in its first page until the test lets it go, and
 	// is let go however the test ends: a held handler would make the
 	// cleanup wait on the queue for the whole test timeout.
-	e.setOCR(func(p int) (string, error) {
+	e.setOCR(func(_ int) (string, error) {
 		once.Do(func() { close(entered) })
 		<-release
 		return "text", nil
@@ -552,7 +559,7 @@ func TestEditRemoveAndScans(t *testing.T) {
 		t.Fatal(err)
 	}
 	img, _ := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	cleanup.Close(resp.Body)
 	if resp.StatusCode != 200 || !bytes.HasPrefix(img, []byte{0xFF, 0xD8}) || !strings.Contains(resp.Header.Get("Cache-Control"), "immutable") {
 		t.Fatalf("scan: %d %d bytes %q", resp.StatusCode, len(img), resp.Header.Get("Cache-Control"))
 	}

@@ -21,6 +21,20 @@ export class ApiError extends Error {
   }
 }
 
+/** The server's error shape from a response body, or a plain internal error
+ *  when the body isn't one. */
+function errorBody(data: unknown, status: number): WireError {
+  if (
+    typeof data === 'object' &&
+    data !== null &&
+    'code' in data &&
+    typeof data.code === 'string'
+  ) {
+    return data as WireError;
+  }
+  return { code: 'internal', message: `The server answered ${status}.` };
+}
+
 /** One fetch wrapper for the whole app. JSON in, JSON out; 204 is
  *  `undefined`. A server that doesn't answer at all is `unreachable`. */
 export async function api<T>(
@@ -43,14 +57,9 @@ export async function api<T>(
     });
   }
   if (res.status === 204) return undefined as T;
-  const data = await res.json().catch(() => null);
+  const data: unknown = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new ApiError(
-      res.status,
-      data && typeof data.code === 'string'
-        ? data
-        : { code: 'internal', message: `The server answered ${res.status}.` },
-    );
+    throw new ApiError(res.status, errorBody(data, res.status));
   }
   return data as T;
 }
@@ -67,14 +76,9 @@ export async function postForm<T>(path: string, body: FormData): Promise<T> {
       message: "PSet's server isn't answering.",
     });
   }
-  const data = await res.json().catch(() => null);
+  const data: unknown = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new ApiError(
-      res.status,
-      data && typeof data.code === 'string'
-        ? data
-        : { code: 'internal', message: `The server answered ${res.status}.` },
-    );
+    throw new ApiError(res.status, errorBody(data, res.status));
   }
   return data as T;
 }

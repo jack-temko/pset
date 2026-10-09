@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/execx"
 )
 
@@ -30,7 +31,7 @@ func rasterize(ctx context.Context, pdfPath string, n, dpi int, ext string, form
 	if err != nil {
 		return nil, fmt.Errorf("create temp dir: %w", err)
 	}
-	defer os.RemoveAll(dir)
+	defer cleanup.RemoveAll(dir)
 
 	args := append([]string{"-f", strconv.Itoa(n), "-l", strconv.Itoa(n), "-r", strconv.Itoa(dpi)}, format...)
 	if _, err := execx.Run(ctx, "pdftoppm", append(args, pdfPath, filepath.Join(dir, "page"))...); err != nil {

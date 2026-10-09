@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jackt/pset/internal/agent"
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/events"
 	"github.com/jackt/pset/internal/httpx"
@@ -29,11 +30,13 @@ type Library interface {
 	Book(ctx context.Context, id string) (Book, error)
 }
 
+// Settings is what the tutor reads of the student's settings: the model connections and their name.
 type Settings interface {
 	LLM(ctx context.Context) (llm.Config, error)
 	Name(ctx context.Context) string
 }
 
+// Queue is the job queue as the tutor uses it.
 type Queue interface {
 	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
 	// Wake starts what was enqueued, once its transaction has committed.
@@ -42,6 +45,7 @@ type Queue interface {
 	Handle(kind, lane string, h jobs.Handler)
 }
 
+// Config is what the service is built from.
 type Config struct {
 	DB       *sql.DB
 	Events   events.Publisher
@@ -52,6 +56,7 @@ type Config struct {
 	Memory agent.Memory
 }
 
+// Service answers the student's questions about a book, one turn at a time.
 type Service struct{ c Config }
 
 // A turn's job. The lane runs many books at once; the book is the key,
@@ -61,6 +66,7 @@ const (
 	LaneTurn = "turn"
 )
 
+// New builds the service and registers its job handler on the queue.
 func New(c Config) *Service {
 	s := &Service{c}
 	c.Queue.Handle(JobTurn, LaneTurn, s.runTurn)
@@ -92,7 +98,7 @@ func (s *Service) Turns(ctx context.Context, bookID string) ([]Turn, error) {
 	}
 	out := make([]Turn, len(rows))
 	for i, r := range rows {
-		r.Turn.Usage = uses[r.ID]
+		r.Usage = uses[r.ID]
 		out[i] = r.Turn
 	}
 	return out, nil
@@ -177,7 +183,9 @@ func (s *Service) Clear(ctx context.Context, bookID string) error {
 	}
 	for _, r := range rows {
 		if r.State == TurnRunning {
-			s.c.Queue.StopSubject(ctx, r.ID)
+			if err := s.c.Queue.StopSubject(ctx, r.ID); err != nil {
+				return err
+			}
 		}
 	}
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM turns WHERE book_id = ?`, bookID); err != nil {
@@ -194,12 +202,19 @@ func (s *Service) Clear(ctx context.Context, bookID string) error {
 	return nil
 }
 
+// announce is publish for a caller that can do nothing about a failure: it
+// logs it.
+func (s *Service) announce(ctx context.Context, id string) {
+	_, err := s.publish(ctx, id)
+	cleanup.Log("ask: publish a turn", err)
+}
+
 func (s *Service) publish(ctx context.Context, id string) (Turn, error) {
 	t, err := getTurn(ctx, s.c.DB, id)
 	if err != nil {
 		return Turn{}, err
 	}
-	if t.Turn.Usage, err = usage.For(ctx, s.c.DB, usage.SubjectTurn, id); err != nil {
+	if t.Usage, err = usage.For(ctx, s.c.DB, usage.SubjectTurn, id); err != nil {
 		return Turn{}, err
 	}
 	s.c.Events.Publish(EventTurnChanged, TurnChanged{Turn: t.Turn})

@@ -12,6 +12,7 @@ import type { Block, Run } from '@/api/gen/doc';
 import type { Usage } from '@/api/gen/usage';
 import type { ScenarioContext } from '@/views/mock/scenario';
 import type { HomeworkSet, Q } from './progress';
+import { must } from '@/lib/must';
 import { COVERS } from '@/lib/covers';
 
 const t = (text: string): Run => ({ t: text });
@@ -427,7 +428,10 @@ export class World {
   }
 
   summary(id: string): HomeworkSet {
-    const h = this.sets.find((x) => x.id === id)!;
+    const h = must(
+      this.sets.find((x) => x.id === id),
+      `set ${id}`,
+    );
     const qs = this.questions.filter((q) => q.homeworkId === id);
     return {
       ...h,
@@ -488,10 +492,14 @@ export class World {
       fail?: { at: 'locating' | 'writing'; failure: Failure; reason: string };
     } = {},
   ) {
-    const q = this.questions.find((x) => x.id === id)!;
+    const q = must(
+      this.questions.find((x) => x.id === id),
+      `question ${id}`,
+    );
     const sample = sampleFor(q.label);
-    const step = (v: number, change: Partial<Question>) =>
+    const step = (v: number, change: Partial<Question>) => {
       this.at(v, () => this.patch(id, change));
+    };
     let v = this.vnow();
 
     if (q.state === 'pending' || q.state === 'locating') {

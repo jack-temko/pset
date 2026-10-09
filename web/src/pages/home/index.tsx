@@ -254,7 +254,9 @@ function Homework({ books }: { books: Book[] | undefined }) {
             className="border-t border-border-muted"
             open={open}
             total={items.length}
-            onToggle={() => setOpen((o) => !o)}
+            onToggle={() => {
+              setOpen((o) => !o);
+            }}
           />
         )}
       </Box>
@@ -308,9 +310,11 @@ function Shelf({ books }: { books: Book[] | undefined }) {
         const only =
           duplicates.length === 1 && files.length === 1 ? duplicates[0] : null;
         const dup = only ? books?.find((b) => b.id === only) : undefined;
-        if (dup?.state.kind === 'ready') navigate(`/books/${dup.id}`);
+        if (dup?.state.kind === 'ready') void navigate(`/books/${dup.id}`);
       },
-      onError: (e) => setRefused([e.message]),
+      onError: (e) => {
+        setRefused([e.message]);
+      },
     });
   };
 
@@ -374,7 +378,13 @@ function Shelf({ books }: { books: Book[] | undefined }) {
                 </span>
               ))}
             </span>
-            <Button variant="ghost" size="sm" onClick={() => setRefused([])}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setRefused([]);
+              }}
+            >
               Dismiss
             </Button>
           </BoxBody>
@@ -401,9 +411,15 @@ function Shelf({ books }: { books: Book[] | undefined }) {
             <ImportRow
               key={b.id}
               book={b}
-              onStop={() => stop.mutate(b.id)}
-              onRetry={() => retry.mutate(b.id)}
-              onDismiss={() => remove.mutate(b.id)}
+              onStop={() => {
+                stop.mutate(b.id);
+              }}
+              onRetry={() => {
+                retry.mutate(b.id);
+              }}
+              onDismiss={() => {
+                remove.mutate(b.id);
+              }}
             />
           ))}
         </Box>
@@ -452,7 +468,9 @@ function Shelf({ books }: { books: Book[] | undefined }) {
                 shape="pill"
                 open={open}
                 total={ready.length}
-                onToggle={() => setOpen((o) => !o)}
+                onToggle={() => {
+                  setOpen((o) => !o);
+                }}
               />
             )}
           </>

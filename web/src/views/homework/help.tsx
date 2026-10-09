@@ -58,8 +58,12 @@ export function HelpRows({
           ask && name !== 'answers'
             ? {
                 selected: ask.selected(stage, blocks),
-                onPick: (sel) => ask.pick(stage, sel, blocks),
-                onAsk: (sel) => ask.ask(stage, sel, blocks),
+                onPick: (sel) => {
+                  ask.pick(stage, sel, blocks);
+                },
+                onAsk: (sel) => {
+                  ask.ask(stage, sel, blocks);
+                },
                 onClear: ask.clear,
               }
             : undefined;
@@ -72,7 +76,9 @@ export function HelpRows({
             still={queued}
             keys={String(i + 1)}
             open={open.has(name)}
-            onOpenChange={(o) => onOpenChange(name, o)}
+            onOpenChange={(o) => {
+              onOpenChange(name, o);
+            }}
           >
             <div className="space-y-3">
               {name === 'answers' ? (

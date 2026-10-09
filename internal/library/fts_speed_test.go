@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackt/pset/internal/testx"
 )
 
 // The race detector makes the pure-Go SQLite far slower, so this timing
@@ -22,9 +24,9 @@ func TestRemovingABookIsNotSlowInABigLibrary(t *testing.T) {
 	}
 	for b := 0; b < 10; b++ {
 		id := fmt.Sprintf("%08d-aaaa-bbbb-cccc-dddddddddddd", b)
-		tx.Exec(`INSERT INTO books (id, sha256, title, state, created_at, updated_at) VALUES (?, ?, 'b', 'ready', '', '')`, id, id)
+		testx.Check(t, testx.Err(tx.Exec(`INSERT INTO books (id, sha256, title, state, created_at, updated_at) VALUES (?, ?, 'b', 'ready', '', '')`, id, id)))
 		for p := 1; p <= 800; p++ {
-			tx.Exec(`INSERT INTO pages (book_id, number, text, status) VALUES (?, ?, ?, 'text')`, id, p, fmt.Sprintf("%s page %d", text, p))
+			testx.Check(t, testx.Err(tx.Exec(`INSERT INTO pages (book_id, number, text, status) VALUES (?, ?, ?, 'text')`, id, p, fmt.Sprintf("%s page %d", text, p))))
 		}
 	}
 	if err := tx.Commit(); err != nil {
@@ -40,7 +42,7 @@ func TestRemovingABookIsNotSlowInABigLibrary(t *testing.T) {
 		t.Logf("removed an 800-page book among ten in %v", took)
 	}
 	var n int
-	d.QueryRow(`SELECT count(*) FROM pages_fts`).Scan(&n)
+	testx.Check(t, d.QueryRow(`SELECT count(*) FROM pages_fts`).Scan(&n))
 	if n != 9*800 {
 		t.Errorf("the index holds %d rows, want %d", n, 9*800)
 	}

@@ -75,8 +75,12 @@ export function RadioRows<T extends string>({
             role="radio"
             aria-checked={on}
             tabIndex={i === stop ? 0 : -1}
-            onClick={() => onChange(o.value)}
-            onKeyDown={(e) => move(e, i)}
+            onClick={() => {
+              onChange(o.value);
+            }}
+            onKeyDown={(e) => {
+              move(e, i);
+            }}
             className={cn(
               'flex w-full cursor-pointer items-start gap-3 px-3 py-2 text-left',
               on ? 'bg-primary-soft' : 'hover:bg-muted/50',

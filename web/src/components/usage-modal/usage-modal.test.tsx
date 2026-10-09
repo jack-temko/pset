@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { BookUsage, Detail } from '@/api/gen/usage';
 import { BookUsageDialog, Fig, isShape, UsageModal } from '.';
+import { must } from '@/lib/must';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -18,9 +19,13 @@ function textOf(node: React.ReactNode): string {
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);
-  act(() => root.render(node));
+  act(() => {
+    root.render(node);
+  });
   const text = document.body.querySelector('dialog')?.textContent ?? '';
-  act(() => root.unmount());
+  act(() => {
+    root.unmount();
+  });
   host.remove();
   return text;
 }
@@ -111,12 +116,12 @@ describe('UsageModal', () => {
     const host = document.createElement('div');
     document.body.append(host);
     const root = createRoot(host);
-    act(() =>
-      root.render(<UsageModal open onClose={noop} name="x" detail={detail} />),
-    );
+    act(() => {
+      root.render(<UsageModal open onClose={noop} name="x" detail={detail} />);
+    });
     const mono = [
       ...document.querySelectorAll('dialog .figure, dialog .font-mono'),
-    ].map((e) => e.textContent ?? '');
+    ].map((e) => e.textContent);
     expect(mono.some((t) => t.includes('model-b'))).toBe(true);
     expect(mono).toContain('30,000');
     expect(
@@ -124,7 +129,9 @@ describe('UsageModal', () => {
         (e) => !/figure|font-mono/.test(e.className),
       ),
     ).toBe(true);
-    act(() => root.unmount());
+    act(() => {
+      root.unmount();
+    });
     host.remove();
   });
 
@@ -158,11 +165,13 @@ describe('UsageModal layout', () => {
     const host = document.createElement('div');
     document.body.append(host);
     const root = createRoot(host);
-    act(() =>
-      root.render(<UsageModal open onClose={noop} name="x" detail={d} />),
-    );
+    act(() => {
+      root.render(<UsageModal open onClose={noop} name="x" detail={d} />);
+    });
     const out = [...document.querySelectorAll(sel)].map((e) => e.textContent);
-    act(() => root.unmount());
+    act(() => {
+      root.unmount();
+    });
     host.remove();
     return out;
   };
@@ -222,9 +231,9 @@ describe('UsageModal layout', () => {
     const host = document.createElement('div');
     document.body.append(host);
     const root = createRoot(host);
-    act(() =>
-      root.render(<UsageModal open onClose={noop} name="x" detail={detail} />),
-    );
+    act(() => {
+      root.render(<UsageModal open onClose={noop} name="x" detail={detail} />);
+    });
     const widths = [...document.querySelectorAll('table')]
       .slice(1)
       .map((t) =>
@@ -232,7 +241,9 @@ describe('UsageModal layout', () => {
       );
     expect(new Set(widths).size).toBe(1);
     expect(document.querySelector('table')?.className).toContain('table-fixed');
-    act(() => root.unmount());
+    act(() => {
+      root.unmount();
+    });
     host.remove();
   });
 });
@@ -268,14 +279,19 @@ describe('UsageModal tool lists', () => {
     const host = document.createElement('div');
     document.body.append(host);
     const root = createRoot(host);
-    act(() =>
-      root.render(<UsageModal open onClose={noop} name="x" detail={d} />),
+    act(() => {
+      root.render(<UsageModal open onClose={noop} name="x" detail={d} />);
+    });
+    const tools = must(
+      document.querySelector('[title="search_pages, read_page"]'),
+      'element',
     );
-    const tools = document.querySelector('[title="search_pages, read_page"]')!;
     expect(tools.className).toContain('truncate');
     expect(document.body.textContent).toContain('rate limited (429)');
     expect(document.querySelector('.truncate[title*="429"]')).toBeNull();
-    act(() => root.unmount());
+    act(() => {
+      root.unmount();
+    });
     host.remove();
   });
 });
@@ -284,17 +300,26 @@ describe('Fig', () => {
   const render = (partial: boolean) => {
     const host = document.createElement('div');
     const root = createRoot(host);
-    act(() => root.render(<Fig text="$0.0054" partial={partial} />));
-    return { host, done: () => act(() => root.unmount()) };
+    act(() => {
+      root.render(<Fig text="$0.0054" partial={partial} />);
+    });
+    return {
+      host,
+      done: () => {
+        act(() => {
+          root.unmount();
+        });
+      },
+    };
   };
 
   it('hangs the mark outside the number, so a cell with it and one without share a number box', () => {
     const marked = render(true);
     const plain = render(false);
-    const box = marked.host.querySelector('.relative')!;
+    const box = must(marked.host.querySelector('.relative'), 'element');
     // The number is the box's own text; the mark is absolutely placed to its left.
     expect(box.firstChild?.textContent).toBe('$0.0054');
-    const mark = box.querySelector('[aria-hidden]')!;
+    const mark = must(box.querySelector('[aria-hidden]'), 'element');
     expect(mark.textContent).toBe('≥');
     expect(mark.className).toMatch(/absolute/);
     expect(mark.className).toMatch(/right-full/);
@@ -308,18 +333,26 @@ describe('Fig', () => {
   it('puts the mark before the number, in the flow, in a left-aligned value', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
-    act(() => root.render(<Fig text="43,800" partial inline />));
+    act(() => {
+      root.render(<Fig text="43,800" partial inline />);
+    });
     expect(host.querySelector('.absolute')).toBeNull();
     expect(host.textContent).toMatch(/^≥ at least 43,800$/);
-    act(() => root.unmount());
+    act(() => {
+      root.unmount();
+    });
   });
 
   it('has no mark on a dash', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
-    act(() => root.render(<Fig text="–" partial />));
+    act(() => {
+      root.render(<Fig text="–" partial />);
+    });
     expect(host.textContent).toBe('–');
-    act(() => root.unmount());
+    act(() => {
+      root.unmount();
+    });
   });
 });
 
@@ -361,13 +394,15 @@ describe('UsageModal calls', () => {
       const host = document.createElement('div');
       document.body.append(host);
       const root = createRoot(host);
-      act(() =>
-        root.render(<UsageModal open onClose={noop} name="x" detail={d} />),
-      );
+      act(() => {
+        root.render(<UsageModal open onClose={noop} name="x" detail={d} />);
+      });
       const th = [
         ...document.querySelectorAll('dialog table:last-of-type th'),
       ].map((t) => t.textContent);
-      act(() => root.unmount());
+      act(() => {
+        root.unmount();
+      });
       host.remove();
       return th;
     };
@@ -477,16 +512,18 @@ describe('UsageModal skeleton from the summary', () => {
     document.body.append(host);
     const root = createRoot(host);
     const summary = { rows: [], total: { ms: 1, calls: 5 }, failed: 0 };
-    act(() =>
+    act(() => {
       root.render(
         <UsageModal open onClose={noop} name="x" loading summary={summary} />,
-      ),
-    );
+      );
+    });
     const calls = [...document.querySelectorAll('dialog table')].find(
       (t) => t.querySelector('caption')?.textContent === 'Calls',
     );
     expect(calls?.querySelectorAll('tbody tr').length).toBe(5);
-    act(() => root.unmount());
+    act(() => {
+      root.unmount();
+    });
     host.remove();
   });
 });

@@ -27,16 +27,23 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 )
 
+// State is where a job is.
 type State string
 
 const (
-	Queued    State = "queued"
-	Running   State = "running"
-	Done      State = "done"
-	Failed    State = "failed"
+	// Queued is waiting for a lane.
+	Queued State = "queued"
+	// Running is being worked on.
+	Running State = "running"
+	// Done finished.
+	Done State = "done"
+	// Failed returned an error.
+	Failed State = "failed"
+	// Cancelled was stopped before it finished.
 	Cancelled State = "cancelled"
 )
 
@@ -129,6 +136,7 @@ type Queue struct {
 	root    context.Context
 }
 
+// New makes a queue over the database. Handlers are registered, then Start runs it.
 func New(d *sql.DB, log *slog.Logger) *Queue {
 	return &Queue{
 		db:      d,
@@ -262,10 +270,15 @@ func (q *Queue) StopSubject(ctx context.Context, subject string) error {
 	var ids []string
 	for rows.Next() {
 		var id string
-		rows.Scan(&id)
+		if err := rows.Scan(&id); err != nil {
+			cleanup.Close(rows)
+			return err
+		}
 		ids = append(ids, id)
 	}
-	rows.Close()
+	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
+		return err
+	}
 	for _, id := range ids {
 		if err := q.Stop(ctx, id); err != nil {
 			return err
@@ -287,6 +300,7 @@ func (q *Queue) Retry(ctx context.Context, id string) error {
 	return nil
 }
 
+// ErrNotRetryable is Retry on a job that is not failed or cancelled.
 var ErrNotRetryable = errors.New("jobs: only a failed or cancelled job can be retried")
 
 type stopKey struct{}
@@ -313,6 +327,7 @@ func (q *Queue) Pause() {
 	q.wg.Wait()
 }
 
+// Resume undoes Pause: waiting jobs start again.
 func (q *Queue) Resume() {
 	q.mu.Lock()
 	q.paused = false
@@ -334,7 +349,9 @@ func (q *Queue) Run(ctx context.Context) error {
 	}
 	// Finished jobs are only history; a week of it is plenty.
 	cutoff := db.At(time.Now().Add(-7 * 24 * time.Hour))
-	q.db.ExecContext(ctx, `DELETE FROM jobs WHERE state IN ('done', 'cancelled') AND updated_at < ?`, cutoff)
+	if _, err := q.db.ExecContext(ctx, `DELETE FROM jobs WHERE state IN ('done', 'cancelled') AND updated_at < ?`, cutoff); err != nil {
+		q.log.Warn("jobs: clear old history", "err", err)
+	}
 
 	t := time.NewTicker(poll)
 	defer t.Stop()
@@ -395,7 +412,7 @@ func (q *Queue) schedule(ctx context.Context) error {
 		for rows.Next() {
 			j, err := scanJob(rows)
 			if err != nil {
-				rows.Close()
+				cleanup.Close(rows)
 				return err
 			}
 			if _, ok := q.running[j.ID]; ok || (j.Key != "" && busy[j.Key]) {
@@ -423,7 +440,7 @@ func (q *Queue) schedule(ctx context.Context) error {
 			yielding = slices.DeleteFunc(yielding, func(r *running) bool { return r == v })
 			q.log.Debug("jobs: interrupted", "kind", v.kind, "id", v.id, "for", j.Kind)
 		}
-		rows.Close()
+		cleanup.Close(rows)
 		for _, j := range next {
 			if err := q.start(ctx, j); err != nil {
 				return err

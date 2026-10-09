@@ -22,6 +22,7 @@ import (
 	"github.com/jackt/pset/internal/activity"
 	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/ask"
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/events"
 	"github.com/jackt/pset/internal/homework"
@@ -48,7 +49,10 @@ func main() {
 	open := fs.Bool("open", true, "open the browser once PSet is serving")
 	verbose := fs.Bool("verbose", false, "log debug detail")
 	showVersion := fs.Bool("version", false, "print the version and exit")
-	fs.Parse(os.Args[1:])
+	if err := fs.Parse(os.Args[1:]); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
 
 	if *showVersion {
 		fmt.Println("pset", Version)
@@ -85,7 +89,7 @@ var restarting atomic.Bool
 // go back to queued and resume), after which main starts the new program.
 func restartSelf() {
 	restarting.Store(true)
-	syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+	cleanup.Log("restart: ask for a shutdown", syscall.Kill(syscall.Getpid(), syscall.SIGTERM))
 }
 
 func serve(addr, dir string, open bool, log *slog.Logger) error {
@@ -94,7 +98,7 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	defer d.Close()
+	defer cleanup.Close(d)
 
 	// Every feature's migrations, in dependency order: a table's parent
 	// before the table.
@@ -199,7 +203,7 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", addr, err)
 	}
-	defer ln.Close()
+	defer cleanup.Close(ln)
 
 	runCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -249,7 +253,7 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); errors.Is(err, context.DeadlineExceeded) {
-		srv.Close()
+		cleanup.Log("close the server", srv.Close())
 	}
 	return nil
 }

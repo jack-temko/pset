@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/jackt/pset/internal/cleanup"
 )
 
 // setsPerBook is how many homework sets the snapshot keeps for each book.
@@ -79,7 +81,7 @@ func Strip(ctx context.Context, d *sql.DB) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer cleanup.Rollback(tx)
 	for _, t := range dropped {
 		ok, err := hasTable(ctx, tx, t)
 		if err != nil {
@@ -232,7 +234,7 @@ func settingRows(ctx context.Context, q queryer) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	out := map[string]string{}
 	for rows.Next() {
 		var k, v string
@@ -289,14 +291,14 @@ func Check(ctx context.Context, d *sql.DB, dir, file string, secrets []string) e
 	for tables.Next() {
 		var name string
 		if err := tables.Scan(&name); err != nil {
-			tables.Close()
+			cleanup.Close(tables)
 			return err
 		}
 		if !isKept(name) {
 			fail("table %s is in neither the keep nor the drop list", name)
 		}
 	}
-	tables.Close()
+	cleanup.Close(tables)
 
 	rows, err := settingRows(ctx, d)
 	if err != nil {
@@ -367,14 +369,14 @@ func Check(ctx context.Context, d *sql.DB, dir, file string, secrets []string) e
 	for brows.Next() {
 		var id string
 		if err := brows.Scan(&id); err != nil {
-			brows.Close()
+			cleanup.Close(brows)
 			return err
 		}
 		if _, err := os.Stat(filepath.Join(dir, "books", id+".pdf")); err != nil {
 			fail("book %s has no PDF", id)
 		}
 	}
-	brows.Close()
+	cleanup.Close(brows)
 
 	raw, err := os.ReadFile(file)
 	if err != nil {

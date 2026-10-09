@@ -4,16 +4,26 @@ package httpx
 type Code string
 
 const (
-	CodeNotFound      Code = "not_found"
-	CodeInvalid       Code = "invalid"
+	// CodeNotFound is a thing that isn't there.
+	CodeNotFound Code = "not_found"
+	// CodeInvalid is input that is wrong; Field names it.
+	CodeInvalid Code = "invalid"
+	// CodeNotConfigured is something that needs setting up first, such as a key.
 	CodeNotConfigured Code = "not_configured"
+	// CodeDuplicateBook is a book that is already on the shelf; ID names it.
 	CodeDuplicateBook Code = "duplicate_book"
-	CodeUnreachable   Code = "unreachable"
-	CodeBadKey        Code = "bad_key"
-	CodeBadModel      Code = "bad_model"
-	CodeBusy          Code = "busy"
-	CodeForbidden     Code = "forbidden"
-	CodeInternal      Code = "internal"
+	// CodeUnreachable is a service that did not answer.
+	CodeUnreachable Code = "unreachable"
+	// CodeBadKey is a key the provider refused.
+	CodeBadKey Code = "bad_key"
+	// CodeBadModel is a model the provider does not know.
+	CodeBadModel Code = "bad_model"
+	// CodeBusy is work that cannot start while something else runs.
+	CodeBusy Code = "busy"
+	// CodeForbidden is a request that is not allowed.
+	CodeForbidden Code = "forbidden"
+	// CodeInternal is a failure that is PSet's own.
+	CodeInternal Code = "internal"
 )
 
 // Error is the one error shape on the wire. Message is display-ready copy;

@@ -20,6 +20,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jackt/pset/internal/cleanup"
 )
 
 // DefaultTimeout bounds a whole HTTP exchange, streaming included. It is
@@ -84,7 +86,9 @@ type Config struct {
 }
 
 // ChatReady and EmbedReady report whether a side is set up.
-func (c Config) ChatReady() bool  { return c.ChatEndpoint != "" && c.ChatModel != "" }
+func (c Config) ChatReady() bool { return c.ChatEndpoint != "" && c.ChatModel != "" }
+
+// EmbedReady reports whether embeddings are set up.
 func (c Config) EmbedReady() bool { return c.EmbedEndpoint != "" && c.EmbedModel != "" }
 
 // Open builds a client for a Config.
@@ -99,15 +103,15 @@ func (c *Client) ChatConfigured() bool { return c.apiBaseURL != "" && c.apiKey !
 // principle (a base URL is set).
 func (c *Client) EmbedConfigured() bool { return c.embedBaseURL != "" }
 
-// LLMError is a failed model call with the HTTP status and response body.
+// CallError is a failed model call with the HTTP status and response body.
 // Adapters wrap it in a user-facing message; the body stays reachable for
 // verbose output.
-type LLMError struct {
+type CallError struct {
 	Status int
 	Body   string
 }
 
-func (e *LLMError) Error() string {
+func (e *CallError) Error() string {
 	return fmt.Sprintf("model request failed (HTTP %d)", e.Status)
 }
 
@@ -180,6 +184,7 @@ type ImageURL struct {
 	URL string `json:"url"`
 }
 
+// MarshalJSON writes plain text as a string and parts as a list, as the API takes both.
 func (c Content) MarshalJSON() ([]byte, error) {
 	if len(c.parts) > 0 {
 		return json.Marshal(c.parts)
@@ -187,6 +192,7 @@ func (c Content) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.text)
 }
 
+// UnmarshalJSON reads either a string or a list of parts.
 func (c *Content) UnmarshalJSON(data []byte) error {
 	if bytes.HasPrefix(bytes.TrimSpace(data), []byte("[")) {
 		c.parts = nil
@@ -325,9 +331,6 @@ type ReasoningOptions struct {
 	Enabled bool   `json:"enabled,omitempty"`
 }
 
-// ProviderOptions is OpenRouter's say in which hosts serve a model: which
-// to try first (Order, falling back to the rest), at what precision, and
-// how to rank the rest (Sort).
 // CacheControl is a prompt cache request: "ephemeral" is five minutes.
 type CacheControl struct {
 	Type string `json:"type"`
@@ -338,6 +341,9 @@ type CacheControl struct {
 // input was over half their cost.
 func cachesWhenAsked(model string) bool { return strings.HasPrefix(model, "anthropic/") }
 
+// ProviderOptions is OpenRouter's say in which hosts serve a model: which
+// to try first (Order, falling back to the rest), at what precision, and
+// how to rank the rest (Sort).
 type ProviderOptions struct {
 	Order         []string `json:"order,omitempty"`
 	Quantizations []string `json:"quantizations,omitempty"`
@@ -628,7 +634,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 	if err != nil {
 		return Reply{}, err
 	}
-	defer resp.Body.Close()
+	defer cleanup.Close(resp.Body)
 
 	var full, reasoning strings.Builder
 	var usage *Usage
@@ -941,7 +947,7 @@ func (c *Client) post(ctx context.Context, url string, body any, out any) error 
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer cleanup.Close(resp.Body)
 	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
 		return fmt.Errorf("decode model reply: %w", err)
 	}
@@ -963,7 +969,7 @@ func (c *Client) request(ctx context.Context, method, url string, body any) (*ht
 }
 
 func readErrorBody(status int, body []byte) error {
-	return &LLMError{Status: status, Body: string(body)}
+	return &CallError{Status: status, Body: string(body)}
 }
 
 // doWithRetry POSTs a JSON body and returns a 200 response. Providers
@@ -984,7 +990,7 @@ func (c *Client) doWithRetry(ctx context.Context, url string, body any) (*http.R
 			return resp, nil
 		}
 		data, readErr := io.ReadAll(io.LimitReader(resp.Body, 8*1024))
-		resp.Body.Close()
+		cleanup.Close(resp.Body)
 		if readErr != nil {
 			return nil, fmt.Errorf("read model error reply: %w", readErr)
 		}
@@ -1013,15 +1019,15 @@ func (c *Client) doWithRetry(ctx context.Context, url string, body any) (*http.R
 type Trouble string
 
 const (
-	// TroubleCut: the reply stopped partway. Asking again usually works.
+	// TroubleCut means the reply stopped partway. Asking again usually works.
 	TroubleCut Trouble = "cut"
-	// TroubleBusy: the provider didn't answer, is overloaded, or the
+	// TroubleBusy means the provider didn't answer, is overloaded, or the
 	// network failed. Nothing to fix; try again later.
 	TroubleBusy Trouble = "busy"
-	// TroubleRejected: the provider refused the request (a bad key, an
+	// TroubleRejected means the provider refused the request (a bad key, an
 	// unknown model): something in the connection's settings is wrong.
 	TroubleRejected Trouble = "rejected"
-	// TroubleCredit: the account has no money left. Asking again can't
+	// TroubleCredit means the account has no money left. Asking again can't
 	// help until it's topped up; switching provider in Settings can.
 	TroubleCredit Trouble = "credit"
 )
@@ -1053,7 +1059,7 @@ func Classify(err error) (Trouble, int) {
 	if errors.Is(err, ErrStreamCut) {
 		return TroubleCut, 0
 	}
-	var e *LLMError
+	var e *CallError
 	if errors.As(err, &e) {
 		if OutOfCredit(e.Status, e.Body) {
 			return TroubleCredit, e.Status

@@ -36,7 +36,9 @@ function DoorDemo() {
         className="border-t border-border-muted"
         open={open}
         total={DUE.length}
-        onToggle={() => setOpen((o) => !o)}
+        onToggle={() => {
+          setOpen((o) => !o);
+        }}
       />
     </Box>
   );
@@ -83,7 +85,9 @@ function DisclosureDemo() {
           title={title}
           meta={meta}
           open={open === title}
-          onOpenChange={(o) => setOpen(o ? title : null)}
+          onOpenChange={(o) => {
+            setOpen(o ? title : null);
+          }}
         >
           <p>{body}</p>
         </Disclosure>

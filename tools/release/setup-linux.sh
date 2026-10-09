@@ -59,6 +59,8 @@ case ":$PATH:" in
 *)
 	added=
 	for rc in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zshrc"; do
+		# The line written into the rc file keeps $HOME and $PATH unexpanded.
+		# shellcheck disable=SC2016
 		[ -f "$rc" ] && printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >>"$rc" && added=1
 	done
 	if [ -n "$added" ]; then

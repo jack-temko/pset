@@ -17,6 +17,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/jackt/pset/internal/cleanup"
 )
 
 const bin = ".dev/pset"
@@ -59,7 +61,7 @@ func main() {
 		select {
 		case <-ctx.Done():
 			halt(server)
-			vite.Wait()
+			cleanup.Log("dev: stop vite", vite.Wait())
 			return
 		case <-time.After(500 * time.Millisecond):
 		}
@@ -69,7 +71,7 @@ func main() {
 // latest is the newest mtime of any Go file, and of any wire.go.
 func latest() (goMod, wireMod time.Time) {
 	for _, root := range []string{"cmd", "internal", "web/embed.go"} {
-		filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		cleanup.Log("dev: watch the sources", filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(p, ".go") || strings.HasSuffix(p, "_test.go") {
 				return nil
 			}
@@ -84,7 +86,7 @@ func latest() (goMod, wireMod time.Time) {
 				wireMod = info.ModTime()
 			}
 			return nil
-		})
+		}))
 	}
 	return
 }
@@ -103,13 +105,13 @@ func halt(c *exec.Cmd) {
 	if c == nil || c.Process == nil {
 		return
 	}
-	c.Process.Signal(os.Interrupt)
+	cleanup.Log("dev: interrupt", c.Process.Signal(os.Interrupt))
 	done := make(chan struct{})
-	go func() { c.Wait(); close(done) }()
+	go func() { cleanup.Log("dev: wait", c.Wait()); close(done) }()
 	select {
 	case <-done:
 	case <-time.After(10 * time.Second):
-		c.Process.Kill()
+		cleanup.Log("dev: kill", c.Process.Kill())
 		<-done
 	}
 }

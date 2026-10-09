@@ -20,8 +20,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/probnum"
+	"github.com/jackt/pset/internal/testx"
 
 	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/db"
@@ -78,7 +80,9 @@ var blank = sync.OnceValue(func() []byte {
 	}
 	img.Set(40, 40, color.Black)
 	var b bytes.Buffer
-	jpeg.Encode(&b, img, nil)
+	if err := jpeg.Encode(&b, img, nil); err != nil {
+		panic(err)
+	}
 	return b.Bytes()
 })
 
@@ -175,7 +179,7 @@ func newEnvWith(t *testing.T, mem agent.Memory) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { cleanup.Close(d) })
 	migs := append(jobs.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
 	migs = append(migs, usage.Migrations()...)
 	migs = append(migs, memory.Migrations()...)
@@ -183,7 +187,7 @@ func newEnvWith(t *testing.T, mem agent.Memory) *env {
 	if err := db.Migrate(context.Background(), d, migs); err != nil {
 		t.Fatal(err)
 	}
-	d.Exec(`INSERT INTO books VALUES ('b1')`)
+	testx.Check(t, testx.Err(d.Exec(`INSERT INTO books VALUES ('b1')`)))
 
 	e := &env{llm: llmtest.New(t), events: &recorder{}}
 	e.llm.Fallback(fakeModel)
@@ -199,7 +203,12 @@ func newEnvWith(t *testing.T, mem agent.Memory) *env {
 	t.Cleanup(e.Close)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
-	go func() { q.Run(ctx); close(done) }()
+	go func() {
+		if err := q.Run(ctx); err != nil && ctx.Err() == nil {
+			t.Error(err)
+		}
+		close(done)
+	}()
 	t.Cleanup(func() { cancel(); <-done })
 	return e
 }
@@ -208,16 +217,16 @@ func (e *env) do(t *testing.T, method, path string, body, out any) int {
 	t.Helper()
 	var buf bytes.Buffer
 	if body != nil {
-		json.NewEncoder(&buf).Encode(body)
+		testx.Check(t, json.NewEncoder(&buf).Encode(body))
 	}
 	req, _ := http.NewRequest(method, e.URL+path, &buf)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer cleanup.Close(resp.Body)
 	if out != nil {
-		json.NewDecoder(resp.Body).Decode(out)
+		testx.Check(t, json.NewDecoder(resp.Body).Decode(out))
 	}
 	return resp.StatusCode
 }
@@ -368,10 +377,10 @@ func TestInBookQuestionIsLocatedThenGuided(t *testing.T) {
 	if err != nil || resp.StatusCode != 200 || resp.Header.Get("Content-Type") != "image/jpeg" {
 		t.Fatalf("figure: %v %v", err, resp.StatusCode)
 	}
-	resp.Body.Close()
+	cleanup.Close(resp.Body)
 	resp, _ = http.Get(e.URL + "/api/homework/" + h.ID + "/worksheet")
 	body, _ := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	cleanup.Close(resp.Body)
 	if resp.StatusCode != 200 || !bytes.HasPrefix(body, []byte("%PDF")) {
 		t.Fatalf("worksheet: %d %q", resp.StatusCode, body[:min(20, len(body))])
 	}
@@ -664,10 +673,10 @@ func TestAFindWritesNothingToMemory(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer rows.Close()
+		defer cleanup.Close(rows)
 		for rows.Next() {
 			var r string
-			rows.Scan(&r)
+			testx.Check(t, rows.Scan(&r))
 			out += r + "\n"
 		}
 		return out
@@ -733,7 +742,7 @@ func TestEveryUpdateBumpsRev(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer d.Close()
+	defer cleanup.Close(d)
 	migs := append([]db.Migration{{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`}}, usage.Migrations()...)
 	migs = append(migs, Migrations()...)
 	if err := db.Migrate(ctx, d, migs); err != nil {

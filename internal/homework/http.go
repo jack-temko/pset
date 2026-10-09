@@ -101,7 +101,7 @@ func (s *Service) Routes(mux *http.ServeMux) {
 		}
 		w.Header().Set("Content-Type", "application/pdf")
 		w.Header().Set("Content-Disposition", `inline; filename="worksheet.pdf"`)
-		w.Write(data)
+		httpx.Write(w, data)
 		return nil
 	}))
 	mux.HandleFunc("PATCH /api/questions/{id}", httpx.Send(http.StatusOK, func(r *http.Request, p QuestionPatch) (Question, error) {
@@ -127,7 +127,7 @@ func (s *Service) Routes(mux *http.ServeMux) {
 		}
 		w.Header().Set("Content-Type", "image/jpeg")
 		w.Header().Set("Cache-Control", "no-cache")
-		w.Write(data)
+		httpx.Write(w, data)
 		return nil
 	}))
 }

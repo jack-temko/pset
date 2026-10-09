@@ -14,7 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/pagenum"
+	"github.com/jackt/pset/internal/testx"
 
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
@@ -89,13 +91,13 @@ func newEnv(t *testing.T) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { cleanup.Close(d) })
 	migs := append(jobs.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
 	migs = append(migs, usage.Migrations()...)
 	if err := db.Migrate(context.Background(), d, append(migs, Migrations()...)); err != nil {
 		t.Fatal(err)
 	}
-	d.Exec(`INSERT INTO books VALUES ('b1')`)
+	testx.Check(t, testx.Err(d.Exec(`INSERT INTO books VALUES ('b1')`)))
 	e := &env{llm: llmtest.New(t), events: &recorder{}}
 	e.cfg = &settings{cfg: e.llm.Config()}
 	q := jobs.New(d, slog.New(slog.NewTextHandler(io.Discard, nil)))
@@ -108,7 +110,12 @@ func newEnv(t *testing.T) *env {
 	t.Cleanup(e.Close)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
-	go func() { q.Run(ctx); close(done) }()
+	go func() {
+		if err := q.Run(ctx); err != nil && ctx.Err() == nil {
+			t.Error(err)
+		}
+		close(done)
+	}()
 	t.Cleanup(func() { cancel(); <-done })
 	return e
 }
@@ -117,16 +124,16 @@ func (e *env) do(t *testing.T, method, path string, body, out any) int {
 	t.Helper()
 	var buf bytes.Buffer
 	if body != nil {
-		json.NewEncoder(&buf).Encode(body)
+		testx.Check(t, json.NewEncoder(&buf).Encode(body))
 	}
 	req, _ := http.NewRequest(method, e.URL+path, &buf)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer cleanup.Close(resp.Body)
 	if out != nil {
-		json.NewDecoder(resp.Body).Decode(out)
+		testx.Check(t, json.NewDecoder(resp.Body).Decode(out))
 	}
 	return resp.StatusCode
 }
@@ -236,9 +243,9 @@ func TestStopKeepsTheBlocksWritten(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	e.do(t, "POST", "/api/turns/"+turn.ID+"/stop", nil, nil)
-	got := e.wait(t, turn.ID, TurnStopped)
+	e.wait(t, turn.ID, TurnStopped)
 	time.Sleep(100 * time.Millisecond)
-	got = e.wait(t, turn.ID, TurnStopped)
+	got := e.wait(t, turn.ID, TurnStopped)
 	if len(got.Answer) < 3 || len(got.Answer) > 39 || doc.TypeOf(got.Answer[0]) != doc.TypePara {
 		t.Fatalf("partial answer: %d blocks", len(got.Answer))
 	}
@@ -293,7 +300,7 @@ func TestOldFailedTurnsGetTheirKind(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer d.Close()
+	defer cleanup.Close(d)
 	d.SetMaxOpenConns(1)
 	for _, q := range []string{`PRAGMA foreign_keys = OFF`, `CREATE TABLE books (id TEXT PRIMARY KEY)`} {
 		if _, err := d.ExecContext(ctx, q); err != nil {

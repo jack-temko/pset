@@ -18,12 +18,15 @@ beforeEach(() => {
   root = createRoot(host);
 });
 afterEach(() => {
-  act(() => root.unmount());
+  act(() => {
+    root.unmount();
+  });
   host.remove();
 });
 
-const click = (el: Element | null) =>
+const click = (el: Element | null) => {
   act(() => void el?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+};
 const trigger = (label: string) =>
   host.querySelector(`[aria-label="${label}"]`);
 const openMenus = () =>
@@ -32,7 +35,7 @@ const openMenus = () =>
   );
 
 function render() {
-  act(() =>
+  act(() => {
     root.render(
       <>
         <Menu label="Set">
@@ -48,8 +51,8 @@ function render() {
           <MenuItem onSelect={() => {}}>4.32</MenuItem>
         </Menu>
       </>,
-    ),
-  );
+    );
+  });
 }
 
 describe('Menu', () => {

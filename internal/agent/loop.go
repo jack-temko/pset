@@ -258,15 +258,15 @@ func flatten(msgs []llm.Message) []llm.Message {
 	b.WriteString("Your work so far, call by call:\n")
 	var images []llm.Part
 	for _, m := range msgs[1:] {
-		switch {
-		case m.Role == "assistant":
+		switch m.Role {
+		case "assistant":
 			if t := strings.TrimSpace(m.Content.Text()); t != "" {
 				fmt.Fprintf(&b, "\nYou wrote: %s\n", t)
 			}
 			for _, c := range m.ToolCalls {
 				fmt.Fprintf(&b, "\nYou called %s(%s)\n", c.Function.Name, c.Function.Arguments)
 			}
-		case m.Role == "tool":
+		case "tool":
 			fmt.Fprintf(&b, "Result:\n%s\n", m.Content.Text())
 		default:
 			if t := m.Content.Text(); t != "" {

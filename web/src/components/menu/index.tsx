@@ -64,7 +64,9 @@ export function Menu({
   const button = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   // One stable function that only closes, so the registry can hold it.
-  const hide = useRef(() => setOpen(false));
+  const hide = useRef(() => {
+    setOpen(false);
+  });
   const side = align ?? (trigger ? 'start' : 'end');
 
   const close = () => {
@@ -99,7 +101,9 @@ export function Menu({
   // The card eases in (a short fade and settle), unless motion is reduced.
   useEffect(() => {
     if (!at) return;
-    const id = requestAnimationFrame(() => setShown(true));
+    const id = requestAnimationFrame(() => {
+      setShown(true);
+    });
     return () => {
       cancelAnimationFrame(id);
       setShown(false);
@@ -116,11 +120,12 @@ export function Menu({
       panel.current?.querySelector<HTMLElement>('[aria-current="true"]') ??
       items?.[0];
     first?.focus();
+    // oxlint-disable-next-line typescript/no-unnecessary-condition -- jsdom has no scrollIntoView
     first?.scrollIntoView?.({ block: 'nearest' });
     const onDown = (e: PointerEvent) => {
       const t = e.target as Node;
       // A confirm opened from an item is part of the menu, not outside it.
-      if ((t as Element).closest?.('[data-confirm]')) return;
+      if (t instanceof Element && t.closest('[data-confirm]')) return;
       if (!panel.current?.contains(t) && !button.current?.contains(t))
         setOpen(false);
     };
@@ -167,7 +172,9 @@ export function Menu({
           aria-haspopup="menu"
           aria-expanded={open}
           {...intent}
-          onClick={() => setOpen((o) => !o)}
+          onClick={() => {
+            setOpen((o) => !o);
+          }}
           className={cn(
             'tabular-nums',
             open &&
@@ -191,7 +198,9 @@ export function Menu({
           aria-haspopup="menu"
           aria-expanded={open}
           {...intent}
-          onClick={() => setOpen((o) => !o)}
+          onClick={() => {
+            setOpen((o) => !o);
+          }}
           className={cn(
             open &&
               'relative z-[60] rounded-b-none border-border bg-card text-foreground hover:bg-card',
@@ -323,7 +332,9 @@ export function MenuConfirmItem({
           'text-destructive [&_svg]:text-destructive',
           asking && 'bg-muted',
         )}
-        onClick={() => setAsking(true)}
+        onClick={() => {
+          setAsking(true);
+        }}
       >
         {icon ?? <span className="size-4" />}
         {children}
@@ -334,7 +345,9 @@ export function MenuConfirmItem({
           question={question}
           detail={detail}
           action={action}
-          onCancel={() => setAsking(false)}
+          onCancel={() => {
+            setAsking(false);
+          }}
           onConfirm={() => {
             setAsking(false);
             close();

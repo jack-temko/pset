@@ -128,18 +128,26 @@ export function usePanes() {
 
   useLayoutEffect(() => {
     if (!el) return;
+    // oxlint-disable-next-line react/set-state-in-effect -- measures the frame before paint, then keeps it measured
     setTotal(el.clientWidth);
-    const ro = new ResizeObserver(() => setTotal(el.clientWidth));
+    const ro = new ResizeObserver(() => {
+      setTotal(el.clientWidth);
+    });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+    };
   }, [el]);
 
   const set = useCallback(
-    (pane: keyof PaneRatios, px: number) =>
-      total > 0 && setRatios((r) => ({ ...r, [pane]: px / total })),
+    (pane: keyof PaneRatios, px: number) => {
+      if (total > 0) setRatios((r) => ({ ...r, [pane]: px / total }));
+    },
     [total],
   );
-  const commit = useCallback(() => setRatios((r) => (writeRatios(r), r)), []);
+  const commit = useCallback(() => {
+    setRatios((r) => (writeRatios(r), r));
+  }, []);
   const reset = useCallback((pane: keyof PaneRatios) => {
     setRatios((r) => {
       const next = { ...r, [pane]: DEFAULT_RATIOS[pane] };

@@ -172,11 +172,14 @@ export function AddHomeworkDialog({
     start.mutate(
       { from, setId: set?.id },
       {
-        onSuccess: (r) => setTracked(r.id),
-        onError: (e) =>
+        onSuccess: (r) => {
+          setTracked(r.id);
+        },
+        onError: (e) => {
           setError(
             e instanceof ApiError ? e.message : "Couldn't start reading it.",
-          ),
+          );
+        },
       },
     );
   };
@@ -192,14 +195,25 @@ export function AddHomeworkDialog({
       onDone(sets, true);
       onClose();
     };
-    const failed = (e: Error) =>
+    const failed = (e: Error) => {
       setError(e instanceof ApiError ? e.message : "Couldn't add them.");
+    };
     if (set)
-      addTo.mutate(drafts, { onSuccess: () => done([]), onError: failed });
+      addTo.mutate(drafts, {
+        onSuccess: () => {
+          done([]);
+        },
+        onError: failed,
+      });
     else
       newSet.mutate(
         { title: title.trim(), dueDate: due, drafts },
-        { onSuccess: (h) => done([h]), onError: failed },
+        {
+          onSuccess: (h) => {
+            done([h]);
+          },
+          onError: failed,
+        },
       );
   };
   const writeLabel = set
@@ -231,7 +245,7 @@ export function AddHomeworkDialog({
     step === 'review' && read ? (
       <Button
         disabled={kept.length === 0 || make.isPending}
-        onClick={() =>
+        onClick={() => {
           make.mutate(
             importOf(read.id, read.assignment?.source ?? read.source, groups),
             {
@@ -240,8 +254,8 @@ export function AddHomeworkDialog({
                 onClose();
               },
             },
-          )
-        }
+          );
+        }}
       >
         {make.isPending && <Spinner className="size-3" />}
         {actionLabel(groups)}
@@ -311,7 +325,9 @@ export function AddHomeworkDialog({
           title={read.assignment.title}
           groups={groups}
           titles={titles}
-          onChange={(next) => setReview({ readId: read.id, groups: next })}
+          onChange={(next) => {
+            setReview({ readId: read.id, groups: next });
+          }}
           error={
             make.error instanceof ApiError
               ? make.error.message
@@ -337,7 +353,10 @@ export function AddHomeworkDialog({
           error={error}
           onLeave={onClose}
           onSubmit={() => {
-            if (mode === 'write') return write();
+            if (mode === 'write') {
+              write();
+              return;
+            }
             if (!canRead) return;
             if (mode === 'page') begin({ url: url.trim() });
             else if (mode === 'paste') begin({ text });
@@ -350,7 +369,9 @@ export function AddHomeworkDialog({
                     <Input
                       autoFocus
                       value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      onChange={(e) => {
+                        setTitle(e.target.value);
+                      }}
                       placeholder="Problem set 4"
                     />
                   </Field>
@@ -358,7 +379,9 @@ export function AddHomeworkDialog({
                     <Input
                       type="date"
                       value={due}
-                      onChange={(e) => setDue(e.target.value)}
+                      onChange={(e) => {
+                        setDue(e.target.value);
+                      }}
                     />
                   </Field>
                 </div>
@@ -454,17 +477,17 @@ export function AssignmentSourceFields({
       )}
       {updating && mode !== 'write' && (
         <p className="text-sm">
-          The professor's assignment for{' '}
+          The professor&apos;s assignment for{' '}
           <span className="font-medium">{updating}</span>, or a newer version of
-          it. PSet compares it with the set: what's new, whose instructions
+          it. PSet compares it with the set: what&apos;s new, whose instructions
           changed, and what it no longer lists. Nothing already there is redone.
         </p>
       )}
       {mode === 'file' && (
         <div className="space-y-1">
           <p className="text-sm">
-            The professor's PDF, or a photo of the assignment: a printout, a
-            slide, the board.
+            The professor&apos;s PDF, or a photo of the assignment: a printout,
+            a slide, the board.
           </p>
           <p
             className={cn(
@@ -492,7 +515,9 @@ export function AssignmentSourceFields({
             type="url"
             value={url}
             placeholder="https://people.example.edu/~prof/202/homework.htm"
-            onChange={(e) => onUrl(e.target.value)}
+            onChange={(e) => {
+              onUrl(e.target.value);
+            }}
           />
         </Field>
       )}
@@ -507,7 +532,9 @@ export function AssignmentSourceFields({
             value={text}
             className="min-h-24"
             placeholder="Homework 3, due Friday: 3.1 #1, 7, 12 (do c)"
-            onChange={(e) => onText(e.target.value)}
+            onChange={(e) => {
+              onText(e.target.value);
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
@@ -538,9 +565,9 @@ function ReadingNote({ read }: { read?: AssignmentRead }) {
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          A one-page sheet takes seconds; a whole semester's page, or a scan,
-          can take a few minutes. You can close this: it keeps reading, and
-          waits in Homework for you to look it over.
+          A one-page sheet takes seconds; a whole semester&apos;s page, or a
+          scan, can take a few minutes. You can close this: it keeps reading,
+          and waits in Homework for you to look it over.
         </p>
       </div>
     </div>
@@ -573,12 +600,14 @@ export function AssignmentReview({
   onLeave: () => void;
 }) {
   const [showEarlier, setShowEarlier] = useState(false);
-  const setGroup = (id: number, change: Partial<ReviewGroup>) =>
+  const setGroup = (id: number, change: Partial<ReviewGroup>) => {
     onChange(groups.map((g) => (g.id === id ? { ...g, ...change } : g)));
-  const setRow = (g: ReviewGroup, id: number, change: Partial<ReviewRow>) =>
+  };
+  const setRow = (g: ReviewGroup, id: number, change: Partial<ReviewRow>) => {
     setGroup(g.id, {
       rows: g.rows.map((r) => (r.id === id ? { ...r, ...change } : r)),
     });
+  };
   const readingOf = useLiveReadings(
     groups.flatMap((g) =>
       g.rows
@@ -605,7 +634,9 @@ export function AssignmentReview({
           variant="ghost"
           size="sm"
           className="-ml-2"
-          onClick={() => setShowEarlier((s) => !s)}
+          onClick={() => {
+            setShowEarlier((s) => !s);
+          }}
         >
           {showEarlier ? <ChevronUp /> : <ChevronDown />}
           {showEarlier
@@ -620,16 +651,24 @@ export function AssignmentReview({
               key={g.id}
               g={g}
               setTitle={titles[g.setId] ?? g.title}
-              onGroup={(change) => setGroup(g.id, change)}
-              onRow={(id, change) => setRow(g, id, change)}
+              onGroup={(change) => {
+                setGroup(g.id, change);
+              }}
+              onRow={(id, change) => {
+                setRow(g, id, change);
+              }}
               readingOf={readingOf}
             />
           ) : (
             <NewGroupBlock
               key={g.id}
               g={g}
-              onGroup={(change) => setGroup(g.id, change)}
-              onRow={(id, change) => setRow(g, id, change)}
+              onGroup={(change) => {
+                setGroup(g.id, change);
+              }}
+              onRow={(id, change) => {
+                setRow(g, id, change);
+              }}
               readingOf={readingOf}
             />
           ),
@@ -656,7 +695,9 @@ function NewGroupBlock({ g, onGroup, onRow, readingOf }: GroupProps) {
       <div className="flex items-center gap-1">
         <Checkbox
           checked={g.keep}
-          onChange={() => onGroup({ keep: !g.keep })}
+          onChange={() => {
+            onGroup({ keep: !g.keep });
+          }}
           className="-ml-2"
         >
           <span className="sr-only">Add {g.title || 'this due date'}</span>
@@ -665,7 +706,9 @@ function NewGroupBlock({ g, onGroup, onRow, readingOf }: GroupProps) {
           aria-label="Set title"
           value={g.title}
           disabled={!g.keep}
-          onChange={(e) => onGroup({ title: e.target.value })}
+          onChange={(e) => {
+            onGroup({ title: e.target.value });
+          }}
           className="min-w-0 flex-1"
         />
         <Input
@@ -673,7 +716,9 @@ function NewGroupBlock({ g, onGroup, onRow, readingOf }: GroupProps) {
           type="date"
           value={g.due}
           disabled={!g.keep}
-          onChange={(e) => onGroup({ due: e.target.value })}
+          onChange={(e) => {
+            onGroup({ due: e.target.value });
+          }}
           className="ml-1 w-40"
         />
       </div>
@@ -699,7 +744,9 @@ function NewGroupBlock({ g, onGroup, onRow, readingOf }: GroupProps) {
               key={r.id}
               r={r}
               live={readingOf(r.id)}
-              onChange={(change) => onRow(r.id, change)}
+              onChange={(change) => {
+                onRow(r.id, change);
+              }}
             />
           ))}
         </div>
@@ -725,7 +772,10 @@ function UpdateGroupBlock({
   );
   const summary = [
     fresh.length > 0 &&
-      `${plural(questionCount({ ...g, rows: fresh.map((r) => ({ ...r, keep: true })) }), 'new question')}`,
+      plural(
+        questionCount({ ...g, rows: fresh.map((r) => ({ ...r, keep: true })) }),
+        'new question',
+      ),
     changed.length > 0 && `${plural(changed.length, 'instruction')} changed`,
     g.gone.length > 0 && `${g.gone.length} no longer listed`,
   ].filter(Boolean);
@@ -735,7 +785,9 @@ function UpdateGroupBlock({
         <Checkbox
           checked={open}
           disabled={!something}
-          onChange={() => onGroup({ keep: !g.keep })}
+          onChange={() => {
+            onGroup({ keep: !g.keep });
+          }}
           className="-ml-2"
         >
           <span className="sr-only">Update {setTitle}</span>
@@ -763,14 +815,18 @@ function UpdateGroupBlock({
               <AddedRow
                 key={r.id}
                 r={r}
-                onChange={(change) => onRow(r.id, change)}
+                onChange={(change) => {
+                  onRow(r.id, change);
+                }}
               />
             ) : (
               <ReviewRowItem
                 key={r.id}
                 r={r}
                 live={readingOf(r.id)}
-                onChange={(change) => onRow(r.id, change)}
+                onChange={(change) => {
+                  onRow(r.id, change);
+                }}
               />
             ),
           )}
@@ -784,15 +840,15 @@ function UpdateGroupBlock({
                 <Checkbox
                   key={q.questionId}
                   checked={q.remove}
-                  onChange={() =>
+                  onChange={() => {
                     onGroup({
                       gone: g.gone.map((x) =>
                         x.questionId === q.questionId
                           ? { ...x, remove: !x.remove }
                           : x,
                       ),
-                    })
-                  }
+                    });
+                  }}
                   className="-ml-2 text-muted-foreground"
                 >
                   Remove{' '}
@@ -854,13 +910,13 @@ function Changes({
         <div key={c.questionId}>
           <Checkbox
             checked={c.apply}
-            onChange={() =>
+            onChange={() => {
               onChange({
                 changes: r.changes.map((x) =>
                   x.questionId === c.questionId ? { ...x, apply: !x.apply } : x,
                 ),
-              })
-            }
+              });
+            }}
             className="-ml-2"
           >
             <span>
@@ -903,7 +959,9 @@ function ReviewRowItem({
   const toggle = (
     <Checkbox
       checked={r.keep}
-      onChange={() => onChange({ keep: !r.keep })}
+      onChange={() => {
+        onChange({ keep: !r.keep });
+      }}
       className="-ml-2"
     >
       <span className="sr-only">Add this line</span>
@@ -930,12 +988,16 @@ function ReviewRowItem({
         <AutoTextarea
           aria-label="The line"
           value={r.text}
-          onChange={(e) => onChange({ text: e.target.value, edited: true })}
+          onChange={(e) => {
+            onChange({ text: e.target.value, edited: true });
+          }}
         />
         <div className="flex flex-wrap items-center gap-x-2">
           <Checkbox
             checked={r.inBook}
-            onChange={() => onChange({ inBook: !r.inBook })}
+            onChange={() => {
+              onChange({ inBook: !r.inBook });
+            }}
             className="-ml-2 text-muted-foreground"
           >
             In this book

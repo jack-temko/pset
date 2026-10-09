@@ -8,7 +8,7 @@ import (
 
 func TestLocalOnly(t *testing.T) {
 	served := 0
-	h := LocalOnly("127.0.0.1:8420", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	h := LocalOnly("127.0.0.1:8420", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		served++
 		w.WriteHeader(http.StatusNoContent)
 	}))
@@ -51,7 +51,7 @@ func TestLocalOnly(t *testing.T) {
 
 // A server told to listen on a name answers to that name.
 func TestLocalOnlyAnswersItsOwnListenName(t *testing.T) {
-	h := LocalOnly("pset.home:8420", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	h := LocalOnly("pset.home:8420", http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	for host, want := range map[string]int{"pset.home:8420": 200, "other.home:8420": 403} {
 		req := httptest.NewRequest("GET", "/", nil)
 		req.Host = host

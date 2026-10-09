@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/agent"
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/jobs"
@@ -85,8 +86,8 @@ func (s *Service) runTurn(ctx context.Context, j jobs.Job) error {
 	case ctx.Err() != nil:
 		// Shutting down: the job runs again on the next start, from the
 		// question, so what it had written goes.
-		s.c.DB.ExecContext(settle, `UPDATE turns SET steps = '[]', answer = '[]', updated_at = ? WHERE id = ?`, db.Now(), t.ID)
-		s.publish(settle, t.ID)
+		s.save(settle, `UPDATE turns SET steps = '[]', answer = '[]', updated_at = ? WHERE id = ?`, db.Now(), t.ID)
+		s.announce(settle, t.ID)
 		return err
 	}
 	reason, kind := "Something went wrong answering this. The details are in the log.", FailureGeneration
@@ -205,14 +206,14 @@ const historyAbout = 600
 // questionText is the question with what the student had open when they
 // asked it: the label they saw on the chip, and its text (a problem, or
 // a problem and exactly what they selected, which says what it is
-// itself). `max` cuts that text, if above zero.
-func questionText(t row, max int) string {
+// itself). `limit` cuts that text, if above zero.
+func questionText(t row, limit int) string {
 	if t.AboutText == "" {
 		return t.Question
 	}
 	about := t.AboutText
-	if r := []rune(about); max > 0 && len(r) > max {
-		about = string(r[:max]) + "…"
+	if r := []rune(about); limit > 0 && len(r) > limit {
+		about = string(r[:limit]) + "…"
 	}
 	return fmt.Sprintf("%s\n\n(What the student had open when asking, \"%s\":\n%s)", t.Question, t.About, about)
 }
@@ -236,7 +237,7 @@ func (r *run) save(ctx context.Context, force bool) {
 		return
 	}
 	r.saved = time.Now()
-	r.s.c.DB.ExecContext(ctx, `UPDATE turns SET answer = ?, steps = ?, updated_at = ? WHERE id = ?`,
+	r.s.save(ctx, `UPDATE turns SET answer = ?, steps = ?, updated_at = ? WHERE id = ?`,
 		mustJSON(r.parser.Blocks()), mustJSON(r.steps), db.Now(), r.t.ID)
 }
 
@@ -252,9 +253,9 @@ func (r *run) step(ctx context.Context, label string, running bool) {
 	}
 	answer := r.parser.Blocks()
 	r.mu.Unlock()
-	r.s.c.DB.ExecContext(ctx, `UPDATE turns SET steps = ?, answer = ?, updated_at = ? WHERE id = ?`,
+	r.s.save(ctx, `UPDATE turns SET steps = ?, answer = ?, updated_at = ? WHERE id = ?`,
 		mustJSON(r.steps), mustJSON(answer), db.Now(), r.t.ID)
-	r.s.publish(ctx, r.t.ID)
+	r.s.announce(ctx, r.t.ID)
 }
 
 // remembered ties the step that just saved a memory to it, for Undo.
@@ -265,7 +266,7 @@ func (r *run) remembered(ctx context.Context, id string) {
 	}
 	r.mu.Unlock()
 	r.save(ctx, true)
-	r.s.publish(ctx, r.t.ID)
+	r.s.announce(ctx, r.t.ID)
 }
 
 func (r *run) finish(ctx context.Context, st TurnState, reason string, kind Failure) {
@@ -284,9 +285,9 @@ func (r *run) finish(ctx context.Context, st TurnState, reason string, kind Fail
 	if answer == nil {
 		answer = []doc.Block{}
 	}
-	r.s.c.DB.ExecContext(ctx, `UPDATE turns SET state = ?, reason = ?, failure = ?, answer = ?, steps = ?, updated_at = ? WHERE id = ?`,
+	r.s.save(ctx, `UPDATE turns SET state = ?, reason = ?, failure = ?, answer = ?, steps = ?, updated_at = ? WHERE id = ?`,
 		st, reason, kind, mustJSON(answer), mustJSON(steps), db.Now(), r.t.ID)
-	r.s.publish(ctx, r.t.ID)
+	r.s.announce(ctx, r.t.ID)
 }
 
 // systemPrompt puts what never changes first (the tools, the document
@@ -309,4 +310,11 @@ func systemPrompt(title, name string) string {
 %s
 
 The textbook is %q. %s`, agent.Prompt, doc.AskWriting, title, who)
+}
+
+// save writes a turn's progress. A failure is logged: the turn goes on, and
+// the next save or the end of the turn writes the same fields again.
+func (s *Service) save(ctx context.Context, query string, args ...any) {
+	_, err := s.c.DB.ExecContext(ctx, query, args...)
+	cleanup.Log("ask: save a turn", err)
 }

@@ -15,10 +15,10 @@ type body struct {
 func TestHandlers(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle("GET /r/{id}", Reply(func(r *http.Request) (body, error) { return body{r.PathValue("id")}, nil }))
-	mux.Handle("GET /r-fail", Reply(func(r *http.Request) (body, error) { return body{}, NotFound("thing") }))
-	mux.Handle("POST /s", Send(http.StatusCreated, func(r *http.Request, in body) (body, error) { return body{"made " + in.Name}, nil }))
-	mux.Handle("POST /s-fail", Send(http.StatusCreated, func(r *http.Request, in body) (body, error) { return body{}, errors.New("boom") }))
-	mux.Handle("POST /t", Take(func(r *http.Request, in body) error {
+	mux.Handle("GET /r-fail", Reply(func(_ *http.Request) (body, error) { return body{}, NotFound("thing") }))
+	mux.Handle("POST /s", Send(http.StatusCreated, func(_ *http.Request, in body) (body, error) { return body{"made " + in.Name}, nil }))
+	mux.Handle("POST /s-fail", Send(http.StatusCreated, func(_ *http.Request, _ body) (body, error) { return body{}, errors.New("boom") }))
+	mux.Handle("POST /t", Take(func(_ *http.Request, in body) error {
 		if in.Name == "bad" {
 			return Invalid("name", "no")
 		}
@@ -44,7 +44,7 @@ func TestHandlers(t *testing.T) {
 		{"reply", "GET", "/r/7", "", 200, `{"name":"7"}`},
 		{"reply error", "GET", "/r-fail", "", 404, `"code":"not_found"`},
 		{"send", "POST", "/s", `{"name":"x"}`, 201, `{"name":"made x"}`},
-		{"send, unknown field", "POST", "/s", `{"nmae":"x"}`, 422, `"code":"invalid"`},
+		{"send, unknown field", "POST", "/s", `{"nom":"x"}`, 422, `"code":"invalid"`},
 		{"send, service error is not leaked", "POST", "/s-fail", `{}`, 500, `"code":"internal"`},
 		{"take", "POST", "/t", `{"name":"x"}`, 204, ``},
 		{"take error", "POST", "/t", `{"name":"bad"}`, 422, `"field":"name"`},

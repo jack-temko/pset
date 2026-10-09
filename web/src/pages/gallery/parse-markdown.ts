@@ -128,9 +128,11 @@ export function parseInline(src: string): Span[] {
   for (const m of src.matchAll(inline)) {
     if (m.index > last)
       spans.push({ k: 'text', text: src.slice(last, m.index) });
-    if (m[1] !== undefined) spans.push({ k: 'code', text: m[1] });
-    else if (m[2] !== undefined) spans.push({ k: 'strong', text: m[2] });
-    else if (m[3] !== undefined) spans.push({ k: 'em', text: m[3] });
+    // Which alternative matched: the others' groups are undefined.
+    const g: (string | undefined)[] = m;
+    if (g[1] !== undefined) spans.push({ k: 'code', text: g[1] });
+    else if (g[2] !== undefined) spans.push({ k: 'strong', text: g[2] });
+    else if (g[3] !== undefined) spans.push({ k: 'em', text: g[3] });
     else spans.push({ k: 'link', text: m[4], href: m[5] });
     last = m.index + m[0].length;
   }

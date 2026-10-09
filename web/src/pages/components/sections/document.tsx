@@ -174,7 +174,9 @@ function SelectingDocument({
   const [about, setAbout] = useState<About | null>(null);
   const ask: AskWiring = {
     selected: sel,
-    onPick: (picked) => setSel(picked),
+    onPick: (picked) => {
+      setSel(picked);
+    },
     onAsk: (picked) => {
       setSel(picked);
       setAbout(
@@ -672,8 +674,9 @@ export const documentSections: ComponentEntry[] = [
               />
               <Callout tone="caveat" title="A common slip">
                 <p>
-                  Don't compare the plans at one caller's <MathInline tex="p" />{' '}
-                  and then quote the answer for all callers.
+                  Don&apos;t compare the plans at one caller&apos;s{' '}
+                  <MathInline tex="p" /> and then quote the answer for all
+                  callers.
                 </p>
               </Callout>
               <AnswersCard

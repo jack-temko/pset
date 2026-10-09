@@ -17,14 +17,18 @@ let calls: string[];
 
 /** What fetch returns: the parts of a Response the app reads. */
 const reply = (status: number, body: unknown) =>
-  ({ status, ok: status < 400, json: async () => body }) as unknown as Response;
+  ({
+    status,
+    ok: status < 400,
+    json: () => Promise.resolve(body),
+  }) as unknown as Response;
 
 /** The server's answers, by "METHOD path". */
 function serve(answers: Record<string, unknown>) {
   calls = [];
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (path: string, init?: RequestInit) => {
+    vi.fn((path: string, init?: RequestInit) => {
       const key = `${init?.method ?? 'GET'} ${path}`;
       calls.push(key);
       if (!(key in answers))
@@ -40,7 +44,9 @@ beforeEach(() => {
   root = createRoot(host);
 });
 afterEach(() => {
-  act(() => root.unmount());
+  act(() => {
+    root.unmount();
+  });
   host.remove();
   vi.unstubAllGlobals();
 });
@@ -53,22 +59,23 @@ async function show() {
         <Updates />
       </QueryClientProvider>,
     );
+    await Promise.resolve();
   });
   await settle();
 }
 const button = (name: string) =>
   [...host.querySelectorAll('button')].find((b) =>
-    b.textContent?.includes(name),
+    b.textContent.includes(name),
   );
 const settle = async () => {
   for (let i = 0; i < 5; i++)
     await act(async () => void (await new Promise((r) => setTimeout(r, 0))));
 };
 const click = async (el: Element | undefined) => {
-  await act(
-    async () =>
-      void el?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
-  );
+  await act(async () => {
+    el?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await Promise.resolve();
+  });
   await settle();
 };
 
@@ -150,13 +157,17 @@ describe('Updates', () => {
 
   it('shows what went wrong when GitHub could not be reached', async () => {
     serve({ 'GET /api/update': base });
-    vi.mocked(fetch).mockImplementationOnce(async () => reply(200, base));
+    vi.mocked(fetch).mockImplementationOnce(() =>
+      Promise.resolve(reply(200, base)),
+    );
     await show();
-    vi.mocked(fetch).mockImplementationOnce(async () =>
-      reply(502, {
-        code: 'unreachable',
-        message: "Couldn't reach GitHub to look for an update.",
-      }),
+    vi.mocked(fetch).mockImplementationOnce(() =>
+      Promise.resolve(
+        reply(502, {
+          code: 'unreachable',
+          message: "Couldn't reach GitHub to look for an update.",
+        }),
+      ),
     );
     await click(button('Check for updates'));
     expect(host.textContent).toContain("Couldn't reach GitHub");

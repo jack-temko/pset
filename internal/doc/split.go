@@ -67,8 +67,8 @@ func tokenize(s string, pages pagenum.Map) []tok {
 	}
 	for i := 0; i < len(s); {
 		c := s[i]
-		switch {
-		case c == '\\':
+		switch c {
+		case '\\':
 			rest := s[i:]
 			switch {
 			case strings.HasPrefix(rest, `\(`):
@@ -111,7 +111,7 @@ func tokenize(s string, pages pagenum.Map) []tok {
 			}
 			text.WriteByte(c)
 			i++
-		case c == '$':
+		case '$':
 			if tex, n, disp, ok := dollarMath(s, i); ok {
 				flush()
 				if money(tex) {
@@ -124,7 +124,7 @@ func tokenize(s string, pages pagenum.Map) []tok {
 			}
 			text.WriteByte(c)
 			i++
-		case c == '[':
+		case '[':
 			if m := cite.FindStringSubmatch(s[i:]); m != nil {
 				flush()
 				a, _ := strconv.Atoi(m[2])
@@ -139,7 +139,7 @@ func tokenize(s string, pages pagenum.Map) []tok {
 			}
 			text.WriteByte(c)
 			i++
-		case c == '`':
+		case '`':
 			if j := strings.IndexByte(s[i+1:], '`'); j > 0 {
 				flush()
 				toks = append(toks, tok{kind: tokText, s: s[i+1 : i+1+j], code: true})
@@ -148,7 +148,7 @@ func tokenize(s string, pages pagenum.Map) []tok {
 			}
 			text.WriteByte(c)
 			i++
-		case c == '*':
+		case '*':
 			n := 1
 			if i+1 < len(s) && s[i+1] == '*' {
 				n = 2
@@ -216,10 +216,10 @@ func singleDollar(s string, i int) (string, int, bool) {
 		return "", 0, false
 	}
 	for j := i + 1; j < len(s); j++ {
-		switch {
-		case s[j] == '\\':
+		switch s[j] {
+		case '\\':
 			j++
-		case s[j] == '$':
+		case '$':
 			if isSpace(s[j-1]) || (j+1 < len(s) && s[j+1] >= '0' && s[j+1] <= '9') {
 				// A dollar sign that can't close the math is one it can't
 				// hold either: math has no bare $ ("costs $20 ... $M$" is

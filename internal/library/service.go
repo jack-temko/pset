@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/events"
 	"github.com/jackt/pset/internal/httpx"
@@ -46,6 +47,7 @@ type Queue interface {
 	Resumable(kind string)
 }
 
+// Config is what the service is built from.
 type Config struct {
 	DB      *sql.DB
 	DataDir string
@@ -60,6 +62,7 @@ type Config struct {
 	ForgetCalls func(ctx context.Context, bookID string) error
 }
 
+// Service keeps the shelf: books, their files and the work of reading them.
 type Service struct {
 	c     Config
 	scans *scanCache
@@ -91,6 +94,7 @@ func examineJob(id string) jobs.Spec {
 	return jobs.Spec{Kind: JobExamine, Subject: id, Priority: examineFirst, Payload: importPayload{BookID: id}}
 }
 
+// New builds the service and registers its job handlers on the queue.
 func New(c Config) *Service {
 	if c.Tools.Metadata == nil {
 		c.Tools = LiveTools()
@@ -150,11 +154,11 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 	if err != nil {
 		return Book{}, err
 	}
-	defer os.Remove(tmp.Name()) // a no-op once renamed
+	defer cleanup.Remove(tmp.Name()) // a no-op once renamed
 	h := sha256.New()
 	head := &headSniffer{}
 	if _, err := io.Copy(io.MultiWriter(tmp, h, head), r); err != nil {
-		tmp.Close()
+		cleanup.Close(tmp)
 		return Book{}, fmt.Errorf("stage upload: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
@@ -181,7 +185,7 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 	// all a race costs.
 	used, err := coversInUse(ctx, s.c.DB)
 	if err != nil {
-		os.Remove(s.pdfPath(id))
+		cleanup.Remove(s.pdfPath(id))
 		return Book{}, err
 	}
 	now := db.Now()
@@ -194,7 +198,7 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 		return err
 	})
 	if err != nil {
-		os.Remove(s.pdfPath(id))
+		cleanup.Remove(s.pdfPath(id))
 		// Two uploads of the same file at once: the second loses the race
 		// on the unique sha and is the duplicate after all.
 		if existing, e := bookBySHA(ctx, s.c.DB, sha); e == nil {
@@ -316,7 +320,7 @@ func (s *Service) Remove(ctx context.Context, id string) error {
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM books WHERE id = ?`, id); err != nil {
 		return err
 	}
-	os.Remove(s.pdfPath(id))
+	cleanup.Remove(s.pdfPath(id))
 	s.scans.drop(id)
 	s.c.Events.Publish(EventBookRemoved, BookRemoved{ID: id})
 	return nil

@@ -70,7 +70,9 @@ describe('layout', () => {
 });
 
 describe('readRatios', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+  });
 
   it('falls back to the defaults for nothing stored, or nonsense', () => {
     expect(readRatios()).toEqual(DEFAULT_RATIOS);

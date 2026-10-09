@@ -8,6 +8,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { makeQueryClient } from '@/api/query';
 import type { Detail } from '@/api/gen/usage';
 import { UsageSummary, UsageTrigger } from '.';
+import { must } from '@/lib/must';
 
 // React reads this to know updates are wrapped in act().
 (
@@ -18,9 +19,13 @@ import { UsageSummary, UsageTrigger } from '.';
 function textOf(u: Usage): string {
   const host = document.createElement('div');
   const root = createRoot(host);
-  act(() => root.render(<UsageSummary usage={u} />));
-  const text = host.textContent ?? '';
-  act(() => root.unmount());
+  act(() => {
+    root.render(<UsageSummary usage={u} />);
+  });
+  const text = host.textContent;
+  act(() => {
+    root.unmount();
+  });
   return text;
 }
 
@@ -111,7 +116,7 @@ describe('UsageTrigger', () => {
     const host = document.createElement('div');
     document.body.append(host);
     const root = createRoot(host);
-    act(() =>
+    act(() => {
       root.render(
         <QueryClientProvider client={makeQueryClient()}>
           <UsageTrigger
@@ -121,14 +126,14 @@ describe('UsageTrigger', () => {
             detail={detail}
           />
         </QueryClientProvider>,
-      ),
-    );
+      );
+    });
     return { host, root };
   };
 
   it('is a focusable button reading the line, and opens the details on a click', () => {
     const { host, root } = mount();
-    const button = host.querySelector('button')!;
+    const button = must(host.querySelector('button'), 'element');
     expect(button.textContent).toBe('deepseek-v4 +1 · $0.0047');
     expect(button.getAttribute('aria-label')).toBe(
       'Usage details for Problem 3.14',
@@ -137,22 +142,26 @@ describe('UsageTrigger', () => {
     // The line is not for copying: Inter, never mono.
     expect(button.innerHTML).not.toMatch(/font-mono|figure/);
     expect(document.querySelector('dialog')).toBeNull();
-    act(() => button.click());
-    const dialog = document.querySelector('dialog')!;
+    act(() => {
+      button.click();
+    });
+    const dialog = must(document.querySelector('dialog'), 'element');
     expect(dialog.hasAttribute('open')).toBe(true);
     expect(dialog.textContent).toContain('Usage · Problem 3.14');
     // Totals, the stage, and the failed call with its error.
     expect(dialog.textContent).toContain('Failed1');
     expect(dialog.textContent).toContain('Guide');
     expect(dialog.textContent).toContain('rate limited (429)');
-    act(() => root.unmount());
+    act(() => {
+      root.unmount();
+    });
     host.remove();
   });
 
   it('draws nothing for a job that made no call', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
-    act(() =>
+    act(() => {
       root.render(
         <QueryClientProvider client={makeQueryClient()}>
           <UsageTrigger
@@ -161,9 +170,11 @@ describe('UsageTrigger', () => {
             name="Read"
           />
         </QueryClientProvider>,
-      ),
-    );
+      );
+    });
     expect(host.textContent).toBe('');
-    act(() => root.unmount());
+    act(() => {
+      root.unmount();
+    });
   });
 });

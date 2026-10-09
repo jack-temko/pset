@@ -45,9 +45,15 @@ export const EventRemoved = "memory.removed";
  * Event types this feature publishes.
  */
 export type Event = typeof EventSaved | typeof EventRemoved;
+/**
+ * Saved is the event for a memory that was saved or changed.
+ */
 export interface Saved {
   memory: Memory;
 }
+/**
+ * Removed is the event for a memory that was deleted.
+ */
 export interface Removed {
   id: string;
   bookId: string;

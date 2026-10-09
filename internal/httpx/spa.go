@@ -64,7 +64,7 @@ func (notBuiltHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusServiceUnavailable)
-	w.Write([]byte("The web interface is not built into this binary.\n" +
-		"Build it with:  cd web && npm install && npm run build\n" +
+	Write(w, []byte("The web interface is not built into this binary.\n"+
+		"Build it with:  cd web && npm install && npm run build\n"+
 		"Then rebuild pset:  go build -o pset ./cmd/pset\n"))
 }

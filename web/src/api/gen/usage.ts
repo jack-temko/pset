@@ -11,11 +11,11 @@
  * drawn.
  */
 export interface Usage {
-  rows: UsageRow[];
+  rows: Row[];
   /**
    * Total is the rows added up, Calls the calls they cover.
    */
-  total: UsageTotal;
+  total: Total;
   /**
    * Failed is the calls that errored, which cost too: the card's
    * footnote.
@@ -23,11 +23,11 @@ export interface Usage {
   failed: number /* int */;
 }
 /**
- * UsageRow is one model's share of a job. Tokens and Cost are absent
+ * Row is one model's share of a job. Tokens and Cost are absent
  * when the provider reported no usage — shown as "–", never as zero,
  * which would say the call was free rather than uncounted.
  */
-export interface UsageRow {
+export interface Row {
   /**
    * Model is the model that answered, as the provider names it; a
    * call that never got an answer sits under the model asked for.
@@ -50,9 +50,9 @@ export interface UsageRow {
   uncounted?: number /* int */;
 }
 /**
- * UsageTotal is every row added up.
+ * Total is every row added up.
  */
-export interface UsageTotal {
+export interface Total {
   ms: number /* int64 */;
   tokens?: number /* int */;
   cost?: number /* float64 */;

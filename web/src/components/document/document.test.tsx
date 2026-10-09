@@ -31,7 +31,9 @@ beforeEach(() => {
   log = [];
 });
 afterEach(() => {
-  act(() => root.unmount());
+  act(() => {
+    root.unmount();
+  });
   host.remove();
 });
 
@@ -60,25 +62,37 @@ function Harness() {
   );
 }
 
-const click = (el: Element | null) =>
+const click = (el: Element | null) => {
   act(() => void el?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
-const over = (el: Element | null) =>
+};
+const over = (el: Element | null) => {
   act(
     () =>
       void el?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })),
   );
+};
 const text = (s: string) =>
   [...host.querySelectorAll('p')].find((p) => p.textContent === s) ?? null;
-const esc = (target: Element) =>
+const find = (selector: string) => {
+  const el = host.querySelector(selector);
+  if (!el) throw new Error(`${selector} is missing`);
+  return el;
+};
+const esc = (target: Element) => {
   act(
     () =>
       void target.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
       ),
   );
+};
 
 describe('Document selection', () => {
-  beforeEach(() => act(() => root.render(<Harness />)));
+  beforeEach(() => {
+    act(() => {
+      root.render(<Harness />);
+    });
+  });
 
   it('picks the block under the pointer, and the heading picks its group', () => {
     click(text('Second paragraph.'));
@@ -91,7 +105,9 @@ describe('Document selection', () => {
 
   it("the group's own whitespace points at nothing", () => {
     // The wrapper around a step's blocks, between the paragraphs.
-    const gap = text('First paragraph.')!.closest('[data-sel="s1"]');
+    const paragraph = text('First paragraph.');
+    if (!paragraph) throw new Error('the paragraph is missing');
+    const gap = paragraph.closest('[data-sel="s1"]');
     click(gap);
     over(gap);
     expect(log).toEqual([]);
@@ -100,7 +116,7 @@ describe('Document selection', () => {
 
   it('the toolbar keeps its own clicks, padding included', () => {
     click(text('First paragraph.'));
-    const bar = host.querySelector('[data-sel-toolbar]')!;
+    const bar = find('[data-sel-toolbar]');
     click(bar);
     expect(log).toEqual(['pick b2']);
     click(bar.querySelector('button'));
@@ -115,9 +131,9 @@ describe('Document selection', () => {
 
   it('Esc lets go, from the page and from the composer, but not from other text boxes', () => {
     click(text('First paragraph.'));
-    esc(host.querySelector('textarea[data-plain]')!);
+    esc(find('textarea[data-plain]'));
     expect(log).toEqual(['pick b2']);
-    esc(host.querySelector('textarea[data-esc-lets-go]')!);
+    esc(find('textarea[data-esc-lets-go]'));
     expect(log).toEqual(['pick b2', 'clear']);
     click(text('First paragraph.'));
     esc(document.body);

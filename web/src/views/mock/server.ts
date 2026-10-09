@@ -17,7 +17,7 @@ export interface MockRequest {
   params: Record<string, string>;
   query: URLSearchParams;
   /** The parsed JSON body, if there was one. */
-  body: any;
+  body: unknown;
   /** The multipart body of an upload. */
   form?: FormData;
 }
@@ -89,7 +89,7 @@ export class MockServer {
     init?: RequestInit,
   ): Promise<Response> {
     const u = new URL(url, 'http://mock.invalid');
-    let body: any;
+    let body: unknown;
     let form: FormData | undefined;
     if (init?.body instanceof FormData) form = init.body;
     else if (typeof init?.body === 'string' && init.body)

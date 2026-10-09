@@ -25,7 +25,7 @@ export function FigureReading({
   onCorrect: (lines: string[]) => void;
   onReread: () => void;
 }) {
-  const lines = q.reading ?? [];
+  const lines = q.reading;
   // Saving rewrites a guide that's there or on its way; a guide that
   // hasn't started just waits for the new lines.
   const rewrites = q.state !== 'located' && q.state !== 'unwritten';

@@ -7,7 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/testx"
 )
 
 type hw struct{}
@@ -22,11 +24,11 @@ func open(t *testing.T, migs []db.Migration) *sql.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { cleanup.Close(d) })
 	if err := db.Migrate(context.Background(), d, append([]db.Migration{books}, migs...)); err != nil {
 		t.Fatal(err)
 	}
-	d.Exec(`INSERT INTO books VALUES ('a'), ('b')`)
+	testx.Check(t, testx.Err(d.Exec(`INSERT INTO books VALUES ('a'), ('b')`)))
 	return d
 }
 
@@ -87,7 +89,7 @@ func TestBeatsBecomeStretches(t *testing.T) {
 	migs := Migrations()
 	d := open(t, migs[:1])
 	beat := func(book, kind string, h, m, sec int) {
-		d.Exec(`INSERT INTO heartbeats VALUES (?, ?, ?)`, book, kind, db.At(monday.Add(time.Duration(h)*time.Hour+time.Duration(m)*time.Minute+time.Duration(sec)*time.Second)))
+		testx.Check(t, testx.Err(d.Exec(`INSERT INTO heartbeats VALUES (?, ?, ?)`, book, kind, db.At(monday.Add(time.Duration(h)*time.Hour+time.Duration(m)*time.Minute+time.Duration(sec)*time.Second)))))
 	}
 	for i := range 4 { // 2 minutes of reading
 		beat("a", "reading", 9, 0, 30*i)
@@ -104,7 +106,7 @@ func TestBeatsBecomeStretches(t *testing.T) {
 		t.Fatal(err)
 	}
 	var n int
-	d.QueryRow(`SELECT count(*) FROM study`).Scan(&n)
+	testx.Check(t, d.QueryRow(`SELECT count(*) FROM study`).Scan(&n))
 	if n != 4 {
 		t.Fatalf("%d stretches, want 4", n)
 	}

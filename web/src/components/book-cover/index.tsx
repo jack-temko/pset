@@ -114,7 +114,9 @@ export function CoverPicker({
           role="radio"
           aria-checked={hue === value}
           aria-label={hue}
-          onClick={() => onChange(hue)}
+          onClick={() => {
+            onChange(hue);
+          }}
           className={cn(
             'cursor-pointer rounded-sm transition-shadow duration-200 ease-out motion-reduce:transition-none',
             hue === value

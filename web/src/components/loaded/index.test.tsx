@@ -16,14 +16,15 @@ const failed: Q = { data: undefined, isPending: false, isError: true };
 
 let host: HTMLDivElement;
 let root: Root;
-const show = (q: Q) =>
-  act(() =>
+const show = (q: Q) => {
+  act(() => {
     root.render(
       <Loaded query={q} skeleton={<span data-testid="sk">...</span>}>
         {(d) => <span>{d}</span>}
       </Loaded>,
-    ),
-  );
+    );
+  });
+};
 const box = () => host.firstElementChild as HTMLElement;
 const skeletonLayer = () => host.querySelector<HTMLElement>('[aria-hidden]');
 const contentLayer = () => box().lastElementChild as HTMLElement | null;
@@ -35,7 +36,9 @@ beforeEach(() => {
   root = createRoot(host);
 });
 afterEach(() => {
-  act(() => root.unmount());
+  act(() => {
+    root.unmount();
+  });
   host.remove();
   vi.useRealTimers();
 });
@@ -137,14 +140,15 @@ describe('Loaded', () => {
   });
 
   describe('without a grace (an overlay)', () => {
-    const showNow = (q: Q) =>
-      act(() =>
+    const showNow = (q: Q) => {
+      act(() => {
         root.render(
           <Loaded grace={false} query={q} skeleton={<span>...</span>}>
             {(d) => <span>{d}</span>}
           </Loaded>,
-        ),
-      );
+        );
+      });
+    };
 
     it('draws the skeleton from the first frame', () => {
       showNow(pending);

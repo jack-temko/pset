@@ -17,6 +17,7 @@ type Tools struct {
 	PageImage func(ctx context.Context, path string, page, dpi int) ([]byte, error)
 }
 
+// LiveTools is the tools that read PDFs with poppler and tesseract.
 func LiveTools() Tools {
 	return Tools{
 		Metadata: pdf.Metadata,

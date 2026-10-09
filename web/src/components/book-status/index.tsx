@@ -79,10 +79,9 @@ export function BookStatus({
   }
 
   const name = state.phase ? IMPORT_PHASES[state.phase] : 'Preparing';
-  const counted = state.total !== undefined && state.done !== undefined;
-  const pct = counted
-    ? Math.round((state.done! / Math.max(state.total!, 1)) * 100)
-    : 0;
+  const { done, total } = state;
+  const counted = done !== undefined && total !== undefined;
+  const pct = counted ? Math.round((done / Math.max(total, 1)) * 100) : 0;
 
   return (
     <span className={cn('flex items-center gap-3', className)}>

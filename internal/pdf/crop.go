@@ -34,13 +34,13 @@ func CropJPEG(pageJPEG []byte, r Rect) ([]byte, error) {
 		return nil, fmt.Errorf("decode page image: %w", err)
 	}
 	b := img.Bounds()
-	px := func(f float64, max int) int {
-		v := int(f*float64(max) + 0.5)
+	px := func(f float64, limit int) int {
+		v := int(f*float64(limit) + 0.5)
 		if v < 0 {
 			return 0
 		}
-		if v > max {
-			return max
+		if v > limit {
+			return limit
 		}
 		return v
 	}
@@ -93,29 +93,29 @@ func SnapRect(pageJPEG []byte, r Rect) Rect {
 	blankRow := func(y int) bool { return rowInk[y]*100 < w }
 	blankCol := func(x int) bool { return colInk[x]*100 < h }
 
-	pix := func(f float64, max int) int {
-		v := int(f*float64(max) + 0.5)
+	pix := func(f float64, limit int) int {
+		v := int(f*float64(limit) + 0.5)
 		if v < 0 {
 			return 0
 		}
-		if v >= max {
-			return max - 1
+		if v >= limit {
+			return limit - 1
 		}
 		return v
 	}
-	norm := func(v, max int) float64 { return float64(v) / float64(max) }
+	norm := func(v, limit int) float64 { return float64(v) / float64(limit) }
 
 	// nearestGutter returns the outer side of the blank run whose centre
 	// sits closest to edge within ±2.5% of the dimension. Blank runs shorter
 	// than 3 pixels are noise, not gutters.
-	nearestGutter := func(blank func(int) bool, max, edge int) (int, bool) {
-		window := max / 40
+	nearestGutter := func(blank func(int) bool, limit, edge int) (int, bool) {
+		window := limit / 40
 		lo, hi := edge-window, edge+window
 		if lo < 0 {
 			lo = 0
 		}
-		if hi > max-1 {
-			hi = max - 1
+		if hi > limit-1 {
+			hi = limit - 1
 		}
 		best, bestDist, found := 0, 0, false
 		run := -1

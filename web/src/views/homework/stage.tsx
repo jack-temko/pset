@@ -37,7 +37,8 @@ function AskStub({ about }: { about: About | null }) {
   return (
     <div className="min-h-0 flex-1 space-y-3 p-card">
       <p className="text-xs text-muted-foreground">
-        The Ask tab is the workspace's. Here it shows what it would be given.
+        The Ask tab is the workspace&apos;s. Here it shows what it would be
+        given.
       </p>
       {about ? (
         <div className="space-y-1 rounded-md border bg-card p-3 text-sm">
@@ -85,11 +86,12 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
           value={{
             bookId: BOOK_ID,
             problems: BOOK.problems,
-            editBook: () =>
+            editBook: () => {
               harness.handoff({
                 to: 'Book dialog',
                 what: 'Edit how the book numbers its problems',
-              }),
+              });
+            },
           }}
         >
           <aside
@@ -103,13 +105,17 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
               <UnderlineNav className="-mb-px h-full">
                 <UnderlineTab
                   active={tab === 'ask'}
-                  onClick={() => setTab('ask')}
+                  onClick={() => {
+                    setTab('ask');
+                  }}
                 >
                   Ask
                 </UnderlineTab>
                 <UnderlineTab
                   active={tab === 'homework'}
-                  onClick={() => setTab('homework')}
+                  onClick={() => {
+                    setTab('homework');
+                  }}
                 >
                   Homework
                 </UnderlineTab>
@@ -141,13 +147,13 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
               <HomeworkTab
                 bookId={BOOK_ID}
                 initialSet={harness.props.initialSet as string | undefined}
-                onJump={(page) =>
+                onJump={(page) => {
                   harness.handoff({
                     to: 'Page scan',
                     what: 'Jump to a page',
                     carries: `PDF page ${page}`,
-                  })
-                }
+                  });
+                }}
                 onAskAbout={(a, sel) => {
                   harness.handoff({
                     to: 'Ask',
@@ -158,7 +164,9 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
                   setSelection(sel ?? null);
                   setTab('ask');
                 }}
-                onPickSelection={(sel) => setSelection(sel)}
+                onPickSelection={(sel) => {
+                  setSelection(sel);
+                }}
                 onClearAbout={() => {
                   setSelection(null);
                   setAbout(null);
@@ -169,13 +177,13 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
                   });
                 }}
                 selection={selection}
-                onOpenSettings={() =>
+                onOpenSettings={() => {
                   harness.handoff({
                     to: 'Settings',
                     what: 'Open Settings',
                     carries: 'the connections section',
-                  })
-                }
+                  });
+                }}
                 wide={harness.wide}
               />
             </div>

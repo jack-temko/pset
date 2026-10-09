@@ -141,7 +141,7 @@ function KeyBox({
               if (status.kind !== 'working') setStatus({ kind: 'idle' });
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && dirty && !looksWorking) run(true);
+              if (e.key === 'Enter' && dirty && !looksWorking) void run(true);
             }}
           />
         </Field>
@@ -154,14 +154,18 @@ function KeyBox({
             variant="outline"
             size="sm"
             disabled={looksWorking}
-            onClick={() => run(false)}
+            onClick={() => {
+              void run(false);
+            }}
           >
             Test
           </Button>
           <Button
             size="sm"
             disabled={looksWorking || !dirty}
-            onClick={() => run(true)}
+            onClick={() => {
+              void run(true);
+            }}
           >
             Save
           </Button>
@@ -302,9 +306,10 @@ function You() {
             <Button
               size="sm"
               disabled={savingShown}
-              onClick={() =>
-                !saveProfile.isPending && saveProfile.mutate({ name: current })
-              }
+              onClick={() => {
+                if (!saveProfile.isPending)
+                  saveProfile.mutate({ name: current });
+              }}
             >
               Save
             </Button>
@@ -385,7 +390,9 @@ function Health() {
                     variant="outline"
                     size="sm"
                     disabled={fixing === c.id}
-                    onClick={() => !fix.isPending && fix.mutate(c.id)}
+                    onClick={() => {
+                      if (!fix.isPending) fix.mutate(c.id);
+                    }}
                   >
                     {fixing === c.id ? 'Fixing…' : 'Fix'}
                   </Button>
@@ -504,7 +511,9 @@ function ClearActivity() {
       action="Clear history"
       actionRef={button}
       asking={asking}
-      onAsk={() => setAsking(true)}
+      onAsk={() => {
+        setAsking(true);
+      }}
     >
       {asking && (
         <ConfirmPopover
@@ -513,11 +522,17 @@ function ClearActivity() {
           detail="Time spent starts again from zero, in every book. Books, homework, conversations and the questions you've worked stay."
           action="Clear history"
           error={clear.isError ? clear.error.message : undefined}
-          onCancel={() => setAsking(false)}
-          onConfirm={() =>
-            !clear.isPending &&
-            clear.mutate(undefined, { onSuccess: () => setAsking(false) })
-          }
+          onCancel={() => {
+            setAsking(false);
+          }}
+          onConfirm={() => {
+            if (!clear.isPending)
+              clear.mutate(undefined, {
+                onSuccess: () => {
+                  setAsking(false);
+                },
+              });
+          }}
         />
       )}
     </ResetRow>
@@ -550,7 +565,9 @@ function ResetEverything() {
       action="Reset everything"
       actionRef={button}
       asking={asking}
-      onAsk={() => setAsking(true)}
+      onAsk={() => {
+        setAsking(true);
+      }}
       className="border-t border-destructive"
     >
       {asking && (
@@ -568,22 +585,24 @@ function ResetEverything() {
                 {pages ?? <CountSlot width={pagesWidth} />}
               </span>
               , every homework set and conversation, and your settings, API key
-              included. There's no undo.
+              included. There&apos;s no undo.
             </>
           }
           action="Reset everything"
           busy={resetting ? 'Resetting…' : undefined}
           error={reset.isError ? reset.error.message : undefined}
-          onCancel={() => setAsking(false)}
-          onConfirm={() =>
-            !reset.isPending &&
-            reset.mutate(undefined, {
-              onSuccess: () => {
-                setAsking(false);
-                navigate('/');
-              },
-            })
-          }
+          onCancel={() => {
+            setAsking(false);
+          }}
+          onConfirm={() => {
+            if (!reset.isPending)
+              reset.mutate(undefined, {
+                onSuccess: () => {
+                  setAsking(false);
+                  void navigate('/');
+                },
+              });
+          }}
         />
       )}
     </ResetRow>
@@ -641,7 +660,9 @@ export function Settings() {
     const scroll = () => document.getElementById(id)?.scrollIntoView();
     scroll();
     const settle = setTimeout(scroll, 400);
-    return () => clearTimeout(settle);
+    return () => {
+      clearTimeout(settle);
+    };
   }, []);
   return (
     // No middle of its own: the bar picks up "Settings" once the h1 has

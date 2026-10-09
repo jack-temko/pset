@@ -55,6 +55,7 @@ type HealthCheck struct {
 	Fixable bool   `json:"fixable"`
 }
 
+// Health is the checks of what PSet needs to run.
 type Health struct {
 	Checks []HealthCheck `json:"checks"`
 }
@@ -65,6 +66,7 @@ type ResetCounts struct {
 	Pages int `json:"pages"`
 }
 
+// About is what the About page shows.
 type About struct {
 	Version string `json:"version"`
 	DataDir string `json:"dataDir"`

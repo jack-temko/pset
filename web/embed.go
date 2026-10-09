@@ -5,5 +5,7 @@ package web
 
 import "embed"
 
+// Dist is the built web app.
+//
 //go:embed all:dist
 var Dist embed.FS

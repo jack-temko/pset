@@ -397,20 +397,29 @@ function UsageModalDemo({ book }: { book?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)}>
+      <Button
+        variant="outline"
+        onClick={() => {
+          setOpen(true);
+        }}
+      >
         {book ? 'Open the book dialog' : 'Open the modal'}
       </Button>
       {book ? (
         <BookUsageDialog
           open={open}
-          onClose={() => setOpen(false)}
+          onClose={() => {
+            setOpen(false);
+          }}
           title="Circuits and Systems"
           data={BOOK_USAGE}
         />
       ) : (
         <UsageModal
           open={open}
-          onClose={() => setOpen(false)}
+          onClose={() => {
+            setOpen(false);
+          }}
           name="Problem 3.14"
           detail={DETAIL}
         />
@@ -545,7 +554,7 @@ export const feedbackSections: ComponentEntry[] = [
         <Shelf label="loading, failed, none">
           <div className="space-y-1 text-sm text-muted-foreground">
             <p>Loading the details… (a spinner)</p>
-            <p>Couldn't load the details. Close this and try again.</p>
+            <p>Couldn&apos;t load the details. Close this and try again.</p>
             <p>No model calls were made.</p>
           </div>
         </Shelf>
@@ -781,19 +790,22 @@ function LoadedDemo() {
     n: 0,
     state: 'pending',
   });
-  const press = (state: LoadedState) => setRun((r) => ({ n: r.n + 1, state }));
+  const press = (state: LoadedState) => {
+    setRun((r) => ({ n: r.n + 1, state }));
+  };
   const [latency, setLatency] = useState<number>(800);
   const [sim, setSim] = useState<{ n: number }>(() => {
     // Starts on cached content, so the box has its height before the first Replay.
     client.setQueryData(['loaded-demo', 0], ROWS);
     return { n: 0 };
   });
-  const replay = (cached: boolean) =>
+  const replay = (cached: boolean) => {
     setSim((s) => {
       const n = s.n + 1;
       if (cached) client.setQueryData(['loaded-demo', n], ROWS);
       return { n };
     });
+  };
   const [dialog, setDialog] = useState<{
     n: number;
     mode: 'before' | 'after';
@@ -806,7 +818,9 @@ function LoadedDemo() {
             <Button
               key={state}
               variant={run.state === state ? 'primary' : 'outline'}
-              onClick={() => press(state)}
+              onClick={() => {
+                press(state);
+              }}
             >
               {state}
             </Button>
@@ -822,13 +836,26 @@ function LoadedDemo() {
             <Button
               key={ms}
               variant={latency === ms ? 'primary' : 'outline'}
-              onClick={() => setLatency(ms)}
+              onClick={() => {
+                setLatency(ms);
+              }}
             >
               {ms >= 1000 ? `${ms / 1000}s` : `${ms}ms`}
             </Button>
           ))}
-          <Button onClick={() => replay(false)}>Replay</Button>
-          <Button variant="outline" onClick={() => replay(true)}>
+          <Button
+            onClick={() => {
+              replay(false);
+            }}
+          >
+            Replay
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              replay(true);
+            }}
+          >
             Replay cached
           </Button>
         </div>
@@ -838,17 +865,17 @@ function LoadedDemo() {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() =>
-              setDialog((d) => ({ n: (d?.n ?? 0) + 1, mode: 'before' }))
-            }
+            onClick={() => {
+              setDialog((d) => ({ n: (d?.n ?? 0) + 1, mode: 'before' }));
+            }}
           >
             Before
           </Button>
           <Button
             variant="outline"
-            onClick={() =>
-              setDialog((d) => ({ n: (d?.n ?? 0) + 1, mode: 'after' }))
-            }
+            onClick={() => {
+              setDialog((d) => ({ n: (d?.n ?? 0) + 1, mode: 'after' }));
+            }}
           >
             After
           </Button>
@@ -859,7 +886,9 @@ function LoadedDemo() {
             id={dialog.n}
             mode={dialog.mode}
             latency={latency}
-            onClose={() => setDialog(null)}
+            onClose={() => {
+              setDialog(null);
+            }}
           />
         )}
       </Shelf>
@@ -958,8 +987,12 @@ function LoadedBox({ state }: { state: LoadedState }) {
   const [arrived, setArrived] = useState(state === 'cached');
   useEffect(() => {
     if (state !== 'loaded') return;
-    const t = setTimeout(() => setArrived(true), 1200);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => {
+      setArrived(true);
+    }, 1200);
+    return () => {
+      clearTimeout(t);
+    };
   }, [state]);
   const query = {
     data: arrived ? ROWS : undefined,

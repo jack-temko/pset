@@ -10,26 +10,38 @@ import type { Usage } from './usage'
  * TurnState is where a turn is.
  */
 export type TurnState = string;
+/**
+ * TurnRunning is being answered now.
+ */
 export const TurnRunning: TurnState = "running";
+/**
+ * TurnDone is answered.
+ */
 export const TurnDone: TurnState = "done";
+/**
+ * TurnStopped was stopped by the student.
+ */
 export const TurnStopped: TurnState = "stopped";
+/**
+ * TurnFailed could not be answered; Reason says why.
+ */
 export const TurnFailed: TurnState = "failed";
 /**
  * Failure is what kind of failure a failed turn had, which picks what the
  * page offers beside its reason: Settings for a setup failure.
  */
 /**
- * FailureSetup: there's no OpenRouter key, OpenRouter refused it, or
+ * FailureSetup means there's no OpenRouter key, OpenRouter refused it, or
  * the account is out of credit. Fix it in Settings.
  */
 export const FailureSetup = "setup";
 /**
- * FailureUnavailable: the provider didn't answer or was busy. Ask again
+ * FailureUnavailable means the provider didn't answer or was busy. Ask again
  * later.
  */
 export const FailureUnavailable = "unavailable";
 /**
- * FailureGeneration: the answer didn't finish (cut off, or the model
+ * FailureGeneration means the answer didn't finish (cut off, or the model
  * stopped without one). Ask again.
  */
 export const FailureGeneration = "generation";
@@ -90,6 +102,9 @@ export interface Turn {
    */
   updatedAt: string;
 }
+/**
+ * Turns is a book's whole conversation, oldest first.
+ */
 export interface Turns {
   turns: Turn[];
 }
@@ -116,6 +131,9 @@ export const EventTurnsCleared = "turns.cleared";
  * Event types this feature publishes.
  */
 export type EventTurn = typeof EventTurnChanged | typeof EventTurnBlockStart | typeof EventTurnBlockText | typeof EventTurnBlockRepairing | typeof EventTurnBlock | typeof EventTurnBlockFailed | typeof EventTurnsCleared;
+/**
+ * TurnChanged is the event for a turn that was created or changed.
+ */
 export interface TurnChanged {
   turn: Turn;
 }
@@ -149,6 +167,9 @@ export interface TurnBlock {
   turnId: string;
   block: Block;
 }
+/**
+ * TurnsCleared is the event for a book whose conversation was cleared.
+ */
 export interface TurnsCleared {
   bookId: string;
 }

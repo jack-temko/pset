@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/llm"
 )
@@ -29,7 +30,7 @@ const (
 	SubjectSet = "set"
 )
 
-// Migrations: one row per call. The rows go when their subject does; the
+// Migrations creates one row per call. The rows go when their subject does; the
 // subjects belong to other features, which delete what they owe (Forget,
 // and each one's removal path calls it).
 func Migrations() []db.Migration {
@@ -177,7 +178,7 @@ func ForSubjects(ctx context.Context, q queryer, subjectType string, ids []strin
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	for rows.Next() {
 		var subjectID, model string
 		var ms int64
@@ -192,7 +193,7 @@ func ForSubjects(ctx context.Context, q queryer, subjectType string, ids []strin
 			u = &Usage{}
 			out[subjectID] = u
 		}
-		row := UsageRow{Model: model, Ms: ms, Calls: calls, Uncounted: calls - withUsage}
+		row := Row{Model: model, Ms: ms, Calls: calls, Uncounted: calls - withUsage}
 		// A model none of whose calls reported usage shows "–", not zero:
 		// nothing was counted, which isn't the same as nothing was spent.
 		if withUsage > 0 {

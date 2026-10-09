@@ -16,6 +16,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/jackt/pset/internal/cleanup"
 )
 
 type cases struct {
@@ -128,7 +130,7 @@ func main() {
 			time.Sleep(3 * time.Second)
 		}
 		// Found is all this measures: the guides stop with the set.
-		call(*addr, "DELETE", "/api/homework/"+set.ID, nil, nil)
+		cleanup.Log("delete the set", call(*addr, "DELETE", "/api/homework/"+set.ID, nil, nil))
 
 		printed := func(pdf int) int {
 			off := 0
@@ -183,7 +185,9 @@ func firstLine(s, state string) string {
 func call(addr, method, path string, body, out any) error {
 	var buf bytes.Buffer
 	if body != nil {
-		json.NewEncoder(&buf).Encode(body)
+		if err := json.NewEncoder(&buf).Encode(body); err != nil {
+			return err
+		}
 	}
 	req, err := http.NewRequest(method, addr+path, &buf)
 	if err != nil {
@@ -194,10 +198,10 @@ func call(addr, method, path string, body, out any) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer cleanup.Close(resp.Body)
 	if resp.StatusCode >= 300 {
 		var e struct{ Message string }
-		json.NewDecoder(resp.Body).Decode(&e)
+		cleanup.Log("read the error", json.NewDecoder(resp.Body).Decode(&e))
 		return fmt.Errorf("%s %s: %d %s", method, path, resp.StatusCode, e.Message)
 	}
 	if out != nil {

@@ -47,6 +47,7 @@ export type Scope = {
 export type SelState = 'washed' | 'outlined' | undefined;
 
 /** An element's state from the document's scope. */
+// oxlint-disable-next-line react/only-export-components -- selection helpers that belong with the component that uses them
 export function selState(scope: Scope, sel: Sel): SelState {
   if (scope.outlined === sel) return 'outlined';
   if (scope.hover === sel) return 'washed';
@@ -57,6 +58,7 @@ export function selState(scope: Scope, sel: Sel): SelState {
  *  (the reading stays untouched until the pointer arrives); the pick is
  *  the app's selection pair, `primary-soft` under a `primary` outline.
  *  Both are instant: a hover that fades reads as lag. */
+// oxlint-disable-next-line react/only-export-components -- selection helpers that belong with the component that uses them
 export function selLook(state: SelState): string | undefined {
   if (state === 'outlined')
     return 'relative cursor-pointer rounded-sm bg-primary-soft outline-1 -outline-offset-1 outline-primary';
@@ -104,7 +106,9 @@ export function SelToolbar({
     >
       <button
         type="button"
-        onClick={() => ask.onAsk(sel)}
+        onClick={() => {
+          ask.onAsk(sel);
+        }}
         className="flex h-full cursor-pointer items-center rounded-sm px-2 font-medium text-primary hover:bg-primary/10"
       >
         Ask about {noun}
@@ -113,7 +117,9 @@ export function SelToolbar({
       <button
         type="button"
         aria-label={`Let go of ${noun}`}
-        onClick={() => ask.onClear()}
+        onClick={() => {
+          ask.onClear();
+        }}
         className="grid size-6 cursor-pointer place-items-center rounded-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground"
       >
         <X className="size-4" />

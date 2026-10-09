@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 )
 
@@ -99,7 +100,9 @@ func snapshot(args []string) error {
 	fl := flag.NewFlagSet("snapshot", flag.ExitOnError)
 	from := fl.String("from", share("pset"), "the library to read")
 	to := fl.String("to", share("pset-test-library"), "where the snapshot goes")
-	fl.Parse(args)
+	if err := fl.Parse(args); err != nil {
+		return err
+	}
 	src, dst := mustAbs(*from), mustAbs(*to)
 	if src == dst || inside(dst, src) || inside(src, dst) {
 		return fmt.Errorf("-to %s and -from %s are the same or one is inside the other", dst, src)
@@ -118,14 +121,14 @@ func snapshot(args []string) error {
 		return err
 	}
 	tmp := dst + fmt.Sprintf(".tmp-%d", os.Getpid())
-	os.RemoveAll(tmp)
+	cleanup.RemoveAll(tmp)
 	if err := os.MkdirAll(tmp, 0o700); err != nil {
 		return err
 	}
 	ok := false
 	defer func() {
 		if !ok {
-			os.RemoveAll(tmp)
+			cleanup.RemoveAll(tmp)
 		}
 	}()
 
@@ -149,7 +152,7 @@ func snapshot(args []string) error {
 		return err
 	}
 	_, err = ro.ExecContext(ctx, "VACUUM INTO ?", filepath.Join(tmp, "pset.db"))
-	ro.Close()
+	cleanup.Close(ro)
 	if err != nil {
 		return fmt.Errorf("copy database: %w", err)
 	}
@@ -164,7 +167,7 @@ func snapshot(args []string) error {
 		// One plain file, no -wal or -shm beside it.
 		_, err = d.ExecContext(ctx, "PRAGMA journal_mode = DELETE")
 	}
-	d.Close()
+	cleanup.Close(d)
 	if err != nil {
 		return err
 	}
@@ -181,7 +184,7 @@ func snapshot(args []string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer cleanup.Close(f)
 	if err := Check(ctx, f, tmp, file, secrets); err != nil {
 		return err
 	}
@@ -194,7 +197,7 @@ func snapshot(args []string) error {
 		return fmt.Errorf("the source %s changed during the snapshot (err %v)", src, err)
 	}
 	m, err := manifest(ctx, f, src, tmp)
-	f.Close()
+	cleanup.Close(f)
 	if err != nil {
 		return err
 	}
@@ -210,18 +213,18 @@ func snapshot(args []string) error {
 		// hardlink, and a mode change would reach them.
 		makeDirsWritable(dst)
 		if err := os.Rename(dst, old); err != nil {
-			readOnly(dst)
+			cleanup.Log("make the snapshot read-only", readOnly(dst))
 			return err
 		}
 	}
 	if err := os.Rename(tmp, dst); err != nil {
 		if os.Rename(old, dst) == nil {
-			readOnly(dst)
+			cleanup.Log("make the snapshot read-only", readOnly(dst))
 		}
 		return err
 	}
 	ok = true
-	os.RemoveAll(old)
+	cleanup.RemoveAll(old)
 	if err := readOnly(dst); err != nil {
 		return err
 	}
@@ -308,12 +311,12 @@ func manifest(ctx context.Context, d *sql.DB, src, dir string) (Manifest, error)
 	for rows.Next() {
 		var b bk
 		if err := rows.Scan(&b.id, &b.title); err != nil {
-			rows.Close()
+			cleanup.Close(rows)
 			return m, err
 		}
 		bks = append(bks, b)
 	}
-	rows.Close()
+	cleanup.Close(rows)
 	for _, b := range bks {
 		mb := ManifestBook{Title: b.title, Sets: []ManifestSet{}}
 		if st, err := os.Stat(filepath.Join(dir, "books", b.id+".pdf")); err == nil {
@@ -327,12 +330,12 @@ func manifest(ctx context.Context, d *sql.DB, src, dir string) (Manifest, error)
 		for sr.Next() {
 			var s ManifestSet
 			if err := sr.Scan(&s.Title, &s.Questions); err != nil {
-				sr.Close()
+				cleanup.Close(sr)
 				return m, err
 			}
 			mb.Sets = append(mb.Sets, s)
 		}
-		sr.Close()
+		cleanup.Close(sr)
 		if err := d.QueryRowContext(ctx, `SELECT
 			(SELECT count(*) FROM turns WHERE book_id = ?1),
 			(SELECT count(*) FROM calls c WHERE (c.subject_type = 'book' AND c.subject_id = ?1)
@@ -356,7 +359,9 @@ func seed(args []string) error {
 	force := fl.Bool("force", false, "replace a library already in the data dir")
 	var dir string
 	for {
-		fl.Parse(args)
+		if err := fl.Parse(args); err != nil {
+			return err
+		}
 		if fl.NArg() == 0 {
 			break
 		}
@@ -430,24 +435,24 @@ func seed(args []string) error {
 	if err := copyTree(filepath.Join(src, "cache"), filepath.Join(dst, "cache"), true); err != nil {
 		return err
 	}
-	os.Remove(tmp)
+	cleanup.Remove(tmp)
 	if err := copyFile(filepath.Join(src, "pset.db"), tmp); err != nil {
 		return err
 	}
-	defer os.Remove(tmp)
+	defer cleanup.Remove(tmp)
 	f, err := openFrozen(tmp)
 	if err != nil {
 		return err
 	}
 	err = Check(context.Background(), f, dst, tmp, nil)
-	f.Close()
+	cleanup.Close(f)
 	if err != nil {
 		return err
 	}
 	if err := os.Rename(tmp, filepath.Join(dst, "pset.db")); err != nil {
 		return err
 	}
-	os.Remove(marker)
+	cleanup.Remove(marker)
 	fmt.Printf("seeded %s from the test library\n", dst)
 	return nil
 }
@@ -459,7 +464,7 @@ func copyTree(from, to string, link bool) error {
 	if _, err := os.Stat(from); errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}
-	return filepath.WalkDir(from, func(p string, e fs.DirEntry, err error) error {
+	return filepath.WalkDir(from, func(p string, _ fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -486,13 +491,13 @@ func copyFile(from, to string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer cleanup.Close(in)
 	out, err := os.OpenFile(to, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
 	}
 	if _, err := io.Copy(out, in); err != nil {
-		out.Close()
+		cleanup.Close(out)
 		return err
 	}
 	return out.Close()
@@ -517,33 +522,33 @@ func exists(p string) bool {
 }
 
 func makeDirsWritable(root string) {
-	filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
+	cleanup.Log("make directories writable", filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
 		if err == nil && e.IsDir() {
-			os.Chmod(p, 0o700)
+			cleanup.Log("make writable", os.Chmod(p, 0o700))
 		}
 		return nil
-	})
+	}))
 }
 
 func makeWritable(root string) {
-	filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
+	cleanup.Log("make writable", filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
 		if err == nil && e.Type()&fs.ModeSymlink == 0 {
-			os.Chmod(p, 0o700)
+			cleanup.Log("make writable", os.Chmod(p, 0o700))
 		}
 		return nil
-	})
+	}))
 }
 
 func size(root string) int64 {
 	var n int64
-	filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
+	cleanup.Log("measure the library", filepath.WalkDir(root, func(_ string, e fs.DirEntry, err error) error {
 		if err == nil && !e.IsDir() {
 			if st, err := e.Info(); err == nil {
 				n += st.Size()
 			}
 		}
 		return nil
-	})
+	}))
 	return n
 }
 

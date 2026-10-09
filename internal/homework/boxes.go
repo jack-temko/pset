@@ -110,7 +110,7 @@ func (s *Service) AddBoxed(ctx context.Context, homeworkID string, boxes []Box) 
 	}
 	s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: out})
 	s.c.Queue.Wake()
-	s.publishSet(ctx, homeworkID)
+	s.announceSet(ctx, homeworkID)
 	return out, nil
 }
 
@@ -132,7 +132,9 @@ func (s *Service) PointOut(ctx context.Context, id string, boxes []Box) (Questio
 	if err := checkBoxes(boxes, book.PageCount); err != nil {
 		return Question{}, err
 	}
-	s.c.Queue.StopSubject(ctx, id)
+	if err := s.c.Queue.StopSubject(ctx, id); err != nil {
+		return Question{}, err
+	}
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET attempts = attempts + (state = 'failed'), boxes = ?, in_book = 1, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]',
 			hint = '[]', walkthrough = '[]', rounds = '[]', reading = '[]', reading_edited = 0,

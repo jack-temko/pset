@@ -51,6 +51,7 @@ type Handler struct {
 	Block func(b Block, failed bool)
 }
 
+// Options is what a parser needs to know about the page it writes for.
 type Options struct {
 	Mode Mode
 	// Pages moves printed-page citations onto PDF pages.
@@ -80,6 +81,7 @@ type Parser struct {
 	sawBlock bool // a block has arrived since the last Reset
 }
 
+// NewParser starts a parser that reports to h as blocks arrive.
 func NewParser(ctx context.Context, opt Options, h Handler) *Parser {
 	p := &Parser{ctx: ctx, opt: opt, h: h}
 	p.pl = &pipeline{ctx: ctx, pages: opt.Pages, pageCount: opt.PageCount, model: opt.Model, budget: MaxRepairCalls,

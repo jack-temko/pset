@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 )
 
@@ -22,7 +23,7 @@ func TestBusyPortLeavesRunningJobsAlone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer busy.Close()
+	defer cleanup.Close(busy)
 	addr := busy.Addr().String()
 
 	// The first attempt makes the database; then a job is running in it, as
@@ -34,7 +35,7 @@ func TestBusyPortLeavesRunningJobsAlone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer d.Close()
+	defer cleanup.Close(d)
 	if _, err := d.ExecContext(context.Background(), `INSERT INTO jobs (id, kind, lane, state, created_at, updated_at) VALUES ('j1', 'import', 'import', 'running', '', '')`); err != nil {
 		t.Fatal(err)
 	}

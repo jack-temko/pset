@@ -4,6 +4,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { INTENT_MS, usePrefetchIntent } from './prefetch-intent';
+import { must } from '@/lib/must';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -18,8 +19,8 @@ function Trigger({ run }: { run: () => void }) {
   return <button {...intent}>x</button>;
 }
 
-const button = () => host.querySelector('button')!;
-const fire = (type: string, init: PointerEventInit = {}) =>
+const button = () => must(host.querySelector('button'), 'element');
+const fire = (type: string, init: PointerEventInit = {}) => {
   act(
     () =>
       void button().dispatchEvent(
@@ -30,6 +31,7 @@ const fire = (type: string, init: PointerEventInit = {}) =>
         }),
       ),
   );
+};
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -37,10 +39,14 @@ beforeEach(() => {
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
-  act(() => root.render(<Trigger run={prefetch} />));
+  act(() => {
+    root.render(<Trigger run={prefetch} />);
+  });
 });
 afterEach(() => {
-  act(() => root.unmount());
+  act(() => {
+    root.unmount();
+  });
   host.remove();
   vi.useRealTimers();
 });
@@ -81,10 +87,14 @@ describe('usePrefetchIntent', () => {
   it('asks the server once for repeated hovers while the answer is cached', async () => {
     vi.useRealTimers();
     const qc = new QueryClient();
-    const queryFn = vi.fn(async () => 1);
+    const queryFn = vi.fn(() => 1);
     const run = () =>
-      void qc.prefetchQuery({ queryKey: ['x'], queryFn, staleTime: Infinity });
-    act(() => root.render(<Trigger run={run} />));
+      void qc
+        .query({ queryKey: ['x'], queryFn, staleTime: Infinity })
+        .catch(() => undefined);
+    act(() => {
+      root.render(<Trigger run={run} />);
+    });
     for (let i = 0; i < 3; i++) {
       fire('pointerdown');
       await act(async () => void (await new Promise((r) => setTimeout(r, 5))));

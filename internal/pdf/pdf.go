@@ -1,3 +1,5 @@
+// Package pdf reads a PDF with poppler: its pages as text and images, and its
+// outline.
 package pdf
 
 import (
@@ -12,6 +14,7 @@ import (
 // ErrNotInstalled is wrapped by the error of a missing poppler tool.
 var ErrNotInstalled = execx.ErrNotInstalled
 
+// Info is what a PDF says about itself.
 type Info struct {
 	Title      string
 	Author     string

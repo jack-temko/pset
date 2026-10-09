@@ -5,6 +5,7 @@ import './index.css';
 import App from './App.tsx';
 import { followSystem } from './lib/theme';
 import { queryClient } from './api/query';
+import { must } from '@/lib/must';
 
 followSystem();
 
@@ -21,7 +22,7 @@ for (const family of [
   void document.fonts.load(`1em "${family}"`, 'AaĀ').catch(() => {});
 }
 
-createRoot(document.getElementById('root')!).render(
+createRoot(must(document.getElementById('root'), '#root')).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <App />

@@ -40,7 +40,9 @@ export function SegmentedControl<T extends string>({
             type="button"
             role="radio"
             aria-checked={on}
-            onClick={() => onChange(o.value)}
+            onClick={() => {
+              onChange(o.value);
+            }}
             className={cn(
               'flex h-full cursor-pointer items-center rounded-sm px-3 text-sm font-medium',
               on

@@ -2,7 +2,7 @@
 # Vite with /api proxied. Go lives in /usr/local/go/bin, nvm's node first.
 export PATH := $(HOME)/.nvm/versions/node/v24.18.0/bin:$(PATH):/usr/local/go/bin
 
-.PHONY: dev test-library seed gen check-gen katex-check fmt fmt-check test check build release jumps
+.PHONY: dev test-library seed gen check-gen katex-check fmt fmt-check lint test check build release jumps
 
 dev:
 	go run ./tools/dev
@@ -46,18 +46,27 @@ fmt-check:
 	npm --prefix web exec -- oxfmt --check
 	go tool shfmt -d $(SH_FILES)
 
+# Linters, all errors, no warnings: Go through golangci-lint (.golangci.yml),
+# the web through oxlint with type information (web/.oxlintrc.json), shell
+# through shellcheck (a pinned release, fetched once), the workflows through
+# actionlint.
+lint:
+	go tool golangci-lint run
+	cd web && npx oxlint --type-aware
+	tools/shellcheck.sh $(SH_FILES)
+	go tool actionlint
+
 # Every check that runs without a browser or a model: the Go tests, the
-# web's types, unit tests and lint. Tests that need poppler or tesseract
+# web's types and unit tests. Tests that need poppler or tesseract
 # skip without them, so install both (README) for the whole suite.
 test:
 	go test ./...
 	cd web && npx tsc -b
 	cd web && npx vitest run
-	cd web && npx oxlint
 
-# What CI runs: fmt-check, test, the Go tests again under the race detector, and the
+# What CI runs: fmt-check, lint, test, the Go tests again under the race detector, and the
 # generated TypeScript against Go's wire types.
-check: fmt-check test check-gen
+check: fmt-check lint test check-gen
 	go test -race ./...
 
 build:

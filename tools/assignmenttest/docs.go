@@ -284,7 +284,7 @@ func wordTable(title string, rows [][]string) string {
 }
 
 // replaceNth replaces the nth occurrence of old.
-func replaceNth(s, old, new string, n int) string {
+func replaceNth(s, old, replacement string, n int) string {
 	at := 0
 	for k := 1; ; k++ {
 		i := strings.Index(s[at:], old)
@@ -292,7 +292,7 @@ func replaceNth(s, old, new string, n int) string {
 			return s
 		}
 		if k == n {
-			return s[:at+i] + new + s[at+i+len(old):]
+			return s[:at+i] + replacement + s[at+i+len(old):]
 		}
 		at += i + len(old)
 	}

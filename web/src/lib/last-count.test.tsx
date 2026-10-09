@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useLastCount, useLastShape } from './last-count';
 
@@ -15,13 +15,19 @@ function Probe({ k, count }: { k: string; count?: number }) {
 function render(k: string, count?: number): string {
   const host = document.createElement('div');
   const root = createRoot(host);
-  act(() => root.render(<Probe k={k} count={count} />));
-  const text = host.textContent ?? '';
-  act(() => root.unmount());
+  act(() => {
+    root.render(<Probe k={k} count={count} />);
+  });
+  const text = host.textContent;
+  act(() => {
+    root.unmount();
+  });
   return text;
 }
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+});
 
 describe('useLastCount', () => {
   it('is 3 when nothing is saved', () => {
@@ -35,14 +41,15 @@ describe('useLastCount', () => {
   });
 
   it('falls back to 3 when storage throws', () => {
-    const real = Storage.prototype.getItem;
-    Storage.prototype.getItem = () => {
-      throw new Error('off');
-    };
+    const spy = vi
+      .spyOn(Storage.prototype, 'getItem')
+      .mockImplementation(() => {
+        throw new Error('off');
+      });
     try {
       expect(render('a')).toBe('3');
     } finally {
-      Storage.prototype.getItem = real;
+      spy.mockRestore();
     }
   });
 });
@@ -57,9 +64,13 @@ function ShapeProbe({ k, shape }: { k: string; shape?: number[] }) {
 function renderShape(k: string, shape?: number[]): string {
   const host = document.createElement('div');
   const root = createRoot(host);
-  act(() => root.render(<ShapeProbe k={k} shape={shape} />));
-  const text = host.textContent ?? '';
-  act(() => root.unmount());
+  act(() => {
+    root.render(<ShapeProbe k={k} shape={shape} />);
+  });
+  const text = host.textContent;
+  act(() => {
+    root.unmount();
+  });
   return text;
 }
 
@@ -88,14 +99,15 @@ describe('useLastShape', () => {
   });
 
   it('falls back when storage throws', () => {
-    const real = Storage.prototype.getItem;
-    Storage.prototype.getItem = () => {
-      throw new Error('off');
-    };
+    const spy = vi
+      .spyOn(Storage.prototype, 'getItem')
+      .mockImplementation(() => {
+        throw new Error('off');
+      });
     try {
       expect(renderShape('s')).toBe('[9]');
     } finally {
-      Storage.prototype.getItem = real;
+      spy.mockRestore();
     }
   });
 });

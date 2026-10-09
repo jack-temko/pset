@@ -11,10 +11,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/httpx"
 )
 
+// Migrations is the activity tables: heartbeats and the study stretches they fold into.
 func Migrations() []db.Migration {
 	return []db.Migration{
 		{Name: "activity/1", SQL: `
@@ -66,7 +68,7 @@ func beatsToStretches(ctx context.Context, tx *sql.Tx) error {
 	for rows.Next() {
 		var book, kind, at string
 		if err := rows.Scan(&book, &kind, &at); err != nil {
-			rows.Close()
+			cleanup.Close(rows)
 			return err
 		}
 		t, err := time.Parse(time.RFC3339Nano, at)
@@ -79,7 +81,7 @@ func beatsToStretches(ctx context.Context, tx *sql.Tx) error {
 		}
 		out = append(out, stretch{book, kind, t.Add(-Beat), t})
 	}
-	rows.Close()
+	cleanup.Close(rows)
 	if err := rows.Err(); err != nil {
 		return err
 	}
@@ -98,12 +100,14 @@ type Homework interface {
 	QuestionsDoneSince(ctx context.Context, since time.Time) (questions, sets int, err error)
 }
 
+// Service records study time and answers the Home tiles from it.
 type Service struct {
 	db  *sql.DB
 	hw  Homework
 	now func() time.Time
 }
 
+// New builds the service over the database; hw says how many questions were worked.
 func New(d *sql.DB, hw Homework) *Service { return &Service{db: d, hw: hw, now: time.Now} }
 
 // SetHomework says where "questions worked" comes from, for a server that
@@ -168,7 +172,7 @@ func (s *Service) Week(ctx context.Context, since time.Time) (Week, error) {
 		var book, from, to string
 		var k Kind
 		if err := rows.Scan(&book, &k, &from, &to); err != nil {
-			rows.Close()
+			cleanup.Close(rows)
 			return Week{}, err
 		}
 		a, err1 := time.Parse(time.RFC3339Nano, from)
@@ -183,7 +187,7 @@ func (s *Service) Week(ctx context.Context, since time.Time) (Week, error) {
 		byKind[k] = append(byKind[k], sp)
 		byBook[book] = append(byBook[book], sp)
 	}
-	rows.Close()
+	cleanup.Close(rows)
 	if err := rows.Err(); err != nil {
 		return Week{}, err
 	}
@@ -224,7 +228,7 @@ func (s *Service) QuestionSeconds(ctx context.Context, ids []string) (map[string
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	by := map[string][]span{}
 	for rows.Next() {
 		var id, from, to string
@@ -297,6 +301,7 @@ func maxTime(a, b time.Time) time.Time {
 	return b
 }
 
+// Routes registers the activity endpoints.
 func (s *Service) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/study", httpx.Take(func(r *http.Request, st Stretch) error {
 		return s.Save(r.Context(), st)

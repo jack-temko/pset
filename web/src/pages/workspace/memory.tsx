@@ -33,7 +33,15 @@ export function MemoryUndo({
   const remove = useRemoveMemory(bookId);
   if (!memories.data) return null;
   if (!memories.data.some((m) => m.id === memoryId)) return <span>Undone</span>;
-  return <StepAction onClick={() => remove.mutate(memoryId)}>Undo</StepAction>;
+  return (
+    <StepAction
+      onClick={() => {
+        remove.mutate(memoryId);
+      }}
+    >
+      Undo
+    </StepAction>
+  );
 }
 
 const SOURCE: Record<Source, string> = { you: 'You', tutor: 'Tutor' };
@@ -146,7 +154,9 @@ export function MemoryDialog({
                 <MemoryRow
                   key={m.id}
                   m={m}
-                  onDelete={() => remove.mutate(m.id)}
+                  onDelete={() => {
+                    remove.mutate(m.id);
+                  }}
                 />
               ))}
             </ul>

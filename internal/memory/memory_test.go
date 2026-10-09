@@ -13,8 +13,10 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/testx"
 )
 
 type recorder struct {
@@ -34,12 +36,12 @@ func newService(t *testing.T) (*Service, *recorder) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { cleanup.Close(d) })
 	migs := append([]db.Migration{{Name: "t/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`}}, Migrations()...)
 	if err := db.Migrate(context.Background(), d, migs); err != nil {
 		t.Fatal(err)
 	}
-	d.Exec(`INSERT INTO books VALUES ('b1'), ('b2')`)
+	testx.Check(t, testx.Err(d.Exec(`INSERT INTO books VALUES ('b1'), ('b2')`)))
 	ev := &recorder{}
 	return New(d, ev), ev
 }
@@ -136,12 +138,12 @@ func TestMigrationKeepsOnlyPreferences(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer d.Close()
+	defer cleanup.Close(d)
 	books := db.Migration{Name: "t/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`}
 	if err := db.Migrate(ctx, d, []db.Migration{books, Migrations()[0]}); err != nil {
 		t.Fatal(err)
 	}
-	d.Exec(`INSERT INTO books VALUES ('b1')`)
+	testx.Check(t, testx.Err(d.Exec(`INSERT INTO books VALUES ('b1')`)))
 	for _, r := range []struct{ id, kind, source, key string }{
 		{"book-note", "book", "tutor", ""},
 		{"range", "book", "pset", "problems/3"},
@@ -186,9 +188,9 @@ func TestHTTP(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer resp.Body.Close()
+		defer cleanup.Close(resp.Body)
 		var buf bytes.Buffer
-		buf.ReadFrom(resp.Body)
+		testx.Check(t, testx.Err(buf.ReadFrom(resp.Body)))
 		return resp, buf.Bytes()
 	}
 
@@ -197,13 +199,13 @@ func TestHTTP(t *testing.T) {
 		t.Fatalf("%d %s", resp.StatusCode, body)
 	}
 	var m Memory
-	json.Unmarshal(body, &m)
+	testx.Check(t, json.Unmarshal(body, &m))
 	if m.Source != SourceYou || m.BookID != "b1" {
 		t.Fatalf("%+v", m)
 	}
 	resp, body = do("POST", "/api/books/b1/memories", `{"text":"  "}`)
 	var e httpx.Error
-	json.Unmarshal(body, &e)
+	testx.Check(t, json.Unmarshal(body, &e))
 	if resp.StatusCode != http.StatusUnprocessableEntity || e.Field != "text" {
 		t.Fatalf("%d %s", resp.StatusCode, body)
 	}
@@ -212,7 +214,7 @@ func TestHTTP(t *testing.T) {
 	}
 	_, body = do("GET", "/api/books/b1/memories", "")
 	var list Memories
-	json.Unmarshal(body, &list)
+	testx.Check(t, json.Unmarshal(body, &list))
 	if len(list.Memories) != 1 {
 		t.Fatalf("%s", body)
 	}

@@ -63,7 +63,7 @@ func TestRememberReachesTheNextRound(t *testing.T) {
 		Client: llm.Open(fake.Config()), Model: "fake-chat", Library: book{},
 		Book:   Book{ID: "b1", PageCount: 100, Pages: pagenum.Single(10)},
 		System: "You are a tutor.", Memory: mem, Student: true,
-		Step:       func(label string, running bool) { steps = append(steps, label) },
+		Step:       func(label string, _ bool) { steps = append(steps, label) },
 		Remembered: func(n Note, _ string) { saved = append(saved, n) },
 	}
 	if err := l.Run(context.Background(), []llm.Message{llm.TextMessage("user", "hi")}); err != nil {
@@ -152,7 +152,7 @@ func TestACutRoundIsAskedAgain(t *testing.T) {
 	var text strings.Builder
 	l := &Loop{
 		Client: llm.Open(fake.Config()), Model: "fake-chat", Library: book{}, Book: Book{ID: "b1"},
-		Step:  func(label string, running bool) { steps = append(steps, label) },
+		Step:  func(label string, _ bool) { steps = append(steps, label) },
 		Delta: func(s string) { text.WriteString(s) },
 	}
 	if err := l.Run(context.Background(), []llm.Message{llm.TextMessage("user", "hi")}); err != nil {

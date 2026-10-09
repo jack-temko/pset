@@ -185,12 +185,7 @@ export function timeLeftWords(
     : set.total > 0 && set.done === set.total;
   if (finished || timed < MIN_TIMED) return null;
   const { low, high } = e;
-  if (
-    low !== undefined &&
-    high !== undefined &&
-    high > low &&
-    (high - low) / e.seconds > WIDE
-  ) {
+  if (high > low && (high - low) / e.seconds > WIDE) {
     return `${span(low)} to ${span(high)} left`;
   }
   return `about ${span(e.seconds)} left`;

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 )
 
@@ -50,7 +51,7 @@ func coversInUse(ctx context.Context, q queryer) (map[Cover]int, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	used := map[Cover]int{}
 	for rows.Next() {
 		var c Cover
@@ -76,12 +77,12 @@ func fillCovers(ctx context.Context, d queryer) error {
 	for rows.Next() {
 		var b bare
 		if err := rows.Scan(&b.id, &b.sha); err != nil {
-			rows.Close()
+			cleanup.Close(rows)
 			return err
 		}
 		todo = append(todo, b)
 	}
-	rows.Close()
+	cleanup.Close(rows)
 	if err := rows.Err(); err != nil || len(todo) == 0 {
 		return err
 	}

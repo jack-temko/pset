@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/jackt/pset/internal/testx"
 )
 
 // hostedAt is a client whose endpoint names a real provider's host, with
@@ -37,8 +39,8 @@ func TestOpenRouterShape(t *testing.T) {
 	var got map[string]any
 	c := hostedAt(t, "https://openrouter.ai/api/v1", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		json.Unmarshal(body, &got)
-		io.WriteString(w, `{"choices":[{"message":{"content":"ok","reasoning":"thought"}}],"usage":{"prompt_tokens":10,"completion_tokens":3,"cost":0.00002,"prompt_tokens_details":{"cached_tokens":4},"completion_tokens_details":{"reasoning_tokens":2}}}`)
+		testx.Check(t, json.Unmarshal(body, &got))
+		testx.Check(t, testx.Err(io.WriteString(w, `{"choices":[{"message":{"content":"ok","reasoning":"thought"}}],"usage":{"prompt_tokens":10,"completion_tokens":3,"cost":0.00002,"prompt_tokens_details":{"cached_tokens":4},"completion_tokens_details":{"reasoning_tokens":2}}}`)))
 	})
 	reply, err := c.ChatOnceFull(context.Background(), ChatRequest{Model: "z-ai/glm-5.3-flash", ReasoningEffort: "low", Messages: []Message{
 		TextMessage("user", "hi"),
@@ -79,8 +81,8 @@ func TestOpenRouterWithoutEffort(t *testing.T) {
 	var got map[string]any
 	c := hostedAt(t, "https://openrouter.ai/api/v1", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		json.Unmarshal(body, &got)
-		io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)
+		testx.Check(t, json.Unmarshal(body, &got))
+		testx.Check(t, testx.Err(io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)))
 	})
 	if _, err := c.ChatOnce(context.Background(), ChatRequest{Model: "m", Messages: []Message{TextMessage("user", "hi")}}); err != nil {
 		t.Fatal(err)
@@ -98,8 +100,8 @@ func TestJobsAskForTheirModels(t *testing.T) {
 	c := hostedAt(t, "https://openrouter.ai/api/v1", func(w http.ResponseWriter, r *http.Request) {
 		got = nil
 		body, _ := io.ReadAll(r.Body)
-		json.Unmarshal(body, &got)
-		io.WriteString(w, `{"model":"z-ai/glm-5.3-flash","choices":[{"message":{"content":"ok"}}]}`)
+		testx.Check(t, json.Unmarshal(body, &got))
+		testx.Check(t, testx.Err(io.WriteString(w, `{"model":"z-ai/glm-5.3-flash","choices":[{"message":{"content":"ok"}}]}`)))
 	})
 	plain := Job{Model: "a/boxes", Fallbacks: []string{"b/backup"}, Plain: true}
 	reply, err := c.ChatOnceFull(context.Background(), plain.Ask(ChatRequest{Messages: []Message{TextMessage("user", "hi")}}))
@@ -130,8 +132,8 @@ func TestOtherEndpointsGetNoneOfIt(t *testing.T) {
 	var got map[string]any
 	c := hostedAt(t, "https://api.deepseek.com", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		json.Unmarshal(body, &got)
-		io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)
+		testx.Check(t, json.Unmarshal(body, &got))
+		testx.Check(t, testx.Err(io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)))
 	})
 	ctx := WithSession(context.Background(), "question-1-guide")
 	_, err := c.ChatOnce(ctx, ChatRequest{Model: "m", ReasoningEffort: "max", Messages: []Message{
@@ -158,8 +160,8 @@ func TestSessionFromContext(t *testing.T) {
 	c := hostedAt(t, "https://openrouter.ai/api/v1", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		got = nil
-		json.Unmarshal(body, &got)
-		io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)
+		testx.Check(t, json.Unmarshal(body, &got))
+		testx.Check(t, testx.Err(io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)))
 	})
 	for _, tc := range []struct{ id, want string }{
 		{"question-63da-guide", "question-63da-guide"},
@@ -183,12 +185,12 @@ func TestSessionFromContext(t *testing.T) {
 // TestStreamReadsOpenRouterReasoningAndUsage: OpenRouter streams its
 // thinking as "reasoning" and the usage in the last chunk.
 func TestStreamReadsOpenRouterReasoningAndUsage(t *testing.T) {
-	c := hostedAt(t, "https://openrouter.ai/api/v1", func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning\":\"think \"}}]}\n\n")
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning\":\"more\"}}]}\n\n")
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"answer\"},\"finish_reason\":\"stop\"}]}\n\n")
-		io.WriteString(w, "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":5,\"completion_tokens\":7,\"cost\":0.001}}\n\n")
-		io.WriteString(w, "data: [DONE]\n\n")
+	c := hostedAt(t, "https://openrouter.ai/api/v1", func(w http.ResponseWriter, _ *http.Request) {
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning\":\"think \"}}]}\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning\":\"more\"}}]}\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"answer\"},\"finish_reason\":\"stop\"}]}\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":5,\"completion_tokens\":7,\"cost\":0.001}}\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, "data: [DONE]\n\n")))
 	})
 	reply, err := c.ChatStreamFull(context.Background(), ChatRequest{Model: "m", Messages: []Message{TextMessage("user", "hi")}}, nil)
 	if err != nil {
@@ -211,10 +213,10 @@ func TestOutOfCredit(t *testing.T) {
 		{"https://openrouter.ai/api/v1", `{"error":{"code":402,"message":"This request requires more credits"}}`, 402},
 	} {
 		calls := 0
-		c := hostedAt(t, tc.base, func(w http.ResponseWriter, r *http.Request) {
+		c := hostedAt(t, tc.base, func(w http.ResponseWriter, _ *http.Request) {
 			calls++
 			w.WriteHeader(tc.status)
-			io.WriteString(w, tc.body)
+			testx.Check(t, testx.Err(io.WriteString(w, tc.body)))
 		})
 		_, err := c.ChatOnce(context.Background(), ChatRequest{Model: "m", Messages: []Message{TextMessage("user", "hi")}})
 		if trouble, _ := Classify(err); trouble != TroubleCredit {
@@ -240,8 +242,8 @@ func TestSessionKeepsItsHost(t *testing.T) {
 	c := hostedAt(t, "https://openrouter.ai/api/v1", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		got = nil
-		json.Unmarshal(body, &got)
-		io.WriteString(w, `{"provider":"Parasail","choices":[{"message":{"content":"ok"}}]}`)
+		testx.Check(t, json.Unmarshal(body, &got))
+		testx.Check(t, testx.Err(io.WriteString(w, `{"provider":"Parasail","choices":[{"message":{"content":"ok"}}]}`)))
 	})
 	order := func() any { return got["provider"].(map[string]any)["order"] }
 	guide := WithSession(context.Background(), "question-keeps-host-guide")
@@ -286,16 +288,16 @@ func TestReasoningDetailsGoBack(t *testing.T) {
 	c := hostedAt(t, "https://openrouter.ai/api/v1", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		got = nil
-		json.Unmarshal(body, &got)
+		testx.Check(t, json.Unmarshal(body, &got))
 		if got["stream"] != true {
-			io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)
+			testx.Check(t, testx.Err(io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)))
 			return
 		}
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning\":\"Plan \",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"Plan \",\"format\":\"anthropic-claude-v1\",\"index\":0}]}}]}\n\n")
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning\":\"it.\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"it.\",\"index\":0}]}}]}\n\n")
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning_details\":[{\"type\":\"reasoning.text\",\"signature\":\"sig\",\"index\":0}]}}]}\n\n")
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\n")
-		io.WriteString(w, "data: [DONE]\n\n")
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning\":\"Plan \",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"Plan \",\"format\":\"anthropic-claude-v1\",\"index\":0}]}}]}\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning\":\"it.\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"it.\",\"index\":0}]}}]}\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning_details\":[{\"type\":\"reasoning.text\",\"signature\":\"sig\",\"index\":0}]}}]}\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, "data: [DONE]\n\n")))
 	})
 	reply, err := c.ChatStreamFull(context.Background(), ChatRequest{Model: "m", Messages: []Message{TextMessage("user", "hi")}}, nil)
 	if err != nil {
@@ -318,8 +320,8 @@ func TestReasoningDetailsGoBack(t *testing.T) {
 	plain := hostedAt(t, "https://api.deepseek.com", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		got = nil
-		json.Unmarshal(body, &got)
-		io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)
+		testx.Check(t, json.Unmarshal(body, &got))
+		testx.Check(t, testx.Err(io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}]}`)))
 	})
 	if _, err := plain.ChatOnce(context.Background(), ChatRequest{Model: "m", Messages: next}); err != nil {
 		t.Fatal(err)
@@ -338,8 +340,8 @@ func TestAnthropicModelsAskForCaching(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		got = nil
-		json.Unmarshal(body, &got)
-		io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":9000,"completion_tokens":5,"prompt_tokens_details":{"cached_tokens":8000,"cache_write_tokens":900}}}`)
+		testx.Check(t, json.Unmarshal(body, &got))
+		testx.Check(t, testx.Err(io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":9000,"completion_tokens":5,"prompt_tokens_details":{"cached_tokens":8000,"cache_write_tokens":900}}}`)))
 	}
 	or := hostedAt(t, "https://openrouter.ai/api/v1", handler)
 	for model, want := range map[string]bool{"anthropic/claude-haiku-5.5": true, "google/gemini-3.8-flash": false, "deepseek/deepseek-v4.1-flash": false} {
