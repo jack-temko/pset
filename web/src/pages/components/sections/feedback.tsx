@@ -412,12 +412,13 @@ function LoadedDemo() {
   const [run, setRun] = useState<{ n: number; state: LoadedState }>({ n: 0, state: 'pending' })
   const press = (state: LoadedState) => setRun((r) => ({ n: r.n + 1, state }))
   const [latency, setLatency] = useState<number>(800)
-  const [sim, setSim] = useState<{ n: number; cached: boolean } | null>(null)
-  const replay = (cached: boolean) =>
+  const [sim, setSim] = useState<{ n: number; cached: boolean; skeleton: number } | null>(null)
+  // `skeleton` is how many lines the skeleton draws; the content is 3.
+  const replay = (cached: boolean, skeleton = ROWS.length) =>
     setSim((s) => {
       const n = (s?.n ?? 0) + 1
       if (cached) client.setQueryData(['loaded-demo', n], ROWS)
-      return { n, cached }
+      return { n, cached, skeleton }
     })
   const [dialog, setDialog] = useState<{ n: number; mode: 'before' | 'after' } | null>(null)
   return (
@@ -445,8 +446,14 @@ function LoadedDemo() {
           <Button variant="outline" onClick={() => replay(true)}>
             Replay cached
           </Button>
+          <Button variant="outline" onClick={() => replay(false, 6)}>
+            Skeleton taller
+          </Button>
+          <Button variant="outline" onClick={() => replay(false, 1)}>
+            Skeleton shorter
+          </Button>
         </div>
-        {sim && <SimBox key={sim.n} id={sim.n} latency={latency} />}
+        {sim && <SimBox key={sim.n} id={sim.n} latency={latency} lines={sim.skeleton} />}
       </Shelf>
       <Shelf label="usage dialog, before and after (uses the latency above)">
         <div className="flex gap-2">
@@ -463,9 +470,10 @@ function LoadedDemo() {
   )
 }
 
-/** A real query that resolves after `latency`, through Loaded. A cached run
+/** A real query that resolves after `latency`, through Loaded. A skeleton
+ *  of other than 3 lines is a mismatch, and the box morphs. A cached run
  *  was seeded before it mounted, so it never waits. */
-function SimBox({ id, latency }: { id: number; latency: number }) {
+function SimBox({ id, latency, lines }: { id: number; latency: number; lines: number }) {
   const query = useQuery({
     queryKey: ['loaded-demo', id],
     queryFn: async () => {
@@ -477,8 +485,8 @@ function SimBox({ id, latency }: { id: number; latency: number }) {
     <Loaded
       className="mt-2 w-panel space-y-2"
       query={query}
-      skeleton={ROWS.map((r) => (
-        <p key={r} className="text-sm">
+      skeleton={Array.from({ length: lines }, (_, i) => (
+        <p key={i} className="text-sm">
           <Skeleton className="h-3 w-full" />
         </p>
       ))}

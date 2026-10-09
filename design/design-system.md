@@ -293,6 +293,10 @@ fade, `aria-busy` and the error line, so screens cannot drift apart.
 
 - **The fade is 150ms**, opacity only, ease-out (`fade-in` in `index.css`), and off under
   reduced motion. Content that replaces a skeleton fades; cached content never does.
+- **A mismatched skeleton morphs** (D9): if the content's height is more than 2px off the
+  skeleton's, `Loaded` eases the box between them over 200ms ease-out while the skeleton
+  fades out and the content fades in. Cached data and reduced motion skip it. It is a
+  safety net, not a licence: the CI check still fails a skeleton off by more than 2px.
 - **Overlays prefetch**: as the pointer or focus reaches the trigger (a usage line, the
   Book actions menu), so the dialog usually opens complete. Usage stays cached and
   refreshes from the event stream, so a second open is instant.

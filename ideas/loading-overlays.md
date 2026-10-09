@@ -20,7 +20,9 @@ skeleton draws its last known count (3 the first time); D7 numbers in a sentence
 prefetched and hold a fixed-width slot; A1 every font preloaded; A2 the book usage
 aggregate prefetches as the pointer reaches the Book actions menu; A3 usage stays
 cached and refreshes on events; A4 the fade is opacity only, ease-out, off under
-reduced motion.
+reduced motion; D9 when content and skeleton differ in height by more than 2px,
+`Loaded` morphs the box from one to the other over 200ms ease-out while the skeleton
+fades out and the content fades in (cached data and reduced motion: instant).
 
 ### Files
 
@@ -31,6 +33,9 @@ reduced motion.
     (`visibility: hidden`, still in layout); after that it shimmers.
   - Data: renders `children(data)`. If the first render was pending, the content gets
     the `fade-in` utility; if data was there at first render (cached), no fade.
+  - Morph (D9): the skeleton's height is kept while it shows; on data the content renders
+    in a wrapper at that height (overflow hidden) with the skeleton on top fading out, then
+    the height eases to the content's and the skeleton goes. Within 2px: no morph.
   - Error: one line of muted destructive text, inside the same box.
   - `aria-busy` on its element while pending.
 - `web/src/components/loaded/index.test.tsx` (new): skeleton in layout but hidden

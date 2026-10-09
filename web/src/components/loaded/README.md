@@ -10,12 +10,19 @@ usage dialogs; every other screen follows (design-system.md, Motion).
 - **Data:** `children(data)` renders in the same element. If the box ever waited, it gets
   the `fade-in` utility (opacity only, 150ms, ease-out, none under reduced motion). Data
   that was already cached at the first render appears at once.
+- **Morph:** when the content's height is more than 2px off the skeleton's, the box's height
+  eases from one to the other over 200ms (ease-out) while the skeleton fades out and the
+  content fades in. Equal heights, cached data and reduced motion skip it (reduced motion
+  skips the fade too).
 - **Error:** one line of muted destructive text. It is not the skeleton's size.
 
 **The skeleton contract:** the same layout and size as the content: the same grid, the same
 table header, the same row count (`useLastCount` gives a list's last known count, 3 the first
 time). If the skeleton is the wrong height, the box jumps when the data lands, which is what
 this component exists to prevent.
+
+The morph is a safety net, not a licence: a skeleton off by more than 2px still fails the
+jump check in CI, and should be fixed.
 
 **What the caller provides:** the `query` (a TanStack query result), the `skeleton`, a render
 function for the data, and the `className` of the layout both share.
