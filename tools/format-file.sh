@@ -17,10 +17,13 @@ else
 fi
 [ -n "$file" ] && [ -f "$file" ] || exit 0
 file="$(realpath "$file" 2>/dev/null)" || exit 0
+# oxfmt reads its argument as a glob
+case "$file" in *[][*?{}]*) exit 0 ;; esac
 root="$(git -C "$(dirname "$file")" rev-parse --show-toplevel 2>/dev/null)" || exit 0
 [ -n "$root" ] || exit 0
 
 cd "$root" || exit 0
+[ -f .oxfmtrc.json ] && [ -f tools/format-file.sh ] || exit 0
 oxfmt=web/node_modules/.bin/oxfmt
 case "$file" in
 *.go) [ -f go.mod ] && go tool golangci-lint fmt "$file" ;;
