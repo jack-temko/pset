@@ -11,6 +11,9 @@ export interface TableColumn<T> {
   cell: (row: T) => ReactNode
   /** A muted second line under the main content. */
   secondary?: (row: T) => ReactNode
+  /** Set the cell in mono, for what is copyable or data (a model id, a time).
+   *  Numeric columns are mono by default; `mono: false` opts one out. */
+  mono?: boolean
   /** Draw the cell in `destructive` ink on an error row. */
   errorInk?: boolean
   /** A CSS width ("6rem"). Give some and the table lays out fixed, so
@@ -27,7 +30,8 @@ export interface TableColumn<T> {
  * A quiet data table for rows you read across: a `card-header` header row
  * in `text-xs` muted ink, body rows about 37px tall (`spacing-2` above and below, 16px beside each cell) divided by
  * `border-muted`, `text-sm` cells. Numeric columns align right in tabular
- * figures so digits line up. A cell may carry a muted second line. A row
+ * figures so digits line up, in mono (a column's `mono` sets it for any
+ * other data or copyable text; the headers and labels stay Inter). A cell may carry a muted second line. A row
  * in `error` takes a light `destructive-soft` tint; only its secondary
  * line, and cells marked `errorInk`, read in `destructive`.
  *
@@ -55,11 +59,12 @@ export function Table<T>({
   dense?: boolean
   className?: string
 }) {
+  const fixed = columns.some((c) => c.width)
   return (
     <div className={cn('overflow-x-auto rounded-lg border bg-card', className)}>
-      <table className={cn('w-full border-collapse text-sm', columns.some((c) => c.width) && 'table-fixed')}>
+      <table className={cn('w-full border-collapse text-sm', fixed && 'table-fixed')} style={fixed ? { minWidth: minWidth(columns) } : undefined}>
         <caption className="sr-only">{caption}</caption>
-        {columns.some((c) => c.width) && (
+        {fixed && (
           <colgroup>
             {columns.map((c) => (
               <col key={c.key} style={c.width ? { width: c.width } : undefined} />
@@ -89,7 +94,7 @@ export function Table<T>({
                   return (
                     <td
                       key={c.key}
-                      className={cn(dense ? 'px-3' : 'px-4', 'py-2 align-top whitespace-nowrap', c.numeric && 'text-right tabular-nums', bad && c.errorInk && 'text-destructive', c.className)}
+                      className={cn(dense ? 'px-3' : 'px-4', 'py-2 align-top whitespace-nowrap', c.numeric && 'text-right', c.numeric && (c.mono === false ? 'tabular-nums' : 'figure'), !c.numeric && c.mono && 'font-mono tabular-nums', bad && c.errorInk && 'text-destructive', c.className)}
                     >
                       {c.cell(row)}
                       {second != null && <div className={cn('text-xs', c.wrapSecondary ? 'min-w-40 whitespace-normal' : 'whitespace-nowrap', bad ? 'text-destructive' : 'text-muted-foreground')}>{second}</div>}
@@ -103,4 +108,14 @@ export function Table<T>({
       </table>
     </div>
   )
+}
+
+/** The narrowest a fixed table may be: its set widths plus a floor for each
+ *  column that has none. Narrower than that its cells would overlap, so the
+ *  frame scrolls instead. */
+const FREE_COLUMN = '10rem'
+function minWidth<T>(columns: TableColumn<T>[]): string {
+  const set = columns.filter((c) => c.width).map((c) => c.width)
+  const free = columns.length - set.length
+  return `calc(${[...set, ...Array(free).fill(FREE_COLUMN)].join(' + ')})`
 }

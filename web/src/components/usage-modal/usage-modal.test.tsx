@@ -50,6 +50,19 @@ describe('UsageModal', () => {
     expect(text).toContain('timeout')
   })
 
+  it('sets figures and model ids in mono and labels in Inter', () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    act(() => root.render(<UsageModal open onClose={noop} name="x" detail={detail} />))
+    const mono = [...document.querySelectorAll('dialog .figure, dialog .font-mono')].map((e) => e.textContent ?? '')
+    expect(mono.some((t) => t.includes('model-b'))).toBe(true)
+    expect(mono).toContain('30,000')
+    expect([...document.querySelectorAll('dialog dt')].every((e) => !/figure|font-mono/.test(e.className))).toBe(true)
+    act(() => root.unmount())
+    host.remove()
+  })
+
   it('says it is loading, failed, or had no calls', () => {
     expect(textOf(<UsageModal open onClose={noop} name="x" loading />)).toContain('Loading the details')
     expect(textOf(<UsageModal open onClose={noop} name="x" error />)).toContain("Couldn't load")

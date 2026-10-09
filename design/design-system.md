@@ -60,15 +60,31 @@ a border to delineate it.
 ## Type
 
 Three faces: **Newsreader** for display, leads and a guide's headings (its
-parts and steps), **Inter** for everything else, **JetBrains Mono** for machine strings: hashes, paths, versions,
-counts, page numbers.
+parts and steps), **Inter** for everything else, **JetBrains Mono** for
+what is copied and for data.
 
-**What a person reads is never mono** (2026-09-25). A book's problem
-labels ("3.1 #7", "4.27", "2.1.4"), a box's kind ("Words"), anything said
-in words is Inter, with `tabular-nums` where figures should line up. Mono
-had crept onto them, and at the floor size in a pill its wide, round
-letterforms read as toy-like (Jack: "the font you use for stuff like that
-looks a bit cartoony").
+**Mono is for what you would copy, and for data** (2026-10-08, Jack;
+this supersedes the 2026-09-25 rule that a person reads is never mono, for
+figures in tables and stats only). The test is "would you copy it":
+
+- **Mono, with tabular figures:** copyable identifiers (a model id, "asked
+  X", a hash, a path, a version, raw TeX and math source, a request log)
+  and data figures: the numeric cells of a table (a time of day too), the
+  value of a stat (`StatTile`, the usage modal's totals), and a trailing
+  data value (`RowValue`). The `figure` utility is mono plus tabular
+  figures, for a number; `font-mono` alone is for a string.
+- **Inter:** labels (column headers, a stage or kind name, a totals label),
+  prose, buttons, a book's problem labels ("3.1 #7", "4.27", "2.1.4": said
+  in words, never mono, because at the floor size in a pill its wide, round
+  letterforms read as toy-like, Jack: "a bit cartoony"), and anything you
+  only glance at and would not copy: the usage line that opens the dialog
+  (its model name included), the PDF viewer's page number and zoom, the
+  study timer, a page citation chip. Where figures should line up they take
+  `tabular-nums`, still in Inter.
+
+A table may mix the two: mono for its data, Inter for its labels
+(`web/src/components/table`: numeric columns are mono by default, `mono`
+sets any other).
 
 Nine steps, and no others. **15px is the floor**; nothing in the product is
 smaller, chips and counters included.

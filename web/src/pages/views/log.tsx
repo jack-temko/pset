@@ -37,7 +37,7 @@ export function Log({ handoffs, traffic }: { handoffs: Handoff[]; traffic: Traff
             <BoxRow
               key={traffic.length - i}
               title={<span className="font-mono text-xs">{`${t.method} ${t.path}`}</span>}
-              trailing={<span className={cn('font-mono text-xs tabular-nums', t.status >= 400 && 'text-destructive')}>{t.status}</span>}
+              trailing={<span className={cn('figure text-xs', t.status >= 400 && 'text-destructive')}>{t.status}</span>}
             />
           ))}
       </Box>

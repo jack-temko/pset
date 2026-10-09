@@ -25,6 +25,7 @@ Every model job that makes something you look at (a question, an Ask answer, an 
 | D10 | An Ask answer's stages are its tool rounds, with the tools each round called, plus repairs | Shows why an answer took long | a flat call list |
 | D11 | The trigger is today's line made a button, with a small trailing chevron that turns accent with the line on hover and focus | Says "opens something" without a loud link | hover only; dotted underline; a Details link; a cost chip; an icon |
 | D12 | A new reusable Table component (`components/table`) with its own /components section: quiet header, right-aligned tabular numbers, a muted second line, a soft error row, a bit tighter than the mockup (about 10px), scrolls sideways when too wide, a slightly larger radius | Jack asked for it, and the call list needs real columns | a hand-made list |
+| D14 | Font rule: copyable strings (model ids, hashes, paths) and data figures (numbers in tables, stats) are mono; the PDF page number and zoom are Inter (you would not copy them); labels, prose, problem labels and non-copyable summaries such as the usage line are Inter with tabular figures; a table mixes both | Jack's rule after seeing both side by side | all figures Inter; all data mono including the usage line |
 | D13 | Jack sees it working for real in the dev app before it merges | His ask | merging on green CI |
 
 ### The artifact: surfaces
@@ -50,6 +51,7 @@ Every model job that makes something you look at (a question, an Ask answer, an 
 Nothing.
 
 ## Reversals
+- design/design-system.md (2026-09-25): "what a person reads is never mono". Reversed for figures in tables and stats by D14, Jack's explicit rule, 2026-10-08. Labels and problem labels stay Inter.
 - design/model-usage.md (2026-09-30) removed the popover and made the line plain text. This grill makes the line clickable again, opening a modal (Jack's ask). The spec there is rewritten when this ships.
 
 ## Disagreements
@@ -124,3 +126,11 @@ Jack: "Also make a new table component for the UI, and make it look good. Also t
 ### Batch 5 (Gate 3, shape; round 3 mockups)
 - Affordance? A2 dotted underline (Rec) / A3 trailing chevron / A4 Details link / A1 hover only. Answer: "A3: trailing chevron"
 - Row height? A bit tighter (Rec) / Keep as is. Answer (free text): "tiny bit tighter, also make sure it scrolls and bump the border radius a bit"
+
+### Batch 6 (after the real-app look: fonts for data)
+Jack: "Why is just the time in a different font. Make sure we unify the decsions regarding what font we use for data and stuff."
+- Figures a person reads? Inter, tabular figures (Rec) / Mono for all data. Answer: "show me both"
+- What stays mono? Only code-like strings (Rec) / Nothing in the product. Answer: "Only code-like strings (Recommended)"
+- How wide? Whole app, in this change (Rec) / Usage now, rest separately. Answer: "Whole app, in this change (Recommended)"
+- Figures, after the comparison: Inter, tabular (Rec) / Mono. Answer (free text): "So heres the rule. Anything copyable (model id, etc), or a number in a table, or stat, or anything of that nature is mono. Tables can be a mix of two fonts, mono for data, and other font for labels like stages. If its should not be copyable, like the usage line to open the dialog, it should not be in mono"
+Jack: "Also the page number and zoom level in the pdf viewer should not be mono, you wouldnt really copy them"

@@ -7,6 +7,8 @@ Esc), and both hold [Tables](../table/README.md).
 
 ## UsageModal
 
+The totals' values, the numeric cells, the time of day and the model ids (with "asked X") are mono; the labels, stage names and kind names are Inter, as the rule is in `design-system.md`, Type.
+
 Titled "Usage · " and the job's name ("Problem 3.14", "Ask answer"). From the top:
 
 1. **Totals**, two rows of four: time, calls, failed, cost; then tokens in,

@@ -35,7 +35,7 @@ function Totals({ total }: { total: DetailTotal }) {
         v === undefined ? null : (
           <div key={k}>
             <dt className="text-xs text-muted-foreground">{k}</dt>
-            <dd className="font-medium tabular-nums">{v}</dd>
+            <dd className="figure font-medium">{v}</dd>
           </div>
         ),
       )}
@@ -63,7 +63,7 @@ const stageColumns: TableColumn<Stage>[] = [
 const modelOf = (c: Call) => shortModel(c.answered || c.asked)
 
 const callColumns = (withReasoning: boolean): TableColumn<Call>[] => [
-  { key: 'at', header: 'At', width: '5.5rem', errorInk: true, cell: (c) => <span className="font-mono text-xs">{timeOfDay(c.at)}</span> },
+  { key: 'at', header: 'At', width: '5.5rem', mono: true, errorInk: true, cell: (c) => timeOfDay(c.at) },
   {
     key: 'stage',
     header: 'Stage',
@@ -75,6 +75,7 @@ const callColumns = (withReasoning: boolean): TableColumn<Call>[] => [
   {
     key: 'model',
     header: 'Model',
+    mono: true,
     cell: modelOf,
     secondary: (c) => (c.answered && c.answered !== c.asked ? `asked ${shortModel(c.asked)}` : undefined),
   },

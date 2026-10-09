@@ -93,7 +93,7 @@ export function WorkedSteps({
               fractions make it; the reason sits under the math, not the
               number. */}
           <div className="flex items-center gap-3">
-            <span className="w-4 shrink-0 text-right font-mono text-xs text-muted-foreground tabular-nums">
+            <span className="w-4 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
               {i + 1}
             </span>
             {/* No scroll wrapper: an overflow container clips tall glyphs
@@ -331,7 +331,7 @@ export function Plot({
                   y={sy(v)}
                   textAnchor="end"
                   dominantBaseline="middle"
-                  className="fill-muted-foreground font-mono text-xs tabular-nums"
+                  className="fill-muted-foreground text-xs tabular-nums"
                 >
                   {fmt(v)}
                 </text>
@@ -343,7 +343,7 @@ export function Plot({
                 x={sx(v)}
                 y={H - m.bottom + 18}
                 textAnchor="middle"
-                className="fill-muted-foreground font-mono text-xs tabular-nums"
+                className="fill-muted-foreground text-xs tabular-nums"
               >
                 {fmt(v)}
               </text>
@@ -446,7 +446,7 @@ export function Plot({
               transform: `translateX(${sx(hx) > width / 2 ? 'calc(-100% - 8px)' : '8px'})`,
             }}
           >
-            <p className="font-mono text-muted-foreground tabular-nums">
+            <p className="figure text-muted-foreground">
               {x.label} = {fmt(hx)}
             </p>
             {series.map((s, i) => {
@@ -455,7 +455,7 @@ export function Plot({
                 <p key={s.label} className="flex items-center gap-2">
                   <span className="w-3 rounded-full" style={{ height: 2, background: colors[i] }} />
                   <span className="text-muted-foreground">{s.label}</span>
-                  <span className="ml-auto font-mono tabular-nums">{fmt(p[1])}</span>
+                  <span className="ml-auto figure">{fmt(p[1])}</span>
                 </p>
               ) : null
             })}

@@ -116,7 +116,7 @@ function Rail({
 
   const pageLabel = (pdfPage: number) => (
     <Tooltip label={`PDF page ${pdfPage}`} side="left">
-      <span className="shrink-0 font-mono text-xs tabular-nums">{pages.label(pdfPage)}</span>
+      <span className="shrink-0 text-xs tabular-nums">{pages.label(pdfPage)}</span>
     </Tooltip>
   )
 
@@ -401,7 +401,7 @@ function Scan({
               className="relative grid place-items-center overflow-hidden rounded-sm border bg-card"
               style={{ aspectRatio: `1 / ${aspect || 11 / 8.5}` }}
             >
-              <span className="font-mono text-xs text-muted-foreground tabular-nums">
+              <span className="text-xs text-muted-foreground tabular-nums">
                 {pages.label(n)}
               </span>
               {width > 0 && (
@@ -441,7 +441,7 @@ function Scan({
         )}
       >
         <Tooltip label={`PDF page ${currentPage} of ${pageCount}`}>
-          <span tabIndex={0} className="flex h-control-sm items-center rounded-md px-2 font-mono tabular-nums">
+          <span tabIndex={0} className="flex h-control-sm items-center rounded-md px-2 tabular-nums">
             p. {pages.label(currentPage)}
           </span>
         </Tooltip>
@@ -456,14 +456,14 @@ function Scan({
                 setZoom(1)
                 wake()
               }}
-              className="font-mono tabular-nums"
+              className="tabular-nums"
             >
               {percent}%
               <RotateCcw />
             </Button>
           </Tooltip>
         ) : (
-          <span className="flex h-control-sm items-center px-2 font-mono tabular-nums">{percent}%</span>
+          <span className="flex h-control-sm items-center px-2 tabular-nums">{percent}%</span>
         )}
       </div>
     </div>

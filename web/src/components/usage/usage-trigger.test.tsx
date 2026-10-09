@@ -79,6 +79,8 @@ describe('UsageTrigger', () => {
     expect(button.textContent).toBe('deepseek-v4 +1 · 25s · 11,016 tokens · $0.0047')
     expect(button.getAttribute('aria-label')).toBe('Usage details for Problem 3.14')
     expect(button.hasAttribute('data-copy-skip')).toBe(true)
+    // The line is not for copying: Inter, never mono.
+    expect(button.innerHTML).not.toMatch(/font-mono|figure/)
     expect(document.querySelector('dialog')).toBeNull()
     act(() => button.click())
     const dialog = document.querySelector('dialog')!

@@ -23,6 +23,29 @@ function render() {
   return { host, done: () => act(() => root.unmount()) }
 }
 
+describe('Table fonts', () => {
+  it('sets numbers and mono columns in mono, labels in Inter, and lets a column opt out', () => {
+    const host = document.createElement('div')
+    const root = createRoot(host)
+    const cols: TableColumn<Row>[] = [
+      { key: 'stage', header: 'Stage', cell: (r) => r.stage },
+      { key: 'model', header: 'Model', mono: true, cell: (r) => r.model },
+      { key: 'ms', header: 'ms', numeric: true, cell: (r) => r.ms },
+      { key: 'plain', header: 'Plain', numeric: true, mono: false, cell: (r) => r.ms },
+    ]
+    act(() => root.render(<Table caption="x" columns={cols} rows={rows} rowKey={(r) => r.stage} />))
+    const [stage, model, ms, plain] = [...host.querySelectorAll('tbody tr:first-child td')].map((t) => t.className)
+    expect(stage).not.toMatch(/font-mono|figure/)
+    expect(model).toContain('font-mono')
+    expect(ms).toContain('figure')
+    expect(plain).not.toContain('figure')
+    expect(plain).toContain('tabular-nums')
+    // Headers are labels: never mono.
+    expect(host.querySelector('thead')?.innerHTML).not.toMatch(/font-mono|figure/)
+    act(() => root.unmount())
+  })
+})
+
 describe('Table options', () => {
   it('goes fixed when columns give widths, and tightens the cells when dense', () => {
     const host = document.createElement('div')
@@ -32,6 +55,8 @@ describe('Table options', () => {
     expect(host.querySelector('table')?.className).toContain('table-fixed')
     expect(host.querySelectorAll('col')[1].style.width).toBe('5rem')
     expect(host.querySelector('td')?.className).toContain('px-3')
+    // Its floor is the widths plus 10rem for the column with none.
+    expect(host.querySelector('table')?.style.minWidth).toMatch(/15rem|5rem \+ 10rem/)
     act(() => root.unmount())
   })
 

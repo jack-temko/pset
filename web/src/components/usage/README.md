@@ -13,6 +13,9 @@ and is a **button**. Clicking it opens the [usage modal](../usage-modal/README.m
   the tokens, the cost: the order a student cares about, the number to skim
   past last. `text-xs`, `tabular-nums`, `text-muted-foreground`; the `title`
   names every model and says time adds up every call.
+- **Inter, never mono.** The line opens a dialog and is not for copying, so
+  it is all Inter with tabular figures, its model name included; the
+  copyable ids are in the modal.
 - **The chevron** is a `size-3` `ChevronRight` after the line. It says "opens
   something" without a loud link; the line and the chevron turn to `primary`
   together on hover and on `:focus-visible`. No underline, no border.

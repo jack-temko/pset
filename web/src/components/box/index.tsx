@@ -159,7 +159,7 @@ export function Counter({ className, ...props }: ComponentProps<'span'>) {
 export function RowValue({ className, ...props }: ComponentProps<'span'>) {
   return (
     <span
-      className={cn('font-mono text-xs text-muted-foreground tabular-nums', className)}
+      className={cn('figure text-xs text-muted-foreground', className)}
       {...props}
     />
   )

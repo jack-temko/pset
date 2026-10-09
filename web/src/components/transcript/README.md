@@ -13,7 +13,7 @@ chat where you ask, page where it answers. No bubbles.
   `AssistantTurn` and between the paragraphs the calls ran between: the
   page tells `Steps` which slice goes where. The group carries
   `data-copy-skip`, so Copy takes the answer without the feed.
-- **`PageRef`**: the inline citation, a small mono `primary-soft` chip
+- **`PageRef`**: the inline citation, a small `primary-soft` chip, Inter with tabular figures (you click it, you don't copy it)
   ("p. 142") that reads as an object in the prose. Click jumps the scan;
   hover fills `primary`.
 - **`MathInline` / `MathDisplay`**: KaTeX, `throwOnError: false` so bad

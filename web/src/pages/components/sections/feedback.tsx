@@ -149,11 +149,12 @@ const STAGE_COLUMNS: TableColumn<(typeof DEMO_STAGES)[number]>[] = [
 ]
 const DEMO_CALLS: DemoCall[] = DETAIL.runs[1].calls
 const CALL_COLUMNS: TableColumn<DemoCall>[] = [
-  { key: 'at', header: 'Time', errorInk: true, cell: (c) => <span className="font-mono text-xs">{timeOfDay(c.at)}</span> },
+  { key: 'at', header: 'At', mono: true, errorInk: true, cell: (c) => timeOfDay(c.at) },
   { key: 'stage', header: 'Stage', cell: (c) => c.stage, secondary: (c) => c.error },
   {
     key: 'model',
     header: 'Model',
+    mono: true,
     cell: (c) => shortModel(c.answered || c.asked),
     secondary: (c) => (c.answered && c.answered !== c.asked ? `asked ${shortModel(c.asked)}` : undefined),
   },
