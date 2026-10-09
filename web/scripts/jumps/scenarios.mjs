@@ -60,7 +60,7 @@ export async function discover(app) {
   let noContentsBook = null;
   let noTurnsBook = null;
   for (const b of books) {
-    if (b.state !== 'ready') continue;
+    if (b.state?.kind !== 'ready') continue;
     const c = await get(`/api/books/${b.id}/contents`);
     if (!noContentsBook && !(c.entries ?? []).length) noContentsBook = b;
     const { turns } = await get(`/api/books/${b.id}/turns`);
