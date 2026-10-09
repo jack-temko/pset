@@ -345,7 +345,10 @@ type Shape = { stages: number[]; runs: number[][] };
 /** What a first open draws before anything is remembered: an Ask turn is one
  *  stage, a read a couple, a question several (and usually fills the dialog). */
 const fallbackFor = (kind: string): Shape => ({
-  stages: Array(kind === 'turn' ? 1 : kind === 'read' ? 2 : 3).fill(0),
+  stages: Array.from(
+    { length: kind === 'turn' ? 1 : kind === 'read' ? 2 : 3 },
+    () => 0,
+  ),
   runs: [[0, 0, 0]],
 });
 // The dialog caps at 80vh and scrolls, so a skeleton this long fills it; more
@@ -365,6 +368,7 @@ const flags = (x: unknown): x is number[] =>
   x.length <= MAX_ROWS &&
   x.every((f) => f === 0 || f === 1);
 /** Whether a saved value is a shape within the caps. */
+// oxlint-disable-next-line react/only-export-components -- a type guard for the shape this dialog saves
 export const isShape = (x: unknown): x is Shape =>
   typeof x === 'object' &&
   x !== null &&
@@ -473,7 +477,7 @@ function Body<T>({
     >
       {(data) =>
         data ? (
-          children(data as T)
+          children(data)
         ) : (
           <p className="text-sm text-muted-foreground">
             No model calls were made.

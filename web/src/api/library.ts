@@ -88,7 +88,7 @@ function putBook(qc: QueryClient, book: Book) {
     qc.setQueryData(libraryKeys.book(book.id), book);
   // Ready means the contents exist now; a retried import may redo them.
   if (book.state.kind === 'ready')
-    qc.invalidateQueries({ queryKey: libraryKeys.contents(book.id) });
+    void qc.invalidateQueries({ queryKey: libraryKeys.contents(book.id) });
 }
 
 function dropBook(qc: QueryClient, id: string) {
@@ -163,7 +163,9 @@ function bookAction(path: string) {
     const qc = useQueryClient();
     return useMutation({
       mutationFn: (id: string) => post<Book>(`/api/books/${id}/${path}`),
-      onSuccess: (b) => putBook(qc, b),
+      onSuccess: (b) => {
+        putBook(qc, b);
+      },
     });
   };
 }
@@ -177,8 +179,10 @@ export const useRetryImport = bookAction('retry');
 export function useRemoveBook() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => del<void>(`/api/books/${id}`),
-    onSuccess: (_, id) => dropBook(qc, id),
+    mutationFn: (id: string) => del<undefined>(`/api/books/${id}`),
+    onSuccess: (_, id) => {
+      dropBook(qc, id);
+    },
   });
 }
 
@@ -197,6 +201,8 @@ export function useUpdateBook(id: string) {
     onError: (_e, _p, ctx) => {
       if (ctx?.before) putBook(qc, ctx.before);
     },
-    onSuccess: (b) => putBook(qc, b),
+    onSuccess: (b) => {
+      putBook(qc, b);
+    },
   });
 }

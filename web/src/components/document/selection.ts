@@ -33,7 +33,9 @@ export type Parsed = {
 };
 
 export function parseSel(sel: Sel): Parsed | null {
-  const m = /^([blps])(\d+)(?:\.(\d+))?$/.exec(sel);
+  const m: (string | undefined)[] | null = /^([blps])(\d+)(?:\.(\d+))?$/.exec(
+    sel,
+  );
   if (!m) return null;
   return {
     kind:
@@ -274,11 +276,11 @@ export function selectionText(
   pages?: PageMap,
 ): string {
   const p = parseSel(sel);
-  if (!p || blocks[p.index] === undefined) return '';
+  const block = p ? blocks.at(p.index) : undefined;
+  if (!p || !block) return '';
   if (p.kind === 'block') {
-    const block = blocks[p.index];
     if (p.line !== undefined && block.type === 'derivation') {
-      const step = block.steps[p.line];
+      const step = block.steps.at(p.line);
       return step ? lineText(step, p.line) : blockText(block, pages);
     }
     return blockText(block, pages);
@@ -320,7 +322,7 @@ export function excerptOf(text: string, max = 28): string {
   const plain = text
     .replace(/\*\*([^*]+)\*\*/g, '$1')
     .replace(/`([^`]*)`/g, '$1')
-    .replace(/\\[()\[\]]/g, '')
+    .replace(/\\[()[\]]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
   return plain.length <= max ? plain : `${plain.slice(0, max).trimEnd()}…`;

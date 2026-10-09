@@ -26,7 +26,7 @@ const columns: TableColumn<Row>[] = [
 function render() {
   const host = document.createElement('div');
   const root = createRoot(host);
-  act(() =>
+  act(() => {
     root.render(
       <Table
         caption="Calls"
@@ -35,9 +35,16 @@ function render() {
         rowKey={(r) => r.stage}
         error={(r) => !!r.failed}
       />,
-    ),
-  );
-  return { host, done: () => act(() => root.unmount()) };
+    );
+  });
+  return {
+    host,
+    done: () => {
+      act(() => {
+        root.unmount();
+      });
+    },
+  };
 }
 
 describe('Table fonts', () => {
@@ -56,7 +63,7 @@ describe('Table fonts', () => {
         cell: (r) => r.ms,
       },
     ];
-    act(() =>
+    act(() => {
       root.render(
         <Table
           caption="x"
@@ -64,8 +71,8 @@ describe('Table fonts', () => {
           rows={rows}
           rowKey={(r) => r.stage}
         />,
-      ),
-    );
+      );
+    });
     const [stage, model, ms, plain] = [
       ...host.querySelectorAll('tbody tr:first-child td'),
     ].map((t) => t.className);
@@ -78,7 +85,9 @@ describe('Table fonts', () => {
     expect(host.querySelector('thead')?.innerHTML).not.toMatch(
       /font-mono|figure/,
     );
-    act(() => root.unmount());
+    act(() => {
+      root.unmount();
+    });
   });
 });
 
@@ -96,7 +105,7 @@ describe('Table options', () => {
         cell: (r) => r.ms,
       },
     ];
-    act(() =>
+    act(() => {
       root.render(
         <Table
           dense
@@ -105,8 +114,8 @@ describe('Table options', () => {
           rows={rows}
           rowKey={(r) => r.stage}
         />,
-      ),
-    );
+      );
+    });
     expect(host.querySelector('table')?.className).toContain('table-fixed');
     expect(host.querySelectorAll('col')[1].style.width).toBe('5rem');
     expect(host.querySelector('td')?.className).toContain('px-3');
@@ -114,7 +123,9 @@ describe('Table options', () => {
     expect(host.querySelector('table')?.style.minWidth).toMatch(
       /15rem|5rem \+ 10rem/,
     );
-    act(() => root.unmount());
+    act(() => {
+      root.unmount();
+    });
   });
 
   it('keeps a secondary line on one line unless its column lets it wrap', () => {
@@ -136,7 +147,7 @@ describe('Table options', () => {
         secondary: (r) => r.model,
       },
     ];
-    act(() =>
+    act(() => {
       root.render(
         <Table
           caption="x"
@@ -144,8 +155,8 @@ describe('Table options', () => {
           rows={rows}
           rowKey={(r) => r.stage}
         />,
-      ),
-    );
+      );
+    });
     const [a, b] = [...host.querySelectorAll('tbody tr:first-child td div')];
     expect(a.className).toContain('whitespace-nowrap');
     expect(b.className).toContain('whitespace-normal');
@@ -153,7 +164,9 @@ describe('Table options', () => {
     expect(b.className).not.toContain('min-w-40');
     expect(b.className).toContain('min-w-0');
     expect(b.className).toContain('max-w-full');
-    act(() => root.unmount());
+    act(() => {
+      root.unmount();
+    });
   });
 });
 

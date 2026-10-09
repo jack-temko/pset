@@ -46,8 +46,12 @@ function dropMemory(qc: QueryClient, id: string, bookId: string) {
   );
 }
 
-on<Saved>('memory.saved', (d, qc) => putMemory(qc, d.memory));
-on<Removed>('memory.removed', (d, qc) => dropMemory(qc, d.id, d.bookId));
+on<Saved>('memory.saved', (d, qc) => {
+  putMemory(qc, d.memory);
+});
+on<Removed>('memory.removed', (d, qc) => {
+  dropMemory(qc, d.id, d.bookId);
+});
 
 // ---------------------------------------------------------------- mutations
 
@@ -56,7 +60,9 @@ export function useAddMemory(bookId: string) {
   return useMutation({
     mutationFn: (m: NewMemory) =>
       post<Memory>(`/api/books/${bookId}/memories`, m),
-    onSuccess: (m) => putMemory(qc, m),
+    onSuccess: (m) => {
+      putMemory(qc, m);
+    },
   });
 }
 
@@ -64,7 +70,7 @@ export function useAddMemory(bookId: string) {
 export function useRemoveMemory(bookId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => del<void>(`/api/memories/${id}`),
+    mutationFn: (id: string) => del<undefined>(`/api/memories/${id}`),
     onMutate: (id) => {
       const before = qc.getQueryData<Memory[]>(memoryKeys.list(bookId));
       dropMemory(qc, id, bookId);

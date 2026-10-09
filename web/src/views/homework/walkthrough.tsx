@@ -78,7 +78,6 @@ import {
   stageWord,
   timeLeftWords,
   isWorking,
-  type HomeworkSet,
   type Q,
 } from './progress';
 
@@ -235,13 +234,14 @@ export function Walkthrough({
   const [peeked, setPeeked] = useState<Record<string, 'reading'[]>>({});
   const [rowsOpen, setRowsOpen] = useState<Record<string, string[]>>({});
 
-  const set = detail.data?.homework as HomeworkSet | undefined;
-  const questions = (detail.data?.questions ?? []) as Q[];
+  const set = detail.data?.homework;
+  const questions = detail.data?.questions ?? [];
   // Open where you'd pick up: the first question not yet done, once the
   // set has loaded.
   useEffect(() => {
     if (index !== null || !detail.data) return;
     const first = firstUnfinished(detail.data.questions);
+    // oxlint-disable-next-line react/set-state-in-effect -- opens the walkthrough where you would pick up once the set has loaded
     setIndex(first ?? 0);
     if (first === null && detail.data.questions.length > 0) setFinishing(true);
   }, [detail.data, index]);
@@ -251,6 +251,7 @@ export function Walkthrough({
     if (!boxing.added || boxing.added === openedBoxed || !detail.data) return;
     const i = detail.data.questions.findIndex((x) => x.id === boxing.added);
     if (i !== -1) {
+      // oxlint-disable-next-line react/set-state-in-effect -- opens the walkthrough where you would pick up once the set has loaded
       setIndex(i);
       setOpenedBoxed(boxing.added);
     }
@@ -285,8 +286,12 @@ export function Walkthrough({
       open={adding}
       bookId={bookId}
       set={{ id: setId, title: detail.data?.homework.title ?? '' }}
-      onBox={() => boxing.start({ kind: 'add', setId })}
-      onClose={() => setAdding(false)}
+      onBox={() => {
+        boxing.start({ kind: 'add', setId });
+      }}
+      onClose={() => {
+        setAdding(false);
+      }}
       onDone={(_, wrote) => {
         if (wrote) setIndex(questions.length);
       }}
@@ -343,7 +348,9 @@ export function Walkthrough({
               <MenuItem
                 icon={<Flag />}
                 current={finished}
-                onSelect={() => setFinishing(true)}
+                onSelect={() => {
+                  setFinishing(true);
+                }}
               >
                 All done
               </MenuItem>
@@ -357,14 +364,21 @@ export function Walkthrough({
         </span>
       )}
       <Menu label="Homework actions">
-        <MenuItem icon={<Plus />} onSelect={() => setAdding(true)}>
+        <MenuItem
+          icon={<Plus />}
+          onSelect={() => {
+            setAdding(true);
+          }}
+        >
           Add questions
         </MenuItem>
         {/* The other way to add one: show it on the page, which works for
             any book, however it numbers its problems. */}
         <MenuItem
           icon={<SquareDashedMousePointer />}
-          onSelect={() => boxing.start({ kind: 'add', setId })}
+          onSelect={() => {
+            boxing.start({ kind: 'add', setId });
+          }}
         >
           Box one on the page
         </MenuItem>
@@ -387,7 +401,9 @@ export function Walkthrough({
             "Turned in" with its check. Choosing it again takes it back. */}
         <MenuCheckItem
           checked={turnedIn}
-          onChange={() => updateSet.mutate({ turnedIn: !turnedIn })}
+          onChange={() => {
+            updateSet.mutate({ turnedIn: !turnedIn });
+          }}
         >
           {turnedIn ? 'Turned in' : 'Turn in'}
         </MenuCheckItem>
@@ -448,7 +464,11 @@ export function Walkthrough({
             No questions yet. Paste a reference or the question itself, one per
             row.
           </p>
-          <Button onClick={() => setAdding(true)}>
+          <Button
+            onClick={() => {
+              setAdding(true);
+            }}
+          >
             <Plus />
             Add questions
           </Button>
@@ -489,8 +509,9 @@ export function Walkthrough({
   // The figure's reading is out in the open only when it is flagged, and
   // asked for from the question's menu otherwise.
   const peek = peeked[q.id] ?? [];
-  const peekAt = (what: 'reading') =>
+  const peekAt = (what: 'reading') => {
     setPeeked((all) => ({ ...all, [q.id]: [...(all[q.id] ?? []), what] }));
+  };
   const readingReady =
     q.figures.length > 0 &&
     q.page !== undefined &&
@@ -527,7 +548,7 @@ export function Walkthrough({
       const to = Math.max(0, Math.min(questions.length - 1, at + key.by));
       if (to !== at) setIndex(to);
     } else {
-      const row = helpRows(q)[key.index];
+      const row = helpRows(q).at(key.index);
       if (row && row.blocks.length > 0)
         toggleRow(row.name, !open.has(row.name));
     }
@@ -542,7 +563,9 @@ export function Walkthrough({
           title={set.title}
           questions={questions}
           turnedIn={turnedIn}
-          onTurnIn={() => updateSet.mutate({ turnedIn: true })}
+          onTurnIn={() => {
+            updateSet.mutate({ turnedIn: true });
+          }}
           onBack={onBack}
         />
         {dialog}
@@ -595,7 +618,9 @@ export function Walkthrough({
                 variant="outline"
                 size="sm"
                 className="shrink-0"
-                onClick={() => onJump(q.page as number)}
+                onClick={() => {
+                  onJump(q.page as number);
+                }}
               >
                 <BookOpen />
                 Show in book
@@ -605,12 +630,22 @@ export function Walkthrough({
                 professor said, what the guide read. */}
             <Menu label="Question actions">
               {at > 0 && (
-                <MenuItem icon={<ChevronUp />} onSelect={() => move(-1)}>
+                <MenuItem
+                  icon={<ChevronUp />}
+                  onSelect={() => {
+                    move(-1);
+                  }}
+                >
                   Move up
                 </MenuItem>
               )}
               {at < questions.length - 1 && (
-                <MenuItem icon={<ChevronDown />} onSelect={() => move(1)}>
+                <MenuItem
+                  icon={<ChevronDown />}
+                  onSelect={() => {
+                    move(1);
+                  }}
+                >
                   Move down
                 </MenuItem>
               )}
@@ -620,27 +655,34 @@ export function Walkthrough({
               {q.inBook && q.page !== undefined && q.state !== 'failed' && (
                 <MenuItem
                   icon={<SquareDashedMousePointer />}
-                  onSelect={() =>
+                  onSelect={() => {
                     boxing.start({
                       kind: 'find',
                       questionId: q.id,
                       label: q.label,
-                    })
-                  }
+                    });
+                  }}
                 >
-                  This isn't the right problem
+                  This isn&apos;t the right problem
                 </MenuItem>
               )}
               <MenuItem
                 icon={<Pencil />}
-                onSelect={() => setEditingNotes(q.id)}
+                onSelect={() => {
+                  setEditingNotes(q.id);
+                }}
               >
                 {q.notes.length > 0
                   ? "Edit the professor's instructions"
                   : "Add your professor's instructions"}
               </MenuItem>
               {readingReady && !showReading && (
-                <MenuItem icon={<Check />} onSelect={() => peekAt('reading')}>
+                <MenuItem
+                  icon={<Check />}
+                  onSelect={() => {
+                    peekAt('reading');
+                  }}
+                >
                   Check how the figure reads
                 </MenuItem>
               )}
@@ -696,8 +738,12 @@ export function Walkthrough({
           <ProfessorNotes
             q={q}
             editing={editingNotes === q.id}
-            onStop={() => setEditingNotes(null)}
-            onSave={(notes) => update.mutate({ id: q.id, patch: { notes } })}
+            onStop={() => {
+              setEditingNotes(null);
+            }}
+            onSave={(notes) => {
+              update.mutate({ id: q.id, patch: { notes } });
+            }}
           />
 
           {/* The words the guide is written from: out only when a reading
@@ -705,8 +751,12 @@ export function Walkthrough({
           {showReading && (
             <FigureReading
               q={q}
-              onCorrect={(lines) => redoReading.mutate({ id: q.id, lines })}
-              onReread={() => redoReading.mutate({ id: q.id })}
+              onCorrect={(lines) => {
+                redoReading.mutate({ id: q.id, lines });
+              }}
+              onReread={() => {
+                redoReading.mutate({ id: q.id });
+              }}
             />
           )}
         </div>
@@ -721,7 +771,9 @@ export function Walkthrough({
             <>
               <FailedQuestion
                 q={q}
-                onRetry={(retry) => retryQ.mutate({ id: q.id, retry })}
+                onRetry={(retry) => {
+                  retryQ.mutate({ id: q.id, retry });
+                }}
                 onOpenSettings={onOpenSettings}
               />
               {/* What the failed attempt spent: the calls cost even when
@@ -759,7 +811,9 @@ export function Walkthrough({
                   </p>
                   <Button
                     variant="outline"
-                    onClick={() => writeGuide.mutate(q.id)}
+                    onClick={() => {
+                      writeGuide.mutate(q.id);
+                    }}
                   >
                     Write the guide
                   </Button>
@@ -780,7 +834,7 @@ export function Walkthrough({
                         blocks,
                         pages,
                       ),
-                    pick: (stage, sel, blocks) =>
+                    pick: (stage, sel, blocks) => {
                       onPickSelection(
                         pendingOf(
                           questionSource(q.id, stage),
@@ -788,8 +842,9 @@ export function Walkthrough({
                           sel,
                           pages,
                         ),
-                      ),
-                    ask: (stage, sel, blocks) =>
+                      );
+                    },
+                    ask: (stage, sel, blocks) => {
                       onAskAbout(
                         guideAbout({
                           question: q.label,
@@ -805,7 +860,8 @@ export function Walkthrough({
                           sel,
                           pages,
                         ),
-                      ),
+                      );
+                    },
                     clear: onClearAbout,
                   }}
                 />
@@ -830,12 +886,12 @@ export function Walkthrough({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() =>
+          onClick={() => {
             onAskAbout({
               label: q.label,
               text: `The homework problem ${q.label}:\n${runsSource(q.statement) || q.text}`,
-            })
-          }
+            });
+          }}
         >
           Ask about this
         </Button>

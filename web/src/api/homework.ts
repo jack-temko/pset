@@ -103,7 +103,7 @@ function putSummary(qc: QueryClient, h: Summary) {
     (d) => d && { ...d, homework: h },
   );
   // The due list's order depends on dates across books: refetch it.
-  qc.invalidateQueries({ queryKey: homeworkKeys.due });
+  void qc.invalidateQueries({ queryKey: homeworkKeys.due });
 }
 
 function dropSummary(qc: QueryClient, id: string, bookId: string) {
@@ -111,7 +111,7 @@ function dropSummary(qc: QueryClient, id: string, bookId: string) {
     list?.filter((x) => x.id !== id),
   );
   qc.removeQueries({ queryKey: homeworkKeys.set(id) });
-  qc.invalidateQueries({ queryKey: homeworkKeys.due });
+  void qc.invalidateQueries({ queryKey: homeworkKeys.due });
 }
 
 // Two snapshots of one question can land in either order: a mutation's
@@ -148,8 +148,12 @@ function dropQuestion(qc: QueryClient, id: string, homeworkId: string) {
   );
 }
 
-on<SetChanged>('homework.changed', (d, qc) => putSummary(qc, d.homework));
-on<SetRemoved>('homework.removed', (d, qc) => dropSummary(qc, d.id, d.bookId));
+on<SetChanged>('homework.changed', (d, qc) => {
+  putSummary(qc, d.homework);
+});
+on<SetRemoved>('homework.removed', (d, qc) => {
+  dropSummary(qc, d.id, d.bookId);
+});
 /** The step a question is in, for its time left (lib/eta): being found,
  *  having its figure read, or being written, none otherwise. */
 export const questionStep = (q: Pick<Question, 'state'>) =>
@@ -173,7 +177,9 @@ export function useCreateHomework(bookId: string) {
   return useMutation({
     mutationFn: (in_: Input) =>
       post<Summary>(`/api/books/${bookId}/homework`, in_),
-    onSuccess: (h) => putSummary(qc, h),
+    onSuccess: (h) => {
+      putSummary(qc, h);
+    },
   });
 }
 
@@ -188,10 +194,14 @@ export function useNewHomework(bookId: string) {
       const added = await post<Questions>(`/api/homework/${h.id}/questions`, {
         drafts,
       });
-      added.questions.forEach((q) => putQuestion(qc, q));
+      added.questions.forEach((q) => {
+        putQuestion(qc, q);
+      });
       return { ...h, total: added.questions.length };
     },
-    onSuccess: (h) => putSummary(qc, h),
+    onSuccess: (h) => {
+      putSummary(qc, h);
+    },
   });
 }
 
@@ -212,16 +222,22 @@ export function useUpdateHomework(id: string) {
       }
       return { before };
     },
-    onError: (_e, _p, ctx) => ctx?.before && putSummary(qc, ctx.before),
-    onSuccess: (h) => putSummary(qc, h),
+    onError: (_e, _p, ctx) => {
+      if (ctx?.before) putSummary(qc, ctx.before);
+    },
+    onSuccess: (h) => {
+      putSummary(qc, h);
+    },
   });
 }
 
 export function useDeleteHomework() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (h: Summary) => del<void>(`/api/homework/${h.id}`),
-    onSuccess: (_, h) => dropSummary(qc, h.id, h.bookId),
+    mutationFn: (h: Summary) => del<undefined>(`/api/homework/${h.id}`),
+    onSuccess: (_, h) => {
+      dropSummary(qc, h.id, h.bookId);
+    },
   });
 }
 
@@ -232,7 +248,9 @@ export function useAddQuestions(homeworkId: string) {
   return useMutation({
     mutationFn: (drafts: Draft[]) =>
       post<Questions>(`/api/homework/${homeworkId}/questions`, { drafts }),
-    onSuccess: (r) => r.questions.forEach((q) => putQuestion(qc, q)),
+    onSuccess: (r) => {
+      for (const q of r.questions) putQuestion(qc, q);
+    },
   });
 }
 
@@ -276,7 +294,7 @@ export function useUpdateQuestion(homeworkId: string) {
 export function useRemoveQuestion(homeworkId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => del<void>(`/api/questions/${id}`),
+    mutationFn: (id: string) => del<undefined>(`/api/questions/${id}`),
     onMutate: (id) => {
       const before = qc.getQueryData<Detail>(homeworkKeys.set(homeworkId));
       dropQuestion(qc, id, homeworkId);
@@ -310,8 +328,12 @@ export function useWriteGuide() {
         }
       }
     },
-    onError: (_e, _v, ctx) => ctx?.old && putQuestion(qc, ctx.old, true),
-    onSuccess: (q) => putQuestion(qc, q),
+    onError: (_e, _v, ctx) => {
+      if (ctx?.old) putQuestion(qc, ctx.old, true);
+    },
+    onSuccess: (q) => {
+      putQuestion(qc, q);
+    },
   });
 }
 
@@ -341,8 +363,12 @@ export function useRetryQuestion() {
         }
       }
     },
-    onError: (_e, _v, ctx) => ctx?.old && putQuestion(qc, ctx.old, true),
-    onSuccess: (q) => putQuestion(qc, q),
+    onError: (_e, _v, ctx) => {
+      if (ctx?.old) putQuestion(qc, ctx.old, true);
+    },
+    onSuccess: (q) => {
+      putQuestion(qc, q);
+    },
   });
 }
 
@@ -382,8 +408,12 @@ export function useRedoReading() {
         }
       }
     },
-    onError: (_e, _v, ctx) => ctx?.old && putQuestion(qc, ctx.old, true),
-    onSuccess: (q) => putQuestion(qc, q),
+    onError: (_e, _v, ctx) => {
+      if (ctx?.old) putQuestion(qc, ctx.old, true);
+    },
+    onSuccess: (q) => {
+      putQuestion(qc, q);
+    },
   });
 }
 
@@ -393,7 +423,9 @@ export function useAddBoxed() {
   return useMutation({
     mutationFn: ({ setId, boxes }: { setId: string; boxes: Box[] }) =>
       post<Question>(`/api/homework/${setId}/boxed`, { boxes }),
-    onSuccess: (q) => putQuestion(qc, q),
+    onSuccess: (q) => {
+      putQuestion(qc, q);
+    },
   });
 }
 
@@ -431,8 +463,12 @@ export function usePointOut() {
         }
       }
     },
-    onError: (_e, _v, ctx) => ctx?.old && putQuestion(qc, ctx.old, true),
-    onSuccess: (q) => putQuestion(qc, q),
+    onError: (_e, _v, ctx) => {
+      if (ctx?.old) putQuestion(qc, ctx.old, true);
+    },
+    onSuccess: (q) => {
+      putQuestion(qc, q);
+    },
   });
 }
 
@@ -521,7 +557,9 @@ export function useStartRead(bookId: string) {
       }
       return post<AssignmentRead>(path, { ...from, setId });
     },
-    onSuccess: (r) => putRead(qc, r),
+    onSuccess: (r) => {
+      putRead(qc, r);
+    },
   });
 }
 
@@ -530,7 +568,9 @@ export function useRetryRead() {
   return useMutation({
     mutationFn: (id: string) =>
       post<AssignmentRead>(`/api/assignment-reads/${id}/retry`),
-    onSuccess: (r) => putRead(qc, r),
+    onSuccess: (r) => {
+      putRead(qc, r);
+    },
   });
 }
 
@@ -538,8 +578,10 @@ export function useDismissRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (r: AssignmentRead) =>
-      del<void>(`/api/assignment-reads/${r.id}`),
-    onSuccess: (_, r) => dropRead(qc, r.id, r.bookId),
+      del<undefined>(`/api/assignment-reads/${r.id}`),
+    onSuccess: (_, r) => {
+      dropRead(qc, r.id, r.bookId);
+    },
   });
 }
 
@@ -551,14 +593,18 @@ export function useImportAssignment(bookId: string) {
     mutationFn: (a: AssignmentImport) =>
       post<List>(`/api/books/${bookId}/assignments`, a).then((r) => r.homework),
     onSuccess: (sets, a) => {
-      sets.forEach((h) => putSummary(qc, h));
+      sets.forEach((h) => {
+        putSummary(qc, h);
+      });
       // An updated set's questions changed under it: fetch them again.
       for (const g of a.groups) {
         if (g.setId)
-          qc.invalidateQueries({ queryKey: homeworkKeys.set(g.setId) });
+          void qc.invalidateQueries({ queryKey: homeworkKeys.set(g.setId) });
       }
       if (a.readId) dropRead(qc, a.readId, bookId);
-      qc.invalidateQueries({ queryKey: homeworkKeys.assignmentSource(bookId) });
+      void qc.invalidateQueries({
+        queryKey: homeworkKeys.assignmentSource(bookId),
+      });
     },
   });
 }

@@ -42,7 +42,9 @@ export function Run({
   useLayoutEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
     const session = scenario.start({
-      emit: (type, data) => emit(type, data, qc),
+      emit: (type, data) => {
+        emit(type, data, qc);
+      },
       after: (ms, fn) => void timers.push(setTimeout(fn, ms / speed)),
       speed,
     });
@@ -50,6 +52,7 @@ export function Run({
       new MockServer(session.routes, { latency: session.latency, onTraffic }),
       assetUrl,
     );
+    // oxlint-disable-next-line react/set-state-in-effect -- a new session starts a new mock server, and the state follows it
     setStarted({
       play: session.play ?? (() => {}),
       props: session.props ?? {},
@@ -68,7 +71,9 @@ export function Run({
   useEffect(() => {
     if (!started) return;
     const t = setTimeout(started.play, 0);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+    };
   }, [started]);
 
   if (!started) return null;

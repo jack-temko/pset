@@ -25,7 +25,9 @@ export function usePrefetchIntent(prefetch: () => void): PrefetchIntent {
   useEffect(() => {
     latest.current = prefetch;
   });
-  const cancel = () => clearTimeout(timer.current);
+  const cancel = () => {
+    clearTimeout(timer.current);
+  };
   useEffect(() => cancel, []);
   const now = () => {
     cancel();
@@ -35,7 +37,9 @@ export function usePrefetchIntent(prefetch: () => void): PrefetchIntent {
     onPointerEnter: (e) => {
       if (e.pointerType === 'touch') return;
       cancel();
-      timer.current = setTimeout(() => latest.current(), INTENT_MS);
+      timer.current = setTimeout(() => {
+        latest.current();
+      }, INTENT_MS);
     },
     onPointerLeave: cancel,
     onPointerDown: now,

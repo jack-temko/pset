@@ -104,7 +104,9 @@ export function HomeworkDialog({
           <Input
             autoFocus
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+            }}
             placeholder="Problem set 4"
           />
         </Field>
@@ -115,7 +117,9 @@ export function HomeworkDialog({
           <Input
             type="date"
             value={due}
-            onChange={(e) => setDue(e.target.value)}
+            onChange={(e) => {
+              setDue(e.target.value);
+            }}
           />
         </Field>
       </form>
@@ -231,11 +235,18 @@ export function BookDialog({
           <Input
             autoFocus
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+            }}
           />
         </Field>
         <Field label="Author">
-          <Input value={author} onChange={(e) => setAuthor(e.target.value)} />
+          <Input
+            value={author}
+            onChange={(e) => {
+              setAuthor(e.target.value);
+            }}
+          />
         </Field>
         <PageNumbersField
           anchors={anchors}
@@ -250,7 +261,9 @@ export function BookDialog({
             setStyle(next);
             setStyleTouched(true);
           }}
-          onConfirm={() => setStyleTouched(true)}
+          onConfirm={() => {
+            setStyleTouched(true);
+          }}
         />
         <Field label="Cover">
           <CoverPicker value={cover} onChange={setCover} />
@@ -268,6 +281,7 @@ let nextRowId = 0;
 /** A row of the questions stack: one question, or a line naming several. */
 export type QuestionRow = QuestionDraft & { id: number };
 
+// oxlint-disable-next-line react/only-export-components -- row helpers that belong with the dialog that owns the rows
 export const emptyRow = (): QuestionRow => ({
   id: nextRowId++,
   text: '',
@@ -275,6 +289,7 @@ export const emptyRow = (): QuestionRow => ({
 });
 
 /** The rows with something in them, as drafts. */
+// oxlint-disable-next-line react/only-export-components -- row helpers that belong with the dialog that owns the rows
 export const draftsOf = (rows: QuestionRow[]): QuestionDraft[] =>
   rows
     .filter((r) => r.text.trim())
@@ -282,6 +297,7 @@ export const draftsOf = (rows: QuestionRow[]): QuestionDraft[] =>
 
 /** How many questions the rows make: a line naming several problems is
  *  several. */
+// oxlint-disable-next-line react/only-export-components -- row helpers that belong with the dialog that owns the rows
 export const rowsCount = (
   rows: QuestionRow[],
   readingOf: (id: number) => LineReading | undefined,
@@ -327,10 +343,11 @@ export function QuestionRows({
     document
       .querySelector<HTMLTextAreaElement>(`[data-row="${focusRow}"]`)
       ?.focus();
+    // oxlint-disable-next-line react/set-state-in-effect -- a one-shot request: focus the row, then clear it
     setFocusRow(null);
   }, [focusRow]);
 
-  const addRow = (after?: number) =>
+  const addRow = (after?: number) => {
     onRows((rs) => {
       const row = emptyRow();
       const at =
@@ -343,12 +360,13 @@ export function QuestionRows({
       setFocusRow(row.id);
       return next;
     });
+  };
 
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        One question per row. Untick In this book if a question isn't from this
-        scan, and the guide is written from your text alone.
+        One question per row. Untick In this book if a question isn&apos;t from
+        this scan, and the guide is written from your text alone.
       </p>
       <div className="divide-y divide-border-muted">
         {rows.map((row) => (
@@ -359,13 +377,13 @@ export function QuestionRows({
                 autoFocus={autoFocus && rows.length === 1}
                 value={row.text}
                 placeholder={`A reference like ${here.problems?.example?.label ?? '3.B.4'}, or paste the question`}
-                onChange={(e) =>
+                onChange={(e) => {
                   onRows((rs) =>
                     rs.map((r) =>
                       r.id === row.id ? { ...r, text: e.target.value } : r,
                     ),
-                  )
-                }
+                  );
+                }}
                 onKeyDown={(e) => {
                   if (e.key !== 'Enter') return;
                   e.preventDefault();
@@ -379,9 +397,9 @@ export function QuestionRows({
                 variant="ghost"
                 aria-label="Remove this question"
                 disabled={rows.length === 1}
-                onClick={() =>
-                  onRows((rs) => rs.filter((r) => r.id !== row.id))
-                }
+                onClick={() => {
+                  onRows((rs) => rs.filter((r) => r.id !== row.id));
+                }}
               >
                 <Trash2 />
               </IconButton>
@@ -389,19 +407,19 @@ export function QuestionRows({
             <div className="flex flex-wrap items-center gap-x-2">
               <Checkbox
                 checked={row.inBook}
-                onChange={() =>
+                onChange={() => {
                   onRows((rs) =>
                     rs.map((r) =>
                       r.id === row.id ? { ...r, inBook: !r.inBook } : r,
                     ),
-                  )
-                }
+                  );
+                }}
                 className="-ml-2 text-muted-foreground"
               >
                 In this book
               </Checkbox>
               {/* What it becomes, read as it's typed. */}
-              {readingOf(row.id) && <ReadsAs reading={readingOf(row.id)!} />}
+              <RowReading reading={readingOf(row.id)} />
             </div>
           </div>
         ))}
@@ -411,7 +429,9 @@ export function QuestionRows({
         variant="ghost"
         size="sm"
         className="-ml-2"
-        onClick={() => addRow()}
+        onClick={() => {
+          addRow();
+        }}
       >
         <Plus />
         Add row
@@ -432,8 +452,8 @@ export function NumberingCheck({ onLeave }: { onLeave: () => void }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <p className="text-xs text-warning">
-        PSet isn't sure how this book numbers its problems, which decides what a
-        reference like "3.1 #7" means here.
+        PSet isn&apos;t sure how this book numbers its problems, which decides
+        what a reference like &quot;3.1 #7&quot; means here.
       </p>
       <Button
         variant="ghost"
@@ -448,4 +468,8 @@ export function NumberingCheck({ onLeave }: { onLeave: () => void }) {
       </Button>
     </div>
   );
+}
+
+function RowReading({ reading }: { reading: LineReading | undefined }) {
+  return reading ? <ReadsAs reading={reading} /> : null;
 }

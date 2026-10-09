@@ -57,7 +57,9 @@ export function GalleryShell({
       filter.current?.focus();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
   }, []);
 
   // A new entry starts at its top, and the index keeps it in view.
@@ -90,13 +92,15 @@ export function GalleryShell({
               ref={filter}
               type="search"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Escape') {
                   setQuery('');
                   e.currentTarget.blur();
                 } else if (e.key === 'Enter' && shown[0]) {
-                  navigate(`${basePath}/${shown[0].id}`);
+                  void navigate(`${basePath}/${shown[0].id}`);
                   e.currentTarget.blur();
                 }
               }}

@@ -60,10 +60,21 @@ function MemoryDemo({ empty }: { empty?: boolean }) {
   });
   return (
     <QueryClientProvider client={client}>
-      <Button variant="outline" onClick={() => setOpen(true)}>
+      <Button
+        variant="outline"
+        onClick={() => {
+          setOpen(true);
+        }}
+      >
         Open Memory{empty ? ' (empty)' : ''}
       </Button>
-      <MemoryDialog open={open} bookId="demo" onClose={() => setOpen(false)} />
+      <MemoryDialog
+        open={open}
+        bookId="demo"
+        onClose={() => {
+          setOpen(false);
+        }}
+      />
     </QueryClientProvider>
   );
 }

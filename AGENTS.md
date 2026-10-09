@@ -173,8 +173,21 @@ in (`tools/format-file.sh`; it skips ignored files, such as `web/src/api/gen`,
 and a worktree without `web/node_modules`, and never fails an edit). Files an
 agent writes in a worktree are therefore formatted before `make check`; anything
 else (your own edits, generated files, a shell command that rewrites a file)
-needs `make fmt`. Linting
-(`make lint`) comes in a second change; a `//nolint` will need a reason.
+needs `make fmt`.
+
+`make lint` runs every linter and `make check` runs it second, after
+`fmt-check`; every rule is an error, there are no warnings. Go: golangci-lint
+(`.golangci.yml`: the standard set, staticcheck with all checks, revive on the
+Code Review Comments rules, misspell, nolintlint). The web: oxlint
+`--type-aware` (`web/.oxlintrc.json`: typescript-eslint strict-type-checked,
+react and react-hooks) beside `tsc` in strict mode. Shell: a pinned shellcheck
+(`tools/shellcheck.sh` fetches it once). Workflows: actionlint. A silence
+needs a reason on the same line, and a linter name: `//nolint:errcheck //
+why` in Go, `// oxlint-disable-next-line <rule> -- why` in the web,
+`# shellcheck disable=SC2016` with a comment above it in shell. Handle an
+ignored error instead (`internal/cleanup` for closes, removes and rollbacks
+whose failure changes nothing, `internal/testx` in tests); never `_ =` without
+a comment saying why it is safe.
 
 ## Repo hygiene: no artifacts in the repo
 

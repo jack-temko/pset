@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { must } from './must';
 
 /**
  * Time left on a step that takes a while, in rounded words: "about 3
@@ -100,7 +101,7 @@ export function timeLeft(entity: string, now = Date.now()): string | undefined {
   if (!w?.step) return undefined;
   if (w.samples.length > 0) {
     const first = w.samples[0];
-    const last = w.samples.at(-1)!;
+    const last = must(w.samples.at(-1), 'the last sample');
     const span = last.t - first.t;
     if (span < PACE_MIN_SPAN || last.done <= first.done) return undefined;
     const perItem = span / (last.done - first.done);
@@ -166,8 +167,12 @@ export function useNow(ms: number, active = true): number {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     if (!active) return;
-    const id = setInterval(() => setNow(Date.now()), ms);
-    return () => clearInterval(id);
+    const id = setInterval(() => {
+      setNow(Date.now());
+    }, ms);
+    return () => {
+      clearInterval(id);
+    };
   }, [ms, active]);
   return now;
 }
@@ -183,9 +188,8 @@ export function useTimeLeft(
   const now = useNow(1000, step !== undefined);
   const done = count?.done;
   const total = count?.total;
-  useEffect(
-    () => observe(entity, step, { done, total }),
-    [entity, step, done, total],
-  );
+  useEffect(() => {
+    observe(entity, step, { done, total });
+  }, [entity, step, done, total]);
   return step ? timeLeft(entity, now) : undefined;
 }

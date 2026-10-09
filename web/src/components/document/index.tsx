@@ -42,12 +42,12 @@ export function Runs({ runs, onJump }: { runs: Run[]; onJump?: Jump }) {
   const out: ReactNode[] = [];
   for (let i = 0; i < runs.length; i++) {
     const r = runs[i];
-    const next = runs[i + 1];
+    const next = runs.at(i + 1);
     const glue =
       r.m !== undefined && !r.d && !r.raw && next?.t !== undefined && !next.code
         ? /^[,.;:!?)\]]+/.exec(next.t)
         : null;
-    if (glue) {
+    if (glue && next?.t !== undefined) {
       out.push(
         <span key={i} className="whitespace-nowrap">
           <RunView r={r} onJump={onJump} />
@@ -56,7 +56,7 @@ export function Runs({ runs, onJump }: { runs: Run[]; onJump?: Jump }) {
       );
       runs = [
         ...runs.slice(0, i + 1),
-        { ...next, t: next.t!.slice(glue[0].length) },
+        { ...next, t: next.t.slice(glue[0].length) },
         ...runs.slice(i + 2),
       ];
       continue;
@@ -319,7 +319,9 @@ export function Document({
       ask.onClear();
     };
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+    };
   }, [ask, outlined]);
 
   return (
@@ -333,7 +335,13 @@ export function Document({
             }
           : undefined
       }
-      onMouseLeave={ask ? () => setHover(null) : undefined}
+      onMouseLeave={
+        ask
+          ? () => {
+              setHover(null);
+            }
+          : undefined
+      }
       onClick={
         ask
           ? (e) => {
@@ -550,16 +558,16 @@ export function BlockSkeleton({
   const name = NAMES[type] ?? 'a block';
   const label = repairing ? `Tidying ${name}` : `Writing ${name}`;
   if (TEXT_BLOCKS.has(type)) {
-    const streaming = (runs?.length ?? 0) > 0;
+    const streamed = runs && runs.length > 0 ? runs : undefined;
     return (
       <div aria-busy="true" className="space-y-1">
-        {streaming ? (
+        {streamed ? (
           type === 'note' ? (
             <Note>
-              <Runs runs={runs!} onJump={onJump} />
+              <Runs runs={streamed} onJump={onJump} />
             </Note>
           ) : (
-            <Para runs={runs!} look={{ reading, onJump }} />
+            <Para runs={streamed} look={{ reading, onJump }} />
           )
         ) : (
           <p>

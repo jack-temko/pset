@@ -57,7 +57,9 @@ function session(
     routes: homeworkRoutes(w),
     ...rest,
     play: () => {
-      engine.forEach((id) => startEngine(w, id));
+      engine.forEach((id) => {
+        startEngine(w, id);
+      });
       play?.();
     },
   };
@@ -283,7 +285,11 @@ const importing: Scenario = {
             'That page answered 401. A page behind a login can be pasted or photographed instead.',
         }),
       ];
-      return { play: () => w.playRead(reading.id) };
+      return {
+        play: () => {
+          w.playRead(reading.id);
+        },
+      };
     }),
 };
 

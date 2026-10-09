@@ -41,7 +41,9 @@ export function AssignmentReads({
           key={r.id}
           r={r}
           setTitle={r.setId ? titles[r.setId] : undefined}
-          onReview={() => onReview(r.id)}
+          onReview={() => {
+            onReview(r.id);
+          }}
         />
       ))}
     </Box>
@@ -87,7 +89,9 @@ export function AssignmentReadRow({
       variant="ghost"
       size="sm"
       aria-label={label}
-      onClick={() => dismiss.mutate(r)}
+      onClick={() => {
+        dismiss.mutate(r);
+      }}
     >
       <X />
     </IconButton>
@@ -135,7 +139,9 @@ export function AssignmentReadRow({
               variant="ghost"
               size="sm"
               disabled={retry.isPending}
-              onClick={() => retry.mutate(r.id)}
+              onClick={() => {
+                retry.mutate(r.id);
+              }}
             >
               Try again
             </Button>

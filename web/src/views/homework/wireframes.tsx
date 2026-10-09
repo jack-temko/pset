@@ -211,10 +211,10 @@ function QuestionHead({ done }: { done?: boolean }) {
         </MenuItem>
         <MenuDivider />
         <MenuItem icon={<SquareDashedMousePointer />} onSelect={() => {}}>
-          This isn't the right problem
+          This isn&apos;t the right problem
         </MenuItem>
         <MenuItem icon={<Pencil />} onSelect={() => {}}>
-          Edit the professor's instructions
+          Edit the professor&apos;s instructions
         </MenuItem>
       </Menu>
     </div>
@@ -294,7 +294,9 @@ function Help({ writing }: { writing?: boolean }) {
             onClick={
               writing && r.name !== 'Hint'
                 ? undefined
-                : () => setOpen(open === r.name ? null : r.name)
+                : () => {
+                    setOpen(open === r.name ? null : r.name);
+                  }
             }
             title={r.name}
             trailing={

@@ -37,14 +37,16 @@ export const useUsageDetail = (source: UsageSource, enabled: boolean) =>
 export const useBookUsage = (bookId: string, enabled: boolean) =>
   useQuery({ ...bookQuery(bookId), enabled });
 
+const noop = () => undefined;
+
 /** Starts a job's detail loading before its modal opens (as the pointer
  *  reaches the trigger). Nothing happens when it is already cached. */
 export const prefetchUsageDetail = (client: QueryClient, source: UsageSource) =>
-  client.prefetchQuery(detailQuery(source));
+  client.query(detailQuery(source)).then(noop, noop);
 
 /** The same for a book's usage aggregate. */
 export const prefetchBookUsage = (client: QueryClient, bookId: string) =>
-  client.prefetchQuery(bookQuery(bookId));
+  client.query(bookQuery(bookId)).then(noop, noop);
 
 // A job that finished, or a book that changed or lost something, has changed
 // what was spent: mark every cached usage stale. What is open refetches and swaps in place; the

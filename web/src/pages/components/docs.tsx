@@ -10,9 +10,9 @@ export function Docs({ names }: { names: string[] }) {
 
   useEffect(() => {
     let live = true;
-    Promise.all(names.map((n) => READMES[readmePath(n)]())).then(
-      (s) => live && setSources(s),
-    );
+    void Promise.all(names.map((n) => READMES[readmePath(n)]())).then((s) => {
+      if (live) setSources(s);
+    });
     return () => {
       live = false;
       setSources(null);

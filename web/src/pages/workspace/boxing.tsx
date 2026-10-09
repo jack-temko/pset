@@ -7,6 +7,7 @@ import { SegmentedControl } from '@/components/segmented-control';
 import { usePages } from '@/lib/pages';
 import { cn } from '@/lib/utils';
 import { BoxingContext, useBoxing, type BoxingTarget } from './boxing-state';
+import { must } from '@/lib/must';
 
 /**
  * Boxing a problem on the scan: the student shows where a problem is by
@@ -21,7 +22,7 @@ export function BoxingProvider({
 }: {
   /** Sends the boxes where the target says; resolves, with the question
    *  it added if any, once they're taken. */
-  onDone: (target: BoxingTarget, boxes: Box[]) => Promise<string | void>;
+  onDone: (target: BoxingTarget, boxes: Box[]) => Promise<string | undefined>;
   children: ReactNode;
 }) {
   const [target, setTarget] = useState<BoxingTarget | null>(null);
@@ -39,9 +40,13 @@ export function BoxingProvider({
   // Esc leaves, wherever focus is, as a dialog's Cancel does.
   useEffect(() => {
     if (!target) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && cancel();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') cancel();
+    };
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+    };
   }, [target]);
 
   return (
@@ -65,15 +70,18 @@ export function BoxingProvider({
           setBoxes((bs) => [...bs, b]);
           setError('');
         },
-        remove: (i) => setBoxes((bs) => bs.filter((_, j) => j !== i)),
-        flip: (i) =>
+        remove: (i) => {
+          setBoxes((bs) => bs.filter((_, j) => j !== i));
+        },
+        flip: (i) => {
           setBoxes((bs) =>
             bs.map((b, j) =>
               j === i
                 ? { ...b, kind: b.kind === 'text' ? 'figure' : 'text' }
                 : b,
             ),
-          ),
+          );
+        },
         done: async () => {
           if (!target) return;
           if (!boxes.some((b) => b.kind === 'text')) {
@@ -122,7 +130,7 @@ export function PageBoxes({ page }: { page: number }) {
   if (!b.target) return null;
 
   const at = (e: React.PointerEvent) => {
-    const r = layer.current!.getBoundingClientRect();
+    const r = must(layer.current, 'the boxing layer').getBoundingClientRect();
     return {
       x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)),
       y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)),
@@ -169,8 +177,12 @@ export function PageBoxes({ page }: { page: number }) {
             key={i}
             box={box}
             n={i + 1}
-            onRemove={() => b.remove(i)}
-            onFlip={() => b.flip(i)}
+            onRemove={() => {
+              b.remove(i);
+            }}
+            onFlip={() => {
+              b.flip(i);
+            }}
           />
         ) : null,
       )}
@@ -295,7 +307,9 @@ export function BoxingBar() {
           <Button
             size="sm"
             disabled={b.boxes.length === 0 || b.sending}
-            onClick={b.done}
+            onClick={() => {
+              void b.done();
+            }}
           >
             {b.sending ? 'Sending…' : 'Done'}
           </Button>

@@ -295,9 +295,13 @@ export function Plot({
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setWidth(el.clientWidth));
+    const ro = new ResizeObserver(() => {
+      setWidth(el.clientWidth);
+    });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+    };
   }, []);
 
   const H = 200;
@@ -502,7 +506,9 @@ export function Plot({
               height={ih}
               fill="transparent"
               onPointerMove={onMove}
-              onPointerLeave={() => setHover(null)}
+              onPointerLeave={() => {
+                setHover(null);
+              }}
             />
           </svg>
         )}

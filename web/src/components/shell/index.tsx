@@ -113,10 +113,10 @@ export function PageTitle({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const label = short ?? el.textContent ?? '';
-    const io = new IntersectionObserver(([entry]) =>
-      setTitle(entry.isIntersecting ? null : label),
-    );
+    const label = short ?? el.textContent;
+    const io = new IntersectionObserver(([entry]) => {
+      setTitle(entry.isIntersecting ? null : label);
+    });
     io.observe(el);
     return () => {
       io.disconnect();

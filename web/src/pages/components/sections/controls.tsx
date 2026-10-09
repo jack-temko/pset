@@ -33,7 +33,9 @@ function ResizeDemo() {
         max={400}
         onChange={setWidth}
         onCommit={() => {}}
-        onReset={() => setWidth(200)}
+        onReset={() => {
+          setWidth(200);
+        }}
       />
       <div className="min-w-0 flex-1 bg-background p-card text-sm text-muted-foreground">
         Drag the grip, or tab to it and use the arrows. Double-click or Enter
@@ -65,7 +67,9 @@ function ProblemStyleDemo({ style }: { style: Style | undefined }) {
         setValue(v);
         setTouched(true);
       }}
-      onConfirm={() => setTouched(true)}
+      onConfirm={() => {
+        setTouched(true);
+      }}
     />
   );
 }
@@ -114,7 +118,12 @@ function RadioRowsDemo({ start }: { start: 'section' | 'chapter' | '' }) {
 function CheckboxDemo() {
   const [on, setOn] = useState(true);
   return (
-    <Checkbox checked={on} onChange={() => setOn((v) => !v)}>
+    <Checkbox
+      checked={on}
+      onChange={() => {
+        setOn((v) => !v);
+      }}
+    >
       In this book
     </Checkbox>
   );

@@ -81,8 +81,12 @@ export function ConfirmPopover({
   };
   // The document listeners are wired once; these always reach the latest
   // props without rewiring them.
-  const outside = useEffectEvent(() => !busy && onCancel());
-  const escape = useEffectEvent(() => back());
+  const outside = useEffectEvent(() => {
+    if (!busy) onCancel();
+  });
+  const escape = useEffectEvent(() => {
+    back();
+  });
 
   useEffect(() => {
     cancel.current?.focus();

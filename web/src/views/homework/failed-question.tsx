@@ -50,7 +50,12 @@ export function FailedQuestion({
   }[kind];
 
   const retryButton = (variant: 'primary' | 'ghost') => (
-    <Button variant={variant} onClick={() => onRetry({})}>
+    <Button
+      variant={variant}
+      onClick={() => {
+        onRetry({});
+      }}
+    >
       Try again
     </Button>
   );
@@ -89,9 +94,9 @@ export function FailedQuestion({
           <div className="space-y-3">
             {/* The way out that always works: show it on the page. */}
             <Button
-              onClick={() =>
-                boxing.start({ kind: 'find', questionId: q.id, label: name })
-              }
+              onClick={() => {
+                boxing.start({ kind: 'find', questionId: q.id, label: name });
+              }}
             >
               <SquareDashedMousePointer />
               Show me where it is
@@ -156,11 +161,10 @@ export function FailedQuestion({
           <Button
             variant="outline"
             size="sm"
-            onClick={() =>
-              text.trim()
-                ? onRetry({ text: text.trim() })
-                : setTextError('Paste the problem first.')
-            }
+            onClick={() => {
+              if (text.trim()) onRetry({ text: text.trim() });
+              else setTextError('Paste the problem first.');
+            }}
           >
             Use this text
           </Button>

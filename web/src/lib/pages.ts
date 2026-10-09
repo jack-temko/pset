@@ -22,7 +22,7 @@ export class PageMap {
     const sorted = [...runs].sort((a, b) => a.from - b.from);
     const out: Run[] = [];
     for (const r of sorted) {
-      const last = out[out.length - 1];
+      const last = out.at(-1);
       if (last && last.from === r.from) out[out.length - 1] = { ...r };
       else if (!last || last.offset !== r.offset) out.push({ ...r });
     }
@@ -55,7 +55,7 @@ export class PageMap {
   pdf(printed: number): number | null {
     for (let i = 0; i < this.runs.length; i++) {
       const p = printed + this.runs[i].offset;
-      const next = this.runs[i + 1];
+      const next = this.runs.at(i + 1);
       if (p >= this.runs[i].from && (!next || p < next.from)) return p;
     }
     return null;

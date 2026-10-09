@@ -23,7 +23,7 @@ export function ProfessorNotes({
   onStop: () => void;
   onSave: (lines: string[]) => void;
 }) {
-  const notes = q.notes ?? [];
+  const notes = q.notes;
   // A guide on its way or written is written again; one not started just
   // reads them when it does.
   const rewrites = q.state === 'writing' || q.state === 'ready';

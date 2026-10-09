@@ -146,7 +146,13 @@ export function EditableLines({
         {/* Each line keeps its dash in the box, so a line that wraps still
             reads as one. */}
         {!readOnly && (
-          <Button variant="ghost" size="sm" onClick={() => setDraft(source())}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setDraft(source());
+            }}
+          >
             <Pencil />
             {editLabel}
           </Button>
@@ -166,7 +172,9 @@ export function EditableLines({
         <Door
           open={open}
           total={lines.length}
-          onToggle={() => setOpen(!open)}
+          onToggle={() => {
+            setOpen(!open);
+          }}
           className="border-t border-border-muted"
         />
       )}

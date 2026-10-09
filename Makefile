@@ -47,21 +47,22 @@ fmt-check:
 	go tool shfmt -d $(SH_FILES)
 
 # Linters, all errors, no warnings: Go through golangci-lint (.golangci.yml),
-# shell through shellcheck (a pinned release, fetched once), the workflows
-# through actionlint.
+# the web through oxlint with type information (web/.oxlintrc.json), shell
+# through shellcheck (a pinned release, fetched once), the workflows through
+# actionlint.
 lint:
 	go tool golangci-lint run
+	cd web && npx oxlint --type-aware
 	tools/shellcheck.sh $(SH_FILES)
 	go tool actionlint
 
 # Every check that runs without a browser or a model: the Go tests, the
-# web's types, unit tests and lint. Tests that need poppler or tesseract
+# web's types and unit tests. Tests that need poppler or tesseract
 # skip without them, so install both (README) for the whole suite.
 test:
 	go test ./...
 	cd web && npx tsc -b
 	cd web && npx vitest run
-	cd web && npx oxlint
 
 # What CI runs: fmt-check, lint, test, the Go tests again under the race detector, and the
 # generated TypeScript against Go's wire types.

@@ -111,22 +111,24 @@ export const stream = {
   }),
 };
 
-on<TurnChanged>('turn.changed', (d, qc) => putTurn(qc, d.turn));
-on<TurnBlockStart>('turn.block.start', (d, qc) =>
-  patchTurn(qc, d.turnId, (t) => stream.start(t, d.type)),
-);
-on<TurnBlockText>('turn.block.text', (d, qc) =>
-  patchTurn(qc, d.turnId, (t) => stream.text(t, d.runs)),
-);
-on<TurnBlockRepairing>('turn.block.repairing', (d, qc) =>
-  patchTurn(qc, d.turnId, (t) => stream.repairing(t, d.type)),
-);
-on<TurnBlock>('turn.block', (d, qc) =>
-  patchTurn(qc, d.turnId, (t) => stream.block(t, d.block)),
-);
-on<TurnBlock>('turn.block.failed', (d, qc) =>
-  patchTurn(qc, d.turnId, (t) => stream.block(t, d.block)),
-);
+on<TurnChanged>('turn.changed', (d, qc) => {
+  putTurn(qc, d.turn);
+});
+on<TurnBlockStart>('turn.block.start', (d, qc) => {
+  patchTurn(qc, d.turnId, (t) => stream.start(t, d.type));
+});
+on<TurnBlockText>('turn.block.text', (d, qc) => {
+  patchTurn(qc, d.turnId, (t) => stream.text(t, d.runs));
+});
+on<TurnBlockRepairing>('turn.block.repairing', (d, qc) => {
+  patchTurn(qc, d.turnId, (t) => stream.repairing(t, d.type));
+});
+on<TurnBlock>('turn.block', (d, qc) => {
+  patchTurn(qc, d.turnId, (t) => stream.block(t, d.block));
+});
+on<TurnBlock>('turn.block.failed', (d, qc) => {
+  patchTurn(qc, d.turnId, (t) => stream.block(t, d.block));
+});
 on<TurnsCleared>('turns.cleared', (d, qc) =>
   qc.setQueryData(askKeys.turns(d.bookId), []),
 );
@@ -137,7 +139,9 @@ export function useAsk(bookId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (q: Question) => post<Turn>(`/api/books/${bookId}/turns`, q),
-    onSuccess: (t) => putTurn(qc, t),
+    onSuccess: (t) => {
+      putTurn(qc, t);
+    },
   });
 }
 
@@ -145,14 +149,16 @@ export function useStopTurn() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => post<Turn>(`/api/turns/${id}/stop`),
-    onSuccess: (t) => putTurn(qc, t),
+    onSuccess: (t) => {
+      putTurn(qc, t);
+    },
   });
 }
 
 export function useClearTurns(bookId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => del<void>(`/api/books/${bookId}/turns`),
+    mutationFn: () => del<undefined>(`/api/books/${bookId}/turns`),
     onSuccess: () => qc.setQueryData(askKeys.turns(bookId), []),
   });
 }

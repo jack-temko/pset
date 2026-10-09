@@ -10,16 +10,19 @@ import { queryClient } from './query';
  * was missed, or sends `reset` when too much was, and then everything is
  * refetched.
  */
-type Handler = (data: any, qc: QueryClient) => void;
+type Handler = (data: unknown, qc: QueryClient) => void;
 
 const handlers = new Map<string, Handler[]>();
 
 /** Register what an event type does. Call at module load. */
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- T names the payload of the event at each registration
 export function on<T>(type: string, fn: (data: T, qc: QueryClient) => void) {
   handlers.set(type, [...(handlers.get(type) ?? []), fn as Handler]);
 }
 
-on('reset', (_, qc) => qc.invalidateQueries());
+on('reset', (_, qc) => {
+  void qc.invalidateQueries();
+});
 
 /** Runs what an event type does to a cache: the stream's own path, and
  *  what /views calls to play a scenario's events into a view's cache. */
@@ -34,7 +37,7 @@ export function emit(
 function dispatch(raw: string) {
   let msg: { type: string; data?: unknown };
   try {
-    msg = JSON.parse(raw);
+    msg = JSON.parse(raw) as { type: string; data?: unknown };
   } catch {
     return;
   }
@@ -88,7 +91,9 @@ export function useEventStream() {
         retry = setTimeout(open, wait);
         wait = Math.min(wait * 2, 30000);
       };
-      es.onmessage = (e) => dispatch(e.data);
+      es.onmessage = (e) => {
+        dispatch(e.data as string);
+      };
     };
     open();
     return () => {

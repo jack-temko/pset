@@ -72,4 +72,5 @@ export function IconButton({
   );
 }
 
+// oxlint-disable-next-line react/only-export-components -- the variants belong with the component and are used by its siblings
 export { buttonVariants };

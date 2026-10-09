@@ -108,7 +108,9 @@ export function Updates() {
             variant="outline"
             size="sm"
             disabled={check.isPending || updating}
-            onClick={() => check.mutate()}
+            onClick={() => {
+              check.mutate();
+            }}
           >
             {check.isPending ? (
               <>
@@ -127,7 +129,7 @@ export function Updates() {
           {error.message}
         </BoxBody>
       )}
-      {available && checked && coming === null && (
+      {available && coming === null && (
         <>
           {checked.notes && (
             <BoxBody className="max-h-64 overflow-y-auto text-sm whitespace-pre-wrap">
@@ -144,11 +146,13 @@ export function Updates() {
             </p>
             <Button
               disabled={!data.canUpdate || updating}
-              onClick={() =>
+              onClick={() => {
                 apply.mutate(undefined, {
-                  onSuccess: (done) => setComing(done.version),
-                })
-              }
+                  onSuccess: (done) => {
+                    setComing(done.version);
+                  },
+                });
+              }}
             >
               {updating ? (
                 <>

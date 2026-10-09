@@ -41,21 +41,23 @@ export function Views() {
   useEffect(() => {
     if (!entry) return;
     let live = true;
-    entry.spec().then((text) => live && setSpec({ id: entry.id, text }));
-    entry.grill?.().then((text) => live && setGrill({ id: entry.id, text }));
+    void entry.spec().then((text) => {
+      if (live) setSpec({ id: entry.id, text });
+    });
+    void entry.grill?.().then((text) => {
+      if (live) setGrill({ id: entry.id, text });
+    });
     return () => {
       live = false;
     };
   }, [entry]);
 
-  const onTraffic = useCallback(
-    (t: Traffic) => setTraffic((all) => [...all, t]),
-    [],
-  );
-  const onHandoff = useCallback(
-    (h: Handoff) => setHandoffs((all) => [...all, h]),
-    [],
-  );
+  const onTraffic = useCallback((t: Traffic) => {
+    setTraffic((all) => [...all, t]);
+  }, []);
+  const onHandoff = useCallback((h: Handoff) => {
+    setHandoffs((all) => [...all, h]);
+  }, []);
 
   if (VIEWS.length === 0)
     return (
@@ -82,7 +84,7 @@ export function Views() {
     entry.grill && ['grill', 'log'].includes(params.get('doc') ?? '')
       ? params.get('doc')
       : 'spec';
-  const set = (key: string, value: string | null) =>
+  const set = (key: string, value: string | null) => {
     setParams(
       (p) => {
         const next = new URLSearchParams(p);
@@ -92,6 +94,7 @@ export function Views() {
       },
       { replace: true },
     );
+  };
   const replay = () => {
     setTraffic([]);
     setHandoffs([]);
@@ -110,7 +113,9 @@ export function Views() {
             <SegmentedControl
               label="Mode"
               value={mode}
-              onChange={(v) => set('mode', v === 'live' ? null : v)}
+              onChange={(v) => {
+                set('mode', v === 'live' ? null : v);
+              }}
               options={[
                 { value: 'live', label: 'Live' },
                 { value: 'wireframes', label: 'Wireframes' },
@@ -146,7 +151,9 @@ export function Views() {
               {entry.wideLabel && (
                 <Checkbox
                   checked={wide}
-                  onChange={() => set('wide', wide ? null : '1')}
+                  onChange={() => {
+                    set('wide', wide ? null : '1');
+                  }}
                 >
                   {entry.wideLabel}
                 </Checkbox>
@@ -194,7 +201,9 @@ export function Views() {
                 <SegmentedControl
                   label="Document"
                   value={doc as 'spec' | 'grill' | 'log'}
-                  onChange={(v) => set('doc', v === 'spec' ? null : v)}
+                  onChange={(v) => {
+                    set('doc', v === 'spec' ? null : v);
+                  }}
                   options={[
                     { value: 'spec', label: 'Spec' },
                     { value: 'grill', label: 'Grill' },

@@ -27,7 +27,7 @@ export const useWeek = () =>
 export function useClearActivity() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => del<void>('/api/study'),
+    mutationFn: () => del<undefined>('/api/study'),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['week'] }),
   });
 }
@@ -77,8 +77,10 @@ export function useStudyTime(
   question?: () => string | undefined,
 ): StudyTime {
   const kindRef = useRef(kind);
+  // oxlint-disable-next-line react/refs -- the latest props in a ref, so the timers read current values without restarting
   kindRef.current = kind;
   const questionRef = useRef(question);
+  // oxlint-disable-next-line react/refs -- the latest props in a ref, so the timers read current values without restarting
   questionRef.current = question;
   const [shown, setShown] = useState<StudyTime>({
     counting: false,
@@ -156,11 +158,13 @@ export function useStudyTime(
       close(Date.now(), true);
     };
     const events = ['pointerdown', 'keydown', 'wheel', 'scroll'] as const;
-    events.forEach((e) =>
-      window.addEventListener(e, touch, { passive: true, capture: true }),
-    );
-    const onVisibility = () =>
-      document.visibilityState === 'visible' ? touch() : going();
+    events.forEach((e) => {
+      window.addEventListener(e, touch, { passive: true, capture: true });
+    });
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') touch();
+      else going();
+    };
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pagehide', going);
     const timer = setInterval(tick, 1000);
@@ -168,9 +172,9 @@ export function useStudyTime(
     return () => {
       clearInterval(timer);
       going();
-      events.forEach((e) =>
-        window.removeEventListener(e, touch, { capture: true }),
-      );
+      events.forEach((e) => {
+        window.removeEventListener(e, touch, { capture: true });
+      });
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('pagehide', going);
     };

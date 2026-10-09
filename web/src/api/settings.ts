@@ -98,8 +98,10 @@ for (const type of ['book.changed', 'book.removed'])
 export function useReset() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => post<void>('/api/reset'),
-    onSuccess: () => qc.clear(),
+    mutationFn: () => post<undefined>('/api/reset'),
+    onSuccess: () => {
+      qc.clear();
+    },
   });
 }
 

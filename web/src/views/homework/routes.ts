@@ -1,4 +1,10 @@
-import type { Draft, Question, QuestionPatch, Retry } from '@/api/homework';
+import type {
+  Box,
+  Draft,
+  Question,
+  QuestionPatch,
+  Retry,
+} from '@/api/homework';
 import { MockError, type Route } from '@/views/mock/server';
 import { BOOK_ID, World, makeQuestion, makeRead, makeSet } from './world';
 
@@ -40,7 +46,9 @@ export function homeworkRoutes(w: World): Route[] {
       }),
     );
     w.questions.push(...added);
-    added.forEach((q) => w.work(q.id));
+    added.forEach((q) => {
+      w.work(q.id);
+    });
     w.ctxEmitSet(setId);
     return added;
   };
@@ -82,7 +90,8 @@ export function homeworkRoutes(w: World): Route[] {
     [
       'POST',
       '/api/books/:bookId/homework',
-      ({ body }) => {
+      ({ body: raw }) => {
+        const body = raw as { title?: string; dueDate?: string };
         if (!String(body.title ?? '').trim())
           throw new MockError(
             422,
@@ -91,14 +100,21 @@ export function homeworkRoutes(w: World): Route[] {
             'title',
           );
         return w.addSet(
-          makeSet(body.title.trim(), null, { dueDate: body.dueDate ?? '' }),
+          makeSet((body.title ?? '').trim(), null, {
+            dueDate: body.dueDate ?? '',
+          }),
         );
       },
     ],
     [
       'PATCH',
       '/api/homework/:id',
-      ({ params, body }) => {
+      ({ params, body: raw }) => {
+        const body = raw as {
+          title?: string;
+          dueDate?: string;
+          turnedIn?: boolean;
+        };
         const h = set(params.id);
         if (body.title !== undefined) h.title = body.title;
         if (body.dueDate !== undefined) h.dueDate = body.dueDate;
@@ -123,13 +139,16 @@ export function homeworkRoutes(w: World): Route[] {
       '/api/homework/:id/questions',
       ({ params, body }) => (
         set(params.id),
-        { questions: addDrafts(params.id, body.drafts) }
+        {
+          questions: addDrafts(params.id, (body as { drafts: Draft[] }).drafts),
+        }
       ),
     ],
     [
       'POST',
       '/api/homework/:id/boxed',
-      ({ params, body }) => {
+      ({ params, body: raw }) => {
+        const body = raw as { boxes: Box[] };
         set(params.id);
         const page = body.boxes[0]?.page ?? 1;
         const [q] = addDrafts(params.id, [
@@ -239,7 +258,7 @@ export function homeworkRoutes(w: World): Route[] {
       '/api/questions/:id/boxes',
       ({ params, body }) => {
         restart(params.id, {
-          boxes: body.boxes,
+          boxes: (body as { boxes: Box[] }).boxes,
           page: undefined,
           figures: [],
           reading: [],
@@ -254,7 +273,7 @@ export function homeworkRoutes(w: World): Route[] {
       'POST',
       '/api/books/:bookId/references',
       ({ body }) => ({
-        lines: (body.lines as string[]).map((line) => {
+        lines: (body as { lines: string[] }).lines.map((line) => {
           const labels = line.match(/\d+(?:\.\d+)+/g) ?? [];
           const notes = [...line.matchAll(/\(([^)]+)\)/g)].map((m) => m[1]);
           return labels.length
@@ -266,10 +285,11 @@ export function homeworkRoutes(w: World): Route[] {
     [
       'POST',
       '/api/books/:bookId/assignments/read',
-      ({ body, form }) => {
+      ({ body: raw, form }) => {
+        const body = raw as { url?: string; setId?: string } | undefined;
         const source = form
           ? ((form.get('file') as File | null)?.name ?? 'Assignment.pdf')
-          : (body.url ?? 'pasted');
+          : (body?.url ?? 'pasted');
         const read = makeRead({
           state: 'reading',
           source,
@@ -314,7 +334,16 @@ export function homeworkRoutes(w: World): Route[] {
     [
       'POST',
       '/api/books/:bookId/assignments',
-      ({ body }) => {
+      ({ body: raw }) => {
+        const body = raw as {
+          readId?: string;
+          groups: {
+            title: string;
+            due: string;
+            rows: Draft[];
+            setId?: string;
+          }[];
+        };
         const made = (
           body.groups as {
             title: string;

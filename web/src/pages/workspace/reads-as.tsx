@@ -23,10 +23,10 @@ export function ReadsAs({
   if (reading.unread)
     return (
       <span className="text-xs text-warning">
-        PSet doesn't read this as a reference itself. Once it's added, the model
-        rewrites it in the book's form
+        PSet doesn&apos;t read this as a reference itself. Once it&apos;s added,
+        the model rewrites it in the book&apos;s form
         {example ? <> (&ldquo;{example}&rdquo;)</> : ''} if it names problems by
-        number; if not, it's looked for by its words.
+        number; if not, it&apos;s looked for by its words.
       </span>
     );
   // A note that's most of the line (the professor's changes to a book
@@ -78,6 +78,7 @@ type Line = { id: number | string; text: string; inBook: boolean };
  * rather than blinking out on every key. Undefined for a line not yet
  * read, an empty one, or one not from the book.
  */
+// oxlint-disable-next-line react/only-export-components -- a hook that belongs with the component it feeds
 export function useLiveReadings(
   lines: Line[],
 ): (id: Line['id']) => LineReading | undefined {
@@ -94,6 +95,7 @@ export function useLiveReadings(
   const last = useRef(new Map<Line['id'], LineReading>());
   for (const l of lines) {
     const r = data?.get(l.text.trim());
+    // oxlint-disable-next-line react/refs -- the last good reading per line is kept in a ref and rewritten the same way on every render
     if (r) last.current.set(l.id, r);
   }
   return (id) => {

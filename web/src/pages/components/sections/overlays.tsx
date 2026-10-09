@@ -40,7 +40,12 @@ function MenuDemo() {
         Print worksheet
       </MenuItem>
       <MenuDivider />
-      <MenuCheckItem checked={on} onChange={() => setOn((v) => !v)}>
+      <MenuCheckItem
+        checked={on}
+        onChange={() => {
+          setOn((v) => !v);
+        }}
+      >
         Turned in
       </MenuCheckItem>
     </Menu>
@@ -75,7 +80,9 @@ function QuestionHeaderDemo() {
         aria-label="Remove this question"
         aria-expanded={asking}
         className={cn(asking && 'bg-muted/50 text-foreground')}
-        onClick={() => setAsking(true)}
+        onClick={() => {
+          setAsking(true);
+        }}
       >
         <Trash2 />
       </IconButton>
@@ -85,8 +92,12 @@ function QuestionHeaderDemo() {
           question="Remove 3.A.4?"
           detail="Its guide, what you revealed and its Complete go with it."
           action="Remove"
-          onConfirm={() => setAsking(false)}
-          onCancel={() => setAsking(false)}
+          onConfirm={() => {
+            setAsking(false);
+          }}
+          onCancel={() => {
+            setAsking(false);
+          }}
         />
       )}
     </div>
@@ -162,7 +173,9 @@ function ResetDemo() {
           variant="outline"
           size="sm"
           className="text-destructive"
-          onClick={() => setAsking(true)}
+          onClick={() => {
+            setAsking(true);
+          }}
         >
           Reset everything
         </Button>
@@ -172,8 +185,12 @@ function ResetDemo() {
             question="Reset everything?"
             detail="Deletes 4 books, 12 homework sets and 2 conversations, and your settings, API key included."
             action="Reset everything"
-            onConfirm={() => setAsking(false)}
-            onCancel={() => setAsking(false)}
+            onConfirm={() => {
+              setAsking(false);
+            }}
+            onCancel={() => {
+              setAsking(false);
+            }}
           />
         )}
       </BoxBody>
@@ -185,20 +202,36 @@ function DialogDemo({ width }: { width: 'default' | 'wide' }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)}>
+      <Button
+        variant="outline"
+        onClick={() => {
+          setOpen(true);
+        }}
+      >
         Open the {width === 'wide' ? '560' : '400'} dialog
       </Button>
       <Dialog
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+        }}
         width={width}
         title={width === 'wide' ? 'Add questions' : 'New homework'}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setOpen(false)}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setOpen(false);
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={() => setOpen(false)}>
+            <Button
+              onClick={() => {
+                setOpen(false);
+              }}
+            >
               {width === 'wide' ? 'Add 2 questions' : 'Create'}
             </Button>
           </>

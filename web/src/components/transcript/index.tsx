@@ -188,7 +188,9 @@ export function AssistantTurn({ children }: { children: ReactNode }) {
             /* clipboard can be blocked; the button just doesn't confirm */
           }
           setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
+          setTimeout(() => {
+            setCopied(false);
+          }, 1500);
         }}
         className="flex h-control-sm w-control-sm items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity duration-200 ease-out group-hover:opacity-100 hover:bg-muted/50 hover:text-foreground focus-visible:opacity-100 motion-reduce:transition-none"
       >
@@ -282,7 +284,9 @@ export function ConversationStart({ onClear }: { onClear?: () => void }) {
         type="button"
         aria-haspopup="dialog"
         aria-expanded={asking}
-        onClick={() => setAsking(true)}
+        onClick={() => {
+          setAsking(true);
+        }}
         className={cn(
           'underline underline-offset-2 hover:text-foreground',
           asking && 'text-foreground',
@@ -296,7 +300,9 @@ export function ConversationStart({ onClear }: { onClear?: () => void }) {
           question="Clear this conversation?"
           detail="Every question and answer about this book goes. What the tutor remembers stays."
           action="Clear"
-          onCancel={() => setAsking(false)}
+          onCancel={() => {
+            setAsking(false);
+          }}
           onConfirm={() => {
             setAsking(false);
             onClear?.();

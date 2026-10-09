@@ -97,7 +97,7 @@ export function HomeworkTab({
   const [editing, setEditing] = useState(false);
   const openSet = useHomeworkSet(openId).data?.homework;
   const updateOpen = useUpdateHomework(openId ?? '');
-  const sets = list.data as HomeworkSet[] | undefined;
+  const sets = list.data;
   const active = (sets ?? []).filter((h) => !h.turnedInAt);
   const turnedIn = (sets ?? []).filter((h) => h.turnedInAt);
 
@@ -107,12 +107,20 @@ export function HomeworkTab({
         <Walkthrough
           key={openId}
           setId={openId}
-          onEdit={() => setEditing(true)}
-          onDelete={() =>
-            openSet &&
-            remove.mutate(openSet, { onSuccess: () => setOpenId(null) })
-          }
-          onBack={() => setOpenId(null)}
+          onEdit={() => {
+            setEditing(true);
+          }}
+          onDelete={() => {
+            if (openSet)
+              remove.mutate(openSet, {
+                onSuccess: () => {
+                  setOpenId(null);
+                },
+              });
+          }}
+          onBack={() => {
+            setOpenId(null);
+          }}
           onJump={onJump}
           onAskAbout={onAskAbout}
           onPickSelection={onPickSelection}
@@ -126,8 +134,12 @@ export function HomeworkTab({
           <HomeworkDialog
             open={editing}
             editing={{ title: openSet.title, due: openSet.dueDate }}
-            onClose={() => setEditing(false)}
-            onSave={(title, due) => updateOpen.mutate({ title, dueDate: due })}
+            onClose={() => {
+              setEditing(false);
+            }}
+            onSave={(title, due) => {
+              updateOpen.mutate({ title, dueDate: due });
+            }}
           />
         )}
       </>
@@ -144,8 +156,9 @@ export function HomeworkTab({
     >
       {sets?.length === 0 && (
         <p className="text-center text-sm text-muted-foreground">
-          No homework here yet. New homework takes your professor's assignment
-          (a file, a web page or pasted text), or the questions you type.
+          No homework here yet. New homework takes your professor&apos;s
+          assignment (a file, a web page or pasted text), or the questions you
+          type.
         </p>
       )}
       {/* Assignments reading in the background, or read and waiting to
@@ -170,11 +183,19 @@ export function HomeworkTab({
               />
             ))
           : active.map((h) => (
-              <SetRow key={h.id} h={h} onOpen={() => setOpenId(h.id)} />
+              <SetRow
+                key={h.id}
+                h={h}
+                onOpen={() => {
+                  setOpenId(h.id);
+                }}
+              />
             ))}
         <DoorAction
           icon={<Plus aria-hidden />}
-          onClick={() => setAdding(true)}
+          onClick={() => {
+            setAdding(true);
+          }}
           className={cn(
             (sets === undefined || active.length > 0) &&
               'border-t border-border-muted',
@@ -192,7 +213,9 @@ export function HomeworkTab({
                 key={h.id}
                 h={h}
                 bar={false}
-                onOpen={() => setOpenId(h.id)}
+                onOpen={() => {
+                  setOpenId(h.id);
+                }}
               />
             ))}
           </Box>
@@ -209,7 +232,9 @@ export function HomeworkTab({
           setAdding(false);
           setReviewing(null);
         }}
-        onDone={(made) => made.length === 1 && setOpenId(made[0].id)}
+        onDone={(made) => {
+          if (made.length === 1) setOpenId(made[0].id);
+        }}
       />
     </div>
   );

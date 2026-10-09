@@ -132,12 +132,13 @@ function Rail({
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   const shows = (depth: number, parent?: ContentsEntry) =>
     depth < RAIL_LEVELS || (parent !== undefined && open.has(parent.id));
-  const toggle = (id: string) =>
+  const toggle = (id: string) => {
     setOpen((o) => {
       const next = new Set(o);
       if (!next.delete(id)) next.add(id);
       return next;
     });
+  };
 
   // The current row is the last one on show, in reading order, that
   // starts at or before the page the scan is showing: a closed section
@@ -188,7 +189,9 @@ function Rail({
         <div className="relative">
           <button
             type="button"
-            onClick={() => onJump(e.page)}
+            onClick={() => {
+              onJump(e.page);
+            }}
             aria-current={current || undefined}
             className={cn(
               'flex w-full items-center gap-2 pr-4 text-left text-sm',
@@ -207,7 +210,9 @@ function Rail({
           {folds && (
             <button
               type="button"
-              onClick={() => toggle(e.id)}
+              onClick={() => {
+                toggle(e.id);
+              }}
               aria-expanded={isOpen}
               aria-label={`${isOpen ? 'Hide' : 'Show'} what's in ${e.title}`}
               className={cn(
@@ -343,25 +348,32 @@ function Scan({
   const wake = () => {
     setPillAwake(true);
     clearTimeout(sleepTimer.current);
-    sleepTimer.current = setTimeout(
-      () => !hovered.current && setPillAwake(false),
-      1200,
-    );
+    sleepTimer.current = setTimeout(() => {
+      if (!hovered.current) setPillAwake(false);
+    }, 1200);
   };
   // The first sleep: the pill says where you are on arrival, then lets
   // the paper have the frame back.
   useEffect(() => {
-    sleepTimer.current = setTimeout(() => setPillAwake(false), 1200);
-    return () => clearTimeout(sleepTimer.current);
+    sleepTimer.current = setTimeout(() => {
+      setPillAwake(false);
+    }, 1200);
+    return () => {
+      clearTimeout(sleepTimer.current);
+    };
   }, []);
 
   // The fit width follows the pane, which Focus mode resizes.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setPaneWidth(el.clientWidth));
+    const ro = new ResizeObserver(() => {
+      setPaneWidth(el.clientWidth);
+    });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+    };
   }, [scrollRef]);
 
   // A trackpad pinch arrives as a ctrl+wheel. It has to be a non-passive
@@ -369,6 +381,8 @@ function Scan({
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    // The map is made once and only ever added to, so this is the live one.
+    const pages = pageRefs.current;
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
@@ -378,7 +392,7 @@ function Scan({
       if (!anchor.current) {
         let best: HTMLDivElement | null = null;
         let bestDist = Infinity;
-        for (const node of pageRefs.current.values()) {
+        for (const node of pages.values()) {
           const r = node.getBoundingClientRect();
           const d =
             e.clientY < r.top
@@ -386,7 +400,10 @@ function Scan({
               : e.clientY > r.bottom
                 ? e.clientY - r.bottom
                 : 0;
-          if (d < bestDist) ((bestDist = d), (best = node));
+          if (d < bestDist) {
+            bestDist = d;
+            best = node;
+          }
           if (d === 0) break;
         }
         if (best) {
@@ -405,8 +422,10 @@ function Scan({
       );
     };
     el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, [scrollRef]);
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, [scrollRef, pageRefs]);
 
   // After layout, before paint: find where the anchored spot ended up and
   // scroll by exactly the difference, so it sits under the pointer again.
@@ -606,13 +625,13 @@ function TurnView({
   const pages = usePages();
   const source = turnSource(t.id);
   const running = t.state === 'running';
-  const last = t.steps[t.steps.length - 1];
+  const last = t.steps.at(-1);
   const lastRunning = !!last?.running;
   // Waiting on the model with nothing saying so: no call running, no block
   // on its way, and no words since the last step (streaming words say it
   // themselves).
   const endsInStep = t.steps.some(
-    (s) => Math.min(s.after ?? 0, t.answer.length) === t.answer.length,
+    (s) => Math.min(s.after, t.answer.length) === t.answer.length,
   );
   const thinking =
     running &&
@@ -625,9 +644,7 @@ function TurnView({
   // before steps carried a position have none, and land at the top, as
   // they always did.
   const feed = (i: number) => {
-    const at = t.steps.filter(
-      (s) => Math.min(s.after ?? 0, t.answer.length) === i,
-    );
+    const at = t.steps.filter((s) => Math.min(s.after, t.answer.length) === i);
     if (at.length === 0) return null;
     return (
       <Steps
@@ -658,9 +675,10 @@ function TurnView({
             before={feed}
             ask={{
               selected: heldSel(selection, source, t.answer, pages),
-              onPick: (sel) =>
-                onPickSelection(pendingOf(source, t.answer, sel, pages)),
-              onAsk: (sel) =>
+              onPick: (sel) => {
+                onPickSelection(pendingOf(source, t.answer, sel, pages));
+              },
+              onAsk: (sel) => {
                 onSelect(
                   answerAbout({
                     question: t.question,
@@ -670,7 +688,8 @@ function TurnView({
                     pages,
                   }),
                   pendingOf(source, t.answer, sel, pages),
-                ),
+                );
+              },
               onClear: onClearAbout,
             }}
           />
@@ -702,7 +721,9 @@ function TurnView({
           onRetry={onRetry}
           onSetup={
             t.failure === 'setup'
-              ? () => navigate('/settings#connections')
+              ? () => {
+                  void navigate('/settings#connections');
+                }
               : undefined
           }
         />
@@ -827,7 +848,11 @@ function AskTab({
           </div>
         ) : (
           <div className="space-y-5">
-            <ConversationStart onClear={() => clear.mutate()} />
+            <ConversationStart
+              onClear={() => {
+                clear.mutate();
+              }}
+            />
             {list.map((t, i) => {
               const day = dayLabel(t.createdAt);
               const newDay = i === 0 || dayLabel(list[i - 1].createdAt) !== day;
@@ -837,7 +862,9 @@ function AskTab({
                   <TurnView
                     t={t}
                     onJump={onJump}
-                    onRetry={() => send(t.question, null)}
+                    onRetry={() => {
+                      send(t.question, null);
+                    }}
                     selection={selection}
                     onPickSelection={onPickSelection}
                     onSelect={onSelect}
@@ -861,11 +888,15 @@ function AskTab({
           <div className="mb-2">
             <FailedTurn
               reason={ask.error.message}
-              onRetry={() => send(text, about, true)}
+              onRetry={() => {
+                send(text, about, true);
+              }}
               onSetup={
                 ask.error instanceof ApiError &&
                 ask.error.code === 'not_configured'
-                  ? () => navigate('/settings#connections')
+                  ? () => {
+                      void navigate('/settings#connections');
+                    }
                   : undefined
               }
             />
@@ -955,20 +986,28 @@ function Panel({
   // hint and a walkthrough) and at most one element outlines at a time.
   const [pending, setPending] = useState<Pending>(NOTHING_PENDING);
   const { about, sel: selection } = pending;
-  const pickSelection = (next: PendingSel) =>
+  const pickSelection = (next: PendingSel) => {
     setPending((p) => picked(p, next));
-  const askAbout = (a: About, sel: PendingSel | null) =>
+  };
+  const askAbout = (a: About, sel: PendingSel | null) => {
     setPending(asked(a, sel));
-  const clearAbout = () => setPending(NOTHING_PENDING);
-  const spendAbout = (spent: About | null) => setPending((p) => sent(p, spent));
+  };
+  const clearAbout = () => {
+    setPending(NOTHING_PENDING);
+  };
+  const spendAbout = (spent: About | null) => {
+    setPending((p) => sent(p, spent));
+  };
   const pick = setTab;
 
   return (
     <aside
-      onPointerDownCapture={() =>
-        onActive(tab === 'ask' ? 'asking' : 'homework')
-      }
-      onKeyDownCapture={() => onActive(tab === 'ask' ? 'asking' : 'homework')}
+      onPointerDownCapture={() => {
+        onActive(tab === 'ask' ? 'asking' : 'homework');
+      }}
+      onKeyDownCapture={() => {
+        onActive(tab === 'ask' ? 'asking' : 'homework');
+      }}
       style={{ width }}
       className={cn(
         'flex shrink-0 flex-col border-l bg-rail',
@@ -977,12 +1016,19 @@ function Panel({
     >
       <div className="flex h-row shrink-0 items-center justify-between border-b px-card">
         <UnderlineNav className="-mb-px h-full">
-          <UnderlineTab active={tab === 'ask'} onClick={() => pick('ask')}>
+          <UnderlineTab
+            active={tab === 'ask'}
+            onClick={() => {
+              pick('ask');
+            }}
+          >
             Ask
           </UnderlineTab>
           <UnderlineTab
             active={tab === 'homework'}
-            onClick={() => pick('homework')}
+            onClick={() => {
+              pick('homework');
+            }}
           >
             Homework
           </UnderlineTab>
@@ -1034,7 +1080,9 @@ function Panel({
           onPickSelection={pickSelection}
           onClearAbout={clearAbout}
           selection={selection}
-          onOpenSettings={() => navigate('/settings#connections')}
+          onOpenSettings={() => {
+            void navigate('/settings#connections');
+          }}
           onQuestion={onQuestion}
           wide={focus}
         />
@@ -1072,7 +1120,7 @@ export function Workspace() {
   if (bookQuery.data.state.kind !== 'ready')
     return (
       <WorkspaceMessage>
-        This book is still being prepared. It opens once it's on the shelf.
+        This book is still being prepared. It opens once it&apos;s on the shelf.
       </WorkspaceMessage>
     );
   return <BookWorkspace key={id} book={bookQuery.data} homework={homework} />;
@@ -1164,7 +1212,9 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           value={{
             bookId: book.id,
             problems: book.problems,
-            editBook: () => setEditingBook(true),
+            editBook: () => {
+              setEditingBook(true);
+            },
           }}
         >
           <AppShell
@@ -1179,19 +1229,25 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                 <Menu label="Book actions" intent={usageIntent}>
                   <MenuItem
                     icon={<Pencil />}
-                    onSelect={() => setEditingBook(true)}
+                    onSelect={() => {
+                      setEditingBook(true);
+                    }}
                   >
                     Edit book
                   </MenuItem>
                   <MenuItem
                     icon={<Brain />}
-                    onSelect={() => setMemoryOpen(true)}
+                    onSelect={() => {
+                      setMemoryOpen(true);
+                    }}
                   >
                     Memory
                   </MenuItem>
                   <MenuItem
                     icon={<Receipt />}
-                    onSelect={() => setUsageOpen(true)}
+                    onSelect={() => {
+                      setUsageOpen(true);
+                    }}
                     intent={usageIntent}
                   >
                     Usage
@@ -1202,9 +1258,13 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                     question={`Remove ${book.title}?`}
                     detail={`${plural(homeworkCount, 'homework set')}, the conversation and what the tutor remembers go with it. Importing the PDF again starts fresh.`}
                     action="Remove book"
-                    onConfirm={() =>
-                      remove.mutate(book.id, { onSuccess: () => navigate('/') })
-                    }
+                    onConfirm={() => {
+                      remove.mutate(book.id, {
+                        onSuccess: () => {
+                          void navigate('/');
+                        },
+                      });
+                    }}
                   >
                     Remove book
                   </MenuConfirmItem>
@@ -1215,6 +1275,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           >
             <div className="flex h-full min-h-0 flex-col">
               <div
+                // oxlint-disable-next-line react/refs -- passes the pane hook's own ref and stable callbacks; nothing reads the ref during render
                 ref={panes.frame}
                 className="flex min-h-0 flex-1"
                 onPointerDownCapture={() => (activity.current = 'reading')}
@@ -1238,9 +1299,14 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                         value={widths.rail}
                         min={widths.railRange[0]}
                         max={widths.railRange[1]}
-                        onChange={(px) => panes.set('rail', px)}
+                        onChange={(px) => {
+                          panes.set('rail', px);
+                        }}
+                        // oxlint-disable-next-line react/refs -- passes the pane hook's own ref and stable callbacks; nothing reads the ref during render
                         onCommit={panes.commit}
-                        onReset={() => panes.reset('rail')}
+                        onReset={() => {
+                          panes.reset('rail');
+                        }}
                       />
                     )}
                   </>
@@ -1263,9 +1329,14 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                     value={widths.panel}
                     min={widths.panelRange[0]}
                     max={widths.panelRange[1]}
-                    onChange={(px) => panes.set(panelKey, px)}
+                    onChange={(px) => {
+                      panes.set(panelKey, px);
+                    }}
+                    // oxlint-disable-next-line react/refs -- passes the pane hook's own ref and stable callbacks; nothing reads the ref during render
                     onCommit={panes.commit}
-                    onReset={() => panes.reset(panelKey)}
+                    onReset={() => {
+                      panes.reset(panelKey);
+                    }}
                   />
                 )}
                 <Panel
@@ -1275,7 +1346,9 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                   onQuestion={onQuestion}
                   homework={homework}
                   focus={focus}
-                  onFocusToggle={() => setFocus((f) => !f)}
+                  onFocusToggle={() => {
+                    setFocus((f) => !f);
+                  }}
                   onJump={jump}
                   width={widths?.panel}
                 />
@@ -1285,7 +1358,9 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
 
           <BookUsageDialog
             open={usageOpen}
-            onClose={() => setUsageOpen(false)}
+            onClose={() => {
+              setUsageOpen(false);
+            }}
             title={book.title}
             data={bookUsage.data}
             loading={bookUsage.isPending && usageOpen}
@@ -1294,7 +1369,9 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           <MemoryDialog
             open={memoryOpen}
             bookId={book.id}
-            onClose={() => setMemoryOpen(false)}
+            onClose={() => {
+              setMemoryOpen(false);
+            }}
           />
 
           <BookDialog
@@ -1311,7 +1388,9 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                 day: 'numeric',
               }),
             }}
-            onClose={() => setEditingBook(false)}
+            onClose={() => {
+              setEditingBook(false);
+            }}
             onSave={(next) => {
               // Only what changed: a colour alone isn't an edit to the name.
               const named =

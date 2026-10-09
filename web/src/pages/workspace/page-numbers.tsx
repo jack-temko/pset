@@ -37,8 +37,9 @@ export function PageNumbersField({
 }) {
   const parsed = runsOf(anchors, pageCount);
   const gaps = 'runs' in parsed ? new PageMap(parsed.runs).gaps() : [];
-  const set = (i: number, key: keyof PageAnchor, value: string) =>
+  const set = (i: number, key: keyof PageAnchor, value: string) => {
     onChange(anchors.map((a, j) => (j === i ? { ...a, [key]: value } : a)));
+  };
 
   return (
     <fieldset className="space-y-2">
@@ -52,7 +53,9 @@ export function PageNumbersField({
                 aria-label="PDF page of printed page 1"
                 inputMode="numeric"
                 value={a.pdf}
-                onChange={(e) => set(i, 'pdf', e.target.value)}
+                onChange={(e) => {
+                  set(i, 'pdf', e.target.value);
+                }}
                 className="w-16 tabular-nums"
               />
             </>
@@ -63,7 +66,9 @@ export function PageNumbersField({
                 aria-label={`Where jump ${i} starts, as a PDF page`}
                 inputMode="numeric"
                 value={a.pdf}
-                onChange={(e) => set(i, 'pdf', e.target.value)}
+                onChange={(e) => {
+                  set(i, 'pdf', e.target.value);
+                }}
                 className="w-16 tabular-nums"
               />
               <span>is printed page</span>
@@ -71,14 +76,18 @@ export function PageNumbersField({
                 aria-label={`Printed number on that page, jump ${i}`}
                 inputMode="numeric"
                 value={a.printed}
-                onChange={(e) => set(i, 'printed', e.target.value)}
+                onChange={(e) => {
+                  set(i, 'printed', e.target.value);
+                }}
                 className="w-16 tabular-nums"
               />
               <IconButton
                 variant="ghost"
                 size="sm"
                 aria-label="Remove this jump"
-                onClick={() => onChange(anchors.filter((_, j) => j !== i))}
+                onClick={() => {
+                  onChange(anchors.filter((_, j) => j !== i));
+                }}
               >
                 <X />
               </IconButton>
@@ -98,7 +107,9 @@ export function PageNumbersField({
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => onChange([...anchors, { pdf: '', printed: '' }])}
+        onClick={() => {
+          onChange([...anchors, { pdf: '', printed: '' }]);
+        }}
       >
         <Plus />
         Add a jump

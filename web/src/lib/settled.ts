@@ -67,7 +67,9 @@ function useYoung(since: number | null): boolean {
     (changed: () => void) => {
       if (since === null) return () => {};
       const t = setTimeout(changed, Math.max(0, since + GRACE_MS - Date.now()));
-      return () => clearTimeout(t);
+      return () => {
+        clearTimeout(t);
+      };
     },
     [since],
   );

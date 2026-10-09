@@ -11,11 +11,11 @@ let restore: (() => void) | undefined;
 afterEach(() => restore?.());
 
 const realFetch = () =>
-  vi.fn(async () => new Response('real server', { status: 200 }));
+  vi.fn(() => Promise.resolve(new Response('real server', { status: 200 })));
 
 function mount(server: MockServer) {
   const real = realFetch();
-  window.fetch = real as unknown as typeof fetch;
+  window.fetch = real;
   restore = installMock(server, assetUrl);
   return real;
 }
@@ -38,7 +38,9 @@ describe('the mock server', () => {
       new MockServer([['GET', '/api/ping', () => ({ ok: true })]]),
     );
     expect(await api('GET', '/api/ping')).toEqual({ ok: true });
-    const err = (await api('GET', '/api/books').catch((e) => e)) as ApiError;
+    const err = (await api('GET', '/api/books').catch(
+      (e: unknown) => e,
+    )) as ApiError;
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(404);
     expect(err.code).toBe('not_found');
@@ -64,7 +66,7 @@ describe('the mock server', () => {
       ]),
     );
     const err = (await api('POST', '/api/things', {}).catch(
-      (e) => e,
+      (e: unknown) => e,
     )) as ApiError;
     expect(err).toMatchObject({
       status: 422,
@@ -83,7 +85,11 @@ describe('the mock server', () => {
           '/api/homework/:id',
           ({ params }) => ({ id: params.id, title }),
         ],
-        ['PATCH', '/api/homework/:id', ({ body }) => void (title = body.title)],
+        [
+          'PATCH',
+          '/api/homework/:id',
+          ({ body }) => void (title = (body as { title: string }).title),
+        ],
       ]),
     );
     expect(

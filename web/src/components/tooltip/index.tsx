@@ -50,7 +50,9 @@ export function Tooltip({
           : { x: r.left, y: r.top + r.height / 2, delay },
     );
   };
-  const hide = () => setAt(null);
+  const hide = () => {
+    setAt(null);
+  };
   const p = children.props;
 
   return (

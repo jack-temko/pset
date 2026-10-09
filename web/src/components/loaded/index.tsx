@@ -66,8 +66,12 @@ export function Loaded<T>({
   const [aged, setAged] = useState(!grace);
   useEffect(() => {
     if (!pending || !grace) return;
-    const t = setTimeout(() => setAged(true), GRACE_MS);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => {
+      setAged(true);
+    }, GRACE_MS);
+    return () => {
+      clearTimeout(t);
+    };
   }, [pending, grace]);
 
   // The skeleton stays under the content for the length of the crossfade,
@@ -85,6 +89,7 @@ export function Loaded<T>({
       setSwapping(false);
     } else if (aged && !reducedMotion()) {
       setFadeFrom(
+        // oxlint-disable-next-line react/refs -- reads the layer's opacity at the moment the swap starts
         layer.current ? getComputedStyle(layer.current).opacity || '1' : '1',
       );
       setSwapping(true);
@@ -92,8 +97,12 @@ export function Loaded<T>({
   }
   useEffect(() => {
     if (!swapping) return;
-    const t = setTimeout(() => setSwapping(false), 170);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => {
+      setSwapping(false);
+    }, 170);
+    return () => {
+      clearTimeout(t);
+    };
   }, [swapping]);
 
   // The content is built once per data: this component re-renders for its own
