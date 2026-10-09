@@ -71,6 +71,8 @@ app before calling it done:
   that shows every component and variant: a section in a group file under
   `web/src/pages/components/sections/`, with the component's README as its
   Docs.
+- `make jumps-check` must pass before the pull request: nothing may jump (see
+  "Nothing jumps" in `design/design-system.md`).
 - The rules are in `design/design-system.md`, and each screen's spec is
   in `design/`. Where a change would contradict a spec, raise it rather
   than quietly diverging.
