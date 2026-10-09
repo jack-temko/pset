@@ -42,6 +42,27 @@ async function settle(page, track) {
   }
 }
 
+/** Watch a page's requests: how many are in flight, when the last ended. */
+function trackRequests(page) {
+  const reqs = []
+  const open = new Map()
+  page.on('request', (r) => {
+    if (['image', 'eventsource', 'websocket'].includes(r.resourceType()) || r.url().includes('/api/events')) return
+    const u = new URL(r.url())
+    const rec = { start: Date.now(), end: null, url: (u.pathname + u.search).slice(0, 120) }
+    open.set(r, rec)
+    reqs.push(rec)
+  })
+  const done = (r) => {
+    const rec = open.get(r)
+    if (rec) rec.end = Date.now()
+    open.delete(r)
+  }
+  page.on('requestfinished', done)
+  page.on('requestfailed', done)
+  return { reqs, inflight: () => open.size, lastEnd: () => Math.max(0, ...reqs.map((r) => r.end ?? 0)) }
+}
+
 async function runOne(browser, app, sc, mode, opts) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   try {
@@ -57,26 +78,8 @@ async function runOne(browser, app, sc, mode, opts) {
     }
     const page = await ctx.newPage()
 
-    const reqs = []
-    const open = new Map()
-    page.on('request', (r) => {
-      if (['image', 'eventsource', 'websocket'].includes(r.resourceType()) || r.url().includes('/api/events')) return
-      const u = new URL(r.url())
-      const rec = { start: Date.now(), end: null, url: (u.pathname + u.search).slice(0, 120) }
-      open.set(r, rec)
-      reqs.push(rec)
-    })
-    const done = (r) => {
-      const rec = open.get(r)
-      if (rec) rec.end = Date.now()
-      open.delete(r)
-    }
-    page.on('requestfinished', done)
-    page.on('requestfailed', done)
-    const track = {
-      inflight: () => open.size,
-      lastEnd: () => Math.max(0, ...reqs.map((r) => r.end ?? 0)),
-    }
+    const track = trackRequests(page)
+    const reqs = track.reqs
 
     const cdp = await ctx.newCDPSession(page)
     const frames = []
@@ -97,16 +100,25 @@ async function runOne(browser, app, sc, mode, opts) {
       await page.goto(app + sc.url, { waitUntil: 'commit' })
       await settle(page, track)
       await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 60, everyNthFrame: 1 })
-      for (const [i, step] of steps.entries()) {
+      // A reopen opens it, closes it with Escape and opens it again; only the
+      // second open is measured (a dialog may refetch each time it mounts).
+      const again = steps[steps.length - 2]?.role === 'menuitem' ? -2 : -1
+      const plan = sc.reopen ? [...steps, { key: 'Escape' }, ...steps.slice(again)] : steps
+      for (const [i, step] of plan.entries()) {
+        if (step.key) {
+          await page.keyboard.press(step.key)
+          await settle(page, track)
+          continue
+        }
         const target = locate(page, step)
         try {
           await target.waitFor({ state: 'visible', timeout: 4000 })
         } catch {
           throw new Missing(`no ${JSON.stringify(step)} on ${sc.url}`)
         }
-        if (i === steps.length - 1) t0 = Date.now()
+        if (i === plan.length - 1) t0 = Date.now()
         await target.click({ timeout: 4000 })
-        if (i < steps.length - 1) await settle(page, track)
+        if (i < plan.length - 1) await settle(page, track)
       }
       timedOut = await settle(page, track)
     }
@@ -157,7 +169,7 @@ async function discoverOverlays(browser, app, pages) {
     try {
       await ctx.addInitScript({ path: path.join(here, 'probe.js') })
       const page = await ctx.newPage()
-      const track = { inflight: () => 0, lastEnd: () => 0 }
+      const track = trackRequests(page)
       await page.goto(app + pg.url, { waitUntil: 'commit' })
       await settle(page, track)
       const triggers = await page.evaluate((css) => {
@@ -167,13 +179,14 @@ async function discoverOverlays(browser, app, pages) {
           const label = (el.getAttribute('aria-label') || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 50)
           if (!label || seen.has(label)) continue
           seen.add(label)
-          out.push({ label, menu: el.getAttribute('aria-haspopup') === 'menu' })
+          const popup = el.getAttribute('aria-haspopup')
+          out.push({ label, menu: popup === 'menu', popup: !!popup && popup !== 'false' })
         }
         return out
       }, TRIGGERS)
       let expanders = 0
       for (const t of triggers) {
-        if (!t.menu && ++expanders > MAX_EXPANDERS) continue
+        if (!t.popup && ++expanders > MAX_EXPANDERS) continue
         const step = { role: 'button', name: t.label }
         found.push({ name: `${pg.name}: ${t.label}`, label: t.label, url: pg.url, steps: [step] })
         if (!t.menu) continue
@@ -216,6 +229,7 @@ async function main() {
       'slow-ms': { type: 'string', default: '600' },
       only: { type: 'string' },
       'no-discover': { type: 'boolean' },
+      'discover-only': { type: 'boolean' },
       out: { type: 'string' },
     },
   })
@@ -240,13 +254,23 @@ async function main() {
     for (const sc of list.filter((s) => !s.skip && !s.steps).slice(0, 4)) {
       await runOne(browser, app, sc, 'real', { slowMs }).catch(() => {})
     }
-    if (!v['no-discover'] && !v.only) {
+    if (!v['no-discover'] && (!v.only || v['discover-only'])) {
       const handwritten = new Set(list.map(stepKey))
       const pages = list.filter((s) => !s.skip && !s.steps)
       const extra = (await discoverOverlays(browser, app, pages)).filter((d) => !handwritten.has(stepKey(d)))
       for (const d of extra) list.push({ ...d, discovered: true })
       process.stderr.write(`discovered ${extra.length} overlays\n`)
+      if (v['discover-only']) {
+        for (const d of extra) console.log(d.name)
+        return
+      }
     }
+    // The usage dialogs are opened twice: the second open is its own row.
+    list = list.flatMap((sc) =>
+      sc.twice || (sc.discovered && /usage/i.test(sc.label))
+        ? [sc, { ...sc, name: `${sc.name}, second open`, reopen: true }]
+        : [sc],
+    )
     for (const sc of list) {
       for (const mode of ['real', 'slow']) {
         const row = { name: sc.name, mode, url: sc.url, trigger: sc.discovered ? sc.label : undefined }

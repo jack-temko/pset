@@ -60,6 +60,22 @@ export function scenarios({ book, set }) {
     { name: 'Add questions', url: hw, steps: [hwMenu, item('Add questions')], skip: noSet },
     { name: 'Questions menu', url: hw, steps: [click('button', 'Questions')], skip: noQuestions },
     { name: 'Question actions menu', url: hw, steps: [click('button', 'Question actions')], skip: noQuestions },
+    // Not found on a branch without them, or when no job has finished; the
+    // report then says they were skipped. Each is also opened a second time.
+    {
+      name: 'Usage details (homework set)',
+      url: hw,
+      steps: [{ css: 'button[aria-label^="Usage details for"]' }],
+      twice: true,
+      skip: noSet,
+    },
+    {
+      name: 'Usage details (Ask answer)',
+      url: b,
+      steps: [{ css: 'button[aria-label="Usage details for Ask answer"]' }],
+      twice: true,
+      skip: noBook,
+    },
     { name: 'Clear history popover', url: '/settings', steps: [click('button', 'Clear history')] },
     { name: 'Reset everything popover', url: '/settings', steps: [click('button', 'Reset everything')] },
   ]
