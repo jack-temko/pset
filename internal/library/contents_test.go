@@ -8,7 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // kettleBook is a scanned book's recognized text: two front pages (a title
@@ -253,9 +255,39 @@ func TestScannedBookContentsFromThePrintedContents(t *testing.T) {
 	pages := kettleBook(true)
 	e.useBook(pages)
 	e.llm.Script(noName, entriesReply(t, kettleEntries))
+	llm.OnCall(usage.Sink(e.svc.c.DB))
+	t.Cleanup(func() { llm.OnCall(nil) })
 	var up BookChanged
 	e.upload(t, "kettles.pdf", scannedPDF(t, len(pages)), &up)
 	b := e.waitFor(t, up.Book.ID, StateReady)
+
+	// The import's calls are the book's, staged Naming then Contents; the
+	// book's usage endpoint serves them (the other kinds' tables belong to
+	// other features, stubbed here).
+	for _, q := range []string{`CREATE TABLE homework (id TEXT, book_id TEXT)`, `CREATE TABLE questions (id TEXT, homework_id TEXT)`,
+		`CREATE TABLE turns (id TEXT, book_id TEXT)`, `CREATE TABLE assignment_reads (id TEXT, book_id TEXT)`} {
+		e.svc.c.DB.Exec(q)
+	}
+	var bu usage.BookUsage
+	if code := e.do(t, "GET", "/api/books/"+b.ID+"/usage", nil, &bu); code != 200 || bu.Import == nil {
+		t.Fatalf("book usage %d %+v", code, bu)
+	}
+	// One import is one run: the examination's job id, carried to the preparation.
+	var examine string
+	if err := e.svc.c.DB.QueryRow(`SELECT id FROM jobs WHERE kind = ? AND subject = ?`, JobExamine, b.ID).Scan(&examine); err != nil {
+		t.Fatal(err)
+	}
+	var runs int
+	var run string
+	if err := e.svc.c.DB.QueryRow(`SELECT count(DISTINCT run), min(run) FROM calls WHERE subject_type = ? AND subject_id = ?`, usage.SubjectBook, b.ID).Scan(&runs, &run); err != nil || runs != 1 || run != examine {
+		t.Fatalf("import calls in %d runs (%q), want one, the examination's %q (%v)", runs, run, examine, err)
+	}
+	if len(bu.Import.Runs) != 1 {
+		t.Fatalf("import runs %+v", bu.Import.Runs)
+	}
+	if len(bu.Import.Stages) != 2 || bu.Import.Stages[0].Name != "Naming" || bu.Import.Stages[1].Name != "Contents" || len(bu.Import.Runs) == 0 {
+		t.Fatalf("import stages %+v", bu.Import.Stages)
+	}
 
 	var c Contents
 	e.do(t, "GET", "/api/books/"+b.ID+"/contents", nil, &c)

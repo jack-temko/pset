@@ -1,5 +1,7 @@
 # Model usage
 
+> **Superseded 2026-10-08** by [Job usage modal](job-usage-modal-grill.md): the line is now a button that opens a modal. The data model below (the `calls` table) stands, extended with stage, run and tokens detail.
+
 ## Status
 
 **Done** · shipped 2026-09-29, the day it was decided. The spec lives in

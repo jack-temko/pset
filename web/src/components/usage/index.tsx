@@ -1,41 +1,116 @@
+import { useState } from 'react'
+import { ChevronRight } from 'lucide-react'
+
 import type { Usage } from '@/api/gen/usage'
-import { atLeast, clock, cost, shortModel, tokens } from '@/lib/usage-format'
+import { useUsageDetail, type UsageSource } from '@/api/usage'
+import { UsageModal } from '@/components/usage-modal'
+import { atLeast, cost, shortModel } from '@/lib/usage-format'
 import { cn } from '@/lib/utils'
 
-/**
- * What a finished job spent, as one muted line and not a control: the model
- * that did the most of the work (and how many more served the job), the time,
- * the tokens, the cost, in that order, the order a student cares about, the
- * number to skim past last. It is plain text where the thing it describes is
- * (a question's guide, an Ask answer, an assignment read's row).
- *
- * Tokens and cost carry a "≥" when a call reported nothing (a failed call
- * still bills), and a dash where nothing was reported at all, never a zero,
- * which would say free. Nothing shows without a call, or while the job runs.
- * It is `inline`: give it `className="block"` to stand on its own line.
- */
-export function UsageLine({ usage, className }: { usage: Usage; className?: string }) {
+/** The line's words: the model that did the most work (and how many more
+ *  served the job) and the cost; the time and tokens are in the modal. Plain
+ *  inline text that wraps at its separator, never inside a figure; `after` rides on the last
+ *  figure, so the trigger's chevron wraps with the last word. */
+export function UsageSummary({ usage, className, after }: { usage: Usage; className?: string; after?: React.ReactNode }) {
   const head = usage.rows[0]
   if (!head) return null
   const partial = (usage.total.uncounted ?? 0) > 0
   const more = usage.rows.length - 1
   return (
     <span
-      // Machinery, not prose: a copy button skips it.
-      data-copy-skip
-      title={`${usage.rows.map((r) => r.model).join(', ')}. Time adds up every call, so calls made at once count in full.`}
-      className={cn('inline-flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground tabular-nums', className)}
+      title={`${usage.rows.map((r) => r.model).join(', ')}. Click for the time, tokens and every call.`}
+      className={cn('text-xs tabular-nums', className)}
     >
-      <span>
+      <span className="whitespace-nowrap">
         {shortModel(head.model)}
         {more > 0 && ` +${more}`}
       </span>
-      <span aria-hidden>·</span>
-      <span className="whitespace-nowrap">{clock(usage.total.ms)}</span>
-      <span aria-hidden>·</span>
-      <span className="whitespace-nowrap">{atLeast(tokens(usage.total.tokens), partial)} tokens</span>
-      <span aria-hidden>·</span>
-      <span className="whitespace-nowrap">{atLeast(cost(usage.total.cost), partial)}</span>
+      <span aria-hidden> · </span>
+      <span className="whitespace-nowrap">
+        {atLeast(cost(usage.total.cost), partial)}
+        {after}
+      </span>
     </span>
+  )
+}
+
+/**
+ * What a finished job spent, as one quiet line that opens the details: the
+ * line (model, time, tokens, cost) with a small chevron, muted, both turning
+ * to the accent on hover and focus. A button, so it is on the keyboard; the
+ * modal it opens fetches the job's stages and calls when it opens.
+ *
+ * `detail` is for /components and tests, where there is no server: given it,
+ * the modal shows that instead of fetching.
+ *
+ * It is `data-copy-skip` (an answer's copy button leaves it out), and it
+ * appears only once a job is done or failed, which the caller decides.
+ */
+export function UsageTrigger({
+  usage,
+  source,
+  name,
+  detail,
+  block,
+  className,
+}: {
+  usage: Usage
+  source: UsageSource
+  /** What the modal's title names: "Problem 3.14", "Ask answer". */
+  name: string
+  detail?: React.ComponentProps<typeof UsageModal>['detail']
+  /** On a line of its own, under a guide or an answer. */
+  block?: boolean
+  className?: string
+}) {
+  const [open, setOpen] = useState(false)
+  if (!usage.rows[0]) return null
+  return (
+    <>
+      <button
+        type="button"
+        data-copy-skip
+        aria-haspopup="dialog"
+        aria-label={`Usage details for ${name}`}
+        onClick={() => setOpen(true)}
+        className={cn(
+          block ? 'block' : 'inline',
+          'max-w-full cursor-pointer rounded-sm text-left text-muted-foreground',
+          'hover:text-primary focus-visible:text-primary',
+          className,
+        )}
+      >
+        <UsageSummary usage={usage} after={<ChevronRight className="ml-1 inline size-3 align-[-0.1em]" aria-hidden />} />
+      </button>
+      {open && <Loaded open source={source} name={name} detail={detail} onClose={() => setOpen(false)} />}
+    </>
+  )
+}
+
+/** The modal with its detail fetched: mounted only while open, so nothing
+ *  is asked for until it is wanted. */
+function Loaded({
+  open,
+  source,
+  name,
+  detail,
+  onClose,
+}: {
+  open: boolean
+  source: UsageSource
+  name: string
+  detail?: React.ComponentProps<typeof UsageModal>['detail']
+  onClose: () => void
+}) {
+  const q = useUsageDetail(source, open && detail === undefined)
+  return (
+    <UsageModal
+      open={open}
+      onClose={onClose}
+      name={name}
+      detail={detail ?? q.data}
+      loading={detail === undefined && q.isPending}
+      error={detail === undefined && q.isError}
+    />
   )
 }

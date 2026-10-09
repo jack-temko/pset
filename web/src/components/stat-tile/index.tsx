@@ -43,7 +43,7 @@ export function StatTile({
         {chart && <span aria-hidden className={cn('size-2 rounded-full', dotBg[chart])} />}
         {label}
       </div>
-      <div className="font-mono text-2xl font-normal tracking-normal tabular-nums [&_small]:text-xs [&_small]:font-normal [&_small]:text-muted-foreground">
+      <div className="figure text-2xl font-normal tracking-normal [&_small]:text-xs [&_small]:font-normal [&_small]:text-muted-foreground">
         {value}
       </div>
       <p className="text-xs font-normal text-muted-foreground">{context}</p>

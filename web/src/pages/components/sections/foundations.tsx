@@ -82,10 +82,11 @@ export const foundationsSections: ComponentEntry[] = [
             <p className="text-xs text-muted-foreground">12 pages · prepared yesterday</p>
           </div>
         </Shelf>
-        <Shelf label="mono">
+        <Shelf label="mono: copyable ids, and data figures">
           <div className="space-y-2">
             <p className="font-mono text-sm">https://api.example.com/v1</p>
-            <p className="font-mono text-xs text-muted-foreground">v0.5.0 · p. 142</p>
+            <p className="font-mono text-xs text-muted-foreground">openai/gpt-6-luna · v0.5.0</p>
+            <p className="figure text-xs text-muted-foreground">$0.0031 · 4,210 tokens</p>
           </div>
         </Shelf>
       </>

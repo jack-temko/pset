@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Check, Clock, TriangleAlert } from 'lucide-react'
 import { Box, BoxRow } from '@/components/box'
 import { Button } from '@/components/button'
@@ -7,8 +8,11 @@ import { Label } from '@/components/label'
 import { ProgressBar } from '@/components/progress-bar'
 import { Spinner } from '@/components/spinner'
 import { Skeleton } from '@/components/skeleton'
-import { UsageLine } from '@/components/usage'
-import type { Usage } from '@/api/gen/usage'
+import { Table, type TableColumn } from '@/components/table'
+import { UsageTrigger } from '@/components/usage'
+import { BookUsageDialog, UsageModal } from '@/components/usage-modal'
+import { clock, cost, shortModel, timeOfDay, tokens } from '@/lib/usage-format'
+import type { BookUsage, Detail as UsageDetail, Usage } from '@/api/gen/usage'
 import type { ComponentEntry } from './types'
 import { Shelf } from './shared'
 
@@ -51,7 +55,165 @@ const USAGE_WIDE: Usage = {
   failed: 0,
 }
 
+/** A question's usage as the modal shows it: two runs (the second a retry
+ *  that hit a rate limit), a shared difficulty ranking, and a fallback that
+ *  answered one call. */
+const DETAIL: UsageDetail = {
+  total: { ms: 21_400, tokensIn: 31_000, tokensOut: 6_900, reasoning: 3_100, cached: 12_000, cost: 0.0049, calls: 7, failed: 1 },
+  stages: [
+    { name: 'Find', attempts: 1, calls: 1, ms: 2100, tokensIn: 8200, tokensOut: 1212, cost: 0.0004 },
+    { name: 'Figures', attempts: 1, calls: 3, ms: 4000, tokensIn: 9400, tokensOut: 1900, cost: 0.0009 },
+    { name: 'Guide', attempts: 2, calls: 3, failed: 1, ms: 14_000, tokensIn: 12_000, tokensOut: 3_700, reasoning: 3_100, cost: 0.0033 },
+    { name: 'Rank', attempts: 1, calls: 1, ms: 1300, tokensIn: 1400, tokensOut: 88, cost: 0.0003, shared: 4 },
+  ],
+  runs: [
+    {
+      label: 'Run 1',
+      calls: [
+        { id: 1, at: '2026-10-08T14:02:11Z', stage: 'Find', asked: 'z-ai/perceptron-mk1.5', answered: 'z-ai/perceptron-mk1.5', ms: 2100, tokensIn: 8200, tokensOut: 1212, cost: 0.0004 },
+        { id: 2, at: '2026-10-08T14:02:14Z', stage: 'Figures', asked: 'openai/gpt-6-luna', answered: 'openai/gpt-6-luna', ms: 1500, tokensIn: 5400, tokensOut: 900, cost: 0.0003 },
+        { id: 3, at: '2026-10-08T14:02:17Z', stage: 'Figures', asked: 'openai/gpt-6-luna', answered: 'openai/gpt-6-luna', ms: 2500, tokensIn: 4000, tokensOut: 1000, cost: 0.0006 },
+        { id: 4, at: '2026-10-08T14:02:20Z', stage: 'Guide', tools: 'search_pages,read_page', asked: 'anthropic/claude-haiku-5.5', answered: 'anthropic/claude-haiku-5.5', ms: 7000, tokensIn: 7000, tokensOut: 1800, reasoning: 1400, cached: 5000, cost: 0.0018 },
+      ],
+    },
+    {
+      label: 'Run 2',
+      calls: [
+        { id: 5, at: '2026-10-08T14:09:01Z', stage: 'Guide', asked: 'anthropic/claude-haiku-5.5', ms: 900, error: 'rate limited (429)' },
+        { id: 6, at: '2026-10-08T14:09:03Z', stage: 'Guide', asked: 'anthropic/claude-haiku-5.5', answered: 'deepseek/deepseek-v4.1-flash', ms: 6100, tokensIn: 5000, tokensOut: 1900, reasoning: 1700, cached: 7000, cost: 0.0015 },
+      ],
+    },
+    {
+      label: 'Difficulty ranking, shared with 4 questions',
+      shared: 4,
+      calls: [{ id: 7, at: '2026-10-08T14:02:30Z', stage: 'Rank', asked: 'openai/gpt-6-luna', answered: 'openai/gpt-6-luna', ms: 1300, tokensIn: 1400, tokensOut: 88, cost: 0.0003 }],
+    },
+  ],
+}
+
+const BOOK_USAGE: BookUsage = {
+  total: { ms: 96_000, tokensIn: 210_000, tokensOut: 31_000, cost: 0.0412, calls: 38, failed: 1 },
+  kinds: [
+    { kind: 'questions', items: 6, total: { ms: 51_000, tokensIn: 120_000, tokensOut: 19_000, cost: 0.0231, calls: 22, failed: 1 } },
+    { kind: 'ranking', items: 1, total: { ms: 1300, tokensIn: 1400, tokensOut: 88, cost: 0.0003, calls: 1, failed: 0 } },
+    { kind: 'ask', items: 4, total: { ms: 22_000, tokensIn: 52_000, tokensOut: 7_000, cost: 0.0118, calls: 9, failed: 0 } },
+    { kind: 'reads', items: 1, total: { ms: 6_000, tokensIn: 9_000, tokensOut: 1_000, cost: 0.0022, calls: 1, failed: 0 } },
+    { kind: 'import', items: 1, total: { ms: 15_700, tokensIn: 27_600, tokensOut: 3_900, cost: 0.0038, calls: 5, failed: 0 } },
+  ],
+  import: {
+    total: { ms: 15_700, tokensIn: 27_600, tokensOut: 3_900, cost: 0.0038, calls: 5, failed: 0 },
+    stages: [
+      { name: 'Naming', attempts: 1, calls: 1, ms: 2_700, tokensIn: 4_600, tokensOut: 300, cost: 0.0006 },
+      { name: 'Contents', attempts: 1, calls: 4, ms: 13_000, tokensIn: 23_000, tokensOut: 3_600, cost: 0.0032 },
+    ],
+    runs: [
+      {
+        label: 'Calls',
+        calls: [
+          { id: 8, at: '2026-10-07T09:00:02Z', stage: 'Naming', asked: 'anthropic/claude-haiku-5.5', answered: 'anthropic/claude-haiku-5.5', ms: 2700, tokensIn: 4600, tokensOut: 300, cost: 0.0006 },
+          { id: 9, at: '2026-10-07T09:00:06Z', stage: 'Contents', asked: 'anthropic/claude-haiku-5.5', answered: 'anthropic/claude-haiku-5.5', ms: 13_000, tokensIn: 23_000, tokensOut: 3_600, cost: 0.0032 },
+        ],
+      },
+    ],
+  },
+}
+
+/** The trigger and the modal it opens, with a fixture standing in for the
+ *  server. */
+function UsageModalDemo({ book }: { book?: boolean }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <Button variant="outline" onClick={() => setOpen(true)}>
+        {book ? 'Open the book dialog' : 'Open the modal'}
+      </Button>
+      {book ? (
+        <BookUsageDialog open={open} onClose={() => setOpen(false)} title="Circuits and Systems" data={BOOK_USAGE} />
+      ) : (
+        <UsageModal open={open} onClose={() => setOpen(false)} name="Problem 3.14" detail={DETAIL} />
+      )}
+    </>
+  )
+}
+
+type DemoCall = UsageDetail['runs'][number]['calls'][number]
+const DEMO_STAGES = DETAIL.stages
+const STAGE_COLUMNS: TableColumn<(typeof DEMO_STAGES)[number]>[] = [
+  { key: 'stage', header: 'Stage', cell: (s) => s.name },
+  { key: 'attempts', header: 'Attempts', numeric: true, cell: (s) => s.attempts },
+  { key: 'calls', header: 'Calls', numeric: true, cell: (s) => s.calls },
+  { key: 'ms', header: 'Time', numeric: true, cell: (s) => clock(s.ms) },
+  { key: 'in', header: 'Tokens in', numeric: true, cell: (s) => tokens(s.tokensIn) },
+  { key: 'out', header: 'Tokens out', numeric: true, cell: (s) => tokens(s.tokensOut) },
+  { key: 'cost', header: 'Cost', numeric: true, cell: (s) => cost(s.cost) },
+]
+const DEMO_CALLS: DemoCall[] = DETAIL.runs[1].calls
+const CALL_COLUMNS: TableColumn<DemoCall>[] = [
+  { key: 'at', header: 'At', mono: true, errorInk: true, cell: (c) => timeOfDay(c.at) },
+  { key: 'stage', header: 'Stage', cell: (c) => c.stage, secondary: (c) => c.error },
+  {
+    key: 'model',
+    header: 'Model',
+    mono: true,
+    cell: (c) => shortModel(c.answered || c.asked),
+    secondary: (c) => (c.answered && c.answered !== c.asked ? `asked ${shortModel(c.asked)}` : undefined),
+  },
+  { key: 'ms', header: 'ms', numeric: true, cell: (c) => c.ms.toLocaleString('en-US') },
+  { key: 'in', header: 'Tokens in', numeric: true, cell: (c) => tokens(c.tokensIn) },
+  { key: 'cost', header: 'Cost', numeric: true, cell: (c) => cost(c.cost) },
+]
+
 export const feedbackSections: ComponentEntry[] = [
+  {
+    id: 'table',
+    title: 'Table',
+    group: 'Feedback',
+    note: 'A quiet table for figures you read across a row: muted header, compact rows, right-aligned tabular numbers, an optional second line, and a soft error row. It scrolls sideways inside its own frame when too wide.',
+    docs: ['table'],
+    Demo: () => (
+      <>
+        <Shelf label="numeric columns">
+          <div className="w-full min-w-0">
+            <Table caption="Stages" columns={STAGE_COLUMNS} rows={DEMO_STAGES} rowKey={(s) => s.name} />
+          </div>
+        </Shelf>
+        <Shelf label="secondary line, error row">
+          <div className="w-full min-w-0">
+            <Table caption="Calls" columns={CALL_COLUMNS} rows={DEMO_CALLS} rowKey={(c) => String(c.id)} error={(c) => !!c.error} />
+          </div>
+        </Shelf>
+        <Shelf label="too wide: scrolls">
+          <div className="w-panel min-w-0">
+            <Table caption="Stages, narrow" columns={STAGE_COLUMNS} rows={DEMO_STAGES} rowKey={(s) => s.name} />
+          </div>
+        </Shelf>
+      </>
+    ),
+  },
+  {
+    id: 'usage-modal',
+    title: 'Usage modal',
+    group: 'Feedback',
+    note: 'What one job spent, in full: totals, stages and every call grouped by run, opened from the usage line. The book dialog is the same for a whole book, with a row for each kind of thing that spent.',
+    docs: ['usage-modal'],
+    Demo: () => (
+      <>
+        <Shelf label="a question">
+          <UsageModalDemo />
+        </Shelf>
+        <Shelf label="a book">
+          <UsageModalDemo book />
+        </Shelf>
+        <Shelf label="loading, failed, none">
+          <div className="space-y-1 text-sm text-muted-foreground">
+            <p>Loading the details… (a spinner)</p>
+            <p>Couldn't load the details. Close this and try again.</p>
+            <p>No model calls were made.</p>
+          </div>
+        </Shelf>
+      </>
+    ),
+  },
   {
     id: 'flash',
     title: 'Flash',
@@ -84,25 +246,25 @@ export const feedbackSections: ComponentEntry[] = [
   },
   {
     id: 'usage',
-    title: 'Usage',
+    title: 'Usage trigger',
     group: 'Feedback',
-    note: 'What a finished job spent, as one muted line: model, time, tokens, cost. Plain text where the thing it describes is; a ≥ marks a minimum when a call reported nothing.',
+    note: 'What a finished job spent, as one muted line (the model and the cost) with a chevron, and a button: it opens the usage modal. A ≥ marks a minimum when a call reported nothing.',
     docs: ['usage'],
     Demo: () => (
       <>
         <Shelf label="the line">
           <div className="py-1">
-            <UsageLine usage={USAGE} />
+            <UsageTrigger usage={USAGE} source={{ kind: 'question', id: 'demo' }} name="Problem 3.14" detail={DETAIL} />
           </div>
         </Shelf>
         <Shelf label="a failed call, and one the provider didn't count">
           <div className="py-1">
-            <UsageLine usage={USAGE_FAILED} />
+            <UsageTrigger usage={USAGE_FAILED} source={{ kind: 'question', id: 'demo' }} name="Problem 3.15" detail={DETAIL} />
           </div>
         </Shelf>
         <Shelf label="the widest">
           <div className="py-1">
-            <UsageLine usage={USAGE_WIDE} />
+            <UsageTrigger usage={USAGE_WIDE} source={{ kind: 'question', id: 'demo' }} name="Problem 12.7" detail={DETAIL} />
           </div>
         </Shelf>
       </>

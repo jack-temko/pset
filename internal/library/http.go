@@ -7,10 +7,14 @@ import (
 	"strconv"
 
 	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // Routes mounts the library's endpoints.
 func (s *Service) Routes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /api/books/{id}/usage", httpx.Reply(func(r *http.Request) (*usage.BookUsage, error) {
+		return usage.ForBook(r.Context(), s.c.DB, r.PathValue("id"))
+	}))
 	mux.HandleFunc("GET /api/books", httpx.Reply(func(r *http.Request) (Books, error) {
 		books, err := s.List(r.Context())
 		return Books{Books: books}, err

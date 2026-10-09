@@ -47,6 +47,7 @@ pointing, then importing, because the importer feeds the same finder.
 | [Git workflow](git-workflow-grill.md) | In progress | any | `dev` for all development, `main` for releases friends run, every change by pull request with `make check` required, and a tag that starts the binary build. Built; the runner that builds binaries is still to be designed. |
 | [Release runner](release-runner-grill.md) | Planned | any | A `v*` tag on `main` builds Linux/WSL and macOS binaries on GitHub, smoke-tests, checksums, signs and publishes them with a one-line installer; PSet opens its own browser and Settings can update it. Grilled; waiting for Jack's OK. |
 | [Loose ends](loose-ends.md) | Idea | any | Small things noticed along the way. |
+| [Job usage modal](job-usage-modal-grill.md) | Done | any | Every question, Ask answer, read and book gets a clickable usage line with a chevron that opens a modal: totals, stages, every call. A new Table component. Spec: [`design/model-usage.md`](../design/model-usage.md). |
 | [Model usage](model-usage.md) | Done | any | What each finished job cost: model, time, tokens and dollars on one quiet line, a light popover behind it. |
 | [Audit fixes](audit-fixes.md) | Done | any | The 2026-09-29 audit, one branch per finding: leaks, restart, local-only API, docs. |
 | [Asking about a selection](asking-about-a-selection.md) | Done | any | Click any element of a guide or an answer and ask the tutor about exactly that, with the problem for context. |

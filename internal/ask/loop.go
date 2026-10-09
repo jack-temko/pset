@@ -73,7 +73,7 @@ func (s *Service) runTurn(ctx context.Context, j jobs.Job) error {
 	r := &run{s: s, t: t}
 	// A book's conversation is one session, turn after turn; every call
 	// in it was spent on this turn.
-	err = r.loop(llm.WithSubject(llm.WithSession(ctx, "ask-"+t.BookID), llm.Subject{Type: usage.SubjectTurn, ID: t.ID}))
+	err = r.loop(llm.WithRun(llm.WithSubject(llm.WithSession(ctx, "ask-"+t.BookID), llm.Subject{Type: usage.SubjectTurn, ID: t.ID}), j.ID))
 	settle := context.WithoutCancel(ctx)
 	switch {
 	case err == nil:
@@ -113,7 +113,9 @@ func (r *run) loop(ctx context.Context) error {
 		return &failure{kind: FailureSetup, msg: llm.NoKey}
 	}
 	r.llm, r.model = llm.Open(cfg), cfg.ChatModel
-	r.parser = doc.NewParser(ctx, doc.Options{
+	// The document's repairs are their own stage: the rounds are the
+	// loop's.
+	r.parser = doc.NewParser(llm.WithStage(ctx, "Repairs"), doc.Options{
 		Mode: doc.Ask, Pages: r.book.Pages, PageCount: r.book.PageCount, Model: r.llm.Mechanical(r.model),
 	}, doc.Handler{
 		BlockStart: func(typ string) {
@@ -143,6 +145,7 @@ func (r *run) loop(ctx context.Context) error {
 		Client: r.llm, Model: r.model, Library: s.c.Library, Book: r.book, Rounds: maxRounds,
 		System: systemPrompt(r.book.Title, s.c.Settings.Name(ctx)),
 		Memory: s.c.Memory, Student: true,
+		Stage:      func(round int) string { return fmt.Sprintf("Round %d", round) },
 		Step:       func(label string, running bool) { r.step(ctx, label, running) },
 		Remembered: func(n agent.Note, _ string) { r.remembered(ctx, n.ID) },
 		Delta: func(chunk string) {

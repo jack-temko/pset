@@ -32,8 +32,9 @@ export function Dialog({
   open: boolean
   onClose: () => void
   title: string
-  /** 400 for a couple of fields, 560 for a stack of rows. No third size. */
-  width?: 'default' | 'wide'
+  /** 400 for a couple of fields, 560 for a stack of rows, 960 for a
+   *  table with real columns. No fourth size. */
+  width?: 'default' | 'wide' | 'table'
   /** Required: it carries Cancel, which is the way out. */
   footer: ReactNode
   className?: string
@@ -58,24 +59,23 @@ export function Dialog({
         onClose()
       }}
       className={cn(
-        'm-auto max-h-[80vh] rounded-lg border bg-card p-0 text-card-foreground shadow-floating',
+        // The dialog is itself the column: it sizes to its content up to
+        // 80vh, the header and footer are shrink-0 and the body scrolls in
+        // between, so the footer sits at the bottom edge, never mid-dialog.
+        'm-auto max-h-[80vh] flex-col overflow-hidden rounded-lg border bg-card p-0 text-card-foreground shadow-floating open:flex',
         'backdrop:bg-foreground/25 backdrop:backdrop-blur-[2px]',
-        width === 'wide' ? 'w-dialog-wide' : 'w-dialog',
+        { default: 'w-dialog', wide: 'w-dialog-wide', table: 'w-dialog-table' }[width],
         className,
       )}
     >
-      {/* max-h on the element, flex inside it: the header and footer are
-          shrink-0 and the body takes what's left. */}
-      <div className="flex max-h-[80vh] flex-col">
-        <div className="flex min-h-row shrink-0 items-center border-b px-card py-2">
-          <h2 className="text-lg font-semibold">{title}</h2>
-        </div>
+      <div className="flex min-h-row shrink-0 items-center border-b px-card py-2">
+        <h2 className="text-lg font-semibold">{title}</h2>
+      </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-card">{children}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-card">{children}</div>
 
-        <div className="flex min-h-row shrink-0 items-center justify-end gap-2 border-t bg-card-header px-card py-2">
-          {footer}
-        </div>
+      <div className="flex min-h-row shrink-0 items-center justify-end gap-2 border-t bg-card-header px-card py-2">
+        {footer}
       </div>
     </dialog>
   )

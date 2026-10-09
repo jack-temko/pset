@@ -119,6 +119,8 @@
        couple of fields, 560 for a stack of rows you read back. */
     --spacing-dialog: 25rem;
     --spacing-dialog-wide: 35rem;
+    /* A dialog that holds a table: 960, wide enough for real columns. */
+    --spacing-dialog-table: 60rem;
 
     /* Each step carries the system's weight and tracking for its style, so a
        call site sets size alone. The four display steps are serif-only
@@ -366,6 +368,13 @@
 @keyframes shimmer {
     from { background-position: 100% 0; }
     to { background-position: -100% 0; }
+}
+/* A data figure: a number in a table or a stat, set in JetBrains Mono with
+   tabular figures. See design-system.md, Type. Copyable identifiers use
+   font-mono alone; readouts you only glance at stay Inter. */
+@utility figure {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
 }
 @utility skeleton {
     background-color: var(--muted);

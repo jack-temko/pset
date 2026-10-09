@@ -60,15 +60,32 @@ a border to delineate it.
 ## Type
 
 Three faces: **Newsreader** for display, leads and a guide's headings (its
-parts and steps), **Inter** for everything else, **JetBrains Mono** for machine strings: hashes, paths, versions,
-counts, page numbers.
+parts and steps), **Inter** for everything else, **JetBrains Mono** for
+what is copied and for data.
 
-**What a person reads is never mono** (2026-09-25). A book's problem
-labels ("3.1 #7", "4.27", "2.1.4"), a box's kind ("Words"), anything said
-in words is Inter, with `tabular-nums` where figures should line up. Mono
-had crept onto them, and at the floor size in a pill its wide, round
-letterforms read as toy-like (Jack: "the font you use for stuff like that
-looks a bit cartoony").
+**Mono is for what you would copy, and for data** (2026-10-08, Jack;
+this supersedes the 2026-09-25 rule that a person reads is never mono, for
+figures in tables and stats only). The test is "would you copy it":
+
+- **Mono, with tabular figures:** copyable identifiers (a model id, "asked
+  X", a hash, a path, a version, raw TeX and math source, a request log)
+  and data figures: the numeric cells of a table (a time of day too), the
+  value of a stat (`StatTile`, the usage modal's totals), and a trailing
+  data value (`RowValue`). The `figure` utility is mono plus tabular
+  figures, for a number; `font-mono` alone is for a string.
+- **Inter:** labels (column headers, a stage or kind name, a totals label),
+  prose, buttons, a book's problem labels ("3.1 #7", "4.27", "2.1.4": said
+  in words, never mono, because at the floor size in a pill its wide, round
+  letterforms read as toy-like, Jack: "a bit cartoony"), and anything you
+  only glance at and would not copy: the usage line that opens the dialog
+  (its model name included), the PDF viewer's page number and zoom, the
+  study timer, a page citation chip. Where figures should line up they take
+  `tabular-nums`, still in Inter. Marks beside a mono figure (the "≥" that
+  says a figure is a minimum) are Inter too: Mono's ≥ is short and narrow.
+
+A table may mix the two: mono for its data, Inter for its labels
+(`web/src/components/table`: numeric columns are mono by default, `mono`
+sets any other).
 
 Nine steps, and no others. **15px is the floor**; nothing in the product is
 smaller, chips and counters included.
@@ -186,17 +203,7 @@ delete asks first. Two rules keep that consistent:
   once, since each is one sentence and Ask's saves have Undo;
   and Dismiss on a failed import, which holds nothing of yours yet.
 
-**Informing, not asking** *(2026-09-30, Jack: superseded for usage. What a job spent is now one muted line of text on the page, model, time, tokens, cost, with no popover; `web/src/components/usage/README.md`. The geometry below is kept for the next thing that wants to inform from a line.)* (2026-09-29). The same geometry serves the
-opposite job: a quiet line ("gpt-6-luna · 14s") may open a light popover
-that informs rather than asks — what a finished job spent, one row per
-model, time, tokens, dollars. It is the ConfirmPopover's card (`w-80`,
-under the control, over it when there's no room, portal to the body)
-with none of its ceremony: no buttons, no focus move, Esc and an outside
-press close it, a press inside only selects so the numbers copy. Where
-the ConfirmPopover detaches when the page scrolls, this one follows its
-line on scroll and resize, because the thing it describes keeps moving
-under it. Opening it moves nothing else. Component:
-`web/src/components/usage`.
+**Informing, not asking** *(2026-10-08, Jack: superseded for usage. What a job spent is one muted line with a small chevron that opens a modal of the details; `web/src/components/usage/README.md`, `web/src/components/usage-modal/README.md`, `design/model-usage.md`. The popover geometry that stood here is gone; a thing that wants to inform from a line opens a Dialog.)*
 
 **Selecting what you ask about** (2026-09-30). Every element of a live
 document (a guide's stages, an answer) selects. Hover is the hover wash,

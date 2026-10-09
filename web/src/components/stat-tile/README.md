@@ -1,6 +1,6 @@
 # StatTile
 
-A dashboard number: a label, a big serif value, and one quiet line of
+A dashboard number: a label, a big mono value, and one quiet line of
 context. Home's "This week" region is four of them in a row: time on
 homework (`chart-1`), reading (`chart-2`), asking (`chart-3`), and
 questions worked, which carries a stacked bar showing the split by
@@ -12,7 +12,7 @@ activity.
   full width, its splits in cover hues and named in a legend.
 - **Label**: `text-xs` in `muted-foreground`, with a `size-2` dot in the
   activity's chart colour when the tile is an activity.
-- **Value**: `text-2xl` in JetBrains Mono at 400, tabular figures. Unit
+- **Value**: `text-2xl` in JetBrains Mono at 400, the `figure` utility (mono, tabular). Unit
   letters go in `<small>` and drop to `text-xs` in `muted-foreground` so
   the figures carry ("4h 23m"). `DurationValue` renders minutes that way.
 - **Context**: `text-xs` at 400 in `muted-foreground`.
@@ -29,8 +29,8 @@ put more than four in a row.
 
 - **The value is mono, not serif.** The baseline sets it in the heading
   face at 30px; Jack compared four treatments and picked JetBrains Mono,
-  which is also what the system's own type rule says: counts, durations
-  and page numbers are machine strings. `text-2xl` keeps the size on the
+  which is also what the system's own type rule says: a stat is a data
+  figure, and data figures are mono (`design-system.md`, Type). `text-2xl` keeps the size on the
   nine-step scale (the mock's 26px is not a step).
 
 - **The stacked bar is 4px (`h-1`), not 6px.** The spacing scale is

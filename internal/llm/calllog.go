@@ -47,6 +47,10 @@ type Call struct {
 	Host        string
 	Session     string
 	Error       string
+	// Stage and Run are the part of the job and the run of its subject
+	// the call belongs to (WithStage, WithRun). Tools names the tools the
+	// reply asked for, comma-separated.
+	Stage, Run, Tools string
 }
 
 // LogCallsTo starts the call log at path. Empty stops it.
@@ -96,7 +100,13 @@ func logCall(req ChatRequest, start time.Time, reply Reply, err error) {
 		At: at, SubjectType: req.Subject.Type, SubjectID: req.Subject.ID,
 		Model: req.Model, Answered: reply.Model, Ms: ms, Usage: reply.Usage,
 		Host: reply.Host, Session: req.SessionID, Error: errText,
+		Stage: req.stage, Run: req.run,
 	}
+	names := make([]string, 0, len(reply.ToolCalls))
+	for _, t := range reply.ToolCalls {
+		names = append(names, t.Function.Name)
+	}
+	call.Tools = strings.Join(names, ",")
 
 	callLog.Lock()
 	path, sink := callLog.path, callLog.sink

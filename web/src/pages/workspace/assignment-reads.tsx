@@ -3,7 +3,7 @@ import { CircleAlert, FileCheck, X } from 'lucide-react'
 import { Box, BoxRow } from '@/components/box'
 import { Button, IconButton } from '@/components/button'
 import { Spinner } from '@/components/spinner'
-import { UsageLine } from '@/components/usage'
+import { UsageTrigger } from '@/components/usage'
 import {
   readStep,
   useAssignmentReads,
@@ -104,7 +104,7 @@ export function AssignmentReadRow({
         description={
           <>
             <span className="text-warning">{r.error}</span>
-            {r.usage && <>{'\u00A0·'} <UsageLine usage={r.usage} /></>}
+            {r.usage && <>{'\u00A0·'} <UsageTrigger usage={r.usage} source={{ kind: 'read', id: r.id }} name={USAGE_NAME} /></>}
           </>
         }
         trailing={
@@ -127,7 +127,7 @@ export function AssignmentReadRow({
       description={
         <>
           {setTitle ? `An update for ${setTitle}` : `${plural(groups.length, 'due date')} to look over`}
-          {r.usage && <>{'\u00A0·'} <UsageLine usage={r.usage} /></>}
+          {r.usage && <>{'\u00A0·'} <UsageTrigger usage={r.usage} source={{ kind: 'read', id: r.id }} name={USAGE_NAME} /></>}
         </>
       }
       trailing={
@@ -141,3 +141,5 @@ export function AssignmentReadRow({
     />
   )
 }
+
+const USAGE_NAME = 'Assignment read'

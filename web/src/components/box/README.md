@@ -17,8 +17,8 @@ Box.
 - **`BoxFooter`**: a `card-header` band with a border above it, for totals,
   counts, facts in mono. A truncated list ends in a `Door` instead.
 - **`Counter`**: the count beside a title.
-- **`RowValue`**: a trailing value in mono, at the floor size, figures
-  aligned.
+- **`RowValue`**: a trailing data value, the `figure` utility (mono,
+  tabular) at the floor size.
 
 **Tone.** A Box carrying a state takes the status ink as its frame and the
 status tint as its ground: `warning` for a not-ready book, `destructive`

@@ -24,7 +24,7 @@ export function StudyTimer({ time }: { time: StudyTime }) {
           : "Paused: nothing clicked or typed for a while."
       }
     >
-      <span className="font-mono text-xs text-muted-foreground tabular-nums">
+      <span className="text-xs text-muted-foreground tabular-nums">
         {time.counting ? 'Studying' : 'Paused'} · {studyDuration(time.seconds)}
       </span>
     </Tooltip>

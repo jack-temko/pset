@@ -27,7 +27,7 @@ bar's middle names the book.
 ## Time
 
 **The top bar shows this sitting's time** (2026-09-29), after the book's
-menu, quiet: mono, small, muted. "Studying · 42m" while it counts,
+menu, quiet: Inter with tabular figures, small, muted (a readout you glance at, not copy; the 2026-10-08 font rule, `design-system.md`, Type). "Studying · 42m" while it counts,
 "Paused · 42m" when it doesn't, so the student can see it counts and
 trust the week Home reports. It pauses after 5 minutes without a click
 or a key, or 20 with a homework question open, since that's worked on
@@ -112,7 +112,7 @@ stays covers.
 ## Contents rail
 
 - **TOC only**: the contents tree as an ActionList, current row
-  highlighted, page numbers in mono on the right, on every row.
+  highlighted, page numbers on the right, on every row, in Inter with tabular figures (2026-10-08 font rule, `design-system.md`, Type).
 - **Every level, two on show** (2026-09-26): the rail carries every
   level the contents gives, but only the top two show at first. A row
   below the top with rows under it has a chevron in its indent that
@@ -162,7 +162,8 @@ built.
   own text as the words come, math and bold phrases whole once they
   have closed; a plot, derivation, table or code block is a labelled
   skeleton ("Writing a plot"); "Tidying" says a block is being repaired.
-- **Citations are inline page chips**: a distinct small mono element
+- **Citations are inline page chips**: a distinct small element, Inter with tabular figures
+  (2026-10-08 font rule, `design-system.md`, Type)
   ("p. 142") in the prose, not underlined text and not a card. Click
   scrolls the scan there and flashes the page's edge.
 - **Math renders inline and display**, KaTeX. Answers about a math book

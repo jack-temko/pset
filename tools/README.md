@@ -5,6 +5,7 @@ Programs that live with the code but aren't the app.
 | Tool | What it is |
 |---|---|
 | `dev` | `make dev`: the Go server rebuilt on save, the TS types regenerated when a `wire.go` changes, and Vite with `/api` proxied to the server, on its own data in `.dev/data`. |
+| `seedusage` | `go run ./tools/seedusage`: fills `.dev/data` with a sample book, a homework set (a retried question with a failed call, a plain one), an Ask turn, an assignment read and their `calls` rows, so the usage line, modal and the book's Usage dialog show realistic data without a model key. Idempotent; refuses a directory outside `.dev`; reload the page after. |
 | `findertest` | Measures finding: Jack's real misses, the professors' references and the typed forms, run against his books, checked against known pages. |
 | `assignmenttest` | Measures reading assignments: ten made-up documents built as they'd arrive (PDFs, web pages it serves, pasted text), scored on due dates, labels, notes and the problems written out. |
 | `samplegen` | Generates the sample books in `testdata/`, byte for byte (`tools/samplegen/README.md`). |

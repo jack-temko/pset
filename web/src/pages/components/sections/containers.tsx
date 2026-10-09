@@ -234,7 +234,7 @@ export const containersSections: ComponentEntry[] = [
     id: 'stat-tile',
     title: 'StatTile',
     group: 'Containers',
-    note: 'A label, a big serif value, one quiet line of context. Reports, never nags.',
+    note: 'A label, a big mono value, one quiet line of context. Reports, never nags.',
     docs: ['stat-tile'],
     Demo: () => (
       <>

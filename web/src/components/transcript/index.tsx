@@ -39,7 +39,7 @@ export function UserTurn({ about, children }: { about?: string; children: ReactN
 export function AboutChip({ label, onRemove }: { label: string; onRemove?: () => void }) {
   return (
     <span className="inline-flex h-control-sm items-center gap-1 rounded-md border border-primary/30 bg-primary-soft pr-1 pl-2 text-xs text-primary">
-      About <span className="font-mono">{label}</span>
+      About {label}
       {onRemove ? (
         <button
           type="button"
@@ -183,7 +183,7 @@ export function PageRef({ pdf, onJump }: { pdf: number; onJump?: (pdf: number) =
       <button
         type="button"
         onClick={() => onJump?.(pdf)}
-        className="mx-px inline-flex shrink-0 translate-y-px items-center rounded-sm bg-primary-soft px-1 font-mono text-xs whitespace-nowrap text-primary hover:bg-primary hover:text-primary-foreground"
+        className="mx-px inline-flex shrink-0 translate-y-px items-center rounded-sm bg-primary-soft px-1 text-xs whitespace-nowrap text-primary tabular-nums hover:bg-primary hover:text-primary-foreground"
       >
         p.&thinsp;{pages.label(pdf)}
       </button>

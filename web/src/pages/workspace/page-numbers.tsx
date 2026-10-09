@@ -48,7 +48,7 @@ export function PageNumbersField({
                 inputMode="numeric"
                 value={a.pdf}
                 onChange={(e) => set(i, 'pdf', e.target.value)}
-                className="w-16 font-mono"
+                className="w-16 tabular-nums"
               />
             </>
           ) : (
@@ -59,7 +59,7 @@ export function PageNumbersField({
                 inputMode="numeric"
                 value={a.pdf}
                 onChange={(e) => set(i, 'pdf', e.target.value)}
-                className="w-16 font-mono"
+                className="w-16 tabular-nums"
               />
               <span>is printed page</span>
               <Input
@@ -67,7 +67,7 @@ export function PageNumbersField({
                 inputMode="numeric"
                 value={a.printed}
                 onChange={(e) => set(i, 'printed', e.target.value)}
-                className="w-16 font-mono"
+                className="w-16 tabular-nums"
               />
               <IconButton
                 variant="ghost"

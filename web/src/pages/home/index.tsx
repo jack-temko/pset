@@ -83,7 +83,7 @@ function WeekByBook({ books }: { books: WeekBook[] }) {
                 swatch ties the entry to its cover on the shelf below. */}
             <CoverSwatch hue={b.cover} className="h-3 w-2" />
             {b.title}
-            <span className="font-mono font-normal tabular-nums">
+            <span className="figure font-normal">
               {Math.floor(b.minutes / 60) > 0 && `${Math.floor(b.minutes / 60)}h `}
               {b.minutes % 60}m
             </span>

@@ -15,6 +15,15 @@ kept with empty strings. The write is one statement that records nothing
 for a subject `Forget` has marked, so a call that ends after its subject
 was removed leaves no row.
 
+Each call also carries what it was part of: a **stage** (`llm.WithStage`:
+Find, Boxed read, Figures, Guide, Rank, Read, Naming, Contents, and an Ask
+turn's "Round n" and "Repairs") and a **run** (`llm.WithRun`: the steps one
+find chains share a run, queued through the job payload; a retry or a
+rewrite after notes starts its own, as does an Ask turn or a read), the
+tools its reply asked for, and the reasoning and cached tokens the
+provider counted. A difficulty ranking is a `set` subject, shared among
+its questions.
+
 A call with no `Usage` (failed, stopped part-way, or a provider that
 reports none) is recorded with null tokens and cost. It is *uncounted*:
 the provider may well have billed it.
@@ -27,6 +36,13 @@ ordered by tokens so the headline is who did the work, with the total, the
 failed calls and how many calls were uncounted. Nil means no calls. The
 alias in the query is not called `model`: `GROUP BY model` would group by
 the column, the model asked for.
+
+`Calls`, `Share` and `Build` are the detail the modal serves: a subject's
+calls in order, a share of a set's ranking (each question takes 1/n of its
+figures, so the shares add up to the whole), and the stages and runs they
+group into. `AddShare` puts the same share on a question's line. `ForBook`
+is the book dialog: its questions', rankings', Ask turns' and reads' calls
+by kind, and the import's stages and calls, the ranking counted once.
 
 ## Cleaning up
 

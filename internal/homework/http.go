@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // Routes mounts the homework endpoints.
@@ -46,6 +47,13 @@ func (s *Service) Routes(mux *http.ServeMux) {
 	}))
 	mux.HandleFunc("GET /api/assignment-reads/{id}", httpx.Reply(func(r *http.Request) (AssignmentRead, error) {
 		return s.Read(r.Context(), r.PathValue("id"))
+	}))
+	mux.HandleFunc("GET /api/assignment-reads/{id}/usage", httpx.Reply(func(r *http.Request) (*usage.Detail, error) {
+		calls, err := usage.Calls(r.Context(), s.c.DB, usage.SubjectRead, r.PathValue("id"))
+		return usage.Build(calls, nil, 0), err
+	}))
+	mux.HandleFunc("GET /api/questions/{id}/usage", httpx.Reply(func(r *http.Request) (*usage.Detail, error) {
+		return s.QuestionUsage(r.Context(), r.PathValue("id"))
 	}))
 	mux.HandleFunc("POST /api/assignment-reads/{id}/retry", httpx.Reply(func(r *http.Request) (AssignmentRead, error) {
 		return s.RetryRead(r.Context(), r.PathValue("id"))

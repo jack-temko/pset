@@ -310,6 +310,9 @@ type ChatRequest struct {
 	// sets where it sets its session; the call log and the usage sink
 	// read it.
 	Subject Subject `json:"-"`
+	// stage and run are the job's WithStage and WithRun, read when the
+	// call starts and recorded with it.
+	stage, run string
 	// OnReasoning, if set, receives a thinking model's reasoning as it
 	// streams: the part it writes before, and apart from, its answer.
 	OnReasoning func(text string) `json:"-"`
@@ -420,6 +423,34 @@ func WithSubject(ctx context.Context, s Subject) context.Context {
 
 func subjectOf(ctx context.Context) Subject {
 	s, _ := ctx.Value(subjectKey{}).(Subject)
+	return s
+}
+
+type stageKey struct{}
+type runKey struct{}
+
+// WithStage names the part of a job every model call made under ctx
+// belongs to ("Find", "Guide", "Round 2"), so the usage store can split a
+// job's spending by what it was spent on.
+func WithStage(ctx context.Context, stage string) context.Context {
+	return context.WithValue(ctx, stageKey{}, stage)
+}
+
+// WithRun names the run of a subject the calls under ctx belong to: the
+// steps one find chains together share one, and a retry or a rewrite
+// starts another.
+func WithRun(ctx context.Context, run string) context.Context {
+	return context.WithValue(ctx, runKey{}, run)
+}
+
+// RunOf is the run ctx carries, empty when it has none.
+func RunOf(ctx context.Context) string {
+	r, _ := ctx.Value(runKey{}).(string)
+	return r
+}
+
+func stageOf(ctx context.Context) string {
+	s, _ := ctx.Value(stageKey{}).(string)
 	return s
 }
 
@@ -542,6 +573,7 @@ func (c *Client) ChatOnceFull(ctx context.Context, req ChatRequest) (reply Reply
 	if req.Subject.Type == "" {
 		req.Subject = subjectOf(ctx)
 	}
+	req.stage, req.run = stageOf(ctx), RunOf(ctx)
 	defer func() { logCall(req, start, reply, err) }()
 	req.Stream = false
 	req = c.shape(ctx, req)
@@ -587,6 +619,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 	if req.Subject.Type == "" {
 		req.Subject = subjectOf(ctx)
 	}
+	req.stage, req.run = stageOf(ctx), RunOf(ctx)
 	defer func() { logCall(req, start, reply, err) }()
 	req.Stream = true
 	req = c.shape(ctx, req)

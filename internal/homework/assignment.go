@@ -149,6 +149,7 @@ func (s *Service) runAssignmentRead(ctx context.Context, j jobs.Job) error {
 	}
 	ctx = llm.WithSession(ctx, "assignment-"+p.ReadID)
 	ctx = llm.WithSubject(ctx, llm.Subject{Type: usage.SubjectRead, ID: p.ReadID})
+	ctx = llm.WithStage(llm.WithRun(ctx, j.ID), "Read")
 	var bookID, source, pageURL, text string
 	var data []byte
 	err := s.c.DB.QueryRowContext(ctx, `SELECT book_id, source, url, text, file FROM assignment_reads WHERE id = ?`, p.ReadID).
