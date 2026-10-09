@@ -35,7 +35,7 @@ budget: open a set in 1 click from the list. Per question with a written guide: 
   - question row: label, done check, **Show in book** button (only when it has a page), question `Menu` (Move up, Move down, This isn't the right problem, Edit or Add the professor's instructions, Check how the figure reads, Remove this question)
   - statement (`Runs`), figures, `ProfessorNotes` (read-only box; its editing state is opened from the question menu), `FigureReading` (only when flagged "Check it", or asked for)
   - `FailedQuestion` (title, reason, the ways out by failure kind, paste-the-problem fallback)
-  - `WorkingLine` or a waiting sentence; `HelpRows` (three `Disclosure` rows; Writing or Waiting while they are not there yet); `UsageLine`
+  - `WorkingLine` or a waiting sentence; `HelpRows` (three `Disclosure` rows; Writing or Waiting while they are not there yet); `UsageTrigger`
   - footer: Ask about this, and the one primary button (`Button`, primary for Next question, outline for the others)
   - Focus: the same pieces in two columns, the question on the left, the help on the right
 - `Finish`: greeting line (`greetings.ts`, Home's seven stretches), two `StatTile`s, the time-per-question bars, `Box` of the hardest, footer with Back to list and Turn in

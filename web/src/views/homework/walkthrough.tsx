@@ -6,7 +6,7 @@ import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/c
 import { ProgressBar } from '@/components/progress-bar'
 import { Skeleton } from '@/components/skeleton'
 import { Spinner } from '@/components/spinner'
-import { UsageLine } from '@/components/usage'
+import { UsageTrigger } from '@/components/usage'
 import { AddHomeworkDialog } from '@/pages/workspace/add-homework'
 import { useBookHere } from '@/pages/workspace/book-here'
 import { FigureReading } from '@/pages/workspace/reading'
@@ -558,7 +558,7 @@ export function Walkthrough({
               <FailedQuestion q={q} onRetry={(retry) => retryQ.mutate({ id: q.id, retry })} onOpenSettings={onOpenSettings} />
               {/* What the failed attempt spent: the calls cost even when
                   the guide didn't land. */}
-              {q.usage && <UsageLine usage={q.usage} className="block" />}
+              {q.usage && <UsageTrigger usage={q.usage} source={{ kind: 'question', id: q.id }} name={usageName(q)} block />}
             </>
           ) : (
             <>
@@ -612,7 +612,9 @@ export function Walkthrough({
               {/* What the whole production spent — find, figure read, guide
                   — once it's over. A question still being written keeps its
                   working lines and shows nothing here. */}
-              {(q.state === 'ready' || q.state === 'unwritten') && q.usage && <UsageLine usage={q.usage} className="block" />}
+              {(q.state === 'ready' || q.state === 'unwritten') && q.usage && (
+                <UsageTrigger usage={q.usage} source={{ kind: 'question', id: q.id }} name={usageName(q)} block />
+              )}
             </>
           )}
         </div>
@@ -638,3 +640,6 @@ export function Walkthrough({
     </div>
   )
 }
+
+/** What a question's usage modal is titled: the problem, by its label. */
+const usageName = (q: { label: string }) => (q.label ? `Problem ${q.label}` : 'Question')

@@ -5,10 +5,11 @@ The system's one modal, and its first. A native `<dialog>` opened with
 everything behind it come from, without a library and without a bug of
 our own.
 
-**Two widths, and there are only two:** `default` 400 for a form of a
-couple of fields, `wide` 560 for a stack of rows you read back. Both are
-tokens (`--spacing-dialog`, `--spacing-dialog-wide`), not arbitrary
-values.
+**Three widths, and there are only three:** `default` 400 for a form of
+a couple of fields, `wide` 560 for a stack of rows you read back, `table`
+960 for a dialog that holds a Table with real columns (the usage modal).
+All three are tokens (`--spacing-dialog`, `--spacing-dialog-wide`,
+`--spacing-dialog-table`), not arbitrary values.
 
 **Three parts, always in this order:** a header carrying the title, the
 body, and a footer band on `card-header` with Cancel and the one primary

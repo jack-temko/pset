@@ -32,8 +32,9 @@ export function Dialog({
   open: boolean
   onClose: () => void
   title: string
-  /** 400 for a couple of fields, 560 for a stack of rows. No third size. */
-  width?: 'default' | 'wide'
+  /** 400 for a couple of fields, 560 for a stack of rows, 960 for a
+   *  table with real columns. No fourth size. */
+  width?: 'default' | 'wide' | 'table'
   /** Required: it carries Cancel, which is the way out. */
   footer: ReactNode
   className?: string
@@ -60,7 +61,7 @@ export function Dialog({
       className={cn(
         'm-auto max-h-[80vh] rounded-lg border bg-card p-0 text-card-foreground shadow-floating',
         'backdrop:bg-foreground/25 backdrop:backdrop-blur-[2px]',
-        width === 'wide' ? 'w-dialog-wide' : 'w-dialog',
+        { default: 'w-dialog', wide: 'w-dialog-wide', table: 'w-dialog-table' }[width],
         className,
       )}
     >

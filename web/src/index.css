@@ -119,6 +119,8 @@
        couple of fields, 560 for a stack of rows you read back. */
     --spacing-dialog: 25rem;
     --spacing-dialog-wide: 35rem;
+    /* A dialog that holds a table: 960, wide enough for real columns. */
+    --spacing-dialog-table: 60rem;
 
     /* Each step carries the system's weight and tracking for its style, so a
        call site sets size alone. The four display steps are serif-only

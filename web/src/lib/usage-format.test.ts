@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { atLeast, clock, cost, shortModel, tokens } from './usage-format'
+import { atLeast, clock, cost, shortModel, timeOfDay, tokens } from './usage-format'
 
 describe('clock', () => {
   it.each([
@@ -64,5 +64,13 @@ describe('the small ones', () => {
     expect(atLeast('$0.0220', true)).toBe('≥ $0.0220')
     expect(atLeast('$0.0220', false)).toBe('$0.0220')
     expect(atLeast('–', true)).toBe('–')
+  })
+})
+
+describe('timeOfDay', () => {
+  it('is the local time to the second, and a bad stamp is left as it came', () => {
+    const at = new Date(2026, 9, 8, 14, 2, 11).toISOString()
+    expect(timeOfDay(at)).toBe('14:02:11')
+    expect(timeOfDay('not a time')).toBe('not a time')
   })
 })

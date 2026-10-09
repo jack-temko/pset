@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowUp, Brain, ChevronRight, Columns2, Pencil, RotateCcw, Square, Trash2 } from 'lucide-react'
+import { ArrowUp, Brain, ChevronRight, Columns2, Pencil, Receipt, RotateCcw, Square, Trash2 } from 'lucide-react'
 
 import { AppShell } from '@/components/shell'
 import { AutoTextarea } from '@/components/input'
@@ -11,7 +11,9 @@ import { UnderlineNav, UnderlineTab } from '@/components/underline-nav'
 import { Menu, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
 import { ResizeHandle } from '@/components/resize-handle'
 import { Skeleton } from '@/components/skeleton'
-import { UsageLine } from '@/components/usage'
+import { UsageTrigger } from '@/components/usage'
+import { BookUsageDialog } from '@/components/usage-modal'
+import { useBookUsage } from '@/api/usage'
 import { BookDialog } from './dialogs'
 import { HomeworkTab } from '@/views/homework'
 import { MemoryDialog, MemoryUndo } from './memory'
@@ -563,7 +565,7 @@ function TurnView({
           />
           {/* What answering spent, once the turn is over; while it runs
               the step feed is already saying how it's going. */}
-          {t.state !== 'running' && t.usage && <UsageLine usage={t.usage} className="block" />}
+          {t.state !== 'running' && t.usage && <UsageTrigger usage={t.usage} source={{ kind: 'turn', id: t.id }} name="Ask answer" block />}
           {thinking && t.steps.length === 0 && <Thinking />}
           {t.pending && (
             <BlockSkeleton type={t.pending.type} runs={t.pending.runs} repairing={t.pending.repairing} onJump={onJump} />
@@ -581,7 +583,7 @@ function TurnView({
       {/* A turn that ended before it wrote a thing (the first call refused, a
           stop at once) has no reply to end with the line, and its calls still
           cost time: it follows the note instead. */}
-      {!hasReply && t.state !== 'running' && t.usage && <UsageLine usage={t.usage} className="block" />}
+      {!hasReply && t.state !== 'running' && t.usage && <UsageTrigger usage={t.usage} source={{ kind: 'turn', id: t.id }} name="Ask answer" block />}
     </>
   )
 }
@@ -923,6 +925,8 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   const [pinnedPage, setPinnedPage] = useState<number | null>(null)
   const [editingBook, setEditingBook] = useState(false)
   const [memoryOpen, setMemoryOpen] = useState(false)
+  const [usageOpen, setUsageOpen] = useState(false)
+  const bookUsage = useBookUsage(book.id, usageOpen)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const pageRefs = useRef(new Map<number, HTMLDivElement>())
 
@@ -978,7 +982,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
             scroll="fill"
             middle={
               // The bar names the book, and its one menu holds what you do to
-              // it: edit it, see what the tutor remembers, and, last and apart,
+              // it: edit it, see what the tutor remembers, what it has cost, and, last and apart,
               // remove it. Every thing has one menu for its actions, the
               // homework set's included.
               <span className="flex items-center gap-2">
@@ -989,6 +993,9 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                   </MenuItem>
                   <MenuItem icon={<Brain />} onSelect={() => setMemoryOpen(true)}>
                     Memory
+                  </MenuItem>
+                  <MenuItem icon={<Receipt />} onSelect={() => setUsageOpen(true)}>
+                    Usage
                   </MenuItem>
                   <MenuDivider />
                   <MenuConfirmItem
@@ -1064,6 +1071,14 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
             </div>
           </AppShell>
 
+          <BookUsageDialog
+            open={usageOpen}
+            onClose={() => setUsageOpen(false)}
+            title={book.title}
+            data={bookUsage.data}
+            loading={bookUsage.isPending && usageOpen}
+            error={bookUsage.isError}
+          />
           <MemoryDialog open={memoryOpen} bookId={book.id} onClose={() => setMemoryOpen(false)} />
 
           <BookDialog

@@ -186,17 +186,7 @@ delete asks first. Two rules keep that consistent:
   once, since each is one sentence and Ask's saves have Undo;
   and Dismiss on a failed import, which holds nothing of yours yet.
 
-**Informing, not asking** *(2026-09-30, Jack: superseded for usage. What a job spent is now one muted line of text on the page, model, time, tokens, cost, with no popover; `web/src/components/usage/README.md`. The geometry below is kept for the next thing that wants to inform from a line.)* (2026-09-29). The same geometry serves the
-opposite job: a quiet line ("gpt-6-luna · 14s") may open a light popover
-that informs rather than asks — what a finished job spent, one row per
-model, time, tokens, dollars. It is the ConfirmPopover's card (`w-80`,
-under the control, over it when there's no room, portal to the body)
-with none of its ceremony: no buttons, no focus move, Esc and an outside
-press close it, a press inside only selects so the numbers copy. Where
-the ConfirmPopover detaches when the page scrolls, this one follows its
-line on scroll and resize, because the thing it describes keeps moving
-under it. Opening it moves nothing else. Component:
-`web/src/components/usage`.
+**Informing, not asking** *(2026-10-08, Jack: superseded for usage. What a job spent is one muted line with a small chevron that opens a modal of the details; `web/src/components/usage/README.md`, `web/src/components/usage-modal/README.md`, `design/model-usage.md`. The popover geometry that stood here is gone; a thing that wants to inform from a line opens a Dialog.)*
 
 **Selecting what you ask about** (2026-09-30). Every element of a live
 document (a guide's stages, an answer) selects. Hover is the hover wash,
