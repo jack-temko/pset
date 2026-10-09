@@ -1,7 +1,7 @@
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router-dom';
 
-import { BookCover } from '@/components/book-cover'
-import type { Book } from '@/api/library'
+import { BookCover } from '@/components/book-cover';
+import type { Book } from '@/api/library';
 
 /**
  * A book on a shelf: the cover is the card, and it is always a link.
@@ -21,5 +21,5 @@ export function BookTile({ book }: { book: Book }) {
         className="transition duration-200 ease-out group-hover:-translate-y-1 group-hover:shadow-lift motion-reduce:transition-none"
       />
     </Link>
-  )
+  );
 }

@@ -14,12 +14,12 @@ PSet picks its models (2026-09-29): the student brings an OpenRouter key
 and nothing else. `models.go` gives each job the model that did it best
 when they were tested side by side (design/backend.md, "Models"):
 
-| Job | Model | Falls back to |
-|---|---|---|
-| `Writer`: guides, Ask, assignment reads, contents, repairs | `anthropic/claude-haiku-5.5` | `deepseek/deepseek-v4.1-flash` |
-| `Finder`: finds a problem on its pages, boxes it and its figures | `perceptron/perceptron-mk1.5`, plain | `z-ai/glm-5.3-flash` |
-| `Reader`: writes out a problem's words and reads its figures | `google/gemini-3.8-flash` | `openai/gpt-6-luna` |
-| `Checker`: solves each guide's problem again, to check its final answers | `google/gemini-3.8-flash` | `openai/gpt-6-luna` |
+| Job                                                                      | Model                                | Falls back to                  |
+| ------------------------------------------------------------------------ | ------------------------------------ | ------------------------------ |
+| `Writer`: guides, Ask, assignment reads, contents, repairs               | `anthropic/claude-haiku-5.5`         | `deepseek/deepseek-v4.1-flash` |
+| `Finder`: finds a problem on its pages, boxes it and its figures         | `perceptron/perceptron-mk1.5`, plain | `z-ai/glm-5.3-flash`           |
+| `Reader`: writes out a problem's words and reads its figures             | `google/gemini-3.8-flash`            | `openai/gpt-6-luna`            |
+| `Checker`: solves each guide's problem again, to check its final answers | `google/gemini-3.8-flash`            | `openai/gpt-6-luna`            |
 
 `Job.Ask` fills a request in for its job. **Fallbacks** go to OpenRouter
 as `models`, after the model itself: OpenRouter tries the next when one

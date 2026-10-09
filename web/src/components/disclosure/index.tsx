@@ -1,8 +1,8 @@
-import { useId, type ReactNode } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { useId, type ReactNode } from 'react';
+import { ChevronDown } from 'lucide-react';
 
-import { Spinner } from '@/components/spinner'
-import { cn } from '@/lib/utils'
+import { Spinner } from '@/components/spinner';
+import { cn } from '@/lib/utils';
 
 /**
  * A row that opens its content in place: a title, a short fact about what is
@@ -22,20 +22,20 @@ export function Disclosure({
   keys,
   children,
 }: {
-  title: ReactNode
+  title: ReactNode;
   /** What is inside, in a few words: "2 lines", "5 steps". */
-  meta?: ReactNode
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  meta?: ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   /** Set while the content is still being made: what to say ("Writing"). */
-  busy?: ReactNode
+  busy?: ReactNode;
   /** With `busy`: nothing is happening yet (queued), so no spinner. */
-  still?: boolean
+  still?: boolean;
   /** The key that toggles it, for assistive tech (`aria-keyshortcuts`). */
-  keys?: string
-  children: ReactNode
+  keys?: string;
+  children: ReactNode;
 }) {
-  const id = useId()
+  const id = useId();
   return (
     <div className="border-t border-border-muted first:border-t-0">
       <button
@@ -61,17 +61,24 @@ export function Disclosure({
             <>
               {meta}
               <ChevronDown
-                className={cn('size-4 transition-transform duration-200 ease-out motion-reduce:transition-none', open && 'rotate-180')}
+                className={cn(
+                  'size-4 transition-transform duration-200 ease-out motion-reduce:transition-none',
+                  open && 'rotate-180',
+                )}
               />
             </>
           )}
         </span>
       </button>
       {open && !busy && (
-        <div id={id} role="region" className="border-t border-border-muted px-card py-3 text-base">
+        <div
+          id={id}
+          role="region"
+          className="border-t border-border-muted px-card py-3 text-base"
+        >
           {children}
         </div>
       )}
     </div>
-  )
+  );
 }

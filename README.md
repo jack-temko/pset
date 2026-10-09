@@ -100,13 +100,13 @@ result is one file, `pset`, which you can put anywhere on your `PATH`.
 
 Then open <http://127.0.0.1:8420>.
 
-| Flag | Default | |
-|---|---|---|
-| `-addr` | `127.0.0.1:8420` | Where to listen. |
-| `-data` | `$PSET_DATA`, else `~/Library/Application Support/pset` on a Mac, else `~/.local/share/pset` | Where your library lives. |
-| `-open` | on | Open your browser once PSet is serving (under WSL, your Windows browser). `-open=false` turns it off. |
-| `-verbose` | off | Debug logging. |
-| `-version` | | Print the version and exit. |
+| Flag       | Default                                                                                      |                                                                                                       |
+| ---------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `-addr`    | `127.0.0.1:8420`                                                                             | Where to listen.                                                                                      |
+| `-data`    | `$PSET_DATA`, else `~/Library/Application Support/pset` on a Mac, else `~/.local/share/pset` | Where your library lives.                                                                             |
+| `-open`    | on                                                                                           | Open your browser once PSet is serving (under WSL, your Windows browser). `-open=false` turns it off. |
+| `-verbose` | off                                                                                          | Debug logging.                                                                                        |
+| `-version` |                                                                                              | Print the version and exit.                                                                           |
 
 Flags go straight after `pset`; there are no subcommands. Stop it with
 Ctrl+C: work in progress (a book being read, a walkthrough being written)

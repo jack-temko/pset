@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react'
-import { X } from 'lucide-react'
+import type { ReactNode } from 'react';
+import { X } from 'lucide-react';
 
-import type { Block } from '@/api/gen/doc'
-import { cn } from '@/lib/utils'
+import type { Block } from '@/api/gen/doc';
+import { cn } from '@/lib/utils';
 
-import { nounOf, type Sel } from './selection'
+import { nounOf, type Sel } from './selection';
 
 /**
  * The pieces a document that selects is wired with. Hover washes an
@@ -23,34 +23,34 @@ export type AskWiring = {
   /** The pending selection when it belongs to this document: a pick
    *  not yet asked about, or what stays outlined while its chip rides
    *  the composer. */
-  selected: Sel | null
+  selected: Sel | null;
   /** A click picked this element. */
-  onPick: (sel: Sel) => void
+  onPick: (sel: Sel) => void;
   /** The toolbar's button: compose the About and hand it up. */
-  onAsk: (sel: Sel) => void
+  onAsk: (sel: Sel) => void;
   /** The one way out: ✕ on the toolbar, Esc, clicking the outlined
    *  element again, or the chip's own ✕. Drops the selection and its
    *  chip. */
-  onClear: () => void
-}
+  onClear: () => void;
+};
 
 /** What every selectable thing in one document shares: the wiring, the
  *  element under the pointer, the one outlined, and the way a click
  *  picks. The document's root owns the pointer and hands each element
  *  its slice. */
 export type Scope = {
-  ask?: AskWiring
-  hover: Sel | null
-  outlined: Sel | null
-}
+  ask?: AskWiring;
+  hover: Sel | null;
+  outlined: Sel | null;
+};
 
-export type SelState = 'washed' | 'outlined' | undefined
+export type SelState = 'washed' | 'outlined' | undefined;
 
 /** An element's state from the document's scope. */
 export function selState(scope: Scope, sel: Sel): SelState {
-  if (scope.outlined === sel) return 'outlined'
-  if (scope.hover === sel) return 'washed'
-  return undefined
+  if (scope.outlined === sel) return 'outlined';
+  if (scope.hover === sel) return 'washed';
+  return undefined;
 }
 
 /** The classes a state wears. Hover is a quiet wash with a hairline
@@ -58,9 +58,11 @@ export function selState(scope: Scope, sel: Sel): SelState {
  *  the app's selection pair, `primary-soft` under a `primary` outline.
  *  Both are instant: a hover that fades reads as lag. */
 export function selLook(state: SelState): string | undefined {
-  if (state === 'outlined') return 'relative cursor-pointer rounded-sm bg-primary-soft outline-1 -outline-offset-1 outline-primary'
-  if (state === 'washed') return 'relative cursor-pointer rounded-sm bg-muted/50 outline-1 -outline-offset-1 outline-border-muted'
-  return undefined
+  if (state === 'outlined')
+    return 'relative cursor-pointer rounded-sm bg-primary-soft outline-1 -outline-offset-1 outline-primary';
+  if (state === 'washed')
+    return 'relative cursor-pointer rounded-sm bg-muted/50 outline-1 -outline-offset-1 outline-border-muted';
+  return undefined;
 }
 
 /**
@@ -74,17 +76,17 @@ export function SelToolbar({
   scope,
   place = 'above',
 }: {
-  sel: Sel
-  noun: string
-  scope: Scope
+  sel: Sel;
+  noun: string;
+  scope: Scope;
   /** Where it floats: `above` the element, down to the leading of its
    *  first line (the toolbar must not sit on the words it asks about);
    *  `rule`, straddling the border above a line of a card; `inside`,
    *  for the card's first line, whose top edge clips what floats. */
-  place?: 'above' | 'rule' | 'inside'
+  place?: 'above' | 'rule' | 'inside';
 }) {
-  const ask = scope.ask
-  if (!ask) return null
+  const ask = scope.ask;
+  if (!ask) return null;
   return (
     <div
       data-sel-toolbar
@@ -117,7 +119,7 @@ export function SelToolbar({
         <X className="size-4" />
       </button>
     </div>
-  )
+  );
 }
 
 /** One selectable thing: a block, a heading with its whole group, or a
@@ -131,19 +133,21 @@ export function Selectable({
   className,
   children,
 }: {
-  sel: Sel
-  scope: Scope
+  sel: Sel;
+  scope: Scope;
   /** The block, for the noun the toolbar names it by. */
-  block?: Block
-  className?: string
-  children: ReactNode
+  block?: Block;
+  className?: string;
+  children: ReactNode;
 }) {
-  const state = selState(scope, sel)
-  const noun = nounOf(sel, block)
+  const state = selState(scope, sel);
+  const noun = nounOf(sel, block);
   return (
     <div data-sel={sel} className={cn(className, selLook(state))}>
       {children}
-      {state === 'outlined' && <SelToolbar sel={sel} noun={noun} scope={scope} />}
+      {state === 'outlined' && (
+        <SelToolbar sel={sel} noun={noun} scope={scope} />
+      )}
     </div>
-  )
+  );
 }

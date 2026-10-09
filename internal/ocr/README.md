@@ -16,10 +16,10 @@ into text. Programs are run through `internal/execx`, shared with
 ## API
 
 - `Page(ctx, pdfPath, n, lang) (string, error)` — rasterizes page n
-(1-based) at `DefaultDPI` (300) into a temp dir, runs
-`tesseract <img> stdout -l <lang>`, returns the text. Temp files are
-removed before returning. A blank page yields empty (whitespace) text —
-still a successful result; the engine stores it as the page's done-marker.
+  (1-based) at `DefaultDPI` (300) into a temp dir, runs
+  `tesseract <img> stdout -l <lang>`, returns the text. Temp files are
+  removed before returning. A blank page yields empty (whitespace) text —
+  still a successful result; the engine stores it as the page's done-marker.
 
 ## Contracts
 

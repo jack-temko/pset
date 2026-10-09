@@ -145,15 +145,15 @@ a tier (quick, planned, grilled) for Jack to confirm, plans, and judges the resu
 The workers are Claude Code subagents in `.claude/agents/` (Claude-specific, so they
 live there, not in `.agents/`):
 
-| Agent | Model | Job |
-|---|---|---|
-| `Explore` | Haiku | every codebase search (replaces the built-in one) |
-| `builder` | Sonnet | builds the plan in the worktree; stops and reports when stuck |
-| `checker` | Haiku | `make check`, returning only the failures |
-| `reviewer` | Sonnet | reads the plan and the diff; escalates risky or unsure changes |
-| `opus-reviewer` | Opus | the second review, for escalated changes |
-| `shooter` | Haiku | screenshots of changed UI states, Paper and Night |
-| `lander` | Haiku | push and open the PR; after Jack approves, CI, squash-merge, worktree removal |
+| Agent           | Model  | Job                                                                           |
+| --------------- | ------ | ----------------------------------------------------------------------------- |
+| `Explore`       | Haiku  | every codebase search (replaces the built-in one)                             |
+| `builder`       | Sonnet | builds the plan in the worktree; stops and reports when stuck                 |
+| `checker`       | Haiku  | `make check`, returning only the failures                                     |
+| `reviewer`      | Sonnet | reads the plan and the diff; escalates risky or unsure changes                |
+| `opus-reviewer` | Opus   | the second review, for escalated changes                                      |
+| `shooter`       | Haiku  | screenshots of changed UI states, Paper and Night                             |
+| `lander`        | Haiku  | push and open the PR; after Jack approves, CI, squash-merge, worktree removal |
 
 Outside `/change`, the same split holds: search with `Explore`, and hand mechanical
 work to `checker` or `lander` instead of doing it on Opus. Spec and reasons:
@@ -161,6 +161,20 @@ work to `checker` or `lander` instead of doing it on Opus. Spec and reasons:
 
 This file is the one set of agent instructions. `CLAUDE.md` only imports
 it (`@AGENTS.md`); put nothing else there.
+
+## Format and lint
+
+Each language follows its own standard: Go through gofmt and goimports, the web
+(TS, CSS, JSON, YAML, Markdown) through oxfmt in Google TS style, shell through
+shfmt. `make fmt` rewrites the repo; `make fmt-check` fails on any diff and
+runs first in `make check`. A hook in `.claude/settings.json` formats each
+file an agent writes or edits, with the formatters of the worktree the file is
+in (`tools/format-file.sh`; it skips ignored files, such as `web/src/api/gen`,
+and a worktree without `web/node_modules`, and never fails an edit). Files an
+agent writes in a worktree are therefore formatted before `make check`; anything
+else (your own edits, generated files, a shell command that rewrites a file)
+needs `make fmt`. Linting
+(`make lint`) comes in a second change; a `//nolint` will need a reason.
 
 ## Repo hygiene: no artifacts in the repo
 

@@ -1,5 +1,5 @@
-import type { Question } from '@/api/homework'
-import { EditableLines } from './editable-lines'
+import type { Question } from '@/api/homework';
+import { EditableLines } from './editable-lines';
 
 /**
  * The professor's instructions for a problem: parts to do, what not to
@@ -18,17 +18,17 @@ export function ProfessorNotes({
   onStop,
   onSave,
 }: {
-  q: Question
-  editing: boolean
-  onStop: () => void
-  onSave: (lines: string[]) => void
+  q: Question;
+  editing: boolean;
+  onStop: () => void;
+  onSave: (lines: string[]) => void;
 }) {
-  const notes = q.notes ?? []
+  const notes = q.notes ?? [];
   // A guide on its way or written is written again; one not started just
   // reads them when it does.
-  const rewrites = q.state === 'writing' || q.state === 'ready'
+  const rewrites = q.state === 'writing' || q.state === 'ready';
 
-  if (notes.length === 0 && !editing) return null
+  if (notes.length === 0 && !editing) return null;
   return (
     <EditableLines
       key={editing ? 'editing' : 'notes'}
@@ -41,9 +41,9 @@ export function ProfessorNotes({
       editing={editing}
       onCancel={onStop}
       onSave={(lines) => {
-        onStop()
-        onSave(lines)
+        onStop();
+        onSave(lines);
       }}
     />
-  )
+  );
 }

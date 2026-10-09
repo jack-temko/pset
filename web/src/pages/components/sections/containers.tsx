@@ -1,24 +1,32 @@
-import { useState } from 'react'
-import { BookOpen } from 'lucide-react'
-import { BookCover, CoverPicker } from '@/components/book-cover'
-import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow, Counter, RowValue } from '@/components/box'
-import { Button } from '@/components/button'
-import { Disclosure } from '@/components/disclosure'
-import { ImportRow } from '@/components/import-row'
-import { Door } from '@/components/door'
-import { HomeworkStatusLabel } from '@/components/homework-status'
-import { DurationValue, StatTile } from '@/components/stat-tile'
-import { observe } from '@/lib/eta'
-import type { CoverHue } from '@/lib/covers'
-import { BOOKS, DUE, sampleBook } from '@/components/fixtures'
-import { BookTile } from '@/components/book-tile'
-import type { ComponentEntry } from './types'
-import { Shelf } from './shared'
+import { useState } from 'react';
+import { BookOpen } from 'lucide-react';
+import { BookCover, CoverPicker } from '@/components/book-cover';
+import {
+  Box,
+  BoxBody,
+  BoxFooter,
+  BoxHeader,
+  BoxRow,
+  Counter,
+  RowValue,
+} from '@/components/box';
+import { Button } from '@/components/button';
+import { Disclosure } from '@/components/disclosure';
+import { ImportRow } from '@/components/import-row';
+import { Door } from '@/components/door';
+import { HomeworkStatusLabel } from '@/components/homework-status';
+import { DurationValue, StatTile } from '@/components/stat-tile';
+import { observe } from '@/lib/eta';
+import type { CoverHue } from '@/lib/covers';
+import { BOOKS, DUE, sampleBook } from '@/components/fixtures';
+import { BookTile } from '@/components/book-tile';
+import type { ComponentEntry } from './types';
+import { Shelf } from './shared';
 
 /** The Door needs state to be worth looking at, so it gets a live demo. */
 function DoorDemo() {
-  const [open, setOpen] = useState(false)
-  const rows = open ? DUE : DUE.slice(0, 2)
+  const [open, setOpen] = useState(false);
+  const rows = open ? DUE : DUE.slice(0, 2);
   return (
     <Box>
       {rows.map((d) => (
@@ -31,38 +39,57 @@ function DoorDemo() {
         onToggle={() => setOpen((o) => !o)}
       />
     </Box>
-  )
+  );
 }
 
 /** The Book dialog's colour picker, live. */
 function CoverPickerDemo() {
-  const [hue, setHue] = useState<CoverHue>('rose')
-  return <CoverPicker value={hue} onChange={setHue} />
+  const [hue, setHue] = useState<CoverHue>('rose');
+  return <CoverPicker value={hue} onChange={setHue} />;
 }
 
 // The reading row has a minute of pace behind it, so it shows its time
 // left as a real import would (40 pages a minute, 172 to go).
-observe('book:b89d3b72', 'import:read', { done: 100, total: 312 }, Date.now() - 60_000)
+observe(
+  'book:b89d3b72',
+  'import:read',
+  { done: 100, total: 312 },
+  Date.now() - 60_000,
+);
 
-observe('book:b89d3b72', 'import:read', { done: 140, total: 312 }, Date.now())
+observe('book:b89d3b72', 'import:read', { done: 140, total: 312 }, Date.now());
 
 /** Rows that open in place, as a question's help does. */
 function DisclosureDemo() {
-  const [open, setOpen] = useState<string | null>('Hint')
+  const [open, setOpen] = useState<string | null>('Hint');
   const rows = [
-    ['Hint', '2 lines', 'Go around the loop once and write that the voltage rises equal the drops.'],
-    ['Walkthrough', '5 steps', 'Going clockwise, the source gives a rise of 10 V and the two resistors are drops.'],
+    [
+      'Hint',
+      '2 lines',
+      'Go around the loop once and write that the voltage rises equal the drops.',
+    ],
+    [
+      'Walkthrough',
+      '5 steps',
+      'Going clockwise, the source gives a rise of 10 V and the two resistors are drops.',
+    ],
     ['Answers', '2 answers', 'i = 0.83 A clockwise; P = 5.6 W.'],
-  ]
+  ];
   return (
     <Box className="w-panel">
       {rows.map(([title, meta, body]) => (
-        <Disclosure key={title} title={title} meta={meta} open={open === title} onOpenChange={(o) => setOpen(o ? title : null)}>
+        <Disclosure
+          key={title}
+          title={title}
+          meta={meta}
+          open={open === title}
+          onOpenChange={(o) => setOpen(o ? title : null)}
+        >
           <p>{body}</p>
         </Disclosure>
       ))}
     </Box>
-  )
+  );
 }
 
 export const containersSections: ComponentEntry[] = [
@@ -107,9 +134,19 @@ export const containersSections: ComponentEntry[] = [
         <Shelf label="rows, no description">
           <div className="w-full max-w-xl">
             <Box>
-              <BoxRow title="1 · Vector Spaces" trailing={<RowValue>1</RowValue>} />
-              <BoxRow title="2 · Finite-Dimensional Spaces" trailing={<RowValue>27</RowValue>} />
-              <BoxRow title="3 · Linear Maps" trailing={<RowValue>51</RowValue>} selected />
+              <BoxRow
+                title="1 · Vector Spaces"
+                trailing={<RowValue>1</RowValue>}
+              />
+              <BoxRow
+                title="2 · Finite-Dimensional Spaces"
+                trailing={<RowValue>27</RowValue>}
+              />
+              <BoxRow
+                title="3 · Linear Maps"
+                trailing={<RowValue>51</RowValue>}
+                selected
+              />
             </Box>
           </div>
         </Shelf>
@@ -118,8 +155,8 @@ export const containersSections: ComponentEntry[] = [
             <Box>
               <BoxHeader>About this book</BoxHeader>
               <BoxBody>
-                Prepared yesterday from a 312-page digital PDF. Sections came from the PDF&apos;s
-                own outline.
+                Prepared yesterday from a 312-page digital PDF. Sections came
+                from the PDF&apos;s own outline.
               </BoxBody>
               <BoxFooter>
                 <RowValue>sha256:4f1a9c2e</RowValue>
@@ -134,7 +171,10 @@ export const containersSections: ComponentEntry[] = [
               <BoxBody>Not ready · reading the pages, 62%.</BoxBody>
             </Box>
             <Box tone="destructive">
-              <BoxBody>Couldn&apos;t prepare this book. The PDF has no extractable text.</BoxBody>
+              <BoxBody>
+                Couldn&apos;t prepare this book. The PDF has no extractable
+                text.
+              </BoxBody>
             </Box>
           </div>
         </Shelf>
@@ -169,11 +209,7 @@ export const containersSections: ComponentEntry[] = [
           <div className="grid w-full grid-cols-6 gap-4">
             {BOOKS.slice(0, 6).map((b) => (
               <div key={b.sha256} className="space-y-2">
-                <BookCover
-                  title={b.title}
-                  author={b.author}
-                  hue={b.cover}
-                />
+                <BookCover title={b.title} author={b.author} hue={b.cover} />
                 <p className="font-mono text-xs text-muted-foreground">
                   {b.cover}
                 </p>
@@ -186,9 +222,11 @@ export const containersSections: ComponentEntry[] = [
         </Shelf>
         <Shelf label="book tile">
           <div className="grid w-full grid-cols-6 gap-4">
-            {BOOKS.filter((b) => b.state.kind === 'ready').slice(0, 3).map((b) => (
-              <BookTile key={b.sha256} book={b} />
-            ))}
+            {BOOKS.filter((b) => b.state.kind === 'ready')
+              .slice(0, 3)
+              .map((b) => (
+                <BookTile key={b.sha256} book={b} />
+              ))}
           </div>
         </Shelf>
       </>
@@ -205,13 +243,33 @@ export const containersSections: ComponentEntry[] = [
         <Shelf label="rows">
           <Box className="w-full">
             <ImportRow
-              book={sampleBook({ sha256: 'b89d3b72', title: 'Introduction to the Theory of Computation', author: '', state: { kind: 'preparing', phase: 'read', done: 140, total: 312 } })}
+              book={sampleBook({
+                sha256: 'b89d3b72',
+                title: 'Introduction to the Theory of Computation',
+                author: '',
+                state: {
+                  kind: 'preparing',
+                  phase: 'read',
+                  done: 140,
+                  total: 312,
+                },
+              })}
             />
             <ImportRow
-              book={sampleBook({ sha256: 'a41c09e2', title: 'Calculus', author: '', state: { kind: 'preparing', phase: 'contents' } })}
+              book={sampleBook({
+                sha256: 'a41c09e2',
+                title: 'Calculus',
+                author: '',
+                state: { kind: 'preparing', phase: 'contents' },
+              })}
             />
             <ImportRow
-              book={sampleBook({ sha256: '7ce04a15', title: 'Griffiths Introduction To Electrodynamics', author: '', state: { kind: 'queued' } })}
+              book={sampleBook({
+                sha256: '7ce04a15',
+                title: 'Griffiths Introduction To Electrodynamics',
+                author: '',
+                state: { kind: 'queued' },
+              })}
             />
             <ImportRow
               book={sampleBook({
@@ -223,7 +281,15 @@ export const containersSections: ComponentEntry[] = [
               })}
             />
             <ImportRow
-              book={sampleBook({ sha256: '3a80b5d4', title: 'Organic Chemistry', author: '', state: { kind: 'failed', reason: "This PDF can't be read. PSet couldn't open it." } })}
+              book={sampleBook({
+                sha256: '3a80b5d4',
+                title: 'Organic Chemistry',
+                author: '',
+                state: {
+                  kind: 'failed',
+                  reason: "This PDF can't be read. PSet couldn't open it.",
+                },
+              })}
             />
           </Box>
         </Shelf>
@@ -262,12 +328,21 @@ export const containersSections: ComponentEntry[] = [
         </Shelf>
         <Shelf label="count">
           <div className="grid w-full max-w-2xl grid-cols-3 gap-4">
-            <StatTile label="Questions worked" value={14} context="across 3 problem sets" />
+            <StatTile
+              label="Questions worked"
+              value={14}
+              context="across 3 problem sets"
+            />
           </div>
         </Shelf>
         <Shelf label="empty week">
           <div className="grid w-full max-w-2xl grid-cols-3 gap-4">
-            <StatTile label="Homework" chart={1} value="0" context="nothing yet this week" />
+            <StatTile
+              label="Homework"
+              chart={1}
+              value="0"
+              context="nothing yet this week"
+            />
           </div>
         </Shelf>
       </>
@@ -286,7 +361,12 @@ export const containersSections: ComponentEntry[] = [
         </Shelf>
         <Shelf label="still being written">
           <Box className="w-panel">
-            <Disclosure title="Walkthrough" busy="Writing" open={false} onOpenChange={() => {}}>
+            <Disclosure
+              title="Walkthrough"
+              busy="Writing"
+              open={false}
+              onOpenChange={() => {}}
+            >
               <p />
             </Disclosure>
           </Box>
@@ -294,4 +374,4 @@ export const containersSections: ComponentEntry[] = [
       </>
     ),
   },
-]
+];

@@ -3,10 +3,7 @@
   "$comment": "Code to read or run, kept verbatim.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "type",
-    "code"
-  ],
+  "required": ["type", "code"],
   "properties": {
     "type": {
       "const": "code"

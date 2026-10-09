@@ -54,7 +54,7 @@ tests that need a set, that every agent uses when it needs a library (2026-10-08
     copies `books/` and `cache/`, makes the result writable.
   - The check, run after stripping and again after seeding: no `apiKey` in any
     `settings` row, zero rows in every dropped table, no book with more than three
-  sets, no question without its set, every `books` row has its PDF.
+    sets, no question without its set, every `books` row has its PDF.
     Any failure deletes the temp folder and exits non-zero.
 - `tools/testlib/strip.go`, `tools/testlib/strip_test.go`: the strip and the check as
   functions. The test builds a library in a temp dir with the real migrations,

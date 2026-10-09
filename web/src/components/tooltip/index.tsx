@@ -1,15 +1,15 @@
-import { cloneElement, useId, useState, type ReactElement } from 'react'
-import { createPortal } from 'react-dom'
+import { cloneElement, useId, useState, type ReactElement } from 'react';
+import { createPortal } from 'react-dom';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 type Handlers = {
-  'aria-describedby'?: string
-  onMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void
-  onMouseLeave?: (e: React.MouseEvent<HTMLElement>) => void
-  onFocus?: (e: React.FocusEvent<HTMLElement>) => void
-  onBlur?: (e: React.FocusEvent<HTMLElement>) => void
-}
+  'aria-describedby'?: string;
+  onMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void;
+  onMouseLeave?: (e: React.MouseEvent<HTMLElement>) => void;
+  onFocus?: (e: React.FocusEvent<HTMLElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLElement>) => void;
+};
 
 /**
  * A short label that explains a target, on hover after a beat and on
@@ -29,27 +29,29 @@ export function Tooltip({
   side = 'top',
   children,
 }: {
-  label: string
+  label: string;
   /** `left` for targets pinned to a pane's right edge, `bottom` for
    *  ones in the top bar. */
-  side?: 'top' | 'left' | 'bottom'
-  children: ReactElement<Handlers>
+  side?: 'top' | 'left' | 'bottom';
+  children: ReactElement<Handlers>;
 }) {
-  const id = useId()
-  const [at, setAt] = useState<{ x: number; y: number; delay: boolean } | null>(null)
+  const id = useId();
+  const [at, setAt] = useState<{ x: number; y: number; delay: boolean } | null>(
+    null,
+  );
 
   const show = (el: HTMLElement, delay: boolean) => {
-    const r = el.getBoundingClientRect()
+    const r = el.getBoundingClientRect();
     setAt(
       side === 'top'
         ? { x: r.left + r.width / 2, y: r.top, delay }
         : side === 'bottom'
           ? { x: r.left + r.width / 2, y: r.bottom, delay }
           : { x: r.left, y: r.top + r.height / 2, delay },
-    )
-  }
-  const hide = () => setAt(null)
-  const p = children.props
+    );
+  };
+  const hide = () => setAt(null);
+  const p = children.props;
 
   return (
     <>
@@ -84,5 +86,5 @@ export function Tooltip({
         document.body,
       )}
     </>
-  )
+  );
 }

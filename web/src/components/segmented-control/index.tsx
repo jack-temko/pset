@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 /**
  * One choice out of a few, all visible at once: a `muted` track holding
@@ -17,20 +17,23 @@ export function SegmentedControl<T extends string>({
   className,
 }: {
   /** The accessible name of the group. */
-  label: string
-  options: readonly { value: T; label: string }[]
-  value: T
-  onChange: (value: T) => void
-  className?: string
+  label: string;
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  className?: string;
 }) {
   return (
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn('inline-flex h-control items-center gap-1 rounded-md bg-muted p-1', className)}
+      className={cn(
+        'inline-flex h-control items-center gap-1 rounded-md bg-muted p-1',
+        className,
+      )}
     >
       {options.map((o) => {
-        const on = o.value === value
+        const on = o.value === value;
         return (
           <button
             key={o.value}
@@ -47,8 +50,8 @@ export function SegmentedControl<T extends string>({
           >
             {o.label}
           </button>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

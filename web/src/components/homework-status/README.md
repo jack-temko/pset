@@ -10,12 +10,12 @@ about the set. A turned-in homework says "turned in Sep 12" instead.
 **The status is a flag, so it gets the trailing slot alone.**
 `HomeworkStatusLabel` renders one `Label`, or nothing:
 
-| Status | Pill |
-|---|---|
-| `soon` | `warning`, clock icon, "Due soon" |
-| `overdue` | `danger`, triangle icon, "Overdue" |
+| Status      | Pill                               |
+| ----------- | ---------------------------------- |
+| `soon`      | `warning`, clock icon, "Due soon"  |
+| `overdue`   | `danger`, triangle icon, "Overdue" |
 | `turned-in` | `success`, check icon, "Turned in" |
-| none | nothing at all |
+| none        | nothing at all                     |
 
 Most rows render nothing, which is the point: a pill that appears on
 every row is wallpaper, not a flag, and the colour stops meaning

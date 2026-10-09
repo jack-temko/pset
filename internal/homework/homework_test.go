@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jackt/pset/internal/pagenum"
-	"github.com/jackt/pset/internal/probnum"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -21,6 +19,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/jackt/pset/internal/pagenum"
+	"github.com/jackt/pset/internal/probnum"
 
 	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/db"

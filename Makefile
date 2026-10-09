@@ -2,7 +2,7 @@
 # Vite with /api proxied. Go lives in /usr/local/go/bin, nvm's node first.
 export PATH := $(HOME)/.nvm/versions/node/v24.18.0/bin:$(PATH):/usr/local/go/bin
 
-.PHONY: dev test-library seed gen check-gen katex-check test check build release jumps
+.PHONY: dev test-library seed gen check-gen katex-check fmt fmt-check test check build release jumps
 
 dev:
 	go run ./tools/dev
@@ -30,6 +30,22 @@ check-gen: gen
 katex-check:
 	cd web && npm run build:check
 
+# Formatting. fmt rewrites every file to its language's standard: Go through
+# golangci-lint (gofmt, goimports), the web and the rest through oxfmt (one
+# config at the repo root), shell through shfmt. fmt-check does the same
+# without writing and fails on any diff.
+SH_FILES = $$(git ls-files '*.sh')
+
+fmt:
+	go tool golangci-lint fmt
+	npm --prefix web exec -- oxfmt
+	go tool shfmt -w $(SH_FILES)
+
+fmt-check:
+	go tool golangci-lint fmt --diff
+	npm --prefix web exec -- oxfmt --check
+	go tool shfmt -d $(SH_FILES)
+
 # Every check that runs without a browser or a model: the Go tests, the
 # web's types, unit tests and lint. Tests that need poppler or tesseract
 # skip without them, so install both (README) for the whole suite.
@@ -39,9 +55,9 @@ test:
 	cd web && npx vitest run
 	cd web && npx oxlint
 
-# What CI runs: test, the Go tests again under the race detector, and the
+# What CI runs: fmt-check, test, the Go tests again under the race detector, and the
 # generated TypeScript against Go's wire types.
-check: test check-gen
+check: fmt-check test check-gen
 	go test -race ./...
 
 build:

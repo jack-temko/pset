@@ -1,6 +1,6 @@
-import type { ComponentProps, ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 /**
  * Primer's tab row: quiet labels with a 2px primary underline on the
@@ -8,7 +8,9 @@ import { cn } from '@/lib/utils'
  * hairline its container already has, so the underline lands on it.
  */
 export function UnderlineNav({ className, ...props }: ComponentProps<'nav'>) {
-  return <nav className={cn('flex items-center gap-4', className)} {...props} />
+  return (
+    <nav className={cn('flex items-center gap-4', className)} {...props} />
+  );
 }
 
 export function UnderlineTab({
@@ -16,9 +18,9 @@ export function UnderlineTab({
   onClick,
   children,
 }: {
-  active: boolean
-  onClick: () => void
-  children: ReactNode
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
 }) {
   return (
     <button
@@ -31,7 +33,12 @@ export function UnderlineTab({
       )}
     >
       {children}
-      {active && <span aria-hidden className="absolute inset-x-0 bottom-0 border-b-2 border-primary" />}
+      {active && (
+        <span
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 border-b-2 border-primary"
+        />
+      )}
     </button>
-  )
+  );
 }

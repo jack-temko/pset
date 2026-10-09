@@ -1,17 +1,17 @@
-import type { ReactNode } from 'react'
+import type { ReactNode } from 'react';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 /** The chart palette, by index. Tailwind only compiles literal class names,
  *  so the map is spelled out. */
-export type Chart = 1 | 2 | 3 | 4 | 5
+export type Chart = 1 | 2 | 3 | 4 | 5;
 const dotBg: Record<Chart, string> = {
   1: 'bg-chart-1',
   2: 'bg-chart-2',
   3: 'bg-chart-3',
   4: 'bg-chart-4',
   5: 'bg-chart-5',
-}
+};
 
 /**
  * A dashboard number: a label, a big mono value, one quiet line of context.
@@ -30,17 +30,27 @@ export function StatTile({
   chart,
   className,
 }: {
-  label: string
+  label: string;
   /** Already formatted. Unit letters go in `<small>`: see DurationValue. */
-  value: ReactNode
-  context: string
-  chart?: Chart
-  className?: string
+  value: ReactNode;
+  context: string;
+  chart?: Chart;
+  className?: string;
 }) {
   return (
-    <div className={cn('flex flex-col gap-2 rounded-md border bg-card px-5 py-4', className)}>
+    <div
+      className={cn(
+        'flex flex-col gap-2 rounded-md border bg-card px-5 py-4',
+        className,
+      )}
+    >
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        {chart && <span aria-hidden className={cn('size-2 rounded-full', dotBg[chart])} />}
+        {chart && (
+          <span
+            aria-hidden
+            className={cn('size-2 rounded-full', dotBg[chart])}
+          />
+        )}
         {label}
       </div>
       <div className="figure text-2xl font-normal tracking-normal [&_small]:text-xs [&_small]:font-normal [&_small]:text-muted-foreground">
@@ -48,7 +58,7 @@ export function StatTile({
       </div>
       <p className="text-xs font-normal text-muted-foreground">{context}</p>
     </div>
-  )
+  );
 }
 
 /**
@@ -61,9 +71,9 @@ export function DurationValue({ minutes }: { minutes: number }) {
       <>
         0<small>m</small>
       </>
-    )
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
+    );
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
   return (
     <>
       {h > 0 && (
@@ -81,5 +91,5 @@ export function DurationValue({ minutes }: { minutes: number }) {
         </>
       )}
     </>
-  )
+  );
 }

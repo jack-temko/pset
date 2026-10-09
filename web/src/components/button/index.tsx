@@ -1,7 +1,7 @@
-import type { ComponentProps } from 'react'
-import { cva, type VariantProps } from 'class-variance-authority'
+import type { ComponentProps } from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 /** The one control for every action. Focus is the shell's global
  *  `:focus-visible` ring, so no variant carries its own. */
@@ -27,7 +27,7 @@ const buttonVariants = cva(
     },
     defaultVariants: { variant: 'primary', size: 'default' },
   },
-)
+);
 
 export function Button({
   className,
@@ -35,7 +35,12 @@ export function Button({
   size,
   ...props
 }: ComponentProps<'button'> & VariantProps<typeof buttonVariants>) {
-  return <button className={cn(buttonVariants({ variant, size }), className)} {...props} />
+  return (
+    <button
+      className={cn(buttonVariants({ variant, size }), className)}
+      {...props}
+    />
+  );
 }
 
 /** A square of the same height. The label is not optional: it is the only
@@ -48,14 +53,23 @@ export function IconButton({
   ...props
 }: ComponentProps<'button'> &
   VariantProps<typeof buttonVariants> & { 'aria-label': string }) {
-  const square = { sm: 'w-control-sm', default: 'w-control', lg: 'w-control-lg' }[size ?? 'default']
+  const square = {
+    sm: 'w-control-sm',
+    default: 'w-control',
+    lg: 'w-control-lg',
+  }[size ?? 'default'];
   return (
     <button
       aria-label={ariaLabel}
-      className={cn(buttonVariants({ variant, size }), 'px-0', square, className)}
+      className={cn(
+        buttonVariants({ variant, size }),
+        'px-0',
+        square,
+        className,
+      )}
       {...props}
     />
-  )
+  );
 }
 
-export { buttonVariants }
+export { buttonVariants };

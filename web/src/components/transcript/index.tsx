@@ -1,15 +1,15 @@
-import { useRef, useState, type ReactNode } from 'react'
-import katex from 'katex'
-import 'katex/dist/katex.min.css'
-import { Check, CircleAlert, Copy, X } from 'lucide-react'
+import { useRef, useState, type ReactNode } from 'react';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
+import { Check, CircleAlert, Copy, X } from 'lucide-react';
 
-import { Button } from '@/components/button'
-import { ConfirmPopover } from '@/components/confirm'
-import { Spinner } from '@/components/spinner'
-import { Tooltip } from '@/components/tooltip'
-import { MATH_OPTIONS } from '@/lib/math'
-import { usePages } from '@/lib/pages'
-import { cn } from '@/lib/utils'
+import { Button } from '@/components/button';
+import { ConfirmPopover } from '@/components/confirm';
+import { Spinner } from '@/components/spinner';
+import { Tooltip } from '@/components/tooltip';
+import { MATH_OPTIONS } from '@/lib/math';
+import { usePages } from '@/lib/pages';
+import { cn } from '@/lib/utils';
 
 /**
  * The Ask transcript's pieces. Asymmetric by design: you speak in a
@@ -18,7 +18,13 @@ import { cn } from '@/lib/utils'
  */
 
 /** The question: a compact `primary-soft` block on the right. */
-export function UserTurn({ about, children }: { about?: string; children: ReactNode }) {
+export function UserTurn({
+  about,
+  children,
+}: {
+  about?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="flex flex-col items-end gap-1">
       {/* The transcript records what a question was about, not just the
@@ -28,7 +34,7 @@ export function UserTurn({ about, children }: { about?: string; children: ReactN
         {children}
       </div>
     </div>
-  )
+  );
 }
 
 /**
@@ -36,7 +42,13 @@ export function UserTurn({ about, children }: { about?: string; children: ReactN
  * Above the composer it has an ×, the one way to drop it; on a sent
  * turn it's a record and has none.
  */
-export function AboutChip({ label, onRemove }: { label: string; onRemove?: () => void }) {
+export function AboutChip({
+  label,
+  onRemove,
+}: {
+  label: string;
+  onRemove?: () => void;
+}) {
   return (
     <span className="inline-flex h-control-sm items-center gap-1 rounded-md border border-primary/30 bg-primary-soft pr-1 pl-2 text-xs text-primary">
       About {label}
@@ -53,7 +65,7 @@ export function AboutChip({ label, onRemove }: { label: string; onRemove?: () =>
         <span className="w-1" />
       )}
     </span>
-  )
+  );
 }
 
 /** A step line's ink: the live one in full foreground, the rest quiet.
@@ -62,7 +74,7 @@ export function AboutChip({ label, onRemove }: { label: string; onRemove?: () =>
 const stepInk = (live: boolean) =>
   `flex items-center gap-2 text-xs font-normal transition-colors duration-200 ease-out motion-reduce:transition-none ${
     live ? 'text-foreground' : 'text-muted-foreground'
-  }`
+  }`;
 
 /**
  * The step feed: one quiet line per tool call, giving verb, object, count.
@@ -73,13 +85,21 @@ const stepInk = (live: boolean) =>
  * finishes, the caller replaces it with the past-tense line and its count,
  * the spinner goes, and the line fades back to the feed's quiet ink.
  */
-export function Steps({ steps, running, thinking }: { steps: StepLine[]; running?: boolean; thinking?: boolean }) {
+export function Steps({
+  steps,
+  running,
+  thinking,
+}: {
+  steps: StepLine[];
+  running?: boolean;
+  thinking?: boolean;
+}) {
   return (
     // Not part of the answer: Copy skips it.
     <div className="space-y-1" data-copy-skip="">
       {steps.map((s, i) => {
-        const live = running && i === steps.length - 1
-        const line = typeof s === 'string' ? { label: s } : s
+        const live = running && i === steps.length - 1;
+        const line = typeof s === 'string' ? { label: s } : s;
         return (
           <p key={i} className={stepInk(!!live)}>
             {live && <Spinner className="size-3" label="Working" />}
@@ -93,11 +113,11 @@ export function Steps({ steps, running, thinking }: { steps: StepLine[]; running
               )}
             </span>
           </p>
-        )
+        );
       })}
       {thinking && <Thinking />}
     </div>
-  )
+  );
 }
 
 /** The loop waiting on the model, with nothing else on screen saying so:
@@ -110,16 +130,22 @@ export function Thinking() {
       <Spinner className="size-3" label="Thinking" />
       <span>Thinking…</span>
     </p>
-  )
+  );
 }
 
 /** A step line, and what you can do about it: a remember step carries
  *  its Undo. */
-export type StepLine = string | { label: string; action?: ReactNode }
+export type StepLine = string | { label: string; action?: ReactNode };
 
 /** The one action a step line has: quiet text in the line's own size,
  *  primary ink so it reads as something to press. */
-export function StepAction({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+export function StepAction({
+  children,
+  onClick,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
@@ -128,18 +154,18 @@ export function StepAction({ children, onClick }: { children: ReactNode; onClick
     >
       {children}
     </button>
-  )
+  );
 }
 
 /** What's left of an answer you stopped: the partial text above it, then
  *  this quiet line. Nothing to click; asking again is the retry. */
 export function StoppedNote() {
-  return <p className="text-xs text-muted-foreground">Stopped</p>
+  return <p className="text-xs text-muted-foreground">Stopped</p>;
 }
 
 /** The answer: full-width on the panel ground, with Copy on hover. */
 export function AssistantTurn({ children }: { children: ReactNode }) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState(false);
   return (
     <div className="group relative space-y-3 text-base">
       {children}
@@ -150,34 +176,40 @@ export function AssistantTurn({ children }: { children: ReactNode }) {
           // The answer, not the feed: the step lines between paragraphs
           // are the app talking, and copying them would paste the
           // machinery along with the words.
-          const button = e.currentTarget
+          const button = e.currentTarget;
           const text = Array.from(button.parentElement?.children ?? [])
             .filter((el) => el !== button && !el.hasAttribute('data-copy-skip'))
             .map((el) => (el as HTMLElement).innerText)
             .filter(Boolean)
-            .join('\n\n')
+            .join('\n\n');
           try {
-            void navigator.clipboard.writeText(text)
+            void navigator.clipboard.writeText(text);
           } catch {
             /* clipboard can be blocked; the button just doesn't confirm */
           }
-          setCopied(true)
-          setTimeout(() => setCopied(false), 1500)
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
         }}
         className="flex h-control-sm w-control-sm items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity duration-200 ease-out group-hover:opacity-100 hover:bg-muted/50 hover:text-foreground focus-visible:opacity-100 motion-reduce:transition-none"
       >
         {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
       </button>
     </div>
-  )
+  );
 }
 
 /** An inline citation: a small mono chip that reads as an object in the
  *  prose. Click scrolls the scan to the page and flashes its edge. It
  *  takes the PDF page, as every page travels. */
-export function PageRef({ pdf, onJump }: { pdf: number; onJump?: (pdf: number) => void }) {
+export function PageRef({
+  pdf,
+  onJump,
+}: {
+  pdf: number;
+  onJump?: (pdf: number) => void;
+}) {
   // The chip says the printed page; the PDF page is one hover away.
-  const pages = usePages()
+  const pages = usePages();
   return (
     <Tooltip label={`PDF page ${pdf}`}>
       <button
@@ -188,7 +220,7 @@ export function PageRef({ pdf, onJump }: { pdf: number; onJump?: (pdf: number) =
         p.&thinsp;{pages.label(pdf)}
       </button>
     </Tooltip>
-  )
+  );
 }
 
 /** Inline math, in the prose's own size. */
@@ -196,10 +228,13 @@ export function MathInline({ tex }: { tex: string }) {
   return (
     <span
       dangerouslySetInnerHTML={{
-        __html: katex.renderToString(tex, { ...MATH_OPTIONS, throwOnError: false }),
+        __html: katex.renderToString(tex, {
+          ...MATH_OPTIONS,
+          throwOnError: false,
+        }),
       }}
     />
-  )
+  );
 }
 
 /** Display math: a centered block with room to breathe. */
@@ -208,28 +243,36 @@ export function MathDisplay({ tex }: { tex: string }) {
     <div
       className="overflow-x-auto py-1"
       dangerouslySetInnerHTML={{
-        __html: katex.renderToString(tex, { ...MATH_OPTIONS, throwOnError: false, displayMode: true }),
+        __html: katex.renderToString(tex, {
+          ...MATH_OPTIONS,
+          throwOnError: false,
+          displayMode: true,
+        }),
       }}
     />
-  )
+  );
 }
 
 /** The date changed: a quiet centered mark on a hairline. */
 export function DayDivider({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3" role="separator" aria-label={label}>
+    <div
+      className="flex items-center gap-3"
+      role="separator"
+      aria-label={label}
+    >
       <span className="h-px flex-1 bg-border-muted" />
       <span className="text-xs font-normal text-muted-foreground">{label}</span>
       <span className="h-px flex-1 bg-border-muted" />
     </div>
-  )
+  );
 }
 
 /** The very top of the history: where it begins, and the one way to
  *  start over. Clear asks first, in a ConfirmPopover under it. */
 export function ConversationStart({ onClear }: { onClear?: () => void }) {
-  const [asking, setAsking] = useState(false)
-  const clear = useRef<HTMLButtonElement>(null)
+  const [asking, setAsking] = useState(false);
+  const clear = useRef<HTMLButtonElement>(null);
   return (
     <div className="flex items-center justify-center gap-2 text-xs font-normal text-muted-foreground">
       <span>Start of conversation</span>
@@ -255,13 +298,13 @@ export function ConversationStart({ onClear }: { onClear?: () => void }) {
           action="Clear"
           onCancel={() => setAsking(false)}
           onConfirm={() => {
-            setAsking(false)
-            onClear?.()
+            setAsking(false);
+            onClear?.();
           }}
         />
       )}
     </div>
-  )
+  );
 }
 
 /** A loop that died: the feed above freezes, this says why in one line,
@@ -273,9 +316,9 @@ export function FailedTurn({
   onRetry,
   onSetup,
 }: {
-  reason: string
-  onRetry?: () => void
-  onSetup?: () => void
+  reason: string;
+  onRetry?: () => void;
+  onSetup?: () => void;
 }) {
   const line = (
     <>
@@ -284,7 +327,7 @@ export function FailedTurn({
       </span>
       <span className="min-w-0 flex-1 font-normal">{reason}</span>
     </>
-  )
+  );
   // Two actions don't fit beside a sentence in a 440px panel: they drop
   // to their own row, under the text.
   if (onSetup)
@@ -300,16 +343,29 @@ export function FailedTurn({
           </Button>
         </div>
       </div>
-    )
+    );
   return (
     <div className="flex items-center gap-2 text-xs text-destructive">
       {line}
-      <Button variant="outline" size="sm" onClick={onRetry} className="shrink-0">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onRetry}
+        className="shrink-0"
+      >
         Try again
       </Button>
     </div>
-  )
+  );
 }
 
-export { AnswerTable, CodeBlock, Plot, Statement, WorkedSteps } from './cards'
-export { AnswersCard, Callout, GuidePara, Note, PartHeader, StepHeading, type CalloutTone } from './guide'
+export { AnswerTable, CodeBlock, Plot, Statement, WorkedSteps } from './cards';
+export {
+  AnswersCard,
+  Callout,
+  GuidePara,
+  Note,
+  PartHeader,
+  StepHeading,
+  type CalloutTone,
+} from './guide';

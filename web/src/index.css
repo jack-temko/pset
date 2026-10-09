@@ -1,7 +1,7 @@
-@import "tailwindcss";
-@import "@fontsource-variable/inter";
-@import "@fontsource-variable/newsreader";
-@import "@fontsource-variable/jetbrains-mono";
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/newsreader';
+@import '@fontsource-variable/jetbrains-mono';
 
 /* Fallbacks for the three web fonts, sized to match them: until a font arrives
    the text is drawn in a system face scaled and spaced like it, so the swap
@@ -13,34 +13,46 @@
    only the latin and latin-ext ranges its font loads, so a glyph the real font
    lacks (an arrow, a symbol) falls through to the system face at 100%, as before. */
 @font-face {
-    font-family: "Inter Fallback";
-    unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF,
-                   U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
-    src: local("Arial"), local("Liberation Sans"), local("Helvetica");
-    size-adjust: 107.12%;
-    ascent-override: 90.44%;
-    descent-override: 22.52%;
-    line-gap-override: 0%;
+  font-family: 'Inter Fallback';
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF, U+0000-00FF, U+0131,
+    U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: local('Arial'), local('Liberation Sans'), local('Helvetica');
+  size-adjust: 107.12%;
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
 }
 @font-face {
-    font-family: "Newsreader Fallback";
-    unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF,
-                   U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
-    src: local("Times New Roman"), local("Liberation Serif"), local("Times");
-    size-adjust: 105.48%;
-    ascent-override: 69.68%;
-    descent-override: 25.12%;
-    line-gap-override: 0%;
+  font-family: 'Newsreader Fallback';
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF, U+0000-00FF, U+0131,
+    U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: local('Times New Roman'), local('Liberation Serif'), local('Times');
+  size-adjust: 105.48%;
+  ascent-override: 69.68%;
+  descent-override: 25.12%;
+  line-gap-override: 0%;
 }
 @font-face {
-    font-family: "JetBrains Mono Fallback";
-    unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF,
-                   U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
-    src: local("Courier New"), local("Liberation Mono"), local("Courier");
-    size-adjust: 99.98%;
-    ascent-override: 102.02%;
-    descent-override: 30%;
-    line-gap-override: 0%;
+  font-family: 'JetBrains Mono Fallback';
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF, U+0000-00FF, U+0131,
+    U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: local('Courier New'), local('Liberation Mono'), local('Courier');
+  size-adjust: 99.98%;
+  ascent-override: 102.02%;
+  descent-override: 30%;
+  line-gap-override: 0%;
 }
 
 @custom-variant dark (&:is(.dark *));
@@ -52,54 +64,58 @@
    ──────────────────────────────────────────────────────────────────────── */
 
 @theme inline {
-    --font-heading: "Newsreader Variable", "Newsreader Fallback", ui-serif, Georgia, serif;
-    --font-sans: "Inter Variable", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
-    --font-mono: "JetBrains Mono Variable", "JetBrains Mono Fallback", ui-monospace, SFMono-Regular, monospace;
+  --font-heading:
+    'Newsreader Variable', 'Newsreader Fallback', ui-serif, Georgia, serif;
+  --font-sans:
+    'Inter Variable', 'Inter Fallback', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    'JetBrains Mono Variable', 'JetBrains Mono Fallback', ui-monospace,
+    SFMono-Regular, monospace;
 
-    --color-background: var(--background);
-    --color-foreground: var(--foreground);
-    --color-card: var(--card);
-    --color-card-header: var(--card-header);
-    --color-card-foreground: var(--card-foreground);
-    --color-rail: var(--rail);
-    --color-primary: var(--primary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary-soft: var(--primary-soft);
-    --color-secondary: var(--secondary);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-muted: var(--muted);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-accent: var(--accent);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-destructive: var(--destructive);
-    --color-destructive-soft: var(--destructive-soft);
-    --color-success: var(--success);
-    --color-success-soft: var(--success-soft);
-    --color-warning: var(--warning);
-    --color-warning-soft: var(--warning-soft);
-    --color-border: var(--border);
-    --color-border-muted: var(--border-muted);
-    --color-input: var(--input);
-    --color-ring: var(--ring);
-    --color-chart-1: var(--chart-1);
-    --color-chart-2: var(--chart-2);
-    --color-chart-3: var(--chart-3);
-    --color-chart-4: var(--chart-4);
-    --color-chart-5: var(--chart-5);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-header: var(--card-header);
+  --color-card-foreground: var(--card-foreground);
+  --color-rail: var(--rail);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-border: var(--border);
+  --color-border-muted: var(--border-muted);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
 
-    --radius-sm: 0.25rem;
-    --radius-md: 0.375rem;
-    --radius-lg: 0.75rem;
-    --radius-full: 9999px;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
 
-    --shadow-floating: var(--shadow-floating-value);
-    --shadow-lift: var(--shadow-lift-value);
+  --shadow-floating: var(--shadow-floating-value);
+  --shadow-lift: var(--shadow-lift-value);
 
-    /* Named for the system's layout tokens, and deliberately not "page" /
+  /* Named for the system's layout tokens, and deliberately not "page" /
        "reading": a --container-page would be shadowed by --spacing-page,
        and max-w-page would silently resolve to the 40px gutter. */
-    --container-layout-page: 72rem;
-    --container-layout-reading: 48rem;
+  --container-layout-page: 72rem;
+  --container-layout-reading: 48rem;
 }
 
 /* ── Lockdown ─────────────────────────────────────────────────────────────
@@ -108,260 +124,282 @@
    ones; 15px is the floor.
    ──────────────────────────────────────────────────────────────────────── */
 @theme {
-    --spacing: initial;
+  --spacing: initial;
 
-    --spacing-0: 0px;
-    --spacing-1: 0.25rem;
-    --spacing-2: calc(var(--spacing-1) * 2);
-    --spacing-3: calc(var(--spacing-1) * 3);
-    --spacing-4: calc(var(--spacing-1) * 4);
-    --spacing-5: calc(var(--spacing-1) * 5);
-    --spacing-6: calc(var(--spacing-1) * 6);
-    --spacing-7: calc(var(--spacing-1) * 7);
-    --spacing-8: calc(var(--spacing-1) * 8);
-    --spacing-9: calc(var(--spacing-1) * 9);
-    --spacing-10: calc(var(--spacing-1) * 10);
-    --spacing-11: calc(var(--spacing-1) * 11);
-    --spacing-12: calc(var(--spacing-1) * 12);
-    --spacing-14: calc(var(--spacing-1) * 14);
-    --spacing-16: calc(var(--spacing-1) * 16);
-    --spacing-20: calc(var(--spacing-1) * 20);
-    --spacing-24: calc(var(--spacing-1) * 24);
-    --spacing-32: calc(var(--spacing-1) * 32);
-    --spacing-40: calc(var(--spacing-1) * 40);
-    --spacing-48: calc(var(--spacing-1) * 48);
-    --spacing-64: calc(var(--spacing-1) * 64);
-    --spacing-80: calc(var(--spacing-1) * 80);
-    --spacing-96: calc(var(--spacing-1) * 96);
+  --spacing-0: 0px;
+  --spacing-1: 0.25rem;
+  --spacing-2: calc(var(--spacing-1) * 2);
+  --spacing-3: calc(var(--spacing-1) * 3);
+  --spacing-4: calc(var(--spacing-1) * 4);
+  --spacing-5: calc(var(--spacing-1) * 5);
+  --spacing-6: calc(var(--spacing-1) * 6);
+  --spacing-7: calc(var(--spacing-1) * 7);
+  --spacing-8: calc(var(--spacing-1) * 8);
+  --spacing-9: calc(var(--spacing-1) * 9);
+  --spacing-10: calc(var(--spacing-1) * 10);
+  --spacing-11: calc(var(--spacing-1) * 11);
+  --spacing-12: calc(var(--spacing-1) * 12);
+  --spacing-14: calc(var(--spacing-1) * 14);
+  --spacing-16: calc(var(--spacing-1) * 16);
+  --spacing-20: calc(var(--spacing-1) * 20);
+  --spacing-24: calc(var(--spacing-1) * 24);
+  --spacing-32: calc(var(--spacing-1) * 32);
+  --spacing-40: calc(var(--spacing-1) * 40);
+  --spacing-48: calc(var(--spacing-1) * 48);
+  --spacing-64: calc(var(--spacing-1) * 64);
+  --spacing-80: calc(var(--spacing-1) * 80);
+  --spacing-96: calc(var(--spacing-1) * 96);
 
-    /* Semantic rhythm. */
-    --spacing-page: 2.5rem;
-    --spacing-section: 2.5rem;
-    --spacing-card: 1rem;
+  /* Semantic rhythm. */
+  --spacing-page: 2.5rem;
+  --spacing-section: 2.5rem;
+  --spacing-card: 1rem;
 
-    /* The mark in the top-bar lockup: a brand size tuned against the 64px
+  /* The mark in the top-bar lockup: a brand size tuned against the 64px
        bar and the 24px icons opposite, not a layout step, so it keeps its
        own name even though 36px happens to sit on the grid. */
-    --spacing-mark: 2.25rem;
+  --spacing-mark: 2.25rem;
 
-    /* The shell's fixed dimensions. */
-    --spacing-topbar: 4rem;
-    --spacing-rail: 20rem;
-    --spacing-panel: 27.5rem;
-    /* Focus mode: the rail's width moves into the panel, and the scan
+  /* The shell's fixed dimensions. */
+  --spacing-topbar: 4rem;
+  --spacing-rail: 20rem;
+  --spacing-panel: 27.5rem;
+  /* Focus mode: the rail's width moves into the panel, and the scan
        gives up a little more (440 + 320 + 40). */
-    --spacing-panel-wide: 50rem;
-    --spacing-control: 2rem;
-    --spacing-control-sm: 1.75rem;
-    --spacing-control-lg: 2.5rem;
-    --spacing-row: 2.5rem;
-    /* The two dialog widths, and there are only two: 400 for a form of a
+  --spacing-panel-wide: 50rem;
+  --spacing-control: 2rem;
+  --spacing-control-sm: 1.75rem;
+  --spacing-control-lg: 2.5rem;
+  --spacing-row: 2.5rem;
+  /* The two dialog widths, and there are only two: 400 for a form of a
        couple of fields, 560 for a stack of rows you read back. */
-    --spacing-dialog: 25rem;
-    --spacing-dialog-wide: 35rem;
-    /* A dialog that holds a table: 960, wide enough for real columns. */
-    --spacing-dialog-table: 60rem;
+  --spacing-dialog: 25rem;
+  --spacing-dialog-wide: 35rem;
+  /* A dialog that holds a table: 960, wide enough for real columns. */
+  --spacing-dialog-table: 60rem;
 
-    /* Each step carries the system's weight and tracking for its style, so a
+  /* Each step carries the system's weight and tracking for its style, so a
        call site sets size alone. The four display steps are serif-only
        (font-heading); text-lg is the one shared step (card-title is sans 600,
        the lead is serif 400 italic) so it stays weightless on purpose. */
-    --text-*: initial;
-    /* 15px: THE FLOOR. Labels, badges, timestamps, hints. */
-    --text-xs: 0.9375rem;
-    --text-xs--line-height: calc(1.375 / 0.9375);
-    --text-xs--font-weight: 500;
-    /* 16px: buttons, rail rows, tabs, table cells. */
-    --text-sm: 1rem;
-    --text-sm--line-height: calc(1.5 / 1);
-    /* 17px: default UI copy. */
-    --text-base: 1.0625rem;
-    --text-base--line-height: calc(1.625 / 1.0625);
-    /* 18px/30px: long-form text a student reads. */
-    --text-reading: 1.125rem;
-    --text-reading--line-height: calc(1.875 / 1.125);
-    /* 19px: card titles (sans 600) and leads (serif italic). */
-    --text-lg: 1.1875rem;
-    --text-lg--line-height: calc(1.75 / 1.1875);
-    /* 21px: section heads. */
-    --text-xl: 1.3125rem;
-    --text-xl--line-height: calc(1.875 / 1.3125);
-    --text-xl--font-weight: 500;
-    /* 25px: panel titles, dialog titles. */
-    --text-2xl: 1.5625rem;
-    --text-2xl--line-height: calc(2 / 1.5625);
-    --text-2xl--font-weight: 500;
-    --text-2xl--letter-spacing: -0.01em;
-    /* 31px: the one h1 on a page-shell page. */
-    --text-3xl: 1.9375rem;
-    --text-3xl--line-height: calc(2.25 / 1.9375);
-    --text-3xl--font-weight: 500;
-    --text-3xl--letter-spacing: -0.02em;
-    /* 37px: the dashboard greeting and empty-state heroes. */
-    --text-4xl: 2.3125rem;
-    --text-4xl--line-height: calc(2.5 / 2.3125);
-    --text-4xl--font-weight: 500;
-    --text-4xl--letter-spacing: -0.02em;
+  --text-*: initial;
+  /* 15px: THE FLOOR. Labels, badges, timestamps, hints. */
+  --text-xs: 0.9375rem;
+  --text-xs--line-height: calc(1.375 / 0.9375);
+  --text-xs--font-weight: 500;
+  /* 16px: buttons, rail rows, tabs, table cells. */
+  --text-sm: 1rem;
+  --text-sm--line-height: calc(1.5 / 1);
+  /* 17px: default UI copy. */
+  --text-base: 1.0625rem;
+  --text-base--line-height: calc(1.625 / 1.0625);
+  /* 18px/30px: long-form text a student reads. */
+  --text-reading: 1.125rem;
+  --text-reading--line-height: calc(1.875 / 1.125);
+  /* 19px: card titles (sans 600) and leads (serif italic). */
+  --text-lg: 1.1875rem;
+  --text-lg--line-height: calc(1.75 / 1.1875);
+  /* 21px: section heads. */
+  --text-xl: 1.3125rem;
+  --text-xl--line-height: calc(1.875 / 1.3125);
+  --text-xl--font-weight: 500;
+  /* 25px: panel titles, dialog titles. */
+  --text-2xl: 1.5625rem;
+  --text-2xl--line-height: calc(2 / 1.5625);
+  --text-2xl--font-weight: 500;
+  --text-2xl--letter-spacing: -0.01em;
+  /* 31px: the one h1 on a page-shell page. */
+  --text-3xl: 1.9375rem;
+  --text-3xl--line-height: calc(2.25 / 1.9375);
+  --text-3xl--font-weight: 500;
+  --text-3xl--letter-spacing: -0.02em;
+  /* 37px: the dashboard greeting and empty-state heroes. */
+  --text-4xl: 2.3125rem;
+  --text-4xl--line-height: calc(2.5 / 2.3125);
+  --text-4xl--font-weight: 500;
+  --text-4xl--letter-spacing: -0.02em;
 }
 
 /* Paper. */
 :root {
-    --background: oklch(0.984 0.005 95);
-    --foreground: oklch(0.245 0.012 90);
-    --card: oklch(0.998 0.003 95);
-    --card-header: oklch(0.97 0.005 95);
-    --card-foreground: oklch(0.245 0.012 90);
-    --rail: oklch(0.965 0.006 95);
-    --primary: oklch(0.45 0.16 263);
-    --primary-foreground: oklch(0.985 0.005 95);
-    --primary-soft: oklch(0.955 0.02 263);
-    /* Darkened from the v2 value of 0.945, which measured 1.06–1.16:1 against
+  --background: oklch(0.984 0.005 95);
+  --foreground: oklch(0.245 0.012 90);
+  --card: oklch(0.998 0.003 95);
+  --card-header: oklch(0.97 0.005 95);
+  --card-foreground: oklch(0.245 0.012 90);
+  --rail: oklch(0.965 0.006 95);
+  --primary: oklch(0.45 0.16 263);
+  --primary-foreground: oklch(0.985 0.005 95);
+  --primary-soft: oklch(0.955 0.02 263);
+  /* Darkened from the v2 value of 0.945, which measured 1.06–1.16:1 against
        every surface in the palette: ghost hover, skeletons, roundels and
        progress tracks were all but invisible. 0.88 is as far as it goes:
        muted-foreground on it is 4.56:1, and the next step down fails 4.5. */
-    --secondary: oklch(0.88 0.007 95);
-    --secondary-foreground: oklch(0.3 0.014 90);
-    --muted: oklch(0.88 0.007 95);
-    --muted-foreground: oklch(0.48 0.017 90);
-    --accent: oklch(0.94 0.03 88);
-    --accent-foreground: oklch(0.3 0.02 85);
-    --destructive: oklch(0.52 0.19 27);
-    --destructive-soft: oklch(0.955 0.025 27);
-    --success: oklch(0.5 0.13 155);
-    --success-soft: oklch(0.955 0.03 155);
-    --warning: oklch(0.52 0.12 70);
-    --warning-soft: oklch(0.96 0.035 80);
-    --border: oklch(0.88 0.01 95);
-    --border-muted: oklch(0.93 0.008 95);
-    --input: oklch(0.65 0.012 95);
-    --ring: oklch(0.55 0.14 263);
-    --chart-1: oklch(0.5 0.16 263);
-    --chart-2: oklch(0.62 0.11 195);
-    --chart-3: oklch(0.75 0.14 80);
-    --chart-4: oklch(0.62 0.19 15);
-    --chart-5: oklch(0.55 0.19 300);
-    --shadow-floating-value: 0 8px 24px -12px rgb(0 0 0 / 0.25);
-    --shadow-lift-value: 0 12px 20px -12px rgb(0 0 0 / 0.35);
+  --secondary: oklch(0.88 0.007 95);
+  --secondary-foreground: oklch(0.3 0.014 90);
+  --muted: oklch(0.88 0.007 95);
+  --muted-foreground: oklch(0.48 0.017 90);
+  --accent: oklch(0.94 0.03 88);
+  --accent-foreground: oklch(0.3 0.02 85);
+  --destructive: oklch(0.52 0.19 27);
+  --destructive-soft: oklch(0.955 0.025 27);
+  --success: oklch(0.5 0.13 155);
+  --success-soft: oklch(0.955 0.03 155);
+  --warning: oklch(0.52 0.12 70);
+  --warning-soft: oklch(0.96 0.035 80);
+  --border: oklch(0.88 0.01 95);
+  --border-muted: oklch(0.93 0.008 95);
+  --input: oklch(0.65 0.012 95);
+  --ring: oklch(0.55 0.14 263);
+  --chart-1: oklch(0.5 0.16 263);
+  --chart-2: oklch(0.62 0.11 195);
+  --chart-3: oklch(0.75 0.14 80);
+  --chart-4: oklch(0.62 0.19 15);
+  --chart-5: oklch(0.55 0.19 300);
+  --shadow-floating-value: 0 8px 24px -12px rgb(0 0 0 / 0.25);
+  --shadow-lift-value: 0 12px 20px -12px rgb(0 0 0 / 0.35);
 }
 
 /* Night study. */
 .dark {
-    --background: oklch(0.178 0.008 90);
-    --foreground: oklch(0.925 0.007 95);
-    --card: oklch(0.215 0.009 90);
-    --card-header: oklch(0.2 0.009 90);
-    --card-foreground: oklch(0.925 0.007 95);
-    --rail: oklch(0.16 0.01 90);
-    --primary: oklch(0.72 0.12 263);
-    --primary-foreground: oklch(0.17 0.03 263);
-    --primary-soft: oklch(0.27 0.05 263);
-    /* As in light: up from the v2 value of 0.262 (1.13–1.25:1 against the
+  --background: oklch(0.178 0.008 90);
+  --foreground: oklch(0.925 0.007 95);
+  --card: oklch(0.215 0.009 90);
+  --card-header: oklch(0.2 0.009 90);
+  --card-foreground: oklch(0.925 0.007 95);
+  --rail: oklch(0.16 0.01 90);
+  --primary: oklch(0.72 0.12 263);
+  --primary-foreground: oklch(0.17 0.03 263);
+  --primary-soft: oklch(0.27 0.05 263);
+  /* As in light: up from the v2 value of 0.262 (1.13–1.25:1 against the
        surfaces) to 0.34, which reads at 1.50–1.66:1 and keeps
        muted-foreground on it at 4.75:1. */
-    --secondary: oklch(0.34 0.01 90);
-    --secondary-foreground: oklch(0.9 0.007 95);
-    --muted: oklch(0.34 0.01 90);
-    --muted-foreground: oklch(0.72 0.012 95);
-    --accent: oklch(0.3 0.025 85);
-    --accent-foreground: oklch(0.93 0.01 90);
-    --destructive: oklch(0.74 0.16 22);
-    --destructive-soft: oklch(0.27 0.05 22);
-    --success: oklch(0.75 0.13 155);
-    --success-soft: oklch(0.26 0.04 155);
-    --warning: oklch(0.8 0.13 80);
-    --warning-soft: oklch(0.27 0.04 80);
-    --border: oklch(0.3 0.012 90);
-    --border-muted: oklch(0.25 0.01 90);
-    --input: oklch(0.52 0.012 90);
-    --ring: oklch(0.62 0.12 263);
-    /* chart-1 and chart-2 re-stepped for the answer plots, validated
+  --secondary: oklch(0.34 0.01 90);
+  --secondary-foreground: oklch(0.9 0.007 95);
+  --muted: oklch(0.34 0.01 90);
+  --muted-foreground: oklch(0.72 0.012 95);
+  --accent: oklch(0.3 0.025 85);
+  --accent-foreground: oklch(0.93 0.01 90);
+  --destructive: oklch(0.74 0.16 22);
+  --destructive-soft: oklch(0.27 0.05 22);
+  --success: oklch(0.75 0.13 155);
+  --success-soft: oklch(0.26 0.04 155);
+  --warning: oklch(0.8 0.13 80);
+  --warning-soft: oklch(0.27 0.04 80);
+  --border: oklch(0.3 0.012 90);
+  --border-muted: oklch(0.25 0.01 90);
+  --input: oklch(0.52 0.012 90);
+  --ring: oklch(0.62 0.12 263);
+  /* chart-1 and chart-2 re-stepped for the answer plots, validated
        against the Night card (#1b1915): both inside the dark lightness band
        (0.48 to 0.67), chroma above 0.1, normal-vision dE 18.7, deutan 17.6,
        both over 3:1. At 0.7 and 0.72 they sat above the band and read as
        one colour. */
-    --chart-1: oklch(0.56 0.16 263);
-    --chart-2: oklch(0.66 0.12 195);
-    --chart-3: oklch(0.8 0.13 80);
-    --chart-4: oklch(0.72 0.17 15);
-    --chart-5: oklch(0.7 0.16 300);
-    --shadow-floating-value: 0 8px 24px -12px rgb(0 0 0 / 0.7);
-    --shadow-lift-value: 0 12px 20px -12px rgb(0 0 0 / 0.8);
+  --chart-1: oklch(0.56 0.16 263);
+  --chart-2: oklch(0.66 0.12 195);
+  --chart-3: oklch(0.8 0.13 80);
+  --chart-4: oklch(0.72 0.17 15);
+  --chart-5: oklch(0.7 0.16 300);
+  --shadow-floating-value: 0 8px 24px -12px rgb(0 0 0 / 0.7);
+  --shadow-lift-value: 0 12px 20px -12px rgb(0 0 0 / 0.8);
 }
 
 /* The book cloth hues. Same in both themes: a book is an object. */
 :root {
-    --cover-indigo: oklch(0.44 0.15 265);
-    --cover-indigo-to: oklch(0.32 0.13 265);
-    --cover-indigo-spine: oklch(0.24 0.1 265);
-    --cover-teal: oklch(0.46 0.09 200);
-    --cover-teal-to: oklch(0.34 0.08 200);
-    --cover-teal-spine: oklch(0.25 0.06 200);
-    --cover-amber: oklch(0.52 0.11 75);
-    --cover-amber-to: oklch(0.4 0.1 75);
-    --cover-amber-spine: oklch(0.3 0.08 75);
-    --cover-rose: oklch(0.44 0.14 15);
-    --cover-rose-to: oklch(0.32 0.12 15);
-    --cover-rose-spine: oklch(0.24 0.1 15);
-    --cover-violet: oklch(0.44 0.14 300);
-    --cover-violet-to: oklch(0.32 0.12 300);
-    --cover-violet-spine: oklch(0.24 0.1 300);
-    --cover-slate: oklch(0.42 0.025 250);
-    --cover-slate-to: oklch(0.31 0.02 250);
-    --cover-slate-spine: oklch(0.23 0.015 250);
+  --cover-indigo: oklch(0.44 0.15 265);
+  --cover-indigo-to: oklch(0.32 0.13 265);
+  --cover-indigo-spine: oklch(0.24 0.1 265);
+  --cover-teal: oklch(0.46 0.09 200);
+  --cover-teal-to: oklch(0.34 0.08 200);
+  --cover-teal-spine: oklch(0.25 0.06 200);
+  --cover-amber: oklch(0.52 0.11 75);
+  --cover-amber-to: oklch(0.4 0.1 75);
+  --cover-amber-spine: oklch(0.3 0.08 75);
+  --cover-rose: oklch(0.44 0.14 15);
+  --cover-rose-to: oklch(0.32 0.12 15);
+  --cover-rose-spine: oklch(0.24 0.1 15);
+  --cover-violet: oklch(0.44 0.14 300);
+  --cover-violet-to: oklch(0.32 0.12 300);
+  --cover-violet-spine: oklch(0.24 0.1 300);
+  --cover-slate: oklch(0.42 0.025 250);
+  --cover-slate-to: oklch(0.31 0.02 250);
+  --cover-slate-spine: oklch(0.23 0.015 250);
 }
 
 @layer base {
-    * {
-        @apply border-border;
-    }
-    body {
-        @apply bg-background text-foreground font-sans antialiased;
-    }
-    html {
-        @apply font-sans;
-    }
-    :root {
-        color-scheme: light;
-    }
-    .dark {
-        color-scheme: dark;
-    }
-    /* Hover and focus washes fade in over 100ms (2026-09-30; they were instant
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  html {
+    @apply font-sans;
+  }
+  :root {
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+  /* Hover and focus washes fade in over 100ms (2026-09-30; they were instant
        before). :where() gives it no specificity, so anything that sets its own
        transition keeps it, and reduced motion gets none. */
-    @media (prefers-reduced-motion: no-preference) {
-        :where(button, a, summary, label, [role='menuitem'], [role='menuitemcheckbox'], [role='tab'], [role='radio']) {
-            transition-property: color, background-color, border-color;
-            transition-duration: 100ms;
-            transition-timing-function: ease-out;
-        }
+  @media (prefers-reduced-motion: no-preference) {
+    :where(
+      button,
+      a,
+      summary,
+      label,
+      [role='menuitem'],
+      [role='menuitemcheckbox'],
+      [role='tab'],
+      [role='radio']
+    ) {
+      transition-property: color, background-color, border-color;
+      transition-duration: 100ms;
+      transition-timing-function: ease-out;
     }
-    /* The focus ring is one thing everywhere: solid 2px, offset 2px. */
-    :focus-visible {
-        @apply outline-2 outline-offset-2 outline-ring;
-    }
-    html {
-        scrollbar-width: thin;
-        scrollbar-color: color-mix(in oklch, var(--muted-foreground) 45%, transparent) transparent;
-    }
-    ::selection {
-        background: color-mix(in oklch, var(--primary) 22%, transparent);
-    }
-    ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-    ::-webkit-scrollbar-track,
-    ::-webkit-scrollbar-corner {
-        background: transparent;
-    }
-    ::-webkit-scrollbar-thumb {
-        border-radius: 9999px;
-        background-color: color-mix(in oklch, var(--muted-foreground) 45%, transparent);
-    }
-    ::-webkit-scrollbar-thumb:hover {
-        background-color: color-mix(in oklch, var(--muted-foreground) 70%, transparent);
-    }
+  }
+  /* The focus ring is one thing everywhere: solid 2px, offset 2px. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(
+        in oklch,
+        var(--muted-foreground) 45%,
+        transparent
+      )
+      transparent;
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 22%, transparent);
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: color-mix(
+      in oklch,
+      var(--muted-foreground) 45%,
+      transparent
+    );
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(
+      in oklch,
+      var(--muted-foreground) 70%,
+      transparent
+    );
+  }
 }
 
 /* Desktop-only: below layout-gate (1024px) the app hides and the static gate
@@ -369,36 +407,36 @@
    inline style in index.html, before first paint, so it never flashes. What
    it looks like is here. */
 #pset-gate {
-    min-height: 100dvh;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    padding: var(--spacing-page);
-    text-align: center;
-    color: var(--foreground);
-    background: var(--background);
+  min-height: 100dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: var(--spacing-page);
+  text-align: center;
+  color: var(--foreground);
+  background: var(--background);
 }
 #pset-gate h1 {
-    margin: 0;
-    font-family: var(--font-heading);
-    font-size: 1.5625rem;
-    font-weight: 500;
-    letter-spacing: -0.01em;
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.5625rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 #pset-gate p {
-    margin: 0;
-    font-family: var(--font-sans);
-    font-size: 0.9375rem;
-    color: var(--muted-foreground);
-    max-width: 28rem;
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  color: var(--muted-foreground);
+  max-width: 28rem;
 }
 #pset-gate .pset-gate-mark {
-    font-family: var(--font-heading);
-    font-size: 0.9375rem;
-    font-weight: 600;
-    letter-spacing: 0.22em;
-    color: var(--primary);
+  font-family: var(--font-heading);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--primary);
 }
 
 /* The skeleton's shimmer: a soft band of lighter ink sweeping across the
@@ -406,51 +444,63 @@
    ever means "waiting". The band is muted mixed toward the card, so it
    follows the theme. Reduced motion leaves the block still. */
 @keyframes shimmer {
-    from { background-position: 100% 0; }
-    to { background-position: -100% 0; }
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
 }
 /* A data figure: a number in a table or a stat, set in JetBrains Mono with
    tabular figures. See design-system.md, Type. Copyable identifiers use
    font-mono alone; readouts you only glance at stay Inter. */
 @utility figure {
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 /* Content replacing a skeleton fades in over 150ms, opacity only, in the
    skeleton's own space. Reduced motion gets none. */
 @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 @utility fade-in {
-    animation: fade-in 150ms ease-out;
-    @media (prefers-reduced-motion: reduce) {
-        animation: none;
-    }
+  animation: fade-in 150ms ease-out;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }
 @keyframes fade-out {
-    from { opacity: var(--fade-from, 1); }
-    to { opacity: 0; }
+  from {
+    opacity: var(--fade-from, 1);
+  }
+  to {
+    opacity: 0;
+  }
 }
 @utility fade-out {
-    animation: fade-out 150ms ease-out forwards;
-    @media (prefers-reduced-motion: reduce) {
-        animation: none;
-    }
+  animation: fade-out 150ms ease-out forwards;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }
 @utility skeleton {
-    background-color: var(--muted);
-    background-image: linear-gradient(
-        90deg,
-        transparent 30%,
-        color-mix(in oklch, var(--muted), var(--card) 55%) 50%,
-        transparent 70%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.6s ease-in-out infinite;
-    @media (prefers-reduced-motion: reduce) {
-        animation: none;
-    }
+  background-color: var(--muted);
+  background-image: linear-gradient(
+    90deg,
+    transparent 30%,
+    color-mix(in oklch, var(--muted), var(--card) 55%) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }
 
 /* A guide's prose is read, not skimmed: inline math a touch larger than the

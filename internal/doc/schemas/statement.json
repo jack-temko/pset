@@ -3,13 +3,7 @@
   "$comment": "A definition, theorem or other numbered statement, quoted the way the book states it. page is the printed page it's on.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "type",
-    "kind",
-    "number",
-    "page",
-    "text"
-  ],
+  "required": ["type", "kind", "number", "page", "text"],
   "properties": {
     "type": {
       "const": "statement"

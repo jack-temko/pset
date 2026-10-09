@@ -3,10 +3,7 @@
   "$comment": "A short paragraph of prose with inline marks: \\(math\\), [p. N], **bold**, *italic*, `code`.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "type",
-    "text"
-  ],
+  "required": ["type", "text"],
   "properties": {
     "type": {
       "const": "para"

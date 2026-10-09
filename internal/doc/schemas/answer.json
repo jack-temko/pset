@@ -3,10 +3,7 @@
   "$comment": "The final result of a part, last in that part, labeled like the part. With no label it is the whole problem's.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "type",
-    "text"
-  ],
+  "required": ["type", "text"],
   "properties": {
     "type": {
       "const": "answer"

@@ -1,9 +1,9 @@
-import { CircleAlert, FileCheck, X } from 'lucide-react'
+import { CircleAlert, FileCheck, X } from 'lucide-react';
 
-import { Box, BoxRow } from '@/components/box'
-import { Button, IconButton } from '@/components/button'
-import { Spinner } from '@/components/spinner'
-import { UsageTrigger } from '@/components/usage'
+import { Box, BoxRow } from '@/components/box';
+import { Button, IconButton } from '@/components/button';
+import { Spinner } from '@/components/spinner';
+import { UsageTrigger } from '@/components/usage';
 import {
   readStep,
   useAssignmentReads,
@@ -11,10 +11,10 @@ import {
   useDismissRead,
   useRetryRead,
   type AssignmentRead,
-} from '@/api/homework'
-import { useTimeLeft } from '@/lib/eta'
-import { plural } from '@/lib/utils'
-import { sourceName } from './import-state'
+} from '@/api/homework';
+import { useTimeLeft } from '@/lib/eta';
+import { plural } from '@/lib/utils';
+import { sourceName } from './import-state';
 
 /**
  * The assignments being read in the background, and the ones read and
@@ -22,10 +22,18 @@ import { sourceName } from './import-state'
  * needn't be watched, so it waits here until it's reviewed or dismissed.
  * Spec: design/workspace.md, "Importing an assignment".
  */
-export function AssignmentReads({ bookId, onReview }: { bookId: string; onReview: (id: string) => void }) {
-  const reads = useAssignmentReads(bookId).data ?? []
-  const titles = Object.fromEntries((useBookHomework(bookId).data ?? []).map((h) => [h.id, h.title]))
-  if (reads.length === 0) return null
+export function AssignmentReads({
+  bookId,
+  onReview,
+}: {
+  bookId: string;
+  onReview: (id: string) => void;
+}) {
+  const reads = useAssignmentReads(bookId).data ?? [];
+  const titles = Object.fromEntries(
+    (useBookHomework(bookId).data ?? []).map((h) => [h.id, h.title]),
+  );
+  if (reads.length === 0) return null;
   return (
     <Box>
       {reads.map((r) => (
@@ -37,7 +45,7 @@ export function AssignmentReads({ bookId, onReview }: { bookId: string; onReview
         />
       ))}
     </Box>
-  )
+  );
 }
 
 /**
@@ -47,8 +55,8 @@ export function AssignmentReads({ bookId, onReview }: { bookId: string; onReview
  * how it's going rather than leaving a spinner with nothing to go on.
  */
 export function ReadWorking({ r }: { r: AssignmentRead }) {
-  const left = useTimeLeft(`read:${r.id}`, readStep(r))
-  const text = r.activity || 'Reading…'
+  const left = useTimeLeft(`read:${r.id}`, readStep(r));
+  const text = r.activity || 'Reading…';
   // As on a question's working line: with an estimate after it, the words
   // drop their ellipsis so it doesn't run into the dot.
   return (
@@ -56,7 +64,7 @@ export function ReadWorking({ r }: { r: AssignmentRead }) {
       {left ? text.replace(/…$/, '') : text}
       {left && <span className="whitespace-nowrap"> · {left}</span>}
     </span>
-  )
+  );
 }
 
 /** One read: reading, with a way to stop; read, with Review; or failed,
@@ -66,19 +74,24 @@ export function AssignmentReadRow({
   setTitle,
   onReview,
 }: {
-  r: AssignmentRead
+  r: AssignmentRead;
   /** The set it was read to update, if it was. */
-  setTitle?: string
-  onReview: () => void
+  setTitle?: string;
+  onReview: () => void;
 }) {
-  const dismiss = useDismissRead()
-  const retry = useRetryRead()
-  const name = r.assignment?.title || sourceName(r.source)
+  const dismiss = useDismissRead();
+  const retry = useRetryRead();
+  const name = r.assignment?.title || sourceName(r.source);
   const dismissButton = (label: string) => (
-    <IconButton variant="ghost" size="sm" aria-label={label} onClick={() => dismiss.mutate(r)}>
+    <IconButton
+      variant="ghost"
+      size="sm"
+      aria-label={label}
+      onClick={() => dismiss.mutate(r)}
+    >
       <X />
     </IconButton>
-  )
+  );
 
   if (r.state === 'reading') {
     return (
@@ -93,7 +106,7 @@ export function AssignmentReadRow({
         }
         trailing={dismissButton('Stop reading')}
       />
-    )
+    );
   }
   if (r.state === 'failed') {
     return (
@@ -104,21 +117,35 @@ export function AssignmentReadRow({
         description={
           <>
             <span className="text-warning">{r.error}</span>
-            {r.usage && <>{'\u00A0·'} <UsageTrigger usage={r.usage} source={{ kind: 'read', id: r.id }} name={USAGE_NAME} /></>}
+            {r.usage && (
+              <>
+                {'\u00A0·'}{' '}
+                <UsageTrigger
+                  usage={r.usage}
+                  source={{ kind: 'read', id: r.id }}
+                  name={USAGE_NAME}
+                />
+              </>
+            )}
           </>
         }
         trailing={
           <span className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" disabled={retry.isPending} onClick={() => retry.mutate(r.id)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={retry.isPending}
+              onClick={() => retry.mutate(r.id)}
+            >
               Try again
             </Button>
             {dismissButton('Dismiss')}
           </span>
         }
       />
-    )
+    );
   }
-  const groups = r.assignment?.groups ?? []
+  const groups = r.assignment?.groups ?? [];
   return (
     <BoxRow
       leading={<FileCheck className="text-primary" />}
@@ -126,8 +153,19 @@ export function AssignmentReadRow({
       wrapDescription={!!r.usage}
       description={
         <>
-          {setTitle ? `An update for ${setTitle}` : `${plural(groups.length, 'due date')} to look over`}
-          {r.usage && <>{'\u00A0·'} <UsageTrigger usage={r.usage} source={{ kind: 'read', id: r.id }} name={USAGE_NAME} /></>}
+          {setTitle
+            ? `An update for ${setTitle}`
+            : `${plural(groups.length, 'due date')} to look over`}
+          {r.usage && (
+            <>
+              {'\u00A0·'}{' '}
+              <UsageTrigger
+                usage={r.usage}
+                source={{ kind: 'read', id: r.id }}
+                name={USAGE_NAME}
+              />
+            </>
+          )}
         </>
       }
       trailing={
@@ -139,7 +177,7 @@ export function AssignmentReadRow({
         </span>
       }
     />
-  )
+  );
 }
 
-const USAGE_NAME = 'Assignment read'
+const USAGE_NAME = 'Assignment read';

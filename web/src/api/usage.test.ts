@@ -1,8 +1,8 @@
-import { QueryClient } from '@tanstack/react-query'
-import { describe, expect, it, vi } from 'vitest'
+import { QueryClient } from '@tanstack/react-query';
+import { describe, expect, it, vi } from 'vitest';
 
-import { emit } from './events'
-import './usage'
+import { emit } from './events';
+import './usage';
 
 describe('usage cache', () => {
   it.each([
@@ -15,9 +15,12 @@ describe('usage cache', () => {
     'turns.cleared',
     'book.changed',
   ])('is marked stale on %s', (type) => {
-    const qc = new QueryClient()
-    const spy = vi.spyOn(qc, 'invalidateQueries')
-    emit(type, {}, qc)
-    expect(spy).toHaveBeenCalledWith({ queryKey: ['usage'] }, { cancelRefetch: false })
-  })
-})
+    const qc = new QueryClient();
+    const spy = vi.spyOn(qc, 'invalidateQueries');
+    emit(type, {}, qc);
+    expect(spy).toHaveBeenCalledWith(
+      { queryKey: ['usage'] },
+      { cancelRefetch: false },
+    );
+  });
+});

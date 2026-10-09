@@ -1,7 +1,15 @@
-import { useEffect, useEffectEvent, useId, useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react'
-import { createPortal } from 'react-dom'
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useLayoutEffect,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from 'react';
+import { createPortal } from 'react-dom';
 
-import { Button } from '@/components/button'
+import { Button } from '@/components/button';
 
 /**
  * Confirming a destructive act where it was asked for, with no trip to
@@ -31,71 +39,72 @@ export function ConfirmPopover({
   onCancel,
 }: {
   /** The control that asked, to sit under and to hand focus back to. */
-  anchor: RefObject<HTMLElement | null>
+  anchor: RefObject<HTMLElement | null>;
   /** The question, in the ink: "Remove 3.A.4?" */
-  question: ReactNode
+  question: ReactNode;
   /** What goes with it, muted: "Its guide and Complete go with it." */
-  detail?: ReactNode
+  detail?: ReactNode;
   /** The act, named on its button: "Remove", "Delete homework". */
-  action: string
+  action: string;
   /** For an act that takes a while and stays open while it runs: the
    *  act's label meanwhile ("Resetting…"). Both buttons wait, and nothing
    *  cancels it. */
-  busy?: string
+  busy?: string;
   /** Why the act failed, in destructive ink under the sentence. */
-  error?: ReactNode
-  onConfirm: () => void
-  onCancel: () => void
+  error?: ReactNode;
+  onConfirm: () => void;
+  onCancel: () => void;
 }) {
-  const card = useRef<HTMLDivElement>(null)
-  const cancel = useRef<HTMLButtonElement>(null)
-  const sentence = useId()
+  const card = useRef<HTMLDivElement>(null);
+  const cancel = useRef<HTMLButtonElement>(null);
+  const sentence = useId();
   // Placed before the first paint, measured and written straight onto the
   // card, so it never shows anywhere else first. Under the control, or
   // over it when there's no room below (Reset, at the foot of Settings);
   // right-aligned to it, but never past the window's left edge.
   useLayoutEffect(() => {
-    const r = anchor.current?.getBoundingClientRect()
-    const el = card.current
-    if (!r || !el) return
-    const gap = 4
-    const margin = 8
-    const below = r.bottom + gap + el.offsetHeight <= window.innerHeight - margin
-    el.style.top = `${below ? r.bottom + gap : Math.max(margin, r.top - gap - el.offsetHeight)}px`
-    el.style.right = `${Math.min(window.innerWidth - r.right, window.innerWidth - el.offsetWidth - margin)}px`
-  }, [anchor])
+    const r = anchor.current?.getBoundingClientRect();
+    const el = card.current;
+    if (!r || !el) return;
+    const gap = 4;
+    const margin = 8;
+    const below =
+      r.bottom + gap + el.offsetHeight <= window.innerHeight - margin;
+    el.style.top = `${below ? r.bottom + gap : Math.max(margin, r.top - gap - el.offsetHeight)}px`;
+    el.style.right = `${Math.min(window.innerWidth - r.right, window.innerWidth - el.offsetWidth - margin)}px`;
+  }, [anchor]);
 
   const back = () => {
-    if (busy) return
-    onCancel()
-    anchor.current?.focus()
-  }
+    if (busy) return;
+    onCancel();
+    anchor.current?.focus();
+  };
   // The document listeners are wired once; these always reach the latest
   // props without rewiring them.
-  const outside = useEffectEvent(() => !busy && onCancel())
-  const escape = useEffectEvent(() => back())
+  const outside = useEffectEvent(() => !busy && onCancel());
+  const escape = useEffectEvent(() => back());
 
   useEffect(() => {
-    cancel.current?.focus()
+    cancel.current?.focus();
     const onDown = (e: PointerEvent) => {
-      if (!card.current?.contains(e.target as Node)) outside()
-    }
+      if (!card.current?.contains(e.target as Node)) outside();
+    };
     // Capture, and stop it there: a document listener in the capture phase
     // runs before any in the bubble phase, so a Menu underneath never
     // hears this Esc.
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      e.preventDefault()
-      e.stopPropagation()
-      escape()
-    }
-    document.addEventListener('pointerdown', onDown)
-    document.addEventListener('keydown', onKey, true)
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      escape();
+    };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey, true);
     return () => {
-      document.removeEventListener('pointerdown', onDown)
-      document.removeEventListener('keydown', onKey, true)
-    }
-  }, [])
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey, true);
+    };
+  }, []);
 
   return createPortal(
     <div
@@ -111,14 +120,25 @@ export function ConfirmPopover({
       </p>
       {error && <p className="text-destructive">{error}</p>}
       <div className="flex justify-end gap-2">
-        <Button ref={cancel} variant="ghost" size="sm" disabled={!!busy} onClick={back}>
+        <Button
+          ref={cancel}
+          variant="ghost"
+          size="sm"
+          disabled={!!busy}
+          onClick={back}
+        >
           Cancel
         </Button>
-        <Button variant="destructive" size="sm" disabled={!!busy} onClick={onConfirm}>
+        <Button
+          variant="destructive"
+          size="sm"
+          disabled={!!busy}
+          onClick={onConfirm}
+        >
           {busy ?? action}
         </Button>
       </div>
     </div>,
     document.body,
-  )
+  );
 }

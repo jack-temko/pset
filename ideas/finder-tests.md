@@ -37,8 +37,8 @@ go run ./tools/assignmenttest -addr http://127.0.0.1:8420 [-doc email] [-keep] [
 ### Why
 
 Finding a problem is the most delicate stage: it misses whole groups of
-references (every "Chapter 3.1 Problem 7" in *Elementary Differential
-Equations* failed or found the wrong problem), and nothing measures it,
+references (every "Chapter 3.1 Problem 7" in _Elementary Differential
+Equations_ failed or found the wrong problem), and nothing measures it,
 so a fix for one book can quietly break another. The figure-reading
 work showed what measuring buys: the 1800px render was only caught by
 running the same question many times.

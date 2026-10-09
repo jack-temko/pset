@@ -1,4 +1,4 @@
-import type { Block, PartBlock, StepBlock } from '@/api/gen/doc'
+import type { Block, PartBlock, StepBlock } from '@/api/gen/doc';
 
 /**
  * A document is a flat list of blocks; `part` and `step` are markers like
@@ -11,56 +11,56 @@ import type { Block, PartBlock, StepBlock } from '@/api/gen/doc'
  * carries its index in the flat list, which is where a step feed or a
  * skeleton belongs.
  */
-export type Item = { block: Block; index: number }
+export type Item = { block: Block; index: number };
 
 export type Group = {
-  step?: StepBlock
+  step?: StepBlock;
   /** Steps count from 1 in each part; 0 when there is no step. */
-  number: number
+  number: number;
   /** Where the group starts in the flat list (its step marker, if any). */
-  index: number
-  items: Item[]
-}
+  index: number;
+  items: Item[];
+};
 
 export type Section = {
-  part?: PartBlock
+  part?: PartBlock;
   /** Where the section starts in the flat list (its part marker, if any). */
-  index: number
-  groups: Group[]
-}
+  index: number;
+  groups: Group[];
+};
 
 export function buildTree(blocks: Block[]): Section[] {
-  const sections: Section[] = []
-  let section: Section | undefined
-  let group: Group | undefined
-  let steps = 0
+  const sections: Section[] = [];
+  let section: Section | undefined;
+  let group: Group | undefined;
+  let steps = 0;
   const newGroup = (index: number, step?: StepBlock) => {
-    group = { step, number: step ? ++steps : 0, index, items: [] }
-    section!.groups.push(group)
-  }
+    group = { step, number: step ? ++steps : 0, index, items: [] };
+    section!.groups.push(group);
+  };
   blocks.forEach((block, index) => {
     if (block.type === 'part') {
-      section = { part: block, index, groups: [] }
-      sections.push(section)
-      group = undefined
-      steps = 0
-      return
+      section = { part: block, index, groups: [] };
+      sections.push(section);
+      group = undefined;
+      steps = 0;
+      return;
     }
     if (!section) {
-      section = { index, groups: [] }
-      sections.push(section)
+      section = { index, groups: [] };
+      sections.push(section);
     }
     if (block.type === 'step') {
-      newGroup(index, block)
-      return
+      newGroup(index, block);
+      return;
     }
-    if (!group) newGroup(index)
-    group!.items.push({ block, index })
-  })
-  return sections
+    if (!group) newGroup(index);
+    group!.items.push({ block, index });
+  });
+  return sections;
 }
 
 /** The answer blocks, in order: what the Answers veil collects. */
 export function answersOf(blocks: Block[]) {
-  return blocks.flatMap((b) => (b.type === 'answer' ? [b] : []))
+  return blocks.flatMap((b) => (b.type === 'answer' ? [b] : []));
 }

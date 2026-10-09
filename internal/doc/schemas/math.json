@@ -3,10 +3,7 @@
   "$comment": "Display math: bare TeX, no delimiters.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "type",
-    "tex"
-  ],
+  "required": ["type", "tex"],
   "properties": {
     "type": {
       "const": "math"

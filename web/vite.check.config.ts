@@ -1,5 +1,5 @@
-import path from 'node:path'
-import { defineConfig } from 'vite'
+import path from 'node:path';
+import { defineConfig } from 'vite';
 
 // Bundles src/lib/katex-check.ts into one IIFE for the Go server to embed
 // (internal/doc/katex-check.js). Run with `npm run build:check`.
@@ -17,4 +17,4 @@ export default defineConfig({
       fileName: () => 'katex-check.js',
     },
   },
-})
+});

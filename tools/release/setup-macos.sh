@@ -36,8 +36,8 @@ fi
 say "Installing the PSet program"
 mkdir -p "$HOME/.local/bin"
 case "$(uname -m)" in
-	arm64) cp bin/pset-arm64 "$HOME/.local/bin/pset" ;;
-	*) cp bin/pset-amd64 "$HOME/.local/bin/pset" ;;
+arm64) cp bin/pset-arm64 "$HOME/.local/bin/pset" ;;
+*) cp bin/pset-amd64 "$HOME/.local/bin/pset" ;;
 esac
 chmod +x "$HOME/.local/bin/pset" PSet.command 2>/dev/null || true
 # Downloaded through a browser, the files are flagged as from the internet and
@@ -45,11 +45,11 @@ chmod +x "$HOME/.local/bin/pset" PSet.command 2>/dev/null || true
 xattr -dr com.apple.quarantine "$HOME/.local/bin/pset" . 2>/dev/null || true
 
 case ":$PATH:" in
-	*":$HOME/.local/bin:"*) ;;
-	*)
-		printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >>"$HOME/.zprofile"
-		echo "    Added ~/.local/bin to your PATH; open a new Terminal window to use  pset  from anywhere."
-		;;
+*":$HOME/.local/bin:"*) ;;
+*)
+	printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >>"$HOME/.zprofile"
+	echo "    Added ~/.local/bin to your PATH; open a new Terminal window to use  pset  from anywhere."
+	;;
 esac
 
 say "Done. Run  pset  (or double-click PSet.command) to start it; it opens your browser."

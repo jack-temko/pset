@@ -3,10 +3,7 @@
   "$comment": "A guide's hint: first, exactly one. One or two sentences, no working.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "type",
-    "text"
-  ],
+  "required": ["type", "text"],
   "properties": {
     "type": {
       "const": "hint"

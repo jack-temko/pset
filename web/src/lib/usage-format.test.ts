@@ -1,6 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest';
 
-import { atLeast, callSeconds, clock, cost, shortModel, timeOfDay, tokens } from './usage-format'
+import {
+  atLeast,
+  callSeconds,
+  clock,
+  cost,
+  shortModel,
+  timeOfDay,
+  tokens,
+} from './usage-format';
 
 describe('clock', () => {
   it.each([
@@ -24,9 +32,9 @@ describe('clock', () => {
     [3725000, '1h 02m'],
     [7325000, '2h 02m'],
   ])('%d ms is %s', (ms, want) => {
-    expect(clock(ms)).toBe(want)
-  })
-})
+    expect(clock(ms)).toBe(want);
+  });
+});
 
 describe('cost', () => {
   it.each([
@@ -46,40 +54,42 @@ describe('cost', () => {
     [1.236, '$1.24'],
     [123.456, '$123.46'],
   ])('%s is %s', (dollars, want) => {
-    expect(cost(dollars)).toBe(want)
-  })
-})
+    expect(cost(dollars)).toBe(want);
+  });
+});
 
 describe('the small ones', () => {
   it('drops the vendor from a model, keeps a bare name', () => {
-    expect(shortModel('deepseek/deepseek-v4.1-flash')).toBe('deepseek-v4.1-flash')
-    expect(shortModel('qwen')).toBe('qwen')
-  })
+    expect(shortModel('deepseek/deepseek-v4.1-flash')).toBe(
+      'deepseek-v4.1-flash',
+    );
+    expect(shortModel('qwen')).toBe('qwen');
+  });
   it('writes tokens exactly, or a dash', () => {
-    expect(tokens(1234567)).toBe('1,234,567')
-    expect(tokens(0)).toBe('0')
-    expect(tokens(undefined)).toBe('–')
-  })
+    expect(tokens(1234567)).toBe('1,234,567');
+    expect(tokens(0)).toBe('0');
+    expect(tokens(undefined)).toBe('–');
+  });
   it('marks a minimum, and leaves a dash alone', () => {
-    expect(atLeast('$0.0220', true)).toBe('≥ $0.0220')
-    expect(atLeast('$0.0220', false)).toBe('$0.0220')
-    expect(atLeast('–', true)).toBe('–')
-  })
-})
+    expect(atLeast('$0.0220', true)).toBe('≥ $0.0220');
+    expect(atLeast('$0.0220', false)).toBe('$0.0220');
+    expect(atLeast('–', true)).toBe('–');
+  });
+});
 
 describe('timeOfDay', () => {
   it('is the local time to the second, and a bad stamp is left as it came', () => {
-    const at = new Date(2026, 9, 8, 14, 2, 11).toISOString()
-    expect(timeOfDay(at)).toBe('14:02:11')
-    expect(timeOfDay('not a time')).toBe('not a time')
-  })
-})
+    const at = new Date(2026, 9, 8, 14, 2, 11).toISOString();
+    expect(timeOfDay(at)).toBe('14:02:11');
+    expect(timeOfDay('not a time')).toBe('not a time');
+  });
+});
 
 describe('callSeconds', () => {
   it('is seconds to the hundredth', () => {
-    expect(callSeconds(6370)).toBe('6.37s')
-    expect(callSeconds(900)).toBe('0.90s')
-    expect(callSeconds(0)).toBe('0.00s')
-    expect(callSeconds(187_004)).toBe('187.00s')
-  })
-})
+    expect(callSeconds(6370)).toBe('6.37s');
+    expect(callSeconds(900)).toBe('0.90s');
+    expect(callSeconds(0)).toBe('0.00s');
+    expect(callSeconds(187_004)).toBe('187.00s');
+  });
+});

@@ -25,7 +25,7 @@ status tint as its ground: `warning` for a not-ready book, `destructive`
 for a failed one.
 
 **Composition.** A Box never sets its own margin: the parent's stack does.
-Children are Box parts only: put a Button *inside* a row, never beside one.
+Children are Box parts only: put a Button _inside_ a row, never beside one.
 
 **Don't:** nest a Box in a Box; add a shadow; give it a coloured left
 border; pad a row by hand.

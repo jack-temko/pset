@@ -1,17 +1,22 @@
-import { useEffect, useState } from 'react'
-import { CircleAlert, CircleCheck } from 'lucide-react'
+import { useEffect, useState } from 'react';
+import { CircleAlert, CircleCheck } from 'lucide-react';
 
-import { Box, BoxBody, BoxFooter, BoxRow } from '@/components/box'
-import { Button } from '@/components/button'
-import { Skeleton } from '@/components/skeleton'
-import { Spinner } from '@/components/spinner'
-import { get } from '@/api/client'
-import { useApplyUpdate, useCheckUpdate, useUpdate, type Status } from '@/api/update'
-import { plural } from '@/lib/utils'
+import { Box, BoxBody, BoxFooter, BoxRow } from '@/components/box';
+import { Button } from '@/components/button';
+import { Skeleton } from '@/components/skeleton';
+import { Spinner } from '@/components/spinner';
+import { get } from '@/api/client';
+import {
+  useApplyUpdate,
+  useCheckUpdate,
+  useUpdate,
+  type Status,
+} from '@/api/update';
+import { plural } from '@/lib/utils';
 
 /** How often the page asks whether PSet is back, and how long it waits. */
-const POLL = 1500
-const GIVE_UP = 90_000
+const POLL = 1500;
+const GIVE_UP = 90_000;
 
 /**
  * Waits for PSet to restart onto `version`: asks the server until it answers
@@ -19,39 +24,41 @@ const GIVE_UP = 90_000
  * running. Reports `lost` if it never comes back, so the page can say so.
  */
 function useComesBack(version: string | null): { lost: boolean } {
-  const [lost, setLost] = useState(false)
+  const [lost, setLost] = useState(false);
   useEffect(() => {
-    if (!version) return
-    let live = true
-    const began = Date.now()
+    if (!version) return;
+    let live = true;
+    const began = Date.now();
     const tick = async () => {
       try {
-        const s = await get<Status>('/api/update')
+        const s = await get<Status>('/api/update');
         if (live && s.version === version) {
-          window.location.reload()
-          return
+          window.location.reload();
+          return;
         }
       } catch {
         // Down while it restarts: expected.
       }
-      if (!live) return
-      if (Date.now() - began > GIVE_UP) setLost(true)
-      else timer = setTimeout(tick, POLL)
-    }
-    let timer = setTimeout(tick, POLL)
+      if (!live) return;
+      if (Date.now() - began > GIVE_UP) setLost(true);
+      else timer = setTimeout(tick, POLL);
+    };
+    let timer = setTimeout(tick, POLL);
     return () => {
-      live = false
-      clearTimeout(timer)
-    }
-  }, [version])
-  return { lost }
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [version]);
+  return { lost };
 }
 
 /** The line under the version: what the last check found, or what to do. */
 function headline(status: Status): string {
-  const c = status.checked
-  if (!c) return 'Press Check to see if a newer version is out.'
-  return c.newer ? `PSet ${c.version} is available.` : "You're on the newest version."
+  const c = status.checked;
+  if (!c) return 'Press Check to see if a newer version is out.';
+  return c.newer
+    ? `PSet ${c.version} is available.`
+    : "You're on the newest version.";
 }
 
 /**
@@ -61,30 +68,32 @@ function headline(status: Status): string {
  * key, replaces the program and restarts. Spec: design/settings.md, "Updates".
  */
 export function Updates() {
-  const { data } = useUpdate()
-  const check = useCheckUpdate()
-  const apply = useApplyUpdate()
-  const [coming, setComing] = useState<string | null>(null)
-  const { lost } = useComesBack(coming)
+  const { data } = useUpdate();
+  const check = useCheckUpdate();
+  const apply = useApplyUpdate();
+  const [coming, setComing] = useState<string | null>(null);
+  const { lost } = useComesBack(coming);
 
   if (!data) {
     return (
       <Box>
         <BoxRow title="PSet" description={<Skeleton className="h-3 w-64" />} />
       </Box>
-    )
+    );
   }
 
-  const checked = data.checked
-  const available = !!checked?.newer
-  const error = check.error ?? apply.error
-  const updating = apply.isPending || coming !== null
+  const checked = data.checked;
+  const available = !!checked?.newer;
+  const error = check.error ?? apply.error;
+  const updating = apply.isPending || coming !== null;
 
   return (
     <Box>
       <BoxRow
         leading={
-          checked && !available ? <CircleCheck className="text-success" aria-label="Up to date" /> : undefined
+          checked && !available ? (
+            <CircleCheck className="text-success" aria-label="Up to date" />
+          ) : undefined
         }
         title={`PSet ${data.version}`}
         description={
@@ -95,7 +104,12 @@ export function Updates() {
             : headline(data)
         }
         trailing={
-          <Button variant="outline" size="sm" disabled={check.isPending || updating} onClick={() => check.mutate()}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={check.isPending || updating}
+            onClick={() => check.mutate()}
+          >
             {check.isPending ? (
               <>
                 <Spinner className="size-3" />
@@ -116,7 +130,9 @@ export function Updates() {
       {available && checked && coming === null && (
         <>
           {checked.notes && (
-            <BoxBody className="max-h-64 overflow-y-auto text-sm whitespace-pre-wrap">{checked.notes}</BoxBody>
+            <BoxBody className="max-h-64 overflow-y-auto text-sm whitespace-pre-wrap">
+              {checked.notes}
+            </BoxBody>
           )}
           <BoxFooter className="flex items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
@@ -150,5 +166,5 @@ export function Updates() {
         <BoxBody className="text-xs text-muted-foreground">{data.why}</BoxBody>
       )}
     </Box>
-  )
+  );
 }

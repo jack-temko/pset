@@ -1,8 +1,8 @@
-import { Spinner } from '@/components/spinner'
-import { bookStep, IMPORT_PHASES, type BookState } from '@/api/library'
-import { useTimeLeft } from '@/lib/eta'
-import { useSettled } from '@/lib/settled'
-import { cn } from '@/lib/utils'
+import { Spinner } from '@/components/spinner';
+import { bookStep, IMPORT_PHASES, type BookState } from '@/api/library';
+import { useTimeLeft } from '@/lib/eta';
+import { useSettled } from '@/lib/settled';
+import { cn } from '@/lib/utils';
 
 /**
  * What is happening to a book that isn't ready yet, as one line, or
@@ -34,20 +34,25 @@ export function BookStatus({
   since,
   className,
 }: {
-  bookId: string
-  state: BookState
-  since?: string
-  className?: string
+  bookId: string;
+  state: BookState;
+  since?: string;
+  className?: string;
 }) {
-  const state = useSettled(now, now.kind === 'queued' && since ? Date.parse(since) : null)
+  const state = useSettled(
+    now,
+    now.kind === 'queued' && since ? Date.parse(since) : null,
+  );
   // The estimate follows the book's real state, not the settled one on
   // screen, so a brief step still counts toward its pace.
-  const left = useTimeLeft(`book:${bookId}`, bookStep(now), now)
-  if (!state) return <span className={className}>{'\u00a0'}</span>
-  if (state.kind === 'ready') return null
+  const left = useTimeLeft(`book:${bookId}`, bookStep(now), now);
+  if (!state) return <span className={className}>{'\u00a0'}</span>;
+  if (state.kind === 'ready') return null;
 
   if (state.kind === 'failed') {
-    return <span className={cn('text-destructive', className)}>{state.reason}</span>
+    return (
+      <span className={cn('text-destructive', className)}>{state.reason}</span>
+    );
   }
 
   // Queued gets no spinner. Nothing is happening to this book yet (the
@@ -55,7 +60,11 @@ export function BookStatus({
   // otherwise for the next forty minutes. A scan that stepped aside for
   // another book keeps the count it reached, still and without a bar.
   if (state.kind === 'queued') {
-    if (state.phase === 'read' && state.done !== undefined && state.total !== undefined) {
+    if (
+      state.phase === 'read' &&
+      state.done !== undefined &&
+      state.total !== undefined
+    ) {
       return (
         <span className={className}>
           Queued ·{' '}
@@ -64,14 +73,16 @@ export function BookStatus({
           </span>{' '}
           pages read
         </span>
-      )
+      );
     }
-    return <span className={className}>Queued</span>
+    return <span className={className}>Queued</span>;
   }
 
-  const name = state.phase ? IMPORT_PHASES[state.phase] : 'Preparing'
-  const counted = state.total !== undefined && state.done !== undefined
-  const pct = counted ? Math.round((state.done! / Math.max(state.total!, 1)) * 100) : 0
+  const name = state.phase ? IMPORT_PHASES[state.phase] : 'Preparing';
+  const counted = state.total !== undefined && state.done !== undefined;
+  const pct = counted
+    ? Math.round((state.done! / Math.max(state.total!, 1)) * 100)
+    : 0;
 
   return (
     <span className={cn('flex items-center gap-3', className)}>
@@ -104,5 +115,5 @@ export function BookStatus({
         </span>
       )}
     </span>
-  )
+  );
 }

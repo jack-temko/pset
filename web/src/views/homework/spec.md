@@ -43,26 +43,26 @@ budget: open a set in 1 click from the list. Per question with a written guide: 
 
 ## states
 
-| state | shows | scenario |
-|---|---|---|
-| list, populated | active sets with bar, count, time left, due flag; "+ New homework"; turned-in sets below | `happy` |
-| list, empty | one sentence, New homework | `empty` |
-| list with reads | reading (time left), ready (Review), failed (Try again) | `importing` |
-| list, back after a break | overdue and due-today flags with progress | `return-after-break` |
-| opening a set | lands on the next unfinished question | `handoff-in` |
-| set loading | skeleton header and rows at real size | `slow` |
-| question ready | header with count, bar, time left; the three rows; Ask about this and Next question | `happy` |
-| question done | a check; the button reads Mark incomplete | `return-after-break` |
-| question queued | "Found on p. N. Its guide starts once every question is found."; rows Waiting; Skip for now | `slow` |
-| question being written | spinner line with time left; Hint opens when it lands, the others say Writing; Skip for now | `happy` |
-| question failed, by kind | the failed block with its ways out; Skip for now | `failed` |
-| question with no guide | "This question has no guide yet." and Write the guide; Skip for now | `no-guide` |
-| finish page | as above; reached by the last Next, from the count's list, or by opening a set that is all done | `finish` |
-| turned in | a label in the header; Turn in checked in the set menu; the finish page says Turned in | `return-after-break`, `finish` |
-| focus | two columns | `?wide=1` |
-| ask and back | Ask about this opens the Ask stub with the chip; its tab returns to the same question | `handoff-in` |
-| long set | 24 questions: the bar segments thin, the count's list scrolls | `long-set` |
-| long title | the title truncates; count, time left and bar never move | `long-title` |
+| state                    | shows                                                                                           | scenario                       |
+| ------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------ |
+| list, populated          | active sets with bar, count, time left, due flag; "+ New homework"; turned-in sets below        | `happy`                        |
+| list, empty              | one sentence, New homework                                                                      | `empty`                        |
+| list with reads          | reading (time left), ready (Review), failed (Try again)                                         | `importing`                    |
+| list, back after a break | overdue and due-today flags with progress                                                       | `return-after-break`           |
+| opening a set            | lands on the next unfinished question                                                           | `handoff-in`                   |
+| set loading              | skeleton header and rows at real size                                                           | `slow`                         |
+| question ready           | header with count, bar, time left; the three rows; Ask about this and Next question             | `happy`                        |
+| question done            | a check; the button reads Mark incomplete                                                       | `return-after-break`           |
+| question queued          | "Found on p. N. Its guide starts once every question is found."; rows Waiting; Skip for now     | `slow`                         |
+| question being written   | spinner line with time left; Hint opens when it lands, the others say Writing; Skip for now     | `happy`                        |
+| question failed, by kind | the failed block with its ways out; Skip for now                                                | `failed`                       |
+| question with no guide   | "This question has no guide yet." and Write the guide; Skip for now                             | `no-guide`                     |
+| finish page              | as above; reached by the last Next, from the count's list, or by opening a set that is all done | `finish`                       |
+| turned in                | a label in the header; Turn in checked in the set menu; the finish page says Turned in          | `return-after-break`, `finish` |
+| focus                    | two columns                                                                                     | `?wide=1`                      |
+| ask and back             | Ask about this opens the Ask stub with the chip; its tab returns to the same question           | `handoff-in`                   |
+| long set                 | 24 questions: the bar segments thin, the count's list scrolls                                   | `long-set`                     |
+| long title               | the title truncates; count, time left and bar never move                                        | `long-title`                   |
 
 ## actions
 
@@ -80,23 +80,27 @@ budget: open a set in 1 click from the list. Per question with a written guide: 
 ## handoffs
 
 out:
+
 - Ask about this -> Ask tab -> the question's label and statement as a chip on the composer -> the Homework tab is still mounted, so it returns to the same question and scroll within a visit. A reload is a new visit and opens the list.
 - Show in book -> page scan -> the question's PDF page -> nothing to return, the scan is beside the panel. (The problem's position on its page is not built yet.)
 - Open Settings (setup failure) -> Settings -> nothing -> leaves the workspace.
 - Edit book (numbering unsure) -> the Book dialog.
 
 in:
+
 - Home due row -> `/books/:id/homework/:set` -> opens that set on its next unfinished question.
 - Boxing added a question -> opens on it.
 
 ## data
 
 reads:
+
 - `useBookHomework` | `GET /api/books/:bookId/homework` | `List`; each set will also carry `estimate`, `timed` and `bar` (see wants)
 - `useHomeworkSet` | `GET /api/homework/:id` | `Detail`; polls every 5 s while any question is outstanding; each question will also carry `difficulty` and `seconds`
 - `useAssignmentReads`, `useAssignmentSource`, `useLineReadings`, `useMemories`: as before
 
 writes:
+
 - `useUpdateQuestion` | `PATCH /api/questions/:id` (reveal, done, position, notes, reading) | optimistic
 - `useUpdateHomework` | `PATCH /api/homework/:id` | optimistic, rolls back
 - `useRemoveQuestion` | `DELETE /api/questions/:id` | optimistic
@@ -124,13 +128,13 @@ What the view computes itself, from the questions: the marks, "n of m", where Ne
 
 Last walked through 2026-09-30, on the redesigned view. The redesign closed the earlier F1 (both tabs stay mounted), F2 (the list rows), F3 (the question menu), F4 (the count's list), F7 (the row order) and F8 (the one button).
 
-| id | where | what goes wrong for a tired student | severity | fix | status |
-|---|---|---|---|---|---|
-| F9 | tab order | From the panel tabs to the first help row is 6 stops in `/views` and 7 in the workspace (the Focus toggle is live there); the acceptance number is 6. | polish | accepted (post-build P3): the keys 1 2 3 reach the rows directly | accepted |
-| F10 | ready question | 14 controls are visible (13 is the target); the usage line's toggle is the extra one. | polish | accepted (post-build P2): the usage line stays | accepted |
-| F5 | waiting sentence | "Queued: it starts once the questions ahead of it are written" still gives no place in line and no time. | friction | "3rd in line", derived from the set's questions | open |
-| F6 | failed, unavailable | A second failure reads the same as the first. | friction | say it failed again (needs `attempts`, backend) | open |
-| F11 | time left | Needs two finished, timed questions; before that the bar is weighted but there is no time, which is on purpose. | friction | none: it is the guard | accepted |
+| id  | where               | what goes wrong for a tired student                                                                                                                   | severity | fix                                                              | status   |
+| --- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------- | -------- |
+| F9  | tab order           | From the panel tabs to the first help row is 6 stops in `/views` and 7 in the workspace (the Focus toggle is live there); the acceptance number is 6. | polish   | accepted (post-build P3): the keys 1 2 3 reach the rows directly | accepted |
+| F10 | ready question      | 14 controls are visible (13 is the target); the usage line's toggle is the extra one.                                                                 | polish   | accepted (post-build P2): the usage line stays                   | accepted |
+| F5  | waiting sentence    | "Queued: it starts once the questions ahead of it are written" still gives no place in line and no time.                                              | friction | "3rd in line", derived from the set's questions                  | open     |
+| F6  | failed, unavailable | A second failure reads the same as the first.                                                                                                         | friction | say it failed again (needs `attempts`, backend)                  | open     |
+| F11 | time left           | Needs two finished, timed questions; before that the bar is weighted but there is no time, which is on purpose.                                       | friction | none: it is the guard                                            | accepted |
 
 ## wants
 

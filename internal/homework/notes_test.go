@@ -1,10 +1,11 @@
 package homework
 
 import (
-	"github.com/jackt/pset/internal/probnum"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/jackt/pset/internal/probnum"
 )
 
 // The notes on Jack's professors' references, as instructions.

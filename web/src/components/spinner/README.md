@@ -10,7 +10,7 @@ of whatever is speaking: `warning` in a preparing tile, `muted-foreground`
 in a quiet row.
 
 **Use it only where work is genuinely running and genuinely cannot be
-counted**: examining a PDF, building a search index. Work that *can* be
+counted**: examining a PDF, building a search index. Work that _can_ be
 counted gets a determinate bar instead: a number a student can watch is
 worth more than a shape that turns, so the spinner is the fallback and
 never the default.

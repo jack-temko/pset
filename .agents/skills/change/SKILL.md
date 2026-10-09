@@ -1,7 +1,7 @@
 ---
 name: change
 description: Take one change to PSet from ask to merged on dev, with each model doing what it is best at. Opus (this session) triages, proposes a tier for Jack to confirm, plans and judges; Sonnet subagents build and review; Haiku subagents search, check, photograph and land. Nothing merges until Jack has tried the change and approved it. Use when Jack types /change.
-argument-hint: "[what to change]"
+argument-hint: '[what to change]'
 disable-model-invocation: true
 ---
 
@@ -34,10 +34,10 @@ Read the ask. If you cannot size it from the ask alone, send `Explore` (quick or
 medium) for the facts you need: which files, how many places, what tests exist. Then
 propose a tier with the ask-user tool, recommended one first, with one line of why:
 
-| Tier | When | What happens |
-|---|---|---|
-| **quick** | One clear fix, a few files, no decision of Jack's, no risk-list area | No plan file. You write a three-line brief; build, check, review, land. |
-| **planned** | Several files or steps, a new behavior, anything on the risk list | You write a plan file; Jack OKs it; then build. |
+| Tier        | When                                                                                      | What happens                                                                    |
+| ----------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **quick**   | One clear fix, a few files, no decision of Jack's, no risk-list area                      | No plan file. You write a three-line brief; build, check, review, land.         |
+| **planned** | Several files or steps, a new behavior, anything on the risk list                         | You write a plan file; Jack OKs it; then build.                                 |
 | **grilled** | A redesign, a new feature with open choices, anything where Jack's decisions are the work | The `grill` skill (or `pset-view` for a view) first; its spec becomes the plan. |
 
 The risk list (always at least **planned**): the database and migrations, the updater

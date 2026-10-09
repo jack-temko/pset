@@ -1,7 +1,7 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties } from 'react';
 
-import { COVERS, type CoverHue } from '@/lib/covers'
-import { cn } from '@/lib/utils'
+import { COVERS, type CoverHue } from '@/lib/covers';
+import { cn } from '@/lib/utils';
 
 /**
  * A book, drawn in CSS. There is no cover art anywhere in the product:
@@ -19,14 +19,14 @@ export function BookCover({
   hue,
   className,
 }: {
-  title: string
-  author: string
-  hue: CoverHue
-  className?: string
+  title: string;
+  author: string;
+  hue: CoverHue;
+  className?: string;
 }) {
   const cloth = {
     background: `linear-gradient(160deg, var(--cover-${hue}), var(--cover-${hue}-to))`,
-  } satisfies CSSProperties
+  } satisfies CSSProperties;
 
   return (
     <div
@@ -45,20 +45,27 @@ export function BookCover({
       {/* A desk lamp falling on cloth. */}
       <div className="absolute inset-0 bg-[radial-gradient(130%_90%_at_18%_6%,rgb(255_255_255/0.13),transparent_55%)]" />
       {/* The paper edge of the pages. */}
-      <div aria-hidden className="absolute inset-y-2 right-[3px] w-1 rounded-full bg-white/20" />
+      <div
+        aria-hidden
+        className="absolute inset-y-2 right-[3px] w-1 rounded-full bg-white/20"
+      />
 
       <div className="absolute inset-2 left-3 flex flex-col rounded-sm border border-white/15 p-3">
-        <div className="truncate text-xs tracking-[0.1em] text-white/75 uppercase">{author}</div>
+        <div className="truncate text-xs tracking-[0.1em] text-white/75 uppercase">
+          {author}
+        </div>
         <div className="mt-2 line-clamp-3 font-heading text-base leading-snug font-medium text-[oklch(0.98_0.005_95)]">
           {title}
         </div>
         <div className="mt-auto">
           <div className="mb-2 h-px w-8 bg-white/30" />
-          <div className="text-xs tracking-[0.22em] text-white/55 uppercase">PSet</div>
+          <div className="text-xs tracking-[0.22em] text-white/55 uppercase">
+            PSet
+          </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 /**
@@ -66,21 +73,38 @@ export function BookCover({
  * book is named beside it (an import row, a list), the plate would only
  * repeat the title at an unreadable size: the colour is what identifies.
  */
-export function CoverSwatch({ hue, className }: { hue: CoverHue; className?: string }) {
+export function CoverSwatch({
+  hue,
+  className,
+}: {
+  hue: CoverHue;
+  className?: string;
+}) {
   return (
     <span
       aria-hidden
-      className={cn('block h-10 w-8 shrink-0 rounded-sm border border-black/15', className)}
-      style={{ background: `linear-gradient(160deg, var(--cover-${hue}), var(--cover-${hue}-to))` }}
+      className={cn(
+        'block h-10 w-8 shrink-0 rounded-sm border border-black/15',
+        className,
+      )}
+      style={{
+        background: `linear-gradient(160deg, var(--cover-${hue}), var(--cover-${hue}-to))`,
+      }}
     />
-  )
+  );
 }
 
 /**
  * Choosing a book's colour: the six swatches as a radiogroup, the chosen
  * one ringed. Only the six exist; there's no custom colour.
  */
-export function CoverPicker({ value, onChange }: { value: CoverHue; onChange: (hue: CoverHue) => void }) {
+export function CoverPicker({
+  value,
+  onChange,
+}: {
+  value: CoverHue;
+  onChange: (hue: CoverHue) => void;
+}) {
   return (
     <div role="radiogroup" aria-label="Cover colour" className="flex gap-2">
       {COVERS.map((hue) => (
@@ -93,12 +117,14 @@ export function CoverPicker({ value, onChange }: { value: CoverHue; onChange: (h
           onClick={() => onChange(hue)}
           className={cn(
             'cursor-pointer rounded-sm transition-shadow duration-200 ease-out motion-reduce:transition-none',
-            hue === value ? 'ring-2 ring-primary' : 'hover:ring-1 hover:ring-border',
+            hue === value
+              ? 'ring-2 ring-primary'
+              : 'hover:ring-1 hover:ring-border',
           )}
         >
           <CoverSwatch hue={hue} />
         </button>
       ))}
     </div>
-  )
+  );
 }

@@ -3,21 +3,13 @@
   "$comment": "A tinted box the reader shouldn't skip.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "type",
-    "tone",
-    "text"
-  ],
+  "required": ["type", "tone", "text"],
   "properties": {
     "type": {
       "const": "callout"
     },
     "tone": {
-      "enum": [
-        "insight",
-        "caveat",
-        "check"
-      ]
+      "enum": ["insight", "caveat", "check"]
     },
     "title": {
       "type": "string",

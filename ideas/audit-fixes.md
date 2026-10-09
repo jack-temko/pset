@@ -9,25 +9,25 @@ brought in and resolved there. The merged result passed gofmt, vet,
 staticcheck, govulncheck, the generated types, the web's types, tests and
 lint, and `go test -race` over every package.
 
-| # | Branch | Does |
-|---|---|---|
-| 1 | `audit-plan` | This file. |
-| 2 | `shared-llm-transport` | One `http.Transport` for every model call. |
-| 3 | `events-reset-after-restart` | A reconnecting tab that missed a server restart is told to refetch. |
-| 4 | `local-only-api` | The API answers only local Hosts and same-origin writes. |
-| 5 | `listen-before-queue` | The port is bound before the queue starts. |
-| 6 | `search-without-ollama` | Search falls back to text when embedding fails. |
-| 7 | `typed-turn-failure` | A turn says its failure kind; the no-key sentence is written once. |
-| 8 | `httpx-body-and-handlers` | A too-large body is said so; four handler adapters replace the closures. |
-| 9 | `atomic-homework-update` | PATCH of a set can't undo another PATCH. |
-| 10 | `stop-queued-test-deflake` | Two flaky tests stop racing, and one stops hanging. |
-| 11 | `fts-book-filter` | The search index is found by book: removing a book was 17 s. |
-| 12 | `ci-and-toolchain` | `make test` runs every check; CI runs `make check`; Go 1.26.8. |
-| 13 | `small-cleanups` | One way to run poppler and tesseract (`execx`); `ocr` gets tests. |
-| 14 | `docs-settings` | `design/settings.md` and the settings README say what the code does. |
-| 15 | `docs-backend` | `design/backend.md`: layers, routes, events and lanes match the code. |
-| 16 | `package-readmes` | READMEs for homework, ask, doc, activity, pagenum, probnum. Cut from the same base as `docs-backend`, and merges it (the one conflict is resolved there). |
-| 17 | `tools-readme` | `tools/README.md`. |
+| #   | Branch                       | Does                                                                                                                                                      |
+| --- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `audit-plan`                 | This file.                                                                                                                                                |
+| 2   | `shared-llm-transport`       | One `http.Transport` for every model call.                                                                                                                |
+| 3   | `events-reset-after-restart` | A reconnecting tab that missed a server restart is told to refetch.                                                                                       |
+| 4   | `local-only-api`             | The API answers only local Hosts and same-origin writes.                                                                                                  |
+| 5   | `listen-before-queue`        | The port is bound before the queue starts.                                                                                                                |
+| 6   | `search-without-ollama`      | Search falls back to text when embedding fails.                                                                                                           |
+| 7   | `typed-turn-failure`         | A turn says its failure kind; the no-key sentence is written once.                                                                                        |
+| 8   | `httpx-body-and-handlers`    | A too-large body is said so; four handler adapters replace the closures.                                                                                  |
+| 9   | `atomic-homework-update`     | PATCH of a set can't undo another PATCH.                                                                                                                  |
+| 10  | `stop-queued-test-deflake`   | Two flaky tests stop racing, and one stops hanging.                                                                                                       |
+| 11  | `fts-book-filter`            | The search index is found by book: removing a book was 17 s.                                                                                              |
+| 12  | `ci-and-toolchain`           | `make test` runs every check; CI runs `make check`; Go 1.26.8.                                                                                            |
+| 13  | `small-cleanups`             | One way to run poppler and tesseract (`execx`); `ocr` gets tests.                                                                                         |
+| 14  | `docs-settings`              | `design/settings.md` and the settings README say what the code does.                                                                                      |
+| 15  | `docs-backend`               | `design/backend.md`: layers, routes, events and lanes match the code.                                                                                     |
+| 16  | `package-readmes`            | READMEs for homework, ask, doc, activity, pagenum, probnum. Cut from the same base as `docs-backend`, and merges it (the one conflict is resolved there). |
+| 17  | `tools-readme`               | `tools/README.md`.                                                                                                                                        |
 
 Not built, and why:
 

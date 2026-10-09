@@ -25,13 +25,13 @@ provider counted. A difficulty ranking is a `set` subject, shared among
 its questions.
 
 A call with no `Usage` (failed, stopped part-way, or a provider that
-reports none) is recorded with null tokens and cost. It is *uncounted*:
+reports none) is recorded with null tokens and cost. It is _uncounted_:
 the provider may well have billed it.
 
 ## Reading
 
 `For` and `ForSubjects` are the one grouped query: one row per model that
-*answered* (falling back to the model asked for when nothing answered),
+_answered_ (falling back to the model asked for when nothing answered),
 ordered by tokens so the headline is who did the work, with the total, the
 failed calls and how many calls were uncounted. Nil means no calls. The
 alias in the query is not called `model`: `GROUP BY model` would group by

@@ -3,11 +3,7 @@
   "$comment": "Starts a labeled part of the problem: label is the problem's own (\"(a)\", \"3.6.6\"), title says what it asks for.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "type",
-    "label",
-    "title"
-  ],
+  "required": ["type", "label", "title"],
   "properties": {
     "type": {
       "const": "part"

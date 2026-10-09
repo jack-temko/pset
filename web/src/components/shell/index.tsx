@@ -5,12 +5,12 @@ import {
   useRef,
   useState,
   type ReactNode,
-} from 'react'
+} from 'react';
 
-import { useLiveStream } from '@/api/events'
-import { Flash } from '@/components/flash'
-import { TopBar } from '@/components/top-bar'
-import { cn } from '@/lib/utils'
+import { useLiveStream } from '@/api/events';
+import { Flash } from '@/components/flash';
+import { TopBar } from '@/components/top-bar';
+import { cn } from '@/lib/utils';
 
 /**
  * Every screen: the top bar as fixed chrome, then the screen below it.
@@ -33,15 +33,15 @@ import { cn } from '@/lib/utils'
 
 /** A page's h1 tells the shell whether it has scrolled out of sight, and
  *  what to call the page when it has. */
-const TitleSlot = createContext<(title: string | null) => void>(() => {})
+const TitleSlot = createContext<(title: string | null) => void>(() => {});
 
 /** Shown while the live stream is down, on every screen. It says only
  *  what's true: touch was lost and the app is reconnecting. Recovery is
  *  the stream's own doing; there is nothing to click. */
 function LostTouch() {
-  const live = useLiveStream()
-  if (live) return null
-  return <Flash tone="warning">Lost touch with PSet. Reconnecting…</Flash>
+  const live = useLiveStream();
+  if (live) return null;
+  return <Flash tone="warning">Lost touch with PSet. Reconnecting…</Flash>;
 }
 
 export function AppShell({
@@ -49,13 +49,13 @@ export function AppShell({
   scroll = 'page',
   children,
 }: {
-  middle?: ReactNode
-  scroll?: 'page' | 'fill'
-  children: ReactNode
+  middle?: ReactNode;
+  scroll?: 'page' | 'fill';
+  children: ReactNode;
 }) {
   // Set while the page's h1 is out of view: the bar then says where you
   // are, since the page no longer does.
-  const [scrolledTitle, setScrolledTitle] = useState<string | null>(null)
+  const [scrolledTitle, setScrolledTitle] = useState<string | null>(null);
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
@@ -78,14 +78,16 @@ export function AppShell({
       <TitleSlot value={setScrolledTitle}>
         <div
           className={
-            scroll === 'page' ? 'min-h-0 flex-1 overflow-y-auto' : 'min-h-0 flex-1 overflow-hidden'
+            scroll === 'page'
+              ? 'min-h-0 flex-1 overflow-y-auto'
+              : 'min-h-0 flex-1 overflow-hidden'
           }
         >
           {children}
         </div>
       </TitleSlot>
     </div>
-  )
+  );
 }
 
 /**
@@ -101,32 +103,32 @@ export function PageTitle({
 }: {
   /** What the bar says. Defaults to the heading's text; Home's heading is
    *  a greeting, so it passes "Home". */
-  short?: string
-  className?: string
-  children: ReactNode
+  short?: string;
+  className?: string;
+  children: ReactNode;
 }) {
-  const ref = useRef<HTMLHeadingElement>(null)
-  const setTitle = useContext(TitleSlot)
+  const ref = useRef<HTMLHeadingElement>(null);
+  const setTitle = useContext(TitleSlot);
 
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const label = short ?? el.textContent ?? ''
+    const el = ref.current;
+    if (!el) return;
+    const label = short ?? el.textContent ?? '';
     const io = new IntersectionObserver(([entry]) =>
       setTitle(entry.isIntersecting ? null : label),
-    )
-    io.observe(el)
+    );
+    io.observe(el);
     return () => {
-      io.disconnect()
-      setTitle(null)
-    }
-  }, [short, setTitle])
+      io.disconnect();
+      setTitle(null);
+    };
+  }, [short, setTitle]);
 
   return (
     <h1 ref={ref} className={cn('font-heading', className)}>
       {children}
     </h1>
-  )
+  );
 }
 
 /** The centered column shared by Home and Settings: `layout-page` wide, page
@@ -134,6 +136,8 @@ export function PageTitle({
  *  it. */
 export function PageShell({ children }: { children: ReactNode }) {
   return (
-    <main className="mx-auto w-full max-w-layout-page space-y-section px-page py-12">{children}</main>
-  )
+    <main className="mx-auto w-full max-w-layout-page space-y-section px-page py-12">
+      {children}
+    </main>
+  );
 }

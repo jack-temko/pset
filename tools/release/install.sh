@@ -15,7 +15,10 @@ repo=${PSET_REPO:-jack-temko/pset}
 base=${PSET_BASE_URL:-https://github.com/$repo/releases/latest/download}
 
 say() { printf '\n==> %s\n' "$1"; }
-die() { printf 'PSet install: %s\n' "$1" >&2; exit 1; }
+die() {
+	printf 'PSet install: %s\n' "$1" >&2
+	exit 1
+}
 
 # Which release file is for this machine.
 case "$(uname -m)" in

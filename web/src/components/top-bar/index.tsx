@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Settings, SwatchBook } from 'lucide-react'
+import type { ReactNode } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Settings, SwatchBook } from 'lucide-react';
 
-import { BrandLockup } from '@/components/brand'
-import { buttonVariants } from '@/components/button'
-import { cn } from '@/lib/utils'
+import { BrandLockup } from '@/components/brand';
+import { buttonVariants } from '@/components/button';
+import { cn } from '@/lib/utils';
 
 /**
  * The one piece of chrome on every screen: 64px on `background` with a
@@ -19,11 +19,15 @@ import { cn } from '@/lib/utils'
  */
 /** Dev only: flip between wherever you are and /components, and back. */
 function ComponentsToggle() {
-  const location = useLocation()
-  const there = location.pathname === '/components'
+  const location = useLocation();
+  const there = location.pathname === '/components';
   return (
     <Link
-      to={there ? ((location.state as { from?: string } | null)?.from ?? '/') : '/components'}
+      to={
+        there
+          ? ((location.state as { from?: string } | null)?.from ?? '/')
+          : '/components'
+      }
       state={there ? undefined : { from: location.pathname }}
       aria-label={there ? 'Back to the app' : 'Components'}
       className={cn(
@@ -34,7 +38,7 @@ function ComponentsToggle() {
     >
       <SwatchBook className="size-6" />
     </Link>
-  )
+  );
 }
 
 export function TopBar({ middle }: { middle?: ReactNode }) {
@@ -54,12 +58,15 @@ export function TopBar({ middle }: { middle?: ReactNode }) {
           <Link
             to="/settings"
             aria-label="Settings"
-            className={cn(buttonVariants({ variant: 'ghost' }), 'size-control-lg px-0')}
+            className={cn(
+              buttonVariants({ variant: 'ghost' }),
+              'size-control-lg px-0',
+            )}
           >
             <Settings className="size-6" />
           </Link>
         </div>
       </div>
     </header>
-  )
+  );
 }

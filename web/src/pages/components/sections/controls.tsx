@@ -1,25 +1,28 @@
-import { useState } from 'react'
-import { BookOpen, Plus, Settings } from 'lucide-react'
-import { Button, IconButton } from '@/components/button'
-import { ResizeHandle } from '@/components/resize-handle'
-import { RadioRows } from '@/components/radio-rows'
-import { SegmentedControl } from '@/components/segmented-control'
-import { Checkbox } from '@/components/checkbox'
-import { AutoTextarea, Field, Input } from '@/components/input'
-import type { Run } from '@/api/gen/pagenum'
-import { PageNumbersField } from '@/pages/workspace/page-numbers'
-import { anchorsOf, choiceOf } from '@/pages/workspace/book-numbering'
-import { ProblemStyleField } from '@/pages/workspace/problem-style'
-import type { Style } from '@/api/gen/probnum'
-import type { ComponentEntry } from './types'
-import { Shelf } from './shared'
+import { useState } from 'react';
+import { BookOpen, Plus, Settings } from 'lucide-react';
+import { Button, IconButton } from '@/components/button';
+import { ResizeHandle } from '@/components/resize-handle';
+import { RadioRows } from '@/components/radio-rows';
+import { SegmentedControl } from '@/components/segmented-control';
+import { Checkbox } from '@/components/checkbox';
+import { AutoTextarea, Field, Input } from '@/components/input';
+import type { Run } from '@/api/gen/pagenum';
+import { PageNumbersField } from '@/pages/workspace/page-numbers';
+import { anchorsOf, choiceOf } from '@/pages/workspace/book-numbering';
+import { ProblemStyleField } from '@/pages/workspace/problem-style';
+import type { Style } from '@/api/gen/probnum';
+import type { ComponentEntry } from './types';
+import { Shelf } from './shared';
 
 /** Two panes and the seam between them, live: the left one sizes. */
 function ResizeDemo() {
-  const [width, setWidth] = useState(200)
+  const [width, setWidth] = useState(200);
   return (
     <div className="flex h-40 w-full max-w-layout-reading overflow-hidden rounded-md border">
-      <div style={{ width }} className="shrink-0 border-r bg-rail p-card text-sm text-muted-foreground">
+      <div
+        style={{ width }}
+        className="shrink-0 border-r bg-rail p-card text-sm text-muted-foreground"
+      >
         {width}px
       </div>
       <ResizeHandle
@@ -33,39 +36,42 @@ function ResizeDemo() {
         onReset={() => setWidth(200)}
       />
       <div className="min-w-0 flex-1 bg-background p-card text-sm text-muted-foreground">
-        Drag the grip, or tab to it and use the arrows. Double-click or Enter puts it back.
+        Drag the grip, or tab to it and use the arrows. Double-click or Enter
+        puts it back.
       </div>
     </div>
-  )
+  );
 }
 
 /** The Book dialog's page numbers, live: one run, or a scan that lost a
  *  page (Boyce's printed 85). */
 function PageNumbersDemo({ runs }: { runs: Run[] }) {
-  const [anchors, setAnchors] = useState(() => anchorsOf(runs))
-  return <PageNumbersField anchors={anchors} pageCount={640} onChange={setAnchors} />
+  const [anchors, setAnchors] = useState(() => anchorsOf(runs));
+  return (
+    <PageNumbersField anchors={anchors} pageCount={640} onChange={setAnchors} />
+  );
 }
 
 /** The Book dialog's problem numbering, live, from what import found. */
 function ProblemStyleDemo({ style }: { style: Style | undefined }) {
-  const [value, setValue] = useState(() => choiceOf(style))
-  const [touched, setTouched] = useState(false)
+  const [value, setValue] = useState(() => choiceOf(style));
+  const [touched, setTouched] = useState(false);
   return (
     <ProblemStyleField
       style={style}
       value={value}
       confirmed={touched}
       onChange={(v) => {
-        setValue(v)
-        setTouched(true)
+        setValue(v);
+        setTouched(true);
       }}
       onConfirm={() => setTouched(true)}
     />
-  )
+  );
 }
 
 function SegmentedDemo() {
-  const [v, setV] = useState<'light' | 'dark' | 'system'>('system')
+  const [v, setV] = useState<'light' | 'dark' | 'system'>('system');
   return (
     <SegmentedControl
       label="Theme"
@@ -77,20 +83,24 @@ function SegmentedDemo() {
         { value: 'system', label: 'System' },
       ]}
     />
-  )
+  );
 }
 
 /** Radio rows, live: a choice that needs explaining, and one not made
  *  yet. The Book dialog's numbering is the real one, above. */
 function RadioRowsDemo({ start }: { start: 'section' | 'chapter' | '' }) {
-  const [v, setV] = useState<'section' | 'chapter' | ''>(start)
+  const [v, setV] = useState<'section' | 'chapter' | ''>(start);
   return (
     <RadioRows
       label="Where the problems are"
       value={v}
       onChange={setV}
       options={[
-        { value: 'section', label: 'After each section', hint: 'A short Problems list closes every section.' },
+        {
+          value: 'section',
+          label: 'After each section',
+          hint: 'A short Problems list closes every section.',
+        },
         {
           value: 'chapter',
           label: "At the chapter's end",
@@ -98,16 +108,16 @@ function RadioRowsDemo({ start }: { start: 'section' | 'chapter' | '' }) {
         },
       ]}
     />
-  )
+  );
 }
 
 function CheckboxDemo() {
-  const [on, setOn] = useState(true)
+  const [on, setOn] = useState(true);
   return (
     <Checkbox checked={on} onChange={() => setOn((v) => !v)}>
       In this book
     </Checkbox>
-  )
+  );
 }
 
 export const controlsSections: ComponentEntry[] = [
@@ -230,7 +240,14 @@ export const controlsSections: ComponentEntry[] = [
         </Shelf>
         <Shelf label="problems, unsure">
           <div className="w-dialog">
-            <ProblemStyleDemo style={{ form: 'section', where: 'chapter', sure: false, confirmed: false }} />
+            <ProblemStyleDemo
+              style={{
+                form: 'section',
+                where: 'chapter',
+                sure: false,
+                confirmed: false,
+              }}
+            />
           </div>
         </Shelf>
         <Shelf label="problems, unknown">
@@ -263,4 +280,4 @@ export const controlsSections: ComponentEntry[] = [
       </>
     ),
   },
-]
+];

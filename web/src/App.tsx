@@ -1,22 +1,22 @@
-import { BrowserRouter, Outlet, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Outlet, Route, Routes } from 'react-router-dom';
 
-import { useEventStream } from '@/api/events'
+import { useEventStream } from '@/api/events';
 // Each feature registers what its events do to the cache on load.
-import '@/api/library'
-import '@/api/homework'
-import '@/api/ask'
-import '@/api/memory'
-import { Components } from '@/pages/components'
-import { Home } from '@/pages/home'
-import { Settings } from '@/pages/settings'
-import { Views } from '@/pages/views'
-import { Workspace } from '@/pages/workspace'
+import '@/api/library';
+import '@/api/homework';
+import '@/api/ask';
+import '@/api/memory';
+import { Components } from '@/pages/components';
+import { Home } from '@/pages/home';
+import { Settings } from '@/pages/settings';
+import { Views } from '@/pages/views';
+import { Workspace } from '@/pages/workspace';
 
 /** The product's screens hold the live stream open. The gallery routes
  *  don't: a component or a view never talks to a real server. */
 function Live() {
-  useEventStream()
-  return <Outlet />
+  useEventStream();
+  return <Outlet />;
 }
 
 export default function App() {
@@ -35,5 +35,5 @@ export default function App() {
         <Route path="/views/:view?" element={<Views />} />
       </Routes>
     </BrowserRouter>
-  )
+  );
 }

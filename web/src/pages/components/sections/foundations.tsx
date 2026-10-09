@@ -1,6 +1,6 @@
-import { BrandLockup, Mark } from '@/components/brand'
-import type { ComponentEntry } from './types'
-import { Shelf } from './shared'
+import { BrandLockup, Mark } from '@/components/brand';
+import type { ComponentEntry } from './types';
+import { Shelf } from './shared';
 
 function Swatch({ name, className }: { name: string; className: string }) {
   return (
@@ -8,11 +8,11 @@ function Swatch({ name, className }: { name: string; className: string }) {
       <div className={`size-12 rounded-md border ${className}`} />
       <span className="font-mono text-xs text-muted-foreground">{name}</span>
     </div>
-  )
+  );
 }
 
 function Ink({ name, className }: { name: string; className: string }) {
-  return <span className={`rounded-md py-1 text-sm ${className}`}>{name}</span>
+  return <span className={`rounded-md py-1 text-sm ${className}`}>{name}</span>;
 }
 
 function Step({ label, className }: { label: string; className: string }) {
@@ -21,7 +21,7 @@ function Step({ label, className }: { label: string; className: string }) {
       <div className={`w-4 bg-primary ${className}`} />
       <span className="font-mono text-xs text-muted-foreground">{label}</span>
     </div>
-  )
+  );
 }
 
 function Radius({ label, className }: { label: string; className: string }) {
@@ -30,7 +30,7 @@ function Radius({ label, className }: { label: string; className: string }) {
       <div className={`size-12 border bg-card ${className}`} />
       <span className="font-mono text-xs text-muted-foreground">{label}</span>
     </div>
-  )
+  );
 }
 
 export const foundationsSections: ComponentEntry[] = [
@@ -74,19 +74,29 @@ export const foundationsSections: ComponentEntry[] = [
           <div className="space-y-2">
             <p className="text-lg font-semibold">Linear Algebra Done Right</p>
             <p className="max-w-layout-reading text-reading">
-              A vector space is a set V along with an addition on V and a scalar multiplication on
-              V such that the following properties hold.
+              A vector space is a set V along with an addition on V and a scalar
+              multiplication on V such that the following properties hold.
             </p>
-            <p className="text-base">Default UI copy: descriptions, list rows, settings labels.</p>
-            <p className="text-sm">Dense · buttons, rail rows, tabs, table cells.</p>
-            <p className="text-xs text-muted-foreground">12 pages · prepared yesterday</p>
+            <p className="text-base">
+              Default UI copy: descriptions, list rows, settings labels.
+            </p>
+            <p className="text-sm">
+              Dense · buttons, rail rows, tabs, table cells.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              12 pages · prepared yesterday
+            </p>
           </div>
         </Shelf>
         <Shelf label="mono: copyable ids, and data figures">
           <div className="space-y-2">
             <p className="font-mono text-sm">https://api.example.com/v1</p>
-            <p className="font-mono text-xs text-muted-foreground">openai/gpt-6-luna · v0.5.0</p>
-            <p className="figure text-xs text-muted-foreground">$0.0031 · 4,210 tokens</p>
+            <p className="font-mono text-xs text-muted-foreground">
+              openai/gpt-6-luna · v0.5.0
+            </p>
+            <p className="figure text-xs text-muted-foreground">
+              $0.0031 · 4,210 tokens
+            </p>
           </div>
         </Shelf>
       </>
@@ -119,7 +129,10 @@ export const foundationsSections: ComponentEntry[] = [
           <Ink name="primary" className="bg-primary-soft px-2 text-primary" />
           <Ink name="success" className="bg-success-soft px-2 text-success" />
           <Ink name="warning" className="bg-warning-soft px-2 text-warning" />
-          <Ink name="destructive" className="bg-destructive-soft px-2 text-destructive" />
+          <Ink
+            name="destructive"
+            className="bg-destructive-soft px-2 text-destructive"
+          />
         </Shelf>
         <Shelf label="lines">
           <Swatch name="border" className="bg-border" />
@@ -191,4 +204,4 @@ export const foundationsSections: ComponentEntry[] = [
       </>
     ),
   },
-]
+];

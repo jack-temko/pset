@@ -46,7 +46,7 @@ focus returns to the trigger. Opening focuses the `current` item, else the
 first; arrow keys move through them, Home and End jump. It portals to the body with fixed positioning, like
 the Tooltip, so no scrolling pane can clip it.
 
-**Don't:** put the one action a bar is *for* in a menu (the menu is for
+**Don't:** put the one action a bar is _for_ in a menu (the menu is for
 the rest); nest menus; put a form or anything that needs typing in one
 (that's a dialog).
 

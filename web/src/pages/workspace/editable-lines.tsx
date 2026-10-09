@@ -1,18 +1,25 @@
-import { useState, type ReactNode } from 'react'
-import { Pencil } from 'lucide-react'
+import { useState, type ReactNode } from 'react';
+import { Pencil } from 'lucide-react';
 
-import { Box, BoxBody, BoxHeader } from '@/components/box'
-import { Button } from '@/components/button'
-import { Door } from '@/components/door'
-import { AutoTextarea } from '@/components/input'
-import { Label } from '@/components/label'
-import type { Run } from '@/api/gen/doc'
-import { Runs } from '@/components/document'
-import { runsSource } from '@/components/document/runs'
+import { Box, BoxBody, BoxHeader } from '@/components/box';
+import { Button } from '@/components/button';
+import { Door } from '@/components/door';
+import { AutoTextarea } from '@/components/input';
+import { Label } from '@/components/label';
+import type { Run } from '@/api/gen/doc';
+import { Runs } from '@/components/document';
+import { runsSource } from '@/components/document/runs';
 
 /** A value keeps its unit on its line: "9 Ω" never breaks after the 9. */
 const keepUnits = (runs: Run[]): Run[] =>
-  runs.map((r) => (r.t === undefined ? r : { ...r, t: r.t.replace(/(\d) (?=[kmMµ]?(Ω|A|V|W|F|H|s)\b|[kmMµ]?Ω)/g, '$1 ') }))
+  runs.map((r) =>
+    r.t === undefined
+      ? r
+      : {
+          ...r,
+          t: r.t.replace(/(\d) (?=[kmMµ]?(Ω|A|V|W|F|H|s)\b|[kmMµ]?Ω)/g, '$1 '),
+        },
+  );
 
 /**
  * A question's lines that the guide is written from and the student can
@@ -38,57 +45,59 @@ export function EditableLines({
   readOnly = false,
   onCancel,
 }: {
-  title: string
+  title: string;
   /** Each line as runs; editing shows their source, and saving sends it back as text. */
-  lines: Run[][]
+  lines: Run[][];
   /** How many lines show before the Door. */
-  closed?: number
+  closed?: number;
   /** A Label in the header, saying the student changed them. */
-  edited?: string
+  edited?: string;
   /** A Label in the header, saying the lines want a look. */
-  flag?: ReactNode
+  flag?: ReactNode;
   /** Above the lines, and above the text box while editing: what the
    *  flag is about. */
-  note?: ReactNode
+  note?: ReactNode;
   /** The header button that starts editing ("Correct", "Edit"). */
-  editLabel: string
+  editLabel: string;
   /** A line above the text box, saying what saving does. */
-  editHint: string
-  saveLabel: string
+  editHint: string;
+  saveLabel: string;
   /** Another way out while editing, apart from Cancel and Save. */
-  extra?: (stopEditing: () => void) => ReactNode
-  onSave: (lines: string[]) => void
+  extra?: (stopEditing: () => void) => ReactNode;
+  onSave: (lines: string[]) => void;
   /** Opens straight into editing, with the lines as they are (none, when
    *  adding the first). */
-  editing?: boolean
+  editing?: boolean;
   /** No edit button in the header: something else starts the editing. */
-  readOnly?: boolean
-  onCancel?: () => void
+  readOnly?: boolean;
+  onCancel?: () => void;
 }) {
-  const [open, setOpen] = useState(false)
-  const source = () => lines.map((l) => `- ${runsSource(l)}`).join('\n')
-  const [draft, setDraft] = useState<string | null>(startEditing ? source() : null)
-  const [error, setError] = useState('')
+  const [open, setOpen] = useState(false);
+  const source = () => lines.map((l) => `- ${runsSource(l)}`).join('\n');
+  const [draft, setDraft] = useState<string | null>(
+    startEditing ? source() : null,
+  );
+  const [error, setError] = useState('');
 
   const stop = () => {
-    setDraft(null)
-    setError('')
-    onCancel?.()
-  }
+    setDraft(null);
+    setError('');
+    onCancel?.();
+  };
 
   if (draft !== null) {
     const save = () => {
       const next = draft
         .split('\n')
         .map((l) => l.replace(/^\s*[-*]\s+/, '').trim())
-        .filter(Boolean)
+        .filter(Boolean);
       if (next.length === 0 && lines.length === 0) {
-        setError('Write at least one line.')
-        return
+        setError('Write at least one line.');
+        return;
       }
-      onSave(next)
-      setDraft(null)
-    }
+      onSave(next);
+      setDraft(null);
+    };
     return (
       <Box>
         <BoxHeader>{title}</BoxHeader>
@@ -101,12 +110,12 @@ export function EditableLines({
             value={draft}
             className="py-2 text-sm"
             onChange={(e) => {
-              setDraft(e.target.value)
-              setError('')
+              setDraft(e.target.value);
+              setError('');
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Escape') stop()
-              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save()
+              if (e.key === 'Escape') stop();
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save();
             }}
           />
           {error && <p className="text-xs text-destructive">{error}</p>}
@@ -122,10 +131,10 @@ export function EditableLines({
           </div>
         </BoxBody>
       </Box>
-    )
+    );
   }
 
-  const shown = open ? lines : lines.slice(0, closed)
+  const shown = open ? lines : lines.slice(0, closed);
   return (
     <Box>
       <BoxHeader>
@@ -154,8 +163,13 @@ export function EditableLines({
         </ul>
       </BoxBody>
       {lines.length > closed && (
-        <Door open={open} total={lines.length} onToggle={() => setOpen(!open)} className="border-t border-border-muted" />
+        <Door
+          open={open}
+          total={lines.length}
+          onToggle={() => setOpen(!open)}
+          className="border-t border-border-muted"
+        />
       )}
     </Box>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 /**
  * The system's one looping animation, and the only thing allowed to loop:
@@ -10,7 +10,13 @@ import { cn } from '@/lib/utils'
  * counted gets a determinate bar instead, because a number a student can
  * watch is worth more than a shape that turns.
  */
-export function Spinner({ className, label }: { className?: string; label?: string }) {
+export function Spinner({
+  className,
+  label,
+}: {
+  className?: string;
+  label?: string;
+}) {
   return (
     <span
       role="status"
@@ -21,5 +27,5 @@ export function Spinner({ className, label }: { className?: string; label?: stri
         className,
       )}
     />
-  )
+  );
 }

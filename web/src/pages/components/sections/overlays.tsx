@@ -1,24 +1,42 @@
-import { useRef, useState } from 'react'
-import { Check, ChevronDown, ChevronUp, Pencil, Plus, Printer, Trash2 } from 'lucide-react'
-import { Box, BoxBody } from '@/components/box'
-import { Button, IconButton } from '@/components/button'
-import { Menu, MenuCheckItem, MenuConfirmItem, MenuDivider, MenuItem } from '@/components/menu'
-import { ConfirmPopover } from '@/components/confirm'
-import { Dialog } from '@/components/dialog'
-import { Spinner } from '@/components/spinner'
-import { cn } from '@/lib/utils'
-import type { ComponentEntry } from './types'
-import { Shelf } from './shared'
+import { useRef, useState } from 'react';
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Pencil,
+  Plus,
+  Printer,
+  Trash2,
+} from 'lucide-react';
+import { Box, BoxBody } from '@/components/box';
+import { Button, IconButton } from '@/components/button';
+import {
+  Menu,
+  MenuCheckItem,
+  MenuConfirmItem,
+  MenuDivider,
+  MenuItem,
+} from '@/components/menu';
+import { ConfirmPopover } from '@/components/confirm';
+import { Dialog } from '@/components/dialog';
+import { Spinner } from '@/components/spinner';
+import { cn } from '@/lib/utils';
+import type { ComponentEntry } from './types';
+import { Shelf } from './shared';
 
 function MenuDemo() {
-  const [on, setOn] = useState(false)
+  const [on, setOn] = useState(false);
   return (
     <Menu label="Homework actions">
       <MenuItem icon={<Plus />} onSelect={() => {}}>
         Add questions
       </MenuItem>
       <MenuItem onSelect={() => {}}>Edit homework</MenuItem>
-      <MenuItem icon={<Printer />} hint="3 still being found" onSelect={() => {}}>
+      <MenuItem
+        icon={<Printer />}
+        hint="3 still being found"
+        onSelect={() => {}}
+      >
         Print worksheet
       </MenuItem>
       <MenuDivider />
@@ -26,22 +44,28 @@ function MenuDemo() {
         Turned in
       </MenuCheckItem>
     </Menu>
-  )
+  );
 }
 
 /** The confirm in its three homes: a control in a row (a question's
  *  trash), a menu's last item (Delete homework), a button in a Box
  *  (Settings' Reset). */
 function QuestionHeaderDemo() {
-  const [asking, setAsking] = useState(false)
-  const trash = useRef<HTMLButtonElement>(null)
+  const [asking, setAsking] = useState(false);
+  const trash = useRef<HTMLButtonElement>(null);
   return (
     <div className="flex w-96 items-center gap-2">
-      <span className="min-w-0 flex-1 truncate text-lg font-semibold">3.A.4</span>
+      <span className="min-w-0 flex-1 truncate text-lg font-semibold">
+        3.A.4
+      </span>
       <IconButton variant="ghost" size="sm" aria-label="Move this question up">
         <ChevronUp />
       </IconButton>
-      <IconButton variant="ghost" size="sm" aria-label="Move this question down">
+      <IconButton
+        variant="ghost"
+        size="sm"
+        aria-label="Move this question down"
+      >
         <ChevronDown />
       </IconButton>
       <IconButton
@@ -66,7 +90,7 @@ function QuestionHeaderDemo() {
         />
       )}
     </div>
-  )
+  );
 }
 
 /** A dropdown with a labelled trigger and a current row: the homework
@@ -83,11 +107,15 @@ function QuestionsMenuDemo() {
       <MenuItem current onSelect={() => {}}>
         4.32
       </MenuItem>
-      <MenuItem icon={<Spinner className="size-4" />} hint="Writing the guide" onSelect={() => {}}>
+      <MenuItem
+        icon={<Spinner className="size-4" />}
+        hint="Writing the guide"
+        onSelect={() => {}}
+      >
         3.12
       </MenuItem>
     </Menu>
-  )
+  );
 }
 
 function HomeworkMenuDemo() {
@@ -117,17 +145,25 @@ function HomeworkMenuDemo() {
         Delete homework
       </MenuConfirmItem>
     </Menu>
-  )
+  );
 }
 
 function ResetDemo() {
-  const [asking, setAsking] = useState(false)
-  const button = useRef<HTMLButtonElement>(null)
+  const [asking, setAsking] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
   return (
     <Box tone="destructive" className="w-full">
       <BoxBody className="flex min-h-control items-center gap-3 text-sm">
-        <span className="min-w-0 flex-1 text-muted-foreground">Erase every book, set, conversation and setting.</span>
-        <Button ref={button} variant="outline" size="sm" className="text-destructive" onClick={() => setAsking(true)}>
+        <span className="min-w-0 flex-1 text-muted-foreground">
+          Erase every book, set, conversation and setting.
+        </span>
+        <Button
+          ref={button}
+          variant="outline"
+          size="sm"
+          className="text-destructive"
+          onClick={() => setAsking(true)}
+        >
           Reset everything
         </Button>
         {asking && (
@@ -142,11 +178,11 @@ function ResetDemo() {
         )}
       </BoxBody>
     </Box>
-  )
+  );
 }
 
 function DialogDemo({ width }: { width: 'default' | 'wide' }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
   return (
     <>
       <Button variant="outline" onClick={() => setOpen(true)}>
@@ -174,7 +210,7 @@ function DialogDemo({ width }: { width: 'default' | 'wide' }) {
         </p>
       </Dialog>
     </>
-  )
+  );
 }
 
 export const overlaysSections: ComponentEntry[] = [
@@ -196,7 +232,9 @@ export const overlaysSections: ComponentEntry[] = [
           <MenuDemo />
           <QuestionsMenuDemo />
           <HomeworkMenuDemo />
-          <p className="text-xs text-muted-foreground">Open one, then another: the first closes. Menus never stack.</p>
+          <p className="text-xs text-muted-foreground">
+            Open one, then another: the first closes. Menus never stack.
+          </p>
         </Shelf>
       </>
     ),
@@ -238,4 +276,4 @@ export const overlaysSections: ComponentEntry[] = [
       </>
     ),
   },
-]
+];

@@ -5,11 +5,11 @@ what is happening, and the controls for exactly that state. A `BoxRow`
 with a `CoverSwatch` leading, `BookStatus` as the description, and the
 buttons trailing.
 
-| state | line | controls |
-|---|---|---|
-| queued | Queued | Cancel |
-| preparing | the phase, its count and a bar, or a spinner | Stop |
-| failed | the engine's own sentence | **Try again** · Dismiss |
+| state     | line                                         | controls                |
+| --------- | -------------------------------------------- | ----------------------- |
+| queued    | Queued                                       | Cancel                  |
+| preparing | the phase, its count and a bar, or a spinner | Stop                    |
+| failed    | the engine's own sentence                    | **Try again** · Dismiss |
 
 - **Stopping leaves a failed row** rather than removing it, so Try again
   is the undo and there is one shape for "not going to finish", not two.

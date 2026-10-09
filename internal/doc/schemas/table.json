@@ -3,11 +3,7 @@
   "$comment": "A small table. Cells may carry inline \\(math\\).",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "type",
-    "columns",
-    "rows"
-  ],
+  "required": ["type", "columns", "rows"],
   "properties": {
     "type": {
       "const": "table"
