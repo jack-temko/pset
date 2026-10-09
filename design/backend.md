@@ -364,6 +364,20 @@ and the probability book, through the eval key:
   min, $0.04; GLM 6 right but 4 to 13 minutes, $0.13. DeepSeek's taught
   best: the book's theorems cited, notes where a student trips, checks.
 
+- **Checker**, `google/gemini-3.8-flash`, with Luna behind it
+  (2026-10-08). The Writer's mistakes vary run to run (Haiku got 18 to
+  20 of the same 22 right), so each guide's final answers are checked
+  against an independent solve. On 66 hand-graded guides, a Gemini solve
+  at medium effort compared by Haiku caught all 6 of the Writer's
+  mistakes and both answers a misread figure had spoiled, and its 4
+  differences on guides graded right were real mistakes in parts the
+  grading had skipped (a Gibbs overshoot claimed for a continuous
+  function, trajectories said to leave an axis they approach). Luna Pro
+  as the solver also caught all 6, at a fifth of the price, but raised 4
+  differences from its own mistakes; DeepSeek caught 5. In the app, on
+  the 22: two first drafts caught and written right, every checked guide
+  right, $0.010 a guide and about 17 s.
+
 A self-reported confidence was tried on the readings and doesn't tell:
 wrong readings claimed 88 to 96 out of 100, right ones 78 to 100. Three
 readings that agree do: every circuit whose readings agreed was right,
