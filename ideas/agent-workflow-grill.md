@@ -24,6 +24,8 @@ Opus judges and plans, Sonnet builds and reviews, Haiku reads, checks, photograp
 | D9 | Opus judges Haiku's screenshots against `design/` on changes touching `web/` only | design judgment is where Opus earns its cost | you always; the Sonnet reviewer |
 | D10 | `pset-view` uses the same split: grills and the final visual verdict on Opus, build steps to the Sonnet builder | your biggest jobs get the biggest saving | all Opus |
 | D11 | Packaging: committed `.claude/agents/` plus one `/change` skill | one command; cloud sessions get it too; nothing loads into unrelated sessions | AGENTS.md rules; a saved workflow |
+| D13 | A gate before every merge, every tier: the orchestrator opens the PR (CI runs meanwhile), starts the branch's own app on private ports with its own data, tells Jack what to try, and asks: approve and merge, change something (back to the builder, then the gate again), or park | Jack wants to try changes himself and amend them before they land | merging on green CI (the old AGENTS.md rule) |
+| D14 | The gate covers every merge into `dev`, not only `/change` | one rule, no surprises | only `/change` changes |
 | D12 | Rollout: update Claude Code to 2.1.293+, build on branch `agent-workflow`, pilot one real change, compare `/usage` attribution, then land | prove it saves before it becomes the rule | spec only |
 
 ### The artifact: roles
@@ -39,7 +41,7 @@ Opus judges and plans, Sonnet builds and reviews, Haiku reads, checks, photograp
 | `shooter` | Haiku, low | bash, browser | photograph each changed state, Paper and Night, 1280+, into scratch outside the repo | paths to images |
 | `lander` | Haiku, low | bash (git, gh) | push, `gh pr create --base dev`, wait for CI, `update-branch` if needed, squash-merge, remove the worktree | PR link and result |
 
-Flow: `/change <ask>` → triage → tier proposed → you confirm → (planned: Opus plan file → your OK) → worktree → builder → checker → reviewer (→ opus-reviewer) → fixes back to builder → (web/: shooter → Opus verdict) → lander → "landed: ..."
+Flow: `/change <ask>` → triage → tier proposed → you confirm → (planned: Opus plan file → your OK) → worktree → builder → checker → reviewer (→ opus-reviewer) → fixes back to builder → (web/: shooter → Opus verdict) → lander opens the PR → **you try it in its own app: approve, change (back to builder), or park** → lander merges → "landed: ..."
 
 ### Assumed
 - A1: Effort per role as in the table above.
@@ -47,7 +49,7 @@ Flow: `/change <ask>` → triage → tier proposed → you confirm → (planned:
 - A3: The plan file is the `ideas/<topic>.md` convention (Status, Information) plus Files, Steps, Tests and Acceptance sections, so the builder reads only what it names.
 - A4: The orchestrator makes the named worktree itself (`../pset-<topic>`), per AGENTS.md, instead of `isolation: worktree`, which branches with generated names.
 - A5: Only the builder gets the 1h subagent cache (`experimental.cacheTtl: 1h`), not every subagent.
-- A6: The lander merges green PRs per AGENTS.md, except where a project says to ask first (the homework redesign).
+- ~~A6: The lander merges green PRs per AGENTS.md, except where a project says to ask first.~~ Superseded by D13.
 - A7: The `/change` skill has `disable-model-invocation: true`, so it runs only when you type it.
 - A8: AGENTS.md gets a short pointer to `/change` and the roles; the detail lives in the skill.
 
@@ -69,7 +71,14 @@ Flow: `/change <ask>` → triage → tier proposed → you confirm → (planned:
 
 ## Reversals
 
+- 2026-10-08: the git workflow grill's D4 (agents merge their own green PRs without waiting for Jack), reversed by Jack as an explicit question (Q15). Recorded there as R2.
+
 - D12 (pilot before landing) reversed by Jack on 2026-10-08: "land it now, I'll pull dev". So `/change` is in every session in his checkout; the pilot runs after landing, from `dev`.
+
+### Batch 5 (2026-10-08, after landing)
+- Jack: "After the implementation, we need to make sure there is a gate for me to actually test the changes and approve them/make changes before anything is merged."
+- Q15 Scope: Every merge into dev (Recommended) / Only changes through /change. Answer: "Every merge into dev (Recommended)"
+- Q16 Test env: App from the worktree (Recommended) / You run it yourself / Screenshots and PR only. Answer: "App from the worktree (Recommended)"
 
 ## Disagreements
 
