@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { ChevronRight } from 'lucide-react'
 
 import type { Usage } from '@/api/gen/usage'
-import { useUsageDetail, type UsageSource } from '@/api/usage'
+import { prefetchUsageDetail, useUsageDetail, type UsageSource } from '@/api/usage'
 import { UsageModal } from '@/components/usage-modal'
 import { atLeast, cost, shortModel } from '@/lib/usage-format'
 import { cn } from '@/lib/utils'
@@ -64,6 +65,12 @@ export function UsageTrigger({
   className?: string
 }) {
   const [open, setOpen] = useState(false)
+  const client = useQueryClient()
+  // Start the fetch as the pointer or focus reaches the line, so the modal
+  // usually opens with its data.
+  const prefetch = () => {
+    if (detail === undefined) void prefetchUsageDetail(client, source)
+  }
   if (!usage.rows[0]) return null
   return (
     <>
@@ -72,6 +79,8 @@ export function UsageTrigger({
         data-copy-skip
         aria-haspopup="dialog"
         aria-label={`Usage details for ${name}`}
+        onPointerEnter={prefetch}
+        onFocus={prefetch}
         onClick={() => setOpen(true)}
         className={cn(
           block ? 'block' : 'inline',
@@ -82,14 +91,14 @@ export function UsageTrigger({
       >
         <UsageSummary usage={usage} after={<ChevronRight className="ml-1 inline size-3 align-[-0.1em]" aria-hidden />} />
       </button>
-      {open && <Loaded open source={source} name={name} detail={detail} onClose={() => setOpen(false)} />}
+      {open && <UsageDetail open source={source} name={name} detail={detail} onClose={() => setOpen(false)} />}
     </>
   )
 }
 
 /** The modal with its detail fetched: mounted only while open, so nothing
  *  is asked for until it is wanted. */
-function Loaded({
+function UsageDetail({
   open,
   source,
   name,

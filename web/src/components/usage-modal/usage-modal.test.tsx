@@ -64,7 +64,11 @@ describe('UsageModal', () => {
   })
 
   it('says it is loading, failed, or had no calls', () => {
-    expect(textOf(<UsageModal open onClose={noop} name="x" loading />)).toContain('Loading the details')
+    // Loading holds the layout: the totals' labels and the stages table's header, no spinner line.
+    const loading = textOf(<UsageModal open onClose={noop} name="x" loading />)
+    expect(loading).toContain('Tokens in')
+    expect(loading).toContain('Attempts')
+    expect(loading).not.toContain('Loading')
     expect(textOf(<UsageModal open onClose={noop} name="x" error />)).toContain("Couldn't load")
     expect(textOf(<UsageModal open onClose={noop} name="x" detail={null} />)).toContain('No model calls were made')
   })

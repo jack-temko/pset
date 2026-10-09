@@ -3,13 +3,15 @@ import type { ReactNode } from 'react'
 import type { BookUsage, Call, Detail, DetailTotal, Stage } from '@/api/gen/usage'
 import { Button } from '@/components/button'
 import { Dialog } from '@/components/dialog'
-import { Spinner } from '@/components/spinner'
+import { Loaded } from '@/components/loaded'
+import { Skeleton } from '@/components/skeleton'
 import { Table, type TableColumn } from '@/components/table'
+import { useLastCount } from '@/lib/last-count'
 import { callSeconds, clock, cost, shortModel, timeOfDay, tokens } from '@/lib/usage-format'
 import { cn } from '@/lib/utils'
 
 /** What a modal is showing: the detail, still on its way, or not coming. */
-type Loaded<T> = { data?: T | null; loading?: boolean; error?: boolean }
+type State<T> = { data?: T | null; loading?: boolean; error?: boolean }
 
 /** A figure that is a minimum, because a call reported nothing, wears a small
  *  "≥" hung to the left of its number: absolutely positioned, so it never
@@ -44,6 +46,31 @@ export function Fig({ text, partial, inline }: { text: string; partial: boolean;
 
 const figure = (n: number | undefined, partial: boolean, inline?: boolean) => <Fig text={tokens(n)} partial={partial} inline={inline} />
 const money = (d: number | undefined, partial: boolean, inline?: boolean) => <Fig text={cost(d)} partial={partial} inline={inline} />
+
+const totalLabels = ['Time', 'Calls', 'Failed', 'Cost', 'Tokens in', 'Tokens out', 'Cached', 'Reasoning']
+
+/** The totals' grid before its figures arrive: two rows of four, the labels
+ *  already there. */
+function TotalsSkeleton() {
+  return (
+    <dl className="grid grid-cols-4 gap-x-4 gap-y-2 text-sm">
+      {totalLabels.map((k) => (
+        <div key={k}>
+          <dt className="text-xs text-muted-foreground">{k}</dt>
+          <dd className="font-medium">
+            <Skeleton className="h-3 w-12" />
+          </dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+/** A table's header with `rows` placeholder rows, laid out as the real one is. */
+function TableSkeleton<T>({ columns, rows, caption }: { columns: TableColumn<T>[]; rows: number; caption: string }) {
+  const bare = columns.map((c) => ({ key: c.key, header: c.header, width: c.width, numeric: c.numeric, cell: () => <Skeleton className="h-3 w-10" /> }))
+  return <Table dense caption={caption} columns={bare} rows={Array.from({ length: rows }, (_, i) => i)} rowKey={String} />
+}
 
 function Totals({ total }: { total: DetailTotal }) {
   const partial = (total.uncounted ?? 0) > 0
@@ -156,17 +183,18 @@ function Breakdown({ detail }: { detail: Detail }) {
   )
 }
 
-function Body({ state, children }: { state: Loaded<unknown>; children: ReactNode }) {
-  if (state.loading) {
-    return (
-      <p className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Spinner /> Loading the details…
-      </p>
-    )
-  }
-  if (state.error) return <p className="text-sm text-destructive">Couldn't load the details. Close this and try again.</p>
-  if (!state.data) return <p className="text-sm text-muted-foreground">No model calls were made.</p>
-  return <div className="space-y-4">{children}</div>
+/** The dialog's body: a skeleton the size of the table while the data is
+ *  on its way, then the data fading in. */
+function Body<T>({ state, skeleton, children }: { state: State<T>; skeleton: ReactNode; children: (data: T) => ReactNode }) {
+  return (
+    <Loaded
+      className="space-y-4"
+      query={{ data: state.data ?? null, isPending: !!state.loading, isError: !!state.error }}
+      skeleton={skeleton}
+    >
+      {(data) => (data ? children(data as T) : <p className="text-sm text-muted-foreground">No model calls were made.</p>)}
+    </Loaded>
+  )
 }
 
 /**
@@ -181,7 +209,8 @@ export function UsageModal({
   detail,
   loading,
   error,
-}: { open: boolean; onClose: () => void; name: string } & Loaded<Detail> & { detail?: Detail | null }) {
+}: { open: boolean; onClose: () => void; name: string } & State<Detail> & { detail?: Detail | null }) {
+  const stageRows = useLastCount('usage-stages', detail?.stages.length)
   return (
     <Dialog
       open={open}
@@ -194,11 +223,21 @@ export function UsageModal({
         </Button>
       }
     >
-      <Body state={{ data: detail, loading, error }}>
-        {detail && (
+      <Body
+        state={{ data: detail, loading, error }}
+        skeleton={
           <>
-            <Totals total={detail.total} />
-            <Breakdown detail={detail} />
+            <TotalsSkeleton />
+            <Section title="Stages">
+              <TableSkeleton columns={stageColumns} rows={stageRows} caption="Stages" />
+            </Section>
+          </>
+        }
+      >
+        {(d) => (
+          <>
+            <Totals total={d.total} />
+            <Breakdown detail={d} />
           </>
         )}
       </Body>
@@ -223,7 +262,8 @@ export function BookUsageDialog({
   data,
   loading,
   error,
-}: { open: boolean; onClose: () => void; title: string } & Loaded<BookUsage>) {
+}: { open: boolean; onClose: () => void; title: string } & State<BookUsage>) {
+  const kindRows = useLastCount('usage-book-kinds', data?.kinds.length)
   return (
     <Dialog
       open={open}
@@ -236,23 +276,33 @@ export function BookUsageDialog({
         </Button>
       }
     >
-      <Body state={{ data, loading, error }}>
-        {data && (
+      <Body
+        state={{ data, loading, error }}
+        skeleton={
           <>
-            <Totals total={data.total} />
+            <TotalsSkeleton />
+            <Section title="By kind">
+              <TableSkeleton columns={kindColumns} rows={kindRows} caption="Usage by kind" />
+            </Section>
+          </>
+        }
+      >
+        {(d) => (
+          <>
+            <Totals total={d.total} />
             <Section title="By kind">
               <Table
                 dense
                 caption="Usage by kind"
                 columns={kindColumns}
-                rows={data.kinds}
+                rows={d.kinds}
                 rowKey={(k) => k.kind}
               />
             </Section>
-            {data.import && (
+            {d.import && (
               <>
                 <h3 className={cn('pt-2 text-sm font-semibold')}>Import</h3>
-                <Breakdown detail={data.import} />
+                <Breakdown detail={d.import} />
               </>
             )}
           </>
