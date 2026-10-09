@@ -8,12 +8,13 @@
 # The source library is only read: the database is copied with VACUUM INTO (it
 # may be open in a running PSet), the rest with cp -rL, and the saved API keys
 # are deleted from the copy before the server starts, so no model call can be
-# made. Default DATA is the worktree's .dev/data.
+# made. Default DATA is the test library in ~/.local/share/pset-test-library.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 topic=$(basename "$root"); topic=${topic#pset-}
-src=${DATA:-$root/.dev/data}
+src=${DATA:-$HOME/.local/share/pset-test-library}
+[ -d "$src" ] || { echo "no library at $src: make test-library makes the default one" >&2; exit 1; }
 src=$(cd "$src" && pwd)
 run=/tmp/pset-jumps-$topic
 stamp=$(date +%Y%m%d-%H%M%S)
