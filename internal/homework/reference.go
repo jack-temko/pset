@@ -51,7 +51,7 @@ func (r Ref) Label(style probnum.Style) string {
 
 // Name is the reference in words, for a sentence: "section 3.1's problem
 // 7", "problem 4.27", "problem 7 on p. 33".
-func (r Ref) Name(style probnum.Style) string {
+func (r Ref) Name(_ probnum.Style) string {
 	switch {
 	case r.Section != "":
 		return fmt.Sprintf("section %s's problem %s", r.Section, r.Number)

@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/probnum"
 
@@ -89,6 +90,7 @@ type Time interface {
 	QuestionSeconds(ctx context.Context, ids []string) (map[string]int, error)
 }
 
+// Queue is the job queue as homework uses it.
 type Queue interface {
 	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
 	// Wake starts what was enqueued, once its transaction has committed.
@@ -97,6 +99,7 @@ type Queue interface {
 	Handle(kind, lane string, h jobs.Handler)
 }
 
+// Config is what the service is built from.
 type Config struct {
 	DB       *sql.DB
 	Events   events.Publisher
@@ -110,6 +113,7 @@ type Config struct {
 	Time Time
 }
 
+// Service keeps homework sets and writes a guide for each question.
 type Service struct {
 	c Config
 	// rankMu makes "is a ranking already waiting, if not queue one" one step.
@@ -133,6 +137,7 @@ const (
 // of every queued guide, even ones queued before the question was added.
 const locateFirst = 1
 
+// New builds the service and registers its job handlers on the queue.
 func New(c Config) *Service {
 	s := &Service{c: c}
 	c.Queue.Handle(JobLocate, LaneQuestion, s.runLocate)
@@ -176,6 +181,7 @@ func (s *Service) Due(ctx context.Context) ([]Summary, error) {
 	return hs, s.fillSummaries(ctx, hs)
 }
 
+// Create makes a homework set in a book and queues the work on its questions.
 func (s *Service) Create(ctx context.Context, bookID string, in Input) (Summary, error) {
 	if _, err := s.c.Library.Book(ctx, bookID); err != nil {
 		return Summary{}, err
@@ -219,6 +225,7 @@ func cleanDate(d string) (string, error) {
 	return d, nil
 }
 
+// Get is a set with its questions.
 func (s *Service) Get(ctx context.Context, id string) (Detail, error) {
 	h, err := getSummary(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
@@ -284,6 +291,7 @@ func (s *Service) fillSeconds(ctx context.Context, qs []Question) error {
 	return nil
 }
 
+// Update changes the fields of a set that the patch names.
 func (s *Service) Update(ctx context.Context, id string, p Patch) (Summary, error) {
 	// Read and write in one transaction, which holds the write lock from
 	// its start: two patches of different fields each read the set as it
@@ -339,9 +347,13 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 		return err
 	}
 	for _, q := range qs {
-		s.c.Queue.StopSubject(ctx, q.ID)
+		if err := s.c.Queue.StopSubject(ctx, q.ID); err != nil {
+			return err
+		}
 	}
-	s.c.Queue.StopSubject(ctx, id)
+	if err := s.c.Queue.StopSubject(ctx, id); err != nil {
+		return err
+	}
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM homework WHERE id = ?`, id); err != nil {
 		return err
 	}
@@ -352,7 +364,7 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 	if err := usage.Forget(ctx, s.c.DB, usage.SubjectSet, id); err != nil {
 		return err
 	}
-	s.c.Events.Publish(EventHomeworkRemoved, HomeworkRemoved{ID: id, BookID: h.BookID})
+	s.c.Events.Publish(EventHomeworkRemoved, SetRemoved{ID: id, BookID: h.BookID})
 	return nil
 }
 
@@ -420,7 +432,7 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 	// is said, the new ones and the others, whose shares of the set's
 	// ranking are now over more questions.
 	s.publishSetQuestions(ctx, homeworkID)
-	s.publishSet(ctx, homeworkID)
+	s.announceSet(ctx, homeworkID)
 	// Questions not from the book have nothing to find: the set may be
 	// ready to rank already.
 	s.rankWhenFound(ctx, homeworkID)
@@ -562,7 +574,7 @@ func (s *Service) UpdateQuestion(ctx context.Context, id string, p QuestionPatch
 	}
 	out, err := s.publishQuestion(ctx, id)
 	if p.Done != nil {
-		s.publishSet(ctx, q.HomeworkID)
+		s.announceSet(ctx, q.HomeworkID)
 	}
 	return out, err
 }
@@ -654,7 +666,9 @@ func (s *Service) RemoveQuestion(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	s.c.Queue.StopSubject(ctx, id)
+	if err := s.c.Queue.StopSubject(ctx, id); err != nil {
+		return err
+	}
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM questions WHERE id = ?`, id); err != nil {
 			return err
@@ -670,7 +684,7 @@ func (s *Service) RemoveQuestion(ctx context.Context, id string) error {
 	s.c.Events.Publish(EventQuestionRemoved, QuestionRemoved{ID: id, HomeworkID: q.HomeworkID})
 	// Everyone left moved up or takes a bigger share of the set's ranking.
 	s.publishSetQuestions(ctx, q.HomeworkID)
-	s.publishSet(ctx, q.HomeworkID)
+	s.announceSet(ctx, q.HomeworkID)
 	// Difficulty is against the rest of the set, so the rest is ranked again.
 	s.rankWhenFound(ctx, q.HomeworkID)
 	return nil
@@ -775,6 +789,23 @@ func (s *Service) filled(ctx context.Context, h Summary) (Summary, error) {
 	return one[0], err
 }
 
+// The announce methods are the publish ones for a caller that can do nothing
+// about a failure: they log it.
+func (s *Service) announceSet(ctx context.Context, id string) {
+	_, err := s.publishSet(ctx, id)
+	cleanup.Log("homework: publish a set", err)
+}
+
+func (s *Service) announceQuestion(ctx context.Context, id string) {
+	_, err := s.publishQuestion(ctx, id)
+	cleanup.Log("homework: publish a question", err)
+}
+
+func (s *Service) announceRead(ctx context.Context, id string) {
+	_, err := s.publishRead(ctx, id)
+	cleanup.Log("homework: publish a read", err)
+}
+
 func (s *Service) publishSet(ctx context.Context, id string) (Summary, error) {
 	h, err := getSummary(ctx, s.c.DB, id)
 	if err != nil {
@@ -783,7 +814,7 @@ func (s *Service) publishSet(ctx context.Context, id string) (Summary, error) {
 	if h, err = s.filled(ctx, h); err != nil {
 		return Summary{}, err
 	}
-	s.c.Events.Publish(EventHomeworkChanged, HomeworkChanged{Homework: h})
+	s.c.Events.Publish(EventHomeworkChanged, SetChanged{Homework: h})
 	return h, nil
 }
 
@@ -792,21 +823,23 @@ func (s *Service) publishQuestion(ctx context.Context, id string) (Question, err
 	if err != nil {
 		return Question{}, err
 	}
-	if q.Question.Usage, err = usage.For(ctx, s.c.DB, usage.SubjectQuestion, id); err != nil {
+	if q.Usage, err = usage.For(ctx, s.c.DB, usage.SubjectQuestion, id); err != nil {
 		return Question{}, err
 	}
-	if set, n, err := s.setOf(ctx, id); err != nil {
+	set, n, err := s.setOf(ctx, id)
+	if err != nil {
 		return Question{}, err
-	} else if rank, err := usage.Calls(ctx, s.c.DB, usage.SubjectSet, set); err != nil {
-		return Question{}, err
-	} else {
-		q.Question.Usage = usage.AddShare(q.Question.Usage, rank, n)
 	}
+	rank, err := usage.Calls(ctx, s.c.DB, usage.SubjectSet, set)
+	if err != nil {
+		return Question{}, err
+	}
+	q.Usage = usage.AddShare(q.Usage, rank, n)
 	one := []Question{q.Question}
 	if err = s.fillSeconds(ctx, one); err != nil {
 		return Question{}, err
 	}
-	q.Question.Seconds = one[0].Seconds
+	q.Seconds = one[0].Seconds
 	s.c.Events.Publish(EventQuestionChanged, QuestionChanged{Question: q.Question})
 	return q.Question, nil
 }
@@ -850,7 +883,7 @@ func ids(ctx context.Context, d *sql.DB, query string, args ...any) ([]string, e
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	var out []string
 	for rows.Next() {
 		var id string

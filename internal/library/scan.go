@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+
+	"github.com/jackt/pset/internal/cleanup"
 )
 
 // Scans render on demand, per width bucket, and are cached on disk: a
@@ -98,11 +100,11 @@ func (c *scanCache) renderTo(ctx context.Context, b row, path string, page, w in
 	if err := os.MkdirAll(filepath.Dir(file), 0o700); err == nil {
 		tmp := file + ".tmp"
 		if os.WriteFile(tmp, data, 0o600) == nil {
-			os.Rename(tmp, file)
+			cleanup.Log("scan cache: rename", os.Rename(tmp, file))
 		}
 	}
 	return data, nil
 }
 
 // drop forgets a removed book's renders.
-func (c *scanCache) drop(bookID string) { os.RemoveAll(filepath.Join(c.dir, bookID)) }
+func (c *scanCache) drop(bookID string) { cleanup.RemoveAll(filepath.Join(c.dir, bookID)) }

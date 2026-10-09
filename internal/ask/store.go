@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
 )
 
-// Migrations: one conversation per book, as its turns.
+// Migrations creates one conversation per book, as its turns.
 func Migrations() []db.Migration {
 	return []db.Migration{{Name: "ask/1", SQL: `
 CREATE TABLE turns (
@@ -58,8 +59,8 @@ func scan(s interface{ Scan(...any) error }) (row, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
 	}
-	json.Unmarshal([]byte(steps), &r.Steps)
-	json.Unmarshal([]byte(answer), &r.Answer)
+	decodeColumn("steps", steps, &r.Steps)
+	decodeColumn("answer", answer, &r.Answer)
 	// "null" unmarshals to nil: the wire always carries lists.
 	if r.Steps == nil {
 		r.Steps = []Step{}
@@ -79,7 +80,7 @@ func listTurns(ctx context.Context, d *sql.DB, bookID string) ([]row, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	var out []row
 	for rows.Next() {
 		r, err := scan(rows)
@@ -94,4 +95,13 @@ func listTurns(ctx context.Context, d *sql.DB, bookID string) ([]row, error) {
 func mustJSON(v any) string {
 	b, _ := json.Marshal(v)
 	return string(b)
+}
+
+// decodeColumn reads a JSON column into dst. An empty one leaves dst as it
+// is; a malformed one is logged, and dst keeps what decoded.
+func decodeColumn(name, col string, dst any) {
+	if col == "" {
+		return
+	}
+	cleanup.Log("ask: read the "+name+" column", json.Unmarshal([]byte(col), dst))
 }

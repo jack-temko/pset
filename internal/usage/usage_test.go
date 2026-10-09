@@ -7,8 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/testx"
 )
 
 func newDB(t *testing.T) *sql.DB {
@@ -17,7 +19,7 @@ func newDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { cleanup.Close(d) })
 	if err := db.Migrate(context.Background(), d, Migrations()); err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +112,7 @@ func TestAggregationGroupsByAnsweredModelAndSums(t *testing.T) {
 		second.Tokens == nil || *second.Tokens != 18_554 {
 		t.Fatalf("second row %+v", second)
 	}
-	var qwen *UsageRow
+	var qwen *Row
 	for i := range u.Rows {
 		if u.Rows[i].Model == "local/qwen" {
 			qwen = &u.Rows[i]
@@ -199,7 +201,7 @@ func TestForgetAllDeletesTheSubjectsRows(t *testing.T) {
 		t.Fatal(err)
 	}
 	var n int
-	d.QueryRow(`SELECT count(*) FROM calls`).Scan(&n)
+	testx.Check(t, d.QueryRow(`SELECT count(*) FROM calls`).Scan(&n))
 	if n != 0 {
 		t.Fatalf("%d rows left", n)
 	}
@@ -251,7 +253,7 @@ func TestUncountedCallsAreTallied(t *testing.T) {
 	sink(call("d", SubjectQuestion, "q1", "local/qwen", "local/qwen", 9_000, nil, ""))
 
 	u, _ := For(context.Background(), d, SubjectQuestion, "q1")
-	by := map[string]UsageRow{}
+	by := map[string]Row{}
 	for _, r := range u.Rows {
 		by[r.Model] = r
 	}
@@ -278,7 +280,7 @@ func TestACallEndingAfterItsSubjectWasRemovedIsNotRecorded(t *testing.T) {
 	ctx := context.Background()
 	count := func(id string) int {
 		var n int
-		d.QueryRow(`SELECT count(*) FROM calls WHERE subject_id = ?`, id).Scan(&n)
+		testx.Check(t, d.QueryRow(`SELECT count(*) FROM calls WHERE subject_id = ?`, id).Scan(&n))
 		return n
 	}
 	live := &llm.Usage{PromptTokens: 10, CompletionTokens: 1}
@@ -313,7 +315,7 @@ func TestACallEndingAfterItsSubjectWasRemovedIsNotRecorded(t *testing.T) {
 	if err := Forget(ctx, tx, SubjectQuestion, "q3"); err != nil {
 		t.Fatal(err)
 	}
-	tx.Rollback()
+	testx.Check(t, tx.Rollback())
 	sink(call("d", SubjectQuestion, "q3", "m", "m", 1, live, ""))
 	if n := count("q3"); n != 1 {
 		t.Fatalf("q3 has %d rows; its removal rolled back, so it lives and is recorded", n)
@@ -337,7 +339,7 @@ func TestSweepClearsOldMarksAndUnattributedCalls(t *testing.T) {
 	sink(call(old, "", "", "m", "m", 1, nil, ""))
 	sink(call(recent, "", "", "m", "m", 1, nil, ""))
 	sink(call(old, SubjectQuestion, "q-old", "m", "m", 1, nil, ""))
-	d.Exec(`INSERT INTO forgotten (subject_type, subject_id, at) VALUES ('question', 'gone-long-ago', ?)`, db.At(time.Now().Add(-48*time.Hour)))
+	testx.Check(t, testx.Err(d.Exec(`INSERT INTO forgotten (subject_type, subject_id, at) VALUES ('question', 'gone-long-ago', ?)`, db.At(time.Now().Add(-48*time.Hour)))))
 	if err := Forget(ctx, d, SubjectQuestion, "gone-now"); err != nil {
 		t.Fatal(err)
 	}
@@ -346,8 +348,8 @@ func TestSweepClearsOldMarksAndUnattributedCalls(t *testing.T) {
 		t.Fatal(err)
 	}
 	var calls, marks int
-	d.QueryRow(`SELECT count(*) FROM calls`).Scan(&calls)
-	d.QueryRow(`SELECT count(*) FROM forgotten`).Scan(&marks)
+	testx.Check(t, d.QueryRow(`SELECT count(*) FROM calls`).Scan(&calls))
+	testx.Check(t, d.QueryRow(`SELECT count(*) FROM forgotten`).Scan(&marks))
 	if calls != 2 {
 		t.Errorf("%d calls left, want the recent unattributed one and the old question's", calls)
 	}
@@ -363,7 +365,7 @@ func TestMigrationKeepsExistingCalls(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { cleanup.Close(d) })
 	ctx := context.Background()
 	old := Migrations()[:2]
 	if err := db.Migrate(ctx, d, old); err != nil {
@@ -384,8 +386,6 @@ func TestMigrationKeepsExistingCalls(t *testing.T) {
 		t.Fatalf("detail %+v", got)
 	}
 }
-
-func intp(n int) *int { return &n }
 
 // The sink stores a call's stage, run, tools and the provider's reasoning
 // and cached counts, and the detail groups them: stages in the order they

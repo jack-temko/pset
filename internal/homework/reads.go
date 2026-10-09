@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/probnum"
 	"github.com/jackt/pset/internal/usage"
@@ -45,7 +46,7 @@ func (s *Service) Reads(ctx context.Context, bookID string) ([]AssignmentRead, e
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	out := []AssignmentRead{}
 	for rows.Next() {
 		r, err := scanRead(rows)
@@ -149,12 +150,12 @@ func (s *Service) mark(ctx context.Context, style probnum.Style, r AssignmentRea
 		for rows.Next() {
 			var due, id string
 			if err := rows.Scan(&due, &id); err != nil {
-				rows.Close()
+				cleanup.Close(rows)
 				return err
 			}
 			sets[due] = id
 		}
-		rows.Close()
+		cleanup.Close(rows)
 		if err := rows.Err(); err != nil {
 			return err
 		}

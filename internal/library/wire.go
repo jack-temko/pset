@@ -9,21 +9,30 @@ import (
 type State string
 
 const (
-	StateQueued    State = "queued"
+	// StateQueued is waiting its turn to be read.
+	StateQueued State = "queued"
+	// StatePreparing is being read; Phase says which step.
 	StatePreparing State = "preparing"
-	StateReady     State = "ready"
-	StateFailed    State = "failed"
+	// StateReady is on the shelf and can be opened.
+	StateReady State = "ready"
+	// StateFailed could not be read; Reason says why.
+	StateFailed State = "failed"
 )
 
 // Phase is one of the five named steps of preparing a book.
 type Phase string
 
 const (
-	PhaseExamine  Phase = "examine"
-	PhaseRead     Phase = "read"
+	// PhaseExamine looks at the file: its size, metadata and whether it has text.
+	PhaseExamine Phase = "examine"
+	// PhaseRead recognizes the text of a scanned book, page by page.
+	PhaseRead Phase = "read"
+	// PhaseContents finds the table of contents.
 	PhaseContents Phase = "contents"
-	PhaseIndex    Phase = "index"
-	PhaseSearch   Phase = "search"
+	// PhaseIndex works the contents out into the book's sections.
+	PhaseIndex Phase = "index"
+	// PhaseSearch embeds the pages so they can be searched.
+	PhaseSearch Phase = "search"
 )
 
 // Cover is a book's cloth colour: one of six, the --cover-* tokens in
@@ -32,12 +41,18 @@ const (
 type Cover string
 
 const (
+	// CoverIndigo is the first of the cover colours.
 	CoverIndigo Cover = "indigo"
-	CoverTeal   Cover = "teal"
-	CoverAmber  Cover = "amber"
-	CoverRose   Cover = "rose"
+	// CoverTeal is a cover colour.
+	CoverTeal Cover = "teal"
+	// CoverAmber is a cover colour.
+	CoverAmber Cover = "amber"
+	// CoverRose is a cover colour.
+	CoverRose Cover = "rose"
+	// CoverViolet is a cover colour.
 	CoverViolet Cover = "violet"
-	CoverSlate  Cover = "slate"
+	// CoverSlate is a cover colour.
+	CoverSlate Cover = "slate"
 )
 
 // BookState is a book's import state. Phase is set while preparing; Done
@@ -59,7 +74,9 @@ type Kind string
 const (
 	// KindUnknown is a book not examined yet.
 	KindUnknown Kind = ""
+	// KindDigital has a text layer.
 	KindDigital Kind = "digital"
+	// KindScanned is pictures of pages, read by OCR.
 	KindScanned Kind = "scanned"
 )
 
@@ -142,6 +159,7 @@ type BookChanged struct {
 	Book Book `json:"book"`
 }
 
+// BookRemoved is the event for a book that was removed.
 type BookRemoved struct {
 	ID string `json:"id"`
 }

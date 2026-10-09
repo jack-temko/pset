@@ -68,7 +68,7 @@ func TestSnapRectSnapsEdgesToGutters(t *testing.T) {
 func TestSnapRectLeavesEdgesWithoutGutters(t *testing.T) {
 	const w, h = 400, 600
 	// Solid ink band with no blank run anywhere near the edges.
-	ink := func(x, y int) bool { return y >= 100 && y < 500 }
+	ink := func(_, y int) bool { return y >= 100 && y < 500 }
 	page := snapFixture(t, w, h, ink)
 
 	rect := Rect{X: 0.1, Y: 150.0 / 600, W: 0.6, H: 200.0 / 600}

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/llm"
@@ -213,7 +214,7 @@ func writable(dir string) bool {
 	if err != nil {
 		return false
 	}
-	f.Close()
-	os.Remove(f.Name())
+	cleanup.Close(f)
+	cleanup.Remove(f.Name())
 	return true
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
+	"github.com/jackt/pset/internal/testx"
 	"github.com/jackt/pset/internal/usage"
 )
 
@@ -266,7 +267,7 @@ func TestScannedBookContentsFromThePrintedContents(t *testing.T) {
 	// other features, stubbed here).
 	for _, q := range []string{`CREATE TABLE homework (id TEXT, book_id TEXT)`, `CREATE TABLE questions (id TEXT, homework_id TEXT)`,
 		`CREATE TABLE turns (id TEXT, book_id TEXT)`, `CREATE TABLE assignment_reads (id TEXT, book_id TEXT)`} {
-		e.svc.c.DB.Exec(q)
+		testx.Check(t, testx.Err(e.svc.c.DB.Exec(q)))
 	}
 	var bu usage.BookUsage
 	if code := e.do(t, "GET", "/api/books/"+b.ID+"/usage", nil, &bu); code != 200 || bu.Import == nil {

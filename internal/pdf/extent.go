@@ -112,7 +112,7 @@ const (
 
 // column is the span of the column x is in: the page split at its gutter,
 // the widest run of empty columns near the middle, when it has one.
-func column(gray *image.Gray, w, h int, ink func(x, y int) bool, x int) (int, int) {
+func column(_ *image.Gray, w, h int, ink func(x, y int) bool, x int) (int, int) {
 	lo, hi := w*2/5, w*3/5
 	counts := make([]int, hi-lo)
 	least := h

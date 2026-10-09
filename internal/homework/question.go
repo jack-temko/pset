@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/jackt/pset/internal/agent"
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/jobs"
@@ -199,7 +200,7 @@ func (s *Service) setFailed(ctx context.Context, id string, kind Failure, reason
 		slog.Error("question: set failed", "question", id, "err", err)
 		return
 	}
-	s.publishQuestion(ctx, id)
+	s.announceQuestion(ctx, id)
 	// A find that failed was the last one the set was waiting on, maybe.
 	var set string
 	if s.c.DB.QueryRowContext(ctx, `SELECT homework_id FROM questions WHERE id = ?`, id).Scan(&set) == nil {
@@ -213,7 +214,7 @@ func (s *Service) setState(ctx context.Context, id string, st State, reason stri
 		slog.Error("question: set state", "question", id, "err", err)
 		return
 	}
-	s.publishQuestion(ctx, id)
+	s.announceQuestion(ctx, id)
 }
 
 // withModel runs a step with the question's book and the chat model, or
@@ -282,7 +283,7 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 	}
 	// No Wake: the guide waits for this job's slot, and settling wakes
 	// the queue.
-	s.publishQuestion(ctx, q.ID)
+	s.announceQuestion(ctx, q.ID)
 	// With the last of the set found, it can be ranked.
 	s.rankWhenFound(ctx, q.HomeworkID)
 	return nil
@@ -313,7 +314,7 @@ func (s *Service) read(ctx context.Context, m model, book Book, q row) error {
 	if err != nil {
 		return err
 	}
-	s.publishQuestion(ctx, q.ID)
+	s.announceQuestion(ctx, q.ID)
 	return nil
 }
 
@@ -486,7 +487,7 @@ func (s *Service) write(ctx context.Context, m model, book Book, q row) error {
 		mustJSON(hint), mustJSON(walk), db.Now(), q.ID); err != nil {
 		return err
 	}
-	s.publishQuestion(ctx, q.ID)
+	s.announceQuestion(ctx, q.ID)
 	return nil
 }
 
@@ -628,7 +629,7 @@ func (s *Service) readingCheck(m model, book Book, q row) []agent.Tool {
 			var a struct {
 				Concern string `json:"concern"`
 			}
-			json.Unmarshal([]byte(args), &a)
+			cleanup.Log("question: read the tool arguments", json.Unmarshal([]byte(args), &a))
 			s.setActivity(ctx, q.ID, "Reading the figures again…")
 			lines, doubts, err := s.readFigures(ctx, m, book, q, strings.TrimSpace(a.Concern))
 			if err != nil || len(lines) == 0 {
@@ -639,7 +640,7 @@ func (s *Service) readingCheck(m model, book Book, q row) []agent.Tool {
 				mustJSON(runLists(lines)), mustJSON(runLists(orEmpty(doubts))), db.Now(), q.ID); err != nil {
 				slog.Warn("guide: save the checked reading", "question", q.ID, "err", err)
 			}
-			s.publishQuestion(ctx, q.ID)
+			s.announceQuestion(ctx, q.ID)
 			answer = "The figures, read again with that point looked at closely. Work from this reading, not the first one:\n" + bullets(lines)
 			if len(doubts) > 0 {
 				answer += "Where the readings differed, now settled:\n" + bullets(doubts)
@@ -663,7 +664,7 @@ func (s *Service) setActivity(ctx context.Context, id, label string) {
 	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET activity = ? WHERE id = ?`, label, id); err != nil {
 		return
 	}
-	s.publishQuestion(ctx, id)
+	s.announceQuestion(ctx, id)
 }
 
 func (s *Service) saveStage(ctx context.Context, id, stage string, blocks []doc.Block) {
@@ -673,7 +674,7 @@ func (s *Service) saveStage(ctx context.Context, id, stage string, blocks []doc.
 		slog.Error("question: save stage", "question", id, "err", err)
 		return
 	}
-	s.publishQuestion(ctx, id)
+	s.announceQuestion(ctx, id)
 }
 
 // guideUser is the writer's opening message, and the PDF pages it shows

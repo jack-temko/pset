@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/jackt/pset/internal/cleanup"
 )
 
 // Kind is the sort of machine.
@@ -125,7 +127,7 @@ func OpenBrowser(url string) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	go cmd.Wait()
+	go func() { cleanup.Log("open the browser", cmd.Wait()) }()
 	return nil
 }
 

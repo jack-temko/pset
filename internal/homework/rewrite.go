@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/llm"
 )
@@ -108,14 +109,14 @@ func (s *Service) rewriteReference(ctx context.Context, m model, book Book, q ro
 	// The questions after it moved down: say where everything is.
 	if len(added) > 0 {
 		s.publishSetQuestions(ctx, q.HomeworkID)
-		s.publishSet(ctx, q.HomeworkID)
+		s.announceSet(ctx, q.HomeworkID)
 		s.c.Queue.Wake()
 	}
 	next, err := getQuestion(ctx, s.c.DB, q.ID)
 	if err != nil {
 		return nil, err
 	}
-	s.publishQuestion(ctx, q.ID)
+	s.announceQuestion(ctx, q.ID)
 	return &next, nil
 }
 
@@ -144,8 +145,8 @@ func (s *Service) publishSetQuestions(ctx context.Context, setID string) {
 			ids = append(ids, id)
 		}
 	}
-	rows.Close()
+	cleanup.Close(rows)
 	for _, id := range ids {
-		s.publishQuestion(ctx, id)
+		s.announceQuestion(ctx, id)
 	}
 }

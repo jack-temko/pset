@@ -2,11 +2,14 @@ package llm
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jackt/pset/internal/cleanup"
 )
 
 // The call log: every chat request and what came back, the model's
@@ -59,7 +62,7 @@ func LogCallsTo(path string) {
 	defer callLog.Unlock()
 	callLog.path = path
 	if path != "" {
-		os.MkdirAll(filepath.Dir(path), 0o700)
+		cleanup.Log("call log: create the folder", os.MkdirAll(filepath.Dir(path), 0o700))
 	}
 }
 
@@ -144,7 +147,7 @@ func logCall(req ChatRequest, start time.Time, reply Reply, err error) {
 	rec.Error = errText
 	line, _ := json.Marshal(rec)
 	if st, e := os.Stat(path); e == nil && st.Size() > logMax {
-		os.Rename(path, path+".1")
+		cleanup.Log("call log: rotate", os.Rename(path, path+".1"))
 	}
 	f, e := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if e != nil {
@@ -153,8 +156,8 @@ func logCall(req ChatRequest, start time.Time, reply Reply, err error) {
 		}
 		return
 	}
-	f.Write(append(line, '\n'))
-	f.Close()
+	_, werr := f.Write(append(line, '\n'))
+	cleanup.Log("call log: write", errors.Join(werr, f.Close()))
 	if sink != nil {
 		sink(call)
 	}

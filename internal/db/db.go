@@ -6,6 +6,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,7 +14,9 @@ import (
 	"strings"
 	"time"
 
-	_ "modernc.org/sqlite"
+	_ "modernc.org/sqlite" // registers the "sqlite" driver
+
+	"github.com/jackt/pset/internal/cleanup"
 )
 
 // Every connection gets these. Foreign keys are what make a book's removal
@@ -33,7 +36,7 @@ func Open(path string) (*sql.DB, error) {
 		return nil, err
 	}
 	if err := d.Ping(); err != nil {
-		d.Close()
+		cleanup.Close(d)
 		return nil, fmt.Errorf("open %s: %w", path, err)
 	}
 	return d, nil
@@ -116,7 +119,7 @@ func Wipe(ctx context.Context, d *sql.DB, migs []Migration) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer cleanup.Close(conn)
 	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys = OFF`); err != nil {
 		return err
 	}
@@ -128,12 +131,12 @@ func Wipe(ctx context.Context, d *sql.DB, migs []Migration) error {
 	for rows.Next() {
 		var t string
 		if err := rows.Scan(&t); err != nil {
-			rows.Close()
+			cleanup.Close(rows)
 			return err
 		}
 		tables = append(tables, t)
 	}
-	rows.Close()
+	cleanup.Close(rows)
 	for _, t := range tables {
 		if _, err := conn.ExecContext(ctx, fmt.Sprintf(`DROP TABLE IF EXISTS "%s"`, t)); err != nil {
 			return err
@@ -155,7 +158,9 @@ func Tx(ctx context.Context, d *sql.DB, fn func(*sql.Tx) error) error {
 		return err
 	}
 	if err := fn(tx); err != nil {
-		tx.Rollback()
+		if rerr := tx.Rollback(); rerr != nil {
+			err = errors.Join(err, rerr)
+		}
 		return err
 	}
 	return tx.Commit()
@@ -227,7 +232,7 @@ func pruneBackups(dir string) {
 	}
 	sort.Strings(names)
 	for len(names) > keepBackups {
-		os.Remove(filepath.Join(dir, names[0]))
+		cleanup.Remove(filepath.Join(dir, names[0]))
 		names = names[1:]
 	}
 }

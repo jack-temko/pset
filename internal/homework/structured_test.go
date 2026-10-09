@@ -8,11 +8,13 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
+	"github.com/jackt/pset/internal/testx"
 	"github.com/jackt/pset/internal/usage"
 )
 
@@ -100,7 +102,7 @@ func TestGuidesAreWipedAndTextBecomesRuns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer d.Close()
+	defer cleanup.Close(d)
 	migs := append(jobs.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
 	all := usage.Migrations()
 	all = append(all, Migrations()...)
@@ -109,14 +111,14 @@ func TestGuidesAreWipedAndTextBecomesRuns(t *testing.T) {
 	if err := db.Migrate(ctx, d, append(migs, all[:wipe]...)); err != nil {
 		t.Fatal(err)
 	}
-	d.Exec(`INSERT INTO books VALUES ('b1')`)
-	d.Exec(`INSERT INTO homework (id, book_id, title, created_at, updated_at) VALUES ('h1', 'b1', 'Set', 'x', 'x')`)
+	testx.Check(t, testx.Err(d.Exec(`INSERT INTO books VALUES ('b1')`)))
+	testx.Check(t, testx.Err(d.Exec(`INSERT INTO homework (id, book_id, title, created_at, updated_at) VALUES ('h1', 'b1', 'Set', 'x', 'x')`)))
 	ins := `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, hint, walkthrough, revealed, state, notes, reading, created_at, updated_at)
 		VALUES (?, 'h1', ?, '3.36', 1, '3.36', ?, ?, ?, '["hint"]', ?, ?, ?, 'x', 'x')`
 	old := `[{"type":"prose","text":"## Hint\nold"}]`
-	d.Exec(ins, "ready", 1, `Find $v_o$ across the \$25 part.`, old, old, "ready", `["no PSpice","use $R_1$"]`, `["Node A: $R_1$ up top"]`)
-	d.Exec(ins, "waiting", 2, "Find it.", "[]", "[]", "located", "[]", "[]")
-	d.Exec(ins, "failed", 3, "", "[]", "[]", "failed", "[]", "[]")
+	testx.Check(t, testx.Err(d.Exec(ins, "ready", 1, `Find $v_o$ across the \$25 part.`, old, old, "ready", `["no PSpice","use $R_1$"]`, `["Node A: $R_1$ up top"]`)))
+	testx.Check(t, testx.Err(d.Exec(ins, "waiting", 2, "Find it.", "[]", "[]", "located", "[]", "[]")))
+	testx.Check(t, testx.Err(d.Exec(ins, "failed", 3, "", "[]", "[]", "failed", "[]", "[]")))
 	if err := db.Migrate(ctx, d, append(migs, all...)); err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +158,7 @@ func TestWriteTheGuideOfAQuestionThatHasNone(t *testing.T) {
 	id := e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID
 	e.wait(t, id, StateReady)
 	// What the wipe leaves.
-	e.svc.c.DB.Exec(`UPDATE questions SET state = 'unwritten', hint = '[]', walkthrough = '[]' WHERE id = ?`, id)
+	testx.Check(t, testx.Err(e.svc.c.DB.Exec(`UPDATE questions SET state = 'unwritten', hint = '[]', walkthrough = '[]' WHERE id = ?`, id)))
 
 	var er struct{ Code string }
 	if code := e.do(t, "POST", "/api/questions/"+id+"/guide", nil, nil); code != 200 {
@@ -178,7 +180,7 @@ func TestNothingWritesAGuideUnasked(t *testing.T) {
 	h := e.newSet(t)
 	id := e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID
 	e.wait(t, id, StateReady)
-	e.svc.c.DB.Exec(`UPDATE questions SET state = 'unwritten', hint = '[]', walkthrough = '[]' WHERE id = ?`, id)
+	testx.Check(t, testx.Err(e.svc.c.DB.Exec(`UPDATE questions SET state = 'unwritten', hint = '[]', walkthrough = '[]' WHERE id = ?`, id)))
 	before := len(guideRequests(e))
 	// Notes and a corrected reading are kept, and write nothing.
 	notes := []string{"do part a"}

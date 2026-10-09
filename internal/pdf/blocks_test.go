@@ -49,7 +49,7 @@ func TestSnapToBlocks(t *testing.T) {
 	// Printed close: six lines of a problem, the last 6px above a
 	// figure's top, all one block. A box around the figure alone takes the
 	// figure's rows, not the lines.
-	close := snapFixture(t, w, h, func(x, y int) bool {
+	nearClose := snapFixture(t, w, h, func(x, y int) bool {
 		for top := 500; top < 620; top += 20 {
 			if inBox(x, y, 100, top, 500, top+16) {
 				return true
@@ -57,7 +57,7 @@ func TestSnapToBlocks(t *testing.T) {
 		}
 		return inBox(x, y, 120, 622, 440, 700)
 	})
-	if got := px(SnapToBlocks(close, rect(110, 619, 450, 705))); !near(got, [4]int{120, 622, 440, 700}) {
+	if got := px(SnapToBlocks(nearClose, rect(110, 619, 450, 705))); !near(got, [4]int{120, 622, 440, 700}) {
 		t.Errorf("close: snapped to %v, want the figure alone", got)
 	}
 	// A box over blank paper stays as it was.

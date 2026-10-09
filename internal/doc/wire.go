@@ -64,6 +64,7 @@ type StepBlock struct {
 	Title []Run  `json:"title"`
 }
 
+// ParaBlock is a paragraph.
 type ParaBlock struct {
 	Type string `json:"type" tstype:"'para'"`
 	Text []Run  `json:"text"`
@@ -89,6 +90,7 @@ type DerivationStep struct {
 	Raw bool   `json:"raw,omitempty"`
 }
 
+// DerivationBlock is a worked derivation, one step per line.
 type DerivationBlock struct {
 	Type  string           `json:"type" tstype:"'derivation'"`
 	Steps []DerivationStep `json:"steps"`
@@ -106,6 +108,7 @@ const (
 	ToneCheck Tone = "check"
 )
 
+// CalloutBlock is a boxed aside: an insight, a caveat or a check.
 type CalloutBlock struct {
 	Type  string `json:"type" tstype:"'callout'"`
 	Tone  Tone   `json:"tone" tstype:"'insight' | 'caveat' | 'check'"`
@@ -124,12 +127,14 @@ type StatementBlock struct {
 	Text   []Run  `json:"text"`
 }
 
+// TableBlock is a table of runs.
 type TableBlock struct {
 	Type    string    `json:"type" tstype:"'table'"`
 	Columns [][]Run   `json:"columns"`
 	Rows    [][][]Run `json:"rows"`
 }
 
+// Axis labels one side of a plot.
 type Axis struct {
 	Label string `json:"label"`
 }
@@ -148,6 +153,7 @@ type Mark struct {
 	Label string   `json:"label,omitempty"`
 }
 
+// PlotBlock is a plot of one or more series.
 type PlotBlock struct {
 	Type   string   `json:"type" tstype:"'plot'"`
 	Title  string   `json:"title,omitempty"`
@@ -157,6 +163,7 @@ type PlotBlock struct {
 	Marks  []Mark   `json:"marks,omitempty"`
 }
 
+// CodeBlock is a block of code.
 type CodeBlock struct {
 	Type     string `json:"type" tstype:"'code'"`
 	Code     string `json:"code"`

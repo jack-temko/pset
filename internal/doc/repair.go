@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/pagenum"
 )
 
@@ -64,7 +65,7 @@ func peekType(obj []byte) string {
 	var t struct {
 		Type string `json:"type"`
 	}
-	json.Unmarshal(obj, &t)
+	cleanup.Log("doc: read a block type", json.Unmarshal(obj, &t))
 	return t.Type
 }
 

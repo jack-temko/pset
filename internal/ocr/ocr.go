@@ -1,3 +1,4 @@
+// Package ocr reads the text of a page image with tesseract.
 package ocr
 
 import (
@@ -6,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/execx"
 	"github.com/jackt/pset/internal/pdf"
 )
@@ -28,7 +30,7 @@ func Page(ctx context.Context, pdfPath string, n int, lang string) (string, erro
 	if err != nil {
 		return "", fmt.Errorf("create temp dir: %w", err)
 	}
-	defer os.RemoveAll(dir)
+	defer cleanup.RemoveAll(dir)
 	path := filepath.Join(dir, "page.png")
 	if err := os.WriteFile(path, img, 0o600); err != nil {
 		return "", fmt.Errorf("write rasterized page: %w", err)

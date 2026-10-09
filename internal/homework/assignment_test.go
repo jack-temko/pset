@@ -13,10 +13,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
 	"github.com/jackt/pset/internal/probnum"
+	"github.com/jackt/pset/internal/testx"
 )
 
 // coursePage is a made-up lookalike of a course's homework page: a
@@ -188,7 +190,7 @@ func TestReadingAnAssignmentFromAWebPage(t *testing.T) {
 			http.NotFound(w, r)
 			return
 		}
-		fmt.Fprint(w, coursePage)
+		testx.Check(t, testx.Err(fmt.Fprint(w, coursePage)))
 	}))
 	defer page.Close()
 
@@ -253,7 +255,7 @@ func TestReadingAnAssignmentFromAWebPage(t *testing.T) {
 	}
 	// Tried again, once the page is there, it reads.
 	pageUp := page.Config.Handler
-	page.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, coursePage) })
+	page.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { testx.Check(t, testx.Err(fmt.Fprint(w, coursePage))) })
 	var retried AssignmentRead
 	// The reply is the read as the retry left it: reading, or already ready
 	// when the job beat the reply back (a busy machine). Failed is the only
@@ -289,18 +291,18 @@ func TestReadingAnUploadedOrPastedAssignment(t *testing.T) {
 		var body bytes.Buffer
 		mw := multipart.NewWriter(&body)
 		if setID != "" {
-			mw.WriteField("setId", setID)
+			testx.Check(t, mw.WriteField("setId", setID))
 		}
 		fw, _ := mw.CreateFormFile("file", name)
-		fw.Write(data)
-		mw.Close()
+		testx.Check(t, testx.Err(fw.Write(data)))
+		cleanup.Close(mw)
 		resp, err := http.Post(e.URL+"/api/books/b1/assignments/read", mw.FormDataContentType(), &body)
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer resp.Body.Close()
+		defer cleanup.Close(resp.Body)
 		var r AssignmentRead
-		json.NewDecoder(resp.Body).Decode(&r)
+		testx.Check(t, json.NewDecoder(resp.Body).Decode(&r))
 		return resp.StatusCode, r
 	}
 
@@ -316,7 +318,7 @@ func TestReadingAnUploadedOrPastedAssignment(t *testing.T) {
 		t.Fatalf("the model wasn't shown the file: %q", m.shown())
 	}
 	var file []byte
-	e.svc.c.DB.QueryRow(`SELECT file FROM assignment_reads WHERE id = ?`, r.ID).Scan(&file)
+	testx.Check(t, e.svc.c.DB.QueryRow(`SELECT file FROM assignment_reads WHERE id = ?`, r.ID).Scan(&file))
 	if file != nil {
 		t.Fatal("the file stayed in the database after it was read")
 	}
@@ -371,7 +373,7 @@ func TestDismissingARead(t *testing.T) {
 func TestImportingAnAssignmentMakesItsSets(t *testing.T) {
 	e := newEnv(t)
 	m := newReader(e)
-	page := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, coursePage) }))
+	page := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { testx.Check(t, testx.Err(fmt.Fprint(w, coursePage))) }))
 	defer page.Close()
 	first := e.read(t, AssignmentText{URL: page.URL})
 

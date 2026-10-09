@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackt/pset/internal/testx"
 )
 
 func testClient(t *testing.T, chatBase, embedBase string) *Client {
@@ -30,12 +32,12 @@ func TestChatStreamAssemblesDeltas(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth = map[string]any{"auth": r.Header.Get("Authorization")}
 		data, _ := io.ReadAll(r.Body)
-		json.Unmarshal(data, &gotBody)
+		testx.Check(t, json.Unmarshal(data, &gotBody))
 		w.Header().Set("Content-Type", "text/event-stream")
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"Hel\"}}]}\n\n")
-		io.WriteString(w, ": keepalive comment\n\n")
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"lo [p. 3]\"}}]}\n\n")
-		io.WriteString(w, "data: [DONE]\n\n")
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"Hel\"}}]}\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, ": keepalive comment\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"lo [p. 3]\"}}]}\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, "data: [DONE]\n\n")))
 	}))
 	defer srv.Close()
 
@@ -67,9 +69,9 @@ func TestChatStreamAssemblesDeltas(t *testing.T) {
 }
 
 func TestChatStreamStopsOnDeltaError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"one\"}}]}\n\n")
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"two\"}}]}\n\n")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"one\"}}]}\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"two\"}}]}\n\n")))
 	}))
 	defer srv.Close()
 
@@ -86,20 +88,20 @@ func TestChatStreamStopsOnDeltaError(t *testing.T) {
 }
 
 func TestChatStreamHTTPError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		io.WriteString(w, `{"error":"bad key"}`)
+		testx.Check(t, testx.Err(io.WriteString(w, `{"error":"bad key"}`)))
 	}))
 	defer srv.Close()
 
 	client := testClient(t, srv.URL, "")
 	_, err := client.ChatStream(context.Background(), ChatRequest{Model: "m"}, nil)
-	llmErr, ok := err.(*LLMError)
+	llmErr, ok := err.(*CallError)
 	if !ok {
-		t.Fatalf("err = %v (%T), want *LLMError", err, err)
+		t.Fatalf("err = %v (%T), want *CallError", err, err)
 	}
 	if llmErr.Status != http.StatusUnauthorized || !strings.Contains(llmErr.Body, "bad key") {
-		t.Errorf("LLMError = %+v, want status 401 and the body", llmErr)
+		t.Errorf("CallError = %+v, want status 401 and the body", llmErr)
 	}
 }
 
@@ -111,14 +113,14 @@ func TestChatOncePlainText(t *testing.T) {
 				Content Content `json:"content"`
 			} `json:"messages"`
 		}
-		json.NewDecoder(r.Body).Decode(&req)
+		testx.Check(t, json.NewDecoder(r.Body).Decode(&req))
 		if req.MaxTokens != 1 {
 			t.Errorf("max_tokens = %d, want 1", req.MaxTokens)
 		}
 		if req.Messages[0].Content.parts != nil {
 			t.Error("plain message content must marshal as a string, not parts")
 		}
-		w.Write([]byte(`{"choices":[{"message":{"content":"ok"}}]}`))
+		testx.Check(t, testx.Err(w.Write([]byte(`{"choices":[{"message":{"content":"ok"}}]}`))))
 	}))
 	defer srv.Close()
 
@@ -167,14 +169,14 @@ func TestContentMarshalsBothShapes(t *testing.T) {
 func TestEmbedOrdersByIndex(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req EmbedRequest
-		json.NewDecoder(r.Body).Decode(&req)
+		testx.Check(t, json.NewDecoder(r.Body).Decode(&req))
 		if req.Model != "test-embed-model" {
 			t.Errorf("model = %q", req.Model)
 		}
 		if strings.Join(req.Input, "|") != "first|second" {
 			t.Errorf("input = %v", req.Input)
 		}
-		w.Write([]byte(`{"data":[{"index":1,"embedding":[3,4]},{"index":0,"embedding":[1,2]}]}`))
+		testx.Check(t, testx.Err(w.Write([]byte(`{"data":[{"index":1,"embedding":[3,4]},{"index":0,"embedding":[1,2]}]}`))))
 	}))
 	defer srv.Close()
 
@@ -189,8 +191,8 @@ func TestEmbedOrdersByIndex(t *testing.T) {
 }
 
 func TestEmbedWrongVectorCount(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"data":[{"index":0,"embedding":[1]}]}`))
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		testx.Check(t, testx.Err(w.Write([]byte(`{"data":[{"index":0,"embedding":[1]}]}`))))
 	}))
 	defer srv.Close()
 
@@ -220,16 +222,16 @@ func TestConfiguredPredicates(t *testing.T) {
 // surfacing the error.
 func TestChatStreamRetriesRateLimit(t *testing.T) {
 	attempts := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		attempts++
 		if attempts < 3 {
 			w.WriteHeader(http.StatusTooManyRequests)
-			w.Write([]byte(`{"error":{"code":"1305","message":"temporarily overloaded"}}`))
+			testx.Check(t, testx.Err(w.Write([]byte(`{"error":{"code":"1305","message":"temporarily overloaded"}}`))))
 			return
 		}
 		w.Header().Set("Content-Type", "text/event-stream")
-		w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\n"))
-		w.Write([]byte("data: [DONE]\n\n"))
+		testx.Check(t, testx.Err(w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\n"))))
+		testx.Check(t, testx.Err(w.Write([]byte("data: [DONE]\n\n"))))
 	}))
 	defer server.Close()
 
@@ -257,12 +259,12 @@ func TestChatStreamFullAssemblesToolCalls(t *testing.T) {
 		var req struct {
 			Tools any `json:"tools"`
 		}
-		json.Unmarshal(data, &req)
+		testx.Check(t, json.Unmarshal(data, &req))
 		gotTools = req.Tools
 		w.Header().Set("Content-Type", "text/event-stream")
-		io.WriteString(w, `data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"calc","arguments":"{\"expr"}}]}}]}`+"\n\n")
-		io.WriteString(w, `data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":\"3/7 + 0.2\"}"}}]}}]}`+"\n\n")
-		io.WriteString(w, "data: [DONE]\n\n")
+		testx.Check(t, testx.Err(io.WriteString(w, `data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"calc","arguments":"{\"expr"}}]}}]}`+"\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, `data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":\"3/7 + 0.2\"}"}}]}}]}`+"\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, "data: [DONE]\n\n")))
 	}))
 	defer srv.Close()
 
@@ -288,9 +290,9 @@ func TestChatStreamFullAssemblesToolCalls(t *testing.T) {
 }
 
 func TestChatOnceFullReturnsToolCalls(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, `{"choices":[{"message":{"content":null,`+
-			`"tool_calls":[{"id":"c9","function":{"name":"search_book","arguments":"{\"query\":\"mesh\"}"}}]}}]}`)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		testx.Check(t, testx.Err(io.WriteString(w, `{"choices":[{"message":{"content":null,`+
+			`"tool_calls":[{"id":"c9","function":{"name":"search_book","arguments":"{\"query\":\"mesh\"}"}}]}}]}`)))
 	}))
 	defer srv.Close()
 
@@ -315,9 +317,9 @@ func TestClassify(t *testing.T) {
 		status int
 	}{
 		{fmt.Errorf("round: %w", ErrStreamCut), TroubleCut, 0},
-		{&LLMError{Status: 503}, TroubleBusy, 503},
-		{&LLMError{Status: 429}, TroubleBusy, 429},
-		{fmt.Errorf("x: %w", &LLMError{Status: 401}), TroubleRejected, 401},
+		{&CallError{Status: 503}, TroubleBusy, 503},
+		{&CallError{Status: 429}, TroubleBusy, 429},
+		{fmt.Errorf("x: %w", &CallError{Status: 401}), TroubleRejected, 401},
 		{errors.New("dial tcp: connection refused"), TroubleBusy, 0},
 	} {
 		if got, st := Classify(c.err); got != c.want || st != c.status {
@@ -327,9 +329,9 @@ func TestClassify(t *testing.T) {
 }
 
 func TestAStreamThatStopsWithoutFinishingIsCut(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"Let me think about the \"}}]}\n\n")
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"Let me think about the \"}}]}\n\n")))
 	}))
 	defer srv.Close()
 	reply, err := testClient(t, srv.URL, "").ChatStreamFull(context.Background(), ChatRequest{Model: "m"}, nil)
@@ -339,10 +341,10 @@ func TestAStreamThatStopsWithoutFinishingIsCut(t *testing.T) {
 }
 
 func TestAFinishReasonEndsAStreamWithoutDone(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"Easy.\"}}]}\n\n")
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"4\"},\"finish_reason\":\"stop\"}]}\n\n")
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"Easy.\"}}]}\n\n")))
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"4\"},\"finish_reason\":\"stop\"}]}\n\n")))
 	}))
 	defer srv.Close()
 	reply, err := testClient(t, srv.URL, "").ChatStreamFull(context.Background(), ChatRequest{Model: "m"}, nil)
@@ -355,7 +357,7 @@ func TestAStreamStoppedByUsIsNotCut(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"Hmm\"}}]}\n\n")
+		testx.Check(t, testx.Err(io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"Hmm\"}}]}\n\n")))
 		w.(http.Flusher).Flush()
 		cancel()
 		<-r.Context().Done()
@@ -408,8 +410,8 @@ func TestReasoningEffortGoesOnlyToOpenRouter(t *testing.T) {
 // TestClientsShareConnections: clients are built per call, so a Transport
 // of their own each leaked its idle connections and their goroutines.
 func TestClientsShareConnections(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"data":[{"index":0,"embedding":[0.1,0.2]}]}`))
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		testx.Check(t, testx.Err(w.Write([]byte(`{"data":[{"index":0,"embedding":[0.1,0.2]}]}`))))
 	}))
 	defer srv.Close()
 	before := runtime.NumGoroutine()

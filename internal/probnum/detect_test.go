@@ -33,7 +33,7 @@ func book(write func(pages []page, ch, sec, start, end int)) ([]page, []Part) {
 
 func TestDetectLocal(t *testing.T) {
 	// Boyce: a Problems heading at each section's end, then 1., 2., ...
-	pages, parts := book(func(pages []page, ch, sec, start, end int) {
+	pages, parts := book(func(pages []page, _, _, _, end int) {
 		var b strings.Builder
 		b.WriteString("Problems\n")
 		for k := 1; k <= 8; k++ {
@@ -53,7 +53,7 @@ func TestDetectLocal(t *testing.T) {
 func TestDetectChapter(t *testing.T) {
 	// Alexander & Sadiku: problems through the chapter at its end, past
 	// the section numbers that also open lines.
-	pages, parts := book(func(pages []page, ch, sec, start, end int) {
+	pages, parts := book(func(pages []page, ch, sec, _, end int) {
 		if sec != 3 {
 			return
 		}
@@ -75,7 +75,7 @@ func TestDetectChapter(t *testing.T) {
 
 func TestDetectSection(t *testing.T) {
 	// Yates & Goodman: 2.1.4, all at the chapter's end.
-	pages, parts := book(func(pages []page, ch, sec, start, end int) {
+	pages, parts := book(func(pages []page, ch, sec, _, end int) {
 		if sec != 3 {
 			return
 		}

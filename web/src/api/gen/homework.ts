@@ -98,7 +98,13 @@ export const StateReading = "reading";
  * StateWriting is writing its guide; the hint may already be there.
  */
 export const StateWriting = "writing";
+/**
+ * StateReady has a guide, written and checked.
+ */
 export const StateReady = "ready";
+/**
+ * StateFailed could not be found or written; Reason says why.
+ */
 export const StateFailed = "failed";
 /**
  * StateUnwritten is found, with no guide: the guides written before
@@ -111,21 +117,21 @@ export type State = typeof StatePending | typeof StateLocating | typeof StateLoc
  * Failure is what kind of failure a failed question had.
  */
 /**
- * FailureNotFound: locate couldn't find it. Give the page, or paste it.
+ * FailureNotFound means locate couldn't find it. Give the page, or paste it.
  */
 export const FailureNotFound = "not_found";
 /**
- * FailureGeneration: the guide didn't finish (cut off, missing a part).
+ * FailureGeneration means the guide didn't finish (cut off, missing a part).
  * Try again.
  */
 export const FailureGeneration = "generation";
 /**
- * FailureUnavailable: the provider didn't answer or was busy. Try
+ * FailureUnavailable means the provider didn't answer or was busy. Try
  * again later.
  */
 export const FailureUnavailable = "unavailable";
 /**
- * FailureSetup: there's no OpenRouter key, OpenRouter refused it, or
+ * FailureSetup means there's no OpenRouter key, OpenRouter refused it, or
  * the account is out of credit.
  * Fix it in Settings.
  */
@@ -255,9 +261,15 @@ export interface Draft {
   text: string;
   inBook: boolean;
 }
+/**
+ * AddQuestions is POST /api/homework/{id}/questions.
+ */
 export interface AddQuestions {
   drafts: Draft[];
 }
+/**
+ * Questions is a list of questions.
+ */
 export interface Questions {
   questions: Question[];
 }
@@ -478,8 +490,17 @@ export interface AssignmentImport {
 /**
  * ReadState is where reading an assignment stands.
  */
+/**
+ * ReadStateReading is being read now.
+ */
 export const ReadStateReading = "reading";
+/**
+ * ReadStateReady is read and waiting for its review.
+ */
 export const ReadStateReady = "ready";
+/**
+ * ReadStateFailed could not be read; Error says why.
+ */
 export const ReadStateFailed = "failed";
 export type ReadState = typeof ReadStateReading | typeof ReadStateReady | typeof ReadStateFailed;
 /**
@@ -567,23 +588,41 @@ export const EventReadRemoved = "assignment.removed";
  * Event types this feature publishes.
  */
 export type Event = typeof EventHomeworkChanged | typeof EventHomeworkRemoved | typeof EventQuestionChanged | typeof EventQuestionRemoved | typeof EventReadChanged | typeof EventReadRemoved;
+/**
+ * ReadChanged is the event for a read that was created or changed.
+ */
 export interface ReadChanged {
   read: AssignmentRead;
 }
+/**
+ * ReadRemoved is the event for a read that was deleted.
+ */
 export interface ReadRemoved {
   id: string;
   bookId: string;
 }
-export interface HomeworkChanged {
+/**
+ * SetChanged is the event for a set that was created or changed.
+ */
+export interface SetChanged {
   homework: Summary;
 }
-export interface HomeworkRemoved {
+/**
+ * SetRemoved is the event for a set that was deleted.
+ */
+export interface SetRemoved {
   id: string;
   bookId: string;
 }
+/**
+ * QuestionChanged is the event for a question that was created or changed.
+ */
 export interface QuestionChanged {
   question: Question;
 }
+/**
+ * QuestionRemoved is the event for a question that was deleted.
+ */
 export interface QuestionRemoved {
   id: string;
   homeworkId: string;

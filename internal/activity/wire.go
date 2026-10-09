@@ -4,9 +4,12 @@ package activity
 type Kind string
 
 const (
-	KindReading  Kind = "reading"
+	// KindReading is time with a book open.
+	KindReading Kind = "reading"
+	// KindHomework is time on a homework set.
 	KindHomework Kind = "homework"
-	KindAsking   Kind = "asking"
+	// KindAsking is time asking the tutor.
+	KindAsking Kind = "asking"
 )
 
 // Stretch is POST /api/study: a stretch of study in one book at one

@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/jobs"
 
@@ -129,7 +130,7 @@ func (s *Service) RetryRead(ctx context.Context, id string) (AssignmentRead, err
 	})
 	if err != nil {
 		var n int
-		if s.c.DB.QueryRowContext(ctx, `SELECT count(*) FROM assignment_reads WHERE id = ?`, id).Scan(&n); n == 0 {
+		if cerr := s.c.DB.QueryRowContext(ctx, `SELECT count(*) FROM assignment_reads WHERE id = ?`, id).Scan(&n); cerr == nil && n == 0 {
 			return AssignmentRead{}, httpx.NotFound("assignment")
 		}
 		return AssignmentRead{}, err
@@ -470,7 +471,7 @@ func fileParts(ctx context.Context, f AssignmentFile) ([]llm.Part, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer os.RemoveAll(dir)
+		defer cleanup.RemoveAll(dir)
 		path := filepath.Join(dir, "a.pdf")
 		if err := os.WriteFile(path, f.Data, 0o600); err != nil {
 			return nil, err
@@ -530,7 +531,7 @@ func fetchPage(ctx context.Context, raw string) (string, error) {
 	if err != nil {
 		return "", httpx.Invalid("url", "Couldn't reach that page.")
 	}
-	defer resp.Body.Close()
+	defer cleanup.Close(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return "", httpx.Invalid("url", "That page answered %d. A page behind a login can be pasted or photographed instead.", resp.StatusCode)
 	}
@@ -674,6 +675,6 @@ func (p *readProgressing) say(msg string, now bool) {
 		return
 	}
 	if n, _ := res.RowsAffected(); n > 0 {
-		p.s.publishRead(p.ctx, p.id)
+		p.s.announceRead(p.ctx, p.id)
 	}
 }

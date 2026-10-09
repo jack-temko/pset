@@ -9,7 +9,7 @@ import (
 	"github.com/jackt/pset/internal/db"
 )
 
-// Migrations: one row per saved side, as JSON. Two sides don't earn a
+// Migrations creates one row per saved side, as JSON. Two sides don't earn a
 // column each, and a new field is then no migration at all.
 func Migrations() []db.Migration {
 	return []db.Migration{{Name: "settings/1", SQL: `

@@ -23,7 +23,7 @@ func TestHeuristicSetsQuestionsAgainstEachOther(t *testing.T) {
 	if got[short.ID] != 1 || got[long.ID] != 5 || got[mid.ID] < 1 || got[mid.ID] > 4 {
 		t.Fatalf("scores %v: want the shortest 1, the longest 5", got)
 	}
-	if !(got[short.ID] <= got[mid.ID] && got[mid.ID] < got[long.ID]) {
+	if got[short.ID] > got[mid.ID] || got[mid.ID] >= got[long.ID] {
 		t.Fatalf("scores %v are not in order of size", got)
 	}
 }

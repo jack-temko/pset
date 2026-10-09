@@ -6,18 +6,18 @@ package usage
 // spent. Nil on the wire means the subject made no call, and nothing is
 // drawn.
 type Usage struct {
-	Rows []UsageRow `json:"rows"`
+	Rows []Row `json:"rows"`
 	// Total is the rows added up, Calls the calls they cover.
-	Total UsageTotal `json:"total"`
+	Total Total `json:"total"`
 	// Failed is the calls that errored, which cost too: the card's
 	// footnote.
 	Failed int `json:"failed"`
 }
 
-// UsageRow is one model's share of a job. Tokens and Cost are absent
+// Row is one model's share of a job. Tokens and Cost are absent
 // when the provider reported no usage — shown as "–", never as zero,
 // which would say the call was free rather than uncounted.
-type UsageRow struct {
+type Row struct {
 	// Model is the model that answered, as the provider names it; a
 	// call that never got an answer sits under the model asked for.
 	Model string `json:"model"`
@@ -34,8 +34,8 @@ type UsageRow struct {
 	Uncounted int `json:"uncounted,omitempty"`
 }
 
-// UsageTotal is every row added up.
-type UsageTotal struct {
+// Total is every row added up.
+type Total struct {
 	Ms     int64    `json:"ms"`
 	Tokens *int     `json:"tokens,omitempty"`
 	Cost   *float64 `json:"cost,omitempty"`

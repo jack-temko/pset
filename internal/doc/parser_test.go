@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/jackt/pset/internal/pagenum"
+	"github.com/jackt/pset/internal/testx"
 )
 
 // feedIn streams text in pieces of n bytes, the way a model cuts it.
@@ -62,7 +63,7 @@ type script struct {
 }
 
 func (s *script) model() Model {
-	return func(_ context.Context, system, user string) (string, error) {
+	return func(_ context.Context, _, user string) (string, error) {
 		s.asked = append(s.asked, user)
 		if len(s.replies) == 0 {
 			return "", errors.New("out of replies")
@@ -128,7 +129,7 @@ func TestRealGuidesParseWholeAtAnyChunking(t *testing.T) {
 func assertNoRawMath(t *testing.T, f string, b Block) {
 	t.Helper()
 	var v any
-	json.Unmarshal(b, &v)
+	testx.Check(t, json.Unmarshal(b, &v))
 	var walk func(any)
 	walk = func(x any) {
 		switch x := x.(type) {
@@ -216,7 +217,7 @@ func TestATextBlockStreamsAsItArrives(t *testing.T) {
 		got = append(got, r)
 	}
 	var blk ParaBlock
-	json.Unmarshal(p.Blocks()[0], &blk)
+	testx.Check(t, json.Unmarshal(p.Blocks()[0], &blk))
 	if !reflect.DeepEqual(got, blk.Text) {
 		t.Fatalf("streamed runs\n%s\nblock runs\n%s", runsJSON(got), runsJSON(blk.Text))
 	}
@@ -237,7 +238,7 @@ func TestStreamedTextEqualsTheBlockAtAnyChunking(t *testing.T) {
 			got = append(got, r)
 		}
 		var blk ParaBlock
-		json.Unmarshal(p.Blocks()[0], &blk)
+		testx.Check(t, json.Unmarshal(p.Blocks()[0], &blk))
 		// What streamed is what's stored, once the last chunk lands.
 		if !reflect.DeepEqual(got, blk.Text) {
 			t.Fatalf("n=%d\nstreamed %s\nstored   %s", n, runsJSON(got), runsJSON(blk.Text))
@@ -279,7 +280,7 @@ func TestABadMathRunIsRepairedAsASpan(t *testing.T) {
 		t.Fatalf("asked %v", s.asked)
 	}
 	var blk ParaBlock
-	json.Unmarshal(p.Blocks()[0], &blk)
+	testx.Check(t, json.Unmarshal(p.Blocks()[0], &blk))
 	if len(blk.Text) != 3 || blk.Text[1].M != `\tfrac{1}{2}(10.85) \approx 5.4` || blk.Text[1].Raw {
 		t.Fatalf("%s", runsJSON(blk.Text))
 	}
@@ -293,7 +294,7 @@ func TestASpanStillBadAfterTwoTriesIsKeptRaw(t *testing.T) {
 	p := NewParser(context.Background(), Options{Mode: Ask, Model: s.model()}, Handler{})
 	feedIn(p, `{"type":"para","text":"So \\(\\frac{1}{\\) ok."}`+"\n", 100)
 	var blk ParaBlock
-	json.Unmarshal(p.Blocks()[0], &blk)
+	testx.Check(t, json.Unmarshal(p.Blocks()[0], &blk))
 	if len(s.asked) != 2 || !blk.Text[1].Raw || blk.Text[1].M != `\frac{` {
 		t.Fatalf("asked %d, %s", len(s.asked), runsJSON(blk.Text))
 	}
@@ -315,7 +316,7 @@ func TestAtMostSixRepairCallsADocument(t *testing.T) {
 	}
 	// The last ones are kept, unrepaired, as raw TeX.
 	var m MathBlock
-	json.Unmarshal(p.Blocks()[4], &m)
+	testx.Check(t, json.Unmarshal(p.Blocks()[4], &m))
 	if !m.Raw {
 		t.Fatalf("%s", p.Blocks()[4])
 	}
@@ -332,7 +333,7 @@ func TestABlockAgainstItsSchemaIsRepairedAsABlock(t *testing.T) {
 	p = NewParser(context.Background(), Options{Mode: Ask}, Handler{})
 	feedIn(p, `{"type":"callout","tone":"warning","text":"x"}`+"\n", 100)
 	var raw RawBlock
-	json.Unmarshal(p.Blocks()[0], &raw)
+	testx.Check(t, json.Unmarshal(p.Blocks()[0], &raw))
 	if raw.Type != TypeRaw || raw.Of != "callout" || p.Failed() != 1 {
 		t.Fatalf("%s", p.Blocks()[0])
 	}
@@ -343,7 +344,7 @@ func TestMoneyAndTeXInPlainTextAreRepairedOrKept(t *testing.T) {
 	p := NewParser(context.Background(), Options{Mode: Ask, Model: s.model()}, Handler{})
 	feedIn(p, `{"type":"para","text":"the values [c = 20.5,\\ 21,\\ \\dots] and $\\$20$ a month"}`+"\n", 100)
 	var blk ParaBlock
-	json.Unmarshal(p.Blocks()[0], &blk)
+	testx.Check(t, json.Unmarshal(p.Blocks()[0], &blk))
 	if len(s.asked) != 1 || len(blk.Text) < 2 || blk.Text[1].M != "c = 20.5, 21, \\dots" {
 		t.Fatalf("%v %s", s.asked, runsJSON(blk.Text))
 	}
@@ -354,7 +355,7 @@ func TestACitationOfAPageTheBookLacksIsRepairedThenUnlinked(t *testing.T) {
 	p := NewParser(context.Background(), Options{Mode: Ask, Model: s.model(), Pages: pagenum.Single(10), PageCount: 300}, Handler{})
 	feedIn(p, `{"type":"para","text":"See [p. 9999] here."}`+"\n", 100)
 	var blk ParaBlock
-	json.Unmarshal(p.Blocks()[0], &blk)
+	testx.Check(t, json.Unmarshal(p.Blocks()[0], &blk))
 	if len(s.asked) != 2 || len(blk.Text) != 1 || blk.Text[0].T != "See [p. 9999] here." {
 		t.Fatalf("%d %s", len(s.asked), runsJSON(blk.Text))
 	}
@@ -364,7 +365,7 @@ func TestPlotsSampleAndCarryMarks(t *testing.T) {
 	p := NewParser(context.Background(), Options{Mode: Ask}, Handler{})
 	feedIn(p, `{"type":"plot","title":"Decay","x":{"label":"t"},"y":{"label":"N"},"series":[{"label":"N(t)","expr":"100*exp(-x/2)","domain":[0,10]}],"marks":[{"x":2,"y":36.8,"label":"e^-1"},{"x":5,"label":"half"}]}`+"\n", 100)
 	var pl PlotBlock
-	json.Unmarshal(p.Blocks()[0], &pl)
+	testx.Check(t, json.Unmarshal(p.Blocks()[0], &pl))
 	if len(pl.Series) != 1 || len(pl.Series[0].Points) != plotSamples || len(pl.Marks) != 2 || pl.Marks[1].Y != nil {
 		t.Fatalf("%s", p.Blocks()[0])
 	}
@@ -433,8 +434,9 @@ func TestModelLinesReadBackAsTheSameBlocks(t *testing.T) {
 
 func jsonEqual(a, b []byte) bool {
 	var x, y any
-	json.Unmarshal(a, &x)
-	json.Unmarshal(b, &y)
+	if json.Unmarshal(a, &x) != nil || json.Unmarshal(b, &y) != nil {
+		return false
+	}
 	return reflect.DeepEqual(x, y)
 }
 
@@ -442,7 +444,7 @@ func TestAStatementWithANumericNumberOrAStringPageIsRead(t *testing.T) {
 	p := NewParser(context.Background(), Options{Mode: Ask, PageCount: 100}, Handler{})
 	feedIn(p, `{"type":"statement","kind":"definition","number":3.2,"page":"71","text":"A geometric \\(X\\)."}`+"\n", 100)
 	var s StatementBlock
-	json.Unmarshal(p.Blocks()[0], &s)
+	testx.Check(t, json.Unmarshal(p.Blocks()[0], &s))
 	if s.Type != TypeStatement || s.Number != "3.2" || s.Page != 71 || p.Failed() != 0 {
 		t.Fatalf("%s", p.Blocks()[0])
 	}
@@ -456,16 +458,16 @@ func TestAFormFeedAndSingleEscapedDelimitersAreRestored(t *testing.T) {
 	p := NewParser(context.Background(), Options{Mode: Ask, Model: noModel(t)}, Handler{})
 	feedIn(p, line, 7)
 	var m MathBlock
-	json.Unmarshal(p.Blocks()[0], &m)
+	testx.Check(t, json.Unmarshal(p.Blocks()[0], &m))
 	var para ParaBlock
-	json.Unmarshal(p.Blocks()[1], &para)
+	testx.Check(t, json.Unmarshal(p.Blocks()[1], &para))
 	if m.Tex != `\frac{1}{2} + \nu + \beta` || m.Raw {
 		t.Fatalf("tex %q", m.Tex)
 	}
 	// A newline in an aligned environment is a newline: "\nv_1" is no command.
 	p = NewParser(context.Background(), Options{Mode: Ask, Model: noModel(t)}, Handler{})
 	feedIn(p, "{\"type\":\"math\",\"tex\":\"\\begin{aligned}\nv_1 &= 2\\\\\nx &= 3 \\end{aligned}\"}\n", 100)
-	json.Unmarshal(p.Blocks()[0], &m)
+	testx.Check(t, json.Unmarshal(p.Blocks()[0], &m))
 	if m.Raw || !strings.HasPrefix(m.Tex, "\\begin{aligned}\nv_1") {
 		t.Fatalf("aligned %q raw=%v", m.Tex, m.Raw)
 	}

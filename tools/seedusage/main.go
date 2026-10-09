@@ -27,6 +27,7 @@ import (
 
 	"github.com/jackt/pset/internal/activity"
 	"github.com/jackt/pset/internal/ask"
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/homework"
@@ -67,7 +68,7 @@ func run(dir string) error {
 	if err != nil {
 		return err
 	}
-	defer d.Close()
+	defer cleanup.Close(d)
 	// The same migrations the server runs, so a directory the server has
 	// never started in works too.
 	var migs []db.Migration
@@ -78,7 +79,7 @@ func run(dir string) error {
 	if err := db.Migrate(ctx, d, migs); err != nil {
 		return err
 	}
-	if err := clear(ctx, d); err != nil {
+	if err := clearSeed(ctx, d); err != nil {
 		return err
 	}
 	if err := copyBook(dir); err != nil {
@@ -139,8 +140,8 @@ func run(dir string) error {
 	return calls(ctx, d, now)
 }
 
-// clear removes what an earlier run seeded.
-func clear(ctx context.Context, d *sql.DB) error {
+// clearSeed removes what an earlier run seeded.
+func clearSeed(ctx context.Context, d *sql.DB) error {
 	for _, q := range []string{
 		`DELETE FROM calls WHERE subject_id LIKE 'seed-%'`,
 		`DELETE FROM books WHERE id = 'seed-book'`, // the set, questions, turn, read and pages cascade
@@ -157,7 +158,7 @@ func copyBook(dir string) error {
 	if err != nil {
 		return fmt.Errorf("run it from the repo root: %w", err)
 	}
-	defer src.Close()
+	defer cleanup.Close(src)
 	if err := os.MkdirAll(filepath.Join(dir, "books"), 0o700); err != nil {
 		return err
 	}
@@ -165,7 +166,7 @@ func copyBook(dir string) error {
 	if err != nil {
 		return err
 	}
-	defer dst.Close()
+	defer cleanup.Close(dst)
 	_, err = io.Copy(dst, src)
 	return err
 }
@@ -206,33 +207,33 @@ func calls(ctx context.Context, d *sql.DB, now time.Time) error {
 		haiku      = "anthropic/claude-haiku-5.5"
 		deepseek   = "deepseek/deepseek-v4.1-flash"
 	)
-	min := time.Minute
+	minute := time.Minute
 	cs := []call{
 		// Question 1: a first run (find, figures, guide), then a retry whose
 		// first guide call hit a rate limit and was served by a fallback.
-		{"question", q1, "Find", "r1", 300 * min, 2100, perceptron, perceptron, 8200, 1212, 0, 0, 0.0004, "", ""},
-		{"question", q1, "Figures", "r1", 299 * min, 1500, luna, luna, 5400, 900, 0, 0, 0.0003, "", ""},
-		{"question", q1, "Figures", "r1", 299 * min, 2500, luna, luna, 4000, 1000, 0, 0, 0.0006, "", ""},
-		{"question", q1, "Figures", "r1", 298 * min, 1900, luna, luna, 4400, 800, 0, 0, 0.0005, "", ""},
-		{"question", q1, "Guide", "r1", 297 * min, 7000, haiku, haiku, 7000, 1800, 1400, 5000, 0.0018, "search_pages,read_page", ""},
-		{"question", q1, "Guide", "r1", 296 * min, 6200, haiku, haiku, 9100, 2100, 1700, 6500, 0.0021, "", ""},
-		{"question", q1, "Guide", "r2", 120 * min, 900, haiku, "", 0, 0, 0, 0, 0, "", "rate limited (429)"},
-		{"question", q1, "Guide", "r2", 120 * min, 6100, haiku, deepseek, 5000, 1900, 1700, 7000, 0.0015, "", ""},
+		{"question", q1, "Find", "r1", 300 * minute, 2100, perceptron, perceptron, 8200, 1212, 0, 0, 0.0004, "", ""},
+		{"question", q1, "Figures", "r1", 299 * minute, 1500, luna, luna, 5400, 900, 0, 0, 0.0003, "", ""},
+		{"question", q1, "Figures", "r1", 299 * minute, 2500, luna, luna, 4000, 1000, 0, 0, 0.0006, "", ""},
+		{"question", q1, "Figures", "r1", 298 * minute, 1900, luna, luna, 4400, 800, 0, 0, 0.0005, "", ""},
+		{"question", q1, "Guide", "r1", 297 * minute, 7000, haiku, haiku, 7000, 1800, 1400, 5000, 0.0018, "search_pages,read_page", ""},
+		{"question", q1, "Guide", "r1", 296 * minute, 6200, haiku, haiku, 9100, 2100, 1700, 6500, 0.0021, "", ""},
+		{"question", q1, "Guide", "r2", 120 * minute, 900, haiku, "", 0, 0, 0, 0, 0, "", "rate limited (429)"},
+		{"question", q1, "Guide", "r2", 120 * minute, 6100, haiku, deepseek, 5000, 1900, 1700, 7000, 0.0015, "", ""},
 		// Question 2: one plain run.
-		{"question", q2, "Find", "r3", 299 * min, 1800, perceptron, perceptron, 7600, 1050, 0, 0, 0.0004, "", ""},
-		{"question", q2, "Guide", "r3", 298 * min, 5400, haiku, haiku, 6200, 1400, 900, 4200, 0.0014, "search_pages", ""},
+		{"question", q2, "Find", "r3", 299 * minute, 1800, perceptron, perceptron, 7600, 1050, 0, 0, 0.0004, "", ""},
+		{"question", q2, "Guide", "r3", 298 * minute, 5400, haiku, haiku, 6200, 1400, 900, 4200, 0.0014, "search_pages", ""},
 		// The set's difficulty ranking, shared by both questions.
-		{"set", setID, "Rank", "rk", 295 * min, 1300, luna, luna, 1400, 88, 0, 0, 0.0003, "", ""},
+		{"set", setID, "Rank", "rk", 295 * minute, 1300, luna, luna, 1400, 88, 0, 0, 0.0003, "", ""},
 		// An Ask turn: three tool rounds and a repair.
-		{"turn", turnID, "Round 1", "t1", 200 * min, 3100, haiku, haiku, 3000, 240, 180, 0, 0.0007, "search_pages", ""},
-		{"turn", turnID, "Round 2", "t1", 200 * min, 3600, haiku, haiku, 4800, 310, 220, 2600, 0.0006, "read_page,compute", ""},
-		{"turn", turnID, "Round 3", "t1", 199 * min, 6800, haiku, haiku, 6100, 920, 400, 4400, 0.0012, "", ""},
-		{"turn", turnID, "Repairs", "t1", 199 * min, 700, haiku, haiku, 900, 60, 0, 0, 0.0001, "", ""},
+		{"turn", turnID, "Round 1", "t1", 200 * minute, 3100, haiku, haiku, 3000, 240, 180, 0, 0.0007, "search_pages", ""},
+		{"turn", turnID, "Round 2", "t1", 200 * minute, 3600, haiku, haiku, 4800, 310, 220, 2600, 0.0006, "read_page,compute", ""},
+		{"turn", turnID, "Round 3", "t1", 199 * minute, 6800, haiku, haiku, 6100, 920, 400, 4400, 0.0012, "", ""},
+		{"turn", turnID, "Repairs", "t1", 199 * minute, 700, haiku, haiku, 900, 60, 0, 0, 0.0001, "", ""},
 		// An assignment read.
-		{"read", readID, "Read", "rd", 250 * min, 9200, haiku, haiku, 12000, 1800, 1100, 8000, 0.0024, "", ""},
+		{"read", readID, "Read", "rd", 250 * minute, 9200, haiku, haiku, 12000, 1800, 1100, 8000, 0.0024, "", ""},
 		// The book's import.
-		{"book", bookID, "Naming", "im", 1500 * min, 2700, haiku, haiku, 4600, 300, 0, 0, 0.0006, "", ""},
-		{"book", bookID, "Contents", "im", 1499 * min, 13000, haiku, haiku, 23000, 3600, 2000, 0, 0.0032, "", ""},
+		{"book", bookID, "Naming", "im", 1500 * minute, 2700, haiku, haiku, 4600, 300, 0, 0, 0.0006, "", ""},
+		{"book", bookID, "Contents", "im", 1499 * minute, 13000, haiku, haiku, 23000, 3600, 2000, 0, 0.0032, "", ""},
 	}
 	for _, c := range cs {
 		var in, out, reasoning, cached, cost any

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/llm"
 )
@@ -160,7 +161,7 @@ func flagParts(walk []doc.Block, differ []difference) []doc.Block {
 			continue
 		}
 		var a doc.AnswerBlock
-		json.Unmarshal(b, &a)
+		cleanup.Log("crosscheck: read an answer block", json.Unmarshal(b, &a))
 		answers[sameLabel(a.Label)] = i
 		last = i
 	}

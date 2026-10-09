@@ -78,8 +78,10 @@ const (
 	StateReading State = "reading"
 	// StateWriting is writing its guide; the hint may already be there.
 	StateWriting State = "writing"
-	StateReady   State = "ready"
-	StateFailed  State = "failed"
+	// StateReady has a guide, written and checked.
+	StateReady State = "ready"
+	// StateFailed could not be found or written; Reason says why.
+	StateFailed State = "failed"
 	// StateUnwritten is found, with no guide: the guides written before
 	// documents were deleted, and nothing writes one until the student
 	// asks ("Write the guide").
@@ -90,15 +92,15 @@ const (
 type Failure string
 
 const (
-	// FailureNotFound: locate couldn't find it. Give the page, or paste it.
+	// FailureNotFound means locate couldn't find it. Give the page, or paste it.
 	FailureNotFound Failure = "not_found"
-	// FailureGeneration: the guide didn't finish (cut off, missing a part).
+	// FailureGeneration means the guide didn't finish (cut off, missing a part).
 	// Try again.
 	FailureGeneration Failure = "generation"
-	// FailureUnavailable: the provider didn't answer or was busy. Try
+	// FailureUnavailable means the provider didn't answer or was busy. Try
 	// again later.
 	FailureUnavailable Failure = "unavailable"
-	// FailureSetup: there's no OpenRouter key, OpenRouter refused it, or
+	// FailureSetup means there's no OpenRouter key, OpenRouter refused it, or
 	// the account is out of credit.
 	// Fix it in Settings.
 	FailureSetup Failure = "setup"
@@ -196,10 +198,12 @@ type Draft struct {
 	InBook bool   `json:"inBook"`
 }
 
+// AddQuestions is POST /api/homework/{id}/questions.
 type AddQuestions struct {
 	Drafts []Draft `json:"drafts"`
 }
 
+// Questions is a list of questions.
 type Questions struct {
 	Questions []Question `json:"questions"`
 }
@@ -377,9 +381,12 @@ type AssignmentImport struct {
 type ReadState string
 
 const (
+	// ReadStateReading is being read now.
 	ReadStateReading ReadState = "reading"
-	ReadStateReady   ReadState = "ready"
-	ReadStateFailed  ReadState = "failed"
+	// ReadStateReady is read and waiting for its review.
+	ReadStateReady ReadState = "ready"
+	// ReadStateFailed could not be read; Error says why.
+	ReadStateFailed ReadState = "failed"
 )
 
 // AssignmentRead is an assignment being read in the background, or read
@@ -449,28 +456,34 @@ const (
 	EventReadRemoved     = "assignment.removed"
 )
 
+// ReadChanged is the event for a read that was created or changed.
 type ReadChanged struct {
 	Read AssignmentRead `json:"read"`
 }
 
+// ReadRemoved is the event for a read that was deleted.
 type ReadRemoved struct {
 	ID     string `json:"id"`
 	BookID string `json:"bookId"`
 }
 
-type HomeworkChanged struct {
+// SetChanged is the event for a set that was created or changed.
+type SetChanged struct {
 	Homework Summary `json:"homework"`
 }
 
-type HomeworkRemoved struct {
+// SetRemoved is the event for a set that was deleted.
+type SetRemoved struct {
 	ID     string `json:"id"`
 	BookID string `json:"bookId"`
 }
 
+// QuestionChanged is the event for a question that was created or changed.
 type QuestionChanged struct {
 	Question Question `json:"question"`
 }
 
+// QuestionRemoved is the event for a question that was deleted.
 type QuestionRemoved struct {
 	ID         string `json:"id"`
 	HomeworkID string `json:"homeworkId"`

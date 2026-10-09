@@ -70,6 +70,9 @@ export interface HealthCheck {
   detail: string;
   fixable: boolean;
 }
+/**
+ * Health is the checks of what PSet needs to run.
+ */
 export interface Health {
   checks: HealthCheck[];
 }
@@ -80,6 +83,9 @@ export interface ResetCounts {
   books: number /* int */;
   pages: number /* int */;
 }
+/**
+ * About is what the About page shows.
+ */
 export interface About {
   version: string;
   dataDir: string;

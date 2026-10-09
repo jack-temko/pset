@@ -8,7 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/testx"
 )
 
 func ftsDB(t *testing.T, migs []db.Migration) *sql.DB {
@@ -17,7 +19,7 @@ func ftsDB(t *testing.T, migs []db.Migration) *sql.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { cleanup.Close(d) })
 	if err := db.Migrate(context.Background(), d, migs); err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +74,7 @@ func TestSearchIsConfinedToItsBooksText(t *testing.T) {
 	} {
 		got := search(t, d, tc.book, tc.query)
 		slices.Sort(got)
-		if !slices.Equal(got, tc.want) && !(len(got) == 0 && len(tc.want) == 0) {
+		if !slices.Equal(got, tc.want) && (len(got) != 0 || len(tc.want) != 0) {
 			t.Errorf("%s %q: pages %v, want %v", tc.book[:8], tc.query, got, tc.want)
 		}
 	}
@@ -100,7 +102,7 @@ func TestIndexFollowsPageEditsAndRemoval(t *testing.T) {
 		t.Fatal(err)
 	}
 	var n int
-	d.QueryRow(`SELECT count(*) FROM pages_fts`).Scan(&n)
+	testx.Check(t, d.QueryRow(`SELECT count(*) FROM pages_fts`).Scan(&n))
 	if n != 1 || len(search(t, d, bookB, "alpha")) != 1 {
 		t.Errorf("after removing a book the index holds %d rows, want the other book's 1", n)
 	}
@@ -135,11 +137,11 @@ func TestTriggersDeleteByLookup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	n := 0
 	for rows.Next() {
 		var name, body string
-		rows.Scan(&name, &body)
+		testx.Check(t, rows.Scan(&name, &body))
 		n++
 		if !strings.Contains(body, "pages_fts MATCH") || strings.Contains(body, "book_id = old.book_id") {
 			t.Errorf("%s deletes from the index by column values, not by lookup:\n%s", name, body)

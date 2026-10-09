@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/jackt/pset/internal/cleanup"
 )
 
 // Finalize runs the whole-document checks a guide has, once it is written:
@@ -41,7 +43,7 @@ func (p *Parser) Finalize() {
 		out, outFailed = append(out, p.blocks[i:j]...), append(outFailed, p.failed[i:j]...)
 		if !answered {
 			var part PartBlock
-			json.Unmarshal(p.blocks[i], &part)
+			cleanup.Log("doc: read a part block", json.Unmarshal(p.blocks[i], &part))
 			user := fmt.Sprintf("The part's blocks:\n%s\n\nWrite the answer for %s.", ModelLines(p.blocks[i:j], p.opt.Pages), part.Label)
 			if b, ok := p.write(answerPrompt, user, TypeAnswer); ok {
 				out, outFailed = append(out, b), append(outFailed, false)

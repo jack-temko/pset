@@ -12,6 +12,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"mime/multipart"
@@ -24,6 +25,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/httpx"
 )
 
 type row struct {
@@ -78,13 +82,13 @@ func main() {
 	for _, d := range docs {
 		if d.HTML != "" {
 			html := d.HTML
-			pages.HandleFunc("/"+d.Name+".htm", func(w http.ResponseWriter, r *http.Request) {
+			pages.HandleFunc("/"+d.Name+".htm", func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("Content-Type", "text/html")
-				fmt.Fprint(w, html)
+				httpx.Write(w, []byte(html))
 			})
 		}
 	}
-	go http.Serve(ln, pages)
+	go func() { cleanup.Log("serve the pages", http.Serve(ln, pages)) }()
 	site := "http://" + ln.Addr().String()
 
 	type run struct {
@@ -113,7 +117,7 @@ func main() {
 				fatal("%s: %v", d.Name, err)
 			}
 			if *out != "" {
-				os.WriteFile(filepath.Join(*out, d.Name+".pdf"), data, 0o644)
+				cleanup.Log("save the pdf", os.WriteFile(filepath.Join(*out, d.Name+".pdf"), data, 0o644))
 			}
 			err = upload(*addr, id, d.Name+".pdf", data, &r)
 			if err != nil {
@@ -121,7 +125,7 @@ func main() {
 			}
 		case d.HTML != "":
 			if *out != "" {
-				os.WriteFile(filepath.Join(*out, d.Name+".htm"), []byte(d.HTML), 0o644)
+				cleanup.Log("save the page", os.WriteFile(filepath.Join(*out, d.Name+".htm"), []byte(d.HTML), 0o644))
 			}
 			if err := call(*addr, "POST", "/api/books/"+id+"/assignments/read", map[string]string{"url": site + "/" + d.Name + ".htm"}, &r); err != nil {
 				rn.err = err.Error()
@@ -156,7 +160,7 @@ func main() {
 				rn.r = r
 				if r.State != "reading" || time.Now().After(deadline) {
 					if !*keep {
-						call(*addr, "DELETE", "/api/assignment-reads/"+rn.id, nil, nil)
+						cleanup.Log("delete the read", call(*addr, "DELETE", "/api/assignment-reads/"+rn.id, nil, nil))
 					}
 					return
 				}
@@ -358,16 +362,18 @@ func upload(addr, bookID, name string, data []byte, out any) error {
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
 	fw, _ := mw.CreateFormFile("file", name)
-	fw.Write(data)
-	mw.Close()
+	_, werr := fw.Write(data)
+	if err := errors.Join(werr, mw.Close()); err != nil {
+		return err
+	}
 	resp, err := http.Post(addr+"/api/books/"+bookID+"/assignments/read", mw.FormDataContentType(), &body)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer cleanup.Close(resp.Body)
 	if resp.StatusCode >= 300 {
 		var e struct{ Message string }
-		json.NewDecoder(resp.Body).Decode(&e)
+		cleanup.Log("read the error", json.NewDecoder(resp.Body).Decode(&e))
 		return fmt.Errorf("%d: %s", resp.StatusCode, e.Message)
 	}
 	return json.NewDecoder(resp.Body).Decode(out)
@@ -376,7 +382,9 @@ func upload(addr, bookID, name string, data []byte, out any) error {
 func call(addr, method, path string, body, out any) error {
 	var buf bytes.Buffer
 	if body != nil {
-		json.NewEncoder(&buf).Encode(body)
+		if err := json.NewEncoder(&buf).Encode(body); err != nil {
+			return err
+		}
 	}
 	req, err := http.NewRequest(method, addr+path, &buf)
 	if err != nil {
@@ -387,10 +395,10 @@ func call(addr, method, path string, body, out any) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer cleanup.Close(resp.Body)
 	if resp.StatusCode >= 300 {
 		var e struct{ Message string }
-		json.NewDecoder(resp.Body).Decode(&e)
+		cleanup.Log("read the error", json.NewDecoder(resp.Body).Decode(&e))
 		return fmt.Errorf("%s %s: %d: %s", method, path, resp.StatusCode, e.Message)
 	}
 	if out != nil {

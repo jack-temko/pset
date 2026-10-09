@@ -128,8 +128,8 @@ func normalizeName(name string) string {
 	}
 }
 
-func formatToken(num *big.Rat, imag bool) string {
-	if imag {
+func formatToken(num *big.Rat, imaginary bool) string {
+	if imaginary {
 		return num.RatString() + "j"
 	}
 	return num.RatString()

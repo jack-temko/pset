@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/llm"
@@ -42,6 +43,7 @@ type Queue interface {
 	Resume()
 }
 
+// Config is what the service is built from.
 type Config struct {
 	DB         *sql.DB
 	DataDir    string
@@ -55,8 +57,10 @@ type Config struct {
 	LookPath func(string) (string, error)
 }
 
+// Service keeps the student's settings: the name, the keys and the health of what PSet needs.
 type Service struct{ c Config }
 
+// New builds the service.
 func New(c Config) *Service { return &Service{c} }
 
 // SetLibrary connects Reset's dry run once the library exists: the
@@ -116,7 +120,8 @@ func (s *Service) SaveProfile(ctx context.Context, p Profile) (Profile, error) {
 // Name is what the tutor calls the student; empty when they haven't said.
 func (s *Service) Name(ctx context.Context) string {
 	var p Profile
-	load(ctx, s.c.DB, keyProfile, &p)
+	_, err := load(ctx, s.c.DB, keyProfile, &p)
+	cleanup.Log("settings: read the profile", err)
 	return p.Name
 }
 
@@ -171,7 +176,7 @@ func (s *Service) Save(ctx context.Context, in KeyInput) (SaveResult, error) {
 // explain turns a failed test into what to do about it: on the key when
 // the key is the trouble, else said in general.
 func explain(err error) error {
-	var le *llm.LLMError
+	var le *llm.CallError
 	if errors.As(err, &le) {
 		switch {
 		case llm.OutOfCredit(le.Status, le.Body):

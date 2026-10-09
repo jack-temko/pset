@@ -94,7 +94,7 @@ func (s *Service) Routes(mux *http.ServeMux) {
 		}
 		w.Header().Set("Content-Type", "image/jpeg")
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		w.Write(data)
+		httpx.Write(w, data)
 		return nil
 	}))
 }

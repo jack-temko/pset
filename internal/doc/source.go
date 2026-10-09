@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/pagenum"
 )
 
@@ -63,7 +64,7 @@ func sourceOf(v any, pages pagenum.Map) any {
 		if isRuns(v) {
 			runs := make([]Run, len(v))
 			raw, _ := json.Marshal(v)
-			json.Unmarshal(raw, &runs)
+			cleanup.Log("doc: read runs", json.Unmarshal(raw, &runs))
 			return Source(runs, pages)
 		}
 		for i, x := range v {
@@ -109,7 +110,7 @@ func SplitGuide(blocks []Block) (hint, walk []Block) {
 			continue
 		}
 		var h HintBlock
-		json.Unmarshal(b, &h)
+		cleanup.Log("doc: read a hint block", json.Unmarshal(b, &h))
 		note, _ := json.Marshal(NoteBlock{Type: TypeNote, Text: h.Text})
 		walk = append(walk, note)
 	}
@@ -123,7 +124,7 @@ func Answers(blocks []Block) []AnswerBlock {
 	for _, b := range blocks {
 		if TypeOf(b) == TypeAnswer {
 			var a AnswerBlock
-			json.Unmarshal(b, &a)
+			cleanup.Log("doc: read an answer block", json.Unmarshal(b, &a))
 			out = append(out, a)
 		}
 	}

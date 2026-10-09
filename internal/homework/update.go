@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/probnum"
 )
 
@@ -44,7 +45,7 @@ func (s *Service) setHas(ctx context.Context, setID string, style probnum.Style)
 	if err != nil {
 		return c, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	for rows.Next() {
 		var q setQ
 		var text, notes string

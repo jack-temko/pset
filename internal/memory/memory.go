@@ -14,11 +14,13 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/events"
 	"github.com/jackt/pset/internal/httpx"
 )
 
+// Migrations is the memories table.
 func Migrations() []db.Migration {
 	return []db.Migration{{Name: "memory/1", SQL: `
 CREATE TABLE memories (
@@ -45,11 +47,13 @@ ALTER TABLE memories DROP COLUMN detail;
 ALTER TABLE memories DROP COLUMN page`}}
 }
 
+// Service keeps what the tutor remembers about the student, per book.
 type Service struct {
 	db     *sql.DB
 	events events.Publisher
 }
 
+// New builds the service over the database.
 func New(d *sql.DB, ev events.Publisher) *Service { return &Service{db: d, events: ev} }
 
 // MaxText bounds one memory: a sentence, not a page of notes.
@@ -74,7 +78,7 @@ func (s *Service) List(ctx context.Context, bookID string) ([]Memory, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	out := []Memory{}
 	for rows.Next() {
 		m, err := scan(rows)
@@ -108,9 +112,12 @@ type Save struct {
 type Outcome string
 
 const (
-	OutcomeSaved     Outcome = "saved"
+	// OutcomeSaved is a new memory.
+	OutcomeSaved Outcome = "saved"
+	// OutcomeDuplicate is a memory already saved, so nothing changed.
 	OutcomeDuplicate Outcome = "duplicate"
-	OutcomeReplaced  Outcome = "replaced"
+	// OutcomeReplaced is a memory that took the place of an older one.
+	OutcomeReplaced Outcome = "replaced"
 )
 
 // Refusals the model reads, in words it can act on.
@@ -219,7 +226,7 @@ func (s *Service) resolve(ctx context.Context, bookID, ref string) (Memory, erro
 	if err != nil {
 		return Memory{}, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	var found []Memory
 	for rows.Next() {
 		m, err := scan(rows)

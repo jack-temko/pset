@@ -9,18 +9,45 @@ import type { Form, Style, Where } from './probnum'
 /**
  * State is where a book is on its way to the shelf.
  */
+/**
+ * StateQueued is waiting its turn to be read.
+ */
 export const StateQueued = "queued";
+/**
+ * StatePreparing is being read; Phase says which step.
+ */
 export const StatePreparing = "preparing";
+/**
+ * StateReady is on the shelf and can be opened.
+ */
 export const StateReady = "ready";
+/**
+ * StateFailed could not be read; Reason says why.
+ */
 export const StateFailed = "failed";
 export type State = typeof StateQueued | typeof StatePreparing | typeof StateReady | typeof StateFailed;
 /**
  * Phase is one of the five named steps of preparing a book.
  */
+/**
+ * PhaseExamine looks at the file: its size, metadata and whether it has text.
+ */
 export const PhaseExamine = "examine";
+/**
+ * PhaseRead recognizes the text of a scanned book, page by page.
+ */
 export const PhaseRead = "read";
+/**
+ * PhaseContents finds the table of contents.
+ */
 export const PhaseContents = "contents";
+/**
+ * PhaseIndex works the contents out into the book's sections.
+ */
 export const PhaseIndex = "index";
+/**
+ * PhaseSearch embeds the pages so they can be searched.
+ */
 export const PhaseSearch = "search";
 export type Phase = typeof PhaseExamine | typeof PhaseRead | typeof PhaseContents | typeof PhaseIndex | typeof PhaseSearch;
 /**
@@ -28,11 +55,29 @@ export type Phase = typeof PhaseExamine | typeof PhaseRead | typeof PhaseContent
  * web/src/index.css. Picked when the book is added, kept, and changeable
  * in the Book dialog (covers.go).
  */
+/**
+ * CoverIndigo is the first of the cover colours.
+ */
 export const CoverIndigo = "indigo";
+/**
+ * CoverTeal is a cover colour.
+ */
 export const CoverTeal = "teal";
+/**
+ * CoverAmber is a cover colour.
+ */
 export const CoverAmber = "amber";
+/**
+ * CoverRose is a cover colour.
+ */
 export const CoverRose = "rose";
+/**
+ * CoverViolet is a cover colour.
+ */
 export const CoverViolet = "violet";
+/**
+ * CoverSlate is a cover colour.
+ */
 export const CoverSlate = "slate";
 export type Cover = typeof CoverIndigo | typeof CoverTeal | typeof CoverAmber | typeof CoverRose | typeof CoverViolet | typeof CoverSlate;
 /**
@@ -56,7 +101,13 @@ export interface BookState {
  * KindUnknown is a book not examined yet.
  */
 export const KindUnknown = "";
+/**
+ * KindDigital has a text layer.
+ */
 export const KindDigital = "digital";
+/**
+ * KindScanned is pictures of pages, read by OCR.
+ */
 export const KindScanned = "scanned";
 export type Kind = typeof KindUnknown | typeof KindDigital | typeof KindScanned;
 /**
@@ -157,6 +208,9 @@ export type EventBook = typeof EventBookChanged | typeof EventBookRemoved;
 export interface BookChanged {
   book: Book;
 }
+/**
+ * BookRemoved is the event for a book that was removed.
+ */
 export interface BookRemoved {
   id: string;
 }

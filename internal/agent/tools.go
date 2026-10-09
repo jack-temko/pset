@@ -16,7 +16,7 @@ import (
 	"github.com/jackt/pset/internal/pagenum"
 )
 
-// The tools: as few as cover what a student needs. Pages are the printed
+// Tools are as few as cover what a student needs. Pages are the printed
 // numbers the model sees in the book and cites; the library speaks PDF
 // pages, so each tool converts once.
 var Tools = []llm.Tool{

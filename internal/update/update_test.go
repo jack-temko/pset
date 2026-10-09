@@ -18,7 +18,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/releasesign"
+	"github.com/jackt/pset/internal/testx"
 )
 
 func TestVersions(t *testing.T) {
@@ -98,19 +100,19 @@ func newFixture(t *testing.T) *fixture {
 		if !f.noSig {
 			assets = append(assets, map[string]string{"name": "SHA256SUMS.sig", "browser_download_url": f.srv.URL + "/dl/SHA256SUMS.sig"})
 		}
-		json.NewEncoder(w).Encode(map[string]any{"tag_name": f.tag, "body": "- a change", "published_at": "2026-10-02T00:00:00Z", "assets": assets})
+		testx.Check(t, json.NewEncoder(w).Encode(map[string]any{"tag_name": f.tag, "body": "- a change", "published_at": "2026-10-02T00:00:00Z", "assets": assets}))
 	})
-	mux.HandleFunc("/dl/pset-1.1.0-linux-amd64.tar.gz", func(w http.ResponseWriter, r *http.Request) { w.Write(f.tarball()) })
-	mux.HandleFunc("/dl/SHA256SUMS", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, f.sums("pset-1.1.0-linux-amd64.tar.gz", f.tarballForSums()))
+	mux.HandleFunc("/dl/pset-1.1.0-linux-amd64.tar.gz", func(w http.ResponseWriter, _ *http.Request) { testx.Check(t, testx.Err(w.Write(f.tarball()))) })
+	mux.HandleFunc("/dl/SHA256SUMS", func(w http.ResponseWriter, _ *http.Request) {
+		testx.Check(t, testx.Err(fmt.Fprint(w, f.sums("pset-1.1.0-linux-amd64.tar.gz", f.tarballForSums()))))
 	})
-	mux.HandleFunc("/dl/SHA256SUMS.sig", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/dl/SHA256SUMS.sig", func(w http.ResponseWriter, _ *http.Request) {
 		key := f.priv
 		if f.signWith != "" {
 			key = f.signWith
 		}
 		sig, _ := releasesign.Sign(key, []byte(f.sums("pset-1.1.0-linux-amd64.tar.gz", f.tarballForSums())))
-		fmt.Fprint(w, sig)
+		testx.Check(t, testx.Err(fmt.Fprint(w, sig)))
 	})
 	f.srv = httptest.NewServer(mux)
 	t.Cleanup(f.srv.Close)
@@ -126,12 +128,12 @@ func (f *fixture) tarball() []byte {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gz)
-	tw.WriteHeader(&tar.Header{Name: "pset-1.1.0-linux-amd64/README.txt", Mode: 0o644, Size: 2, Typeflag: tar.TypeReg})
-	tw.Write([]byte("hi"))
-	tw.WriteHeader(&tar.Header{Name: f.member, Mode: 0o755, Size: int64(len(f.script)), Typeflag: tar.TypeReg})
-	tw.Write([]byte(f.script))
-	tw.Close()
-	gz.Close()
+	testx.Check(f.t, tw.WriteHeader(&tar.Header{Name: "pset-1.1.0-linux-amd64/README.txt", Mode: 0o644, Size: 2, Typeflag: tar.TypeReg}))
+	testx.Check(f.t, testx.Err(tw.Write([]byte("hi"))))
+	testx.Check(f.t, tw.WriteHeader(&tar.Header{Name: f.member, Mode: 0o755, Size: int64(len(f.script)), Typeflag: tar.TypeReg}))
+	testx.Check(f.t, testx.Err(tw.Write([]byte(f.script))))
+	cleanup.Close(tw)
+	cleanup.Close(gz)
 	return buf.Bytes()
 }
 
@@ -193,7 +195,7 @@ func TestApplyReplacesTheProgramAndRestarts(t *testing.T) {
 	if _, err := f.svc.Apply(ctx); err == nil {
 		t.Fatal("applied without checking")
 	}
-	f.svc.Check(ctx)
+	testx.Check(t, testx.Err(f.svc.Check(ctx)))
 	got, err := f.svc.Apply(ctx)
 	if err != nil || got.Version != "1.1.0" || !got.Restarting {
 		t.Fatalf("apply: %+v %v", got, err)
@@ -226,7 +228,7 @@ func TestNothingIsReplacedUnlessEverythingChecksOut(t *testing.T) {
 		},
 		"a release with no signature": func(f *fixture) { f.noSig = true },
 		"checksums that do not list this file": func(f *fixture) {
-			f.sums = func(file string, archive []byte) string { return strings.Repeat("a", 64) + "  other.tar.gz\n" }
+			f.sums = func(_ string, _ []byte) string { return strings.Repeat("a", 64) + "  other.tar.gz\n" }
 		},
 		"an archive without the program": func(f *fixture) { f.member = "pset-1.1.0-linux-amd64/other" },
 		"a program that is not the version it says": func(f *fixture) {
@@ -276,8 +278,8 @@ func TestWhyItCannotUpdate(t *testing.T) {
 		"windows":             func(c *Config) { c.GOOS = "windows" },
 		"a folder it cannot write": func(c *Config) {
 			dir := t.TempDir()
-			os.Chmod(dir, 0o500)
-			t.Cleanup(func() { os.Chmod(dir, 0o700) })
+			testx.Check(t, os.Chmod(dir, 0o500))
+			t.Cleanup(func() { testx.Check(t, os.Chmod(dir, 0o700)) })
 			c.Exe = func() (string, error) { return filepath.Join(dir, "pset"), nil }
 		},
 	} {

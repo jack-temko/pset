@@ -9,10 +9,14 @@ import (
 type TurnState string
 
 const (
+	// TurnRunning is being answered now.
 	TurnRunning TurnState = "running"
-	TurnDone    TurnState = "done"
+	// TurnDone is answered.
+	TurnDone TurnState = "done"
+	// TurnStopped was stopped by the student.
 	TurnStopped TurnState = "stopped"
-	TurnFailed  TurnState = "failed"
+	// TurnFailed could not be answered; Reason says why.
+	TurnFailed TurnState = "failed"
 )
 
 // Failure is what kind of failure a failed turn had, which picks what the
@@ -20,13 +24,13 @@ const (
 type Failure string
 
 const (
-	// FailureSetup: there's no OpenRouter key, OpenRouter refused it, or
+	// FailureSetup means there's no OpenRouter key, OpenRouter refused it, or
 	// the account is out of credit. Fix it in Settings.
 	FailureSetup Failure = "setup"
-	// FailureUnavailable: the provider didn't answer or was busy. Ask again
+	// FailureUnavailable means the provider didn't answer or was busy. Ask again
 	// later.
 	FailureUnavailable Failure = "unavailable"
-	// FailureGeneration: the answer didn't finish (cut off, or the model
+	// FailureGeneration means the answer didn't finish (cut off, or the model
 	// stopped without one). Ask again.
 	FailureGeneration Failure = "generation"
 )
@@ -74,6 +78,7 @@ type Turn struct {
 	UpdatedAt string `json:"updatedAt"`
 }
 
+// Turns is a book's whole conversation, oldest first.
 type Turns struct {
 	Turns []Turn `json:"turns"`
 }
@@ -98,6 +103,7 @@ const (
 	EventTurnsCleared       = "turns.cleared"
 )
 
+// TurnChanged is the event for a turn that was created or changed.
 type TurnChanged struct {
 	Turn Turn `json:"turn"`
 }
@@ -128,6 +134,7 @@ type TurnBlock struct {
 	Block  doc.Block `json:"block"`
 }
 
+// TurnsCleared is the event for a book whose conversation was cleared.
 type TurnsCleared struct {
 	BookID string `json:"bookId"`
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"slices"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/pagenum"
@@ -64,12 +65,12 @@ func fillPageRuns(ctx context.Context, d queryer) error {
 	for rows.Next() {
 		var b bare
 		if err := rows.Scan(&b.id, &b.count, &b.offset, &b.edited); err != nil {
-			rows.Close()
+			cleanup.Close(rows)
 			return err
 		}
 		todo = append(todo, b)
 	}
-	rows.Close()
+	cleanup.Close(rows)
 	if err := rows.Err(); err != nil {
 		return err
 	}

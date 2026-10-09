@@ -17,8 +17,8 @@ import type {
   Box,
   Detail,
   Draft,
-  HomeworkChanged,
-  HomeworkRemoved,
+  SetChanged,
+  SetRemoved,
   Input,
   List,
   Patch,
@@ -148,10 +148,8 @@ function dropQuestion(qc: QueryClient, id: string, homeworkId: string) {
   );
 }
 
-on<HomeworkChanged>('homework.changed', (d, qc) => putSummary(qc, d.homework));
-on<HomeworkRemoved>('homework.removed', (d, qc) =>
-  dropSummary(qc, d.id, d.bookId),
-);
+on<SetChanged>('homework.changed', (d, qc) => putSummary(qc, d.homework));
+on<SetRemoved>('homework.removed', (d, qc) => dropSummary(qc, d.id, d.bookId));
 /** The step a question is in, for its time left (lib/eta): being found,
  *  having its figure read, or being written, none otherwise. */
 export const questionStep = (q: Pick<Question, 'state'>) =>

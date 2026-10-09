@@ -90,7 +90,7 @@ func (s *Service) runRank(ctx context.Context, j jobs.Job) error {
 	// has a new share, whether or not its difficulty moved.
 	s.publishSetQuestions(ctx, p.SetID)
 	if changed {
-		s.publishSet(ctx, p.SetID)
+		s.announceSet(ctx, p.SetID)
 	}
 	return nil
 }

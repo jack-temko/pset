@@ -12,6 +12,7 @@ import (
 	"github.com/jackt/pset/internal/activity"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/llm/llmtest"
+	"github.com/jackt/pset/internal/testx"
 )
 
 func TestNothingToSayUntilTwoFinishedQuestionsAreTimed(t *testing.T) {
@@ -42,7 +43,7 @@ func TestPaceIsSecondsPerPointOfDifficulty(t *testing.T) {
 	if e == nil || n != 2 || e.Seconds != 1500 {
 		t.Fatalf("estimate %+v from %d, want 1500 s from 2", e, n)
 	}
-	if !(e.Low < e.Seconds && e.Seconds < e.High) || e.Low < 0 {
+	if (e.Low >= e.Seconds || e.Seconds >= e.High) || e.Low < 0 {
 		t.Fatalf("range %+v does not hold the estimate", e)
 	}
 }
@@ -195,7 +196,7 @@ func TestSetsCarryTheirBarAndTheTimeLeft(t *testing.T) {
 		e.difficulty(t, q.ID)
 	}
 	for i, d := range []int{2, 2, 4, 1} {
-		e.svc.c.DB.Exec(`UPDATE questions SET difficulty = ? WHERE id = ?`, d, qs[i].ID)
+		testx.Check(t, testx.Err(e.svc.c.DB.Exec(`UPDATE questions SET difficulty = ? WHERE id = ?`, d, qs[i].ID)))
 	}
 	yes := true
 	e.do(t, "PATCH", "/api/questions/"+qs[0].ID, QuestionPatch{Done: &yes}, nil)
@@ -257,7 +258,7 @@ func TestTimeLeftFromRealStretches(t *testing.T) {
 		e.difficulty(t, q.ID)
 	}
 	for i, d := range []int{2, 2, 4, 1} {
-		e.svc.c.DB.Exec(`UPDATE questions SET difficulty = ? WHERE id = ?`, d, qs[i].ID)
+		testx.Check(t, testx.Err(e.svc.c.DB.Exec(`UPDATE questions SET difficulty = ? WHERE id = ?`, d, qs[i].ID)))
 	}
 	start := time.Now().UTC().Add(-2 * time.Hour)
 	at := func(m int) string { return start.Add(time.Duration(m) * time.Minute).Format(time.RFC3339) }

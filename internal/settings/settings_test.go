@@ -12,9 +12,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/testx"
 )
 
 type fakeDialer struct {
@@ -53,7 +55,7 @@ func newServer(t *testing.T) *server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { cleanup.Close(d) })
 	migs := Migrations()
 	if err := db.Migrate(context.Background(), d, migs); err != nil {
 		t.Fatal(err)
@@ -75,16 +77,16 @@ func (s *server) do(t *testing.T, method, path string, body, out any) int {
 	t.Helper()
 	var buf bytes.Buffer
 	if body != nil {
-		json.NewEncoder(&buf).Encode(body)
+		testx.Check(t, json.NewEncoder(&buf).Encode(body))
 	}
 	req, _ := http.NewRequest(method, s.URL+path, &buf)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer cleanup.Close(resp.Body)
 	if out != nil {
-		json.NewDecoder(resp.Body).Decode(out)
+		testx.Check(t, json.NewDecoder(resp.Body).Decode(out))
 	}
 	return resp.StatusCode
 }
@@ -125,7 +127,7 @@ func TestSaveTestsThenWrites(t *testing.T) {
 func TestAKeyForAnotherEndpointIsntReady(t *testing.T) {
 	s := newServer(t)
 	for endpoint, want := range map[string]bool{"https://openrouter.ai/api/v1/": true, "http://localhost:11434/v1": false} {
-		save(context.Background(), s.svc.c.DB, keyChat, map[string]string{"endpoint": endpoint, "apiKey": "k", "model": "m"})
+		testx.Check(t, save(context.Background(), s.svc.c.DB, keyChat, map[string]string{"endpoint": endpoint, "apiKey": "k", "model": "m"}))
 		var got Settings
 		s.do(t, "GET", "/api/settings", nil, &got)
 		if got.Ready.Key != want {
@@ -136,7 +138,7 @@ func TestAKeyForAnotherEndpointIsntReady(t *testing.T) {
 
 func TestFailedSaveWritesNothing(t *testing.T) {
 	s := newServer(t)
-	s.dial.chatErr = &llm.LLMError{Status: 401, Body: "unauthorized"}
+	s.dial.chatErr = &llm.CallError{Status: 401, Body: "unauthorized"}
 	var e httpx.Error
 	if code := s.do(t, "PUT", "/api/settings", goodKey, &e); code != 422 {
 		t.Fatalf("status %d", code)
@@ -174,9 +176,9 @@ func TestErrors(t *testing.T) {
 		field string
 	}{
 		{"no key", "  ", nil, httpx.CodeInvalid, "apiKey"},
-		{"refused key", "k", &llm.LLMError{Status: 403}, httpx.CodeBadKey, "apiKey"},
-		{"unknown model", "k", &llm.LLMError{Status: 400, Body: `{"error":"Model not found"}`}, httpx.CodeBadModel, ""},
-		{"server error", "k", &llm.LLMError{Status: 500}, httpx.CodeUnreachable, ""},
+		{"refused key", "k", &llm.CallError{Status: 403}, httpx.CodeBadKey, "apiKey"},
+		{"unknown model", "k", &llm.CallError{Status: 400, Body: `{"error":"Model not found"}`}, httpx.CodeBadModel, ""},
+		{"server error", "k", &llm.CallError{Status: 500}, httpx.CodeUnreachable, ""},
 		{"timeout", "k", context.DeadlineExceeded, httpx.CodeUnreachable, ""},
 	}
 	for _, c := range cases {
@@ -260,8 +262,8 @@ func TestOllamaCheck(t *testing.T) {
 func TestResetIsAFreshInstall(t *testing.T) {
 	s := newServer(t)
 	s.do(t, "PUT", "/api/settings", goodKey, nil)
-	os.MkdirAll(filepath.Join(s.dir, "cache", "pages"), 0o700)
-	os.WriteFile(filepath.Join(s.dir, "cache", "pages", "1.jpg"), []byte("x"), 0o600)
+	testx.Check(t, os.MkdirAll(filepath.Join(s.dir, "cache", "pages"), 0o700))
+	testx.Check(t, os.WriteFile(filepath.Join(s.dir, "cache", "pages", "1.jpg"), []byte("x"), 0o600))
 
 	var counts ResetCounts
 	s.do(t, "GET", "/api/reset", nil, &counts)
@@ -317,7 +319,7 @@ func TestProfileNameIsTidiedAndSurvivesUntilReset(t *testing.T) {
 // TestOutOfCreditPointsAtTheKey: an account with no money left is said on
 // the key's field, not as an unreachable endpoint.
 func TestOutOfCreditPointsAtTheKey(t *testing.T) {
-	for _, le := range []*llm.LLMError{
+	for _, le := range []*llm.CallError{
 		{Status: 429, Body: `{"error":{"code":"1113","message":"Insufficient balance or no resource package. Please recharge."}}`},
 		{Status: 402, Body: `{"error":{"code":402,"message":"This request requires more credits"}}`},
 	} {

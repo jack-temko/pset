@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/llm"
 )
@@ -39,7 +40,7 @@ func (s *Service) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/reset", httpx.Act(func(r *http.Request) error {
 		return s.Reset(r.Context())
 	}))
-	mux.HandleFunc("GET /api/about", httpx.Reply(func(r *http.Request) (About, error) {
+	mux.HandleFunc("GET /api/about", httpx.Reply(func(_ *http.Request) (About, error) {
 		return s.About(), nil
 	}))
 }
@@ -47,6 +48,7 @@ func (s *Service) Routes(mux *http.ServeMux) {
 // LiveDialer dials OpenRouter and the local Ollama.
 type LiveDialer struct{}
 
+// Chat checks an OpenRouter key with a one-word request.
 func (LiveDialer) Chat(ctx context.Context, apiKey string) error {
 	client := llm.Open(llm.Config{ChatEndpoint: llm.OpenRouter, APIKey: apiKey, ChatModel: llm.Writer.Model})
 	_, err := client.ChatOnce(ctx, llm.ChatRequest{
@@ -61,6 +63,7 @@ func (LiveDialer) Chat(ctx context.Context, apiKey string) error {
 // with: it says which models are pulled, and pulls one.
 var ollamaAPI = strings.TrimSuffix(llm.EmbedEndpoint, "/v1") + "/api"
 
+// Ollama lists the models the local Ollama has.
 func (LiveDialer) Ollama(ctx context.Context) ([]string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ollamaAPI+"/tags", nil)
 	if err != nil {
@@ -70,7 +73,7 @@ func (LiveDialer) Ollama(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer cleanup.Close(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("ollama answered %d", resp.StatusCode)
 	}
@@ -89,6 +92,7 @@ func (LiveDialer) Ollama(ctx context.Context) ([]string, error) {
 	return out, nil
 }
 
+// Pull asks the local Ollama to download a model.
 func (LiveDialer) Pull(ctx context.Context, model string) error {
 	body, _ := json.Marshal(map[string]any{"model": model, "stream": false})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ollamaAPI+"/pull", bytes.NewReader(body))
@@ -99,7 +103,7 @@ func (LiveDialer) Pull(ctx context.Context, model string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer cleanup.Close(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return fmt.Errorf("ollama answered %d: %s", resp.StatusCode, strings.TrimSpace(string(msg)))

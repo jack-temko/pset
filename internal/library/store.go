@@ -8,12 +8,13 @@ import (
 	"errors"
 	"math"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/probnum"
 )
 
-// Migrations: books and everything read out of them. Every child row
+// Migrations creates the tables: books and everything read out of them. Every child row
 // cascades from its book, so removing a book is one DELETE.
 func Migrations() []db.Migration {
 	return []db.Migration{{Name: "library/1", SQL: `
@@ -180,7 +181,7 @@ func listBooks(ctx context.Context, q queryer) ([]Book, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	out := []Book{}
 	for rows.Next() {
 		r, err := scanBook(rows)
@@ -230,7 +231,7 @@ func loadPages(ctx context.Context, q queryer, bookID string) ([]storedPage, err
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	var out []storedPage
 	for rows.Next() {
 		var p storedPage
@@ -249,11 +250,13 @@ func settledPages(ctx context.Context, q queryer, bookID string) (map[int]bool, 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	out := map[int]bool{}
 	for rows.Next() {
 		var n int
-		rows.Scan(&n)
+		if err := rows.Scan(&n); err != nil {
+			return nil, err
+		}
 		out[n] = true
 	}
 	return out, rows.Err()
@@ -287,7 +290,7 @@ func loadSections(ctx context.Context, q queryer, bookID string) ([]section, err
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	var out []section
 	for rows.Next() {
 		var s section
@@ -316,11 +319,13 @@ func embeddedPages(ctx context.Context, q queryer, bookID, model string) (map[in
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	out := map[int]bool{}
 	for rows.Next() {
 		var n int
-		rows.Scan(&n)
+		if err := rows.Scan(&n); err != nil {
+			return nil, err
+		}
 		out[n] = true
 	}
 	return out, rows.Err()
@@ -340,7 +345,7 @@ func vectors(ctx context.Context, q queryer, bookID, model string) ([]vectorRow,
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	var out []vectorRow
 	for rows.Next() {
 		var r vectorRow
@@ -395,7 +400,7 @@ func searchFTS(ctx context.Context, q queryer, bookID, query string, limit int) 
 		for rows.Next() {
 			var n int
 			if err := rows.Scan(&n); err != nil {
-				rows.Close()
+				cleanup.Close(rows)
 				return nil, err
 			}
 			if !seen[n] {
@@ -404,10 +409,10 @@ func searchFTS(ctx context.Context, q queryer, bookID, query string, limit int) 
 			}
 		}
 		if err := rows.Err(); err != nil {
-			rows.Close()
+			cleanup.Close(rows)
 			return nil, err
 		}
-		rows.Close()
+		cleanup.Close(rows)
 	}
 	return out, nil
 }

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/jackt/pset/internal/cleanup"
 )
 
 // CallRow is one stored call, as the detail reads it.
@@ -21,7 +23,7 @@ const callColumns = `id, at, coalesce(stage, ''), coalesce(run, ''), coalesce(to
 	prompt_tokens, completion_tokens, reasoning_tokens, cached_tokens, cost, coalesce(error, '')`
 
 func scanCalls(rows *sql.Rows) ([]CallRow, error) {
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	var out []CallRow
 	for rows.Next() {
 		var c CallRow
@@ -247,7 +249,7 @@ func AddShare(u *Usage, rank []CallRow, n int) *Usage {
 			}
 		}
 		if i < 0 {
-			u.Rows = append(u.Rows, UsageRow{Model: who})
+			u.Rows = append(u.Rows, Row{Model: who})
 			i = len(u.Rows) - 1
 		}
 		row := &u.Rows[i]
@@ -327,7 +329,7 @@ func countSubjects(ctx context.Context, q queryer, typ, from, bookID string) (in
 	if err != nil {
 		return 0, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	n := 0
 	if rows.Next() {
 		err = rows.Scan(&n)

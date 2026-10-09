@@ -6,15 +6,45 @@
 /**
  * Code is a stable error code the UI switches on. Generated into TS.
  */
+/**
+ * CodeNotFound is a thing that isn't there.
+ */
 export const CodeNotFound = "not_found";
+/**
+ * CodeInvalid is input that is wrong; Field names it.
+ */
 export const CodeInvalid = "invalid";
+/**
+ * CodeNotConfigured is something that needs setting up first, such as a key.
+ */
 export const CodeNotConfigured = "not_configured";
+/**
+ * CodeDuplicateBook is a book that is already on the shelf; ID names it.
+ */
 export const CodeDuplicateBook = "duplicate_book";
+/**
+ * CodeUnreachable is a service that did not answer.
+ */
 export const CodeUnreachable = "unreachable";
+/**
+ * CodeBadKey is a key the provider refused.
+ */
 export const CodeBadKey = "bad_key";
+/**
+ * CodeBadModel is a model the provider does not know.
+ */
 export const CodeBadModel = "bad_model";
+/**
+ * CodeBusy is work that cannot start while something else runs.
+ */
 export const CodeBusy = "busy";
+/**
+ * CodeForbidden is a request that is not allowed.
+ */
 export const CodeForbidden = "forbidden";
+/**
+ * CodeInternal is a failure that is PSet's own.
+ */
 export const CodeInternal = "internal";
 export type Code = typeof CodeNotFound | typeof CodeInvalid | typeof CodeNotConfigured | typeof CodeDuplicateBook | typeof CodeUnreachable | typeof CodeBadKey | typeof CodeBadModel | typeof CodeBusy | typeof CodeForbidden | typeof CodeInternal;
 /**

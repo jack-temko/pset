@@ -13,7 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/testx"
 )
 
 func newQueue(t *testing.T) *Queue {
@@ -22,7 +24,7 @@ func newQueue(t *testing.T) *Queue {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { cleanup.Close(d) })
 	if err := db.Migrate(context.Background(), d, Migrations()); err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +34,12 @@ func newQueue(t *testing.T) *Queue {
 func run(t *testing.T, q *Queue) context.CancelFunc {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
-	go func() { q.Run(ctx); close(done) }()
+	go func() {
+		if err := q.Run(ctx); err != nil && ctx.Err() == nil {
+			t.Error(err)
+		}
+		close(done)
+	}()
 	t.Cleanup(func() { cancel(); <-done })
 	return cancel
 }
@@ -58,13 +65,13 @@ func TestLaneRunsInOrderOneAtATime(t *testing.T) {
 	var mu sync.Mutex
 	var order []int
 	var live, peak atomic.Int32
-	q.Handle("imp", "import", func(ctx context.Context, j Job) error {
+	q.Handle("imp", "import", func(_ context.Context, j Job) error {
 		n := live.Add(1)
 		if n > peak.Load() {
 			peak.Store(n)
 		}
 		var p struct{ N int }
-		j.Decode(&p)
+		testx.Check(t, j.Decode(&p))
 		time.Sleep(10 * time.Millisecond)
 		mu.Lock()
 		order = append(order, p.N)
@@ -94,9 +101,9 @@ func TestHigherPriorityStartsFirstThenOldest(t *testing.T) {
 	q.Lane("l", 1)
 	var mu sync.Mutex
 	var order []string
-	q.Handle("k", "l", func(ctx context.Context, j Job) error {
+	q.Handle("k", "l", func(_ context.Context, j Job) error {
 		var p struct{ Name string }
-		j.Decode(&p)
+		testx.Check(t, j.Decode(&p))
 		mu.Lock()
 		order = append(order, p.Name)
 		mu.Unlock()
@@ -134,7 +141,7 @@ func TestHigherPriorityStartsFirstThenOldest(t *testing.T) {
 func TestEnqueueInATransactionNeverWaitsOnTheScheduler(t *testing.T) {
 	q := newQueue(t)
 	q.Lane("l", 1)
-	q.Handle("k", "l", func(ctx context.Context, j Job) error { return nil })
+	q.Handle("k", "l", func(_ context.Context, _ Job) error { return nil })
 	ctx := context.Background()
 	run(t, q)
 	// Once a job has run, the scheduler is past its start-up writes.
@@ -172,7 +179,7 @@ func TestWakeAfterCommitStartsTheJobWithoutWaitingForThePoll(t *testing.T) {
 	q := newQueue(t)
 	q.Lane("l", 1)
 	started := make(chan time.Time, 1)
-	q.Handle("k", "l", func(ctx context.Context, j Job) error {
+	q.Handle("k", "l", func(_ context.Context, _ Job) error {
 		started <- time.Now()
 		return nil
 	})
@@ -227,9 +234,9 @@ func TestResumableJobGivesWayToAHigherOneThenResumes(t *testing.T) {
 		return ctx.Err()
 	})
 	q.Resumable("slow")
-	q.Handle("fast", "l", func(ctx context.Context, j Job) error {
+	q.Handle("fast", "l", func(_ context.Context, j Job) error {
 		var p struct{ Name string }
-		j.Decode(&p)
+		testx.Check(t, j.Decode(&p))
 		note(p.Name)
 		return nil
 	})
@@ -264,7 +271,7 @@ func TestAJobThatIsntResumableIsNeverInterrupted(t *testing.T) {
 	q := newQueue(t)
 	q.Lane("l", 1)
 	started, release := make(chan struct{}), make(chan struct{})
-	q.Handle("slow", "l", func(ctx context.Context, j Job) error {
+	q.Handle("slow", "l", func(ctx context.Context, _ Job) error {
 		close(started)
 		select {
 		case <-release:
@@ -273,7 +280,7 @@ func TestAJobThatIsntResumableIsNeverInterrupted(t *testing.T) {
 			return ctx.Err()
 		}
 	})
-	q.Handle("fast", "l", func(ctx context.Context, j Job) error { return nil })
+	q.Handle("fast", "l", func(_ context.Context, _ Job) error { return nil })
 	ctx := context.Background()
 	run(t, q)
 	slow, _ := q.Enqueue(ctx, q.db, Spec{Kind: "slow"})
@@ -294,7 +301,7 @@ func TestSameKeyNeverRunsTogether(t *testing.T) {
 	q := newQueue(t)
 	q.Lane("turn", 8)
 	var live, peak atomic.Int32
-	q.Handle("t", "turn", func(ctx context.Context, j Job) error {
+	q.Handle("t", "turn", func(_ context.Context, _ Job) error {
 		n := live.Add(1)
 		if n > peak.Load() {
 			peak.Store(n)
@@ -323,7 +330,7 @@ func TestStopRunningCancelsAndHandlerSeesIt(t *testing.T) {
 	q.Lane("l", 1)
 	started := make(chan struct{})
 	var sawStop atomic.Bool
-	q.Handle("k", "l", func(ctx context.Context, j Job) error {
+	q.Handle("k", "l", func(ctx context.Context, _ Job) error {
 		close(started)
 		<-ctx.Done()
 		sawStop.Store(Stopped(ctx))
@@ -332,7 +339,7 @@ func TestStopRunningCancelsAndHandlerSeesIt(t *testing.T) {
 	id, _ := q.Enqueue(context.Background(), q.db, Spec{Kind: "k"})
 	run(t, q)
 	<-started
-	q.Stop(context.Background(), id)
+	testx.Check(t, q.Stop(context.Background(), id))
 	waitState(t, q, id, Cancelled)
 	if !sawStop.Load() {
 		t.Fatal("handler did not see Stopped")
@@ -343,10 +350,10 @@ func TestStopQueuedAndRetry(t *testing.T) {
 	q := newQueue(t)
 	q.Lane("l", 1)
 	var runs atomic.Int32
-	q.Handle("k", "l", func(ctx context.Context, j Job) error { runs.Add(1); return nil })
+	q.Handle("k", "l", func(_ context.Context, _ Job) error { runs.Add(1); return nil })
 	ctx := context.Background()
 	id, _ := q.Enqueue(ctx, q.db, Spec{Kind: "k"})
-	q.Stop(ctx, id)
+	testx.Check(t, q.Stop(ctx, id))
 	waitState(t, q, id, Cancelled)
 	if err := q.Retry(ctx, id); err != nil {
 		t.Fatal(err)
@@ -361,8 +368,8 @@ func TestStopQueuedAndRetry(t *testing.T) {
 func TestFailureRecordsErrorAndPanicIsAFailure(t *testing.T) {
 	q := newQueue(t)
 	q.Lane("l", 2)
-	q.Handle("bad", "l", func(ctx context.Context, j Job) error { return errors.New("boom") })
-	q.Handle("panic", "l", func(ctx context.Context, j Job) error { panic("oops") })
+	q.Handle("bad", "l", func(_ context.Context, _ Job) error { return errors.New("boom") })
+	q.Handle("panic", "l", func(_ context.Context, _ Job) error { panic("oops") })
 	ctx := context.Background()
 	a, _ := q.Enqueue(ctx, q.db, Spec{Kind: "bad"})
 	b, _ := q.Enqueue(ctx, q.db, Spec{Kind: "panic"})
@@ -378,7 +385,7 @@ func TestShutdownRequeuesAndRestartResumes(t *testing.T) {
 	q.Lane("l", 1)
 	started := make(chan struct{}, 2)
 	var finish atomic.Bool
-	q.Handle("k", "l", func(ctx context.Context, j Job) error {
+	q.Handle("k", "l", func(ctx context.Context, _ Job) error {
 		started <- struct{}{}
 		if finish.Load() {
 			return nil
@@ -389,7 +396,12 @@ func TestShutdownRequeuesAndRestartResumes(t *testing.T) {
 	id, _ := q.Enqueue(context.Background(), q.db, Spec{Kind: "k"})
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
-	go func() { q.Run(ctx); close(done) }()
+	go func() {
+		if err := q.Run(ctx); err != nil && ctx.Err() == nil {
+			t.Error(err)
+		}
+		close(done)
+	}()
 	<-started
 	cancel()
 	<-done
@@ -408,7 +420,7 @@ func TestPauseRequeuesUntilResume(t *testing.T) {
 	q.Lane("l", 1)
 	started := make(chan struct{}, 4)
 	var finish atomic.Bool
-	q.Handle("k", "l", func(ctx context.Context, j Job) error {
+	q.Handle("k", "l", func(ctx context.Context, _ Job) error {
 		started <- struct{}{}
 		if finish.Load() {
 			return nil

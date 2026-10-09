@@ -13,6 +13,7 @@ import (
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
+	"github.com/jackt/pset/internal/testx"
 	"github.com/jackt/pset/internal/usage"
 )
 
@@ -121,7 +122,7 @@ func TestACallEndingAfterItsQuestionWasRemovedLeavesNoRow(t *testing.T) {
 	recordCalls(t, e.svc.c.DB)
 	entered, release := make(chan struct{}), make(chan struct{})
 	var once, free sync.Once
-	e.llm.Fallback(func(req llm.ChatRequest) llmtest.Reply {
+	e.llm.Fallback(func(_ llm.ChatRequest) llmtest.Reply {
 		once.Do(func() { close(entered) })
 		<-release
 		return llmtest.Reply{Text: "{}"}
@@ -143,7 +144,7 @@ func TestACallEndingAfterItsQuestionWasRemovedLeavesNoRow(t *testing.T) {
 	for time.Now().Before(deadline) {
 		time.Sleep(50 * time.Millisecond)
 		var n int
-		e.svc.c.DB.QueryRow(`SELECT count(*) FROM calls WHERE subject_type = ? AND subject_id = ?`, usage.SubjectQuestion, q.ID).Scan(&n)
+		testx.Check(t, e.svc.c.DB.QueryRow(`SELECT count(*) FROM calls WHERE subject_type = ? AND subject_id = ?`, usage.SubjectQuestion, q.ID).Scan(&n))
 		if n != 0 {
 			t.Fatalf("%d call rows outlived the removed question", n)
 		}
@@ -168,7 +169,7 @@ func TestForgetBookCallsTakesTheQuestionsAndReadsWithIt(t *testing.T) {
 		t.Fatal(err)
 	}
 	var n int
-	e.svc.c.DB.QueryRow(`SELECT count(*) FROM calls`).Scan(&n)
+	testx.Check(t, e.svc.c.DB.QueryRow(`SELECT count(*) FROM calls`).Scan(&n))
 	if n != 0 {
 		t.Fatalf("%d rows left after the book's calls were forgotten", n)
 	}
@@ -176,7 +177,7 @@ func TestForgetBookCallsTakesTheQuestionsAndReadsWithIt(t *testing.T) {
 	sink := usage.Sink(e.svc.c.DB)
 	sink(llm.Call{SubjectType: usage.SubjectQuestion, SubjectID: q.ID, Model: "m"})
 	sink(llm.Call{SubjectType: usage.SubjectRead, SubjectID: r.ID, Model: "m"})
-	e.svc.c.DB.QueryRow(`SELECT count(*) FROM calls`).Scan(&n)
+	testx.Check(t, e.svc.c.DB.QueryRow(`SELECT count(*) FROM calls`).Scan(&n))
 	if n != 0 {
 		t.Fatalf("%d rows recorded for subjects of a removed book", n)
 	}

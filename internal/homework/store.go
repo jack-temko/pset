@@ -7,6 +7,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/llm"
@@ -14,7 +15,7 @@ import (
 	"github.com/jackt/pset/internal/pdf"
 )
 
-// Migrations: sets hang off books, questions off sets, and both cascade,
+// Migrations creates the tables: sets hang off books, questions off sets, and both cascade,
 // so removing a book removes its homework without a call from library.
 func Migrations() []db.Migration {
 	return []db.Migration{{Name: "homework/1", SQL: `
@@ -149,7 +150,7 @@ func structuredGuides(ctx context.Context, tx *sql.Tx) error {
 	for rows.Next() {
 		var t text
 		if err := rows.Scan(&t.id, &t.statement, &t.notes, &t.reading); err != nil {
-			rows.Close()
+			cleanup.Close(rows)
 			return err
 		}
 		all = append(all, t)
@@ -196,7 +197,7 @@ func listSummaries(ctx context.Context, q queryer, where string, args ...any) ([
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	out := []Summary{}
 	for rows.Next() {
 		h, err := scanSummary(rows)
@@ -260,21 +261,21 @@ func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 		n := int(pinned.Int64)
 		r.Pinned = &n
 	}
-	json.Unmarshal([]byte(rect), &r.Rect)
-	json.Unmarshal([]byte(figs), &r.FigRect)
+	decodeColumn("rect", rect, &r.Rect)
+	decodeColumn("figs", figs, &r.FigRect)
 	r.Figures = make([]Figure, len(r.FigRect))
 	for i, f := range r.FigRect {
 		r.Figures[i] = Figure{Label: f.Label}
 	}
 	r.Statement = decodeRuns(statement)
 	r.Hint, r.Walkthrough, r.Revealed = []doc.Block{}, []doc.Block{}, []string{}
-	json.Unmarshal([]byte(hint), &r.Hint)
-	json.Unmarshal([]byte(walk), &r.Walkthrough)
-	json.Unmarshal([]byte(revealed), &r.Revealed)
+	decodeColumn("hint", hint, &r.Hint)
+	decodeColumn("walk", walk, &r.Walkthrough)
+	decodeColumn("revealed", revealed, &r.Revealed)
 	r.Reading = decodeRunLists(reading)
 	r.ReadingDoubts = decodeRunLists(doubts)
 	r.Boxes = []Box{}
-	json.Unmarshal([]byte(boxes), &r.Boxes)
+	decodeColumn("boxes", boxes, &r.Boxes)
 	r.Notes = decodeRunLists(notes)
 	r.Done = doneAt != ""
 	// When it failed only means something while it is failed.
@@ -295,7 +296,7 @@ func listQuestions(ctx context.Context, q queryer, homeworkID string) ([]Questio
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cleanup.Close(rows)
 	out := []Question{}
 	for rows.Next() {
 		r, err := scanQuestion(rows)
@@ -395,4 +396,13 @@ func decodeRunLists(s string) [][]doc.Run {
 		return runLists(lines)
 	}
 	return [][]doc.Run{}
+}
+
+// decodeColumn reads a JSON column into dst. An empty one leaves dst as it
+// is; a malformed one is logged, and dst keeps what decoded.
+func decodeColumn(name, col string, dst any) {
+	if col == "" {
+		return
+	}
+	cleanup.Log("homework: read the "+name+" column", json.Unmarshal([]byte(col), dst))
 }

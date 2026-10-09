@@ -13,12 +13,14 @@ import (
 
 	"github.com/jackt/pset/internal/activity"
 	"github.com/jackt/pset/internal/ask"
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/homework"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/library"
 	"github.com/jackt/pset/internal/memory"
 	"github.com/jackt/pset/internal/settings"
+	"github.com/jackt/pset/internal/testx"
 	"github.com/jackt/pset/internal/usage"
 )
 
@@ -58,7 +60,7 @@ func fixture(t *testing.T) (string, *sql.DB) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { cleanup.Close(d) })
 	if err := db.Migrate(context.Background(), d, migrations()); err != nil {
 		t.Fatal(err)
 	}
@@ -138,8 +140,8 @@ func TestStripKeepsTheSampleAndDropsTheRest(t *testing.T) {
 	exec(t, d, `DELETE FROM calls WHERE session LIKE '%sk-or-v1-%'`)
 	exec(t, d, `VACUUM`)
 	var st5, st4 string
-	d.QueryRow(`SELECT state FROM questions WHERE id = 'q5'`).Scan(&st5)
-	d.QueryRow(`SELECT state FROM questions WHERE id = 'q4'`).Scan(&st4)
+	testx.Check(t, d.QueryRow(`SELECT state FROM questions WHERE id = 'q5'`).Scan(&st5))
+	testx.Check(t, d.QueryRow(`SELECT state FROM questions WHERE id = 'q4'`).Scan(&st4))
 	if st5 != "located" || st4 != "pending" {
 		t.Errorf("in-flight questions are %s and %s, want located and pending", st5, st4)
 	}
@@ -208,7 +210,7 @@ func TestCheckFailsOnAMissingPDF(t *testing.T) {
 	if _, err := Strip(context.Background(), d); err != nil {
 		t.Fatal(err)
 	}
-	os.Remove(filepath.Join(dir, "books", "b1.pdf"))
+	testx.Check(t, os.Remove(filepath.Join(dir, "books", "b1.pdf")))
 	if err := Check(context.Background(), d, dir, filepath.Join(dir, "pset.db"), nil); err == nil {
 		t.Fatal("check passed with a book missing its PDF")
 	}
@@ -218,7 +220,7 @@ func TestCheckFailsOnAMissingPDF(t *testing.T) {
 func snapshotTree(t *testing.T, root string) string {
 	t.Helper()
 	var b strings.Builder
-	filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
+	err := filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -226,6 +228,9 @@ func snapshotTree(t *testing.T, root string) string {
 		fmt.Fprintf(&b, "%s %v %d %d\n", p, st.Mode(), st.Size(), st.ModTime().UnixNano())
 		return nil
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	return b.String()
 }
 
@@ -241,7 +246,7 @@ func TestSnapshotThenSeed(t *testing.T) {
 	if _, err := d.Exec(`PRAGMA journal_mode = DELETE`); err != nil {
 		t.Fatal(err)
 	}
-	d.Close()
+	cleanup.Close(d)
 	before := snapshotTree(t, src)
 
 	root := t.TempDir()
@@ -315,15 +320,15 @@ func TestSeedAndSnapshotGuards(t *testing.T) {
 	if _, err := d.Exec(`PRAGMA journal_mode = DELETE`); err != nil {
 		t.Fatal(err)
 	}
-	d.Close()
+	cleanup.Close(d)
 	root := t.TempDir()
 	t.Cleanup(func() { makeWritable(root) })
 	snap := filepath.Join(root, "lib")
 
 	// -to must be absent or an earlier snapshot.
 	other := filepath.Join(root, "other")
-	os.MkdirAll(other, 0o755)
-	os.WriteFile(filepath.Join(other, "mine.txt"), []byte("x"), 0o644)
+	testx.Check(t, os.MkdirAll(other, 0o755))
+	testx.Check(t, os.WriteFile(filepath.Join(other, "mine.txt"), []byte("x"), 0o644))
 	if err := snapshot([]string{"-from", src, "-to", other}); err == nil {
 		t.Error("snapshot replaced a directory that is not a test library")
 	}
@@ -339,19 +344,19 @@ func TestSeedAndSnapshotGuards(t *testing.T) {
 
 	// A seed does not empty books or caches it did not start.
 	data := filepath.Join(root, "data")
-	os.MkdirAll(filepath.Join(data, "books"), 0o700)
-	os.WriteFile(filepath.Join(data, "books", "keep.pdf"), []byte("x"), 0o600)
+	testx.Check(t, os.MkdirAll(filepath.Join(data, "books"), 0o700))
+	testx.Check(t, os.WriteFile(filepath.Join(data, "books", "keep.pdf"), []byte("x"), 0o600))
 	if err := seed([]string{data, "-from", snap}); err == nil {
 		t.Error("seed went over a non-empty books dir with no pset.db")
 	}
 	if _, err := os.Stat(filepath.Join(data, "books", "keep.pdf")); err != nil {
 		t.Error("seed removed a file it did not own")
 	}
-	os.Remove(filepath.Join(data, "books", "keep.pdf"))
+	testx.Check(t, os.Remove(filepath.Join(data, "books", "keep.pdf")))
 	// A seed that stopped halfway (marker left) is cleared and redone.
-	os.MkdirAll(filepath.Join(data, "cache", "pages"), 0o700)
-	os.WriteFile(filepath.Join(data, "cache", "pages", "half"), []byte("x"), 0o600)
-	os.WriteFile(filepath.Join(data, ".seeding"), nil, 0o600)
+	testx.Check(t, os.MkdirAll(filepath.Join(data, "cache", "pages"), 0o700))
+	testx.Check(t, os.WriteFile(filepath.Join(data, "cache", "pages", "half"), []byte("x"), 0o600))
+	testx.Check(t, os.WriteFile(filepath.Join(data, ".seeding"), nil, 0o600))
 	if err := seed([]string{data, "-from", snap}); err != nil {
 		t.Fatalf("seed after an interrupted seed: %v", err)
 	}

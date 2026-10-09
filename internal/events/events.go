@@ -45,6 +45,7 @@ type Bus struct {
 	subs map[chan Event]struct{}
 }
 
+// NewBus makes a bus with no subscribers.
 func NewBus() *Bus {
 	return &Bus{next: 1, subs: map[chan Event]struct{}{}}
 }
@@ -144,7 +145,9 @@ func (b *Bus) Handler(w http.ResponseWriter, r *http.Request) {
 		b.mu.Lock()
 		now := b.next - 1
 		b.mu.Unlock()
-		fmt.Fprintf(w, "id: %d\nretry: 1000\n\n", now)
+		if _, err := fmt.Fprintf(w, "id: %d\nretry: 1000\n\n", now); err != nil {
+			return
+		}
 	}
 	flusher.Flush()
 
@@ -155,7 +158,9 @@ func (b *Bus) Handler(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-tick.C:
-			fmt.Fprint(w, ": keep-alive\n\n")
+			if _, err := fmt.Fprint(w, ": keep-alive\n\n"); err != nil {
+				return
+			}
 			flusher.Flush()
 		case e, ok := <-ch:
 			if !ok {
@@ -165,7 +170,9 @@ func (b *Bus) Handler(w http.ResponseWriter, r *http.Request) {
 				Type string          `json:"type"`
 				Data json.RawMessage `json:"data,omitempty"`
 			}{e.Type, e.Data})
-			fmt.Fprintf(w, "id: %d\ndata: %s\n\n", e.ID, body)
+			if _, err := fmt.Fprintf(w, "id: %d\ndata: %s\n\n", e.ID, body); err != nil {
+				return
+			}
 			flusher.Flush()
 		}
 	}

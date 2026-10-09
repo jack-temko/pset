@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/releasesign"
 )
@@ -36,6 +37,7 @@ const (
 	maxProgram = 300 << 20
 )
 
+// Config is what the service is built from.
 type Config struct {
 	// Version is what is running.
 	Version string
@@ -58,6 +60,7 @@ type Config struct {
 	Restart func()
 }
 
+// Service checks GitHub for a newer release and replaces the running program with it.
 type Service struct {
 	c Config
 
@@ -72,6 +75,7 @@ type checked struct {
 	assets map[string]string // file name to download URL
 }
 
+// New builds the service, filling in the defaults.
 func New(c Config) *Service {
 	if c.Repo == "" {
 		c.Repo = "jack-temko/pset"
@@ -141,8 +145,8 @@ func (s *Service) cannot() string {
 	if err != nil {
 		return "PSet can't write to " + dir + ", where it is installed, so it can't replace itself. Run the installer again instead."
 	}
-	f.Close()
-	os.Remove(f.Name())
+	cleanup.Close(f)
+	cleanup.Remove(f.Name())
 	return ""
 }
 
@@ -159,7 +163,7 @@ func (s *Service) Check(ctx context.Context) (Status, error) {
 	if err != nil {
 		return Status{}, httpx.Errorf(httpx.CodeUnreachable, "Couldn't reach GitHub to look for an update: %v", err)
 	}
-	defer resp.Body.Close()
+	defer cleanup.Close(resp.Body)
 	if resp.StatusCode == http.StatusNotFound {
 		return Status{}, httpx.Errorf(httpx.CodeNotFound, "There is no published release yet.")
 	}
@@ -237,10 +241,10 @@ func (s *Service) Apply(ctx context.Context) (Applied, error) {
 	}
 	next, err := s.fetch(ctx, c, filepath.Dir(exe))
 	if err != nil {
-		return Applied{}, httpx.Errorf(httpx.CodeUnreachable, "Nothing was changed. %v", err)
+		return Applied{}, httpx.Errorf(httpx.CodeUnreachable, "Nothing was changed. %v.", err)
 	}
 	if err := os.Rename(next, exe); err != nil {
-		os.Remove(next)
+		cleanup.Remove(next)
 		return Applied{}, httpx.Errorf(httpx.CodeUnreachable, "Nothing was changed. PSet couldn't put the new program in place: %v", err)
 	}
 	done = true
@@ -283,10 +287,10 @@ func (s *Service) fetch(ctx context.Context, c *checked, dir string) (string, er
 	}
 	sumsURL, sigURL, fileURL := c.assets["SHA256SUMS"], c.assets["SHA256SUMS.sig"], c.assets[file]
 	if sumsURL == "" || sigURL == "" {
-		return "", errors.New("this release has no signed checksums, so it can't be trusted.")
+		return "", errors.New("this release has no signed checksums, so it can't be trusted")
 	}
 	if fileURL == "" {
-		return "", fmt.Errorf("this release has no file for this machine (%s).", file)
+		return "", fmt.Errorf("this release has no file for this machine (%s)", file)
 	}
 	sums, err := s.get(ctx, sumsURL, maxSmall)
 	if err != nil {
@@ -297,7 +301,7 @@ func (s *Service) fetch(ctx context.Context, c *checked, dir string) (string, er
 		return "", err
 	}
 	if err := releasesign.Verify(s.c.PublicKey, sums, string(sig)); err != nil {
-		return "", fmt.Errorf("the release's checksums fail their signature check: %v.", err)
+		return "", fmt.Errorf("the release's checksums fail their signature check: %v", err)
 	}
 	entries, err := releasesign.ParseSums(string(sums))
 	if err != nil {
@@ -310,24 +314,24 @@ func (s *Service) fetch(ctx context.Context, c *checked, dir string) (string, er
 		}
 	}
 	if want == "" {
-		return "", fmt.Errorf("the signed checksums don't list %s.", file)
+		return "", fmt.Errorf("the signed checksums don't list %s", file)
 	}
 
 	tmp, err := os.CreateTemp(dir, ".pset-update-*.tar.gz")
 	if err != nil {
 		return "", err
 	}
-	defer os.Remove(tmp.Name())
+	defer cleanup.Remove(tmp.Name())
 	h := sha256.New()
 	if err := s.copyTo(ctx, fileURL, io.MultiWriter(tmp, h), maxProgram); err != nil {
-		tmp.Close()
+		cleanup.Close(tmp)
 		return "", err
 	}
 	if err := tmp.Close(); err != nil {
 		return "", err
 	}
 	if got := hex.EncodeToString(h.Sum(nil)); got != want {
-		return "", fmt.Errorf("the download doesn't match its signed checksum, so it was thrown away.")
+		return "", fmt.Errorf("the download doesn't match its signed checksum, so it was thrown away")
 	}
 
 	out, err := os.CreateTemp(dir, ".pset-new-*")
@@ -335,16 +339,16 @@ func (s *Service) fetch(ctx context.Context, c *checked, dir string) (string, er
 		return "", err
 	}
 	if err := extractMember(tmp.Name(), member, out); err != nil {
-		out.Close()
-		os.Remove(out.Name())
+		cleanup.Close(out)
+		cleanup.Remove(out.Name())
 		return "", err
 	}
 	if err := out.Close(); err != nil {
-		os.Remove(out.Name())
+		cleanup.Remove(out.Name())
 		return "", err
 	}
 	if err := os.Chmod(out.Name(), 0o755); err != nil {
-		os.Remove(out.Name())
+		cleanup.Remove(out.Name())
 		return "", err
 	}
 	// It runs once to say what it is: the wrong build for this machine, or one
@@ -353,8 +357,8 @@ func (s *Service) fetch(ctx context.Context, c *checked, dir string) (string, er
 	defer cancel()
 	got, err := exec.CommandContext(vctx, out.Name(), "-version").Output()
 	if want := "pset " + c.Version; err != nil || strings.TrimSpace(string(got)) != want {
-		os.Remove(out.Name())
-		return "", fmt.Errorf("the new program doesn't run here as %q.", want)
+		cleanup.Remove(out.Name())
+		return "", fmt.Errorf("the new program doesn't run here as %q", want)
 	}
 	return out.Name(), nil
 }
@@ -378,16 +382,16 @@ func (s *Service) copyTo(ctx context.Context, url string, w io.Writer, limit int
 	if err != nil {
 		return fmt.Errorf("a download failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer cleanup.Close(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("a download answered %d.", resp.StatusCode)
+		return fmt.Errorf("a download answered %d", resp.StatusCode)
 	}
 	n, err := io.Copy(w, io.LimitReader(resp.Body, limit+1))
 	if err != nil {
 		return fmt.Errorf("a download broke off: %v", err)
 	}
 	if n > limit {
-		return errors.New("a download was bigger than any release should be.")
+		return errors.New("a download was bigger than any release should be")
 	}
 	return nil
 }
@@ -399,19 +403,19 @@ func extractMember(archive, member string, w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer cleanup.Close(f)
 	gz, err := gzip.NewReader(f)
 	if err != nil {
-		return errors.New("the download isn't a release archive.")
+		return errors.New("the download isn't a release archive")
 	}
 	tr := tar.NewReader(gz)
 	for {
 		h, err := tr.Next()
 		if err == io.EOF {
-			return fmt.Errorf("the download has no %s in it.", member)
+			return fmt.Errorf("the download has no %s in it", member)
 		}
 		if err != nil {
-			return errors.New("the download isn't a release archive.")
+			return errors.New("the download isn't a release archive")
 		}
 		if h.Typeflag == tar.TypeReg && h.Name == member {
 			if _, err := io.Copy(w, io.LimitReader(tr, maxProgram+1)); err != nil {

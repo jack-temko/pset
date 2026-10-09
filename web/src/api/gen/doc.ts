@@ -84,6 +84,9 @@ export interface StepBlock {
   type: 'step';
   title: Run[];
 }
+/**
+ * ParaBlock is a paragraph.
+ */
 export interface ParaBlock {
   type: 'para';
   text: Run[];
@@ -111,6 +114,9 @@ export interface DerivationStep {
   why?: Run[];
   raw?: boolean;
 }
+/**
+ * DerivationBlock is a worked derivation, one step per line.
+ */
 export interface DerivationBlock {
   type: 'derivation';
   steps: DerivationStep[];
@@ -131,6 +137,9 @@ export const ToneCaveat = "caveat";
  */
 export const ToneCheck = "check";
 export type Tone = typeof ToneInsight | typeof ToneCaveat | typeof ToneCheck;
+/**
+ * CalloutBlock is a boxed aside: an insight, a caveat or a check.
+ */
 export interface CalloutBlock {
   type: 'callout';
   tone: 'insight' | 'caveat' | 'check';
@@ -149,11 +158,17 @@ export interface StatementBlock {
   page: number /* int */;
   text: Run[];
 }
+/**
+ * TableBlock is a table of runs.
+ */
 export interface TableBlock {
   type: 'table';
   columns: Run[][];
   rows: Run[][][];
 }
+/**
+ * Axis labels one side of a plot.
+ */
 export interface Axis {
   label: string;
 }
@@ -173,6 +188,9 @@ export interface Mark {
   y?: number /* float64 */;
   label?: string;
 }
+/**
+ * PlotBlock is a plot of one or more series.
+ */
 export interface PlotBlock {
   type: 'plot';
   title?: string;
@@ -181,6 +199,9 @@ export interface PlotBlock {
   series: Series[];
   marks?: Mark[];
 }
+/**
+ * CodeBlock is a block of code.
+ */
 export interface CodeBlock {
   type: 'code';
   code: string;

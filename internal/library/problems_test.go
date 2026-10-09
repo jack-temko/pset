@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/probnum"
@@ -18,7 +19,7 @@ func TestProblemStylesKeepTheStudentsWord(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { cleanup.Close(d) })
 	if err := db.Migrate(ctx, d, append(jobs.Migrations(), Migrations()...)); err != nil {
 		t.Fatal(err)
 	}

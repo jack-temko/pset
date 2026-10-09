@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+
+	"github.com/jackt/pset/internal/cleanup"
 )
 
 func (e *Error) Error() string { return string(e.Code) + ": " + e.Message }
@@ -87,7 +89,14 @@ func H(fn HandlerFunc) http.HandlerFunc {
 func JSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	cleanup.Log("write the response", json.NewEncoder(w).Encode(v))
+}
+
+// Write writes a response body. A failure means the client went away, and is
+// only logged.
+func Write(w http.ResponseWriter, data []byte) {
+	_, err := w.Write(data)
+	cleanup.Log("write the response", err)
 }
 
 // OK writes v with 200, and returns nil so a handler can end on it.
