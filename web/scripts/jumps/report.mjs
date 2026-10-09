@@ -28,12 +28,13 @@ export function rank(rows) {
 
 export function table(rows) {
   const lines = [
-    '| Scenario | Mode | Jump score (median / p95) | Overlay growth px | Settle ms (median / p95) | Skeleton ms | Moved |',
-    '|---|---|---|---|---|---|---|',
+    '| Scenario | Mode | Jump score (median / p95) | Overlay growth px | Settle ms (median / p95) | Skeleton ms | Settle waited on last | Moved |',
+    '|---|---|---|---|---|---|---|---|',
   ]
   for (const r of rank(rows)) {
+    const who = esc(r.name) + (r.trigger ? `<br>discovered: ${esc(r.trigger)}` : '')
     if (!r.agg) {
-      lines.push(`| ${esc(r.name)} | ${r.mode} | skipped: ${esc(r.skipped)} | | | | |`)
+      lines.push(`| ${who} | ${r.mode} | skipped: ${esc(r.skipped)} | | | | | |`)
       continue
     }
     const a = r.agg
@@ -41,7 +42,7 @@ export function table(rows) {
     const grew = a.overlays.filter((o) => o.growthPx > 0).map((o) => `${esc(o.name)} ${o.first.w}x${o.first.h} to ${o.final.w}x${o.final.h}`)
     const growth = a.growthPx.median ? `${f(a.growthPx.median, 0)}<br>${grew.join('<br>')}` : '0'
     const settle = ms(a.settleMs) + (a.timeouts ? ` (${a.timeouts} timed out)` : '')
-    lines.push(`| ${esc(r.name)} | ${r.mode} | ${f(a.jump.median)} / ${f(a.jump.p95)} | ${growth} | ${settle} | ${Math.round(a.skeletonMs.median)} | ${moved} |`)
+    lines.push(`| ${who} | ${r.mode} | ${f(a.jump.median)} / ${f(a.jump.p95)} | ${growth} | ${settle} | ${Math.round(a.skeletonMs.median)} | ${esc(a.waitedOn || 'nothing')} | ${moved} |`)
   }
   return lines.join('\n')
 }
