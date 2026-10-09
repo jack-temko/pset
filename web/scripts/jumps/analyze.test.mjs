@@ -103,6 +103,24 @@ describe('analyzeRun', () => {
     expect(r.settleMs).toBe(2000)
   })
 
+  it('names what the settle waited on last', () => {
+    const r = analyzeRun({
+      ...base,
+      frames: [
+        { t: 1010, skel: 1, status: 0, skelSel: 'div.row', statusSel: '' },
+        { t: 1500, skel: 0, status: 0 },
+      ],
+      requests: [{ start: 1000, end: 1900, url: '/api/books/1/memory' }],
+    })
+    expect(r.waitedOn).toBe('request: /api/books/1/memory')
+    const s = analyzeRun({
+      ...base,
+      frames: [{ t: 1010, skel: 1, status: 0, skelSel: 'div.row', statusSel: '' }],
+    })
+    expect(s.waitedOn).toBe('skeleton: div.row')
+    expect(analyzeRun(base).waitedOn).toBe('')
+  })
+
   it('a skeleton already on at t0 counts until it goes, or to the end', () => {
     const gone = analyzeRun({
       ...base,
@@ -140,6 +158,7 @@ describe('aggregate', () => {
     skeletonMs: 0,
     spinnerMs: 0,
     timedOut: false,
+    waitedOn: '',
     moved: jump ? [{ sel, value: jump, count: 1 }] : [],
     overlays: [
       { name: 'Dialog', first: { w: 400, h: 200 }, final: { w: 400, h: 200 + growth }, growthPx: growth, appearMs: 10, settleMs },
@@ -152,6 +171,7 @@ describe('aggregate', () => {
     expect(a.jump).toEqual({ median: 0.3, p95: 0.5 })
     expect(a.settleMs).toEqual({ median: 300, p95: 900 })
     expect(a.growthPx).toEqual({ median: 30, p95: 90 })
+    expect(a.waitedOn).toBe('')
     expect(a.moved[0]).toMatchObject({ sel: 'a', runs: 4 })
     expect(a.overlays[0]).toMatchObject({ name: 'Dialog', growthPx: 30, settleMedian: 300, settleP95: 900 })
   })

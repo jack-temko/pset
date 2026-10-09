@@ -8,8 +8,9 @@
 //   shifts    [{ t, value, hadRecentInput, sources: [{ sel, prev, cur }] }]
 //   sizes     [{ id, name, named, t, w, h }]  an overlay's size each time it changed;
 //             id is stable per element, named false when name is only its role
-//   frames    [{ t, skel, status }] skeletons and spinners on screen, on change
-//   requests  [{ start, end }]      wall-clock, end null while in flight
+//   frames    [{ t, skel, status, skelSel, statusSel }] skeletons and spinners in the
+//             viewport, on change, with a selector for the first of each
+//   requests  [{ start, end, url }] wall-clock, end null while in flight
 
 export function median(xs) {
   if (xs.length === 0) return 0
@@ -28,24 +29,31 @@ export function percentile(xs, p) {
 const round = (n) => Math.round(n * 1000) / 1000
 
 /** When something (skeleton or spinner) was last on screen after t0, as ms
- *  after t0. 0 if it never was; the run's length if it still is at the end. */
+ *  after t0, and the selector it had then. 0 if it never was; the run's
+ *  length if it still is at the end. */
 function lastSeen(log, key) {
   const frames = [...log.frames].sort((a, b) => a.t - b.t)
   let on = false
   let end = null
+  let what = ''
+  const sel = key === 'skel' ? 'skelSel' : 'statusSel'
   for (const f of frames) {
     const at = log.origin + f.t
     const now = f[key] > 0
     if (at <= log.t0) {
       on = now
-      if (on) end = log.t0
+      if (on) {
+        end = log.t0
+        what = f[sel] ?? ''
+      }
     } else {
       if (on || now) end = at
+      if (now) what = f[sel] ?? ''
       on = now
     }
   }
   if (on) end = log.end
-  return end === null ? 0 : Math.max(0, end - log.t0)
+  return end === null ? { ms: 0, what: '' } : { ms: Math.max(0, end - log.t0), what }
 }
 
 export function analyzeRun(log) {
@@ -89,13 +97,23 @@ export function analyzeRun(log) {
     }
   })
 
-  const skeletonMs = lastSeen(log, 'skel')
-  const spinnerMs = lastSeen(log, 'status')
-  const events = [skeletonMs, spinnerMs]
-  for (const s of shifts) events.push(at(s.t) - log.t0)
-  for (const o of overlays) events.push(o.settleMs)
-  for (const r of log.requests ?? []) if (r.end !== null && r.end >= log.t0) events.push(r.end - log.t0)
-  const settleMs = log.timedOut ? log.end - log.t0 : Math.max(0, ...events)
+  const skel = lastSeen(log, 'skel')
+  const spin = lastSeen(log, 'status')
+  const skeletonMs = skel.ms
+  const spinnerMs = spin.ms
+  // Everything the settle could have waited on, each with its time; the
+  // latest is what it waited on last.
+  const events = [{ ms: 0, kind: 'nothing', what: '' }]
+  if (skel.ms) events.push({ ms: skel.ms, kind: 'skeleton', what: skel.what })
+  if (spin.ms) events.push({ ms: spin.ms, kind: 'spinner', what: spin.what })
+  for (const s of shifts) events.push({ ms: at(s.t) - log.t0, kind: 'shift', what: s.sources[0]?.sel ?? 'unknown' })
+  for (const o of overlays) events.push({ ms: o.settleMs, kind: 'overlay', what: o.name })
+  for (const r of log.requests ?? []) {
+    const end = r.end ?? log.end
+    if (end >= log.t0) events.push({ ms: end - log.t0, kind: 'request', what: r.url ?? '' })
+  }
+  const last = events.reduce((a, e) => (e.ms > a.ms ? e : a))
+  const settleMs = log.timedOut ? log.end - log.t0 : Math.max(0, last.ms)
 
   return {
     jump: round(shifts.reduce((n, s) => n + s.value, 0)),
@@ -105,6 +123,7 @@ export function analyzeRun(log) {
     skeletonMs,
     spinnerMs,
     settleMs,
+    waitedOn: last.kind === 'nothing' ? '' : `${last.kind}: ${last.what}`,
     timedOut: !!log.timedOut,
   }
 }
@@ -138,8 +157,14 @@ export function aggregate(runs) {
     }
   })
 
+  // What the settle waited on last, most often across the runs.
+  const tally = new Map()
+  for (const r of runs) if (r.waitedOn) tally.set(r.waitedOn, (tally.get(r.waitedOn) ?? 0) + 1)
+  const waitedOn = [...tally].sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
+
   return {
     runs: runs.length,
+    waitedOn,
     jump: stat((r) => r.jump),
     settleMs: stat((r) => r.settleMs),
     skeletonMs: stat((r) => r.skeletonMs),

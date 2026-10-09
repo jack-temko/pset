@@ -83,16 +83,31 @@
   }).observe(document, { childList: true, subtree: true })
 
   // Skeletons and spinners on screen, sampled every frame; only changes kept.
+  // One counts only while it intersects the viewport: a skeleton in a hidden
+  // tab, a closed dialog or far down a scrolled list isn't being waited on.
+  const inView = (el) => {
+    const r = el.getBoundingClientRect()
+    return r.width > 0 && r.height > 0 && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth
+  }
+  // `.skeleton` too, so a branch from before data-skeleton can be measured.
+  const SKELETON = '[data-skeleton], .skeleton'
+  J.visible = (css) => [...document.querySelectorAll(css)].filter(inView)
   let prev = ''
   const tick = () => {
-    const skel = document.querySelectorAll('[data-skeleton]').length
-    const status = document.querySelectorAll('[role=status]').length
-    const key = skel + ',' + status
+    const skels = J.visible(SKELETON)
+    const stats = J.visible('[role=status]')
+    const key = skels.length + ',' + stats.length
     if (key !== prev) {
       prev = key
-      J.frames.push({ t: performance.now(), skel, status })
+      J.frames.push({
+        t: performance.now(),
+        skel: skels.length,
+        status: stats.length,
+        skelSel: skels.length ? sel(skels[0]) : '',
+        statusSel: stats.length ? sel(stats[0]) : '',
+      })
     }
-    if (skel || status) J.last = performance.now()
+    if (skels.length || stats.length) J.last = performance.now()
     requestAnimationFrame(tick)
   }
   requestAnimationFrame(tick)
