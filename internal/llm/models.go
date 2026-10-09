@@ -50,10 +50,19 @@ var (
 	// about 8 times Luna: $0.0016 a problem, $0.019 a figure.
 	Reader = Job{Name: "Reading figures", Model: "google/gemini-3.8-flash",
 		Fallbacks: []string{"openai/gpt-6-luna"}}
+	// Checker solves each guide's problem again on its own, so a guide
+	// whose final answers differ is caught. Asked of 66 graded guides
+	// (2026-10-08) it caught every wrong one, the Writer's 6 mistakes and
+	// 2 misread figures, and its 4 differences on guides graded right were
+	// real mistakes in parts the grading had skipped; Luna Pro and
+	// DeepSeek, cheaper, raised differences from their own mistakes.
+	// About $0.015 a guide, at medium effort.
+	Checker = Job{Name: "Checking answers", Model: "google/gemini-3.8-flash",
+		Fallbacks: []string{"openai/gpt-6-luna"}}
 )
 
 // Jobs is every job, in the order Settings lists them.
-var Jobs = []Job{Writer, Finder, Reader}
+var Jobs = []Job{Writer, Finder, Reader, Checker}
 
 // Ask is a request made for this job: its model and fallbacks, and its
 // reasoning left out when the job runs plain.
