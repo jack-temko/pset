@@ -24,6 +24,13 @@ reduced motion; D9 (a height morph for a mismatched skeleton) was tried and drop
 The skeleton and content crossfade in one grid cell instead, skeletons are made
 exact, and the jump check enforces it.
 
+**Research tweaks.** Prefetch waits for hover intent, not the first touch of the pointer:
+a 60ms dwell, cancelled on leave, at once on press or focus, never on touch hover (the
+instant.page and Flying Pages pattern, 65ms). Each web font gets a metric-matched system
+fallback (`size-adjust` and the ascent, descent and line-gap overrides, as `next/font` does
+and Chrome's "Framework tools for font fallbacks" describes), computed once from
+@capsizecss/metrics and committed as CSS, so the first-paint swap shifts nothing.
+
 ### Files
 
 - `web/src/components/loaded/index.tsx` (new): `Loaded<T>({ query, skeleton,

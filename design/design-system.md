@@ -299,15 +299,20 @@ fade, `aria-busy` and the error line, so screens cannot drift apart.
 - **Skeletons are exact, not morphed.** A height animation between a skeleton and its content
   was tried (D9, 2026-10-09) and dropped: it jittered. The skeleton must be the content's
   size, and the jump check (`make jumps`) reports one that isn't; the CI guard comes in part 2.
-- **Overlays prefetch**: so far only the usage dialogs, as the pointer or focus reaches the
-  trigger (a usage line, the Book actions menu), so the dialog usually opens complete. Usage stays cached and
+- **Overlays prefetch**: so far only the usage dialogs, once the pointer has rested on the
+  trigger for 60ms (`usePrefetchIntent`; at once on a press or keyboard focus, never on a
+  touch hover), so the dialog usually opens complete. Usage stays cached and
   refreshes from the event stream, so a second open is instant.
 - **A list's skeleton draws the count it showed last time**, saved per list in the browser
   (`useLastCount`), 3 the first time.
 - **A number in a sentence** is fetched with the page; while missing, it holds a slot as
   wide (in `ch`) as the text it showed last time.
 - **The latin and latin-ext subsets of every font start loading at app start** (`main.tsx`),
-  so none of the text and figures arrives after first paint and reflows the screen.
+  so none of the text and figures arrives after first paint and reflows the screen. Each
+  family has a metric-matched system fallback (`Inter Fallback` over Arial, `Newsreader
+  Fallback` over Times New Roman, `JetBrains Mono Fallback` over Courier New; `size-adjust` and
+  the ascent, descent and line-gap overrides in `index.css`) right after it in the font stack,
+  so the swap moves almost nothing.
 
 **Hover fades in over 100ms** (2026-09-30, Jack: "give hover a short fade", reversing
 2026-09-25). A hover wash or ink change used to be instant, because a slower fade left a

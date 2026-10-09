@@ -22,6 +22,11 @@ usage dialogs; every other screen follows (design-system.md, Motion).
 from its first frame (no hidden phase, no fade-in) and data crossfades over it even if it lands
 inside 300ms. The grace is for content inside a page that is already there.
 
+**Prefetch intent.** An overlay's data is warmed by `usePrefetchIntent(prefetch)`
+(`lib/prefetch-intent.ts`): spread its handlers on the trigger. It prefetches after the pointer
+has rested 60ms (a pointer sweeping past asks for nothing), at once on a press or keyboard
+focus, and never for a touch pointer's hover. `Menu` and `MenuItem` take it as `intent`.
+
 **The skeleton contract:** the same layout and size as the content: the same grid, the same
 table header, the same row count (`useLastCount` gives a list's last known count, 3 the first
 time). If the skeleton is the wrong height, the box jumps when the data lands, which is what
