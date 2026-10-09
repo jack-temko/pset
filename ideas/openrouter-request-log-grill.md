@@ -66,6 +66,19 @@ A section under the keys lists the last 24 hours of requests on the PSet workspa
 - **For agents:** `list_openrouter_keys` also reports the five most recent jobs (last 3 hours).
 - **Tests:** a fifth `claude plugin test` case puts analytics rows into the feed with model, job and tokens, and a call with no session as Other.
 
+### One poller for every pane (2026-10-08)
+Every Claude Code session loads the mod, and each one used to poll OpenRouter on its own. With four sessions open, that was about 120 analytics calls a minute, and OpenRouter answered **429 Rate limit exceeded**: errors, and sections that wouldn't load. Jack: "All panes should share the same data, and only one thread populating the source."
+- **One poller.** Only the session holding a lease (`~/.claude/mods/openrouter-keys-shared/lease.json`, renewed every 5 seconds, free after 20 seconds without renewal) calls OpenRouter. It writes keys, tiles and feed to `data.json` in the same folder (written beside the file and moved over it, so a reader never sees half a file). If that session closes, another takes the lease within about 20 seconds.
+- **Every pane reads the same file** every 5 seconds and redraws only what changed.
+- **Pending requests and the agent-key registry** are shared files too (`requests.json`, `agent-keys.json`; the registry moved from `$.store`). A request shows in every pane, and approving it in any pane sends the answer to the session that asked (`$.session.send`, or its own prompt when it's the same session).
+- **Kicks.** Refresh and any action (approve, deny, delete, a new management key) write `kick.json`, and the poller fetches everything on its next tick. Agents' `list_openrouter_keys` reads the shared data and never forces a fetch.
+- **Intervals:** keys every 60 seconds, the feed's analytics every 30, the tiles every 5 minutes, the local logs every 10 (no OpenRouter calls). The feed's analytics are 3 queries; the finish-reason one went, so "Cut off" only comes from the local logs.
+- **429s.** After one, nothing calls OpenRouter for 2 minutes, in any session (the pause is in `data.json`). The pane says so in dim text and keeps showing the last data.
+- **The tiles count the whole account,** every workspace and deleted keys included, so they match what OpenRouter charges. A line under them says so. Before, they counted only the workspace's live keys, so spend on deleted keys dropped out.
+- **The feed counts deleted keys too.** The poller remembers every workspace key it has seen (the last 200), so a deleted key's calls stay in the feed.
+- **Line 1 of a feed entry** now carries the tokens beside the cost ("1.3k tokens · $0.0012"), so they're never cut off. Line 2 is time · job · where it ran.
+- **Tests:** seven `claude plugin test` cases, with the shared files in memory. They cover the poller writing what it fetched and a second read inside the intervals calling OpenRouter not at all. They also cover a session that doesn't hold the lease calling nothing and showing the other session's data.
+
 ### Open
 - How quickly a request reaches the analytics is still unmeasured. Watch it during the next eval run.
 

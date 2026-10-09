@@ -24,15 +24,23 @@
 2. CI runs `make check` (Go tests, typecheck, vitest, lint, the
    generated-types check, then the Go tests again under the race
    detector). A ruleset on `dev` blocks the merge until it is green and the
-   branch is up to date with `dev`: if `dev` moved, `gh pr update-branch`
-   and wait for the run again. Run `make check` yourself first; don't use
+   branch is up to date with `dev`: if `dev` moved, update it with
+   `gh api -X PUT repos/jack-temko/pset/pulls/<number>/update-branch` (this
+   machine's `gh` has no `pr update-branch`) and wait for the run again. Run `make check` yourself first; don't use
    CI to find out.
 3. A red check is fixed, never re-run until it goes green. A flaky test is
    fixed in its own change before the next merge. If `dev` itself goes red,
    revert the change that did it first, then fix on a branch.
-4. When it is green, **merge your own pull request** with a squash
-   (`gh pr merge --squash --delete-branch`) and tell Jack what landed. Then
-   remove the worktree. Don't wait for Jack, and never merge into `main`.
+4. **Jack tries it and approves before anything merges.** Start the
+   branch's own app for him (`.agents/skills/change/references/try.sh start
+   <worktree>`: private ports, the worktree's own data, never 8420), tell him
+   what changed and what to try, and ask. His changes go back into the
+   branch and he tries it again. Only his approval, in his own words, for
+   this change, lets it merge: never a reviewer's, a subagent's, or an
+   earlier one.
+5. When he has approved and it is green, squash-merge it
+   (`gh pr merge --squash --delete-branch`), tell him what landed, and
+   remove the worktree. Never merge into `main`.
 
 **Releasing is Jack's**: a pull request from `dev` into `main`, merged with
 a merge commit (not a squash, so `main` stays an ancestor of `dev`), which
@@ -97,6 +105,17 @@ no shared key: `key.txt` is retired.
   through `CLAUDE_CODE_PLUGIN_DIRS`; its spec is
   `ideas/openrouter-keys-grill.md`.
 
+## Test library
+
+`~/.local/share/pset-test-library/` is a read-only snapshot of Jack's books and
+textbooks with up to three of his newest homework sets per book (questions and
+guides included), and no key, tutor turns, memories, activity or usage. When a
+test needs a library, run `make seed` in your worktree: it copies the snapshot into
+`.dev/data` in seconds, with no model call (`try.sh start` does it for an empty
+worktree). Never use the snapshot directly or Jack's own library. `make test-library`
+refreshes the snapshot from his library (he runs it, or an agent with his OK).
+Spec: `ideas/test-library.md`.
+
 ## Skills
 
 Project skills live in `.agents/skills/<name>/` (a `SKILL.md` with `name`
@@ -115,7 +134,7 @@ Three skills:
   `extract` (put a view still inside its screen onto `/views`). Its design is
   `ideas/views-gallery.md` and `ideas/grill-skill.md`.
 - `change` takes one change from ask to merged on `dev`, splitting the work by model
-  (below). Jack starts it with `/change`; it uses the other two when a change needs a
+  (below), with a gate where Jack tries the change and approves it before it merges. Jack starts it with `/change`; it uses the other two when a change needs a
   grill.
 
 ## Models and agents
@@ -134,7 +153,7 @@ live there, not in `.agents/`):
 | `reviewer` | Sonnet | reads the plan and the diff; escalates risky or unsure changes |
 | `opus-reviewer` | Opus | the second review, for escalated changes |
 | `shooter` | Haiku | screenshots of changed UI states, Paper and Night |
-| `lander` | Haiku | push, PR into `dev`, CI, squash-merge, worktree removal |
+| `lander` | Haiku | push and open the PR; after Jack approves, CI, squash-merge, worktree removal |
 
 Outside `/change`, the same split holds: search with `Explore`, and hand mechanical
 work to `checker` or `lander` instead of doing it on Opus. Spec and reasons:

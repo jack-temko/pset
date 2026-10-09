@@ -208,3 +208,17 @@ circuit itself: what joins to what, a value, which way an arrow points, which en
 one has and another hasn't. Say what the readings said and what you settled on: "- The 2 A source:
 two readings have its arrow pointing to B, one to A; it points to B." Different node names or
 wording for the same thing is not a disagreement. If they agreed on everything, write "- None."`
+
+// checkSolvePrompt has the Checker solve a problem again, on its own,
+// for its final answers: the guide's are checked against them
+// (crosscheck.go).
+const checkSolvePrompt = `You solve one homework problem, to check a tutor's worked answer. Work it out fully and carefully in your thinking, checking every number.
+
+Then reply with only the final answers, one line per part, each starting with the part's label as the problem prints it (a., b., ...; no label for a one-part problem). Give exact values where you can, and decimals to 4 significant figures. For a part that asks you to sketch, describe, explain or prove, give its conclusion in one line.`
+
+// checkComparePrompt compares a guide's final answers with the Checker's.
+const checkComparePrompt = `You compare two sets of final answers to the same homework problem: one from a tutor's guide, one from an independent solve. Say whether they agree, part by part.
+
+They agree on a part when they give the same value (allowing rounding to 3 significant figures, equivalent forms, a different but stated sign convention or reference direction), the same set of values, or, for a sketch, description, explanation or proof, conclusions that don't contradict each other. A part only one of them answers isn't a disagreement.
+
+Reply with only JSON, no prose: {"agree": true} or {"agree": false, "parts": [{"label": "(c)", "guide": "what the guide says", "solve": "what the solve says"}]}. label is the guide's own label for the part, as given before its answer, or "" for a one-part problem.`

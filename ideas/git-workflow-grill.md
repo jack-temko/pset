@@ -24,7 +24,7 @@ Everything is built on `dev` and lands there by pull request once `make check` i
 | D1 | Everything lands by pull request, and a GitHub ruleset blocks the merge until the CI check is green. | The gate holds without anyone remembering it, for agents and cloud sessions too. The repo is public, so Actions is free. | A local `make land` script; both |
 | D2 | The required check is `make check` (Go tests, typecheck, vitest, lint, generated-types drift, then the Go tests under the race detector). | It is what CI ran and it caught the ranking race that `make test` let through. About 3 to 4 minutes. | `make test` only; `make check` + web build |
 | D3 | Jack merges `dev` into `main` when he is comfortable, and tags it. The tag starts the runner. | Main only moves by his hand and every release has a name. | Release branches; automatic promotion |
-| D4 | An agent merges its own PR into `dev` once the check is green, then tells Jack what landed. | `dev` is the integration branch and `main` is what protects friends. Fewer interruptions. | Ask every time; only Jack merges |
+| D4 | ~~An agent merges its own PR into `dev` once the check is green, then tells Jack what landed.~~ Reversed (R2): Jack tries and approves every change first. | `dev` is the integration branch and `main` is what protects friends. Fewer interruptions. | Ask every time; only Jack merges |
 | D5 | Squash merge into `dev`: one commit per change, titled with what it does. | `dev` reads as a list of changes, and undoing one is a plain `git revert`. | Merge commit; rebase |
 | D6 | Rulesets on `dev` and `main`: no direct pushes, no bypass for agents. Jack, as repo owner, can bypass in an emergency. | Cloud sessions pushed straight to `main` before; a ruleset stops that. | Bind Jack too; convention only |
 | D7 | A bug in a release is fixed on `dev` and released again (v0.2.1). | One flow, no special case. | Hotfix branch off `main`; decide each time |
@@ -64,6 +64,7 @@ Taken at the recommended default; overrule any.
 - Whether anyone else (a friend contributing) will ever need write access, which changes D6.
 
 ## Reversals
+- **R2** D4, "an agent merges its own PR into `dev` once the check is green" (and step 4 of the flow): reversed by Jack on 2026-10-08. Every merge into `dev` now waits for him to try the change in its own app and approve it; his changes go back into the branch first. Asked as an explicit reversal; recorded in `AGENTS.md` and `ideas/agent-workflow-grill.md`.
 - **R1** "Nuke the CI file" (Jack, 2026-10-01, a pick in this grill's setup, committed as `remove-ci-workflow`, unmerged): reversed by Jack in this grill because the required check needs CI. The branch is deleted. No document held the decision.
 
 ## Disagreements

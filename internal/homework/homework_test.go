@@ -589,9 +589,9 @@ func TestGuideComputesAndShowsWhatItsDoing(t *testing.T) {
 		t.Fatalf("activity %v", saw)
 	}
 	// The tool's exact answer went back to the model.
-	reqs := e.llm.Requests()
+	reqs := guideRequests(e)
 	var got bool
-	for _, m := range reqs[len(reqs)-1].Chat.Messages {
+	for _, m := range reqs[len(reqs)-1].Messages {
 		if m.Role == "tool" && strings.Contains(m.Content.Text(), "3/8") {
 			got = true
 		}
