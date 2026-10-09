@@ -115,6 +115,11 @@ func (e *CallError) Error() string {
 	return fmt.Sprintf("model request failed (HTTP %d)", e.Status)
 }
 
+// cut is a stream that ended partway, in the catalog.
+func cut(format string, args ...any) error {
+	return modelCut.Wrap(fmt.Errorf(format, args...))
+}
+
 // Message is one chat turn. Content may be plain text or multimodal parts —
 // build it with TextMessage or the Content helpers, not by hand. A tool
 // round adds two shapes: an assistant turn carrying ToolCalls, and a
@@ -717,7 +722,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 			}
 			if isCut(err) {
 				// The connection dropped mid-event.
-				return Reply{Content: full.String()}, fmt.Errorf("%w: %v", ErrStreamCut, err)
+				return Reply{Content: full.String()}, cut("%w: %v", ErrStreamCut, err)
 			}
 			return Reply{}, fmt.Errorf("decode stream chunk: %w", err)
 		}
@@ -762,10 +767,10 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 		return Reply{}, ctx.Err()
 	}
 	if err := scanner.Err(); err != nil {
-		return Reply{Content: full.String()}, fmt.Errorf("%w: %v", ErrStreamCut, err)
+		return Reply{Content: full.String()}, cut("%w: %v", ErrStreamCut, err)
 	}
 	if !finished {
-		return Reply{Content: full.String()}, fmt.Errorf("%w: the stream ended without finishing", ErrStreamCut)
+		return Reply{Content: full.String()}, cut("%w: the stream ended without finishing", ErrStreamCut)
 	}
 	keepHost(req.SessionID, host)
 	var rd json.RawMessage
@@ -984,7 +989,7 @@ func (c *Client) doWithRetry(ctx context.Context, url string, body any) (*http.R
 		}
 		resp, err := c.http.Do(httpReq)
 		if err != nil {
-			return nil, fmt.Errorf("model request failed: %w", err)
+			return nil, modelUnreachable.Wrap(fmt.Errorf("model request failed: %w", err))
 		}
 		if resp.StatusCode == http.StatusOK {
 			return resp, nil
