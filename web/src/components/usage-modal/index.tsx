@@ -316,7 +316,7 @@ export function BookUsageDialog({
   loading,
   error,
 }: { open: boolean; onClose: () => void; title: string } & State<BookUsage>) {
-  const kindRows = useLastCount('usage-book-kinds', data ? Math.min(data.kinds.length, 12) : undefined)
+  const kindRows = useLastCount('usage-book-kinds', data ? Math.min(data.kinds.length, 12) : undefined, 2)
   const importShape = useLastShape<Shape | null>('usage-book-import', data ? (data.import ? shapeOf(data.import) : null) : undefined, null, isImportShape)
   return (
     <Dialog
