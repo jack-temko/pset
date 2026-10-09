@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress, branch `test-library`.
+Built on branch `test-library`; Done when merged into `dev`.
 
 ## Information
 
