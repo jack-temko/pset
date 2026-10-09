@@ -155,8 +155,9 @@ func isSecret(field string) bool {
 // shorter one would match by chance.
 const minSecret = 8
 
-// skPattern is what an OpenRouter or OpenAI style key looks like.
-var skPattern = regexp.MustCompile(`sk-[A-Za-z0-9_-]{16,}`)
+// skPattern is what an OpenRouter or OpenAI style key looks like. It starts
+// at a word edge, so the "ask-<id>" session ids in calls are not taken for one.
+var skPattern = regexp.MustCompile(`(?:^|[^A-Za-z0-9])sk-[A-Za-z0-9_-]{16,}`)
 
 // scrub removes every secret-named field from a decoded JSON value, at any
 // depth, and appends the strings it removed to out.

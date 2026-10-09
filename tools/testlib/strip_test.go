@@ -124,6 +124,11 @@ func TestStripKeepsTheSampleAndDropsTheRest(t *testing.T) {
 	if err := Check(ctx, d, dir, file, []string{"books"}); err == nil {
 		t.Error("check passed with a removed secret still in the file")
 	}
+	exec(t, d, `INSERT INTO calls (at, subject_type, subject_id, model, ms, session) VALUES ('2026-01-01T00:00:00Z', 'book', 'b1', 'm', 1, 'ask-0123456789abcdef0123')`)
+	if err := Check(ctx, d, dir, file, secrets); err != nil {
+		t.Errorf("an ask- session id was taken for a key: %v", err)
+	}
+	exec(t, d, `DELETE FROM calls WHERE session = 'ask-0123456789abcdef0123'`)
 	var st5, st4 string
 	d.QueryRow(`SELECT state FROM questions WHERE id = 'q5'`).Scan(&st5)
 	d.QueryRow(`SELECT state FROM questions WHERE id = 'q4'`).Scan(&st4)
