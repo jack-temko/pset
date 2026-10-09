@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, Clock, TriangleAlert } from 'lucide-react'
 import { Box, BoxRow } from '@/components/box'
 import { Button } from '@/components/button'
 import { Flash } from '@/components/flash'
 import { HomeworkStatusLabel } from '@/components/homework-status'
 import { Label } from '@/components/label'
+import { Loaded } from '@/components/loaded'
 import { ProgressBar } from '@/components/progress-bar'
 import { Spinner } from '@/components/spinner'
 import { Skeleton } from '@/components/skeleton'
@@ -271,10 +272,18 @@ export const feedbackSections: ComponentEntry[] = [
     ),
   },
   {
+    id: 'loaded',
+    title: 'Loaded',
+    group: 'Feedback',
+    note: 'The one way anything that waits on data is drawn: a skeleton that holds the content\'s space, a 150ms fade when it arrives, one line when it fails.',
+    docs: ['loaded'],
+    Demo: () => <LoadedDemo />,
+  },
+  {
     id: 'skeleton',
     title: 'Skeleton',
     group: 'Feedback',
-    note: "The shape of what's coming, at its real size, so nothing moves when it lands. It doesn't pulse: the Spinner is the only loop.",
+    note: "The shape of what's coming, at its real size, so nothing moves when it lands. It shimmers while it waits, the one loop besides the Spinner.",
     docs: ['skeleton'],
     Demo: () => (
       <>
@@ -386,3 +395,57 @@ export const feedbackSections: ComponentEntry[] = [
     ),
   },
 ]
+
+type LoadedState = 'pending' | 'loaded' | 'cached' | 'error'
+
+/** Loaded with a query faked by four buttons. Each press remounts it, so the
+ *  first render is the state pressed: pending waits (the grace, then the
+ *  shimmer), loaded waits 1.2s then arrives and fades, cached is there at
+ *  once, error fails. */
+function LoadedDemo() {
+  const [run, setRun] = useState<{ n: number; state: LoadedState }>({ n: 0, state: 'pending' })
+  const press = (state: LoadedState) => setRun((r) => ({ n: r.n + 1, state }))
+  return (
+    <>
+      <Shelf label="state">
+        <div className="flex gap-2">
+          {(['pending', 'loaded', 'cached', 'error'] as const).map((state) => (
+            <Button key={state} variant={run.state === state ? 'primary' : 'outline'} onClick={() => press(state)}>
+              {state}
+            </Button>
+          ))}
+        </div>
+      </Shelf>
+      <Shelf label="the box">
+        <LoadedBox key={run.n} state={run.state} />
+      </Shelf>
+    </>
+  )
+}
+
+function LoadedBox({ state }: { state: LoadedState }) {
+  const [arrived, setArrived] = useState(state === 'cached')
+  useEffect(() => {
+    if (state !== 'loaded') return
+    const t = setTimeout(() => setArrived(true), 1200)
+    return () => clearTimeout(t)
+  }, [state])
+  const query = {
+    data: arrived ? ['Problem 3.14', 'Problem 3.15', 'Problem 3.16'] : undefined,
+    isPending: state === 'pending' || (state === 'loaded' && !arrived),
+    isError: state === 'error',
+  }
+  return (
+    <Loaded
+      className="w-panel space-y-2"
+      query={query}
+      skeleton={[0, 1, 2].map((i) => (
+        <p key={i} className="text-sm">
+          <Skeleton className="h-3 w-full" />
+        </p>
+      ))}
+    >
+      {(rows) => rows.map((r) => <p key={r} className="text-sm">{r}</p>)}
+    </Loaded>
+  )
+}
