@@ -122,7 +122,7 @@ if [ ! -s "$run/settings.json" ] || ! grep -q '"apiKey":""' "$run/settings.json"
 fi
 rm -f "$run/settings.json"
 
-(cd "$tree/web" && exec env PSET_API_TARGET="http://127.0.0.1:$sp" setsid npx vite --port "$vp" --strictPort) \
+(cd "$tree/web" && exec env PSET_API_TARGET="http://127.0.0.1:$sp" setsid npx vite --host 127.0.0.1 --port "$vp" --strictPort) \
 	</dev/null >"$run/vite.log" 2>&1 &
 pids+=($!)
 up=
