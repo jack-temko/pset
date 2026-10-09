@@ -278,6 +278,31 @@ another checkout while this worktree measures it, and
 `ARGS="--only home-cold-load,memory"` runs just those scenarios, named by slug. Spec and
 reasons: `ideas/layout-jumps.md`.
 
+**One loading standard** (2026-10-09, `ideas/loading-standard-grill.md`). Everything that
+waits on data opens at its final size and is written through one component,
+`Loaded` (`web/src/components/loaded`), which owns the skeleton, the 300ms grace, the
+fade, `aria-busy` and the error line, so screens cannot drift apart.
+
+| Surface | Before data | When it arrives |
+|---|---|---|
+| Dialog, popover | Prefetched; else opens at final size with a skeleton | 150ms fade in place |
+| Page section, list | Skeleton in the real layout, at the last known count | 150ms fade in place |
+| Value in a sentence | Prefetched; else a slot of fixed width | The number appears, nothing reflows |
+| Any wait under 300ms | Nothing drawn | Content at once |
+| Cached data | Content at once, no fade | |
+
+- **The fade is 150ms**, opacity only, ease-out (`fade-in` in `index.css`), and off under
+  reduced motion. Content that replaces a skeleton fades; cached content never does.
+- **Overlays prefetch**: as the pointer or focus reaches the trigger (a usage line, the
+  Book actions menu), so the dialog usually opens complete. Usage stays cached and
+  refreshes from the event stream, so a second open is instant.
+- **A list's skeleton draws the count it showed last time**, saved per list in the browser
+  (`useLastCount`), 3 the first time.
+- **A number in a sentence** is fetched with the page; while missing, it holds a slot as
+  wide (in `ch`) as the text it showed last time.
+- **Every font starts loading at app start** (`main.tsx`), so none arrives after first paint
+  and reflows the screen.
+
 **Hover fades in over 100ms** (2026-09-30, Jack: "give hover a short fade", reversing
 2026-09-25). A hover wash or ink change used to be instant, because a slower fade left a
 swept list lighting rows late and trailing behind the pointer ("It seems to jitter and flash

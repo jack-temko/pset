@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress, branch `loading-overlays` (change 2a of the loading standard). Part 2
+Built on branch `loading-overlays`, awaiting Jack's try (change 2a of the loading standard). Part 2
 (every other screen onto `Loaded`, the remaining spots, the CI guard) follows.
 
 ## Information
