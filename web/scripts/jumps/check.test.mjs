@@ -198,3 +198,49 @@ describe('flashes and double reveals', () => {
     expect(check(report(row())).failed).toEqual([]);
   });
 });
+
+describe('a tagged scenario must show its variant', () => {
+  const seen = (content, skeleton = []) => ({
+    variantsSeen: { content, skeleton },
+  });
+  const tagged = (over, a = {}) =>
+    row({
+      variant: 'homeworkSet/finish',
+      ...over,
+      agg: agg({ ...seen([]), ...a }),
+    });
+
+  it('passes when a box showed the variant', () => {
+    expect(
+      check(report(tagged({}, seen(['finish', 'question'])))).failed,
+    ).toEqual([]);
+  });
+  it('fails when no box did, naming what it saw', () => {
+    const { failed } = check(report(tagged({}, seen(['question']))));
+    expect(failed).toHaveLength(1);
+    expect(failed[0].why[0]).toContain(
+      'no box showed the "finish" variant (saw "question")',
+    );
+  });
+  it('fails when the page has no boxes at all', () => {
+    expect(check(report(tagged({}, seen([])))).failed).toHaveLength(1);
+  });
+  it('a skeleton alone does not count, unless the scenario waits', () => {
+    expect(check(report(tagged({}, seen([], ['finish'])))).failed).toHaveLength(
+      1,
+    );
+    expect(
+      check(report(tagged({ waits: true }, seen([], ['finish'])))).failed,
+    ).toEqual([]);
+  });
+  it('a row without a tag, or a skipped one, is not checked', () => {
+    expect(check(report(row({ agg: agg(seen([])) }))).failed).toEqual([]);
+    expect(
+      check(report(row({ variant: 'ask/turns', agg: undefined, skipped: 'x' })))
+        .failed,
+    ).toEqual([]);
+  });
+  it('a report from before the probe recorded variants is not failed for it', () => {
+    expect(check(report(row({ variant: 'ask/turns' }))).failed).toEqual([]);
+  });
+});

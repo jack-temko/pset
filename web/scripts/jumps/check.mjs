@@ -50,6 +50,18 @@ export function offences(row) {
       `never settled in ${a.timeouts} of ${a.runs} runs: ${a.waitedOn || 'something'} was still showing at the timeout`,
     );
   }
+  // A scenario tagged with a variant must have shown a box of that variant
+  // ("<view>/<name>": the name is what data-variant holds). One that waits on
+  // purpose may show it only as its skeleton or busy state.
+  if (row.variant && a.variantsSeen) {
+    const name = row.variant.split('/').pop();
+    const seen = new Set(a.variantsSeen.content);
+    if (row.waits) for (const v of a.variantsSeen.skeleton) seen.add(v);
+    if (!seen.has(name))
+      out.push(
+        `${row.variant}: no box showed the "${name}" variant (saw ${[...seen].map((v) => `"${v}"`).join(', ') || 'none'}), so the scenario checked nothing`,
+      );
+  }
   for (const x of a.boxes?.fidelity ?? []) {
     if (x.skeleton !== x.content)
       out.push(

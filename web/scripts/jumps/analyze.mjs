@@ -176,6 +176,7 @@ export function analyzeRun(log) {
     fidelity,
     flashes,
     doubles,
+    variantsSeen: log.variants ?? { content: [], skeleton: [] },
     shiftCount: shifts.length,
     jump: round(counted.reduce((n, s) => n + s.value, 0)),
     afterInput: round(afterInput.reduce((n, s) => n + s.value, 0)),
@@ -251,6 +252,12 @@ export function aggregate(runs) {
     moved,
     overlays,
     boxes: aggregateBoxes(runs),
+    variantsSeen: {
+      content: [...new Set(runs.flatMap((r) => r.variantsSeen?.content ?? []))],
+      skeleton: [
+        ...new Set(runs.flatMap((r) => r.variantsSeen?.skeleton ?? [])),
+      ],
+    },
   };
 }
 
