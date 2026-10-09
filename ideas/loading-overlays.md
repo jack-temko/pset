@@ -2,8 +2,9 @@
 
 ## Status
 
-Built on branch `loading-overlays`, awaiting Jack's try (change 2a of the loading standard). Part 2
-(every other screen onto `Loaded`, the remaining spots, the CI guard) follows.
+Done (2026-10-09): the spec is in design/design-system.md (the loading standard) and
+web/src/components/loaded/README.md. Part 2 is ideas/loading-screens.md, part 3
+ideas/jumps-guard.md.
 
 ## Information
 
