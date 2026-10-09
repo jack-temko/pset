@@ -2,9 +2,9 @@
 
 ## Status
 
-In progress. Part 1 (formatting) is merged (#31). Part 2 (linting) is built on branch
-`lint-everything`, awaiting merge; mark this Done when it lands. Unblocks the
-error-catalog change, which adds its rule on top of part 2.
+Done. Part 1 (formatting) is #31; part 2 (linting) is branch `lint-everything`. The living
+doc is the "Format and lint" section of `AGENTS.md`. Unblocks the error-catalog change,
+which adds its rule on top of part 2.
 
 ## Information
 
