@@ -53,9 +53,9 @@ const stageColumns: TableColumn<Stage>[] = [
   { key: 'attempts', header: 'Attempts', width: '5.5rem', numeric: true, cell: (s) => s.attempts },
   { key: 'calls', header: 'Calls', width: '4.5rem', numeric: true, cell: (s) => s.calls },
   { key: 'ms', header: 'Time', width: '5.5rem', numeric: true, cell: (s) => clock(s.ms) },
-  { key: 'in', header: 'Tokens in', width: '6.5rem', numeric: true, cell: (s) => atLeast(tokens(s.tokensIn), !!s.uncounted) },
-  { key: 'out', header: 'Tokens out', width: '6.5rem', numeric: true, cell: (s) => atLeast(tokens(s.tokensOut), !!s.uncounted) },
-  { key: 'cost', header: 'Cost', width: '6.5rem', numeric: true, cell: (s) => atLeast(cost(s.cost), !!s.uncounted) },
+  { key: 'in', header: 'Tokens in', width: '7rem', numeric: true, cell: (s) => atLeast(tokens(s.tokensIn), !!s.uncounted) },
+  { key: 'out', header: 'Tokens out', width: '7rem', numeric: true, cell: (s) => atLeast(tokens(s.tokensOut), !!s.uncounted) },
+  { key: 'cost', header: 'Cost', width: '7.5rem', numeric: true, cell: (s) => atLeast(cost(s.cost), !!s.uncounted) },
 ]
 
 /** One call's model: the one that answered, with the one asked for under
@@ -63,11 +63,11 @@ const stageColumns: TableColumn<Stage>[] = [
 const modelOf = (c: Call) => shortModel(c.answered || c.asked)
 
 const callColumns = (withReasoning: boolean): TableColumn<Call>[] => [
-  { key: 'at', header: 'At', width: '5.5rem', mono: true, errorInk: true, cell: (c) => timeOfDay(c.at) },
+  { key: 'at', header: 'At', width: '7rem', mono: true, errorInk: true, cell: (c) => timeOfDay(c.at) },
   {
     key: 'stage',
     header: 'Stage',
-    width: '9.5rem',
+    width: '9rem',
     wrapSecondary: true,
     cell: (c) => c.stage,
     secondary: (c) => c.error || (c.tools ? c.tools.split(',').join(', ') : undefined),
@@ -83,7 +83,7 @@ const callColumns = (withReasoning: boolean): TableColumn<Call>[] => [
   { key: 'in', header: 'Tokens in', width: '6.5rem', numeric: true, cell: (c) => tokens(c.tokensIn) },
   { key: 'out', header: 'Tokens out', width: '6.5rem', numeric: true, cell: (c) => tokens(c.tokensOut) },
   ...(withReasoning ? [{ key: 'reasoning', header: 'Reasoning', width: '6rem', numeric: true, cell: (c: Call) => tokens(c.reasoning) }] : []),
-  { key: 'cost', header: 'Cost', width: '6.5rem', numeric: true, cell: (c) => cost(c.cost) },
+  { key: 'cost', header: 'Cost', width: '7rem', numeric: true, cell: (c) => cost(c.cost) },
 ]
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -227,7 +227,7 @@ const kindColumns: TableColumn<KindRow>[] = [
   { key: 'items', header: 'Items', width: '5rem', numeric: true, cell: (k) => k.items },
   { key: 'calls', header: 'Calls', width: '4.5rem', numeric: true, cell: (k) => k.total.calls },
   { key: 'ms', header: 'Time', width: '5.5rem', numeric: true, cell: (k) => clock(k.total.ms) },
-  { key: 'in', header: 'Tokens in', width: '6.5rem', numeric: true, cell: (k) => atLeast(tokens(k.total.tokensIn), !!k.total.uncounted) },
-  { key: 'out', header: 'Tokens out', width: '6.5rem', numeric: true, cell: (k) => atLeast(tokens(k.total.tokensOut), !!k.total.uncounted) },
-  { key: 'cost', header: 'Cost', width: '6.5rem', numeric: true, cell: (k) => atLeast(cost(k.total.cost), !!k.total.uncounted) },
+  { key: 'in', header: 'Tokens in', width: '7rem', numeric: true, cell: (k) => atLeast(tokens(k.total.tokensIn), !!k.total.uncounted) },
+  { key: 'out', header: 'Tokens out', width: '7rem', numeric: true, cell: (k) => atLeast(tokens(k.total.tokensOut), !!k.total.uncounted) },
+  { key: 'cost', header: 'Cost', width: '7.5rem', numeric: true, cell: (k) => atLeast(cost(k.total.cost), !!k.total.uncounted) },
 ]

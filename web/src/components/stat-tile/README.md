@@ -1,6 +1,6 @@
 # StatTile
 
-A dashboard number: a label, a big serif value, and one quiet line of
+A dashboard number: a label, a big mono value, and one quiet line of
 context. Home's "This week" region is four of them in a row: time on
 homework (`chart-1`), reading (`chart-2`), asking (`chart-3`), and
 questions worked, which carries a stacked bar showing the split by
