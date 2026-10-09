@@ -35,7 +35,26 @@ Parked after batch 2. Resume here once `lint-everything` has merged into dev (re
 - F3 (behavior, high) Field validation errors: full catalog entries or a short form with just a message by the field?
 - F4 (behavior, medium) Background surfaces (import Reason, homework Failure, jobs Error, model usage red rows) migrate to catalog ids: all now, or in phases?
 - F5 (delivery, medium) Errors table: schema, retention, what context is stored (no keys or prompt text), dev page location (/errors next to /components?).
-- F6 (delivery, medium) The lint rule's exact shape. Linter session (2026-10-09): formatting merged as #31; linting is branch `lint-everything` with golangci-lint v2.14.0 as a go.mod tool. Build the rule as a golangci-lint module plugin (`golangci-lint custom`) or a go/analysis analyzer it loads. wrapcheck and errorlint were left off for this change to turn on, since it defines how errors wrap.
+- F6 (delivery, medium) The lint rule's shape. Linter: golangci-lint v2.14.0 (go.mod `tool`), `.golangci.yml` on `lint-everything`, every rule an error, nolint needs linter + reason. The "handlers return only catalog errors" rule: a golangci-lint module plugin (`golangci-lint custom`) or a go/analysis analyzer it loads. Draft for wrapcheck and errorlint (left off by the linter for this change), measured 2026-10-09 on `lint-everything`:
+
+  ```yaml
+  run:
+    relative-path-mode: gomod
+  linters:
+    enable: [wrapcheck, errorlint]   # added to the existing list
+    settings:
+      wrapcheck:
+        ignore-package-globs: [github.com/jackt/pset/*]   # our own errors already carry their id
+        # ignore-sigs: add the catalog constructors (errs.Wrap, errs.New) once named
+      errorlint: {errorf: true, asserts: true, comparison: true}
+    exclusions:
+      rules:
+        - {path: ^tools/, linters: [wrapcheck]}     # dev tools, never seen by a student
+        - {path: _test\.go$, linters: [wrapcheck]}
+  ```
+
+  Size: plain wrapcheck + errorlint give 472 findings (462 + 10). With the draft: 234 (wrapcheck 224, errorlint 10: 8 `%v` for errors, 1 `==`, 1 type assertion). Wrapcheck by package: homework 75, library 49, db 17, activity 12, update 11, settings 11, jobs 10, llm 9, memory 6, ask 6, usage 5, doc 4, rest small. Most are database/sql, os and encoding/json errors returned bare; those become the catalog's lowest layer (e.g. `db.*`, `file.*`).
+- F8 (note) Names on `lint-everything` to use in the catalog: `llm.LLMError` is now `llm.CallError`; `usage.UsageRow`/`UsageTotal` are `Row`/`Total`; `homework.HomeworkChanged`/`HomeworkRemoved` are `SetChanged`/`SetRemoved`. revive error-strings is on: Go error strings start lowercase with no trailing period, so the catalog's display copy (sentences) must live in catalog entries, never in `error.Error()` text. errcheck is on, with new `internal/cleanup` (logs Close failures) and `internal/testx`. A `StopSubject` error now aborts the delete or rewrite that called it.
 - F7 (tail) What would make Jack regret this in a month; what he'd cut if halved.
 
 ## Log
