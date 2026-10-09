@@ -78,9 +78,10 @@ func TestBuildHasEveryAuditTarget(t *testing.T) {
 	}
 	// The audit's usage scenarios look for a finished question and an answered
 	// turn that carry a usage line.
-	q := count(t, d, `SELECT COUNT(*) FROM questions WHERE state = 'ready' AND walkthrough != '[]'`)
-	if q == 0 {
-		t.Fatal("no written guide")
+	// A written guide has all its rows, or the page shows a spinner for the
+	// missing one for ever.
+	if n := count(t, d, `SELECT COUNT(*) FROM questions WHERE state = 'ready' AND (hint = '[]' OR walkthrough NOT LIKE '%"answer"%')`); n != 0 {
+		t.Errorf("%d ready questions lack a hint or an answer", n)
 	}
 	uses, err := usage.ForSubjects(ctx, d, usage.SubjectQuestion, []string{"fx-hw-digital-due-q1"})
 	if err != nil || uses["fx-hw-digital-due-q1"] == nil {
