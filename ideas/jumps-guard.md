@@ -25,6 +25,12 @@ is Jack's own books and the repo is public, and a real import needs a key and Ol
   `tools/seedusage` already does), with no model call.
 - The step runs inside the existing required `check` job, only when the PR touches
   `web/` or `tools/jumps.sh` or `web/scripts/jumps/`, so no ruleset change is needed.
+- CI time budget (Jack): the full audit takes about 26 minutes, so CI runs a **core**
+  profile (hand-written scenarios only, `--no-discover`, `--runs 2`, both modes), aiming at
+  5 to 7 minutes on a runner. `make jumps-check FULL=1` (discovery, `--runs 3`) runs
+  nightly in `.github/workflows/jumps-nightly.yml` (07:00 UTC on `dev`, and by hand), which
+  uploads the report and keeps one issue, "Nightly jump check failed", open while it fails.
+  `/change` runs the full profile in the worktree before a UI pull request.
 
 ### Files
 
@@ -53,9 +59,10 @@ is Jack's own books and the repo is public, and a real import needs a key and Ol
   `check.test.mjs`: thresholds at the edges, allow-list match, timeout as failure,
   a skipped scenario is not a failure but is listed.
 - `tools/jumps.sh`, `Makefile`: `make jumps-check` builds the fixture library into
-  `/tmp/pset-jumps-<topic>/fixture`, runs the audit on it with `--runs 3` (both
-  modes, hand-written scenarios plus discovery), then `check.mjs`. `make jumps`
+  `/tmp/pset-jumps-<topic>/fixture`, runs the audit on it (both modes; core by default,
+  `FULL=1` for discovery and `--runs 3`), then `check.mjs`. `make jumps`
   keeps its behaviour.
+- `.github/workflows/jumps-nightly.yml` (new): the nightly full run above.
 - `.github/workflows/ci.yml`: in the `check` job, after `make check`: a step that
   decides from `git diff --name-only origin/${{ github.base_ref }}...HEAD` (or the
   push range) whether `web/`, `tools/jumps.sh`, `tools/fixturelib/` or

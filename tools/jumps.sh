@@ -6,9 +6,9 @@
 # (web/scripts/jumps), stops both and prints the report's path.
 #
 # make jumps-check (--check) is the guard: it builds the public fixture library
-# (tools/fixturelib) instead of copying one, runs the audit on it with --runs 3,
-# and exits 1 if anything jumps (web/scripts/jumps/check.mjs). It touches no
-# library of yours and needs no key.
+# (tools/fixturelib) instead of copying one, runs the audit on it, and exits 1 if anything jumps (web/scripts/jumps/check.mjs). It touches no
+# library of yours and needs no key. The core profile (the default) measures the
+# hand-written scenarios with --runs 2; FULL=1 adds discovery and --runs 3.
 #
 # The source library is only read: the database is copied with VACUUM INTO (it
 # may be open in a running PSet), the rest with cp -rL, and the saved API keys
@@ -141,7 +141,9 @@ for _ in $(seq 75); do
 done
 
 args=${ARGS:-}
-[ -n "$check" ] && [ -z "$args" ] && args="--runs 3"
+if [ -n "$check" ] && [ -z "$args" ]; then
+	if [ -n "${FULL:-}" ]; then args="--runs 3"; else args="--runs 2 --no-discover"; fi
+fi
 # shellcheck disable=SC2086
 (cd "$root/web" && node scripts/jumps/run.mjs --url "http://127.0.0.1:$vp" --out "$run/$stamp" $args)
 echo "report: $run/$stamp/report.md"

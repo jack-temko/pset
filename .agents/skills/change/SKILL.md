@@ -102,6 +102,9 @@ whole job.
    judgment is why you are the judge tier.
 4. Problems go to the builder, then the shooter again for the states they touch.
 5. Send Jack the key shots (Paper and Night) with your verdict in a line.
+6. Before the PR, run `make jumps-check FULL=1` in the worktree (about 25 minutes; wait
+   for any other audit first) and put its result in the PR body. CI runs only the core
+   profile; the full one runs nightly.
 
 ## 7. Open the pull request
 
