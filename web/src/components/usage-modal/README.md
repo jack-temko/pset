@@ -35,7 +35,9 @@ Titled "Usage · " and the job's name ("Problem 3.14", "Ask answer"). From the t
 A question's total is everything it ever cost, every run included: the money
 was really spent. A `≥` marks a minimum when a call reported nothing: a small muted mark hung
 to the left of the number (`Fig`), so digits line up whether or not a cell
-has it and the cell keeps its right padding. In the left-aligned totals it
+has it and the cell keeps its right padding. The mark is Inter (`font-sans`), not mono: JetBrains Mono's ≥ is short and
+narrow and reads squished beside the digits; it is nudged to sit centred on
+them. In the left-aligned totals it
 sits inline before the number ("≥ 43,800"), so the value starts flush with
 its label.
 

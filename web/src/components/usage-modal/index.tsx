@@ -23,7 +23,7 @@ export function Fig({ text, partial, inline }: { text: string; partial: boolean;
   if (inline) {
     return (
       <>
-        <span aria-hidden className="text-muted-foreground">
+        <span aria-hidden className="font-sans text-muted-foreground">
           ≥{' '}
         </span>
         <span className="sr-only">at least </span>
@@ -34,7 +34,7 @@ export function Fig({ text, partial, inline }: { text: string; partial: boolean;
   return (
     <span className="relative inline-block">
       {text}
-      <span aria-hidden className="absolute top-0 right-full mr-1 text-muted-foreground">
+      <span aria-hidden className="absolute top-1/2 right-full mr-1 -translate-y-1/2 font-sans leading-none text-muted-foreground">
         ≥
       </span>
       <span className="sr-only"> at least</span>

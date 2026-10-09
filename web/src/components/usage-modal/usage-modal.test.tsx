@@ -133,6 +133,7 @@ describe('Fig', () => {
     expect(mark.textContent).toBe('≥')
     expect(mark.className).toMatch(/absolute/)
     expect(mark.className).toMatch(/right-full/)
+    expect(mark.className).toContain('font-sans')
     expect(plain.host.textContent).toBe('$0.0054')
     expect(plain.host.querySelector('[aria-hidden]')).toBeNull()
     marked.done()

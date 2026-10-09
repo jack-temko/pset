@@ -80,7 +80,8 @@ figures in tables and stats only). The test is "would you copy it":
   only glance at and would not copy: the usage line that opens the dialog
   (its model name included), the PDF viewer's page number and zoom, the
   study timer, a page citation chip. Where figures should line up they take
-  `tabular-nums`, still in Inter.
+  `tabular-nums`, still in Inter. Marks beside a mono figure (the "≥" that
+  says a figure is a minimum) are Inter too: Mono's ≥ is short and narrow.
 
 A table may mix the two: mono for its data, Inter for its labels
 (`web/src/components/table`: numeric columns are mono by default, `mono`
