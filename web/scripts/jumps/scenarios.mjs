@@ -20,8 +20,10 @@ export async function discover(app) {
   const { books } = await get('/api/books');
   let best = null;
   const sets = [];
+  const listsOf = [];
   for (const b of books) {
     const { homework } = await get(`/api/books/${b.id}/homework`);
+    listsOf.push([b, homework]);
     for (const h of homework) sets.push(h);
     if (!best || homework.length > best.homework.length)
       best = { book: b, homework };
@@ -50,13 +52,42 @@ export async function discover(app) {
     }
   }
 
-  // One of each variant the views have, where the library holds it.
+  // One of each variant the views have (src/variants.ts), where the library
+  // holds it. The set that shows every question state is told apart by its
+  // title so the in-progress set is a plain one.
+  const everyState = (h) => /every state/i.test(h.title);
   const setOf = (pick) => sets.find(pick) ?? null;
-  const inProgressSet = setOf((h) => !h.turnedInAt && h.done < h.total);
+  const inProgressSet = setOf(
+    (h) => !h.turnedInAt && h.done < h.total && !everyState(h),
+  );
   const finishedSet = setOf(
     (h) => !h.turnedInAt && h.total > 0 && h.done === h.total,
   );
   const turnedInSet = setOf((h) => !!h.turnedInAt);
+  const emptySet = setOf((h) => h.total === 0);
+  // The every-state set: each question's place in the Questions menu, by the
+  // question variant its state is drawn as.
+  const statesSet = setOf(everyState);
+  const questionAt = {};
+  if (statesSet) {
+    const { questions } = await get(`/api/homework/${statesSet.id}`);
+    const kinds = {
+      queued: ['pending', 'located'],
+      working: ['locating', 'reading', 'writing'],
+      ready: ['ready'],
+      unwritten: ['unwritten'],
+      failed: ['failed'],
+    };
+    for (const [kind, states] of Object.entries(kinds)) {
+      const i = (questions ?? []).findIndex((q) => states.includes(q.state));
+      if (i >= 0)
+        questionAt[kind] = {
+          set: statesSet,
+          index: i,
+          label: questions[i].label,
+        };
+    }
+  }
   let noContentsBook = null;
   let noTurnsBook = null;
   for (const b of books) {
@@ -65,6 +96,14 @@ export async function discover(app) {
     if (!noContentsBook && !(c.entries ?? []).length) noContentsBook = b;
     const { turns } = await get(`/api/books/${b.id}/turns`);
     if (!noTurnsBook && !(turns ?? []).length) noTurnsBook = b;
+  }
+  // The Homework tab's list: a book with no sets, one with sets and none
+  // turned in, one with a turned-in set.
+  const lists = { empty: null, active: null, turnedIn: null };
+  for (const [book_, homework] of listsOf) {
+    if (homework.length === 0) lists.empty ??= book_;
+    else if (homework.some((h) => h.turnedInAt)) lists.turnedIn ??= book_;
+    else lists.active ??= book_;
   }
 
   const book = best?.book ?? null;
@@ -83,6 +122,9 @@ export async function discover(app) {
     inProgressSet,
     finishedSet,
     turnedInSet,
+    emptySet,
+    questionAt,
+    lists,
     noContentsBook,
     noTurnsBook,
   };
@@ -96,6 +138,9 @@ export function scenarios({
   inProgressSet,
   finishedSet,
   turnedInSet,
+  emptySet,
+  questionAt = {},
+  lists = {},
   noContentsBook,
   noTurnsBook,
 }) {
@@ -113,47 +158,71 @@ export function scenarios({
   const hwMenu = click('button', 'Homework actions');
 
   return [
-    { name: 'Home, cold load', url: '/', variant: 'home/books' },
+    { name: 'Home, cold load', url: '/', variant: 'home/library' },
     {
       name: 'Home, empty library, cold load',
       url: '/',
-      variant: 'home/empty',
+      variant: 'home/firstRun',
       skip: 'the fixture library has books; an empty library needs its own data',
     },
     {
       name: 'Settings, cold load',
       url: '/settings',
-      variant: 'settings/key-missing',
+      variant: 'settingsKey/missing',
     },
     {
       name: 'Settings, key saved, cold load',
       url: '/settings',
-      variant: 'settings/key-present',
+      variant: 'settingsKey/saved',
       skip: 'the fixture library holds no key; one would need saving through the API',
     },
-    {
-      name: 'Book, cold load',
-      url: b,
-      variant: 'book/contents',
-      skip: noBook,
-    },
+    { name: 'Book, cold load', url: b, variant: 'rail/contents', skip: noBook },
     {
       name: 'Book without contents, cold load',
       url: noContentsBook && `/books/${noContentsBook.id}`,
-      variant: 'book/no-contents',
+      variant: 'rail/none',
       skip: noContentsBook ? undefined : 'no book lacks a table of contents',
     },
     { name: 'Homework set, cold load', url: hw, skip: noSet },
     ...[
-      ['in-progress', 'in progress', inProgressSet],
-      ['finished', 'finished', finishedSet],
-      ['turned-in', 'turned in', turnedInSet],
+      ['empty', 'no sets', lists.empty],
+      ['active', 'sets, none turned in', lists.active],
+      ['turnedIn', 'a turned-in set', lists.turnedIn],
+    ].map(([id, words, bk]) => ({
+      name: `Homework list, ${words}`,
+      url: bk && `/books/${bk.id}`,
+      steps: [tab('Homework')],
+      variant: `homeworkList/${id}`,
+      skip: bk ? undefined : `no book has ${words}`,
+    })),
+    ...[
+      ['question', 'in progress', inProgressSet],
+      ['finish', 'finished', finishedSet],
+      ['turnedIn', 'turned in', turnedInSet],
+      ['empty', 'with no questions', emptySet],
     ].map(([id, words, h]) => ({
       name: `Homework set, ${words}, cold load`,
       url: h && `/books/${h.bookId}/homework/${h.id}`,
-      variant: `homework-set/${id}`,
+      variant: `homeworkSet/${id}`,
       skip: h ? undefined : `no homework set is ${words}`,
     })),
+    // A question in each state, picked from the Questions menu. A queued or
+    // working one is waiting on work that never comes in the fixture, so its
+    // skeleton or spinner is expected to be on screen at the end.
+    ...['queued', 'working', 'ready', 'unwritten', 'failed'].map((kind) => {
+      const q = questionAt[kind];
+      return {
+        name: `Question, ${kind}`,
+        url: q && `/books/${q.set.bookId}/homework/${q.set.id}`,
+        steps: [
+          click('button', 'Questions'),
+          { css: '[role=menuitem]', nth: q?.index, label: q?.label },
+        ],
+        variant: `question/${kind}`,
+        waits: kind === 'queued' || kind === 'working',
+        skip: q ? undefined : `no question is ${kind}`,
+      };
+    }),
     {
       name: 'Ask, with turns',
       url: askBook && `/books/${askBook.id}`,

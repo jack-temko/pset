@@ -21,6 +21,14 @@ const found = {
   inProgressSet: set('s1'),
   finishedSet: set('s2', { done: 4 }),
   turnedInSet: set('s3', { done: 4, turnedInAt: 'x' }),
+  emptySet: set('s4', { total: 0 }),
+  questionAt: Object.fromEntries(
+    ['queued', 'working', 'ready', 'unwritten', 'failed'].map((k, i) => [
+      k,
+      { set: set('s5'), index: i, label: `5.${i + 1}` },
+    ]),
+  ),
+  lists: { empty: { id: 'b3' }, active: { id: 'b2' }, turnedIn: book },
   noContentsBook: { id: 'b3' },
   noTurnsBook: { id: 'b3' },
 };
@@ -42,7 +50,7 @@ describe('variant coverage', () => {
 
   it('a scenario is skipped, not absent, when the library lacks its variant', () => {
     const none = scenarios({ ...found, finishedSet: null });
-    const sc = none.find((s) => s.variant === 'homework-set/finished');
+    const sc = none.find((s) => s.variant === 'homeworkSet/finish');
     expect(sc.skip).toMatch(/finished/);
   });
 });

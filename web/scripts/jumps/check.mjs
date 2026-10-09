@@ -48,7 +48,9 @@ export function offences(row) {
       `layout shift ${f(a.jump.median)} (limit ${MAX_JUMP}), moved: ${moved.join(', ') || 'unknown'}`,
     );
   }
-  if (a.timeouts > 0) {
+  // A scenario marked `waits` (a question still queued or being written) is
+  // expected to show a skeleton or spinner at the end.
+  if (a.timeouts > 0 && !row.waits) {
     out.push(
       `never settled in ${a.timeouts} of ${a.runs} runs: ${a.waitedOn || 'something'} was still showing at the timeout`,
     );

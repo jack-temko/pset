@@ -84,6 +84,20 @@ describe('timeouts', () => {
   });
 });
 
+describe('scenarios that wait', () => {
+  it('a timeout is not a failure where the scenario waits on purpose', () => {
+    const r = row({
+      waits: true,
+      agg: agg({ timeouts: 2, waitedOn: 'spinner' }),
+    });
+    expect(check(report(r)).failed).toEqual([]);
+  });
+  it('but a shift still is', () => {
+    const r = row({ waits: true, agg: agg({ jump: { median: 0.5 } }) });
+    expect(check(report(r)).failed).toHaveLength(1);
+  });
+});
+
 describe('the allow-list', () => {
   const bad = { agg: agg({ jump: { median: 0.2 } }) };
   it('ignores a row it names, and keeps the reason', () => {
