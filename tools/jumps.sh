@@ -9,7 +9,8 @@
 # (tools/fixturelib) instead of copying one, runs the audit on it, and exits 1
 # if anything jumps (web/scripts/jumps/check.mjs). It touches no library of
 # yours and needs no key. The core profile (the default) measures the
-# hand-written scenarios with --runs 2; FULL=1 adds discovery and --runs 3.
+# hand-written scenarios with --runs 2; FULL=1 adds discovery and --runs 3. Both
+# measure 3 jobs at once (JUMPS_PARALLEL=1 for one at a time).
 #
 # The source library is only read: the database is copied with VACUUM INTO (it
 # may be open in a running PSet), the rest with cp -rL, and the saved API keys
@@ -142,6 +143,7 @@ fi
 args=${ARGS:-}
 if [ -n "$check" ] && [ -z "$args" ]; then
 	if [ -n "${FULL:-}" ]; then args="--runs 3"; else args="--runs 2 --no-discover"; fi
+	args="$args --parallel ${JUMPS_PARALLEL:-3}"
 fi
 # shellcheck disable=SC2086
 (cd "$root/web" && node scripts/jumps/run.mjs --url "http://127.0.0.1:$vp" --out "$run/$stamp" $args)
