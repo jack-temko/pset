@@ -15,7 +15,6 @@ import (
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/events"
-	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/usage"
@@ -112,23 +111,23 @@ func (s *Service) Ask(ctx context.Context, bookID string, q Question) (Turn, err
 	}
 	text := strings.TrimSpace(q.Question)
 	if text == "" {
-		return Turn{}, httpx.Invalid("question", "Ask something.")
+		return Turn{}, emptyQuestion.New().OnField("question")
 	}
 	if len(text) > maxQuestion {
-		return Turn{}, httpx.Invalid("question", "That's too long for one question.")
+		return Turn{}, questionTooLong.New().OnField("question")
 	}
 	cfg, err := s.c.Settings.LLM(ctx)
 	if err != nil {
 		return Turn{}, err
 	}
 	if !cfg.ChatReady() {
-		return Turn{}, httpx.Errorf(httpx.CodeNotConfigured, "%s", llm.NoKey)
+		return Turn{}, llm.KeyMissing.New()
 	}
 	about, aboutText := "", ""
 	if q.About != nil {
 		about, aboutText = strings.TrimSpace(q.About.Label), strings.TrimSpace(q.About.Text)
 		if len(aboutText) > maxAbout {
-			return Turn{}, httpx.Invalid("about", "That selection is too long to ask about. Pick a smaller piece.")
+			return Turn{}, selectionTooLong.New().OnField("about")
 		}
 	}
 	id := uuid.NewString()
@@ -156,7 +155,7 @@ func (s *Service) Ask(ctx context.Context, bookID string, q Question) (Turn, err
 func (s *Service) Stop(ctx context.Context, id string) (Turn, error) {
 	t, err := getTurn(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Turn{}, httpx.NotFound("turn")
+		return Turn{}, turnNotFound.New()
 	}
 	if err != nil {
 		return Turn{}, err

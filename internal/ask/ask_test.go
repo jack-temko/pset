@@ -20,7 +20,7 @@ import (
 
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
@@ -34,7 +34,7 @@ var pages = []string{"Cover", "Contents", "Eigenvalues. An eigenvalue of T is a 
 
 func (library) Book(_ context.Context, id string) (Book, error) {
 	if id != "b1" {
-		return Book{}, httpx.NotFound("book")
+		return Book{}, errs.BookNotFound.New()
 	}
 	return Book{ID: "b1", Title: "Linear Algebra", PageCount: len(pages), Pages: pagenum.Single(2)}, nil
 }
@@ -265,12 +265,12 @@ func TestModelOutageFailsReadablyAndClearEmpties(t *testing.T) {
 	if got.Failure != FailureSetup {
 		t.Fatalf("failure %q, want setup", got.Failure)
 	}
-	var er httpx.Error
+	var er errs.View
 	if code := e.do(t, "POST", "/api/books/b1/turns", Question{Question: "  "}, &er); code != 422 || er.Field != "question" {
 		t.Fatalf("blank: %d", code)
 	}
 	e.cfg.cfg.ChatModel = ""
-	if code := e.do(t, "POST", "/api/books/b1/turns", Question{Question: "Hi"}, &er); code != 422 || er.Code != httpx.CodeNotConfigured {
+	if code := e.do(t, "POST", "/api/books/b1/turns", Question{Question: "Hi"}, &er); code != 422 || er.ID != "key.missing" {
 		t.Fatalf("unconfigured: %d %+v", code, er)
 	}
 	e.do(t, "DELETE", "/api/books/b1/turns", nil, nil)
@@ -335,7 +335,7 @@ func TestOldFailedTurnsGetTheirKind(t *testing.T) {
 
 func TestWhatAChipCarriesIsBoundedAndNotRepeatedInFull(t *testing.T) {
 	e := newEnv(t)
-	var er httpx.Error
+	var er errs.View
 	huge := About{Label: "3.A", Text: strings.Repeat("x", maxAbout+1)}
 	if code := e.do(t, "POST", "/api/books/b1/turns", Question{Question: "Why?", About: &huge}, &er); code != 422 || er.Field != "about" {
 		t.Fatalf("too long: %d %+v", code, er)
