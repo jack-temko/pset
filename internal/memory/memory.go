@@ -8,6 +8,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -16,8 +17,8 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/events"
-	"github.com/jackt/pset/internal/httpx"
 )
 
 // Migrations is the memories table.
@@ -134,9 +135,9 @@ func (s *Service) Save(ctx context.Context, bookID string, in Save) (Memory, Out
 	text := strings.Join(strings.Fields(in.Text), " ")
 	switch {
 	case text == "":
-		return Memory{}, "", httpx.Invalid("text", "Write what to remember.")
+		return Memory{}, "", textEmpty.New().OnField("text")
 	case utf8.RuneCountInString(text) > MaxText:
-		return Memory{}, "", httpx.Invalid("text", "Keep it to a sentence or two (%d characters at most).", MaxText)
+		return Memory{}, "", textTooLong.New("max", strconv.Itoa(MaxText)).OnField("text")
 	}
 	norm := normalize(text)
 
@@ -178,7 +179,7 @@ func (s *Service) Save(ctx context.Context, bookID string, in Save) (Memory, Out
 	if _, err := s.db.ExecContext(ctx, `INSERT INTO memories (id, book_id, kind, text, norm, source, created_at, updated_at)
 		VALUES (?, ?, 'preference', ?, ?, ?, ?, ?)`, id, bookID, text, norm, in.Source, now, now); err != nil {
 		// The one constraint an insert can break is the book.
-		return Memory{}, "", httpx.NotFound("book")
+		return Memory{}, "", errs.BookNotFound.New()
 	}
 	m, err := s.get(ctx, id)
 	if err == nil {
@@ -191,7 +192,7 @@ func (s *Service) Save(ctx context.Context, bookID string, in Save) (Memory, Out
 func (s *Service) Remove(ctx context.Context, id string) (Memory, error) {
 	m, err := s.get(ctx, id)
 	if errors.Is(err, errNotFound) {
-		return Memory{}, httpx.NotFound("memory")
+		return Memory{}, memoryNotFound.New()
 	}
 	if err != nil {
 		return Memory{}, err

@@ -71,3 +71,14 @@ var (
 		Scope:  ScopeScreen,
 	})
 )
+
+// BookNotFound is a book that isn't on the shelf. It is here because the
+// library, the tutor, memory and time all answer it, and none of them is
+// below the others.
+var BookNotFound = Define(Entry{
+	ID:     "book.not_found",
+	What:   "That book isn't on your shelf.",
+	Why:    "It was removed, or the link is out of date.",
+	Fix:    "Go back to your shelf and open it from there.",
+	Status: http.StatusNotFound,
+})

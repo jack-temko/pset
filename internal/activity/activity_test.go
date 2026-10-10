@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/errs"
+
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/testx"
@@ -190,8 +192,9 @@ func TestTimeIsSaidByQuestion(t *testing.T) {
 func TestOnlyHomeworkTimeIsForAQuestion(t *testing.T) {
 	s := New(open(t, Migrations()), hw{})
 	s.now = func() time.Time { return monday.Add(12 * time.Hour) }
-	if err := s.Save(context.Background(), Stretch{"r", "a", KindReading, at(9, 0), at(9, 30), "q1"}); err == nil {
-		t.Fatal("reading time was taken for a question")
+	err := s.Save(context.Background(), Stretch{"r", "a", KindReading, at(9, 0), at(9, 30), "q1"})
+	if v := errs.Resolve(err); v.ID != "activity.not_homework" || v.Field != "questionId" {
+		t.Fatalf("reading time was taken for a question: %+v", v)
 	}
 	if err := s.Save(context.Background(), Stretch{"h", "a", KindHomework, at(9, 0), at(9, 30), string(make([]byte, 65))}); err == nil {
 		t.Fatal("a 65-character question id was taken")

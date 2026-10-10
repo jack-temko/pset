@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/httpx"
 )
 
@@ -129,21 +131,21 @@ func (s *Service) Save(ctx context.Context, st Stretch) error {
 	switch st.Kind {
 	case KindReading, KindHomework, KindAsking:
 	default:
-		return httpx.Invalid("kind", "There's no activity called %q.", st.Kind)
+		return unknownKind.New("kind", strconv.Quote(string(st.Kind))).OnField("kind")
 	}
 	if st.ID == "" || len(st.ID) > 64 {
-		return httpx.Invalid("id", "Name the stretch with an id of up to 64 characters.")
+		return badID.New().OnField("id")
 	}
 	if len(st.QuestionID) > 64 {
-		return httpx.Invalid("questionId", "A question's id is up to 64 characters.")
+		return badQuestionID.New().OnField("questionId")
 	}
 	if st.QuestionID != "" && st.Kind != KindHomework {
-		return httpx.Invalid("questionId", "Only homework time is for a question.")
+		return notHomework.New().OnField("questionId")
 	}
 	from, err1 := time.Parse(time.RFC3339Nano, st.Started)
 	to, err2 := time.Parse(time.RFC3339Nano, st.Ended)
 	if err1 != nil || err2 != nil {
-		return httpx.Invalid("started", "Say when the stretch started and ended, as RFC 3339 times.")
+		return badTimes.New().OnField("started")
 	}
 	to = minTime(to.UTC(), s.now().UTC().Add(maxAhead))
 	from = maxTime(minTime(from.UTC(), to), to.Add(-maxStretch))
@@ -152,7 +154,7 @@ func (s *Service) Save(ctx context.Context, st Stretch) error {
 		st.ID, st.BookID, st.Kind, db.At(from), db.At(to), st.QuestionID)
 	if err != nil {
 		// A book that no longer exists: nothing to record.
-		return httpx.NotFound("book")
+		return errs.BookNotFound.New()
 	}
 	return nil
 }
@@ -312,7 +314,7 @@ func (s *Service) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/week", httpx.Reply(func(r *http.Request) (Week, error) {
 		since, err := time.Parse(time.RFC3339, r.URL.Query().Get("since"))
 		if err != nil {
-			return Week{}, httpx.Invalid("since", "Say when the week starts, as an RFC 3339 time.")
+			return Week{}, badSince.New().OnField("since")
 		}
 		return s.Week(r.Context(), since)
 	}))
