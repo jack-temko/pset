@@ -17,7 +17,9 @@
 package errs
 
 import (
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -36,6 +38,8 @@ type Entry struct {
 	Status int
 	// Scope is Inline when empty.
 	Scope Scope
+	// Owner is the package that declared the entry, filled in by Define.
+	Owner string
 }
 
 var idPattern = regexp.MustCompile(`^[a-z]+(\.[a-z_]+)+$`)
@@ -56,6 +60,9 @@ func Define(e Entry) *Entry {
 	}
 	if e.Scope == "" {
 		e.Scope = ScopeInline
+	}
+	if _, file, _, ok := runtime.Caller(1); ok {
+		e.Owner = filepath.Base(filepath.Dir(file))
 	}
 	mu.Lock()
 	defer mu.Unlock()
