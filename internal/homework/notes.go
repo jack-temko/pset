@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/jackt/pset/internal/db"
-	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/jobs"
 )
 
@@ -80,12 +80,12 @@ func cleanNotes(lines []string) ([]string, error) {
 			continue
 		}
 		if len([]rune(l)) > maxNote {
-			return nil, httpx.Invalid("notes", "Keep each note under %d characters.", maxNote)
+			return nil, noteTooLong.New("max", strconv.Itoa(maxNote)).OnField("notes")
 		}
 		out = append(out, l)
 	}
 	if len(out) > maxNotes {
-		return nil, httpx.Invalid("notes", "Keep it to %d notes.", maxNotes)
+		return nil, tooManyNotes.New("max", strconv.Itoa(maxNotes)).OnField("notes")
 	}
 	return out, nil
 }

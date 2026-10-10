@@ -4,7 +4,7 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-71 entries.
+118 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
@@ -23,6 +23,53 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `errors.clear_failed` | Couldn't clear the list of errors. | PSet's database didn't answer. | Try again. If it keeps happening, check the database in Settings. | `retry` | inline | errlog |
 | `errors.read_failed` | Couldn't read the list of errors. | PSet's database didn't answer. | Try again. If it keeps happening, check the database in Settings. | `retry` | inline | errlog |
 | `events.no_streaming` | PSet can't keep this page up to date. | The connection between the page and PSet can't carry live updates. | Reload the page. If it keeps happening, report it with the details. | `reload` | inline | events |
+| `homework.assignment_not_found` | That assignment isn't there. | It was dismissed, or the page is out of date. | Add the assignment again. |  | inline | homework |
+| `homework.bad_due_date` | That isn't a date. |  |  |  | field | homework |
+| `homework.bad_position` | Position {to} is outside the set (1 to {n}). |  |  |  | field | homework |
+| `homework.bad_stage` | There's no stage called {stage}. |  |  |  | field | homework |
+| `homework.bad_url` | That isn't a web page's address. |  |  |  | field | homework |
+| `homework.box_kind_mixed` | A box is either the problem's words or a figure. |  |  |  | field | homework |
+| `homework.box_no_text` | Box the problem's words too, not only its figure. |  |  |  | field | homework |
+| `homework.box_off_book` | A box is on a page the book doesn't have. |  |  |  | field | homework |
+| `homework.box_off_page` | A box runs off its page. |  |  |  | field | homework |
+| `homework.draft_too_long` | One of these is too long for a single question. |  |  |  | field | homework |
+| `homework.empty_worksheet` | There is nothing to print yet. | A worksheet needs at least one question. | Add a question before printing the worksheet. |  | inline | homework |
+| `homework.figure_busy` | Its figure is still being read. |  |  |  | field | homework |
+| `homework.figure_not_found` | That figure isn't there. | The question has no figure, or it was removed. | Reload the page to see the question as it is now. | `reload` | inline | homework |
+| `homework.file_kind` | Send a PDF, a photo, or a text file. |  |  |  | field | homework |
+| `homework.file_too_big` | That file is too big for an assignment. |  |  |  | field | homework |
+| `homework.guide_exists` | This question already has a guide, or is being written. | A guide was started for it a moment ago, so the page is out of date. | Reload the page to see the guide. | `reload` | inline | homework |
+| `homework.no_boxes` | Draw a box around the problem first. |  |  |  | field | homework |
+| `homework.no_drafts` | Write at least one question. |  |  |  | field | homework |
+| `homework.no_figure` | This question has no figure to read. |  |  |  | field | homework |
+| `homework.no_groups` | Pick at least one due date to add. |  |  |  | field | homework |
+| `homework.no_homework_found` | Didn't find any homework in it. | The model read it and found no problems to do. | If the homework is there, paste just that part. |  | inline | homework |
+| `homework.no_page_for_question` | This question isn't in the book, so it has no page. |  |  |  | field | homework |
+| `homework.no_source` | Give a file, a web page's address, or the assignment's text. |  |  |  | field | homework |
+| `homework.not_failed` | Only a question that failed can be tried again. | This question isn't in a failed state, so the page is out of date. | Reload the page to see where the question stands. | `reload` | inline | homework |
+| `homework.note_too_long` | Keep each note under {max} characters. |  |  |  | field | homework |
+| `homework.nothing_to_add` | There's nothing left to add or change in those. |  |  |  | field | homework |
+| `homework.page_empty` | That page has no text to read. |  |  |  | field | homework |
+| `homework.page_outside` | The book doesn't have that page. |  |  |  | field | homework |
+| `homework.page_refused` | That page answered {status}. A page behind a login can be pasted or photographed instead. |  |  |  | field | homework |
+| `homework.page_unreachable` | Couldn't reach that page. |  |  |  | field | homework |
+| `homework.page_unreadable` | Couldn't read that page. |  |  |  | field | homework |
+| `homework.pdf_unreadable` | That PDF couldn't be read. |  |  |  | field | homework |
+| `homework.question_not_found` | That question isn't there. | It was removed, or the page is out of date. | Go back to the set's list of questions. |  | inline | homework |
+| `homework.read_busy` | That assignment is already read, or being read. | It isn't in a failed state, so there is nothing to try again. | Reload the page to see where it stands. | `reload` | inline | homework |
+| `homework.read_failed` | Couldn't read the assignment. | Something went wrong while PSet was reading it. | Try again, or paste just the part with the problems. | `retry` | inline | homework |
+| `homework.reading_empty` | Write at least one line. |  |  |  | field | homework |
+| `homework.reading_line_too_long` | Keep each line under {max} characters. |  |  |  | field | homework |
+| `homework.reading_too_long` | Keep it to {max} lines. |  |  |  | field | homework |
+| `homework.reply_unreadable` | Couldn't make out the assignment's homework. | The model's answer wasn't in a form PSet could read. | Try again, or paste just the part with the problems. | `retry` | inline | homework |
+| `homework.set_not_found` | That homework set isn't there. | It was removed, or the page is out of date. | Go back to the book's homework list. |  | inline | homework |
+| `homework.text_too_long` | That's too long for a single question. |  |  |  | field | homework |
+| `homework.title_empty` | Give it a title. |  |  |  | field | homework |
+| `homework.title_too_long` | Keep the title under {max} characters. |  |  |  | field | homework |
+| `homework.too_many_boxes` | That's more than {max} boxes for one problem. |  |  |  | field | homework |
+| `homework.too_many_drafts` | That's more than {max} questions at once. Add them in smaller batches. |  |  |  | field | homework |
+| `homework.too_many_lines` | That's more than {max} lines at once. |  |  |  | field | homework |
+| `homework.too_many_notes` | Keep it to {max} notes. |  |  |  | field | homework |
 | `internal.unexpected` | Something went wrong inside PSet. | PSet hit a problem it has no name for. | Try again. If it keeps happening, copy the details and report it. | `retry` | inline | errs |
 | `key.missing` | There's no OpenRouter key yet. | PSet needs a key to read pages and write answers. | Add your key in Settings, under Connections. | `open_settings` | inline | llm |
 | `key.out_of_credit` | Your OpenRouter account is out of credit. | Your OpenRouter account is out of credit, so PSet can't use a model. | Add credit on OpenRouter, then try again. | `retry` | inline | llm |

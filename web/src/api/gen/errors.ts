@@ -17,6 +17,53 @@ export type ErrorId =
   | "errors.clear_failed"
   | "errors.read_failed"
   | "events.no_streaming"
+  | "homework.assignment_not_found"
+  | "homework.bad_due_date"
+  | "homework.bad_position"
+  | "homework.bad_stage"
+  | "homework.bad_url"
+  | "homework.box_kind_mixed"
+  | "homework.box_no_text"
+  | "homework.box_off_book"
+  | "homework.box_off_page"
+  | "homework.draft_too_long"
+  | "homework.empty_worksheet"
+  | "homework.figure_busy"
+  | "homework.figure_not_found"
+  | "homework.file_kind"
+  | "homework.file_too_big"
+  | "homework.guide_exists"
+  | "homework.no_boxes"
+  | "homework.no_drafts"
+  | "homework.no_figure"
+  | "homework.no_groups"
+  | "homework.no_homework_found"
+  | "homework.no_page_for_question"
+  | "homework.no_source"
+  | "homework.not_failed"
+  | "homework.note_too_long"
+  | "homework.nothing_to_add"
+  | "homework.page_empty"
+  | "homework.page_outside"
+  | "homework.page_refused"
+  | "homework.page_unreachable"
+  | "homework.page_unreadable"
+  | "homework.pdf_unreadable"
+  | "homework.question_not_found"
+  | "homework.read_busy"
+  | "homework.read_failed"
+  | "homework.reading_empty"
+  | "homework.reading_line_too_long"
+  | "homework.reading_too_long"
+  | "homework.reply_unreadable"
+  | "homework.set_not_found"
+  | "homework.text_too_long"
+  | "homework.title_empty"
+  | "homework.title_too_long"
+  | "homework.too_many_boxes"
+  | "homework.too_many_drafts"
+  | "homework.too_many_lines"
+  | "homework.too_many_notes"
   | "internal.unexpected"
   | "key.missing"
   | "key.out_of_credit"
@@ -193,6 +240,316 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 500,
     owner: "events",
   },
+  "homework.assignment_not_found": {
+    what: "That assignment isn't there.",
+    why: "It was dismissed, or the page is out of date.",
+    fix: "Add the assignment again.",
+    scope: "inline",
+    status: 404,
+    owner: "homework",
+  },
+  "homework.bad_due_date": {
+    what: "That isn't a date.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.bad_position": {
+    what: "Position {to} is outside the set (1 to {n}).",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.bad_stage": {
+    what: "There's no stage called {stage}.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.bad_url": {
+    what: "That isn't a web page's address.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.box_kind_mixed": {
+    what: "A box is either the problem's words or a figure.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.box_no_text": {
+    what: "Box the problem's words too, not only its figure.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.box_off_book": {
+    what: "A box is on a page the book doesn't have.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.box_off_page": {
+    what: "A box runs off its page.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.draft_too_long": {
+    what: "One of these is too long for a single question.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.empty_worksheet": {
+    what: "There is nothing to print yet.",
+    why: "A worksheet needs at least one question.",
+    fix: "Add a question before printing the worksheet.",
+    scope: "inline",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.figure_busy": {
+    what: "Its figure is still being read.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.figure_not_found": {
+    what: "That figure isn't there.",
+    why: "The question has no figure, or it was removed.",
+    fix: "Reload the page to see the question as it is now.",
+    action: "reload",
+    scope: "inline",
+    status: 404,
+    owner: "homework",
+  },
+  "homework.file_kind": {
+    what: "Send a PDF, a photo, or a text file.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.file_too_big": {
+    what: "That file is too big for an assignment.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.guide_exists": {
+    what: "This question already has a guide, or is being written.",
+    why: "A guide was started for it a moment ago, so the page is out of date.",
+    fix: "Reload the page to see the guide.",
+    action: "reload",
+    scope: "inline",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.no_boxes": {
+    what: "Draw a box around the problem first.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.no_drafts": {
+    what: "Write at least one question.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.no_figure": {
+    what: "This question has no figure to read.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.no_groups": {
+    what: "Pick at least one due date to add.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.no_homework_found": {
+    what: "Didn't find any homework in it.",
+    why: "The model read it and found no problems to do.",
+    fix: "If the homework is there, paste just that part.",
+    scope: "inline",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.no_page_for_question": {
+    what: "This question isn't in the book, so it has no page.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.no_source": {
+    what: "Give a file, a web page's address, or the assignment's text.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.not_failed": {
+    what: "Only a question that failed can be tried again.",
+    why: "This question isn't in a failed state, so the page is out of date.",
+    fix: "Reload the page to see where the question stands.",
+    action: "reload",
+    scope: "inline",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.note_too_long": {
+    what: "Keep each note under {max} characters.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.nothing_to_add": {
+    what: "There's nothing left to add or change in those.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.page_empty": {
+    what: "That page has no text to read.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.page_outside": {
+    what: "The book doesn't have that page.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.page_refused": {
+    what: "That page answered {status}. A page behind a login can be pasted or photographed instead.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.page_unreachable": {
+    what: "Couldn't reach that page.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.page_unreadable": {
+    what: "Couldn't read that page.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.pdf_unreadable": {
+    what: "That PDF couldn't be read.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.question_not_found": {
+    what: "That question isn't there.",
+    why: "It was removed, or the page is out of date.",
+    fix: "Go back to the set's list of questions.",
+    scope: "inline",
+    status: 404,
+    owner: "homework",
+  },
+  "homework.read_busy": {
+    what: "That assignment is already read, or being read.",
+    why: "It isn't in a failed state, so there is nothing to try again.",
+    fix: "Reload the page to see where it stands.",
+    action: "reload",
+    scope: "inline",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.read_failed": {
+    what: "Couldn't read the assignment.",
+    why: "Something went wrong while PSet was reading it.",
+    fix: "Try again, or paste just the part with the problems.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.reading_empty": {
+    what: "Write at least one line.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.reading_line_too_long": {
+    what: "Keep each line under {max} characters.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.reading_too_long": {
+    what: "Keep it to {max} lines.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.reply_unreadable": {
+    what: "Couldn't make out the assignment's homework.",
+    why: "The model's answer wasn't in a form PSet could read.",
+    fix: "Try again, or paste just the part with the problems.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.set_not_found": {
+    what: "That homework set isn't there.",
+    why: "It was removed, or the page is out of date.",
+    fix: "Go back to the book's homework list.",
+    scope: "inline",
+    status: 404,
+    owner: "homework",
+  },
+  "homework.text_too_long": {
+    what: "That's too long for a single question.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.title_empty": {
+    what: "Give it a title.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.title_too_long": {
+    what: "Keep the title under {max} characters.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.too_many_boxes": {
+    what: "That's more than {max} boxes for one problem.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.too_many_drafts": {
+    what: "That's more than {max} questions at once. Add them in smaller batches.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.too_many_lines": {
+    what: "That's more than {max} lines at once.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.too_many_notes": {
+    what: "Keep it to {max} notes.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
   "internal.unexpected": {
     what: "Something went wrong inside PSet.",
     why: "PSet hit a problem it has no name for.",
@@ -262,7 +619,7 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     fix: "Reload the page to see where the book stands.",
     action: "reload",
     scope: "inline",
-    status: 409,
+    status: 422,
     owner: "library",
   },
   "library.not_pdf": {

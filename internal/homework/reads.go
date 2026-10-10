@@ -7,7 +7,6 @@ import (
 	"errors"
 
 	"github.com/jackt/pset/internal/cleanup"
-	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/probnum"
 	"github.com/jackt/pset/internal/usage"
 )
@@ -81,7 +80,7 @@ func (s *Service) Reads(ctx context.Context, bookID string) ([]AssignmentRead, e
 func (s *Service) Read(ctx context.Context, id string) (AssignmentRead, error) {
 	r, err := scanRead(s.c.DB.QueryRowContext(ctx, `SELECT `+readColumns+` FROM assignment_reads WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
-		return r, httpx.NotFound("assignment")
+		return r, assignmentNotFound.New()
 	} else if err != nil {
 		return r, err
 	}
@@ -100,7 +99,7 @@ func (s *Service) DismissRead(ctx context.Context, id string) error {
 	var bookID string
 	err := s.c.DB.QueryRowContext(ctx, `SELECT book_id FROM assignment_reads WHERE id = ?`, id).Scan(&bookID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return httpx.NotFound("assignment")
+		return assignmentNotFound.New()
 	} else if err != nil {
 		return err
 	}
@@ -127,8 +126,7 @@ func (s *Service) publishRead(ctx context.Context, id string) (AssignmentRead, e
 }
 
 func isNotFound(err error) bool {
-	var he *httpx.Error
-	return errors.As(err, &he) && he.Code == httpx.CodeNotFound
+	return errors.Is(err, assignmentNotFound)
 }
 
 // mark compares a read's dates with the sets they'd update: a set made

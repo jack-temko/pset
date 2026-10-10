@@ -119,7 +119,7 @@ func (s *Service) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/questions/{id}/figures/{n}", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
 		n, err := strconv.Atoi(r.PathValue("n"))
 		if err != nil {
-			return httpx.NotFound("figure")
+			return figureNotFound.New()
 		}
 		data, err := s.Figure(r.Context(), r.PathValue("id"), n)
 		if err != nil {
@@ -138,16 +138,16 @@ func (s *Service) Routes(mux *http.ServeMux) {
 func assignmentUpload(r *http.Request) (*AssignmentFile, string, error) {
 	mr, err := r.MultipartReader()
 	if err != nil {
-		return nil, "", httpx.Invalid("file", "Send the file as a multipart upload.")
+		return nil, "", httpx.NotMultipart.Wrap(err).OnField("file")
 	}
 	setID := ""
 	for {
 		part, err := mr.NextPart()
 		if errors.Is(err, io.EOF) {
-			return nil, "", httpx.Invalid("file", "No file came with the upload.")
+			return nil, "", httpx.NoFile.New().OnField("file")
 		}
 		if err != nil {
-			return nil, "", httpx.Invalid("file", "The upload was cut off.")
+			return nil, "", httpx.UploadCut.Wrap(err).OnField("file")
 		}
 		switch part.FormName() {
 		case "setId":
@@ -156,7 +156,7 @@ func assignmentUpload(r *http.Request) (*AssignmentFile, string, error) {
 		case "file":
 			data, err := io.ReadAll(io.LimitReader(part, maxAssignmentBytes+1))
 			if err != nil {
-				return nil, "", httpx.Invalid("file", "The upload was cut off.")
+				return nil, "", httpx.UploadCut.Wrap(err).OnField("file")
 			}
 			return &AssignmentFile{Name: part.FileName(), Data: data}, setID, nil
 		}

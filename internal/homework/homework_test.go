@@ -28,7 +28,7 @@ import (
 	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
@@ -51,7 +51,7 @@ var pages = []string{
 
 func (library) Book(_ context.Context, id string) (Book, error) {
 	if id != "b1" {
-		return Book{}, httpx.NotFound("book")
+		return Book{}, errs.BookNotFound.New()
 	}
 	return Book{ID: "b1", Title: "Circuits", PageCount: len(pages), Pages: pagenum.Single(2),
 		Parts: []probnum.Part{{Number: "3", Title: "3 Methods of Analysis", Start: 2, End: 4}}}, nil
@@ -268,8 +268,8 @@ func (e *env) wait(t *testing.T, id string, st State) Question {
 
 func TestSetsCreateEditTurnInAndDue(t *testing.T) {
 	e := newEnv(t)
-	var er httpx.Error
-	if code := e.do(t, "POST", "/api/books/b1/homework", Input{Title: "  "}, &er); code != 422 || er.Field != "title" {
+	var er errs.View
+	if code := e.do(t, "POST", "/api/books/b1/homework", Input{Title: "  "}, &er); code != 422 || er.Field != "title" || er.ID != "homework.title_empty" {
 		t.Fatalf("blank title: %d %+v", code, er)
 	}
 	if code := e.do(t, "POST", "/api/books/b1/homework", Input{Title: "x", DueDate: "Friday"}, &er); code != 422 || er.Field != "dueDate" {
@@ -464,7 +464,7 @@ func TestNotFoundThenPinnedPageThenPastedText(t *testing.T) {
 	if q.Failure != FailureNotFound || !strings.Contains(q.Reason, "problem 3.99") {
 		t.Fatalf("reason %q", q.Reason)
 	}
-	var er httpx.Error
+	var er errs.View
 	bad := 99
 	if code := e.do(t, "POST", "/api/questions/"+q.ID+"/retry", Retry{Page: &bad}, &er); code != 422 || er.Field != "page" {
 		t.Fatalf("page out of range: %d %+v", code, er)
@@ -529,7 +529,7 @@ func TestRevealDoneReorderRemove(t *testing.T) {
 	if !got.Done || len(got.Revealed) != 1 {
 		t.Fatalf("%+v", got)
 	}
-	var er httpx.Error
+	var er errs.View
 	nope := "answer"
 	if code := e.do(t, "PATCH", "/api/questions/"+qs[1].ID, QuestionPatch{Reveal: &nope}, &er); code != 422 {
 		t.Fatalf("bad stage %d", code)

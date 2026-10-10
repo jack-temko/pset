@@ -7,12 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
 
 	"github.com/jackt/pset/internal/db"
-	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pdf"
 )
@@ -29,29 +29,29 @@ const maxBoxes = 12
 // words, every one inside the book and the page.
 func checkBoxes(boxes []Box, pageCount int) error {
 	if len(boxes) == 0 {
-		return httpx.Invalid("boxes", "Draw a box around the problem first.")
+		return noBoxes.New().OnField("boxes")
 	}
 	if len(boxes) > maxBoxes {
-		return httpx.Invalid("boxes", "That's more than %d boxes for one problem.", maxBoxes)
+		return tooManyBoxes.New("max", strconv.Itoa(maxBoxes)).OnField("boxes")
 	}
 	words := false
 	for _, b := range boxes {
 		if b.Page < 1 || b.Page > pageCount {
-			return httpx.Invalid("boxes", "A box is on a page the book doesn't have.")
+			return boxOffBook.New().OnField("boxes")
 		}
 		if !(pdf.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}).Valid() {
-			return httpx.Invalid("boxes", "A box runs off its page.")
+			return boxOffPage.New().OnField("boxes")
 		}
 		switch b.Kind {
 		case BoxKindText:
 			words = true
 		case BoxKindFigure:
 		default:
-			return httpx.Invalid("boxes", "A box is either the problem's words or a figure.")
+			return boxKindMixed.New().OnField("boxes")
 		}
 	}
 	if !words {
-		return httpx.Invalid("boxes", "Box the problem's words too, not only its figure.")
+		return boxNoText.New().OnField("boxes")
 	}
 	return nil
 }
@@ -72,7 +72,7 @@ func firstText(boxes []Box) Box {
 func (s *Service) AddBoxed(ctx context.Context, homeworkID string, boxes []Box) (Question, error) {
 	h, err := getSummary(ctx, s.c.DB, homeworkID)
 	if errors.Is(err, errNotFound) {
-		return Question{}, httpx.NotFound("homework set")
+		return Question{}, setNotFound.New()
 	} else if err != nil {
 		return Question{}, err
 	}
@@ -120,7 +120,7 @@ func (s *Service) AddBoxed(ctx context.Context, homeworkID string, boxes []Box) 
 func (s *Service) PointOut(ctx context.Context, id string, boxes []Box) (Question, error) {
 	q, err := getQuestion(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Question{}, httpx.NotFound("question")
+		return Question{}, questionNotFound.New()
 	}
 	if err != nil {
 		return Question{}, err

@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/cleanup"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
 	"github.com/jackt/pset/internal/probnum"
@@ -271,11 +271,11 @@ func TestReadingAnAssignmentFromAWebPage(t *testing.T) {
 	if code := e.do(t, "POST", "/api/assignment-reads/"+bad.ID+"/retry", nil, nil); code != 422 {
 		t.Fatalf("retrying a ready read %d", code)
 	}
-	var er httpx.Error
+	var er errs.View
 	if code := e.do(t, "POST", "/api/books/b1/assignments/read", AssignmentText{URL: "file:///etc/passwd"}, &er); code != 422 || er.Field != "url" {
 		t.Fatalf("file URL: %d %+v", code, er)
 	}
-	if code := e.do(t, "POST", "/api/books/b1/assignments/read", AssignmentText{}, &er); code != 422 || er.Field != "source" {
+	if code := e.do(t, "POST", "/api/books/b1/assignments/read", AssignmentText{}, &er); code != 422 || er.Field != "source" || er.ID != "homework.no_source" {
 		t.Fatalf("nothing given: %d %+v", code, er)
 	}
 	if m.asked != 2 {
@@ -377,7 +377,7 @@ func TestImportingAnAssignmentMakesItsSets(t *testing.T) {
 	defer page.Close()
 	first := e.read(t, AssignmentText{URL: page.URL})
 
-	var er httpx.Error
+	var er errs.View
 	if code := e.do(t, "POST", "/api/books/b1/assignments", AssignmentImport{Source: page.URL}, &er); code != 422 || er.Field != "groups" {
 		t.Fatalf("nothing kept: %d %+v", code, er)
 	}

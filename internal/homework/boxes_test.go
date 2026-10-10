@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
 )
@@ -53,7 +53,7 @@ func TestShowingWhereAFailedFindIs(t *testing.T) {
 	e := newEnv(t)
 	h := e.newSet(t)
 	failed := e.wait(t, e.add(t, h.ID, Draft{Text: "3.99", InBook: true})[0].ID, StateFailed)
-	var er httpx.Error
+	var er errs.View
 	if code := e.do(t, "POST", "/api/questions/"+failed.ID+"/boxes", Boxes{Boxes: []Box{{Page: 3, X: 0.1, Y: 0.1, W: 0.5, H: 0.2, Kind: BoxKindFigure}}}, &er); code != 422 || er.Field != "boxes" {
 		t.Fatalf("a figure alone: %d %+v", code, er)
 	}

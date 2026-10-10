@@ -51,7 +51,6 @@ var (
 		Why:    "This book isn't in a failed state, so the page is out of date.",
 		Fix:    "Reload the page to see where the book stands.",
 		Action: errs.ActionReload,
-		Status: http.StatusConflict,
 	})
 	runsEmpty = errs.Define(errs.Entry{
 		ID:    "library.runs_empty",

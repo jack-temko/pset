@@ -80,7 +80,7 @@ func TestChangingTheCover(t *testing.T) {
 
 	var er errs.View
 	bad := Cover("plaid")
-	if code := e.do(t, "PATCH", "/api/books/"+id, BookPatch{Cover: &bad}, &er); code != 422 || er.Field != "cover" {
+	if code := e.do(t, "PATCH", "/api/books/"+id, BookPatch{Cover: &bad}, &er); code != 422 || er.Field != "cover" || er.ID != "library.bad_cover" {
 		t.Fatalf("plaid: %d %+v", code, er)
 	}
 	rose := CoverRose

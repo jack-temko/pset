@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
 )
@@ -129,7 +129,7 @@ func TestACorrectedReadingWritesTheGuideAgain(t *testing.T) {
 	id := e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID
 	e.wait(t, id, StateReady)
 
-	var er httpx.Error
+	var er errs.View
 	if code := e.do(t, "PATCH", "/api/questions/"+id, QuestionPatch{Reading: &[]string{" ", ""}}, &er); code != 422 || er.Field != "reading" {
 		t.Fatalf("blank reading: %d %+v", code, er)
 	}
@@ -177,7 +177,7 @@ func TestReadingAgainRedoesTheReadingAndTheGuide(t *testing.T) {
 		t.Fatalf("after reading again: %+v, %d guides", q, len(guideRequests(e)))
 	}
 
-	var er httpx.Error
+	var er errs.View
 	typed := e.wait(t, e.add(t, h.ID, Draft{Text: "Find the voltage across a 2 Ω resistor carrying 3 A."})[0].ID, StateReady)
 	if code := e.do(t, "PATCH", "/api/questions/"+typed.ID, QuestionPatch{Reread: true}, &er); code != 422 {
 		t.Fatalf("reread a question with no figure: %d", code)

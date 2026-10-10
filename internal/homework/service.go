@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,7 +22,6 @@ import (
 	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/events"
-	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/usage"
@@ -206,10 +206,10 @@ func (s *Service) Create(ctx context.Context, bookID string, in Input) (Summary,
 func cleanTitle(t string) (string, error) {
 	t = strings.Join(strings.Fields(t), " ")
 	if t == "" {
-		return "", httpx.Invalid("title", "Give it a title.")
+		return "", titleEmpty.New().OnField("title")
 	}
 	if len([]rune(t)) > maxTitle {
-		return "", httpx.Invalid("title", "Keep the title under %d characters.", maxTitle)
+		return "", titleTooLong.New("max", strconv.Itoa(maxTitle)).OnField("title")
 	}
 	return t, nil
 }
@@ -220,7 +220,7 @@ func cleanDate(d string) (string, error) {
 		return "", nil
 	}
 	if _, err := time.Parse("2006-01-02", d); err != nil {
-		return "", httpx.Invalid("dueDate", "That isn't a date.")
+		return "", badDueDate.New().OnField("dueDate")
 	}
 	return d, nil
 }
@@ -229,7 +229,7 @@ func cleanDate(d string) (string, error) {
 func (s *Service) Get(ctx context.Context, id string) (Detail, error) {
 	h, err := getSummary(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Detail{}, httpx.NotFound("homework set")
+		return Detail{}, setNotFound.New()
 	}
 	if err != nil {
 		return Detail{}, err
@@ -299,7 +299,7 @@ func (s *Service) Update(ctx context.Context, id string, p Patch) (Summary, erro
 	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		h, err := getSummary(ctx, tx, id)
 		if errors.Is(err, errNotFound) {
-			return httpx.NotFound("homework set")
+			return setNotFound.New()
 		}
 		if err != nil {
 			return err
@@ -337,7 +337,7 @@ func (s *Service) Update(ctx context.Context, id string, p Patch) (Summary, erro
 func (s *Service) Delete(ctx context.Context, id string) error {
 	h, err := getSummary(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return httpx.NotFound("homework set")
+		return setNotFound.New()
 	}
 	if err != nil {
 		return err
@@ -385,7 +385,7 @@ func questionIDs(qs []Question) []string {
 func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([]Question, error) {
 	h, err := getSummary(ctx, s.c.DB, homeworkID)
 	if errors.Is(err, errNotFound) {
-		return nil, httpx.NotFound("homework set")
+		return nil, setNotFound.New()
 	} else if err != nil {
 		return nil, err
 	}
@@ -400,15 +400,15 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 			continue
 		}
 		if len(d.Text) > maxDraftText {
-			return nil, httpx.Invalid("drafts", "One of these is too long for a single question.")
+			return nil, draftTooLong.New().OnField("drafts")
 		}
 		keep = append(keep, splitDraft(d, book.Problems)...)
 	}
 	if len(keep) == 0 {
-		return nil, httpx.Invalid("drafts", "Write at least one question.")
+		return nil, noDrafts.New().OnField("drafts")
 	}
 	if len(keep) > maxDrafts {
-		return nil, httpx.Invalid("drafts", "That's more than %d questions at once. Add them in smaller batches.", maxDrafts)
+		return nil, tooManyDrafts.New("max", strconv.Itoa(maxDrafts)).OnField("drafts")
 	}
 	// Each question is read back inside the transaction that made it, so
 	// the answer is the questions as added, not whatever a worker has made
@@ -522,7 +522,7 @@ func labelFromText(text string) string {
 func (s *Service) UpdateQuestion(ctx context.Context, id string, p QuestionPatch) (Question, error) {
 	q, err := getQuestion(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Question{}, httpx.NotFound("question")
+		return Question{}, questionNotFound.New()
 	}
 	if err != nil {
 		return Question{}, err
@@ -537,7 +537,7 @@ func (s *Service) UpdateQuestion(ctx context.Context, id string, p QuestionPatch
 		if p.Reveal != nil {
 			stage := *p.Reveal
 			if stage != "hint" && stage != "walkthrough" && stage != "answers" {
-				return httpx.Invalid("reveal", "There's no stage called %q.", stage)
+				return badStage.New("stage", strconv.Quote(string(stage))).OnField("reveal")
 			}
 			if !slices.Contains(q.Revealed, stage) {
 				q.Revealed = append(q.Revealed, stage)
@@ -586,11 +586,11 @@ func (s *Service) UpdateQuestion(ctx context.Context, id string, p QuestionPatch
 // just waits for the new reading.
 func (s *Service) redoReading(ctx context.Context, q row, corrected *[]string) (Question, error) {
 	if len(q.FigRect) == 0 || q.Page == nil {
-		return Question{}, httpx.Invalid("reading", "This question has no figure to read.")
+		return Question{}, noFigure.New().OnField("reading")
 	}
 	switch q.State {
 	case StatePending, StateLocating, StateReading:
-		return Question{}, httpx.Invalid("reading", "Its figure is still being read.")
+		return Question{}, figureBusy.New().OnField("reading")
 	}
 	var lines []string
 	if corrected != nil {
@@ -601,15 +601,15 @@ func (s *Service) redoReading(ctx context.Context, q row, corrected *[]string) (
 				continue
 			}
 			if len([]rune(l)) > maxReadingLine {
-				return Question{}, httpx.Invalid("reading", "Keep each line under %d characters.", maxReadingLine)
+				return Question{}, readingLineTooLong.New("max", strconv.Itoa(maxReadingLine)).OnField("reading")
 			}
 			lines = append(lines, l)
 		}
 		if len(lines) == 0 {
-			return Question{}, httpx.Invalid("reading", "Write at least one line.")
+			return Question{}, readingEmpty.New().OnField("reading")
 		}
 		if len(lines) > maxReadingLines {
-			return Question{}, httpx.Invalid("reading", "Keep it to %d lines.", maxReadingLines)
+			return Question{}, readingTooLong.New("max", strconv.Itoa(maxReadingLines)).OnField("reading")
 		}
 		if slices.Equal(sources(runLists(lines)), sources(q.Reading)) {
 			return q.Question, nil
@@ -640,7 +640,7 @@ func move(ctx context.Context, tx *sql.Tx, homeworkID, id string, from, to int) 
 		return err
 	}
 	if to < 1 || to > n {
-		return httpx.Invalid("position", "Position %d is outside the set (1 to %d).", to, n)
+		return badPosition.New("to", strconv.Itoa(to), "n", strconv.Itoa(n)).OnField("position")
 	}
 	if to == from {
 		return nil
@@ -661,7 +661,7 @@ func move(ctx context.Context, tx *sql.Tx, homeworkID, id string, from, to int) 
 func (s *Service) RemoveQuestion(ctx context.Context, id string) error {
 	q, err := getQuestion(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return httpx.NotFound("question")
+		return questionNotFound.New()
 	}
 	if err != nil {
 		return err
@@ -695,13 +695,13 @@ func (s *Service) RemoveQuestion(ctx context.Context, id string) error {
 func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Question, error) {
 	q, err := getQuestion(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Question{}, httpx.NotFound("question")
+		return Question{}, questionNotFound.New()
 	}
 	if err != nil {
 		return Question{}, err
 	}
 	if q.State != StateFailed {
-		return Question{}, httpx.Errorf(httpx.CodeInvalid, "Only a question that failed can be tried again.")
+		return Question{}, questionNotFailed.New()
 	}
 	set := `attempts = attempts + 1, reason = '', failure = '', hint = '[]', walkthrough = '[]', updated_at = ?`
 	args := []any{db.Now()}
@@ -712,21 +712,21 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 	case r.Text != nil && strings.TrimSpace(*r.Text) != "":
 		text := strings.TrimSpace(*r.Text)
 		if len(text) > maxDraftText {
-			return Question{}, httpx.Invalid("text", "That's too long for a single question.")
+			return Question{}, textTooLong.New().OnField("text")
 		}
 		set += `, text = ?, in_book = 0, statement = ?, label = ?, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]', rounds = '[]', reading = '[]', reading_edited = 0, boxes = '[]'`
 		args = append(args, text, mustJSON(runsOf(text)), labelFromText(text))
 		st, find = StatePending, false
 	case r.Page != nil:
 		if !q.InBook {
-			return Question{}, httpx.Invalid("page", "This question isn't in the book, so it has no page.")
+			return Question{}, noPageForQuestion.New().OnField("page")
 		}
 		b, err := s.c.Library.Book(ctx, q.BookID)
 		if err != nil {
 			return Question{}, err
 		}
 		if *r.Page < 1 || *r.Page > b.PageCount {
-			return Question{}, httpx.Invalid("page", "The book doesn't have that page.")
+			return Question{}, pageOutside.New().OnField("page")
 		}
 		set += `, pinned_page = ?, page = NULL, rounds = '[]', boxes = '[]'`
 		args = append(args, *r.Page)
@@ -757,13 +757,13 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 func (s *Service) WriteGuide(ctx context.Context, id string) (Question, error) {
 	q, err := getQuestion(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Question{}, httpx.NotFound("question")
+		return Question{}, questionNotFound.New()
 	}
 	if err != nil {
 		return Question{}, err
 	}
 	if q.State != StateUnwritten {
-		return Question{}, httpx.Errorf(httpx.CodeInvalid, "This question already has a guide, or is being written.")
+		return Question{}, guideExists.New()
 	}
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET state = ?, failure = '', reason = '', activity = '', updated_at = ? WHERE id = ?`,
