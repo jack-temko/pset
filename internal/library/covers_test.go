@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/jackt/pset/internal/db"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 )
 
 func TestPickCover(t *testing.T) {
@@ -78,7 +78,7 @@ func TestChangingTheCover(t *testing.T) {
 	id := up.Book.ID
 	e.waitFor(t, id, StateReady)
 
-	var er httpx.Error
+	var er errs.View
 	bad := Cover("plaid")
 	if code := e.do(t, "PATCH", "/api/books/"+id, BookPatch{Cover: &bad}, &er); code != 422 || er.Field != "cover" {
 		t.Fatalf("plaid: %d %+v", code, er)

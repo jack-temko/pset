@@ -27,7 +27,7 @@ import (
 	"github.com/go-pdf/fpdf"
 
 	"github.com/jackt/pset/internal/db"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
@@ -303,8 +303,8 @@ func TestDuplicateAndNotAPDFAreRefused(t *testing.T) {
 	pdf := fixturePDF(t, 0, 4, "Dup")
 	var first BookChanged
 	e.upload(t, "a.pdf", pdf, &first)
-	var er httpx.Error
-	if code := e.upload(t, "b.pdf", pdf, &er); code != 409 || er.Code != httpx.CodeDuplicateBook || er.ID != first.Book.ID {
+	var er errs.View
+	if code := e.upload(t, "b.pdf", pdf, &er); code != 409 || er.ID != "book.duplicate" || er.Ref != first.Book.ID {
 		t.Fatalf("duplicate: %d %+v", code, er)
 	}
 	if code := e.upload(t, "notes.pdf", []byte("hello, not a pdf"), &er); code != 422 || er.Field != "file" {
@@ -330,8 +330,8 @@ func TestUploadRefusedWithoutEmbeddingsOrChat(t *testing.T) {
 		{llm.Config{ChatEndpoint: full.ChatEndpoint, APIKey: full.APIKey, ChatModel: full.ChatModel, EmbedEndpoint: "http://127.0.0.1:1", EmbedModel: full.EmbedModel}, "can't reach Ollama"},
 	} {
 		e.models.cfg = c.cfg
-		var er httpx.Error
-		if code := e.upload(t, "a.pdf", fixturePDF(t, 0, 2, "X"), &er); code != 422 || er.Code != httpx.CodeNotConfigured || !strings.Contains(er.Message, c.want) {
+		var er errs.View
+		if code := e.upload(t, "a.pdf", fixturePDF(t, 0, 2, "X"), &er); code != 422 || !strings.Contains(er.What, c.want) {
 			t.Errorf("%d %+v, want %q", code, er, c.want)
 		}
 	}
@@ -541,7 +541,7 @@ func TestEditRemoveAndScans(t *testing.T) {
 	e.upload(t, "a.pdf", fixturePDF(t, 2, 6, "Scans"), &up)
 	b := e.waitFor(t, up.Book.ID, StateReady)
 
-	var er httpx.Error
+	var er errs.View
 	if code := e.do(t, "PATCH", "/api/books/"+b.ID, map[string]any{"pageRuns": []pagenum.Run{{From: 99, Offset: 1}}}, &er); code != 422 || er.Field != "pageRuns" {
 		t.Fatalf("run out of range: %d %+v", code, er)
 	}

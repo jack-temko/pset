@@ -24,8 +24,8 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/events"
-	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pagenum"
@@ -128,7 +128,7 @@ func (s *Service) List(ctx context.Context) ([]Book, error) { return listBooks(c
 func (s *Service) Get(ctx context.Context, id string) (Book, error) {
 	r, err := getBook(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Book{}, httpx.NotFound("book")
+		return Book{}, errs.BookNotFound.New()
 	}
 	return r.Book, err
 }
@@ -165,11 +165,11 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 		return Book{}, err
 	}
 	if !head.isPDF() {
-		return Book{}, httpx.Invalid("file", "That isn't a PDF.")
+		return Book{}, notPDF.New().OnField("file")
 	}
 	sha := hex.EncodeToString(h.Sum(nil))
 	if existing, err := bookBySHA(ctx, s.c.DB, sha); err == nil {
-		return Book{}, httpx.Errorf(httpx.CodeDuplicateBook, "%s is already on your shelf.", existing.Title).About(existing.ID)
+		return Book{}, bookDuplicate.New("title", existing.Title).About(existing.ID)
 	} else if !errors.Is(err, errNotFound) {
 		return Book{}, err
 	}
@@ -202,7 +202,7 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 		// Two uploads of the same file at once: the second loses the race
 		// on the unique sha and is the duplicate after all.
 		if existing, e := bookBySHA(ctx, s.c.DB, sha); e == nil {
-			return Book{}, httpx.Errorf(httpx.CodeDuplicateBook, "%s is already on your shelf.", existing.Title).About(existing.ID)
+			return Book{}, bookDuplicate.New("title", existing.Title).About(existing.ID)
 		}
 		return Book{}, err
 	}
@@ -251,7 +251,7 @@ func (s *Service) Update(ctx context.Context, id string, p BookPatch) (Book, err
 	if p.Title != nil {
 		t := strings.TrimSpace(*p.Title)
 		if t == "" {
-			return Book{}, httpx.Invalid("title", "A book needs a title.")
+			return Book{}, titleEmpty.New().OnField("title")
 		}
 		cur.Title = t
 	}
@@ -275,7 +275,7 @@ func (s *Service) Update(ctx context.Context, id string, p BookPatch) (Book, err
 	}
 	if p.Cover != nil {
 		if !validCover(*p.Cover) {
-			return Book{}, httpx.Invalid("cover", "That isn't one of the cover colours.")
+			return Book{}, badCover.New().OnField("cover")
 		}
 		cur.Cover = *p.Cover
 	}
@@ -355,15 +355,15 @@ func (s *Service) Stop(ctx context.Context, id string) (Book, error) {
 // it's a program on this machine that may not be running.
 func preparable(ctx context.Context, cfg llm.Config) error {
 	if !cfg.ChatReady() {
-		return httpx.Errorf(httpx.CodeNotConfigured, "Add your OpenRouter key in Settings first. Books need it to be prepared.")
+		return llm.KeyMissing.New()
 	}
 	if !cfg.EmbedReady() {
-		return httpx.Errorf(httpx.CodeNotConfigured, noOllama)
+		return ollamaDown.New()
 	}
 	probe, cancel := context.WithTimeout(ctx, ollamaProbe)
 	defer cancel()
 	if _, err := llm.Open(cfg).Embed(probe, []string{"probe"}); err != nil {
-		return httpx.Errorf(httpx.CodeNotConfigured, noOllama)
+		return ollamaDown.New()
 	}
 	return nil
 }
@@ -383,7 +383,7 @@ func (s *Service) Retry(ctx context.Context, id string) (Book, error) {
 		return Book{}, err
 	}
 	if b.State.Kind != StateFailed {
-		return Book{}, httpx.Errorf(httpx.CodeInvalid, "Only a book that failed to import can be tried again.")
+		return Book{}, notFailed.New()
 	}
 	cfg, err := s.c.Models.LLM(ctx)
 	if err != nil {
