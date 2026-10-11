@@ -36,6 +36,7 @@ export const BOOK: Book = {
   } as Book['problems'],
   cover: COVERS[2],
   aspect: 11 / 8.5,
+  rail: [3, 4, 2],
   kind: 'digital',
   state: { kind: 'ready' },
   addedAt: '2026-09-03T12:00:00Z',
@@ -284,7 +285,8 @@ export function makeQuestion(init: QuestionInit): Q {
           ? sample.page
           : 120 + init.position
         : undefined,
-    figures: found && sample?.figure ? [{ label: 'Fig. 4.109' }] : [],
+    figures:
+      found && sample?.figure ? [{ label: 'Fig. 4.109', w: 0.6, h: 0.3 }] : [],
     hint: init.state === 'ready' || init.state === 'writing' ? HINT : [],
     walkthrough: init.state === 'ready' ? WALKTHROUGH : [],
     state: init.state,
@@ -523,7 +525,9 @@ export class World {
         activity: undefined,
         statement: q.inBook ? (sample?.statement ?? [t(q.text)]) : [t(q.text)],
         page: q.inBook ? (sample?.page ?? 120) : undefined,
-        figures: sample?.figure ? [{ label: 'Fig. 4.109' }] : [],
+        figures: sample?.figure
+          ? [{ label: 'Fig. 4.109', w: 0.6, h: 0.3 }]
+          : [],
       });
     }
     if (sample?.figure && !q.reading.length) {

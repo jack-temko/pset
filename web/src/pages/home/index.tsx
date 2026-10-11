@@ -10,7 +10,7 @@ import {
   useUploadBooks,
   type Book,
 } from '@/api/library';
-import { useSettings } from '@/api/settings';
+import { useSettings, type Settings } from '@/api/settings';
 
 import { AppShell, PageShell, PageTitle } from '@/components/shell';
 import { BookTile } from '@/components/book-tile';
@@ -26,6 +26,9 @@ import { Skeleton } from '@/components/skeleton';
 import { Spinner } from '@/components/spinner';
 import { useWeek, type Week } from '@/api/activity';
 import { useDue, type Summary } from '@/api/homework';
+import { Loaded } from '@/components/loaded';
+import type { Variant } from '@/variants';
+import { useLastShape } from '@/lib/last-count';
 import { dueLine, dueStatus } from '@/lib/due';
 import { greeting } from '@/lib/greeting';
 import { useShowPending } from '@/lib/settled';
@@ -53,7 +56,7 @@ function SectionHeader({
   action,
 }: {
   title: string;
-  count?: number;
+  count?: React.ReactNode;
   action?: React.ReactNode;
 }) {
   return (
@@ -71,7 +74,17 @@ function SectionHeader({
  *  flattened. Each split takes its book's cover hue and is named below. */
 function WeekByBook({ books }: { books: WeekBook[] }) {
   const total = books.reduce((sum, b) => sum + b.minutes, 0);
-  if (total === 0) return null;
+  // Always there, so the page is the same height with or without a week of
+  // study: an empty track and one quiet line when there is nothing yet.
+  if (total === 0)
+    return (
+      <div className="space-y-3">
+        <div className="h-2 rounded-full bg-muted" />
+        <p className="text-xs text-muted-foreground">
+          No study time yet this week
+        </p>
+      </div>
+    );
 
   return (
     <div className="space-y-3">
@@ -143,28 +156,11 @@ function splitByBookTotal(
   return { homework: out[0], reading: out[1], asking: out[2] };
 }
 
-function ThisWeek({
-  week: loaded,
-  byBook,
-}: {
-  week: Week | undefined;
-  byBook: WeekBook[];
-}) {
-  // Until the numbers arrive, the tiles hold their size with skeletons.
-  const week = loaded ?? {
-    homework: 0,
-    reading: 0,
-    asking: 0,
-    questions: 0,
-    problemSets: 0,
-    byBook: [],
-  };
+function ThisWeek({ week, byBook }: { week: Week; byBook: WeekBook[] }) {
   const onShelf = byBook.reduce((sum, b) => sum + b.minutes, 0);
   const { homework, reading, asking } = splitByBookTotal(onShelf, week);
   const total = homework + reading + asking;
   const empty = total === 0 && week.questions === 0;
-  const wait = (v: React.ReactNode) =>
-    loaded ? v : <Skeleton className="h-6 w-16" />;
 
   return (
     <section className="space-y-5">
@@ -173,24 +169,24 @@ function ThisWeek({
         <StatTile
           label="Homework"
           chart={1}
-          value={wait(<DurationValue minutes={homework} />)}
+          value={<DurationValue minutes={homework} />}
           context={empty ? 'nothing yet this week' : 'so far this week'}
         />
         <StatTile
           label="Reading"
           chart={2}
-          value={wait(<DurationValue minutes={reading} />)}
+          value={<DurationValue minutes={reading} />}
           context={empty ? 'nothing yet this week' : 'so far this week'}
         />
         <StatTile
           label="Asking"
           chart={3}
-          value={wait(<DurationValue minutes={asking} />)}
+          value={<DurationValue minutes={asking} />}
           context={empty ? 'nothing yet this week' : 'so far this week'}
         />
         <StatTile
           label="Questions worked"
-          value={wait(week.questions)}
+          value={week.questions}
           context={
             week.questions > 0
               ? `across ${week.problemSets} problem set${week.problemSets === 1 ? '' : 's'}`
@@ -203,34 +199,51 @@ function ThisWeek({
   );
 }
 
+/** A part of the page that failed to load, said where it would sit. */
+function PartError({ children }: { children: React.ReactNode }) {
+  return (
+    <p role="status" className="text-sm text-destructive/80">
+      {children}
+    </p>
+  );
+}
+
+/** The week's tiles as they will be, before the numbers: the real labels and
+ *  dots, a skeleton for each figure and its line. */
+function ThisWeekSkeleton() {
+  const value = <Skeleton className="h-6 w-16" />;
+  const context = <Skeleton className="h-3 w-24" />;
+  return (
+    <section className="space-y-5">
+      <SectionHeader title="This week" />
+      <div className="grid grid-cols-4 gap-4">
+        <StatTile label="Homework" chart={1} value={value} context={context} />
+        <StatTile label="Reading" chart={2} value={value} context={context} />
+        <StatTile label="Asking" chart={3} value={value} context={context} />
+        <StatTile label="Questions worked" value={value} context={context} />
+      </div>
+      {/* The bar and its legend line, as the loaded week has them. */}
+      <div className="space-y-3">
+        <div className="h-2 rounded-full bg-muted" />
+        <p className="text-xs">
+          <Skeleton className="h-3 w-48" />
+        </p>
+      </div>
+    </section>
+  );
+}
+
 /** How many due rows show before the door. */
 const DUE_SHOWN = 3;
 
 /** What is due across every book: the only thing on the page with a
  *  deadline. The section header owns the title, count and action; the Box
  *  holds only rows and its door. Nothing due, no section. */
-function Homework({ books }: { books: Book[] | undefined }) {
+function Homework({ books, items }: { books: Book[]; items: Summary[] }) {
   const [open, setOpen] = useState(false);
-  const { data: items } = useDue();
   const titleOf = (h: Summary) =>
-    books?.find((b) => b.id === h.bookId)?.title ?? '';
+    books.find((b) => b.id === h.bookId)?.title ?? '';
 
-  if (items === undefined) {
-    return (
-      <section className="space-y-5">
-        <SectionHeader title="Homework" />
-        <Box>
-          {Array.from({ length: DUE_SHOWN }, (_, i) => (
-            <BoxRow
-              key={i}
-              title={<Skeleton className="h-3 w-40" />}
-              description={<Skeleton className="h-3 w-80" />}
-            />
-          ))}
-        </Box>
-      </section>
-    );
-  }
   if (items.length === 0) return null;
   const visible = open ? items : items.slice(0, DUE_SHOWN);
 
@@ -264,6 +277,31 @@ function Homework({ books }: { books: Book[] | undefined }) {
   );
 }
 
+/** The due rows before they arrive: as many as last time (none, and there is
+ *  no section), its count in the heading and its door held. */
+function HomeworkSkeleton({ rows, door }: { rows: number; door: boolean }) {
+  if (rows === 0) return null;
+  return (
+    <section className="space-y-5">
+      <SectionHeader
+        title="Homework"
+        count={<Skeleton className="h-3 w-2" />}
+      />
+      <Box>
+        {Array.from({ length: rows }, (_, i) => (
+          <BoxRow
+            key={i}
+            title={<Skeleton className="h-3 w-40" />}
+            description={<Skeleton className="h-3 w-80" />}
+            trailing={<Skeleton className="h-3 w-16" />}
+          />
+        ))}
+        {door && <div className="h-row border-t border-border-muted" />}
+      </Box>
+    </section>
+  );
+}
+
 /** One row of covers by default: the door shows the rest in place, since
  *  there is no other screen for the shelf to lead to. */
 const SHELF_ROW = 5;
@@ -278,12 +316,11 @@ const SHELF_ROW = 5;
  * while there is work, so a shelf of ready books is just covers, with
  * nothing reserved beneath them.
  */
-function Shelf({ books }: { books: Book[] | undefined }) {
+function Shelf({ books, settings }: { books: Book[]; settings?: Settings }) {
   const [open, setOpen] = useState(false);
   const [refused, setRefused] = useState<string[]>([]);
   const picker = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const settings = useSettings();
   const upload = useUploadBooks();
   // A small PDF uploads in a blink: the spinner only for a slow one.
   const adding = useShowPending(upload);
@@ -295,8 +332,8 @@ function Shelf({ books }: { books: Book[] | undefined }) {
   // reads the contents) rather than failing forty minutes into reading
   // the pages, so the shelf refuses it too, before you've picked a file.
   // Ollama isn't known until an upload asks it: the engine says so then.
-  // Unknown until settings load: not blocked.
-  const preparable = settings.data?.ready.key ?? true;
+  // Unknown when settings failed to load: not blocked.
+  const preparable = settings?.ready.key ?? true;
 
   const add = (files: File[]) => {
     if (files.length === 0) return;
@@ -309,7 +346,7 @@ function Shelf({ books }: { books: Book[] | undefined }) {
         // one still on its way is already a row above the shelf.
         const only =
           duplicates.length === 1 && files.length === 1 ? duplicates[0] : null;
-        const dup = only ? books?.find((b) => b.id === only) : undefined;
+        const dup = only ? books.find((b) => b.id === only) : undefined;
         if (dup?.state.kind === 'ready') void navigate(`/books/${dup.id}`);
       },
       onError: (e) => {
@@ -324,14 +361,14 @@ function Shelf({ books }: { books: Book[] | undefined }) {
   // oldest first, and the sort is stable).
   const rank = { preparing: 0, queued: 1, failed: 2, ready: 3 } as const;
   const turn = { '': 0, digital: 1, scanned: 2 } as const;
-  const inFlight = (books ?? [])
+  const inFlight = books
     .filter((b) => b.state.kind !== 'ready')
     .sort(
       (a, b) =>
         rank[a.state.kind] - rank[b.state.kind] ||
         (a.state.kind === 'queued' ? turn[a.kind] - turn[b.kind] : 0),
     );
-  const ready = (books ?? []).filter((b) => b.state.kind === 'ready');
+  const ready = books.filter((b) => b.state.kind === 'ready');
   const shown = open ? ready : ready.slice(0, SHELF_ROW);
 
   return (
@@ -425,15 +462,7 @@ function Shelf({ books }: { books: Book[] | undefined }) {
         </Box>
       )}
 
-      {books === undefined ? (
-        // A row of covers at their real size, so the shelf doesn't grow
-        // when the books arrive.
-        <div className="grid grid-cols-5 items-start gap-6">
-          {Array.from({ length: SHELF_ROW }, (_, i) => (
-            <Skeleton key={i} className="block aspect-3/4 w-full rounded-md" />
-          ))}
-        </div>
-      ) : books.length === 0 ? (
+      {books.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <p className="font-heading text-2xl text-muted-foreground italic">
             Nothing on the shelf yet.
@@ -480,42 +509,207 @@ function Shelf({ books }: { books: Book[] | undefined }) {
   );
 }
 
+/** What the page looked like last time, for the skeleton that stands in for
+ *  it: a first run is just the greeting and the shelf, and the rows and covers
+ *  are as many as showed. */
+type HomeShape = {
+  firstRun: boolean;
+  due: number;
+  dueDoor: boolean;
+  covers: number;
+  coversDoor: boolean;
+};
+/** A saved count is drawn as that many rows: a small whole number. */
+const count = (n: unknown): n is number =>
+  Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 50;
+const isHomeShape = (x: unknown): x is HomeShape => {
+  if (typeof x !== 'object' || x === null) return false;
+  const s = x as Partial<HomeShape>;
+  return (
+    typeof s.firstRun === 'boolean' &&
+    count(s.due) &&
+    count(s.covers) &&
+    typeof s.dueDoor === 'boolean' &&
+    typeof s.coversDoor === 'boolean'
+  );
+};
+
+/** The shelf before the books: the header, then a row of covers at their real
+ *  size, as many as showed last time, so it doesn't grow when they arrive. */
+function ShelfSkeleton({
+  covers,
+  door,
+  firstRun,
+}: {
+  covers: number;
+  door: boolean;
+  firstRun: boolean;
+}) {
+  return (
+    <section className="space-y-5">
+      <SectionHeader
+        title="Your books"
+        action={
+          <IconButton
+            variant="outline"
+            size="sm"
+            aria-label="Add a textbook"
+            disabled
+          >
+            <Plus />
+          </IconButton>
+        }
+      />
+      {firstRun ? (
+        <div className="flex flex-col items-center gap-4 py-16 text-center">
+          <p className="font-heading text-2xl">&nbsp;</p>
+          <div className="h-control-lg" />
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-5 items-start gap-6">
+            {Array.from({ length: Math.min(covers, SHELF_ROW) }, (_, i) => (
+              <Skeleton
+                key={i}
+                className="block aspect-3/4 w-full rounded-md"
+              />
+            ))}
+          </div>
+          {door && <div className="h-row" />}
+        </>
+      )}
+    </section>
+  );
+}
+
 /**
  * Home. The greeting, this week's numbers, what's due across every book,
  * then the shelf. The top bar's middle is empty here: you are home, and the
  * greeting says so.
  */
 export function Home() {
-  const { data: books } = useBooks();
-  const { data: settings } = useSettings();
-  // A first run is the greeting and the shelf, nothing else: empty
-  // sections read as broken, and a row of zeroes is noise.
-  const firstRun = books !== undefined && books.length === 0;
-  const { data: week } = useWeek();
-  const title = useGreeting(settings?.profile.name ?? '');
-  const byBook = (week?.byBook ?? []).flatMap((w) => {
-    const b = books?.find((x) => x.id === w.bookId);
-    return b
-      ? [
-          {
-            sha256: b.sha256,
-            cover: b.cover,
-            title: b.title,
-            minutes: w.minutes,
-          },
-        ]
-      : [];
-  });
+  const books = useBooks();
+  const settings = useSettings();
+  const due = useDue();
+  const week = useWeek();
+  const title = useGreeting(settings.data?.profile.name ?? '');
+  const ready = books.data?.filter((b) => b.state.kind === 'ready').length;
+  const shape = useLastShape<HomeShape | null>(
+    'home-shape',
+    books.data && due.data
+      ? {
+          firstRun: books.data.length === 0,
+          due: Math.min(due.data.length, DUE_SHOWN),
+          dueDoor: due.data.length > DUE_SHOWN,
+          covers: Math.min(ready ?? 0, SHELF_ROW),
+          coversDoor: (ready ?? 0) > SHELF_ROW,
+        }
+      : undefined,
+    null,
+    isHomeShape,
+  );
 
+  const titleSkeleton = (
+    <h1 className="font-heading text-4xl">
+      <Skeleton className="h-9 w-80" />
+    </h1>
+  );
+
+  // One box over everything the page reads, so the name, the key banner, the
+  // tiles, the due rows and the shelf appear together, and a first run is
+  // known before anything is drawn.
   return (
     <AppShell>
       <PageShell>
-        <PageTitle short="Home" className="text-4xl">
-          {title}
-        </PageTitle>
-        {!firstRun && <ThisWeek week={week} byBook={byBook} />}
-        {!firstRun && <Homework books={books} />}
-        <Shelf books={books} />
+        <Loaded
+          className="space-y-section"
+          query={books}
+          queries={[settings, due, week]}
+          // The page is a first run or a library: known from last time, and
+          // with nothing remembered, the greeting and the shelf's header only.
+          variant={
+            shape ? (shape.firstRun ? 'firstRun' : 'library') : undefined
+          }
+          view="home"
+          variantOf={(list: Book[]): Variant<'home'> =>
+            list.length === 0 ? 'firstRun' : 'library'
+          }
+          neutral={
+            <>
+              {titleSkeleton}
+              <ShelfSkeleton covers={0} door={false} firstRun={false} />
+            </>
+          }
+          skeletons={{
+            firstRun: (
+              <>
+                {titleSkeleton}
+                <ShelfSkeleton covers={0} door={false} firstRun />
+              </>
+            ),
+            library: (
+              <>
+                {titleSkeleton}
+                <ThisWeekSkeleton />
+                <HomeworkSkeleton
+                  rows={shape?.due ?? 0}
+                  door={shape?.dueDoor ?? false}
+                />
+                <ShelfSkeleton
+                  covers={shape?.covers ?? 0}
+                  door={shape?.coversDoor ?? false}
+                  firstRun={false}
+                />
+              </>
+            ),
+          }}
+        >
+          {(list) => {
+            // A first run is the greeting and the shelf, nothing else: empty
+            // sections read as broken, and a row of zeroes is noise.
+            const firstRun = list.length === 0;
+            const byBook = (week.data?.byBook ?? []).flatMap((w) => {
+              const b = list.find((x) => x.id === w.bookId);
+              return b
+                ? [
+                    {
+                      sha256: b.sha256,
+                      cover: b.cover,
+                      title: b.title,
+                      minutes: w.minutes,
+                    },
+                  ]
+                : [];
+            });
+            return (
+              <>
+                <PageTitle short="Home" className="text-4xl">
+                  {title}
+                </PageTitle>
+                {/* The books gate the page. The week, what is due and the
+                    settings each only change a part of it: when one failed, that
+                    part says so in its own line and the rest stands. */}
+                {!firstRun &&
+                  (week.data ? (
+                    <ThisWeek week={week.data} byBook={byBook} />
+                  ) : (
+                    week.isError && (
+                      <PartError>Couldn&apos;t load this week.</PartError>
+                    )
+                  ))}
+                {!firstRun &&
+                  (due.data ? (
+                    <Homework books={list} items={due.data} />
+                  ) : (
+                    due.isError && (
+                      <PartError>Couldn&apos;t load what&apos;s due.</PartError>
+                    )
+                  ))}
+                <Shelf books={list} settings={settings.data} />
+              </>
+            );
+          }}
+        </Loaded>
       </PageShell>
     </AppShell>
   );

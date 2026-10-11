@@ -7,11 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"strings"
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/probnum"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // Migrations creates the tables: books and everything read out of them. Every child row
@@ -135,7 +137,7 @@ func (r row) Pages() pagenum.Map { return pagenum.New(r.PageRuns) }
 const bookCols = `id, sha256, title, author, page_count, page_width, page_height, page_offset, page_runs, pages_edited, problem_style, kind, edited, state, phase, done, total, reason, created_at, updated_at, cover`
 
 func scanBook(s interface{ Scan(...any) error }) (row, error) {
-	var r row
+	r := row{Book: Book{Rail: []int{}}}
 	var done, total sql.NullInt64
 	var runs, style string
 	err := s.Scan(&r.ID, &r.SHA256, &r.Title, &r.Author, &r.PageCount, &r.Width, &r.Height,
@@ -172,6 +174,30 @@ func getBook(ctx context.Context, q queryer, id string) (row, error) {
 	return scanBook(q.QueryRowContext(ctx, `SELECT `+bookCols+` FROM books WHERE id = ?`, id))
 }
 
+// decorate adds what the shelf and the page carry about a book that is in
+// other tables: the shape of its rail and of its usage dialog. Kept off
+// getBook, which the page images, the page texts and the import call on their
+// hot paths; Service.Get and the shelf call it.
+func decorate(ctx context.Context, q queryer, books []Book) error {
+	ids := make([]string, len(books))
+	for i := range books {
+		ids[i] = books[i].ID
+	}
+	shapes, err := usage.ForBookShapes(ctx, q, ids)
+	if err != nil {
+		return err
+	}
+	rails, err := railsOf(ctx, q, ids)
+	if err != nil {
+		return err
+	}
+	for i := range books {
+		books[i].Rail = rails[books[i].ID]
+		books[i].Usage = shapes[books[i].ID]
+	}
+	return nil
+}
+
 func bookBySHA(ctx context.Context, q queryer, sha string) (row, error) {
 	return scanBook(q.QueryRowContext(ctx, `SELECT `+bookCols+` FROM books WHERE sha256 = ?`, sha))
 }
@@ -190,7 +216,62 @@ func listBooks(ctx context.Context, q queryer) ([]Book, error) {
 		}
 		out = append(out, r.Book)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	_ = rows.Close()
+	if err := decorate(ctx, q, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// railsOf is the shape of each book's contents rail (Book.Rail), from one
+// query for all of them. Every id has an entry, empty when it has no rail.
+func railsOf(ctx context.Context, q queryer, ids []string) (map[string][]int, error) {
+	out := make(map[string][]int, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	marks := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	rows, err := q.QueryContext(ctx, `SELECT book_id, level, title, start_page, end_page FROM sections WHERE book_id IN (`+marks+`) ORDER BY book_id, ord`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	by := map[string][]section{}
+	for rows.Next() {
+		var id string
+		var s section
+		if err := rows.Scan(&id, &s.Level, &s.Title, &s.StartPage, &s.EndPage); err != nil {
+			return nil, err
+		}
+		by[id] = append(by[id], s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for _, id := range ids {
+		out[id] = railShape(buildContents(by[id]))
+	}
+	return out, nil
+}
+
+// railShape is how many rows sit under each top-level heading, for the
+// first RailRows headings. Empty when the book has no rail.
+func railShape(c Contents) []int {
+	out := []int{}
+	for i, e := range c.Entries {
+		if i == RailRows {
+			break
+		}
+		out = append(out, min(len(e.Children), RailRows))
+	}
+	return out
 }
 
 type queryer interface {

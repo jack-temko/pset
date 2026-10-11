@@ -61,10 +61,25 @@ function lastSeen(log, key) {
 export function analyzeRun(log) {
   const at = (t) => log.origin + t;
   const shifts = log.shifts.filter((s) => at(s.t) >= log.t0);
+  // Like CLS, a shift within 500ms of the student's own input (the page
+  // opening what they pressed) is not a jump, and is reported apart. Unless a
+  // response came in between the input (t0, the click being measured) and the
+  // shift: that is data landing after the click, a load, and it counts.
+  const loadedAfterInput = (s) =>
+    (log.requests ?? []).some(
+      (r) =>
+        r.end !== null &&
+        r.end !== undefined &&
+        r.end > log.t0 &&
+        r.end <= at(s.t),
+    );
+  const isInput = (s) => s.hadRecentInput && !loadedAfterInput(s);
+  const counted = shifts.filter((s) => !isInput(s));
+  const afterInput = shifts.filter(isInput);
 
   // A shift's score is split evenly among the elements that moved.
   const byEl = new Map();
-  for (const s of shifts) {
+  for (const s of counted) {
     const srcs = s.sources.length ? s.sources : [{ sel: 'unknown' }];
     for (const src of srcs) {
       const e = byEl.get(src.sel) ?? { sel: src.sel, value: 0, count: 0 };
@@ -127,8 +142,10 @@ export function analyzeRun(log) {
   const settleMs = log.timedOut ? log.end - log.t0 : Math.max(0, last.ms);
 
   return {
-    jump: round(shifts.reduce((n, s) => n + s.value, 0)),
-    shiftCount: shifts.length,
+    jump: round(counted.reduce((n, s) => n + s.value, 0)),
+    afterInput: round(afterInput.reduce((n, s) => n + s.value, 0)),
+    shiftCount: counted.length,
+    afterInputCount: afterInput.length,
     moved,
     overlays,
     skeletonMs,
@@ -190,6 +207,7 @@ export function aggregate(runs) {
     runs: runs.length,
     waitedOn,
     jump: stat((r) => r.jump),
+    afterInput: stat((r) => r.afterInput ?? 0),
     settleMs: stat((r) => r.settleMs),
     skeletonMs: stat((r) => r.skeletonMs),
     spinnerMs: stat((r) => r.spinnerMs),

@@ -42,11 +42,17 @@ export const useBooks = () =>
     queryFn: () => get<Books>('/api/books').then((r) => r.books),
   });
 
-export const useBook = (id: string) =>
-  useQuery({
+/** A book opened from the shelf is the shelf's own row until its request is
+ *  back (the same shape), so the workspace opens on the book, not a skeleton. */
+export const useBook = (id: string) => {
+  const qc = useQueryClient();
+  return useQuery({
     queryKey: libraryKeys.book(id),
     queryFn: () => get<Book>(`/api/books/${id}`),
+    placeholderData: () =>
+      qc.getQueryData<Book[]>(libraryKeys.books)?.find((b) => b.id === id),
   });
+};
 
 export const useContents = (id: string, enabled = true) =>
   useQuery({

@@ -29,15 +29,15 @@ export function rank(rows) {
 
 export function table(rows) {
   const lines = [
-    '| Scenario | Mode | Jump score (median / p95) | Overlay growth px | Settle ms (median / p95) | Skeleton ms | Settle waited on last | Moved |',
-    '|---|---|---|---|---|---|---|---|',
+    '| Scenario | Mode | Jump score (median / p95) | After input | Overlay growth px | Settle ms (median / p95) | Skeleton ms | Settle waited on last | Moved |',
+    '|---|---|---|---|---|---|---|---|---|',
   ];
   for (const r of rank(rows)) {
     const who =
       esc(r.name) + (r.trigger ? `<br>discovered: ${esc(r.trigger)}` : '');
     if (!r.agg) {
       lines.push(
-        `| ${who} | ${r.mode} | skipped: ${esc(r.skipped)} | | | | | |`,
+        `| ${who} | ${r.mode} | skipped: ${esc(r.skipped)} | | | | | | |`,
       );
       continue;
     }
@@ -58,7 +58,7 @@ export function table(rows) {
     const settle =
       ms(a.settleMs) + (a.timeouts ? ` (${a.timeouts} timed out)` : '');
     lines.push(
-      `| ${who} | ${r.mode} | ${f(a.jump.median)} / ${f(a.jump.p95)} | ${growth} | ${settle} | ${Math.round(a.skeletonMs.median)} | ${esc(a.waitedOn || 'nothing')} | ${moved} |`,
+      `| ${who} | ${r.mode} | ${f(a.jump.median)} / ${f(a.jump.p95)} | ${f(a.afterInput.median)} | ${growth} | ${settle} | ${Math.round(a.skeletonMs.median)} | ${esc(a.waitedOn || 'nothing')} | ${moved} |`,
     );
   }
   return lines.join('\n');
@@ -75,7 +75,7 @@ export function writeReport(out, meta, rows) {
     `${meta.at} against ${meta.app}. ${meta.runs} runs each. Slow mode holds every /api request ${meta.slowMs}ms.`,
     `Book: ${meta.book ?? 'none'}. Homework set: ${meta.set ?? 'none'}.`,
     '',
-    'Worst first: jump score (median), then overlay growth, then settle time. Jump score is the Layout Instability API sum after t0, input-driven shifts included. Overlay growth is how far a dialog, popover or menu changed size from its first frame (height plus width, px). Settle is t0 to the last shift, resize, skeleton, spinner or request.',
+    'Worst first: jump score (median), then overlay growth, then settle time. Jump score is the Layout Instability API sum after t0, leaving out shifts within 500ms of their own input, as CLS does, unless a response came in between the input and the shift (data landing after the click); the left-out ones are summed in After input. Overlay growth is how far a dialog, popover or menu changed size from its first frame (height plus width, px). Settle is t0 to the last shift, resize, skeleton, spinner or request.',
     '',
     table(rows),
     '',

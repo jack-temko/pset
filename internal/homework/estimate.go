@@ -2,9 +2,12 @@ package homework
 
 import (
 	"context"
+	"encoding/json"
 	"math"
+	"slices"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/doc"
 )
 
 // The time left on a set, from how long its finished questions took the
@@ -127,8 +130,11 @@ func estimateLeft(items []estimateItem) (*Estimate, int) {
 
 // fillSummaries puts on each set what is worked out from its questions:
 // its bar (one entry per question), how many questions the pace was
-// learned from, and the time left. Two queries for any number of sets.
-func (s *Service) fillSummaries(ctx context.Context, hs []Summary) error {
+// learned from, and the time left. With `opening` it also puts on each set
+// that is not turned in the question it opens on (the book's list, where the
+// walkthrough's skeleton is drawn from it). Three queries for any number of
+// sets: the questions' bar, their seconds, and the opening questions together.
+func (s *Service) fillSummaries(ctx context.Context, hs []Summary, opening bool) error {
 	if len(hs) == 0 {
 		return nil
 	}
@@ -168,6 +174,7 @@ func (s *Service) fillSummaries(ctx context.Context, hs []Summary) error {
 			return err
 		}
 	}
+	openingID := make([]string, len(hs))
 	for i, h := range hs {
 		os := bySet[h.ID]
 		items := make([]estimateItem, len(os))
@@ -177,8 +184,30 @@ func (s *Service) fillSummaries(ctx context.Context, hs []Summary) error {
 			items[j] = o.estimateItem
 			items[j].Seconds = o.Seconds
 			hs[i].Bar[j] = BarEntry{Done: o.Done, Failed: o.failed, Weight: o.Difficulty}
+			if openingID[i] == "" && !o.Done {
+				openingID[i] = o.id
+			}
 		}
 		hs[i].Estimate, hs[i].Timed = estimateLeft(items)
+	}
+	if !opening {
+		return nil
+	}
+	var want []string
+	for i, id := range openingID {
+		if id != "" && hs[i].TurnedInAt == "" {
+			want = append(want, id)
+		}
+	}
+	qs, err := questionsByID(ctx, s.c.DB, want)
+	if err != nil {
+		return err
+	}
+	for i, id := range openingID {
+		// A question gone since the list was read (a race) leaves no opening.
+		if q, ok := qs[id]; ok && hs[i].TurnedInAt == "" {
+			hs[i].Opening = openingOf(q)
+		}
 	}
 	return nil
 }
@@ -193,4 +222,45 @@ func placeholders(n int) (string, []any) {
 		m = append(m, '?')
 	}
 	return string(m), make([]any, n)
+}
+
+// openingQuestion is the question a set opens on, trimmed to what its screen
+// draws before the rest arrives: the help panels it had open keep their
+// content, the others are empty, and what only a question's own work needs (its
+// figures' readings, boxes, usage) is left out.
+func openingQuestion(q Question) Question {
+	has := func(name string) bool { return slices.Contains(q.Revealed, name) }
+	if !has("hint") {
+		q.Hint = []doc.Block{}
+	}
+	// The answers are cut from the walkthrough, so either panel needs it.
+	if !has("walkthrough") && !has("answers") {
+		q.Walkthrough = []doc.Block{}
+	}
+	q.Reading, q.ReadingDoubts, q.Boxes, q.Usage = [][]doc.Run{}, [][]doc.Run{}, []Box{}, nil
+	return q
+}
+
+// openingOf is a question as its set's Opening: trimmed, with whether the
+// walkthrough has an Answers row (none written yet, or answers in it).
+func openingOf(q Question) *Opening {
+	return &Opening{Question: openingQuestion(q), HasAnswers: hasAnswers(q.Walkthrough)}
+}
+
+// hasAnswers is whether the Answers help row is drawn for a walkthrough: not
+// written yet (the row waits), or with an answer block in it. The web's
+// helpRows has the same rule.
+func hasAnswers(blocks []doc.Block) bool {
+	if len(blocks) == 0 {
+		return true
+	}
+	for _, b := range blocks {
+		var t struct {
+			Type string `json:"type"`
+		}
+		if json.Unmarshal(b, &t) == nil && t.Type == "answer" {
+			return true
+		}
+	}
+	return false
 }

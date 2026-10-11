@@ -4,8 +4,10 @@ const storeKey = (key: string) => `pset:last-count:${key}`;
 
 function read(key: string, fallback: number): number {
   try {
-    const n = Number(localStorage.getItem(storeKey(key)));
-    return Number.isInteger(n) && n > 0 ? n : fallback;
+    const raw = localStorage.getItem(storeKey(key));
+    const n = Number(raw);
+    // Zero is a count too: a list that was empty draws no rows.
+    return raw !== null && Number.isInteger(n) && n >= 0 ? n : fallback;
   } catch {
     return fallback;
   }
@@ -14,7 +16,7 @@ function read(key: string, fallback: number): number {
 /**
  * How many rows a list showed last time, for the skeleton that stands in for
  * it: right almost always, so the list doesn't resize when it arrives.
- * Saved per `key` in the browser; 3 when nothing is saved. Pass the real
+ * Saved per `key` in the browser (0 included); 3 when nothing is saved. Pass the real
  * `count` once it is known and it is saved for next time. `fallback` stands in
  * for it when nothing is saved (a width in characters, say, rather than rows). The value returned
  * is the one at mount, so a skeleton on screen doesn't change under itself.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -571,5 +572,118 @@ func TestCallsHaveIDsAndAbsentCountsStayAbsent(t *testing.T) {
 	det := Build(rows, nil, 0)
 	if det.Total.Reasoning != nil || det.Total.Cached != nil || det.Runs[0].Calls[0].ID != rows[0].ID {
 		t.Fatalf("detail %+v", det.Total)
+	}
+}
+
+// The line carries the size of the modal it opens, so the modal's first
+// skeleton is that size: the same stages and the same tables as the detail
+// built from the same calls, with the rows that take a second line counted.
+func TestTheLineCarriesTheShapeOfTheModal(t *testing.T) {
+	d := newDB(t)
+	ctx := context.Background()
+	sink := Sink(d)
+	put := func(typ, id, stage, run, tools string, us *llm.Usage, errText string) {
+		c := call("2026-09-29T10:00:00Z", typ, id, "m", "m", 1000, us, errText)
+		c.Stage, c.Run, c.Tools = stage, run, tools
+		sink(c)
+	}
+	ok := &llm.Usage{PromptTokens: 10, CompletionTokens: 1}
+	put(SubjectQuestion, "q1", "Find", "r1", "", ok, "")
+	put(SubjectQuestion, "q1", "Guide", "r1", "", ok, "")
+	put(SubjectQuestion, "q1", "Guide", "r2", "", nil, "rate limited (429)")
+	put(SubjectQuestion, "q1", "Round 2", "r2", "search_pages", ok, "")
+	put(SubjectSet, "h1", "Rank", "r", "", ok, "")
+	put(SubjectTurn, "t1", "Round 1", "r", "", ok, "")
+	put(SubjectTurn, "t1", "Round 2", "r", "read_page", ok, "")
+	put(SubjectTurn, "t1", "Round 3", "r", "", ok, "")
+
+	uses, err := ForSubjects(ctx, d, SubjectQuestion, []string{"q1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	own, _ := Calls(ctx, d, SubjectQuestion, "q1")
+	rank, _ := Calls(ctx, d, SubjectSet, "h1")
+	want := ShapeOf(Build(own, nil, 0))
+	if got := *uses["q1"].Shape; !reflect.DeepEqual(got, want) || got.Stages != 3 || len(got.Sections) != 2 || got.Sections[1].Rows != 2 || got.Sections[1].Tall != 2 {
+		t.Fatalf("own shape %+v, detail says %+v", got, want)
+	}
+
+	line := AddShare(uses["q1"], rank, 3)
+	modal := ShapeOf(Build(own, Share(rank, 3), 3))
+	if !reflect.DeepEqual(*line.Shape, modal) || line.Shape.Stages != 4 || line.Shape.StagesTall != 1 || len(line.Shape.Sections) != 3 {
+		t.Fatalf("shared shape %+v, detail says %+v", line.Shape, modal)
+	}
+
+	turns, err := ForSubjects(ctx, d, SubjectTurn, []string{"t1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := *turns["t1"].Shape; got.Stages != 3 || len(got.Sections) != 1 || got.Sections[0].Rows != 3 || got.Sections[0].Tall != 1 {
+		t.Fatalf("a turn of three rounds: %+v", got)
+	}
+}
+
+// A book's usage dialog has a row for each kind that spent anything, and the
+// import's tables; a book that spent nothing has no shape.
+func TestTheBookCarriesTheShapeOfItsUsageDialog(t *testing.T) {
+	d := newDB(t)
+	ctx := context.Background()
+	for _, q := range []string{
+		`CREATE TABLE homework (id TEXT, book_id TEXT)`, `CREATE TABLE questions (id TEXT, homework_id TEXT)`,
+		`CREATE TABLE turns (id TEXT, book_id TEXT)`, `CREATE TABLE assignment_reads (id TEXT, book_id TEXT)`,
+	} {
+		if _, err := d.Exec(q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if m, err := ForBookShapes(ctx, d, []string{"b1", "b2"}); err != nil || len(m) != 0 {
+		t.Fatalf("nothing spent: %+v %v", m, err)
+	}
+	sink := Sink(d)
+	put := func(id, stage, run, tools string) {
+		c := call("2026-09-29T10:00:00Z", SubjectBook, id, "m", "m", 1000, &llm.Usage{PromptTokens: 5, CompletionTokens: 1}, "")
+		c.Stage, c.Run, c.Tools = stage, run, tools
+		sink(c)
+	}
+	put("b1", "Naming", "r", "")
+	put("b1", "Contents", "r", "read_page")
+	put("b2", "Naming", "r", "")
+	m, err := ForBookShapes(ctx, d, []string{"b1", "b2", "b3"})
+	if err != nil || len(m) != 2 || m["b3"] != nil {
+		t.Fatalf("books %+v %v", m, err)
+	}
+	sh := m["b1"]
+	if sh.Kinds != 1 || sh.Import == nil || sh.Import.Stages != 2 || len(sh.Import.Sections) != 1 || sh.Import.Sections[0].Rows != 2 || sh.Import.Sections[0].Tall != 1 {
+		t.Fatalf("import only: %+v %+v", sh, sh.Import)
+	}
+}
+
+// A ranking stage named like one of the question's own is folded into it by
+// the detail, so the shape must not count it twice.
+func TestASharedStageWithAnOwnStagesNameIsNotCountedTwice(t *testing.T) {
+	d := newDB(t)
+	ctx := context.Background()
+	sink := Sink(d)
+	ok := &llm.Usage{PromptTokens: 10, CompletionTokens: 1}
+	put := func(typ, id, stage string) {
+		c := call("2026-09-29T10:00:00Z", typ, id, "m", "m", 1000, ok, "")
+		c.Stage, c.Run = stage, "r"
+		sink(c)
+	}
+	put(SubjectQuestion, "q1", "")
+	put(SubjectQuestion, "q1", "Guide")
+	put(SubjectSet, "h1", "")
+	put(SubjectSet, "h1", "Rank")
+
+	uses, err := ForSubjects(ctx, d, SubjectQuestion, []string{"q1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	own, _ := Calls(ctx, d, SubjectQuestion, "q1")
+	rank, _ := Calls(ctx, d, SubjectSet, "h1")
+	line := AddShare(uses["q1"], rank, 3)
+	want := ShapeOf(Build(own, Share(rank, 3), 3))
+	if !reflect.DeepEqual(*line.Shape, want) || want.Stages != 3 || want.StagesTall != 1 {
+		t.Fatalf("shape %+v, detail says %+v", *line.Shape, want)
 	}
 }

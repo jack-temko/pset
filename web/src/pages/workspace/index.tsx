@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   useCallback,
   useEffect,
+  memo,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -44,13 +45,15 @@ import {
   MenuItem,
 } from '@/components/menu';
 import { ResizeHandle } from '@/components/resize-handle';
+import { Loaded } from '@/components/loaded';
 import { Skeleton } from '@/components/skeleton';
 import { UsageTrigger } from '@/components/usage';
 import { BookUsageDialog } from '@/components/usage-modal';
 import { usePrefetchIntent } from '@/lib/prefetch-intent';
 import { prefetchBookUsage, useBookUsage } from '@/api/usage';
 import { BookDialog } from './dialogs';
-import { HomeworkTab } from '@/views/homework';
+import { HomeworkTab, ListSkeleton } from '@/views/homework';
+import { isListShape, type ListShape } from '@/views/homework/list-shape';
 import { MemoryDialog, MemoryUndo } from './memory';
 import { BoxingBar, BoxingProvider, PageBoxes } from './boxing';
 import { useBoxing } from './boxing-state';
@@ -65,7 +68,15 @@ import {
   type ContentsEntry,
 } from '@/api/library';
 import { ApiError } from '@/api/client';
-import { useBookHomework, useAddBoxed, usePointOut } from '@/api/homework';
+import {
+  useBookHomework,
+  useAddBoxed,
+  usePointOut,
+  useAssignmentReads,
+  useAssignmentSource,
+  useHomeworkSet,
+} from '@/api/homework';
+import { useMemories } from '@/api/memory';
 import { BlockSkeleton, Document } from '@/components/document';
 import {
   answerAbout,
@@ -80,7 +91,7 @@ import {
   type PendingSel,
 } from '@/components/document/selection';
 import { useStudyTime, type Kind as ActivityKind } from '@/api/activity';
-import { StudyTimer } from './study-timer';
+import { LiveStudyTimer } from './study-timer';
 import {
   useAsk,
   useClearTurns,
@@ -91,6 +102,8 @@ import {
 } from '@/api/ask';
 import { PageMap, Pages, usePages } from '@/lib/pages';
 import { layout, usePanes } from '@/lib/panes';
+import { useLastCount, useLastShape } from '@/lib/last-count';
+import type { Variant } from '@/variants';
 import { cn, plural } from '@/lib/utils';
 
 /**
@@ -255,15 +268,26 @@ const RAIL_INDENT = ['pl-4', 'pl-8', 'pl-12', 'pl-16', 'pl-20'];
 /** The chevron sits in the 24px just before its row's title. */
 const RAIL_CHEVRON = ['left-0', 'left-2', 'left-6', 'left-10', 'left-14'];
 
-/** The rail before the contents arrive: rows at their real height. */
-function RailSkeleton({ width }: { width?: number }) {
+/** What the rail looked like last time, per book: how many rows sit under each
+ *  top-level row. Empty is a book with no contents, which has no rail. */
+type RailShape = number[];
+const RAIL_SHAPE: RailShape = [3, 4, 2];
+const isRailShape = (x: unknown): x is RailShape =>
+  Array.isArray(x) &&
+  x.length <= RAIL_SKELETON_ROWS &&
+  x.every((n) => Number.isInteger(n) && n >= 0 && n <= RAIL_SKELETON_ROWS);
+const RAIL_SKELETON_ROWS = 12;
+
+/** The rail before the contents arrive: rows at their real height, shaped
+ *  like the contents it showed last time for this book. */
+function RailSkeleton({ width, shape }: { width?: number; shape: RailShape }) {
   return (
     <aside
       style={{ width }}
       className="w-rail shrink-0 overflow-hidden border-r bg-rail py-4"
       aria-hidden
     >
-      {[3, 4, 2].map((n, i) => (
+      {shape.map((n, i) => (
         <div key={i}>
           <div className="px-4 py-2 text-sm">
             <Skeleton className="h-3 w-40" />
@@ -285,6 +309,63 @@ function RailSkeleton({ width }: { width?: number }) {
  *  percentage in the pill says so. */
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3;
+
+/** One page of the scan: a box at the page's own proportions, with its
+ *  printed number, and, once it is near the viewport, its image and the layer
+ *  for boxing a problem. The first screen's worth are near from the start. */
+const PageSlot = memo(function PageSlot({
+  n,
+  label,
+  aspect,
+  bookId,
+  width,
+  pageRefs,
+  watch,
+}: {
+  n: number;
+  label: string;
+  aspect: number;
+  bookId: string;
+  width: number;
+  pageRefs: React.RefObject<Map<number, HTMLDivElement>>;
+  watch: (el: Element, cb: (near: boolean) => void) => () => void;
+}) {
+  const [near, setNear] = useState(n <= 3);
+  const el = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const node = el.current;
+    if (!node) return;
+    const refs = pageRefs.current;
+    refs.set(n, node);
+    const stop = watch(node, setNear);
+    return () => {
+      refs.delete(n);
+      stop();
+    };
+  }, [n, pageRefs, watch]);
+  return (
+    <div
+      ref={el}
+      className="relative grid place-items-center overflow-hidden rounded-sm border bg-card"
+      style={{ aspectRatio: `1 / ${aspect}` }}
+    >
+      <span className="text-xs text-muted-foreground tabular-nums">
+        {label}
+      </span>
+      {near && width > 0 && (
+        <img
+          src={pageImageURL(bookId, n, width)}
+          alt={`Page ${label}`}
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+          className="absolute inset-0 size-full"
+        />
+      )}
+      {near && <PageBoxes page={n} />}
+    </div>
+  );
+});
 
 /**
  * Pages stack in one scrolling pane, edge-to-edge paper. Each is the
@@ -364,9 +445,12 @@ function Scan({
   }, []);
 
   // The fit width follows the pane, which Focus mode resizes.
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    // Measured before the first paint: the pages' column is its fit width in
+    // the first frame, not the pane's full width until the observer reports.
+    setPaneWidth(el.clientWidth);
     const ro = new ResizeObserver(() => {
       setPaneWidth(el.clientWidth);
     });
@@ -461,6 +545,45 @@ function Scan({
     if (page !== currentPage) onPageChange(page);
   };
 
+  // Which pages are near the viewport (a screen or two each way), told to the
+  // slots by one observer on the scroller. The rest are empty boxes of the
+  // right size: a long book is hundreds of pages, and mounting an image and a
+  // box layer for each made the first render a long task.
+  const observer = useRef<IntersectionObserver | null>(null);
+  const waiting = useRef<[Element, (near: boolean) => void][]>([]);
+  const callbacks = useRef(new Map<Element, (near: boolean) => void>());
+  useEffect(() => {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries)
+          callbacks.current.get(e.target)?.(e.isIntersecting);
+      },
+      { root: scrollRef.current, rootMargin: '1500px 0px' },
+    );
+    observer.current = io;
+    for (const [el, cb] of waiting.current) {
+      callbacks.current.set(el, cb);
+      io.observe(el);
+    }
+    waiting.current = [];
+    return () => {
+      io.disconnect();
+      observer.current = null;
+    };
+  }, [scrollRef]);
+  const watch = useCallback((el: Element, cb: (near: boolean) => void) => {
+    if (observer.current) {
+      callbacks.current.set(el, cb);
+      observer.current.observe(el);
+    } else {
+      waiting.current.push([el, cb]);
+    }
+    return () => {
+      callbacks.current.delete(el);
+      observer.current?.unobserve(el);
+    };
+  }, []);
+
   return (
     <div className="relative min-w-0 flex-1">
       <div
@@ -495,30 +618,16 @@ function Scan({
           style={{ width: width ? width + 48 : undefined }}
         >
           {Array.from({ length: pageCount }, (_, i) => i + 1).map((n) => (
-            <div
+            <PageSlot
               key={n}
-              ref={(node) => {
-                if (node) pageRefs.current.set(n, node);
-                else pageRefs.current.delete(n);
-              }}
-              className="relative grid place-items-center overflow-hidden rounded-sm border bg-card"
-              style={{ aspectRatio: `1 / ${aspect || 11 / 8.5}` }}
-            >
-              <span className="text-xs text-muted-foreground tabular-nums">
-                {pages.label(n)}
-              </span>
-              {width > 0 && (
-                <img
-                  src={pageImageURL(bookId, n, width)}
-                  alt={`Page ${pages.label(n)}`}
-                  loading="lazy"
-                  decoding="async"
-                  draggable={false}
-                  className="absolute inset-0 size-full"
-                />
-              )}
-              <PageBoxes page={n} />
-            </div>
+              n={n}
+              label={pages.label(n)}
+              aspect={aspect || 11 / 8.5}
+              bookId={bookId}
+              width={width}
+              pageRefs={pageRefs}
+              watch={watch}
+            />
           ))}
         </div>
       </div>
@@ -743,6 +852,22 @@ function TurnView({
   );
 }
 
+const ASK_ABOUT =
+  'It searches and reads the book, looks at figures, and checks its arithmetic, then answers with the pages it used.';
+
+/** Puts a scroller at its end as this mounts. */
+function PinToBottom({
+  scroller,
+}: {
+  scroller: React.RefObject<HTMLDivElement | null>;
+}) {
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    el?.scrollTo({ top: el.scrollHeight });
+  }, [scroller]);
+  return null;
+}
+
 /** Ask: the transcript over the composer. An empty conversation is a
  *  prompt line and one sentence of capability: no generated suggestions. */
 function AskTab({
@@ -781,6 +906,13 @@ function AskTab({
   const scroller = useRef<HTMLDivElement | null>(null);
   const pinned = useRef(true);
   const composer = useRef<HTMLDivElement | null>(null);
+  // Empty or a conversation, as it was last time here, for the skeleton.
+  const askShape = useLastShape<Variant<'ask'> | null>(
+    `ask-${bookId}`,
+    turns.data && (turns.data.length === 0 ? 'empty' : 'turns'),
+    null,
+    (x): x is Variant<'ask'> | null => x === 'empty' || x === 'turns',
+  );
   const list = turns.data;
   const running = list?.find((t) => t.state === 'running');
 
@@ -825,56 +957,87 @@ function AskTab({
         }}
         className="min-h-0 flex-1 overflow-y-auto p-card"
       >
-        {list === undefined ? (
-          <div className="space-y-5" aria-hidden>
-            <div className="ml-auto w-2/3 space-y-1 rounded-md bg-primary-soft p-3">
-              <Skeleton className="h-3 w-full" />
-            </div>
-            <p className="space-y-1">
-              <Skeleton className="h-3 w-full" />
-              <Skeleton className="h-3 w-full" />
-              <Skeleton className="h-3 w-1/2" />
-            </p>
-          </div>
-        ) : list.length === 0 ? (
-          <div className="flex h-full flex-col justify-end gap-1 pb-2">
-            <p className="font-heading text-lg">
-              Ask anything about {bookTitle}.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              It searches and reads the book, looks at figures, and checks its
-              arithmetic, then answers with the pages it used.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            <ConversationStart
-              onClear={() => {
-                clear.mutate();
-              }}
-            />
-            {list.map((t, i) => {
-              const day = dayLabel(t.createdAt);
-              const newDay = i === 0 || dayLabel(list[i - 1].createdAt) !== day;
-              return (
-                <div key={t.id} className="space-y-5">
-                  {newDay && <DayDivider label={day} />}
-                  <TurnView
-                    t={t}
-                    onJump={onJump}
-                    onRetry={() => {
-                      send(t.question, null);
-                    }}
-                    selection={selection}
-                    onPickSelection={onPickSelection}
-                    onSelect={onSelect}
-                    onClearAbout={onClearAbout}
-                  />
+        <Loaded
+          query={turns}
+          fill
+          className="h-full"
+          variant={askShape ?? undefined}
+          view="ask"
+          variantOf={(list: unknown[]): Variant<'ask'> =>
+            list.length === 0 ? 'empty' : 'turns'
+          }
+          neutral={<div className="h-full" />}
+          skeletons={{
+            // The prompt is static: the same words, there from the first frame.
+            empty: (
+              <div className="flex h-full flex-col justify-end gap-1 pb-2">
+                <p className="font-heading text-lg">
+                  Ask anything about {bookTitle}.
+                </p>
+                <p className="text-sm text-muted-foreground">{ASK_ABOUT}</p>
+              </div>
+            ),
+            // The conversation sits at the bottom, over the composer, like
+            // the prompt does when it is empty.
+            turns: (
+              <div className="flex h-full flex-col justify-end space-y-5">
+                <div className="ml-auto w-2/3 space-y-1 rounded-md bg-primary-soft p-3">
+                  <Skeleton className="h-3 w-full" />
                 </div>
-              );
-            })}
-          </div>
-        )}
+                <p className="space-y-1">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-1/2" />
+                </p>
+              </div>
+            ),
+          }}
+        >
+          {(list) => (
+            <>
+              {/* The transcript is drawn when the data is revealed, not when
+                  it lands: the pin to the bottom happens as it mounts. */}
+              <PinToBottom scroller={scroller} />
+              {list.length === 0 ? (
+                <div className="flex h-full flex-col justify-end gap-1 pb-2">
+                  <p className="font-heading text-lg">
+                    Ask anything about {bookTitle}.
+                  </p>
+                  <p className="text-sm text-muted-foreground">{ASK_ABOUT}</p>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <ConversationStart
+                    onClear={() => {
+                      clear.mutate();
+                    }}
+                  />
+                  {list.map((t, i) => {
+                    const day = dayLabel(t.createdAt);
+                    const newDay =
+                      i === 0 || dayLabel(list[i - 1].createdAt) !== day;
+                    return (
+                      <div key={t.id} className="space-y-5">
+                        {newDay && <DayDivider label={day} />}
+                        <TurnView
+                          t={t}
+                          onJump={onJump}
+                          onRetry={() => {
+                            send(t.question, null);
+                          }}
+                          selection={selection}
+                          onPickSelection={onPickSelection}
+                          onSelect={onSelect}
+                          onClearAbout={onClearAbout}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </Loaded>
       </div>
       <div ref={composer} className="shrink-0 border-t p-card">
         {/* The question rides above the composer as a chip, so the box
@@ -1093,7 +1256,7 @@ function Panel({
 
 // ------------------------------------------------------------ workspace
 
-/** The workspace frame with nothing in it yet, or a sentence instead. */
+/** A sentence in the workspace frame, in place of a book. */
 function WorkspaceMessage({ children }: { children?: ReactNode }) {
   return (
     <AppShell scroll="fill">
@@ -1106,9 +1269,103 @@ function WorkspaceMessage({ children }: { children?: ReactNode }) {
   );
 }
 
+/** The book's frame before the book arrives, in its real layout: the top bar,
+ *  the rail (as this book had one last time), the pages' ground and the panel
+ *  with its tabs. The pane widths are the saved ones, so nothing moves when
+ *  the book lands. */
+function WorkspaceSkeleton({
+  id,
+  frame,
+  total,
+  ratios,
+}: {
+  id: string;
+  frame: Panes['frame'];
+  total: number;
+  ratios: Panes['ratios'];
+}) {
+  const rail = useLastShape(railKey(id), undefined, RAIL_SHAPE, isRailShape);
+  const list = useLastShape<ListShape | null>(
+    `homework-list-${id}`,
+    undefined,
+    null,
+    isListShape,
+  );
+  const showRail = rail.length > 0;
+  const widths = total > 0 ? layout(total, ratios, false, showRail) : undefined;
+  return (
+    <AppShell scroll="fill" middle={<Skeleton className="h-3 w-48" />}>
+      <div className="flex h-full min-h-0 flex-col">
+        <div ref={frame} className="flex min-h-0 flex-1" aria-busy>
+          {showRail && <RailSkeleton width={widths?.rail} shape={rail} />}
+          <div className="relative min-w-0 flex-1 bg-muted/40" />
+          <aside
+            style={{ width: widths?.panel }}
+            className="flex w-panel shrink-0 flex-col border-l bg-rail"
+            aria-hidden
+          >
+            <div className="flex h-row shrink-0 items-center justify-between border-b px-card">
+              <UnderlineNav className="-mb-px h-full">
+                <UnderlineTab active={false} onClick={noop}>
+                  Ask
+                </UnderlineTab>
+                <UnderlineTab active onClick={noop}>
+                  Homework
+                </UnderlineTab>
+              </UnderlineNav>
+              <IconButton
+                variant="ghost"
+                size="sm"
+                aria-label="Focus on the panel"
+                disabled
+              >
+                <Columns2 />
+              </IconButton>
+            </div>
+            {/* A book opens on Homework: the list, as many rows as last time. */}
+            <div className="min-h-0 flex-1 space-y-4 overflow-hidden p-card">
+              <ListSkeleton
+                active={list?.active ?? 2}
+                turnedIn={list?.turnedIn ?? 0}
+              />
+            </div>
+          </aside>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
+const noop = () => {};
+type Panes = ReturnType<typeof usePanes>;
+const railKey = (bookId: string) => `rail-${bookId}`;
+
+/**
+ * Starts every request the book page makes as soon as the route knows the
+ * book's id, all together, instead of each when the component that owns it
+ * mounts (which chains them: the book, then the page, then the set, then the
+ * dialog's remembered page). It draws nothing and re-renders alone. The
+ * components below read the same cached queries.
+ */
+function BookPrefetch({ id, set }: { id: string; set?: string }) {
+  // The set first: with the browser's six connections to a host (one held by
+  // the event stream), the ones asked last wait for a slot.
+  useHomeworkSet(set ?? null);
+  useBookHomework(id);
+  useContents(id);
+  useAssignmentReads(id);
+  useTurns(id);
+  useAssignmentSource(id);
+  useMemories(id);
+  return null;
+}
+
 export function Workspace() {
   const { id = '', homework } = useParams<{ id: string; homework?: string }>();
   const bookQuery = useBook(id);
+  // Held here so the frame that waits and the book that follows share one
+  // measurement of the width.
+  const panes = usePanes();
   if (
     bookQuery.error instanceof ApiError &&
     bookQuery.error.code === 'not_found'
@@ -1116,17 +1373,43 @@ export function Workspace() {
     return <WorkspaceMessage>There is no book here.</WorkspaceMessage>;
   if (bookQuery.error)
     return <WorkspaceMessage>{bookQuery.error.message}</WorkspaceMessage>;
-  if (!bookQuery.data) return <WorkspaceMessage />;
-  if (bookQuery.data.state.kind !== 'ready')
+  if (bookQuery.data && bookQuery.data.state.kind !== 'ready')
     return (
       <WorkspaceMessage>
         This book is still being prepared. It opens once it&apos;s on the shelf.
       </WorkspaceMessage>
     );
-  return <BookWorkspace key={id} book={bookQuery.data} homework={homework} />;
+  return (
+    <>
+      {id && <BookPrefetch id={id} set={homework} />}
+      {bookQuery.data ? (
+        <BookWorkspace
+          key={id}
+          book={bookQuery.data}
+          homework={homework}
+          panes={panes}
+        />
+      ) : (
+        <WorkspaceSkeleton
+          id={id}
+          frame={panes.frame}
+          total={panes.total}
+          ratios={panes.ratios}
+        />
+      )}
+    </>
+  );
 }
 
-function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
+function BookWorkspace({
+  book,
+  homework,
+  panes,
+}: {
+  book: Book;
+  homework?: string;
+  panes: Panes;
+}) {
   const navigate = useNavigate();
   const contents = useContents(book.id);
   const update = useUpdateBook(book.id);
@@ -1136,7 +1419,6 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
 
   const [focus, setFocus] = useState(false);
   // The panes' widths, as fractions of the frame, held to their limits.
-  const panes = usePanes();
   // A PDF index: the scan is the one place that counts in those.
   const [currentPage, setCurrentPage] = useState(1);
   // The page a jump landed on holds the rail's highlight until a scroll
@@ -1175,14 +1457,32 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
   };
   const entries = contents.data?.entries;
   // The rail holds its place while the contents load, and goes for good
-  // when a book has none.
-  const showRail = !focus && (entries === undefined || entries.length > 0);
+  // when a book has none: the book itself carries the rail's shape, so even
+  // a first visit knows. It is kept for the frame drawn before the book
+  // arrives (a reload), where nothing else is known.
+  const railShape = book.rail;
+  useLastShape(railKey(book.id), railShape, RAIL_SHAPE, isRailShape);
+  const hasRail =
+    entries === undefined ? railShape.length > 0 : entries.length > 0;
+  const showRail = !focus && hasRail;
   const panelKey = focus ? 'panelFocus' : 'panel';
   const widths =
     panes.total > 0
       ? layout(panes.total, panes.ratios, focus, showRail)
       : undefined;
-  const homeworkCount = useBookHomework(book.id).data?.length ?? 0;
+  // The Remove popover names how many homework sets go with the book. The
+  // list is fetched with the page; until it is, the count is a slot as wide
+  // as the phrase was last time, never a "0".
+  const homeworkSets = useBookHomework(book.id).data?.length;
+  const homeworkText =
+    homeworkSets === undefined
+      ? undefined
+      : plural(homeworkSets, 'homework set');
+  const homeworkWidth = useLastCount(
+    'remove-homework-width',
+    homeworkText?.length,
+    14,
+  );
   // Time counts toward what you last touched: the panel's tab, or the
   // book itself.
   const activity = useRef<ActivityKind>('reading');
@@ -1212,6 +1512,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
           value={{
             bookId: book.id,
             problems: book.problems,
+            aspect: book.aspect,
             editBook: () => {
               setEditingBook(true);
             },
@@ -1256,7 +1557,18 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                   <MenuConfirmItem
                     icon={<Trash2 />}
                     question={`Remove ${book.title}?`}
-                    detail={`${plural(homeworkCount, 'homework set')}, the conversation and what the tutor remembers go with it. Importing the PDF again starts fresh.`}
+                    detail={
+                      <>
+                        {homeworkText ?? (
+                          <Skeleton
+                            className="h-3"
+                            style={{ width: `${homeworkWidth}ch` }}
+                          />
+                        )}
+                        , the conversation and what the tutor remembers go with
+                        it. Importing the PDF again starts fresh.
+                      </>
+                    }
                     action="Remove book"
                     onConfirm={() => {
                       remove.mutate(book.id, {
@@ -1269,7 +1581,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                     Remove book
                   </MenuConfirmItem>
                 </Menu>
-                <StudyTimer time={study} />
+                <LiveStudyTimer clock={study} />
               </span>
             }
           >
@@ -1280,19 +1592,45 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
                 className="flex min-h-0 flex-1"
                 onPointerDownCapture={() => (activity.current = 'reading')}
               >
-                {showRail && (
+                {!focus && (
                   <>
-                    {entries === undefined ? (
-                      <RailSkeleton width={widths?.rail} />
-                    ) : (
-                      <Rail
-                        toc={entries}
-                        page={pinnedPage ?? currentPage}
-                        onJump={jumpPdf}
-                        width={widths?.rail}
-                      />
-                    )}
-                    {widths && (
+                    {/* The rail, with contents or (a book with none) no rail:
+                        known from the book before the contents arrive. */}
+                    <Loaded
+                      query={contents}
+                      view="rail"
+                      fill
+                      boxClassName="shrink-0 grid-rows-[minmax(0,1fr)]"
+                      className="flex h-full min-h-0"
+                      errorText="Couldn't load the contents."
+                      errorClassName="w-rail shrink-0 border-r bg-rail p-4"
+                      variant={book.rail.length > 0 ? 'contents' : 'none'}
+                      variantOf={(c): Variant<'rail'> =>
+                        c.entries.length > 0 ? 'contents' : 'none'
+                      }
+                      neutral={null}
+                      skeletons={{
+                        contents: (
+                          <RailSkeleton
+                            width={widths?.rail}
+                            shape={railShape}
+                          />
+                        ),
+                        none: null,
+                      }}
+                    >
+                      {(c) =>
+                        c.entries.length > 0 ? (
+                          <Rail
+                            toc={c.entries}
+                            page={pinnedPage ?? currentPage}
+                            onJump={jumpPdf}
+                            width={widths?.rail}
+                          />
+                        ) : null
+                      }
+                    </Loaded>
+                    {showRail && widths && (
                       <ResizeHandle
                         label="Resize the contents"
                         pane="before"
@@ -1362,6 +1700,7 @@ function BookWorkspace({ book, homework }: { book: Book; homework?: string }) {
               setUsageOpen(false);
             }}
             title={book.title}
+            shape={book.usage}
             data={bookUsage.data}
             loading={bookUsage.isPending && usageOpen}
             error={bookUsage.isError}

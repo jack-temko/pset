@@ -25,6 +25,21 @@ type Summary struct {
 	// has two to go on (estimate.go).
 	Estimate *Estimate `json:"estimate,omitempty"`
 	Timed    int       `json:"timed,omitempty"`
+	// Opening is the question the set opens on (the first not yet done), as
+	// its screen draws it before the set arrives: its label, statement and
+	// figures, and the content of the help panels the student left open (the
+	// others are empty, to keep this small). Only on a book's list of sets still
+	// open, where the walkthrough's skeleton is drawn from it. Absent when every
+	// question is done or there are none.
+	Opening *Opening `json:"opening,omitempty"`
+}
+
+// Opening is the question a set opens on, trimmed (see Summary.Opening), and
+// whether its Answers help row is there at all: the walkthrough decides, and
+// a trimmed copy no longer shows it.
+type Opening struct {
+	Question   Question `json:"question"`
+	HasAnswers bool     `json:"hasAnswers"`
 }
 
 // Estimate is the time left on a set at the student's pace, in seconds,
@@ -110,6 +125,12 @@ const (
 // served at /api/questions/{id}/figures/{index}.
 type Figure struct {
 	Label string `json:"label"`
+	// W and H are the size of its image as fractions of the page it is cropped
+	// from (the box with its padding), so the image holds its place before it
+	// arrives: the image's height over its width is H over W times the page's
+	// own height over width (Book.aspect).
+	W float64 `json:"w"`
+	H float64 `json:"h"`
 }
 
 // Question is one problem in a set. Text is what the student typed;

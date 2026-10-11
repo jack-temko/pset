@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { del, get } from './client';
@@ -62,6 +62,47 @@ type Open = {
 export type StudyTime = { counting: boolean; seconds: number };
 
 /**
+ * The study time as a store, so the one-second count re-renders nothing:
+ * the timer in the top bar subscribes (`useStudyClock`), and a snapshot is
+ * only new when what it shows changes (counting or not, or the minute).
+ * Rendering the workspace once a second made every page, formula and
+ * transcript card redraw with it.
+ */
+export type StudyClock = {
+  get: () => StudyTime;
+  set: (t: StudyTime) => void;
+  subscribe: (fn: () => void) => () => void;
+};
+
+function newStudyClock(): StudyClock {
+  let shown: StudyTime = { counting: false, seconds: 0 };
+  const subs = new Set<() => void>();
+  return {
+    get: () => shown,
+    set: (t) => {
+      if (
+        t.counting === shown.counting &&
+        Math.floor(t.seconds / 60) === Math.floor(shown.seconds / 60)
+      )
+        return;
+      shown = t;
+      subs.forEach((f) => {
+        f();
+      });
+    },
+    subscribe: (fn) => {
+      subs.add(fn);
+      return () => void subs.delete(fn);
+    },
+  };
+}
+
+/** The clock's time, re-rendering only the caller, and only when it changes. */
+export function useStudyClock(clock: StudyClock): StudyTime {
+  return useSyncExternalStore(clock.subscribe, clock.get);
+}
+
+/**
  * Counts time in a book, as stretches: while the tab is visible and the
  * student hasn't been away longer than IDLE, one stretch per kind of
  * thing they're doing. `kind` is read each second, so it follows where
@@ -75,17 +116,14 @@ export function useStudyTime(
   bookId: string,
   kind: () => Kind,
   question?: () => string | undefined,
-): StudyTime {
+): StudyClock {
   const kindRef = useRef(kind);
   // oxlint-disable-next-line react/refs -- the latest props in a ref, so the timers read current values without restarting
   kindRef.current = kind;
   const questionRef = useRef(question);
   // oxlint-disable-next-line react/refs -- the latest props in a ref, so the timers read current values without restarting
   questionRef.current = question;
-  const [shown, setShown] = useState<StudyTime>({
-    counting: false,
-    seconds: 0,
-  });
+  const [clock] = useState(newStudyClock);
   useEffect(() => {
     let lastInput = Date.now();
     let open: Open | null = null;
@@ -144,7 +182,7 @@ export function useStudyTime(
         }
       }
       const live = open ? now - open.started : 0;
-      setShown({
+      clock.set({
         counting: open !== null,
         seconds: Math.floor((closedMs + live) / 1000),
       });
@@ -178,6 +216,6 @@ export function useStudyTime(
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('pagehide', going);
     };
-  }, [bookId]);
-  return shown;
+  }, [bookId, clock]);
+  return clock;
 }

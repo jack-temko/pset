@@ -1,7 +1,9 @@
 package homework
 
 import (
+	"bytes"
 	"context"
+	"image/jpeg"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -72,6 +74,90 @@ func TestAFigureOnAnotherPageIsFound(t *testing.T) {
 	// 2, 4.
 	if r.FigRect[0].Page != 4 {
 		t.Fatalf("figure on page %d, want 4", r.FigRect[0].Page)
+	}
+	// The wire carries the size of the cropped image (the box with its
+	// padding) as page fractions, so the image can hold its place. The served
+	// image snaps each edge to a gutter, up to 2.5% of the page, so its
+	// proportions lie within what that can move from the wire's.
+	got := q.Figures[0]
+	pageJPG, err := e.svc.c.Library.PageJPEG(context.Background(), h.BookID, r.FigRect[0].Page, cropWidth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pageImg, err := jpeg.Decode(bytes.NewReader(pageJPG))
+	if err != nil {
+		t.Fatal(err)
+	}
+	aspect := float64(pageImg.Bounds().Dy()) / float64(pageImg.Bounds().Dx())
+	jpg, err := e.svc.Figure(context.Background(), q.ID, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	img, err := jpeg.Decode(bytes.NewReader(jpg))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ratio := float64(img.Bounds().Dy()) / float64(img.Bounds().Dx())
+	const snap = 2 * 0.025 // both edges, a fraction of the page
+	lo := (got.H - snap) * aspect / (got.W + snap)
+	hi := (got.H + snap) * aspect / (got.W - snap)
+	if got.W <= 0 || got.H <= 0 || ratio < lo || ratio > hi {
+		t.Fatalf("served image %v high per wide; the wire's %v x %v of a page at aspect %v allows %v to %v", ratio, got.W, got.H, aspect, lo, hi)
+	}
+
+	// The book's list of sets carries, on each set still open, the question it
+	// opens on, as its screen draws it: the label, statement and figures, and
+	// only the help panels it had open.
+	opening := func() *Opening {
+		t.Helper()
+		sets, err := e.svc.ForBook(context.Background(), h.BookID)
+		if err != nil || len(sets) != 1 {
+			t.Fatalf("the book's sets: %+v %v", sets, err)
+		}
+		return sets[0].Opening
+	}
+	op := opening()
+	if op == nil || op.Question.ID != q.ID || op.Question.Label != q.Label || len(op.Question.Statement) != len(q.Statement) ||
+		len(op.Question.Figures) != 1 || op.Question.Figures[0].W != got.W || op.Question.Figures[0].H != got.H {
+		t.Fatalf("opening %+v, want the question %s with one figure %v x %v", op, q.ID, got.W, got.H)
+	}
+	if len(q.Hint) == 0 || len(q.Walkthrough) == 0 {
+		t.Fatalf("the test question has no guide to trim: hint %d, walkthrough %d", len(q.Hint), len(q.Walkthrough))
+	}
+	if len(op.Question.Hint) != 0 || len(op.Question.Walkthrough) != 0 {
+		t.Fatalf("no panel was open, yet the opening carries hint %d, walkthrough %d blocks", len(op.Question.Hint), len(op.Question.Walkthrough))
+	}
+	if _, err := e.svc.c.DB.Exec(`UPDATE questions SET revealed = '["hint"]' WHERE id = ?`, q.ID); err != nil {
+		t.Fatal(err)
+	}
+	if op = opening(); len(op.Question.Hint) != len(q.Hint) || len(op.Question.Walkthrough) != 0 {
+		t.Fatalf("with the hint open: %+v", op)
+	}
+	if _, err := e.svc.c.DB.Exec(`UPDATE questions SET revealed = '["walkthrough"]' WHERE id = ?`, q.ID); err != nil {
+		t.Fatal(err)
+	}
+	if op = opening(); len(op.Question.Hint) != 0 || len(op.Question.Walkthrough) != len(q.Walkthrough) {
+		t.Fatalf("with the walkthrough open: %+v", op)
+	}
+	if _, err := e.svc.c.DB.Exec(`UPDATE questions SET revealed = '["answers"]' WHERE id = ?`, q.ID); err != nil {
+		t.Fatal(err)
+	}
+	if op = opening(); len(op.Question.Hint) != 0 || len(op.Question.Walkthrough) != len(q.Walkthrough) {
+		t.Fatalf("with the answers open: %+v", op)
+	}
+	// Only the book's list carries it: not the set, and not the due list.
+	if d, err := e.svc.Get(context.Background(), h.ID); err != nil || d.Homework.Opening != nil {
+		t.Fatalf("the set carries an opening: %+v %v", d.Homework.Opening, err)
+	}
+	if due, err := e.svc.Due(context.Background()); err != nil || len(due) != 1 || due[0].Opening != nil {
+		t.Fatalf("the due list carries an opening: %+v %v", due, err)
+	}
+	// Done questions are skipped, and a finished set has none.
+	if _, err := e.svc.c.DB.Exec(`UPDATE questions SET done_at = ? WHERE id = ?`, "2026-10-09T10:00:00Z", q.ID); err != nil {
+		t.Fatal(err)
+	}
+	if op = opening(); op != nil {
+		t.Fatalf("a finished set has an opening: %+v", op)
 	}
 }
 

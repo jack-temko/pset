@@ -260,10 +260,9 @@ the row that replaces it measure the same.
 `make jumps` measures where this is broken. It drives the real app in Chromium over a
 copy of a library (default `~/.local/share/pset-test-library`, or `DATA=<dir>`), each screen
 and overlay twice: **real** (no added latency) and **slow** (every `/api` request held
-600ms), five runs each. It records the browser's own layout shifts (including those right
-after a click, which Chrome's CLS leaves out) and the size of every dialog, popover and menu
+600ms), five runs each. It records the browser's own layout shifts and the size of every dialog, popover and menu
 as it changes, and writes `report.md` under `/tmp/pset-jumps-<topic>/<time>/`. Read the
-table worst first: **jump score** is the sum of layout-shift scores after the click or load
+table worst first: **jump score** is the sum of layout-shift scores after the click or load, leaving out, as CLS does, shifts within 500ms of the student's own input (a menu opening what they pressed) unless a response came in between the click and the shift, which is data landing after it; the left-out ones are the **after input** column
 (median and p95 over the runs); **overlay growth** is how many px an overlay changed from
 its first frame (height plus width), the "opens small, then grows" case; **settle** is the
 time to the last shift, resize, skeleton, spinner or request; **skeleton ms** is how long
@@ -283,13 +282,13 @@ waits on data opens at its final size and is written through one component,
 `Loaded` (`web/src/components/loaded`), which owns the skeleton, the 300ms grace, the
 fade, `aria-busy` and the error line, so screens cannot drift apart.
 
-| Surface              | Before data                                                                                          | When it arrives                     |
-| -------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| Dialog, popover      | Prefetched (so far the usage dialogs and Reset everything); else opens at final size with a skeleton | 150ms crossfade in place            |
-| Page section, list   | Skeleton in the real layout, at the last known count                                                 | 150ms crossfade in place            |
-| Value in a sentence  | Prefetched; else a slot of fixed width                                                               | The number appears, nothing reflows |
-| Any wait under 300ms | Nothing drawn                                                                                        | Content at once                     |
-| Cached data          | Content at once, no fade                                                                             |                                     |
+| Surface              | Before data                                                                                              | When it arrives                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Dialog, popover      | Prefetched (so far the usage dialogs and Reset everything); else opens at final size with a skeleton     | 150ms crossfade in place                                            |
+| Page, section, list  | Skeleton in the real layout, at the last known count; static parts (titles, labels, column headers) real | 150ms crossfade in place, sections that land close together at once |
+| Value in a sentence  | Prefetched; else a slot of fixed width                                                                   | The number appears, nothing reflows                                 |
+| Any wait under 300ms | Nothing drawn                                                                                            | Content at once                                                     |
+| Cached data          | Content at once, no fade                                                                                 |                                                                     |
 
 - **The fade is 150ms**, opacity only, ease-out (`fade-in`, `fade-out` in `index.css`), and
   off under reduced motion. A skeleton that was seen crossfades with its content in one grid
@@ -298,7 +297,33 @@ fade, `aria-busy` and the error line, so screens cannot drift apart.
   inside a page; an overlay (`grace={false}`) shows its skeleton at once, from its first frame.
 - **Skeletons are exact, not morphed.** A height animation between a skeleton and its content
   was tried (D9, 2026-10-09) and dropped: it jittered. The skeleton must be the content's
-  size, and the jump check (`make jumps`) reports one that isn't; the CI guard comes in part 2.
+  size, and the jump check (`make jumps`) reports one that isn't; the CI guard comes in part 3.
+- **Variant first** (D10 to D13, `ideas/loading-standard-grill.md`). A view that takes more
+  than one shape (a set that opens on a question or on the finish page, Home on a first run,
+  a list empty or not) declares its variants in `web/src/variants.ts` and gives `Loaded` a
+  skeleton per variant, a `variant` resolved before the data from what is known (the clicked
+  row, the route, a cache), and `variantOf(data)`. With nothing known it draws the **neutral
+  skeleton**: the chrome every variant shares, real, and a quiet body; never a guess.
+- **Seed from the list.** A list-to-detail move starts from the list's row (`useListedSet`,
+  the book from the shelf's row), so the variant is known at click time.
+- **Choose the variant in render**, never in an effect: an effect that switches screens
+  after a first one has drawn is a flash. In development `Loaded` warns on screen and in the
+  console when the skeleton's variant is not the content's, or the content switches variant
+  just after it appears. Both layers carry `data-view` and `data-variant`; finding every
+  variant of every view in the manifest and failing on a mismatch is the jump guard's check
+  (`make jumps-check`, part 3), not `make jumps`.
+- **Sections that land close together appear together** (the reveal train, as in React's
+  Suspense, which reveals at most once every 300ms). A `Loaded` whose skeleton was seen
+  reveals at once if nothing revealed in the last 300ms, and otherwise joins the next
+  reveal, 300ms after the last. Data inside the grace still shows at once. A box can wait
+  on several queries (`queries`) and reveal once; a page decides its late facts (the key
+  banner, a first run, whether the rail exists) inside its `Loaded`, not after it.
+- **A key change keeps the last data.** Where a mounted query's key changes (the live
+  readings while typing, a set switch), the previous data stays until the new data arrives
+  (`placeholderData: keepPreviousData`, or the list's cached summary), never a skeleton.
+- **A failed query is one line, never a skeleton forever**, on every screen.
+- **Nothing ticks the whole page.** A value that changes every second lives in the smallest
+  leaf that shows it (the study timer, an ETA line), so a tick re-renders only that leaf.
 - **Overlays prefetch**: so far only the usage dialogs, once the pointer has rested on the
   trigger for 60ms (`usePrefetchIntent`; at once on a press or keyboard focus, never on a
   touch hover), so the dialog usually opens complete. Usage stays cached and

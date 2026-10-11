@@ -3,6 +3,7 @@ package library
 import (
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/probnum"
+	"github.com/jackt/pset/internal/usage"
 )
 
 // State is where a book is on its way to the shelf.
@@ -99,14 +100,27 @@ type Book struct {
 	Aspect float64 `json:"aspect"`
 	// Kind orders queued imports: books not yet examined, then digital
 	// ones, then scans.
-	Kind  Kind      `json:"kind"`
+	Kind Kind `json:"kind"`
+	// Rail is the shape of the contents rail: how many rows sit under each
+	// top-level heading (the first RailRows headings, each count capped at
+	// RailRows). Empty when the book has no contents and so no rail. It is on
+	// the book so the workspace draws the rail's skeleton, or none, on a first
+	// visit, before the contents arrive.
+	Rail  []int     `json:"rail"`
 	State BookState `json:"state"`
+	// Usage is the layout of the book's usage dialog (the rows of "By kind",
+	// the import's tables), so the dialog's skeleton is the right size on a
+	// first open. Absent when the book spent nothing.
+	Usage *usage.BookShape `json:"usage,omitempty"`
 	// AddedAt is when it was put on the shelf (RFC 3339).
 	AddedAt string `json:"addedAt"`
 	// UpdatedAt orders copies of the book: a reply that arrives after a
 	// newer event must not win.
 	UpdatedAt string `json:"updatedAt"`
 }
+
+// RailRows caps the rail's shape on a Book.
+const RailRows = 12
 
 // Books is GET /api/books.
 type Books struct {
