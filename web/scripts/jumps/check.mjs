@@ -7,7 +7,8 @@
 // (median jump score), or the page never settled (a skeleton or spinner still
 // showing at the timeout in any run). A row listed in allow.json is ignored:
 // each entry is { scenario, mode?, reason }, with a reason that says why the
-// jump is deliberate. A skipped scenario is not a failure but is listed.
+// jump is deliberate. A skipped scenario is not a failure but is listed; a discovered one whose
+// trigger was not found is listed as LOST, so coverage dropping shows.
 // Exits 1 with the offenders and the elements that moved. Spec: ideas/jumps-guard.md.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -124,8 +125,11 @@ export function check(report, allow = []) {
 
 export function format({ failed, ignored, skipped }, total) {
   const lines = [];
+  const lost = skipped.filter((s) => s.lost).length;
   for (const s of skipped)
-    lines.push(`skipped: ${s.name} (${s.mode}): ${s.skipped}`);
+    lines.push(
+      `${s.lost ? 'LOST' : 'skipped'}: ${s.name} (${s.mode}): ${s.skipped}`,
+    );
   for (const { row, why, reason } of ignored)
     lines.push(
       `allowed: ${row.name} (${row.mode}): ${reason}${why.map((w) => `\n  ${w}`).join('')}`,
@@ -137,7 +141,7 @@ export function format({ failed, ignored, skipped }, total) {
   lines.push(
     failed.length
       ? `${failed.length} of ${total} rows jump`
-      : `no jumps in ${total - skipped.length} rows${skipped.length ? ` (${skipped.length} skipped)` : ''}`,
+      : `no jumps in ${total - skipped.length} rows${skipped.length ? ` (${skipped.length} skipped${lost ? `, ${lost} LOST` : ''})` : ''}`,
   );
   return lines.join('\n');
 }
