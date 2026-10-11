@@ -33,30 +33,27 @@ const ENTRIES: GalleryEntry[] = [
 ];
 
 const columns: TableColumn<Row>[] = [
-  { key: 'id', header: 'Id', mono: true, width: '19rem', cell: (r) => r.id },
+  { key: 'id', header: 'Id', mono: true, width: '15rem', cell: (r) => r.id },
   {
     key: 'what',
     header: 'What',
-    width: '18rem',
     cell: (r) => <span className="whitespace-normal">{r.what}</span>,
   },
   {
     key: 'why',
     header: 'Why',
-    width: '20rem',
     cell: (r) => <span className="whitespace-normal">{r.why}</span>,
   },
   {
     key: 'fix',
     header: 'Fix',
-    width: '20rem',
     cell: (r) => <span className="whitespace-normal">{r.fix}</span>,
   },
   {
     key: 'action',
     header: 'Action',
     mono: true,
-    width: '8rem',
+    width: '7rem',
     cell: (r) => r.action,
   },
   { key: 'scope', header: 'Scope', width: '5rem', cell: (r) => r.scope },
@@ -64,7 +61,7 @@ const columns: TableColumn<Row>[] = [
     key: 'status',
     header: 'Status',
     numeric: true,
-    width: '5rem',
+    width: '4rem',
     cell: (r) => r.status,
   },
 ];
