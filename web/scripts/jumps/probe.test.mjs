@@ -35,6 +35,7 @@ async function judge({
   content,
   boxHeight = 800,
   variant = ['a', 'a'],
+  scroller = 0,
 }) {
   const ctx = await browser.newContext();
   await ctx.addInitScript({ path: probe });
@@ -46,9 +47,13 @@ async function judge({
         return `<div style="height:${h}px;margin-top:${mt}px;background:#ccc"></div>`;
       })
       .join('');
-  await page.setContent(`<body style="margin:0"><div id="box" data-view="v" style="display:grid;height:${boxHeight}px">
+  const open = scroller
+    ? `<div style="height:${scroller}px;overflow:auto">`
+    : '';
+  const close = scroller ? '</div>' : '';
+  await page.setContent(`<body style="margin:0">${open}<div id="box" data-view="v" style="display:grid;${scroller ? '' : `height:${boxHeight}px`}">
     <div aria-hidden="true" data-view="v" data-variant="${variant[0]}" style="grid-area:1/1">${html(skeleton)}</div>
-    <div id="c" data-view="v" data-variant="${variant[1]}" style="grid-area:1/1"></div></div></body>`);
+    <div id="c" data-view="v" data-variant="${variant[1]}" style="grid-area:1/1"></div></div>${close}</body>`);
   await page.waitForFunction(() => !!window.__jumps, null, { timeout: 4000 });
   await page.waitForTimeout(150);
   await page.evaluate((h) => {
@@ -160,6 +165,61 @@ describe('fidelity on a real page', () => {
       expect(r.why.join(' ')).toContain(
         '"question" variant but the content is "finish"',
       );
+    }),
+  );
+
+  it(
+    'a difference below the fold of a scroll container is not a mismatch',
+    need(async () => {
+      const r = await judge({
+        skeleton: [100, 100, 100, 400],
+        content: [100, 100, 100, 700],
+        scroller: 350,
+      });
+      expect(r.fid.extentPx).toBe(0);
+      expect(r.fid.fullExtent).toEqual([700, 1000]);
+      expect(r.why).toEqual([]);
+    }),
+  );
+
+  it(
+    'a block that starts below the fold is not compared',
+    need(async () => {
+      const r = await judge({
+        skeleton: [100, 100, 100, 100],
+        content: [100, 100, 100, [100, 50]],
+        scroller: 250,
+      });
+      expect(r.fid.offsetPx).toBe(0);
+      expect(r.why).toEqual([]);
+    }),
+  );
+
+  it(
+    'a block inserted inside the visible region of a scroll container still fails',
+    need(async () => {
+      const r = await judge({
+        skeleton: [60, 100, 100, 400],
+        content: [60, 62, 100, 100, 400],
+        scroller: 400,
+      });
+      expect(r.fid.extentPx).toBe(0);
+      // The content's third block starts 38px higher than the skeleton's.
+      expect(r.fid.offsetPx).toBe(38);
+      expect(r.why.join(' ')).toContain('38px in where its blocks start');
+    }),
+  );
+
+  it(
+    'a visible extent that differs by 62px fails',
+    need(async () => {
+      const r = await judge({
+        skeleton: [60, 100],
+        content: [60, 62, 100],
+        scroller: 600,
+      });
+      expect(r.fid.extentPx).toBe(62);
+      expect(r.why.join(' ')).toContain('62px in how far it reaches');
     }),
   );
 });
