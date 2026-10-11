@@ -37,7 +37,7 @@ func H(fn HandlerFunc) http.HandlerFunc {
 func Fail(w http.ResponseWriter, r *http.Request, err error) {
 	// A client that went away (a tab closed, a request cancelled) is not a
 	// failure and gets no answer.
-	if errors.Is(err, context.Canceled) || r.Context().Err() != nil {
+	if r.Context().Err() != nil {
 		return
 	}
 	// A method-and-path pattern ("GET /api/books/{id}") says which route it
@@ -45,6 +45,13 @@ func Fail(w http.ResponseWriter, r *http.Request, err error) {
 	route := r.Pattern
 	if !strings.Contains(route, " ") {
 		route = r.Method + " " + r.URL.Path
+	}
+	// A cancel while the client is still there (a shutdown) still gets an
+	// answer, but it is not a failure of its own and is not kept.
+	if errors.Is(err, context.Canceled) {
+		v := errs.Resolve(err)
+		JSON(w, v.Status, v)
+		return
 	}
 	v := errs.Respond(r.Context(), err, errs.Where{Route: route})
 	JSON(w, v.Status, v)

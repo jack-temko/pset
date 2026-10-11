@@ -67,6 +67,9 @@ func NewIncident() string {
 func Respond(ctx context.Context, err error, where Where) View {
 	v := Resolve(err)
 	if v.Status < 500 {
+		// Not a failure, so no incident and no row, but the Go text (a
+		// provider's message under a failed key test) stays in the log.
+		slog.Info("request refused", "id", v.ID, "chain", v.Chain, "where", where.Route, "err", err.Error())
 		return v
 	}
 	return Report(ctx, err, where)

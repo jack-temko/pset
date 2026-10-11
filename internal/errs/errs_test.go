@@ -232,3 +232,23 @@ func TestRespondKeepsOnlyServerFailures(t *testing.T) {
 		t.Errorf("a 5xx: %+v %d kept", five, len(m.got))
 	}
 }
+
+var whyOnly = Define(Entry{ID: "test.why_only", What: "Couldn't save.", Why: "The save stopped partway."})
+
+func TestAnOuterWhyKeepsTheGeneralFix(t *testing.T) {
+	v := Resolve(whyOnly.Wrap(Database.Wrap(errors.New("sql"))))
+	if v.Why != "The save stopped partway." {
+		t.Errorf("why %q: the outer entry's", v.Why)
+	}
+	if v.Fix != Database.Fix || v.Action != Database.Action {
+		t.Errorf("fix %q action %q: the database's, since nothing outer has one", v.Fix, v.Action)
+	}
+}
+
+func TestAnOldRowWithMergedParamsStillReads(t *testing.T) {
+	old := Stored{Chain: []string{"test.top", "test.deep"}, Params: map[string]string{"thing": "the work", "who": "Ada"}}
+	v := old.View()
+	if v.What != "Couldn't do the work." || v.Why != "Deep reason for Ada." {
+		t.Errorf("old merged params: %+v", v)
+	}
+}

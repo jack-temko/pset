@@ -87,6 +87,10 @@ func (s *Store) List(ctx context.Context) ([]Group, error) {
 		}
 		st := errs.Stored{}
 		cleanup.Log("read a kept error's params", json.Unmarshal([]byte(params), &st))
+		if st.Links == nil && st.Params == nil {
+			// A row kept before params were stored per link holds a flat map.
+			cleanup.Log("read a kept error's old params", json.Unmarshal([]byte(params), &st.Params))
+		}
 		cleanup.Log("read a kept error's chain", json.Unmarshal([]byte(chain), &st.Chain))
 		v := st.View()
 		inc.What, inc.Chain = v.What, st.Chain

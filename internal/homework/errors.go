@@ -6,10 +6,6 @@ import (
 	"github.com/jackt/pset/internal/errs"
 )
 
-// Not found: a set, a question, an assignment read, a figure. Each is its
-// own entry because each is found somewhere else.
-var ()
-
 // A set and its questions, as typed.
 var (
 	titleEmpty = errs.Define(errs.Entry{
@@ -78,10 +74,6 @@ var (
 		Scope: errs.ScopeField,
 	})
 )
-
-// What the student may do to a question depends on its state; the page is
-// out of date when it offers what no longer applies.
-var ()
 
 // Figure readings.
 var (

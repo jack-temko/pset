@@ -33,7 +33,7 @@ const ENTRIES: GalleryEntry[] = [
 ];
 
 const columns: TableColumn<Row>[] = [
-  { key: 'id', header: 'Id', mono: true, width: '15rem', cell: (r) => r.id },
+  { key: 'id', header: 'Id', mono: true, width: '16.5rem', cell: (r) => r.id },
   {
     key: 'what',
     header: 'What',

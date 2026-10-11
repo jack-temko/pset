@@ -101,9 +101,11 @@ func TestACancelledRequestIsAnsweredWithNothing(t *testing.T) {
 	if rec.Body.Len() != 0 || rec.Code != 200 {
 		t.Errorf("wrote %d %q", rec.Code, rec.Body.String())
 	}
+	// A cancel while the client is still there is answered (never an empty
+	// 200 the client can't parse) but gets no incident.
 	rec = httptest.NewRecorder()
 	Fail(rec, httptest.NewRequest("GET", "/x", nil), context.Canceled)
-	if rec.Body.Len() != 0 {
+	if rec.Body.Len() == 0 || strings.Contains(rec.Body.String(), `"incident"`) {
 		t.Errorf("wrote %q", rec.Body.String())
 	}
 }

@@ -497,8 +497,7 @@ func (s *Service) progress(ctx context.Context, id string, ph Phase, done, total
 }
 
 func isNotFound(err error) bool {
-	var e interface{ Status() int }
-	return errors.As(err, &e) && e.Status() == 404
+	return errors.Is(err, errs.BookNotFound)
 }
 
 // pacer holds progress events to a few a second per book: every page is a
