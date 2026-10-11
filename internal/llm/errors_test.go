@@ -55,6 +55,10 @@ func TestAFailedCallIsLoggedWithItsCauseID(t *testing.T) {
 	if got.ErrorID != "key.out_of_credit" || got.Error == "" {
 		t.Errorf("call %+v", got)
 	}
+	logCall(ChatRequest{Model: "m"}, time.Now(), Reply{}, errors.New("who knows"))
+	if got.ErrorID != "" || got.Error == "" {
+		t.Errorf("an unnamed failure keeps the provider's text and no id: %+v", got)
+	}
 	logCall(ChatRequest{Model: "m"}, time.Now(), Reply{}, nil)
 	if got.ErrorID != "" {
 		t.Errorf("a call that worked has cause %q", got.ErrorID)

@@ -102,8 +102,11 @@ func logCall(req ChatRequest, start time.Time, reply Reply, err error) {
 	errText, errID := "", ""
 	if err != nil {
 		errText = err.Error()
-		chain := errs.Resolve(err).Chain
-		errID = chain[len(chain)-1]
+		// Only a cause the catalog knows: a chain that is just the fallback
+		// leaves the provider's own text to be shown.
+		if chain := errs.Resolve(err).Chain; chain[len(chain)-1] != errs.Unexpected.ID {
+			errID = chain[len(chain)-1]
+		}
 	}
 	call := Call{
 		At: at, SubjectType: req.Subject.Type, SubjectID: req.Subject.ID,

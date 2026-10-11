@@ -68,11 +68,11 @@ var ollamaAPI = strings.TrimSuffix(llm.EmbedEndpoint, "/v1") + "/api"
 func (LiveDialer) Ollama(ctx context.Context) ([]string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ollamaAPI+"/tags", nil)
 	if err != nil {
-		return nil, errs.Disk.Wrap(err)
+		return nil, fmt.Errorf("build the request to ollama: %w", err)
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, errs.Data.Wrap(err)
+		return nil, llm.EmbedUnreachable.Wrap(err)
 	}
 	defer cleanup.Close(resp.Body)
 	if resp.StatusCode != http.StatusOK {
@@ -98,11 +98,11 @@ func (LiveDialer) Pull(ctx context.Context, model string) error {
 	body, _ := json.Marshal(map[string]any{"model": model, "stream": false})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ollamaAPI+"/pull", bytes.NewReader(body))
 	if err != nil {
-		return errs.Disk.Wrap(err)
+		return fmt.Errorf("build the request to ollama: %w", err)
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return errs.Data.Wrap(err)
+		return llm.EmbedUnreachable.Wrap(err)
 	}
 	defer cleanup.Close(resp.Body)
 	if resp.StatusCode != http.StatusOK {

@@ -87,7 +87,7 @@ UPDATE calls SET error_id = CASE
 	WHEN error LIKE '%(HTTP %' THEN 'model.rejected'
 	WHEN error LIKE '%stream was cut%' THEN 'model.cut'
 	WHEN error LIKE 'model request failed:%' THEN 'model.unreachable'
-	ELSE 'internal.unexpected' END
+	ELSE NULL END
 WHERE error IS NOT NULL AND error != ''`}}
 }
 

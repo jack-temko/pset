@@ -84,8 +84,11 @@ func fillCovers(ctx context.Context, d queryer) error {
 		todo = append(todo, b)
 	}
 	cleanup.Close(rows)
-	if err := rows.Err(); err != nil || len(todo) == 0 {
+	if err := rows.Err(); err != nil {
 		return errs.Database.Wrap(err)
+	}
+	if len(todo) == 0 {
+		return nil
 	}
 	used, err := coversInUse(ctx, d)
 	if err != nil {

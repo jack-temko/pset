@@ -60,7 +60,7 @@ func TestOldFailedCallsGetTheirCause(t *testing.T) {
 		}
 		got = append(got, id)
 	}
-	want := []string{"key.out_of_credit", "key.refused", "model.unknown", "model.busy", "model.rejected", "model.unreachable", "model.cut", "internal.unexpected", "-"}
+	want := []string{"key.out_of_credit", "key.refused", "model.unknown", "model.busy", "model.rejected", "model.unreachable", "model.cut", "-", "-"}
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("call %d: %q, want %q", i, got[i], want[i])
