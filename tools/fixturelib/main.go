@@ -186,13 +186,15 @@ func build(ctx context.Context, dir string, now time.Time) error {
 			return fmt.Errorf("%s: %w", b.id, err)
 		}
 	}
-	// Two answered turns on the first book.
-	for i, q := range []string{"What is the Voss Register?", "How often must a collar be re-silvered?"} {
+	// Two answered turns on the first book. They carry what real answers do,
+	// so what real data makes jump can jump here: inline math, a fraction, a
+	// matrix and an equation on its own line, a derivation, a callout, and
+	// paragraphs long enough to wrap.
+	for i, t := range turnAnswers {
 		id := fmt.Sprintf("fx-turn-%d", i+1)
 		at := now.Add(-time.Duration(5-i) * time.Hour)
-		answer := blocks(fmt.Sprintf(`{"type":"para","text":"The book answers this on page %d [p. %d]."}`, 3+i, 3+i))
 		if _, err := d.ExecContext(ctx, `INSERT INTO turns (id, book_id, question, answer, state, created_at, updated_at) VALUES (?, 'fx-digital', ?, ?, 'done', ?, ?)`,
-			id, q, answer, at.Format(time.RFC3339), at.Format(time.RFC3339)); err != nil {
+			id, t.question, blocks(t.answer), at.Format(time.RFC3339), at.Format(time.RFC3339)); err != nil {
 			return err
 		}
 		if err := addCalls(ctx, d, "turn", id, at, turnCalls); err != nil {
@@ -202,6 +204,26 @@ func build(ctx context.Context, dir string, now time.Time) error {
 	// No key: the settings table is left without one, which is how a fresh
 	// install looks.
 	return nil
+}
+
+// The answers of the two Ask turns, as model-format lines. The shapes copy a
+// real answer's (a paragraph with inline math and a page cite, a math block, a
+// derivation, a callout); the words are about the sample book.
+var turnAnswers = []struct{ question, answer string }{
+	{
+		"What is the Voss Register, and how are storms counted in it?",
+		`{"type":"para","text":"The Voss Register of 1912 catalogued \\(n = 34\\) storm families across the Mirefill Basin [p. 3]. Each family is counted once however many storms it produced in a season, so the register is a count of kinds of storm and not of storms, which is why the number barely moves from one decade to the next even when the weather itself changes a great deal."}
+{"type":"math","tex":"\\frac{\\text{families seen}}{\\text{storms recorded}} = \\frac{34}{1{,}208} \\approx 0.028"}
+{"type":"para","text":"Read the ratio as how repetitive the basin's weather is: a small value means many storms share a family. The register also stores each family's mean intensity \\(\\bar I\\) and its spread \\(\\sigma_I\\) as a vector, so a family is a point you can compare with another."}
+{"type":"callout","tone":"insight","title":"Why count families","text":"Counting families keeps the register short enough to read in an afternoon, and it is what lets two stations compare notes without sharing every record."}`,
+	},
+	{
+		"How often must a collar be re-silvered, and what does the meter read when it is healthy?",
+		`{"type":"para","text":"A collar must be re-silvered every \\(T = 82\\) days; ringers call the chore silverpoint [p. 4]. A healthy gavel reads \\(0.37\\) karsts on the collar meter [p. 5], and the reading drifts down as the silver wears, so the two facts go together: the meter tells you when you are close to \\(T\\) before the calendar does."}
+{"type":"derivation","steps":[{"tex":"r(t) = r_0 \\left(1 - \\frac{t}{2T}\\right)","why":"A simple model: the reading falls linearly to half its starting value over \\(T\\) days."},{"tex":"r(T) = \\frac{r_0}{2} = \\frac{0.37}{2} = 0.185","why":"At the re-silvering date the meter should read about half of a healthy gavel."}]}
+{"type":"math","tex":"M = \\begin{pmatrix} 0.37 & 0.185 \\\\ 82 & 41 \\end{pmatrix}"}
+{"type":"note","text":"The matrix \\(M\\) only lists the two readings against the two ages (new and due), one row for the meter and one for the days."}`,
+	},
 }
 
 func sections(hs []head, pages int) []section {
@@ -285,13 +307,19 @@ func addHomework(ctx context.Context, d *sql.DB, b book, now, at time.Time) erro
 			if i == 3 && !s.finished {
 				state, hnt, walk = "unwritten", "[]", "[]"
 			}
+			// The first two questions of a set show a figure cropped from the
+			// problem's page, with a caption, as a book's problems do.
+			figs := "[]"
+			if i <= 2 {
+				figs = fmt.Sprintf(`[{"label":"Figure %s: the arrangement the problem describes","rect":{"x":0.1,"y":0.15,"w":0.8,"h":0.3}}]`, label)
+			}
 			doneAt := ""
 			if s.finished {
 				doneAt = ts
 			}
-			if _, err := d.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, page, hint, walkthrough, state, difficulty, done_at, created_at, updated_at)
-				VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				qid, s.id, i, text, label, statement(text), 1+i%b.pages, hnt, walk, state, 1+i%5, doneAt, ts, ts); err != nil {
+			if _, err := d.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, page, figures, hint, walkthrough, state, difficulty, done_at, created_at, updated_at)
+				VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				qid, s.id, i, text, label, statement(text), 1+i%b.pages, figs, hnt, walk, state, 1+i%5, doneAt, ts, ts); err != nil {
 				return err
 			}
 			if state == "ready" {
