@@ -73,6 +73,12 @@ func TestAFigureOnAnotherPageIsFound(t *testing.T) {
 	if r.FigRect[0].Page != 4 {
 		t.Fatalf("figure on page %d, want 4", r.FigRect[0].Page)
 	}
+	// The wire carries the size of the cropped image (the box with its
+	// padding) as page fractions, so the image holds its place.
+	want := padRect(r.FigRect[0].Rect)
+	if got := q.Figures[0]; got.W != want.W || got.H != want.H || got.W <= 0 || got.H <= 0 {
+		t.Fatalf("figure size %v x %v, want %v x %v", got.W, got.H, want.W, want.H)
+	}
 }
 
 // A problem that names no figure by number keeps what was boxed: there's

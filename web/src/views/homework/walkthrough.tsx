@@ -370,7 +370,7 @@ function WalkthroughBody({
   const retryQ = useRetryQuestion();
   const writeGuide = useWriteGuide();
   const redoReading = useRedoReading();
-  const { bookId } = useBookHere();
+  const { bookId, aspect: pageAspect } = useBookHere();
   const boxing = useBoxing();
   const [adding, setAdding] = useState(false);
   // Open where you'd pick up: the first question not yet done, and on the
@@ -853,6 +853,13 @@ function WalkthroughBody({
               <img
                 src={figureURL(q.id, i)}
                 alt={f.label || 'Figure'}
+                // Its box is its crop's proportions from the first frame, so the
+                // figure does not push what is under it when it arrives.
+                style={
+                  pageAspect && f.w > 0 && f.h > 0
+                    ? { aspectRatio: `${f.w} / ${f.h * pageAspect}` }
+                    : undefined
+                }
                 className="w-full rounded-md border bg-card"
               />
               {f.label && (

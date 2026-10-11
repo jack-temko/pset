@@ -8,6 +8,8 @@ export interface BookHere {
   /** Unset outside a workspace (the components page). */
   bookId?: string;
   problems?: Style;
+  /** A page's height over its width, for what is cropped from a page. */
+  aspect?: number;
   editBook: () => void;
 }
 

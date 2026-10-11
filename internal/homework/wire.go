@@ -110,6 +110,12 @@ const (
 // served at /api/questions/{id}/figures/{index}.
 type Figure struct {
 	Label string `json:"label"`
+	// W and H are the size of its image as fractions of the page it is cropped
+	// from (the box with its padding), so the image holds its place before it
+	// arrives: the image's height over its width is H over W times the page's
+	// own height over width (Book.aspect).
+	W float64 `json:"w"`
+	H float64 `json:"h"`
 }
 
 // Question is one problem in a set. Text is what the student typed;

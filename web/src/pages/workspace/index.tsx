@@ -1500,6 +1500,7 @@ function BookWorkspace({
           value={{
             bookId: book.id,
             problems: book.problems,
+            aspect: book.aspect,
             editBook: () => {
               setEditingBook(true);
             },

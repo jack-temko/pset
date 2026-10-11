@@ -143,6 +143,14 @@ export type Failure = typeof FailureNotFound | typeof FailureGeneration | typeof
  */
 export interface Figure {
   label: string;
+  /**
+   * W and H are the size of its image as fractions of the page it is cropped
+   * from (the box with its padding), so the image holds its place before it
+   * arrives: the image's height over its width is H over W times the page's
+   * own height over width (Book.aspect).
+   */
+  w: number /* float64 */;
+  h: number /* float64 */;
 }
 /**
  * Question is one problem in a set. Text is what the student typed;

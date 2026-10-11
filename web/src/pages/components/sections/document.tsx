@@ -130,7 +130,7 @@ const READ_QUESTION: Question = {
   label: '4.72',
   statement: [],
   page: 194,
-  figures: [{ label: 'Figure 4.138' }],
+  figures: [{ label: 'Figure 4.138', w: 0.6, h: 0.3 }],
   hint: [],
   walkthrough: [],
   state: 'ready',

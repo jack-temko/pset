@@ -265,7 +265,8 @@ func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	decodeColumn("figs", figs, &r.FigRect)
 	r.Figures = make([]Figure, len(r.FigRect))
 	for i, f := range r.FigRect {
-		r.Figures[i] = Figure{Label: f.Label}
+		pad := padRect(f.Rect)
+		r.Figures[i] = Figure{Label: f.Label, W: pad.W, H: pad.H}
 	}
 	r.Statement = decodeRuns(statement)
 	r.Hint, r.Walkthrough, r.Revealed = []doc.Block{}, []doc.Block{}, []string{}
