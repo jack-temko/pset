@@ -65,7 +65,8 @@ function trackRequests(page) {
   page.on('request', (r) => {
     if (
       ['image', 'eventsource', 'websocket'].includes(r.resourceType()) ||
-      r.url().includes('/api/events')
+      r.url().includes('/api/events') ||
+      r.url().includes('/api/study')
     )
       return;
     const u = new URL(r.url());

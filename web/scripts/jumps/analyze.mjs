@@ -189,7 +189,6 @@ export function analyzeRun(log) {
     flashes,
     doubles,
     variantsSeen: log.variants ?? { content: [], skeleton: [] },
-    shiftCount: shifts.length,
     jump: round(counted.reduce((n, s) => n + s.value, 0)),
     afterInput: round(afterInput.reduce((n, s) => n + s.value, 0)),
     shiftCount: counted.length,

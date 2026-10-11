@@ -159,7 +159,10 @@
   const realFetch = window.fetch.bind(window);
   window.fetch = (input, init) => {
     const url = typeof input === 'string' ? input : input.url || String(input);
-    if (url.includes('/api/events')) return realFetch(input, init);
+    // The event stream and the study timer's saves are background traffic
+    // that nothing on screen waits for.
+    if (url.includes('/api/events') || url.includes('/api/study'))
+      return realFetch(input, init);
     J.inflight++;
     return realFetch(input, init).finally(() => {
       J.inflight--;
@@ -173,7 +176,11 @@
   try {
     new PerformanceObserver((list) => {
       for (const e of list.getEntries()) {
-        if (e.initiatorType === 'img' || e.name.includes('/api/events'))
+        if (
+          e.initiatorType === 'img' ||
+          e.name.includes('/api/events') ||
+          e.name.includes('/api/study')
+        )
           continue;
         J.lastNet = Math.max(J.lastNet, e.responseEnd);
       }
