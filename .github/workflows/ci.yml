@@ -1,0 +1,60 @@
+name: CI
+
+# Every change lands on dev by pull request, and the ruleset needs `check`
+# green. A pull request into main (a release) or a push to it also runs the
+# bundle build and the vulnerability scan. Spec: ideas/git-workflow-grill.md.
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      # The PDF tests skip without these, and a skipped test checks nothing.
+      - run: sudo apt-get update && sudo apt-get install -y poppler-utils tesseract-ocr
+      - run: npm ci
+        working-directory: web
+      - run: make check
+
+  # What friends run: the shipped web bundle and the server, built. Only for
+  # a release.
+  release-build:
+    if: github.base_ref == 'main' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: make build
+
+  # The standard library and every module PSet calls, against the Go
+  # vulnerability database. Only for a release.
+  vulnerabilities:
+    if: github.base_ref == 'main' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...

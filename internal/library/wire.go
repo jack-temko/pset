@@ -1,0 +1,165 @@
+package library
+
+import (
+	"github.com/jackt/pset/internal/pagenum"
+	"github.com/jackt/pset/internal/probnum"
+)
+
+// State is where a book is on its way to the shelf.
+type State string
+
+const (
+	// StateQueued is waiting its turn to be read.
+	StateQueued State = "queued"
+	// StatePreparing is being read; Phase says which step.
+	StatePreparing State = "preparing"
+	// StateReady is on the shelf and can be opened.
+	StateReady State = "ready"
+	// StateFailed could not be read; Reason says why.
+	StateFailed State = "failed"
+)
+
+// Phase is one of the five named steps of preparing a book.
+type Phase string
+
+const (
+	// PhaseExamine looks at the file: its size, metadata and whether it has text.
+	PhaseExamine Phase = "examine"
+	// PhaseRead recognizes the text of a scanned book, page by page.
+	PhaseRead Phase = "read"
+	// PhaseContents finds the table of contents.
+	PhaseContents Phase = "contents"
+	// PhaseIndex works the contents out into the book's sections.
+	PhaseIndex Phase = "index"
+	// PhaseSearch embeds the pages so they can be searched.
+	PhaseSearch Phase = "search"
+)
+
+// Cover is a book's cloth colour: one of six, the --cover-* tokens in
+// web/src/index.css. Picked when the book is added, kept, and changeable
+// in the Book dialog (covers.go).
+type Cover string
+
+const (
+	// CoverIndigo is the first of the cover colours.
+	CoverIndigo Cover = "indigo"
+	// CoverTeal is a cover colour.
+	CoverTeal Cover = "teal"
+	// CoverAmber is a cover colour.
+	CoverAmber Cover = "amber"
+	// CoverRose is a cover colour.
+	CoverRose Cover = "rose"
+	// CoverViolet is a cover colour.
+	CoverViolet Cover = "violet"
+	// CoverSlate is a cover colour.
+	CoverSlate Cover = "slate"
+)
+
+// BookState is a book's import state. Phase is set while preparing; Done
+// and Total only where the phase can count (reading and search), and on a
+// queued scan whose reading was interrupted, as the pages it has read;
+// Reason only when failed, in words written for the student.
+type BookState struct {
+	Kind   State  `json:"kind"`
+	Phase  Phase  `json:"phase,omitempty"`
+	Done   *int   `json:"done,omitempty"`
+	Total  *int   `json:"total,omitempty"`
+	Reason string `json:"reason,omitempty"`
+}
+
+// Kind is what examining a book found: a digital book has a text layer,
+// a scanned one is read page by page with OCR.
+type Kind string
+
+const (
+	// KindUnknown is a book not examined yet.
+	KindUnknown Kind = ""
+	// KindDigital has a text layer.
+	KindDigital Kind = "digital"
+	// KindScanned is pictures of pages, read by OCR.
+	KindScanned Kind = "scanned"
+)
+
+// Book is a book as every screen sees it. Cover is its cloth colour;
+// PageRuns is how its printed numbers run (PDF page = printed page +
+// offset, run by run), never empty. Page numbers on the wire are always
+// PDF pages.
+type Book struct {
+	ID        string        `json:"id"`
+	SHA256    string        `json:"sha256"`
+	Title     string        `json:"title"`
+	Author    string        `json:"author"`
+	PageCount int           `json:"pageCount"`
+	PageRuns  []pagenum.Run `json:"pageRuns"`
+	// Problems is how the book numbers its problems, once worked out.
+	Problems *probnum.Style `json:"problems,omitempty"`
+	Cover    Cover          `json:"cover"`
+	// Aspect is page height over width, so a scan holds its box before the
+	// image arrives.
+	Aspect float64 `json:"aspect"`
+	// Kind orders queued imports: books not yet examined, then digital
+	// ones, then scans.
+	Kind  Kind      `json:"kind"`
+	State BookState `json:"state"`
+	// AddedAt is when it was put on the shelf (RFC 3339).
+	AddedAt string `json:"addedAt"`
+	// UpdatedAt orders copies of the book: a reply that arrives after a
+	// newer event must not win.
+	UpdatedAt string `json:"updatedAt"`
+}
+
+// Books is GET /api/books.
+type Books struct {
+	Books []Book `json:"books"`
+}
+
+// BookPatch is PATCH /api/books/{id}: any subset. PageRuns
+// replaces the book's numbering whole.
+type BookPatch struct {
+	Title    *string       `json:"title,omitempty"`
+	Author   *string       `json:"author,omitempty"`
+	PageRuns []pagenum.Run `json:"pageRuns,omitempty"`
+	Cover    *Cover        `json:"cover,omitempty"`
+	// Problems says how the book numbers its problems: the student's
+	// word, which import never overrides.
+	Problems *ProblemsPatch `json:"problems,omitempty"`
+}
+
+// ProblemsPatch is the student's word on how the book numbers its
+// problems.
+type ProblemsPatch struct {
+	Form  probnum.Form  `json:"form"`
+	Where probnum.Where `json:"where"`
+}
+
+// ContentsEntry is one heading of the contents, at its PDF page, and
+// the headings under it, however deep the book goes.
+type ContentsEntry struct {
+	ID       string          `json:"id"`
+	Title    string          `json:"title"`
+	Page     int             `json:"page"`
+	Children []ContentsEntry `json:"children"`
+}
+
+// Contents is GET /api/books/{id}/contents: the top-level entries.
+// Empty when the book's structure couldn't be read, and then the
+// workspace has no rail.
+type Contents struct {
+	Entries []ContentsEntry `json:"entries"`
+}
+
+// Event types this feature publishes.
+const (
+	EventBookChanged = "book.changed"
+	EventBookRemoved = "book.removed"
+)
+
+// BookChanged carries the whole book, so the client patches it in place.
+type BookChanged struct {
+	Book Book `json:"book"`
+}
+
+// BookRemoved is the event for a book that was removed.
+type BookRemoved struct {
+	ID string `json:"id"`
+}

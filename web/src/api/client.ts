@@ -1,0 +1,101 @@
+import type { Code, Error as WireError } from './gen/httpx';
+
+/**
+ * Every failed call throws this: the server's `{code, message, field?, id?}`
+ * shape, so a screen switches on `code`, shows `message` as written, and
+ * marks `field` when there is one.
+ */
+export class ApiError extends Error {
+  readonly code: Code;
+  readonly field?: string;
+  readonly id?: string;
+  readonly status: number;
+
+  constructor(status: number, body: WireError) {
+    super(body.message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = body.code;
+    this.field = body.field;
+    this.id = body.id;
+  }
+}
+
+/** The server's error shape from a response body, or a plain internal error
+ *  when the body isn't one. */
+function errorBody(data: unknown, status: number): WireError {
+  if (
+    typeof data === 'object' &&
+    data !== null &&
+    'code' in data &&
+    typeof data.code === 'string'
+  ) {
+    return data as WireError;
+  }
+  return { code: 'internal', message: `The server answered ${status}.` };
+}
+
+/** One fetch wrapper for the whole app. JSON in, JSON out; 204 is
+ *  `undefined`. A server that doesn't answer at all is `unreachable`. */
+export async function api<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method,
+      headers:
+        body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError(0, {
+      code: 'unreachable',
+      message: "PSet's server isn't answering.",
+    });
+  }
+  if (res.status === 204) return undefined as T;
+  const data: unknown = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new ApiError(res.status, errorBody(data, res.status));
+  }
+  return data as T;
+}
+
+/** A file upload, as multipart form data: the same answers and errors as
+ *  `api`, without the JSON body. */
+export async function postForm<T>(path: string, body: FormData): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(path, { method: 'POST', body });
+  } catch {
+    throw new ApiError(0, {
+      code: 'unreachable',
+      message: "PSet's server isn't answering.",
+    });
+  }
+  const data: unknown = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new ApiError(res.status, errorBody(data, res.status));
+  }
+  return data as T;
+}
+
+/**
+ * Where the pictures and documents an `<img>` or a new tab loads come from.
+ * They are plain URLs, so `fetch` can't be stubbed under them: every such
+ * URL passes through here, and /views points it at samples of its own so a
+ * view never asks a real server for a scan.
+ */
+export const assets = { url: (path: string): string => path };
+
+export const get = <T>(path: string) => api<T>('GET', path);
+export const post = <T>(path: string, body?: unknown) =>
+  api<T>('POST', path, body);
+export const put = <T>(path: string, body?: unknown) =>
+  api<T>('PUT', path, body);
+export const patch = <T>(path: string, body?: unknown) =>
+  api<T>('PATCH', path, body);
+export const del = <T>(path: string) => api<T>('DELETE', path);

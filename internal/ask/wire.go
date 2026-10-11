@@ -1,0 +1,140 @@
+package ask
+
+import (
+	"github.com/jackt/pset/internal/doc"
+	"github.com/jackt/pset/internal/usage"
+)
+
+// TurnState is where a turn is.
+type TurnState string
+
+const (
+	// TurnRunning is being answered now.
+	TurnRunning TurnState = "running"
+	// TurnDone is answered.
+	TurnDone TurnState = "done"
+	// TurnStopped was stopped by the student.
+	TurnStopped TurnState = "stopped"
+	// TurnFailed could not be answered; Reason says why.
+	TurnFailed TurnState = "failed"
+)
+
+// Failure is what kind of failure a failed turn had, which picks what the
+// page offers beside its reason: Settings for a setup failure.
+type Failure string
+
+const (
+	// FailureSetup means there's no OpenRouter key, OpenRouter refused it, or
+	// the account is out of credit. Fix it in Settings.
+	FailureSetup Failure = "setup"
+	// FailureUnavailable means the provider didn't answer or was busy. Ask again
+	// later.
+	FailureUnavailable Failure = "unavailable"
+	// FailureGeneration means the answer didn't finish (cut off, or the model
+	// stopped without one). Ask again.
+	FailureGeneration Failure = "generation"
+)
+
+// Step is one tool call on the feed: present tense while it runs
+// ("Searching 'eigenvalue'…"), past tense with its count when done.
+type Step struct {
+	Label   string `json:"label"`
+	Running bool   `json:"running"`
+	// After is how many answer blocks were written when the call ran:
+	// the feed is interleaved, not stacked at the top, so each step sits
+	// between the blocks it happened between.
+	After int `json:"after"`
+	// MemoryID is the memory a remember step saved, for its Undo.
+	MemoryID string `json:"memoryId,omitempty"`
+}
+
+// About is the homework question a turn was asked about: the label the
+// chip shows, and its text for the model.
+type About struct {
+	Label string `json:"label"`
+	Text  string `json:"text"`
+}
+
+// Turn is one question and its answer, a document of blocks. Answer holds
+// what's been saved so far; while running, the turn.block events carry the
+// rest.
+type Turn struct {
+	ID       string      `json:"id"`
+	BookID   string      `json:"bookId"`
+	Question string      `json:"question"`
+	About    string      `json:"about,omitempty"`
+	Steps    []Step      `json:"steps"`
+	Answer   []doc.Block `json:"answer"`
+	State    TurnState   `json:"state" tstype:"'running' | 'done' | 'stopped' | 'failed'"`
+	Reason   string      `json:"reason,omitempty"`
+	// Failure is what kind of failure a failed turn had.
+	Failure Failure `json:"failure,omitempty"`
+	// Usage is what answering this turn spent on model calls, once it has
+	// finished; nil until it has made a call, and nothing is drawn.
+	Usage     *usage.Usage `json:"usage,omitempty"`
+	CreatedAt string       `json:"createdAt"`
+	// UpdatedAt orders copies of the turn: a reply that arrives after a
+	// newer event must not win.
+	UpdatedAt string `json:"updatedAt"`
+}
+
+// Turns is a book's whole conversation, oldest first.
+type Turns struct {
+	Turns []Turn `json:"turns"`
+}
+
+// Question is POST /api/books/{id}/turns.
+type Question struct {
+	Question string `json:"question"`
+	About    *About `json:"about,omitempty"`
+}
+
+// Event types this feature publishes.
+const (
+	EventTurnChanged = "turn.changed"
+	// The blocks of an answer as they are written: a skeleton when a
+	// block's type has arrived, its text as it streams, a "Tidying" label
+	// while it is repaired, and the finished block in the skeleton's place.
+	EventTurnBlockStart     = "turn.block.start"
+	EventTurnBlockText      = "turn.block.text"
+	EventTurnBlockRepairing = "turn.block.repairing"
+	EventTurnBlock          = "turn.block"
+	EventTurnBlockFailed    = "turn.block.failed"
+	EventTurnsCleared       = "turns.cleared"
+)
+
+// TurnChanged is the event for a turn that was created or changed.
+type TurnChanged struct {
+	Turn Turn `json:"turn"`
+}
+
+// TurnBlockStart says a block is being written: draw its skeleton.
+type TurnBlockStart struct {
+	TurnID string `json:"turnId"`
+	Type   string `json:"type"`
+}
+
+// TurnBlockText is the open text block's new runs, citations already on
+// PDF pages.
+type TurnBlockText struct {
+	TurnID string    `json:"turnId"`
+	Runs   []doc.Run `json:"runs"`
+}
+
+// TurnBlockRepairing says the block being written is being repaired.
+type TurnBlockRepairing struct {
+	TurnID string `json:"turnId"`
+	Type   string `json:"type"`
+}
+
+// TurnBlock is a finished block, replacing the skeleton. For
+// turn.block.failed it is a raw block: repair could not make it valid.
+type TurnBlock struct {
+	TurnID string    `json:"turnId"`
+	Block  doc.Block `json:"block"`
+}
+
+// TurnsCleared is the event for a book whose conversation was cleared.
+type TurnsCleared struct {
+	BookID string `json:"bookId"`
+}

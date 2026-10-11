@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "A worked chain: one line of bare TeX per step, each with an optional one-sentence reason.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "steps"],
+  "properties": {
+    "type": {
+      "const": "derivation"
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tex"],
+        "properties": {
+          "tex": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "why": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      }
+    }
+  }
+}
