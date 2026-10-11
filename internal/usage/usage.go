@@ -72,7 +72,22 @@ ALTER TABLE calls ADD COLUMN stage TEXT;
 ALTER TABLE calls ADD COLUMN run TEXT;
 ALTER TABLE calls ADD COLUMN tools TEXT;
 ALTER TABLE calls ADD COLUMN reasoning_tokens INTEGER;
-ALTER TABLE calls ADD COLUMN cached_tokens INTEGER;`}}
+ALTER TABLE calls ADD COLUMN cached_tokens INTEGER;`},
+		// A failed call names its cause in the error catalog (key.out_of_credit,
+		// model.busy). Calls that failed before get the entry their status
+		// named; the error text stays as the provider said it.
+		{Name: "usage/4", SQL: `
+ALTER TABLE calls ADD COLUMN error_id TEXT;
+UPDATE calls SET error_id = CASE
+	WHEN error LIKE '%(HTTP 402)%' THEN 'key.out_of_credit'
+	WHEN error LIKE '%(HTTP 401)%' OR error LIKE '%(HTTP 403)%' THEN 'key.refused'
+	WHEN error LIKE '%(HTTP 404)%' THEN 'model.unknown'
+	WHEN error LIKE '%(HTTP 429)%' OR error LIKE '%(HTTP 5%' THEN 'model.busy'
+	WHEN error LIKE '%(HTTP %' THEN 'model.rejected'
+	WHEN error LIKE '%stream was cut%' THEN 'model.cut'
+	WHEN error LIKE 'model request failed:%' THEN 'model.unreachable'
+	ELSE 'internal.unexpected' END
+WHERE error IS NOT NULL AND error != ''`}}
 }
 
 // execer is what the sink and the cleanup write through, so they can run
@@ -100,21 +115,21 @@ func Sink(d *sql.DB) func(llm.Call) {
 			// absent, since a reported zero says no more than that.
 			reasoning, cached = zeroIsNull(c.Usage.CompletionDetails.ReasoningTokens), zeroIsNull(c.Usage.PromptDetails.CachedTokens)
 		}
-		var errText any
+		var errText, errID any
 		if c.Error != "" {
-			errText = c.Error
+			errText, errID = c.Error, nullable(c.ErrorID)
 		}
 		// Nothing is recorded for a subject that was removed while this call
 		// ran: the mark and the insert are one statement, so a removal
 		// can't slip between checking and writing.
 		if _, err := d.ExecContext(ctx, `INSERT INTO calls
 			(at, subject_type, subject_id, model, answered, ms, prompt_tokens, completion_tokens, cost, host, session, error,
-				stage, run, tools, reasoning_tokens, cached_tokens)
-			SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+				stage, run, tools, reasoning_tokens, cached_tokens, error_id)
+			SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 			WHERE NOT EXISTS (SELECT 1 FROM forgotten WHERE subject_type = ? AND subject_id = ?)`,
 			c.At, c.SubjectType, c.SubjectID, c.Model, nullable(c.Answered), c.Ms,
 			prompt, completion, cost, nullable(c.Host), nullable(c.Session), errText,
-			nullable(c.Stage), nullable(c.Run), nullable(c.Tools), reasoning, cached,
+			nullable(c.Stage), nullable(c.Run), nullable(c.Tools), reasoning, cached, errID,
 			c.SubjectType, c.SubjectID); err != nil {
 			slog.Error("usage: record call", "subject", c.SubjectType+"/"+c.SubjectID, "err", err)
 		}

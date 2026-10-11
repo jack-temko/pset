@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackt/pset/internal/errs"
 )
@@ -42,5 +43,20 @@ func TestStreamCutAndNetworkFailureAreInTheCatalog(t *testing.T) {
 	_, err := c.ChatOnce(context.Background(), ChatRequest{Model: "m", Messages: []Message{TextMessage("user", "hi")}})
 	if err == nil || errs.Resolve(err).ID != "model.unreachable" {
 		t.Errorf("unreachable: %v", err)
+	}
+}
+
+// The cost sink is told the cause's id with a failed call.
+func TestAFailedCallIsLoggedWithItsCauseID(t *testing.T) {
+	var got Call
+	OnCall(func(c Call) { got = c })
+	t.Cleanup(func() { OnCall(nil) })
+	logCall(ChatRequest{Model: "m"}, time.Now(), Reply{}, &CallError{Status: 402})
+	if got.ErrorID != "key.out_of_credit" || got.Error == "" {
+		t.Errorf("call %+v", got)
+	}
+	logCall(ChatRequest{Model: "m"}, time.Now(), Reply{}, nil)
+	if got.ErrorID != "" {
+		t.Errorf("a call that worked has cause %q", got.ErrorID)
 	}
 }

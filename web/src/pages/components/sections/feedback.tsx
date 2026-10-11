@@ -238,6 +238,7 @@ const DETAIL: UsageDetail = {
           asked: 'anthropic/claude-haiku-5.5',
           ms: 900,
           error: 'rate limited (429)',
+          errorId: 'model.busy',
         },
         {
           id: 6,

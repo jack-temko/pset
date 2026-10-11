@@ -116,6 +116,9 @@ type Call struct {
 	Cached    *int     `json:"cached,omitempty"`
 	Cost      *float64 `json:"cost,omitempty"`
 	Error     string   `json:"error,omitempty"`
+	// ErrorID is the catalog id of why a failed call failed; Error is the
+	// text as the provider said it.
+	ErrorID string `json:"errorId,omitempty"`
 }
 
 // BookUsage is what a whole book has cost: the total, a row for each

@@ -14,13 +14,14 @@ import (
 type CallRow struct {
 	ID                                            int64
 	At, Stage, Run, Tools, Asked, Answered, Error string
+	ErrorID                                       string
 	Ms                                            int64
 	TokensIn, TokensOut, Reasoning, Cached        *int
 	Cost                                          *float64
 }
 
 const callColumns = `id, at, coalesce(stage, ''), coalesce(run, ''), coalesce(tools, ''), model, coalesce(answered, ''), ms,
-	prompt_tokens, completion_tokens, reasoning_tokens, cached_tokens, cost, coalesce(error, '')`
+	prompt_tokens, completion_tokens, reasoning_tokens, cached_tokens, cost, coalesce(error, ''), coalesce(error_id, '')`
 
 func scanCalls(rows *sql.Rows) ([]CallRow, error) {
 	defer cleanup.Close(rows)
@@ -29,7 +30,7 @@ func scanCalls(rows *sql.Rows) ([]CallRow, error) {
 		var c CallRow
 		var in, outTok, reasoning, cached sql.NullInt64
 		var cost sql.NullFloat64
-		if err := rows.Scan(&c.ID, &c.At, &c.Stage, &c.Run, &c.Tools, &c.Asked, &c.Answered, &c.Ms, &in, &outTok, &reasoning, &cached, &cost, &c.Error); err != nil {
+		if err := rows.Scan(&c.ID, &c.At, &c.Stage, &c.Run, &c.Tools, &c.Asked, &c.Answered, &c.Ms, &in, &outTok, &reasoning, &cached, &cost, &c.Error, &c.ErrorID); err != nil {
 			return nil, err
 		}
 		c.TokensIn, c.TokensOut, c.Reasoning, c.Cached = nullInt(in), nullInt(outTok), nullInt(reasoning), nullInt(cached)
@@ -160,7 +161,7 @@ func Build(own, shared []CallRow, n int) *Detail {
 			}
 			r.Calls = append(r.Calls, Call{
 				ID: c.ID, At: c.At, Stage: name, Tools: c.Tools, Asked: c.Asked, Answered: c.Answered, Ms: c.Ms,
-				TokensIn: c.TokensIn, TokensOut: c.TokensOut, Reasoning: c.Reasoning, Cached: c.Cached, Cost: c.Cost, Error: c.Error,
+				TokensIn: c.TokensIn, TokensOut: c.TokensOut, Reasoning: c.Reasoning, Cached: c.Cached, Cost: c.Cost, Error: c.Error, ErrorID: c.ErrorID,
 			})
 		}
 	}
