@@ -242,3 +242,141 @@ describe('aggregate', () => {
     });
   });
 });
+
+describe('Loaded boxes', () => {
+  const swap = (over = {}) => ({
+    box: 'main > div',
+    t: 1100,
+    skeleton: 'done',
+    content: 'done',
+    skeletonBlocks: [20, 40, 40],
+    contentBlocks: [20, 52, 40],
+    skeletonOffsets: [0, 20, 60],
+    contentOffsets: [0, 20, 72],
+    skeletonExtent: 100,
+    contentExtent: 112,
+    ...over,
+  });
+
+  it('measures how far a skeleton is from its content', () => {
+    const r = analyzeRun({ ...base, swaps: [swap()] });
+    expect(r.fidelity).toEqual([
+      {
+        box: 'main > div',
+        skeleton: 'done',
+        content: 'done',
+        blockPx: 12,
+        blocks: [3, 3],
+        offsetPx: 12,
+        extentPx: 12,
+        fullExtent: [100, 112],
+      },
+    ]);
+  });
+  it('ignores swaps before t0, and compares only totals when the block counts differ', () => {
+    const r = analyzeRun({
+      ...base,
+      swaps: [
+        swap({ t: 500 }),
+        swap({
+          skeletonBlocks: [100],
+          skeletonOffsets: [0],
+          skeletonExtent: 112,
+        }),
+      ],
+    });
+    expect(r.fidelity).toHaveLength(1);
+    expect(r.fidelity[0].blockPx).toBe(0);
+    expect(r.fidelity[0].extentPx).toBe(0);
+  });
+  it('still measures how far the content reaches when the block counts differ', () => {
+    const r = analyzeRun({
+      ...base,
+      swaps: [
+        swap({
+          skeletonBlocks: [40, 80],
+          skeletonOffsets: [0, 40],
+          skeletonExtent: 120,
+          contentBlocks: [40, 62, 80],
+          contentOffsets: [0, 40, 102],
+          contentExtent: 182,
+        }),
+      ],
+    });
+    expect(r.fidelity[0].extentPx).toBe(62);
+    expect(r.fidelity[0].blocks).toEqual([2, 3]);
+    // The second block of one starts where the second of the other does.
+    expect(r.fidelity[0].offsetPx).toBe(0);
+  });
+  it('compares only the first eight common blocks, and the blocks both have', () => {
+    const many = Array.from({ length: 12 }, (_, i) => i * 10);
+    const r = analyzeRun({
+      ...base,
+      swaps: [
+        swap({
+          skeletonOffsets: many,
+          contentOffsets: many
+            .map((y, i) => (i === 10 ? y + 50 : y))
+            .slice(0, 11),
+        }),
+      ],
+    });
+    expect(r.fidelity[0].offsetPx).toBe(0);
+  });
+  it('reports a variant change after the reveal', () => {
+    const r = analyzeRun({
+      ...base,
+      changes: [{ box: 'main > div', t: 1500, from: 'question', to: 'done' }],
+    });
+    expect(r.flashes).toEqual([
+      { box: 'main > div', from: 'question', to: 'done' },
+    ]);
+  });
+  it('a double reveal is two in one navigation; one per navigation is fine', () => {
+    const rv = (epoch, t) => ({ box: 'a', t, epoch });
+    expect(
+      analyzeRun({ ...base, reveals: [rv(0, 1100), rv(0, 1500)] }).doubles,
+    ).toEqual([{ box: 'a', count: 2 }]);
+    expect(
+      analyzeRun({ ...base, reveals: [rv(0, 1100), rv(1, 1500)] }).doubles,
+    ).toEqual([]);
+  });
+  it('aggregate keeps the worst of each box and every flash', () => {
+    const run = (blockPx, flashes = []) => ({
+      ...analyzeRun(base),
+      fidelity: [
+        {
+          box: 'a',
+          skeleton: 'x',
+          content: 'x',
+          blockPx,
+          totalPx: 0,
+          blocks: [1, 1],
+        },
+      ],
+      flashes,
+      doubles: [],
+    });
+    const a = aggregate([run(3), run(9, [{ box: 'a', from: 'x', to: 'y' }])]);
+    expect(a.boxes.fidelity[0].blockPx).toBe(9);
+    expect(a.boxes.flashes).toHaveLength(1);
+  });
+});
+
+describe('variants seen', () => {
+  it('are passed through and joined across runs', () => {
+    const seen = (content, skeleton) => ({
+      ...base,
+      variants: { content, skeleton },
+    });
+    const a = aggregate([
+      analyzeRun(seen(['a'], ['x'])),
+      analyzeRun(seen(['a', 'b'], [])),
+    ]);
+    expect(a.variantsSeen).toEqual({ content: ['a', 'b'], skeleton: ['x'] });
+    expect(analyzeRun(base).variantsSeen).toEqual({
+      content: [],
+      skeleton: [],
+    });
+  });
+});

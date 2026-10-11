@@ -3,13 +3,14 @@
 //
 //   node scripts/jumps/run.mjs --url http://localhost:5180 [--runs 5]
 //        [--slow-ms 600] [--only <scenario>] [--out <dir>]
-//        [--no-discover] [--discover-only]
+//        [--no-discover] [--discover-only] [--parallel 3]
 //
 // --only takes one scenario name or its slug ("home-cold-load"), or a comma
 // list of slugs ("home-cold-load,memory"; the comma form takes slugs only, as
 // names have commas of their own). With --only, discovery looks only at the
 // Book and Homework set pages. --no-discover runs only the hand-written
 // scenarios; --discover-only prints what discovery finds and stops.
+// --parallel N measures N (scenario, mode) jobs at once, one Chromium each.
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
@@ -100,6 +101,36 @@ const textOf = (el) =>
     .replace(/\s+/g, ' ')
     .slice(0, 50);
 
+/** The locator a step names. A step found by its place (a discovered trigger
+ *  or item) is first looked for by its label, the accessible name it was
+ *  found under, so a page that gained or lost a button before it does not
+ *  point the step at another; only when no element carries the label does it
+ *  fall back to the old index. */
+async function locateStep(page, step) {
+  if (!step.css || !step.label || step.nth === undefined)
+    return locate(page, step);
+  const at = await page
+    .evaluate(
+      ({ css, label, nth }) => {
+        const text = (el) =>
+          (el.getAttribute('aria-label') || el.innerText || '')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .slice(0, 50);
+        const all = [...document.querySelectorAll(css)];
+        const named = all.flatMap((el, i) => (text(el) === label ? [i] : []));
+        if (named.length === 0) return nth;
+        // Several with the label: the one nearest the old index.
+        return named.reduce((a, b) =>
+          Math.abs(b - nth) < Math.abs(a - nth) ? b : a,
+        );
+      },
+      { css: step.css, label: step.label, nth: step.nth },
+    )
+    .catch(() => step.nth);
+  return page.locator(step.css).nth(at);
+}
+
 async function runOne(browser, app, sc, mode, opts) {
   const ctx = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
@@ -168,7 +199,7 @@ async function runOne(browser, app, sc, mode, opts) {
           await settle(page, track);
           continue;
         }
-        const target = locate(page, step);
+        const target = await locateStep(page, step);
         try {
           await target.waitFor({ state: 'visible', timeout: 4000 });
         } catch {
@@ -206,6 +237,10 @@ async function runOne(browser, app, sc, mode, opts) {
       shifts: raw.shifts,
       sizes: raw.sizes,
       frames: raw.frames,
+      swaps: raw.swaps,
+      changes: raw.changes,
+      reveals: raw.reveals,
+      variants: raw.variants,
       requests: reqs,
     };
 
@@ -295,7 +330,7 @@ async function discoverOverlays(browser, app, pages) {
         await page.reload({ waitUntil: 'commit' });
         await settle(page, track);
         try {
-          await locate(page, step).click({ timeout: 4000 });
+          await (await locateStep(page, step)).click({ timeout: 4000 });
         } catch {
           continue;
         }
@@ -356,6 +391,7 @@ async function main() {
       only: { type: 'string' },
       'no-discover': { type: 'boolean' },
       'discover-only': { type: 'boolean' },
+      parallel: { type: 'string', default: '1' },
       out: { type: 'string' },
     },
   });
@@ -381,6 +417,7 @@ async function main() {
   const needDiscovery =
     !v.only || known(whole) ? !v.only : !pieces.every(known);
 
+  const parallel = Math.max(1, Number(v.parallel));
   const browser = await chromium.launch();
   const rows = [];
   try {
@@ -421,6 +458,11 @@ async function main() {
       throw new Error(
         `no scenario named ${v.only}. Discovery covers only the Book and Homework set pages when --only is given; other discovered scenarios need a run without --only.`,
       );
+    // Every (scenario, mode) is a job. Rows are made up front, in order, and
+    // `parallel` workers, each with its own Chromium, take jobs as they free.
+    // A run's measurements are timed in the page, so sharing the machine
+    // slows the runs but does not skew what they record.
+    const jobs = [];
     for (const sc of list) {
       for (const mode of ['real', 'slow']) {
         const row = {
@@ -428,56 +470,72 @@ async function main() {
           mode,
           url: sc.url,
           trigger: sc.discovered ? sc.label : undefined,
+          waits: sc.waits,
+          variant: sc.variant,
         };
         rows.push(row);
-        if (sc.skip) {
-          row.skipped = sc.skip;
-          continue;
-        }
-        const results = [];
-        for (let i = 0; i < runs; i++) {
-          process.stderr.write(`${sc.name} (${mode}) ${i + 1}/${runs}\n`);
-          // A run that fails (a click that never lands) is tried once more,
-          // then reported as an error rather than ending the audit.
-          let r;
-          let failure;
-          for (let attempt = 0; attempt < 2 && !r; attempt++) {
-            try {
-              r = await runOne(browser, app, sc, mode, { slowMs });
-            } catch (e) {
-              if (e instanceof Missing) {
-                row.skipped = e.message;
-                break;
-              }
-              failure = String(e.message ?? e).split('\n')[0];
-            }
-          }
-          if (row.skipped) break;
-          if (!r) {
-            row.skipped = `failed twice: ${failure}`;
-            break;
-          }
-          const base = `${slug(sc.name)}-${mode}-${i + 1}`;
-          fs.writeFileSync(
-            path.join(out, 'raw', `${base}.json`),
-            JSON.stringify(r.log),
-          );
-          if (r.firstShot)
-            fs.writeFileSync(
-              path.join(out, 'shots', `${base}-first.jpg`),
-              r.firstShot,
-            );
-          fs.writeFileSync(
-            path.join(out, 'shots', `${base}-settled.jpg`),
-            r.settledShot,
-          );
-          results.push({ run: i + 1, base, ...analyzeRun(r.log) });
-        }
-        if (!row.skipped) {
-          row.runs = results;
-          row.agg = aggregate(results);
-        }
+        if (sc.skip) row.skipped = sc.skip;
+        else jobs.push({ sc, mode, row });
       }
+    }
+    const measure = async (b, { sc, mode, row }) => {
+      const results = [];
+      for (let i = 0; i < runs; i++) {
+        process.stderr.write(`${sc.name} (${mode}) ${i + 1}/${runs}\n`);
+        // A run that fails (a click that never lands) is tried once more,
+        // then reported as an error rather than ending the audit.
+        let r;
+        let failure;
+        for (let attempt = 0; attempt < 2 && !r; attempt++) {
+          try {
+            r = await runOne(b, app, sc, mode, { slowMs });
+          } catch (e) {
+            if (e instanceof Missing) {
+              row.skipped = e.message;
+              // A discovered scenario that cannot find its trigger is coverage
+              // lost, not a scenario that was never there.
+              if (sc.discovered) row.lost = true;
+              break;
+            }
+            failure = String(e.message ?? e).split('\n')[0];
+          }
+        }
+        if (row.skipped) break;
+        if (!r) {
+          row.skipped = `failed twice: ${failure}`;
+          break;
+        }
+        const base = `${slug(sc.name)}-${mode}-${i + 1}`;
+        fs.writeFileSync(
+          path.join(out, 'raw', `${base}.json`),
+          JSON.stringify(r.log),
+        );
+        if (r.firstShot)
+          fs.writeFileSync(
+            path.join(out, 'shots', `${base}-first.jpg`),
+            r.firstShot,
+          );
+        fs.writeFileSync(
+          path.join(out, 'shots', `${base}-settled.jpg`),
+          r.settledShot,
+        );
+        results.push({ run: i + 1, base, ...analyzeRun(r.log) });
+      }
+      if (!row.skipped) {
+        row.runs = results;
+        row.agg = aggregate(results);
+      }
+    };
+    let next = 0;
+    const worker = async (b) => {
+      while (next < jobs.length) await measure(b, jobs[next++]);
+    };
+    const extra = [];
+    try {
+      for (let i = 1; i < parallel; i++) extra.push(await chromium.launch());
+      await Promise.all([browser, ...extra].map(worker));
+    } finally {
+      await Promise.all(extra.map((x) => x.close()));
     }
   } finally {
     await browser.close();

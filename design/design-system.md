@@ -314,6 +314,28 @@ fade, `aria-busy` and the error line, so screens cannot drift apart.
   the ascent, descent and line-gap overrides in `index.css`) right after it in the font stack,
   so the swap moves almost nothing.
 
+`make jumps-check` is the guard: nothing may jump, and it fails if anything does. It builds a
+public fixture library (`tools/fixturelib`: two books from `testdata/`, homework, answered Ask
+turns and usage calls, no key and no model call) in `/tmp/pset-jumps-<topic>/fixture`, runs
+the audit on it in both modes, and `web/scripts/jumps/check.mjs` exits 1,
+listing each offender with its numbers and the elements that moved, when any row has an
+overlay that changed size by more than 2px after opening, a layout shift above 0.001 (both
+medians over the runs), or a run that never settled (a skeleton or spinner still showing at the
+timeout: a failed query shows its error line, it doesn't shimmer forever). A skipped
+scenario is listed, not failed. A deliberate exception goes in
+`web/scripts/jumps/allow.json` as `{ "scenario", "mode"?, "reason" }`, and the list is meant
+to stay empty. The default is the **core** profile (the hand-written scenarios, `--runs 2`),
+which CI runs inside the `check` job when a pull request touches `web/`, `tools/jumps.sh`,
+`tools/fixturelib/` or `web/scripts/jumps/`; `make jumps-check FULL=1` adds discovery and
+`--runs 3`, and runs nightly in CI (`jumps-nightly.yml`, which keeps one issue open while it fails). The guard also reads each `Loaded` box at its swap (its layers carry `data-variant`):
+it fails on a skeleton of another variant than its content, content that reaches more than 2px
+further or less far than the skeleton's (measured on the content, not its box, so a
+fill-height panel can't hide it), a shared block that starts more than 8px away, or a block
+more than 8px taller or shorter, a box whose variant changes after its reveal, and a box revealed
+twice in one navigation. The fixture holds one instance of every view variant and the audit
+opens each (`web/scripts/jumps/variants.mjs`, a copy of `web/src/variants.ts` until that
+lands; a test fails when a variant has no scenario). Spec: `ideas/jumps-guard.md`.
+
 **Hover fades in over 100ms** (2026-09-30, Jack: "give hover a short fade", reversing
 2026-09-25). A hover wash or ink change used to be instant, because a slower fade left a
 swept list lighting rows late and trailing behind the pointer ("It seems to jitter and flash

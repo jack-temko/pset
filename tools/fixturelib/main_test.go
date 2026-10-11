@@ -1,0 +1,221 @@
+package main
+
+import (
+	"context"
+	"database/sql"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/usage"
+)
+
+func inRepoRoot(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("pdftotext"); err != nil {
+		t.Skip("pdftotext is not installed")
+	}
+	t.Chdir(filepath.Join("..", ".."))
+}
+
+func count(t *testing.T, d *sql.DB, q string, args ...any) int {
+	t.Helper()
+	var n int
+	if err := d.QueryRow(q, args...).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func TestBuildHasEveryAuditTarget(t *testing.T) {
+	inRepoRoot(t)
+	ctx := context.Background()
+	dir := filepath.Join(t.TempDir(), "fixture")
+	if err := build(ctx, dir, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	d, err := db.Open(filepath.Join(dir, "pset.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = d.Close() }()
+
+	if n := count(t, d, `SELECT COUNT(*) FROM books WHERE state = 'ready'`); n != 3 {
+		t.Errorf("ready books = %d, want 3", n)
+	}
+	// The scan is the empty variant: no contents, homework or Ask turns.
+	if n := count(t, d, `SELECT COUNT(*) FROM sections WHERE book_id = 'fx-scanned'`) +
+		count(t, d, `SELECT COUNT(*) FROM homework WHERE book_id = 'fx-scanned'`) +
+		count(t, d, `SELECT COUNT(*) FROM turns WHERE book_id = 'fx-scanned'`); n != 0 {
+		t.Errorf("the scanned book holds %d contents, sets or turns, want none", n)
+	}
+	for _, id := range []string{"fx-digital", "fx-flat"} {
+		if _, err := os.Stat(filepath.Join(dir, "books", id+".pdf")); err != nil {
+			t.Error(err)
+		}
+		if n := count(t, d, `SELECT COUNT(*) FROM pages WHERE book_id = ? AND status = 'text'`, id); n == 0 {
+			t.Errorf("%s has no page text", id)
+		}
+		if n := count(t, d, `SELECT COUNT(*) FROM sections WHERE book_id = ?`, id); n == 0 {
+			t.Errorf("%s has no sections", id)
+		}
+		// One set of each variant: in progress, finished, turned in.
+		if n := count(t, d, `SELECT COUNT(*) FROM homework h WHERE h.book_id = ? AND h.turned_in_at = '' AND h.due_date != ''
+			AND EXISTS (SELECT 1 FROM questions q WHERE q.homework_id = h.id AND q.done_at = '')`, id); n != 1 {
+			t.Errorf("%s: in-progress sets = %d, want 1", id, n)
+		}
+		if n := count(t, d, `SELECT COUNT(*) FROM homework h WHERE h.book_id = ? AND h.turned_in_at = ''
+			AND NOT EXISTS (SELECT 1 FROM questions q WHERE q.homework_id = h.id AND q.done_at = '')`, id); n != 1 {
+			t.Errorf("%s: finished sets = %d, want 1", id, n)
+		}
+		if n := count(t, d, `SELECT COUNT(*) FROM homework WHERE book_id = ? AND turned_in_at != ''`, id); n != 1 {
+			t.Errorf("%s: turned-in sets = %d, want 1", id, n)
+		}
+		if n := count(t, d, `SELECT COUNT(*) FROM questions q JOIN homework h ON h.id = q.homework_id WHERE h.book_id = ?`, id); n != 12 {
+			t.Errorf("%s: questions = %d, want 12", id, n)
+		}
+		if n := count(t, d, `SELECT COUNT(*) FROM questions q JOIN homework h ON h.id = q.homework_id WHERE h.book_id = ? AND q.state = 'unwritten'`, id); n == 0 {
+			t.Errorf("%s has no unwritten question", id)
+		}
+		if n := count(t, d, `SELECT COUNT(*) FROM calls WHERE subject_type = 'book' AND subject_id = ? AND stage != '' AND run != ''`, id); n == 0 {
+			t.Errorf("%s has no import calls", id)
+		}
+	}
+	if n := count(t, d, `SELECT COUNT(*) FROM turns WHERE book_id = 'fx-digital' AND state = 'done' AND answer != '[]'`); n != 2 {
+		t.Errorf("answered turns = %d, want 2", n)
+	}
+	// Ask answers carry what real ones do (math of each kind, a long
+	// paragraph), and questions carry captioned figures that can be cropped.
+	var answer string
+	if err := d.QueryRow(`SELECT group_concat(answer) FROM turns WHERE book_id = 'fx-digital'`).Scan(&answer); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"type":"math"`, `"type":"derivation"`, `"type":"callout"`, `"m":`, `\\frac`, `pmatrix`} {
+		if !strings.Contains(answer, want) {
+			t.Errorf("the Ask answers lack %s", want)
+		}
+	}
+	var longest int
+	if err := d.QueryRow(`SELECT max(length(answer)) FROM turns`).Scan(&longest); err != nil || longest < 600 {
+		t.Errorf("the longest Ask answer is %d bytes, want one long enough to wrap", longest)
+	}
+	if n := count(t, d, `SELECT COUNT(*) FROM questions WHERE figures LIKE '%"label":"Figure %'  AND page IS NOT NULL`); n == 0 {
+		t.Error("no question has a captioned figure")
+	}
+	// This week's study on two books (Home's week bar), and a current question
+	// with a figure and its hint open.
+	if n := count(t, d, `SELECT COUNT(DISTINCT book_id) FROM study WHERE ended > datetime('now', '-1 day')`); n != 2 {
+		t.Errorf("study this week on %d books, want 2", n)
+	}
+	if n := count(t, d, `SELECT COUNT(*) FROM questions WHERE figures != '[]' AND revealed LIKE '%hint%' AND done_at = ''`); n == 0 {
+		t.Error("no unfinished question has a figure and its hint open")
+	}
+	// The audit's usage scenarios look for a finished question and an answered
+	// turn that carry a usage line.
+	// A written guide has all its rows, or the page shows a spinner for the
+	// missing one for ever.
+	if n := count(t, d, `SELECT COUNT(*) FROM questions WHERE state = 'ready' AND (hint = '[]' OR walkthrough NOT LIKE '%"answer"%')`); n != 0 {
+		t.Errorf("%d ready questions lack a hint or an answer", n)
+	}
+	uses, err := usage.ForSubjects(ctx, d, usage.SubjectQuestion, []string{"fx-hw-digital-due-q1"})
+	if err != nil || uses["fx-hw-digital-due-q1"] == nil {
+		t.Errorf("question usage = %v, %v", uses, err)
+	}
+	uses, err = usage.ForSubjects(ctx, d, usage.SubjectTurn, []string{"fx-turn-1", "fx-turn-2"})
+	if err != nil || uses["fx-turn-1"] == nil || uses["fx-turn-2"] == nil {
+		t.Errorf("turn usage = %v, %v", uses, err)
+	}
+	if n := count(t, d, `SELECT COUNT(*) FROM settings WHERE key IN ('chat', 'embeddings')`); n != 0 {
+		t.Errorf("the fixture holds %d model settings, want none", n)
+	}
+}
+
+func TestRefusals(t *testing.T) {
+	inRepoRoot(t)
+	ctx := context.Background()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_DATA_HOME", "")
+	t.Setenv("PSET_DATA", "")
+
+	// A directory that holds a library already.
+	full := filepath.Join(t.TempDir(), "full")
+	if err := os.MkdirAll(full, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(full, "pset.db"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := build(ctx, full, time.Now()); err == nil || !strings.Contains(err.Error(), "pset.db") {
+		t.Errorf("a directory with a pset.db: %v", err)
+	}
+
+	for _, rel := range []string{".local/share/pset", ".local/share/pset-test-library", ".local/share/pset/sub", ".local/share"} {
+		dir := filepath.Join(home, rel)
+		if err := build(ctx, dir, time.Now()); err == nil {
+			t.Errorf("%s was not refused", rel)
+		}
+		if _, err := os.Stat(dir); err == nil {
+			t.Errorf("%s was created", rel)
+		}
+	}
+
+	t.Setenv("PSET_DATA", filepath.Join(home, "elsewhere"))
+	if err := build(ctx, filepath.Join(home, "elsewhere"), time.Now()); err == nil {
+		t.Error("PSET_DATA was not refused")
+	}
+}
+
+// The study stretches always fall inside the week the app asks for, even
+// just after it starts and just before it ends.
+func TestStudyStaysInTheWeek(t *testing.T) {
+	inRepoRoot(t)
+	for name, now := range map[string]time.Time{
+		"Monday 00:05": time.Date(2026, 10, 12, 0, 5, 0, 0, time.Local),
+		"Monday 00:00": time.Date(2026, 10, 12, 0, 0, 30, 0, time.Local),
+		"Sunday 23:55": time.Date(2026, 10, 11, 23, 55, 0, 0, time.Local),
+		"midweek":      time.Date(2026, 10, 14, 15, 0, 0, 0, time.Local),
+	} {
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			dir := filepath.Join(t.TempDir(), "fixture")
+			if err := build(ctx, dir, now); err != nil {
+				t.Fatal(err)
+			}
+			d, err := db.Open(filepath.Join(dir, "pset.db"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = d.Close() }()
+			start := weekStart(now)
+			rows, err := d.Query(`SELECT book_id, started, ended FROM study`)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = rows.Close() }()
+			books := map[string]bool{}
+			for rows.Next() {
+				var book, a, b string
+				if err := rows.Scan(&book, &a, &b); err != nil {
+					t.Fatal(err)
+				}
+				from, err1 := time.Parse(time.RFC3339Nano, a)
+				to, err2 := time.Parse(time.RFC3339Nano, b)
+				if err1 != nil || err2 != nil {
+					t.Fatal(err1, err2)
+				}
+				if from.Before(start) || to.After(now) || !to.After(from) {
+					t.Errorf("stretch %s to %s is outside %s to %s", from, to, start, now)
+				}
+				books[book] = true
+			}
+			if len(books) != 2 {
+				t.Errorf("study on %d books, want 2", len(books))
+			}
+		})
+	}
+}

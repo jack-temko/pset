@@ -50,6 +50,23 @@ export async function discover(app) {
     }
   }
 
+  // One of each variant the views have, where the library holds it.
+  const setOf = (pick) => sets.find(pick) ?? null;
+  const inProgressSet = setOf((h) => !h.turnedInAt && h.done < h.total);
+  const finishedSet = setOf(
+    (h) => !h.turnedInAt && h.total > 0 && h.done === h.total,
+  );
+  const turnedInSet = setOf((h) => !!h.turnedInAt);
+  let noContentsBook = null;
+  let noTurnsBook = null;
+  for (const b of books) {
+    if (b.state?.kind !== 'ready') continue;
+    const c = await get(`/api/books/${b.id}/contents`);
+    if (!noContentsBook && !(c.entries ?? []).length) noContentsBook = b;
+    const { turns } = await get(`/api/books/${b.id}/turns`);
+    if (!noTurnsBook && !(turns ?? []).length) noTurnsBook = b;
+  }
+
   const book = best?.book ?? null;
   // The set the homework scenarios use: one with a finished, costed
   // question if there is one, else the one with the most questions.
@@ -57,10 +74,31 @@ export async function discover(app) {
     usageQuestion?.set ??
     best?.homework.slice().sort((a, b) => b.total - a.total)[0] ??
     null;
-  return { book, set, home: books[0] ?? null, usageQuestion, askBook };
+  return {
+    book,
+    set,
+    home: books[0] ?? null,
+    usageQuestion,
+    askBook,
+    inProgressSet,
+    finishedSet,
+    turnedInSet,
+    noContentsBook,
+    noTurnsBook,
+  };
 }
 
-export function scenarios({ book, set, usageQuestion, askBook }) {
+export function scenarios({
+  book,
+  set,
+  usageQuestion,
+  askBook,
+  inProgressSet,
+  finishedSet,
+  turnedInSet,
+  noContentsBook,
+  noTurnsBook,
+}) {
   const noBook = book ? undefined : 'the library has no book';
   const noSet = !book
     ? 'the library has no book'
@@ -75,10 +113,61 @@ export function scenarios({ book, set, usageQuestion, askBook }) {
   const hwMenu = click('button', 'Homework actions');
 
   return [
-    { name: 'Home, cold load', url: '/' },
-    { name: 'Settings, cold load', url: '/settings' },
-    { name: 'Book, cold load', url: b, skip: noBook },
+    { name: 'Home, cold load', url: '/', variant: 'home/books' },
+    {
+      name: 'Home, empty library, cold load',
+      url: '/',
+      variant: 'home/empty',
+      skip: 'the fixture library has books; an empty library needs its own data',
+    },
+    {
+      name: 'Settings, cold load',
+      url: '/settings',
+      variant: 'settings/key-missing',
+    },
+    {
+      name: 'Settings, key saved, cold load',
+      url: '/settings',
+      variant: 'settings/key-present',
+      skip: 'the fixture library holds no key; one would need saving through the API',
+    },
+    {
+      name: 'Book, cold load',
+      url: b,
+      variant: 'book/contents',
+      skip: noBook,
+    },
+    {
+      name: 'Book without contents, cold load',
+      url: noContentsBook && `/books/${noContentsBook.id}`,
+      variant: 'book/no-contents',
+      skip: noContentsBook ? undefined : 'no book lacks a table of contents',
+    },
     { name: 'Homework set, cold load', url: hw, skip: noSet },
+    ...[
+      ['in-progress', 'in progress', inProgressSet],
+      ['finished', 'finished', finishedSet],
+      ['turned-in', 'turned in', turnedInSet],
+    ].map(([id, words, h]) => ({
+      name: `Homework set, ${words}, cold load`,
+      url: h && `/books/${h.bookId}/homework/${h.id}`,
+      variant: `homework-set/${id}`,
+      skip: h ? undefined : `no homework set is ${words}`,
+    })),
+    {
+      name: 'Ask, with turns',
+      url: askBook && `/books/${askBook.id}`,
+      steps: [tab('Ask')],
+      variant: 'ask/turns',
+      skip: askBook ? undefined : 'no book has an answered Ask turn',
+    },
+    {
+      name: 'Ask, empty',
+      url: noTurnsBook && `/books/${noTurnsBook.id}`,
+      steps: [tab('Ask')],
+      variant: 'ask/empty',
+      skip: noTurnsBook ? undefined : 'every book has Ask turns',
+    },
 
     {
       name: 'Home to a book',

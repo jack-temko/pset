@@ -1,0 +1,93 @@
+name: Jumps nightly
+
+# The full jump audit (discovery, 3 runs) on dev, too long for every pull
+# request. One issue stays open while it fails. Spec: ideas/jumps-guard.md.
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  jumps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      # The PDF text extraction the fixture needs.
+      - run: sudo apt-get update && sudo apt-get install -y poppler-utils
+      - run: npm ci
+        working-directory: web
+      - name: Playwright version
+        id: pw
+        working-directory: web
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      # Restored and saved apart, so a failing guard still saves the browser.
+      - uses: actions/cache/restore@v4
+        id: browser
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - name: Install Chromium
+        working-directory: web
+        run: |
+          npx playwright install --with-deps chromium
+          command -v sqlite3 >/dev/null || sudo apt-get install -y sqlite3
+      - uses: actions/cache/save@v4
+        if: always() && steps.browser.outputs.cache-hit != 'true'
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - name: Full jump check
+        id: jumps
+        run: |
+          set +e
+          make jumps-check FULL=1 2>&1 | tee "$RUNNER_TEMP/jumps.log"
+          echo "status=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jumps-report
+          path: |
+            /tmp/pset-jumps-*/20*
+            /tmp/pset-jumps-*/server.log
+            /tmp/pset-jumps-*/vite.log
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS: ${{ steps.jumps.outputs.status }}
+        run: |
+          title="Nightly jump check failed"
+          number=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --jq "[.[] | select(.title == \"$title\")][0].number // empty")
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          if [ "$STATUS" = "0" ]; then
+            [ -n "$number" ] && gh issue close "$number" --comment "Passed on $(date -u +%F): $run_url"
+            exit 0
+          fi
+          {
+            echo "The full jump check failed on dev ($run_url). The report is in the run's artifacts."
+            echo
+            echo '```'
+            grep -E '^(FAIL|skipped|allowed|[0-9]+ of [0-9]+ rows)|^  ' "$RUNNER_TEMP/jumps.log" | head -c 55000
+            echo '```'
+          } > "$RUNNER_TEMP/body.md"
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh issue create --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          fi
+          # A failed audit fails the run, so it shows red.
+          exit 1

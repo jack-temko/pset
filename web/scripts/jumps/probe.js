@@ -151,4 +151,129 @@
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
+
+  // Loaded boxes (components/loaded): a grid whose layers carry data-variant,
+  // the skeleton layer aria-hidden and the content layer not. At the swap, when
+  // the content layer first has content over a skeleton layer still there,
+  // the probe records both variants and the heights of each layer's top-level
+  // blocks (a swap is a sample); the content layer's variant is watched after
+  // its reveal (a change is a flash), and reveals are counted per navigation
+  // epoch (two in one epoch is a double reveal).
+  // Every "<view>/<data-variant>" seen on a content layer and on a skeleton layer,
+  // so a scenario can be checked to have shown the variant it is tagged with.
+  J.variants = { content: [], skeleton: [] };
+  J.swaps = [];
+  J.changes = [];
+  J.reveals = [];
+  J.epoch = 0;
+  const bump = () => J.epoch++;
+  for (const m of ['pushState', 'replaceState']) {
+    const orig = history[m];
+    history[m] = function (...args) {
+      bump();
+      return orig.apply(this, args);
+    };
+  }
+  addEventListener('popstate', bump);
+
+  // A layer's content, not its box: a fill-height panel keeps its box fixed
+  // whatever it holds. What a student sees is only what is inside every
+  // scrolling or clipping ancestor and the viewport, so the sample is clipped
+  // to that: `extent` is how far its descendants reach below the layer's top,
+  // and `offsets` the tops of its top-level children (with `blocks` their
+  // heights), the visible ones only. `fullExtent` is the unclipped reach, kept
+  // as information.
+  const visibleBottom = (layer) => {
+    let bottom = innerHeight;
+    for (let el = layer.parentElement; el; el = el.parentElement) {
+      if (getComputedStyle(el).overflowY === 'visible') continue;
+      const r = el.getBoundingClientRect();
+      bottom = Math.min(bottom, r.top + el.clientTop + el.clientHeight);
+    }
+    return bottom;
+  };
+  const layout = (layer) => {
+    const top = layer.getBoundingClientRect().top;
+    const limit = visibleBottom(layer);
+    let bottom = top;
+    for (const el of layer.querySelectorAll('*')) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) bottom = Math.max(bottom, r.bottom);
+    }
+    const kids = [...layer.children]
+      .map((c) => c.getBoundingClientRect())
+      .filter((r) => r.top < limit);
+    return {
+      blocks: kids.map((r) => Math.round(Math.min(r.bottom, limit) - r.top)),
+      offsets: kids.map((r) => Math.round(r.top - top)),
+      extent: Math.round(Math.max(0, Math.min(bottom, limit) - top)),
+      fullExtent: Math.round(bottom - top),
+    };
+  };
+  const boxes = new WeakMap();
+  const noteVariants = () => {
+    for (const el of document.querySelectorAll('[data-variant]')) {
+      const kind =
+        el.getAttribute('aria-hidden') === 'true' ? 'skeleton' : 'content';
+      // "<view>/<name>"; a box that names no view is "/<name>".
+      const v = el.getAttribute('data-variant');
+      const id = `${el.getAttribute('data-view') ?? ''}/${v}`;
+      if (v && !J.variants[kind].includes(id)) J.variants[kind].push(id);
+    }
+  };
+  const watchBoxes = () => {
+    noteVariants();
+    for (const el of document.querySelectorAll(
+      '[data-variant]:not([aria-hidden=true])',
+    )) {
+      const box = el.parentElement;
+      if (!box) continue;
+      let st = boxes.get(el);
+      if (!st) boxes.set(el, (st = { revealed: false, variant: '' }));
+      const variant = el.getAttribute('data-variant');
+      const has = el.childElementCount > 0;
+      if (has && !st.revealed) {
+        st.revealed = true;
+        st.variant = variant;
+        const t = performance.now();
+        J.reveals.push({ box: sel(box), t, epoch: J.epoch });
+        const skel = box.querySelector(
+          ':scope > [data-variant][aria-hidden=true]',
+        );
+        if (skel) {
+          const a = layout(skel);
+          const b = layout(el);
+          J.swaps.push({
+            box: sel(box),
+            t,
+            skeleton: skel.getAttribute('data-variant'),
+            content: variant,
+            skeletonBlocks: a.blocks,
+            contentBlocks: b.blocks,
+            skeletonOffsets: a.offsets,
+            contentOffsets: b.offsets,
+            skeletonExtent: a.extent,
+            contentExtent: b.extent,
+            skeletonFullExtent: a.fullExtent,
+            contentFullExtent: b.fullExtent,
+          });
+        }
+      } else if (!has && st.revealed) {
+        st.revealed = false;
+      } else if (has && st.revealed && variant !== st.variant) {
+        J.changes.push({
+          box: sel(box),
+          t: performance.now(),
+          from: st.variant,
+          to: variant,
+        });
+        st.variant = variant;
+      }
+    }
+  };
+  const watchTick = () => {
+    watchBoxes();
+    requestAnimationFrame(watchTick);
+  };
+  requestAnimationFrame(watchTick);
 })();
