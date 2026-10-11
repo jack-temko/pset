@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -88,5 +89,21 @@ func TestUnknownEndpointAnswersRequestNotFound(t *testing.T) {
 	NotFoundAPI(rec, httptest.NewRequest("GET", "/api/nothing", nil))
 	if rec.Code != 404 || !strings.Contains(rec.Body.String(), `"id":"request.not_found"`) {
 		t.Errorf("%d %q", rec.Code, rec.Body.String())
+	}
+}
+
+// A client that went away is not a failure: nothing is written, nothing kept.
+func TestACancelledRequestIsAnsweredWithNothing(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	rec := httptest.NewRecorder()
+	Fail(rec, httptest.NewRequest("GET", "/x", nil).WithContext(ctx), errors.New("boom"))
+	if rec.Body.Len() != 0 || rec.Code != 200 {
+		t.Errorf("wrote %d %q", rec.Code, rec.Body.String())
+	}
+	rec = httptest.NewRecorder()
+	Fail(rec, httptest.NewRequest("GET", "/x", nil), context.Canceled)
+	if rec.Body.Len() != 0 {
+		t.Errorf("wrote %q", rec.Body.String())
 	}
 }

@@ -60,6 +60,18 @@ func NewIncident() string {
 	return string(b[:])
 }
 
+// Respond is Report for a request: only a server failure (status 500 or more)
+// is kept. A 4xx is the request's own fault, and a screen that asks again
+// every few seconds would write a row each time; it is answered with its view
+// and chain, with no incident.
+func Respond(ctx context.Context, err error, where Where) View {
+	v := Resolve(err)
+	if v.Status < 500 {
+		return v
+	}
+	return Report(ctx, err, where)
+}
+
 // Report resolves err, gives it an incident id, writes one structured log
 // line with the whole chain and every Go error text, keeps it through the
 // recorder, and returns the view. A field error is the student's typing, not

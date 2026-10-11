@@ -52,21 +52,27 @@ type View struct {
 
 	// Status is the HTTP status; it is not sent.
 	Status int `json:"-"`
-	// Params are the placeholder values the chain was raised with.
-	Params map[string]string `json:"-"`
+	// Links are the placeholder values each link of the chain was raised with,
+	// outermost first.
+	Links []map[string]string `json:"-"`
 }
 
 // Stored is a view in the form a database row keeps it: the ids and params,
 // not the words, so a row shows the catalog's current copy.
 type Stored struct {
-	Chain    []string          `json:"chain"`
-	Params   map[string]string `json:"params,omitempty"`
-	Incident string            `json:"incident,omitempty"`
+	Chain []string `json:"chain"`
+	// Links are the params of each link, in the chain's order. Params is the
+	// older merged form, read when there are no Links.
+	Links    []map[string]string `json:"links,omitempty"`
+	Params   map[string]string   `json:"params,omitempty"`
+	Field    string              `json:"field,omitempty"`
+	Ref      string              `json:"ref,omitempty"`
+	Incident string              `json:"incident,omitempty"`
 }
 
 // Stored is the view as a row keeps it.
 func (v View) Stored() Stored {
-	return Stored{Chain: v.Chain, Params: v.Params, Incident: v.Incident}
+	return Stored{Chain: v.Chain, Links: v.Links, Field: v.Field, Ref: v.Ref, Incident: v.Incident}
 }
 
 // Marshal is the stored view as the JSON a row keeps in its error column.

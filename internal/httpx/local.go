@@ -33,18 +33,25 @@ func LocalOnly(listen string, next http.Handler) http.Handler {
 	local := func(hostport string) bool { return isLocalName(hostname(hostport), own) }
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !local(r.Host) {
-			Fail(w, r, errs.NotLocal.New())
+			refuse(w, errs.NotLocal.New())
 			return
 		}
 		if origin := r.Header.Get("Origin"); origin != "" && !safeMethod(r.Method) {
 			u, err := url.Parse(origin)
 			if err != nil || !local(u.Host) {
-				Fail(w, r, errs.ForeignOrigin.New())
+				refuse(w, errs.ForeignOrigin.New())
 				return
 			}
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// refuse answers a request the server won't hear, with the catalog's words
+// and nothing kept: a page on another site can ask as often as it likes.
+func refuse(w http.ResponseWriter, err error) {
+	v := errs.Resolve(err)
+	JSON(w, v.Status, v)
 }
 
 func safeMethod(m string) bool {

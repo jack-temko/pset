@@ -5,6 +5,7 @@
 package httpx
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -34,13 +35,18 @@ func H(fn HandlerFunc) http.HandlerFunc {
 // Fail answers err as H does. For a handler that has to answer before it
 // returns, such as one already streaming.
 func Fail(w http.ResponseWriter, r *http.Request, err error) {
+	// A client that went away (a tab closed, a request cancelled) is not a
+	// failure and gets no answer.
+	if errors.Is(err, context.Canceled) || r.Context().Err() != nil {
+		return
+	}
 	// A method-and-path pattern ("GET /api/books/{id}") says which route it
 	// was; any other (the catch-all) says nothing, so the path is the route.
 	route := r.Pattern
 	if !strings.Contains(route, " ") {
 		route = r.Method + " " + r.URL.Path
 	}
-	v := errs.Report(r.Context(), err, errs.Where{Route: route})
+	v := errs.Respond(r.Context(), err, errs.Where{Route: route})
 	JSON(w, v.Status, v)
 }
 

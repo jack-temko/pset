@@ -9,7 +9,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
@@ -37,6 +36,10 @@ CREATE INDEX errors_created ON errors (created_at)`},
 	}
 }
 
+// maxIncidents is how many incidents of one id a group lists; its count
+// still says how many there were.
+const maxIncidents = 50
+
 // Store is the errors table.
 type Store struct{ db *sql.DB }
 
@@ -49,7 +52,9 @@ func (s *Store) Record(ctx context.Context, r errs.Record) error {
 	if err != nil {
 		return errs.Data.Wrap(err)
 	}
-	params, err := json.Marshal(r.View.Params)
+	// The params of each link, and the field and ref, as the row keeps them.
+	st := r.View.Stored()
+	params, err := json.Marshal(errs.Stored{Links: st.Links, Field: st.Field, Ref: st.Ref})
 	if err != nil {
 		return errs.Data.Wrap(err)
 	}
@@ -59,7 +64,7 @@ func (s *Store) Record(ctx context.Context, r errs.Record) error {
 		(incident, error_id, chain, params, detail, route, book_id, set_id, question_id, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		r.Incident, r.View.ID, string(chain), string(params), r.Detail, r.Where.Route,
-		r.Where.Book, r.Where.Set, r.Where.Question, r.At.UTC().Format(time.RFC3339Nano))
+		r.Where.Book, r.Where.Set, r.Where.Question, db.At(r.At))
 	return errs.Database.Of(err)
 }
 
@@ -81,8 +86,8 @@ func (s *Store) List(ctx context.Context) ([]Group, error) {
 			return nil, readFailed.Wrap(err)
 		}
 		st := errs.Stored{}
+		cleanup.Log("read a kept error's params", json.Unmarshal([]byte(params), &st))
 		cleanup.Log("read a kept error's chain", json.Unmarshal([]byte(chain), &st.Chain))
-		cleanup.Log("read a kept error's params", json.Unmarshal([]byte(params), &st.Params))
 		v := st.View()
 		inc.What, inc.Chain = v.What, st.Chain
 		i, ok := at[id]
@@ -92,7 +97,9 @@ func (s *Store) List(ctx context.Context) ([]Group, error) {
 			groups = append(groups, Group{ID: id, What: inc.What, Last: inc.At})
 		}
 		groups[i].Count++
-		groups[i].Incidents = append(groups[i].Incidents, inc)
+		if len(groups[i].Incidents) < maxIncidents {
+			groups[i].Incidents = append(groups[i].Incidents, inc)
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, readFailed.Wrap(err)

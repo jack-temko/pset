@@ -186,3 +186,49 @@ func TestEntriesAreWrittenAsSentences(t *testing.T) {
 		}
 	}
 }
+
+func TestAGeneralCauseSpeaksOnlyWhenNothingOuterDoes(t *testing.T) {
+	outerWithFix := top.Wrap(Database.Wrap(errors.New("sql")), "thing", "x")
+	if v := Resolve(top.Wrap(deep.New("who", "a"))); v.Fix != "Deep fix." {
+		t.Errorf("a specific cause: %+v", v)
+	}
+	// top has no why or fix, so the database speaks.
+	if v := Resolve(outerWithFix); v.Why != Database.Why || v.Fix != Database.Fix {
+		t.Errorf("nothing outer speaks: %+v", v)
+	}
+	// mid is outer and has none either; but deep above the database does.
+	chain := deep.Wrap(Database.Wrap(errors.New("sql")), "who", "z")
+	if v := Resolve(top.Wrap(chain, "thing", "x")); v.Why != "Deep reason for z." || v.Fix != "Deep fix." {
+		t.Errorf("an outer why beats the general one: %+v", v)
+	}
+}
+
+func TestParamsAreKeptPerLinkAndFilledOnce(t *testing.T) {
+	v := Resolve(top.Wrap(deep.New("who", "{thing}"), "thing", "the work"))
+	if v.What != "Couldn't do the work." || v.Why != "Deep reason for {thing}." {
+		t.Errorf("one pass, per link: %+v", v)
+	}
+	back := v.Stored().View()
+	if back.What != v.What || back.Why != v.Why {
+		t.Errorf("re-read: %+v vs %+v", back, v)
+	}
+	f := Resolve(mid.New().OnField("title").About("b1"))
+	g := f.Stored().View()
+	if g.Field != "title" || g.Ref != "b1" {
+		t.Errorf("field and ref survive a row: %+v", g)
+	}
+}
+
+func TestRespondKeepsOnlyServerFailures(t *testing.T) {
+	m := &memory{}
+	SetRecorder(m)
+	t.Cleanup(func() { SetRecorder(nil) })
+	four := Respond(context.Background(), mid.New(), Where{})
+	if four.Incident != "" || len(m.got) != 0 || four.Status != 409 {
+		t.Errorf("a 4xx: %+v %d kept", four, len(m.got))
+	}
+	five := Respond(context.Background(), errors.New("boom"), Where{})
+	if five.Incident == "" || len(m.got) != 1 {
+		t.Errorf("a 5xx: %+v %d kept", five, len(m.got))
+	}
+}

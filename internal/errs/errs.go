@@ -114,6 +114,9 @@ func (e *Entry) New(params ...string) *Error {
 }
 
 // Wrap raises the entry because of cause, which stays in the chain.
+//
+// A nil cause is no cause: the error is as New makes it. Where the cause may
+// be nil (the end of a function that returns what a call returned), use Of.
 func (e *Entry) Wrap(cause error, params ...string) *Error {
 	return &Error{entry: e, params: pairs(e.ID, params), cause: cause}
 }
@@ -179,13 +182,15 @@ func (e *Error) Is(target error) bool {
 // fill puts params into a text's {name} placeholders. A placeholder with no
 // param is left as written, which a test of the catalog catches.
 func fill(text string, params map[string]string) string {
-	if !strings.Contains(text, "{") {
+	if !strings.Contains(text, "{") || len(params) == 0 {
 		return text
 	}
+	// One pass over the template: a value that holds "{x}" is never filled again.
+	pairs := make([]string, 0, 2*len(params))
 	for k, v := range params {
-		text = strings.ReplaceAll(text, "{"+k+"}", v)
+		pairs = append(pairs, "{"+k+"}", v)
 	}
-	return text
+	return strings.NewReplacer(pairs...).Replace(text)
 }
 
 // catalogChain is every catalog error in err's chain, outermost first.
@@ -236,6 +241,7 @@ func resolve(chain []*Error) View {
 		What:  fill(outer.entry.What, outer.params),
 		Scope: outer.entry.Scope,
 		Chain: make([]string, len(chain)),
+		Links: make([]map[string]string, len(chain)),
 	}
 	for i, e := range chain {
 		v.Chain[i] = e.entry.ID
@@ -248,25 +254,27 @@ func resolve(chain []*Error) View {
 		if e.ref != "" && v.Ref == "" {
 			v.Ref = e.ref
 		}
-		for k, p := range e.params {
-			if v.Params == nil {
-				v.Params = map[string]string{}
-			}
-			v.Params[k] = p
-		}
+		v.Links[i] = e.params
 	}
 	// The deepest entry that has a why gives the why; the same for the fix
-	// and the action. The fix lives where the cause is known.
-	for i := len(chain) - 1; i >= 0; i-- {
-		e := chain[i]
-		if v.Why == "" && e.entry.Why != "" {
-			v.Why = fill(e.entry.Why, e.params)
-		}
-		if v.Fix == "" && e.entry.Fix != "" {
-			v.Fix = fill(e.entry.Fix, e.params)
-		}
-		if v.Action == ActionNone && e.entry.Action != ActionNone {
-			v.Action = e.entry.Action
+	// and the action. The fix lives where the cause is known. The three
+	// internal causes (database, disk, data) are too general to be that
+	// cause: they speak only when nothing outer has a why or a fix of its own.
+	for _, general := range []bool{false, true} {
+		for i := len(chain) - 1; i >= 0; i-- {
+			e := chain[i]
+			if isGeneral(e.entry) != general {
+				continue
+			}
+			if v.Why == "" && e.entry.Why != "" {
+				v.Why = fill(e.entry.Why, e.params)
+			}
+			if v.Fix == "" && e.entry.Fix != "" {
+				v.Fix = fill(e.entry.Fix, e.params)
+			}
+			if v.Action == ActionNone && e.entry.Action != ActionNone {
+				v.Action = e.entry.Action
+			}
 		}
 	}
 	if v.Status == 0 {
@@ -275,18 +283,32 @@ func resolve(chain []*Error) View {
 	return v
 }
 
+// isGeneral is one of the three internal entries every package wraps what
+// comes from sql, os or encoding in.
+func isGeneral(e *Entry) bool {
+	return e == Database || e == Disk || e == Data
+}
+
 // View rebuilds the view from the catalog. An id the catalog no longer has
-// is skipped; none left is internal.unexpected.
+// is skipped; none left is internal.unexpected. Each link has its own params
+// (Links), or the merged Params of a row written before they were per link.
 func (s Stored) View() View {
 	var chain []*Error
-	for _, id := range s.Chain {
-		if e, ok := Lookup(id); ok {
-			chain = append(chain, &Error{entry: e, params: s.Params})
+	for i, id := range s.Chain {
+		e, ok := Lookup(id)
+		if !ok {
+			continue
 		}
+		params := s.Params
+		if i < len(s.Links) {
+			params = s.Links[i]
+		}
+		chain = append(chain, &Error{entry: e, params: params})
 	}
 	if len(chain) == 0 {
 		chain = []*Error{Unexpected.New()}
 	}
+	chain[0] = chain[0].OnField(s.Field).About(s.Ref)
 	v := resolve(chain)
 	v.Incident = s.Incident
 	return v

@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
@@ -87,5 +89,24 @@ func TestRoutesListAndClear(t *testing.T) {
 	mux.ServeHTTP(rec, httptest.NewRequest("DELETE", "/api/errors", nil))
 	if rec.Code != 204 {
 		t.Errorf("clear answered %d", rec.Code)
+	}
+}
+
+func TestAGroupListsAtMostMaxIncidentsButCountsThemAll(t *testing.T) {
+	s, _ := newStore(t)
+	ctx := context.Background()
+	for i := range maxIncidents + 10 {
+		testx.Check(t, s.Record(ctx, errs.Record{
+			Incident: fmt.Sprintf("I%05d", i), View: errs.Resolve(inner.New()), Where: errs.Where{Route: "x"},
+			At: time.Now().Add(time.Duration(i) * time.Second),
+		}))
+	}
+	groups, err := s.List(ctx)
+	testx.Check(t, err)
+	if len(groups) != 1 || groups[0].Count != maxIncidents+10 || len(groups[0].Incidents) != maxIncidents {
+		t.Fatalf("%d groups, count %d, listed %d", len(groups), groups[0].Count, len(groups[0].Incidents))
+	}
+	if groups[0].Incidents[0].Incident != fmt.Sprintf("I%05d", maxIncidents+9) {
+		t.Errorf("newest first: %q", groups[0].Incidents[0].Incident)
 	}
 }

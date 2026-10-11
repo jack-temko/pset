@@ -118,3 +118,7 @@ Every state in Paper and Night. Mockup code only (no Go, no wire changes). Do no
 - Q18 Cut: Nothing, ship it whole (Recommended) / Settings errors section / Lint rule. Answer: "Nothing, ship it whole (Recommended)"
 - Q19 Regret: No, write the spec (Recommended) / Yes. Answer: "I want to make sure that this doesn't become a hassle to upkeep. It should be as useful as possible to the student, without introducing hidden dependencies, and getting too large."
 - Q20 Upkeep (reopens D2): Per package, one generated table (Recommended) / One central file (as decided). Answer: "One central file (as decided)", then in a follow-up message: "If you truly can keep them separated without weird error edge cases where more than one part needs it than you can keep the errors where they are used."
+
+### Batch 6 (review, 2026-10-10; narrows D6)
+
+- Q21 Recording: Failures only (Recommended) / Everything, deduplicated. Answer: "Failures only (Recommended)". D6 now: server failures (5xx) and background failures get an incident and a row; 4xx request errors show their view and chain without either. Reason: polling screens would write a row every few seconds for a stale request.
