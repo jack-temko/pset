@@ -893,7 +893,7 @@ function AskTab({
               }}
               onSetup={
                 ask.error instanceof ApiError &&
-                ask.error.code === 'not_configured'
+                ask.error.view.action === 'open_settings'
                   ? () => {
                       void navigate('/settings#connections');
                     }
@@ -1111,7 +1111,7 @@ export function Workspace() {
   const bookQuery = useBook(id);
   if (
     bookQuery.error instanceof ApiError &&
-    bookQuery.error.code === 'not_found'
+    bookQuery.error.view.id === 'book.not_found'
   )
     return <WorkspaceMessage>There is no book here.</WorkspaceMessage>;
   if (bookQuery.error)

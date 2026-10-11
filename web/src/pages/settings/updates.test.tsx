@@ -1,5 +1,6 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -32,7 +33,7 @@ function serve(answers: Record<string, unknown>) {
       const key = `${init?.method ?? 'GET'} ${path}`;
       calls.push(key);
       if (!(key in answers))
-        return reply(404, { code: 'not_found', message: 'no' });
+        return reply(404, { id: 'request.not_found', what: 'no', chain: [] });
       return reply(200, answers[key]);
     }),
   );
@@ -55,9 +56,11 @@ async function show() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   await act(async () => {
     root.render(
-      <QueryClientProvider client={qc}>
-        <Updates />
-      </QueryClientProvider>,
+      <MemoryRouter>
+        <QueryClientProvider client={qc}>
+          <Updates />
+        </QueryClientProvider>
+      </MemoryRouter>,
     );
     await Promise.resolve();
   });
@@ -164,12 +167,15 @@ describe('Updates', () => {
     vi.mocked(fetch).mockImplementationOnce(() =>
       Promise.resolve(
         reply(502, {
-          code: 'unreachable',
-          message: "Couldn't reach GitHub to look for an update.",
+          id: 'update.check_unreachable',
+          what: "Couldn't look for an update.",
+          why: "PSet couldn't reach GitHub.",
+          scope: 'inline',
+          chain: ['update.check_unreachable'],
         }),
       ),
     );
     await click(button('Check for updates'));
-    expect(host.textContent).toContain("Couldn't reach GitHub");
+    expect(host.textContent).toContain("PSet couldn't reach GitHub.");
   });
 });

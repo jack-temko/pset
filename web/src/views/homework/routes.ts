@@ -5,6 +5,7 @@ import type {
   QuestionPatch,
   Retry,
 } from '@/api/homework';
+import type { ErrorId } from '@/api/gen/errors';
 import { MockError, type Route } from '@/views/mock/server';
 import { BOOK_ID, World, makeQuestion, makeRead, makeSet } from './world';
 
@@ -15,8 +16,15 @@ const labelOf = (text: string) =>
   /\d+(?:\.\d+)+/.exec(text)?.[0] ??
   (text.length > 28 ? `${text.slice(0, 27)}…` : text);
 
-const notFound = (what: string) =>
-  new MockError(404, 'not_found', `There is no ${what} here.`);
+const notFound = (what: 'question' | 'homework set' | 'read') =>
+  new MockError(
+    404,
+    {
+      question: 'homework.question_not_found',
+      'homework set': 'homework.set_not_found',
+      read: 'homework.assignment_not_found',
+    }[what] as ErrorId,
+  );
 
 /** The server's homework routes over a `World`: what the view's hooks call,
  *  answered the way the server answers, with the events it would send. */
@@ -93,12 +101,7 @@ export function homeworkRoutes(w: World): Route[] {
       ({ body: raw }) => {
         const body = raw as { title?: string; dueDate?: string };
         if (!String(body.title ?? '').trim())
-          throw new MockError(
-            422,
-            'invalid',
-            'Name the homework first.',
-            'title',
-          );
+          throw new MockError(422, 'homework.title_empty', 'title');
         return w.addSet(
           makeSet((body.title ?? '').trim(), null, {
             dueDate: body.dueDate ?? '',

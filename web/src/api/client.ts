@@ -1,51 +1,68 @@
-import type { Code, Error as WireError } from './gen/httpx';
+import { ERRORS, type ErrorId } from './gen/errors';
+import type { View } from './gen/errs';
+
+/** A catalog entry as the view the server would have sent for it, for the
+ *  two failures only the web app sees: a server that doesn't answer, and an
+ *  answer that isn't the error shape. The words are the catalog's. */
+export function viewOf(id: ErrorId): View {
+  const e = ERRORS[id];
+  return {
+    id,
+    what: e.what,
+    why: e.why,
+    fix: e.fix,
+    action: e.action,
+    scope: e.scope,
+    chain: [id],
+  };
+}
 
 /**
- * Every failed call throws this: the server's `{code, message, field?, id?}`
- * shape, so a screen switches on `code`, shows `message` as written, and
- * marks `field` when there is one.
+ * Every failed call throws this: the server's error `View` (internal/errs).
+ * A screen shows `view` with ErrorNotice, or switches on `view.id`; `message`
+ * is the what, for the places that print one line.
  */
 export class ApiError extends Error {
-  readonly code: Code;
-  readonly field?: string;
-  readonly id?: string;
+  readonly view: View;
   readonly status: number;
 
-  constructor(status: number, body: WireError) {
-    super(body.message);
+  constructor(status: number, view: View) {
+    super(view.what);
     this.name = 'ApiError';
     this.status = status;
-    this.code = body.code;
-    this.field = body.field;
-    this.id = body.id;
+    this.view = view;
+  }
+
+  /** The input at fault, when the error is about one. */
+  get field(): string | undefined {
+    return this.view.field;
   }
 }
 
-/** The server's error shape from a response body, or a plain internal error
- *  when the body isn't one. */
-function errorBody(data: unknown, status: number): WireError {
+/** The view of anything that was thrown: an ApiError's own, else the
+ *  catalog's fallback. */
+export function errorView(e: unknown): View {
+  return e instanceof ApiError ? e.view : viewOf('internal.unexpected');
+}
+
+/** The server's error view from a response body, or the fallback when the
+ *  body isn't one (a proxy's page, a crash). */
+function errorBody(data: unknown): View {
   if (
     typeof data === 'object' &&
     data !== null &&
-    'code' in data &&
-    typeof data.code === 'string'
-  ) {
-    return data as WireError;
-  }
-  // The catalog's shape (internal/errs): the sentence is its `what`.
-  if (
-    typeof data === 'object' &&
-    data !== null &&
+    'id' in data &&
+    typeof data.id === 'string' &&
     'what' in data &&
     typeof data.what === 'string'
   ) {
-    return { code: 'internal', message: data.what };
+    return data as View;
   }
-  return { code: 'internal', message: `The server answered ${status}.` };
+  return viewOf('internal.unexpected');
 }
 
 /** One fetch wrapper for the whole app. JSON in, JSON out; 204 is
- *  `undefined`. A server that doesn't answer at all is `unreachable`. */
+ *  `undefined`. A server that doesn't answer at all is `request.unreachable`. */
 export async function api<T>(
   method: string,
   path: string,
@@ -60,15 +77,12 @@ export async function api<T>(
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new ApiError(0, {
-      code: 'unreachable',
-      message: "PSet's server isn't answering.",
-    });
+    throw new ApiError(0, viewOf('request.unreachable'));
   }
   if (res.status === 204) return undefined as T;
   const data: unknown = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new ApiError(res.status, errorBody(data, res.status));
+    throw new ApiError(res.status, errorBody(data));
   }
   return data as T;
 }
@@ -80,14 +94,11 @@ export async function postForm<T>(path: string, body: FormData): Promise<T> {
   try {
     res = await fetch(path, { method: 'POST', body });
   } catch {
-    throw new ApiError(0, {
-      code: 'unreachable',
-      message: "PSet's server isn't answering.",
-    });
+    throw new ApiError(0, viewOf('request.unreachable'));
   }
   const data: unknown = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new ApiError(res.status, errorBody(data, res.status));
+    throw new ApiError(res.status, errorBody(data));
   }
   return data as T;
 }

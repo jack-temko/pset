@@ -14,6 +14,7 @@ import { Label } from '@/components/label';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Spinner } from '@/components/spinner';
 import { ApiError } from '@/api/client';
+import { errorLine } from '@/lib/error-text';
 import {
   useAssignmentRead,
   useAssignmentSource,
@@ -177,7 +178,9 @@ export function AddHomeworkDialog({
         },
         onError: (e) => {
           setError(
-            e instanceof ApiError ? e.message : "Couldn't start reading it.",
+            e instanceof ApiError
+              ? errorLine(e.view)
+              : "Couldn't start reading it.",
           );
         },
       },
@@ -196,7 +199,9 @@ export function AddHomeworkDialog({
       onClose();
     };
     const failed = (e: Error) => {
-      setError(e instanceof ApiError ? e.message : "Couldn't add them.");
+      setError(
+        e instanceof ApiError ? errorLine(e.view) : "Couldn't add them.",
+      );
     };
     if (set)
       addTo.mutate(drafts, {
@@ -330,7 +335,7 @@ export function AddHomeworkDialog({
           }}
           error={
             make.error instanceof ApiError
-              ? make.error.message
+              ? errorLine(make.error.view)
               : make.error
                 ? "Couldn't add them."
                 : ''

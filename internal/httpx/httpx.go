@@ -33,9 +33,6 @@ func H(fn HandlerFunc) http.HandlerFunc {
 // Fail answers err as H does. For a handler that has to answer before it
 // returns, such as one already streaming.
 func Fail(w http.ResponseWriter, r *http.Request, err error) {
-	if legacy(w, err) {
-		return
-	}
 	route := r.Pattern
 	if route == "" {
 		route = r.Method + " " + r.URL.Path

@@ -123,15 +123,10 @@ async function uploadOne(file: File): Promise<Book> {
 /** A refusal that names its file, as the duplicate error names its book. */
 function refused(f: File, e: ApiError): ApiError {
   const message =
-    e.message === "That isn't a PDF."
+    e.view.id === 'library.not_pdf'
       ? `${f.name} isn't a PDF. PSet can only shelve PDF files.`
       : `${f.name}: ${e.message}`;
-  return new ApiError(e.status, {
-    code: e.code,
-    message,
-    field: e.field,
-    id: e.id,
-  });
+  return new ApiError(e.status, { ...e.view, what: message });
 }
 
 /** Uploads files one after another. Each lands in the list as it's
@@ -147,8 +142,12 @@ export function useUploadBooks() {
         try {
           putBook(qc, await uploadOne(f));
         } catch (e) {
-          if (e instanceof ApiError && e.code === 'duplicate_book' && e.id)
-            duplicates.push(e.id);
+          if (
+            e instanceof ApiError &&
+            e.view.id === 'book.duplicate' &&
+            e.view.ref
+          )
+            duplicates.push(e.view.ref);
           else if (e instanceof ApiError) errors.push(refused(f, e));
           else throw e;
         }

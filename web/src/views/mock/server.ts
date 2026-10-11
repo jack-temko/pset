@@ -1,12 +1,13 @@
-import type { Code } from '@/api/gen/httpx';
+import { viewOf } from '@/api/client';
+import type { ErrorId } from '@/api/gen/errors';
 
 /**
  * A stand-in for the PSet server, for /views: routes answered from memory.
  *
  * It speaks the server's own shapes. A handler returns the JSON body (or
  * nothing, for a 204) and throws `MockError` to fail as the server does:
- * `{code, message, field?}` with a status, which `api()` turns into the
- * `ApiError` a screen switches on. A path no route answers is a 404 in the
+ * the catalog's error view with a status (a catalog id, and a field when it is
+ * about one), which `api()` turns into the `ApiError` a screen switches on. A path no route answers is a 404 in the
  * same shape, so a view that asks for something a scenario didn't provide
  * fails loudly and never falls through to a real server.
  */
@@ -31,13 +32,13 @@ export type Route = readonly [
 
 export class MockError extends Error {
   readonly status: number;
-  readonly code: Code;
+  readonly id: ErrorId;
   readonly field?: string;
 
-  constructor(status: number, code: Code, message: string, field?: string) {
-    super(message);
+  constructor(status: number, id: ErrorId, field?: string) {
+    super(id);
     this.status = status;
-    this.code = code;
+    this.id = id;
     this.field = field;
   }
 }
@@ -121,12 +122,7 @@ export class MockServer {
 
     let res: Response;
     try {
-      if (!handler)
-        throw new MockError(
-          404,
-          'not_found',
-          `No sample answers ${method} ${u.pathname}.`,
-        );
+      if (!handler) throw new MockError(404, 'request.not_found');
       const out = handler(req);
       res =
         out === undefined
@@ -135,8 +131,7 @@ export class MockServer {
     } catch (e) {
       if (!(e instanceof MockError)) throw e;
       res = json(e.status, {
-        code: e.code,
-        message: e.message,
+        ...viewOf(e.id),
         ...(e.field && { field: e.field }),
       });
     }

@@ -15,7 +15,10 @@ import { Field, Input } from '@/components/input';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Skeleton } from '@/components/skeleton';
 import { Spinner } from '@/components/spinner';
-import { ApiError } from '@/api/client';
+import { ApiError, errorView } from '@/api/client';
+import type { View } from '@/api/gen/errs';
+import { ErrorNotice } from '@/components/error-notice';
+import { errorLine } from '@/lib/error-text';
 import {
   useAbout,
   useFixCheck,
@@ -75,7 +78,7 @@ function KeyBox({
 }) {
   const [saved, setSaved] = useState(initial);
   const [value, setValue] = useState(initial);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<View | null>(null);
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
 
   const [savedOnce, setSavedOnce] = useState(ready);
@@ -114,7 +117,7 @@ function KeyBox({
       const err = e instanceof ApiError ? e : null;
       // A failure that's the key's lands under it; any other (OpenRouter
       // down, the server itself down) says so in the footer.
-      if (err?.field) setError(err.message);
+      if (err?.field) setError(err.view);
       const what = save ? 'Not saved: the test failed' : 'Test failed';
       setStatus({
         kind: 'failed',
@@ -127,7 +130,11 @@ function KeyBox({
     <Box>
       <BoxHeader>OpenRouter</BoxHeader>
       <BoxBody className="space-y-4">
-        <Field label="API key" hint={KEY_HINT} error={error ?? undefined}>
+        <Field
+          label="API key"
+          hint={KEY_HINT}
+          error={error?.scope === 'field' ? error.what : undefined}
+        >
           <Input
             value={value}
             spellCheck={false}
@@ -145,6 +152,14 @@ function KeyBox({
             }}
           />
         </Field>
+        {error && error.scope !== 'field' && (
+          <ErrorNotice
+            error={error}
+            onRetry={() => {
+              void run(false);
+            }}
+          />
+        )}
         <ModelsLine models={models} />
       </BoxBody>
       <BoxFooter>
@@ -377,7 +392,9 @@ function Health() {
               title={c.name}
               description={
                 fix.isError && fix.variables === c.id ? (
-                  <span className="text-destructive">{fix.error.message}</span>
+                  <span className="text-destructive">
+                    {errorLine(errorView(fix.error))}
+                  </span>
                 ) : HEALTH_PURPOSE[c.id] ? (
                   `${c.detail} · ${HEALTH_PURPOSE[c.id]}`
                 ) : (
@@ -521,7 +538,7 @@ function ClearActivity() {
           question="Clear activity history?"
           detail="Time spent starts again from zero, in every book. Books, homework, conversations and the questions you've worked stay."
           action="Clear history"
-          error={clear.isError ? clear.error.message : undefined}
+          error={clear.isError ? errorLine(errorView(clear.error)) : undefined}
           onCancel={() => {
             setAsking(false);
           }}
@@ -590,7 +607,7 @@ function ResetEverything() {
           }
           action="Reset everything"
           busy={resetting ? 'Resetting…' : undefined}
-          error={reset.isError ? reset.error.message : undefined}
+          error={reset.isError ? errorLine(errorView(reset.error)) : undefined}
           onCancel={() => {
             setAsking(false);
           }}
@@ -683,7 +700,7 @@ export function Settings() {
           <Health />
         </Section>
 
-        <Section title="Updates">
+        <Section id="updates" title="Updates">
           <Updates />
         </Section>
 
