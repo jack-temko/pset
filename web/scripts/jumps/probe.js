@@ -176,15 +176,22 @@
   }
   addEventListener('popstate', bump);
 
+  // A layer's content, not its box: a fill-height panel keeps its box fixed
+  // whatever it holds. `extent` is how far its descendants reach below the
+  // layer's top; `blocks` and `offsets` are its top-level children's heights
+  // and tops, from that same top.
   const layout = (layer) => {
+    const top = layer.getBoundingClientRect().top;
+    let bottom = top;
+    for (const el of layer.querySelectorAll('*')) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) bottom = Math.max(bottom, r.bottom);
+    }
     const kids = [...layer.children].map((c) => c.getBoundingClientRect());
-    const total = kids.length
-      ? Math.max(...kids.map((r) => r.bottom)) -
-        Math.min(...kids.map((r) => r.top))
-      : 0;
     return {
       blocks: kids.map((r) => Math.round(r.height)),
-      total: Math.round(total),
+      offsets: kids.map((r) => Math.round(r.top - top)),
+      extent: Math.round(bottom - top),
     };
   };
   const boxes = new WeakMap();
@@ -227,8 +234,10 @@
             content: variant,
             skeletonBlocks: a.blocks,
             contentBlocks: b.blocks,
-            skeletonHeight: a.total,
-            contentHeight: b.total,
+            skeletonOffsets: a.offsets,
+            contentOffsets: b.offsets,
+            skeletonExtent: a.extent,
+            contentExtent: b.extent,
           });
         }
       } else if (!has && st.revealed) {

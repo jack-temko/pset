@@ -251,8 +251,10 @@ describe('Loaded boxes', () => {
     content: 'done',
     skeletonBlocks: [20, 40, 40],
     contentBlocks: [20, 52, 40],
-    skeletonHeight: 100,
-    contentHeight: 112,
+    skeletonOffsets: [0, 20, 60],
+    contentOffsets: [0, 20, 72],
+    skeletonExtent: 100,
+    contentExtent: 112,
     ...over,
   });
 
@@ -265,7 +267,8 @@ describe('Loaded boxes', () => {
         content: 'done',
         blockPx: 12,
         blocks: [3, 3],
-        totalPx: 12,
+        offsetPx: 12,
+        extentPx: 12,
       },
     ]);
   });
@@ -274,12 +277,50 @@ describe('Loaded boxes', () => {
       ...base,
       swaps: [
         swap({ t: 500 }),
-        swap({ skeletonBlocks: [100], skeletonHeight: 112 }),
+        swap({
+          skeletonBlocks: [100],
+          skeletonOffsets: [0],
+          skeletonExtent: 112,
+        }),
       ],
     });
     expect(r.fidelity).toHaveLength(1);
     expect(r.fidelity[0].blockPx).toBe(0);
-    expect(r.fidelity[0].totalPx).toBe(0);
+    expect(r.fidelity[0].extentPx).toBe(0);
+  });
+  it('still measures how far the content reaches when the block counts differ', () => {
+    const r = analyzeRun({
+      ...base,
+      swaps: [
+        swap({
+          skeletonBlocks: [40, 80],
+          skeletonOffsets: [0, 40],
+          skeletonExtent: 120,
+          contentBlocks: [40, 62, 80],
+          contentOffsets: [0, 40, 102],
+          contentExtent: 182,
+        }),
+      ],
+    });
+    expect(r.fidelity[0].extentPx).toBe(62);
+    expect(r.fidelity[0].blocks).toEqual([2, 3]);
+    // The second block of one starts where the second of the other does.
+    expect(r.fidelity[0].offsetPx).toBe(0);
+  });
+  it('compares only the first eight common blocks, and the blocks both have', () => {
+    const many = Array.from({ length: 12 }, (_, i) => i * 10);
+    const r = analyzeRun({
+      ...base,
+      swaps: [
+        swap({
+          skeletonOffsets: many,
+          contentOffsets: many
+            .map((y, i) => (i === 10 ? y + 50 : y))
+            .slice(0, 11),
+        }),
+      ],
+    });
+    expect(r.fidelity[0].offsetPx).toBe(0);
   });
   it('reports a variant change after the reveal', () => {
     const r = analyzeRun({

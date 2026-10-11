@@ -201,6 +201,9 @@ func build(ctx context.Context, dir string, now time.Time) error {
 			return err
 		}
 	}
+	if err := addStudy(ctx, d, now); err != nil {
+		return err
+	}
 	// No key: the settings table is left without one, which is how a fresh
 	// install looks.
 	return nil
@@ -313,13 +316,19 @@ func addHomework(ctx context.Context, d *sql.DB, b book, now, at time.Time) erro
 			if i <= 2 {
 				figs = fmt.Sprintf(`[{"label":"Figure %s: the arrangement the problem describes","rect":{"x":0.1,"y":0.15,"w":0.8,"h":0.3}}]`, label)
 			}
+			// The current question of an unfinished set has its hint open: a
+			// figure and an open help panel, the tallest a question gets.
+			revealed := "[]"
+			if i == 1 && !s.finished {
+				revealed = `["hint"]`
+			}
 			doneAt := ""
 			if s.finished {
 				doneAt = ts
 			}
-			if _, err := d.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, page, figures, hint, walkthrough, state, difficulty, done_at, created_at, updated_at)
-				VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				qid, s.id, i, text, label, statement(text), 1+i%b.pages, figs, hnt, walk, state, 1+i%5, doneAt, ts, ts); err != nil {
+			if _, err := d.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, page, figures, revealed, hint, walkthrough, state, difficulty, done_at, created_at, updated_at)
+				VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				qid, s.id, i, text, label, statement(text), 1+i%b.pages, figs, revealed, hnt, walk, state, 1+i%5, doneAt, ts, ts); err != nil {
 				return err
 			}
 			if state == "ready" {
@@ -420,6 +429,30 @@ func addCalls(ctx context.Context, d *sql.DB, subject, id string, at time.Time, 
 			at.Add(c.after).Format(time.RFC3339), subject, id, model, model, c.ms, c.in, c.out, c.cost,
 			c.stage, c.run, nullIf(c.tools), nullZero(c.reasoning), nullZero(c.cached))
 		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// addStudy adds this week's study time on two books, so Home draws its week
+// (the stat tiles and the bar split by book). The real test library has no
+// activity by design.
+func addStudy(ctx context.Context, d *sql.DB, now time.Time) error {
+	stretches := []struct {
+		book, kind string
+		ago, mins  int
+	}{
+		{"fx-digital", "homework", 150, 40},
+		{"fx-digital", "reading", 100, 25},
+		{"fx-digital", "asking", 60, 10},
+		{"fx-flat", "reading", 45, 30},
+	}
+	for i, st := range stretches {
+		started := now.Add(-time.Duration(st.ago) * time.Minute)
+		ended := started.Add(time.Duration(st.mins) * time.Minute)
+		if _, err := d.ExecContext(ctx, `INSERT INTO study (id, book_id, kind, started, ended) VALUES (?, ?, ?, ?, ?)`,
+			fmt.Sprintf("fx-study-%d", i+1), st.book, st.kind, started.Format(time.RFC3339), ended.Format(time.RFC3339)); err != nil {
 			return err
 		}
 	}

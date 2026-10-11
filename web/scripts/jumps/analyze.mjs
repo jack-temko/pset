@@ -26,6 +26,7 @@ export function percentile(xs, p) {
   return s[Math.max(0, Math.ceil(p * s.length) - 1)];
 }
 
+const OFFSET_BLOCKS = 8;
 const round = (n) => Math.round(n * 1000) / 1000;
 
 /** When something (skeleton or spinner) was last on screen after t0, as ms
@@ -142,7 +143,18 @@ export function analyzeRun(log) {
           )
         : 0,
       blocks: [w.skeletonBlocks.length, w.contentBlocks.length],
-      totalPx: Math.abs(w.skeletonHeight - w.contentHeight),
+      // Where the blocks the layers share, in order, start: the first
+      // OFFSET_BLOCKS of them.
+      offsetPx: Math.max(
+        0,
+        ...w.skeletonOffsets
+          .slice(0, OFFSET_BLOCKS)
+          .map((y, i) =>
+            i < w.contentOffsets.length ? Math.abs(y - w.contentOffsets[i]) : 0,
+          ),
+      ),
+      // How far each layer's content reaches, whatever the count of blocks.
+      extentPx: Math.abs(w.skeletonExtent - w.contentExtent),
     };
   });
   const flashes = after(log.changes).map((c) => ({
@@ -253,7 +265,8 @@ function aggregateBoxes(runs) {
       if (!w) worst.set(k, { ...f });
       else {
         w.blockPx = Math.max(w.blockPx, f.blockPx);
-        w.totalPx = Math.max(w.totalPx, f.totalPx);
+        w.offsetPx = Math.max(w.offsetPx, f.offsetPx);
+        w.extentPx = Math.max(w.extentPx, f.extentPx);
       }
     }
   const once = (lists, key) => [
