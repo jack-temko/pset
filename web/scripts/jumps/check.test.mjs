@@ -263,3 +263,24 @@ describe('a tagged scenario must show its view and variant', () => {
     expect(check(report(row({ variant: 'ask/turns' }))).failed).toEqual([]);
   });
 });
+
+describe('lost coverage', () => {
+  it('a discovered scenario that lost its trigger is listed as LOST, not failed', () => {
+    const res = check(
+      report(
+        row({
+          name: 'Book: Memory',
+          agg: undefined,
+          skipped: 'no trigger',
+          lost: true,
+        }),
+        row({ name: 'Edit book', agg: undefined, skipped: 'no book' }),
+      ),
+    );
+    expect(res.failed).toEqual([]);
+    const out = format(res, 2);
+    expect(out).toContain('LOST: Book: Memory (real): no trigger');
+    expect(out).toContain('skipped: Edit book (real): no book');
+    expect(out).toContain('1 LOST');
+  });
+});

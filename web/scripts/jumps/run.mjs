@@ -101,6 +101,36 @@ const textOf = (el) =>
     .replace(/\s+/g, ' ')
     .slice(0, 50);
 
+/** The locator a step names. A step found by its place (a discovered trigger
+ *  or item) is first looked for by its label, the accessible name it was
+ *  found under, so a page that gained or lost a button before it does not
+ *  point the step at another; only when no element carries the label does it
+ *  fall back to the old index. */
+async function locateStep(page, step) {
+  if (!step.css || !step.label || step.nth === undefined)
+    return locate(page, step);
+  const at = await page
+    .evaluate(
+      ({ css, label, nth }) => {
+        const text = (el) =>
+          (el.getAttribute('aria-label') || el.innerText || '')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .slice(0, 50);
+        const all = [...document.querySelectorAll(css)];
+        const named = all.flatMap((el, i) => (text(el) === label ? [i] : []));
+        if (named.length === 0) return nth;
+        // Several with the label: the one nearest the old index.
+        return named.reduce((a, b) =>
+          Math.abs(b - nth) < Math.abs(a - nth) ? b : a,
+        );
+      },
+      { css: step.css, label: step.label, nth: step.nth },
+    )
+    .catch(() => step.nth);
+  return page.locator(step.css).nth(at);
+}
+
 async function runOne(browser, app, sc, mode, opts) {
   const ctx = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
@@ -169,7 +199,7 @@ async function runOne(browser, app, sc, mode, opts) {
           await settle(page, track);
           continue;
         }
-        const target = locate(page, step);
+        const target = await locateStep(page, step);
         try {
           await target.waitFor({ state: 'visible', timeout: 4000 });
         } catch {
@@ -300,7 +330,7 @@ async function discoverOverlays(browser, app, pages) {
         await page.reload({ waitUntil: 'commit' });
         await settle(page, track);
         try {
-          await locate(page, step).click({ timeout: 4000 });
+          await (await locateStep(page, step)).click({ timeout: 4000 });
         } catch {
           continue;
         }
@@ -462,6 +492,9 @@ async function main() {
           } catch (e) {
             if (e instanceof Missing) {
               row.skipped = e.message;
+              // A discovered scenario that cannot find its trigger is coverage
+              // lost, not a scenario that was never there.
+              if (sc.discovered) row.lost = true;
               break;
             }
             failure = String(e.message ?? e).split('\n')[0];
