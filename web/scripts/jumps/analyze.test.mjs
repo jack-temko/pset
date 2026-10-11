@@ -269,6 +269,7 @@ describe('Loaded boxes', () => {
         blocks: [3, 3],
         offsetPx: 12,
         extentPx: 12,
+        fullExtent: [100, 112],
       },
     ]);
   });

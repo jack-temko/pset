@@ -155,6 +155,11 @@ export function analyzeRun(log) {
       ),
       // How far each layer's content reaches, whatever the count of blocks.
       extentPx: Math.abs(w.skeletonExtent - w.contentExtent),
+      // Information: how far each reaches unclipped, below the fold too.
+      fullExtent: [
+        w.skeletonFullExtent ?? w.skeletonExtent,
+        w.contentFullExtent ?? w.contentExtent,
+      ],
     };
   });
   const flashes = after(log.changes).map((c) => ({

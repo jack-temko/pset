@@ -177,21 +177,37 @@
   addEventListener('popstate', bump);
 
   // A layer's content, not its box: a fill-height panel keeps its box fixed
-  // whatever it holds. `extent` is how far its descendants reach below the
-  // layer's top; `blocks` and `offsets` are its top-level children's heights
-  // and tops, from that same top.
+  // whatever it holds. What a student sees is only what is inside every
+  // scrolling or clipping ancestor and the viewport, so the sample is clipped
+  // to that: `extent` is how far its descendants reach below the layer's top,
+  // and `offsets` the tops of its top-level children (with `blocks` their
+  // heights), the visible ones only. `fullExtent` is the unclipped reach, kept
+  // as information.
+  const visibleBottom = (layer) => {
+    let bottom = innerHeight;
+    for (let el = layer.parentElement; el; el = el.parentElement) {
+      if (getComputedStyle(el).overflowY === 'visible') continue;
+      const r = el.getBoundingClientRect();
+      bottom = Math.min(bottom, r.top + el.clientTop + el.clientHeight);
+    }
+    return bottom;
+  };
   const layout = (layer) => {
     const top = layer.getBoundingClientRect().top;
+    const limit = visibleBottom(layer);
     let bottom = top;
     for (const el of layer.querySelectorAll('*')) {
       const r = el.getBoundingClientRect();
       if (r.width > 0 && r.height > 0) bottom = Math.max(bottom, r.bottom);
     }
-    const kids = [...layer.children].map((c) => c.getBoundingClientRect());
+    const kids = [...layer.children]
+      .map((c) => c.getBoundingClientRect())
+      .filter((r) => r.top < limit);
     return {
-      blocks: kids.map((r) => Math.round(r.height)),
+      blocks: kids.map((r) => Math.round(Math.min(r.bottom, limit) - r.top)),
       offsets: kids.map((r) => Math.round(r.top - top)),
-      extent: Math.round(bottom - top),
+      extent: Math.round(Math.max(0, Math.min(bottom, limit) - top)),
+      fullExtent: Math.round(bottom - top),
     };
   };
   const boxes = new WeakMap();
@@ -238,6 +254,8 @@
             contentOffsets: b.offsets,
             skeletonExtent: a.extent,
             contentExtent: b.extent,
+            skeletonFullExtent: a.fullExtent,
+            contentFullExtent: b.fullExtent,
           });
         }
       } else if (!has && st.revealed) {
