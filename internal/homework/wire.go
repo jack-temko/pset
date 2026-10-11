@@ -25,24 +25,12 @@ type Summary struct {
 	// has two to go on (estimate.go).
 	Estimate *Estimate `json:"estimate,omitempty"`
 	Timed    int       `json:"timed,omitempty"`
-	// Opening is the question the set opens on (the first not yet done) as
-	// far as its screen's size goes, so the walkthrough's skeleton can reserve
-	// its figures and its open help rows before the set arrives. Absent when
-	// every question is done or there are none.
-	Opening *Opening `json:"opening,omitempty"`
-}
-
-// Opening is the size-relevant shape of one question: the figures it shows
-// (as Figure.W and H) and the help rows the student left open.
-type Opening struct {
-	Figures  []FigureSize `json:"figures"`
-	Revealed []string     `json:"revealed"`
-}
-
-// FigureSize is a figure's image as fractions of its page (Figure.W, H).
-type FigureSize struct {
-	W float64 `json:"w"`
-	H float64 `json:"h"`
+	// Opening is the question the set opens on (the first not yet done), as
+	// its screen draws it before the set arrives: its label, statement and
+	// figures, and the content of the help panels the student left open (the
+	// others are empty, to keep this small). Absent when every question is
+	// done or there are none.
+	Opening *Question `json:"opening,omitempty"`
 }
 
 // Estimate is the time left on a set at the student's pace, in seconds,

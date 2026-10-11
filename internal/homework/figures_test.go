@@ -105,21 +105,35 @@ func TestAFigureOnAnotherPageIsFound(t *testing.T) {
 		t.Fatalf("served image %v high per wide; the wire's %v x %v of a page at aspect %v allows %v to %v", ratio, got.W, got.H, aspect, lo, hi)
 	}
 
-	// The set's own summary carries the question it opens on: its figures'
-	// sizes and the help rows left open, so the walkthrough can reserve them.
+	// The set's own summary carries the question it opens on, as its screen
+	// draws it: the label, statement and figures, and only the help panels it
+	// had open.
 	d, err := e.svc.Get(context.Background(), h.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	op := d.Homework.Opening
-	if op == nil || len(op.Figures) != 1 || op.Figures[0].W != got.W || op.Figures[0].H != got.H || op.Revealed == nil {
-		t.Fatalf("opening %+v, want one figure %v x %v", op, got.W, got.H)
+	if op == nil || op.ID != q.ID || op.Label != q.Label || len(op.Statement) != len(q.Statement) ||
+		len(op.Figures) != 1 || op.Figures[0].W != got.W || op.Figures[0].H != got.H {
+		t.Fatalf("opening %+v, want the question %s with one figure %v x %v", op, q.ID, got.W, got.H)
+	}
+	if len(q.Hint) == 0 || len(q.Walkthrough) == 0 {
+		t.Fatalf("the test question has no guide to trim: hint %d, walkthrough %d", len(q.Hint), len(q.Walkthrough))
+	}
+	if len(op.Hint) != 0 || len(op.Walkthrough) != 0 {
+		t.Fatalf("no panel was open, yet the opening carries hint %d, walkthrough %d blocks", len(op.Hint), len(op.Walkthrough))
 	}
 	if _, err := e.svc.c.DB.Exec(`UPDATE questions SET revealed = '["hint"]' WHERE id = ?`, q.ID); err != nil {
 		t.Fatal(err)
 	}
-	if d, err = e.svc.Get(context.Background(), h.ID); err != nil || len(d.Homework.Opening.Revealed) != 1 || d.Homework.Opening.Revealed[0] != "hint" {
-		t.Fatalf("revealed rows %+v %v", d.Homework.Opening, err)
+	if d, err = e.svc.Get(context.Background(), h.ID); err != nil || len(d.Homework.Opening.Hint) != len(q.Hint) || len(d.Homework.Opening.Walkthrough) != 0 {
+		t.Fatalf("with the hint open: %+v %v", d.Homework.Opening, err)
+	}
+	if _, err := e.svc.c.DB.Exec(`UPDATE questions SET revealed = '["answers"]' WHERE id = ?`, q.ID); err != nil {
+		t.Fatal(err)
+	}
+	if d, err = e.svc.Get(context.Background(), h.ID); err != nil || len(d.Homework.Opening.Hint) != 0 || len(d.Homework.Opening.Walkthrough) != len(q.Walkthrough) {
+		t.Fatalf("with the answers open: %+v %v", d.Homework.Opening, err)
 	}
 }
 

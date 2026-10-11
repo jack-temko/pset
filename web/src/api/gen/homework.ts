@@ -33,27 +33,13 @@ export interface Summary {
   estimate?: Estimate;
   timed?: number /* int */;
   /**
-   * Opening is the question the set opens on (the first not yet done) as
-   * far as its screen's size goes, so the walkthrough's skeleton can reserve
-   * its figures and its open help rows before the set arrives. Absent when
-   * every question is done or there are none.
+   * Opening is the question the set opens on (the first not yet done), as
+   * its screen draws it before the set arrives: its label, statement and
+   * figures, and the content of the help panels the student left open (the
+   * others are empty, to keep this small). Absent when every question is
+   * done or there are none.
    */
-  opening?: Opening;
-}
-/**
- * Opening is the size-relevant shape of one question: the figures it shows
- * (as Figure.W and H) and the help rows the student left open.
- */
-export interface Opening {
-  figures: FigureSize[];
-  revealed: string[];
-}
-/**
- * FigureSize is a figure's image as fractions of its page (Figure.W, H).
- */
-export interface FigureSize {
-  w: number /* float64 */;
-  h: number /* float64 */;
+  opening?: Question;
 }
 /**
  * Estimate is the time left on a set at the student's pace, in seconds,

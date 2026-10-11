@@ -3,8 +3,10 @@ package homework
 import (
 	"context"
 	"math"
+	"slices"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/doc"
 )
 
 // The time left on a set, from how long its finished questions took the
@@ -136,7 +138,7 @@ func (s *Service) fillSummaries(ctx context.Context, hs []Summary) error {
 	for i, h := range hs {
 		args[i] = h.ID
 	}
-	rows, err := s.c.DB.QueryContext(ctx, `SELECT id, homework_id, done_at != '', state = 'failed', difficulty, figures, revealed
+	rows, err := s.c.DB.QueryContext(ctx, `SELECT id, homework_id, done_at != '', state = 'failed', difficulty
 		FROM questions WHERE homework_id IN (`+marks+`) ORDER BY homework_id, position`, args...)
 	if err != nil {
 		return err
@@ -152,7 +154,7 @@ func (s *Service) fillSummaries(ctx context.Context, hs []Summary) error {
 	for rows.Next() {
 		var o one
 		var set string
-		if err := rows.Scan(&o.id, &set, &o.Done, &o.failed, &o.Difficulty, &o.figs, &o.shown); err != nil {
+		if err := rows.Scan(&o.id, &set, &o.Done, &o.failed, &o.Difficulty); err != nil {
 			cleanup.Close(rows)
 			return err
 		}
@@ -169,6 +171,7 @@ func (s *Service) fillSummaries(ctx context.Context, hs []Summary) error {
 			return err
 		}
 	}
+	openingID := make([]string, len(hs))
 	for i, h := range hs {
 		os := bySet[h.ID]
 		items := make([]estimateItem, len(os))
@@ -178,11 +181,21 @@ func (s *Service) fillSummaries(ctx context.Context, hs []Summary) error {
 			items[j] = o.estimateItem
 			items[j].Seconds = o.Seconds
 			hs[i].Bar[j] = BarEntry{Done: o.Done, Failed: o.failed, Weight: o.Difficulty}
-			if hs[i].Opening == nil && !o.Done {
-				hs[i].Opening = openingOf(o.figs, o.shown)
+			if openingID[i] == "" && !o.Done {
+				openingID[i] = o.id
 			}
 		}
 		hs[i].Estimate, hs[i].Timed = estimateLeft(items)
+	}
+	for i, id := range openingID {
+		if id == "" {
+			continue
+		}
+		r, err := getQuestion(ctx, s.c.DB, id)
+		if err != nil {
+			return err
+		}
+		hs[i].Opening = openingQuestion(r.Question)
 	}
 	return nil
 }
@@ -199,20 +212,19 @@ func placeholders(n int) (string, []any) {
 	return string(m), make([]any, n)
 }
 
-// openingOf is the shape of a question's screen that its stored columns say:
-// each figure's image size (as Question.Figures has it) and the help rows left
-// open.
-func openingOf(figs, revealed string) *Opening {
-	o := &Opening{Figures: []FigureSize{}, Revealed: []string{}}
-	var fs []figure
-	decodeColumn("figs", figs, &fs)
-	for _, f := range fs {
-		pad := padRect(f.Rect)
-		o.Figures = append(o.Figures, FigureSize{W: pad.W, H: pad.H})
+// openingQuestion is the question a set opens on, trimmed to what its screen
+// draws before the rest arrives: the help panels it had open keep their
+// content, the others are empty, and what only a question's own work needs (its
+// figures' readings, boxes, usage) is left out.
+func openingQuestion(q Question) *Question {
+	has := func(name string) bool { return slices.Contains(q.Revealed, name) }
+	if !has("hint") {
+		q.Hint = []doc.Block{}
 	}
-	decodeColumn("revealed", revealed, &o.Revealed)
-	if o.Revealed == nil {
-		o.Revealed = []string{}
+	// The answers are cut from the walkthrough, so either panel needs it.
+	if !has("walkthrough") && !has("answers") {
+		q.Walkthrough = []doc.Block{}
 	}
-	return o
+	q.Reading, q.ReadingDoubts, q.Boxes, q.Usage = [][]doc.Run{}, [][]doc.Run{}, []Box{}, nil
+	return &q
 }

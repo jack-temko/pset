@@ -42,7 +42,6 @@ import {
   toFind,
   useHomeworkSet,
   type Detail,
-  type Opening,
   useRemoveQuestion,
   useRedoReading,
   useRetryQuestion,
@@ -52,7 +51,7 @@ import {
   worksheetURL,
   type Question,
 } from '@/api/homework';
-import { Runs } from '@/components/document';
+import { AnswersOf, Document, Runs } from '@/components/document';
 import {
   guideAbout,
   heldSel,
@@ -70,7 +69,13 @@ import { FailedQuestion } from './failed-question';
 import { detailVariant, opening, summaryVariant } from './walkthrough-variant';
 import { HelpRows } from './help';
 import { Finish } from './finish';
-import { HELP_NAMES, TITLE, helpRows, type HelpName } from './help-meta';
+import {
+  HELP_NAMES,
+  TITLE,
+  helpMeta,
+  helpRows,
+  type HelpName,
+} from './help-meta';
 import { isTyping, walkthroughKey } from './keys';
 import {
   PRIMARY_LABEL,
@@ -96,24 +101,30 @@ const noop = () => {};
  *  question's label and menu, its statement, the three help rows and the
  *  footer's buttons. In Focus the statement is on the left and the help on
  *  the right. */
-const OPEN_LINES = { hint: 3, walkthrough: 5, answers: 2 } as const;
-
 function WalkthroughSkeleton({
   wide,
   first,
   aspect,
 }: {
   wide: boolean;
-  /** The question it opens on, from the set's row: its figures and its open help rows. */
-  first?: Opening;
+  /** The question it opens on, from the set's row: drawn for real (its label,
+   *  statement, figures, and the help panels it had open), with only what is
+   *  still unknown (the rest of the set, the counts on closed rows) as skeleton. */
+  first?: Question;
   aspect?: number;
 }) {
   const problem = (
     <>
       <div className="flex items-center gap-2">
         <span className="min-w-0 flex-1 truncate text-lg font-semibold">
-          <Skeleton className="h-4 w-24" />
+          {first ? first.label : <Skeleton className="h-4 w-24" />}
         </span>
+        {first?.page !== undefined && (
+          <Button variant="outline" size="sm" className="shrink-0" disabled>
+            <BookOpen />
+            Show in book
+          </Button>
+        )}
         <IconButton
           variant="ghost"
           size="sm"
@@ -123,51 +134,76 @@ function WalkthroughSkeleton({
           <Ellipsis />
         </IconButton>
       </div>
-      <p className="space-y-1 text-base">
-        <Skeleton className="h-3 w-full" />
-        <Skeleton className="h-3 w-2/3" />
-      </p>
-      {/* Its figures, each in the box it will have (as the loaded ones). */}
-      {aspect !== undefined &&
-        first?.figures.map((f, i) => (
-          <figure key={i} className="space-y-1">
-            <div
-              className="w-full rounded-md border bg-card"
-              style={{ aspectRatio: `${f.w} / ${f.h * aspect}` }}
-            />
-            <p className="text-xs">
-              <Skeleton className="h-3 w-24" />
-            </p>
-          </figure>
-        ))}
+      {first &&
+      first.statement.length > 0 &&
+      runsText(first.statement) !== first.label ? (
+        <div className="text-base">
+          <Runs runs={first.statement} />
+        </div>
+      ) : (
+        <p className="space-y-1 text-base">
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-2/3" />
+        </p>
+      )}
+      {first?.figures.map((f, i) => (
+        <figure key={i} className="space-y-1">
+          <img
+            src={figureURL(first.id, i)}
+            alt={f.label || 'Figure'}
+            style={
+              aspect && f.w > 0 && f.h > 0
+                ? {
+                    aspectRatio: `${f.w} / ${f.h * aspect}`,
+                    objectFit: 'contain',
+                  }
+                : undefined
+            }
+            className="w-full rounded-md border bg-card"
+          />
+          {f.label && (
+            <figcaption className="text-xs text-muted-foreground">
+              {f.label}
+            </figcaption>
+          )}
+        </figure>
+      ))}
+      {first && (
+        <ProfessorNotes q={first} editing={false} onStop={noop} onSave={noop} />
+      )}
     </>
   );
+  const rows = first ? helpRows(first) : null;
   const help = (
     <Box className="pointer-events-none">
-      {HELP_NAMES.map((name) => (
-        <Disclosure
-          key={name}
-          title={TITLE[name]}
-          meta={<Skeleton className="h-3 w-12" />}
-          open={first?.revealed.includes(name) ?? false}
-          onOpenChange={noop}
-        >
-          {/* An open row is as tall as its text will be: about as many lines as a
-              hint, a walkthrough or the answers usually run. */}
-          <div className="space-y-1">
-            {Array.from({ length: OPEN_LINES[name] }, (_, j) => (
-              <p key={j} className="text-base">
-                <Skeleton
-                  className={cn(
-                    'h-3',
-                    j === OPEN_LINES[name] - 1 ? 'w-2/3' : 'w-full',
-                  )}
-                />
-              </p>
-            ))}
-          </div>
-        </Disclosure>
-      ))}
+      {HELP_NAMES.map((name) => {
+        const open = first?.revealed.includes(name) ?? false;
+        const blocks = rows?.find((r) => r.name === name)?.blocks ?? [];
+        return (
+          <Disclosure
+            key={name}
+            title={TITLE[name]}
+            // An open row has its content, so its count; a closed one's isn't known.
+            meta={
+              open && blocks.length > 0 ? (
+                helpMeta(name, blocks)
+              ) : (
+                <Skeleton className="h-3 w-12" />
+              )
+            }
+            open={open}
+            onOpenChange={noop}
+          >
+            <div className="space-y-3">
+              {name === 'answers' ? (
+                <AnswersOf blocks={first?.walkthrough ?? []} />
+              ) : (
+                <Document blocks={blocks} reading />
+              )}
+            </div>
+          </Disclosure>
+        );
+      })}
     </Box>
   );
   return (
