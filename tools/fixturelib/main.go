@@ -435,24 +435,40 @@ func addCalls(ctx context.Context, d *sql.DB, subject, id string, at time.Time, 
 	return nil
 }
 
+// weekStart is Monday 00:00 of now's week in the local time zone, the way the
+// app asks for the week (web/src/api/activity.ts).
+func weekStart(now time.Time) time.Time {
+	l := now.In(time.Local)
+	d := time.Date(l.Year(), l.Month(), l.Day(), 0, 0, 0, 0, time.Local)
+	return d.AddDate(0, 0, -((int(d.Weekday()) + 6) % 7))
+}
+
 // addStudy adds this week's study time on two books, so Home draws its week
 // (the stat tiles and the bar split by book). The real test library has no
-// activity by design.
+// activity by design. The stretches sit between the week's start and now,
+// squeezed together when little of the week has passed, so they are always
+// inside the week the app asks for.
 func addStudy(ctx context.Context, d *sql.DB, now time.Time) error {
 	stretches := []struct {
 		book, kind string
-		ago, mins  int
+		ago, mins  float64 // minutes before now it started, and its length
 	}{
 		{"fx-digital", "homework", 150, 40},
 		{"fx-digital", "reading", 100, 25},
 		{"fx-digital", "asking", 60, 10},
 		{"fx-flat", "reading", 45, 30},
 	}
+	const need = 200 // minutes the layout above spans, with room to spare
+	scale := 1.0
+	if span := now.Sub(weekStart(now)).Minutes(); span < need {
+		scale = span / need
+	}
+	min := func(m float64) time.Duration { return time.Duration(m * scale * float64(time.Minute)) }
 	for i, st := range stretches {
-		started := now.Add(-time.Duration(st.ago) * time.Minute)
-		ended := started.Add(time.Duration(st.mins) * time.Minute)
+		started := now.Add(-min(st.ago))
+		ended := started.Add(min(st.mins))
 		if _, err := d.ExecContext(ctx, `INSERT INTO study (id, book_id, kind, started, ended) VALUES (?, ?, ?, ?, ?)`,
-			fmt.Sprintf("fx-study-%d", i+1), st.book, st.kind, started.Format(time.RFC3339), ended.Format(time.RFC3339)); err != nil {
+			fmt.Sprintf("fx-study-%d", i+1), st.book, st.kind, started.UTC().Format(time.RFC3339Nano), ended.UTC().Format(time.RFC3339Nano)); err != nil {
 			return err
 		}
 	}

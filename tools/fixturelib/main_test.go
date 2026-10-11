@@ -169,3 +169,53 @@ func TestRefusals(t *testing.T) {
 		t.Error("PSET_DATA was not refused")
 	}
 }
+
+// The study stretches always fall inside the week the app asks for, even
+// just after it starts and just before it ends.
+func TestStudyStaysInTheWeek(t *testing.T) {
+	inRepoRoot(t)
+	for name, now := range map[string]time.Time{
+		"Monday 00:05": time.Date(2026, 10, 12, 0, 5, 0, 0, time.Local),
+		"Monday 00:00": time.Date(2026, 10, 12, 0, 0, 30, 0, time.Local),
+		"Sunday 23:55": time.Date(2026, 10, 11, 23, 55, 0, 0, time.Local),
+		"midweek":      time.Date(2026, 10, 14, 15, 0, 0, 0, time.Local),
+	} {
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			dir := filepath.Join(t.TempDir(), "fixture")
+			if err := build(ctx, dir, now); err != nil {
+				t.Fatal(err)
+			}
+			d, err := db.Open(filepath.Join(dir, "pset.db"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = d.Close() }()
+			start := weekStart(now)
+			rows, err := d.Query(`SELECT book_id, started, ended FROM study`)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = rows.Close() }()
+			books := map[string]bool{}
+			for rows.Next() {
+				var book, a, b string
+				if err := rows.Scan(&book, &a, &b); err != nil {
+					t.Fatal(err)
+				}
+				from, err1 := time.Parse(time.RFC3339Nano, a)
+				to, err2 := time.Parse(time.RFC3339Nano, b)
+				if err1 != nil || err2 != nil {
+					t.Fatal(err1, err2)
+				}
+				if from.Before(start) || to.After(now) || !to.After(from) {
+					t.Errorf("stretch %s to %s is outside %s to %s", from, to, start, now)
+				}
+				books[book] = true
+			}
+			if len(books) != 2 {
+				t.Errorf("study on %d books, want 2", len(books))
+			}
+		})
+	}
+}
