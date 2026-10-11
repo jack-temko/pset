@@ -42,6 +42,7 @@ import {
   toFind,
   useHomeworkSet,
   type Detail,
+  type Opening,
   useRemoveQuestion,
   useRedoReading,
   useRetryQuestion,
@@ -95,7 +96,18 @@ const noop = () => {};
  *  question's label and menu, its statement, the three help rows and the
  *  footer's buttons. In Focus the statement is on the left and the help on
  *  the right. */
-function WalkthroughSkeleton({ wide }: { wide: boolean }) {
+const OPEN_LINES = { hint: 3, walkthrough: 5, answers: 2 } as const;
+
+function WalkthroughSkeleton({
+  wide,
+  first,
+  aspect,
+}: {
+  wide: boolean;
+  /** The question it opens on, from the set's row: its figures and its open help rows. */
+  first?: Opening;
+  aspect?: number;
+}) {
   const problem = (
     <>
       <div className="flex items-center gap-2">
@@ -115,6 +127,19 @@ function WalkthroughSkeleton({ wide }: { wide: boolean }) {
         <Skeleton className="h-3 w-full" />
         <Skeleton className="h-3 w-2/3" />
       </p>
+      {/* Its figures, each in the box it will have (as the loaded ones). */}
+      {aspect !== undefined &&
+        first?.figures.map((f, i) => (
+          <figure key={i} className="space-y-1">
+            <div
+              className="w-full rounded-md border bg-card"
+              style={{ aspectRatio: `${f.w} / ${f.h * aspect}` }}
+            />
+            <p className="text-xs">
+              <Skeleton className="h-3 w-24" />
+            </p>
+          </figure>
+        ))}
     </>
   );
   const help = (
@@ -124,10 +149,23 @@ function WalkthroughSkeleton({ wide }: { wide: boolean }) {
           key={name}
           title={TITLE[name]}
           meta={<Skeleton className="h-3 w-12" />}
-          open={false}
+          open={first?.revealed.includes(name) ?? false}
           onOpenChange={noop}
         >
-          {null}
+          {/* An open row is as tall as its text will be: about as many lines as a
+              hint, a walkthrough or the answers usually run. */}
+          <div className="space-y-1">
+            {Array.from({ length: OPEN_LINES[name] }, (_, j) => (
+              <p key={j} className="text-base">
+                <Skeleton
+                  className={cn(
+                    'h-3',
+                    j === OPEN_LINES[name] - 1 ? 'w-2/3' : 'w-full',
+                  )}
+                />
+              </p>
+            ))}
+          </div>
         </Disclosure>
       ))}
     </Box>
@@ -1068,6 +1106,7 @@ export function Walkthrough({
   summary?: HomeworkSet;
 }) {
   const detail = useHomeworkSet(props.setId);
+  const { aspect } = useBookHere();
   const header = <SetHeaderSkeleton summary={summary} onBack={props.onBack} />;
   if (detail.isError && !detail.data) {
     return (
@@ -1098,7 +1137,11 @@ export function Walkthrough({
         question: (
           <>
             {header}
-            <WalkthroughSkeleton wide={wide} />
+            <WalkthroughSkeleton
+              wide={wide}
+              first={summary?.opening}
+              aspect={aspect}
+            />
           </>
         ),
         finish: (

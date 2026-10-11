@@ -74,7 +74,17 @@ function SectionHeader({
  *  flattened. Each split takes its book's cover hue and is named below. */
 function WeekByBook({ books }: { books: WeekBook[] }) {
   const total = books.reduce((sum, b) => sum + b.minutes, 0);
-  if (total === 0) return null;
+  // Always there, so the page is the same height with or without a week of
+  // study: an empty track and one quiet line when there is nothing yet.
+  if (total === 0)
+    return (
+      <div className="space-y-3">
+        <div className="h-2 rounded-full bg-muted" />
+        <p className="text-xs text-muted-foreground">
+          No study time yet this week
+        </p>
+      </div>
+    );
 
   return (
     <div className="space-y-3">
@@ -211,6 +221,13 @@ function ThisWeekSkeleton() {
         <StatTile label="Reading" chart={2} value={value} context={context} />
         <StatTile label="Asking" chart={3} value={value} context={context} />
         <StatTile label="Questions worked" value={value} context={context} />
+      </div>
+      {/* The bar and its legend line, as the loaded week has them. */}
+      <div className="space-y-3">
+        <div className="h-2 rounded-full bg-muted" />
+        <p className="text-xs">
+          <Skeleton className="h-3 w-48" />
+        </p>
       </div>
     </section>
   );

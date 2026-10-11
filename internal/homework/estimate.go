@@ -136,7 +136,7 @@ func (s *Service) fillSummaries(ctx context.Context, hs []Summary) error {
 	for i, h := range hs {
 		args[i] = h.ID
 	}
-	rows, err := s.c.DB.QueryContext(ctx, `SELECT id, homework_id, done_at != '', state = 'failed', difficulty
+	rows, err := s.c.DB.QueryContext(ctx, `SELECT id, homework_id, done_at != '', state = 'failed', difficulty, figures, revealed
 		FROM questions WHERE homework_id IN (`+marks+`) ORDER BY homework_id, position`, args...)
 	if err != nil {
 		return err
@@ -144,14 +144,15 @@ func (s *Service) fillSummaries(ctx context.Context, hs []Summary) error {
 	type one struct {
 		id string
 		estimateItem
-		failed bool
+		failed      bool
+		figs, shown string
 	}
 	bySet := map[string][]one{}
 	var ids []string
 	for rows.Next() {
 		var o one
 		var set string
-		if err := rows.Scan(&o.id, &set, &o.Done, &o.failed, &o.Difficulty); err != nil {
+		if err := rows.Scan(&o.id, &set, &o.Done, &o.failed, &o.Difficulty, &o.figs, &o.shown); err != nil {
 			cleanup.Close(rows)
 			return err
 		}
@@ -177,6 +178,9 @@ func (s *Service) fillSummaries(ctx context.Context, hs []Summary) error {
 			items[j] = o.estimateItem
 			items[j].Seconds = o.Seconds
 			hs[i].Bar[j] = BarEntry{Done: o.Done, Failed: o.failed, Weight: o.Difficulty}
+			if hs[i].Opening == nil && !o.Done {
+				hs[i].Opening = openingOf(o.figs, o.shown)
+			}
 		}
 		hs[i].Estimate, hs[i].Timed = estimateLeft(items)
 	}
@@ -193,4 +197,22 @@ func placeholders(n int) (string, []any) {
 		m = append(m, '?')
 	}
 	return string(m), make([]any, n)
+}
+
+// openingOf is the shape of a question's screen that its stored columns say:
+// each figure's image size (as Question.Figures has it) and the help rows left
+// open.
+func openingOf(figs, revealed string) *Opening {
+	o := &Opening{Figures: []FigureSize{}, Revealed: []string{}}
+	var fs []figure
+	decodeColumn("figs", figs, &fs)
+	for _, f := range fs {
+		pad := padRect(f.Rect)
+		o.Figures = append(o.Figures, FigureSize{W: pad.W, H: pad.H})
+	}
+	decodeColumn("revealed", revealed, &o.Revealed)
+	if o.Revealed == nil {
+		o.Revealed = []string{}
+	}
+	return o
 }

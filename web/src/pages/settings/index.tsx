@@ -30,7 +30,7 @@ import {
   useTestKey,
   type ModelUse,
 } from '@/api/settings';
-import { useLastCount } from '@/lib/last-count';
+import { useLastCount, useLastShape } from '@/lib/last-count';
 import { useSettled, useShowPending } from '@/lib/settled';
 import { applyTheme, getTheme, type Theme } from '@/lib/theme';
 import { cn, plural } from '@/lib/utils';
@@ -196,7 +196,7 @@ function ModelsLine({ models }: { models: ModelUse[] }) {
 
 /** The key Box before the settings arrive: the same rows at their real
  *  height, so the values land without moving anything. */
-function KeySkeleton() {
+function KeySkeleton({ models }: { models: ModelUse[] }) {
   return (
     <Box>
       <BoxHeader>OpenRouter</BoxHeader>
@@ -204,14 +204,9 @@ function KeySkeleton() {
         <Field label="API key" hint={KEY_HINT}>
           <Skeleton className="block h-control w-full rounded-md" />
         </Field>
-        {/* The models line: PSet's own sentence, three lines at this width. */}
-        <span className="block" aria-hidden>
-          {['w-full', 'w-full', 'w-2/3'].map((w, i) => (
-            <span key={i} className="flex h-4 items-center">
-              <Skeleton className={`block h-3 ${w}`} />
-            </span>
-          ))}
-        </span>
+        {/* The models line is PSet's own sentence: real from the first frame,
+            from the models as last seen, so it wraps as it will. */}
+        <ModelsLine models={models} />
       </BoxBody>
       <BoxFooter>
         <span />
@@ -645,16 +640,43 @@ function ResetEverything() {
 
 // ---------------------------------------------------------------- page
 
+/** The models as this build knew them, for a first visit's skeleton. */
+const DEFAULT_MODELS: ModelUse[] = [
+  { job: 'Guides and Ask', model: 'anthropic/claude-haiku-5.5' },
+  { job: 'Finding problems', model: 'perceptron/perceptron-mk1.5' },
+  { job: 'Reading figures', model: 'google/gemini-3.8-flash' },
+  { job: 'Checking answers', model: 'google/gemini-3.8-flash' },
+];
+const isModels = (x: unknown): x is ModelUse[] =>
+  Array.isArray(x) &&
+  x.every(
+    (m) =>
+      typeof m === 'object' &&
+      m !== null &&
+      typeof (m as ModelUse).job === 'string' &&
+      typeof (m as ModelUse).model === 'string',
+  );
+
 function Connections() {
+  const settings = useSettings();
+  const models = useLastShape(
+    'settings-models',
+    settings.data?.models,
+    DEFAULT_MODELS,
+    isModels,
+  );
   // The key box has the same shape saved or not; the variant is named so the
   // audit opens both, and it is the data's, so the neutral skeleton is the same.
   return (
     <Loaded
-      query={useSettings()}
+      query={settings}
       view="settingsKey"
       variant={undefined}
-      neutral={<KeySkeleton />}
-      skeletons={{ missing: <KeySkeleton />, saved: <KeySkeleton /> }}
+      neutral={<KeySkeleton models={models} />}
+      skeletons={{
+        missing: <KeySkeleton models={models} />,
+        saved: <KeySkeleton models={models} />,
+      }}
       variantOf={(data): Variant<'settingsKey'> =>
         data.ready.key ? 'saved' : 'missing'
       }

@@ -21,7 +21,6 @@ import type { About } from '@/api/ask';
 import type { PendingSel } from '@/components/document/selection';
 import { dueLine, dueStatus } from '@/lib/due';
 import { useLastShape } from '@/lib/last-count';
-import type { Variant } from '@/variants';
 import { cn } from '@/lib/utils';
 import {
   setBarLabel,
@@ -29,6 +28,7 @@ import {
   timeLeftWords,
   type HomeworkSet,
 } from './progress';
+import { isListShape, listVariant, type ListShape } from './list-shape';
 import { Walkthrough } from './walkthrough';
 
 /** A set's row in the list: its title, the bar (as in its header), how many
@@ -80,23 +80,9 @@ function SetRowSkeleton({ bar = true }: { bar?: boolean }) {
   );
 }
 
-/** How many sets the list showed last time, per book, for its skeleton. */
-type ListShape = { active: number; turnedIn: number };
-const isListShape = (x: unknown): x is ListShape => {
-  if (typeof x !== 'object' || x === null) return false;
-  const s = x as Partial<ListShape>;
-  return Number.isInteger(s.active) && Number.isInteger(s.turnedIn);
-};
-
-const listVariant = (
-  active: number,
-  turnedIn: number,
-): Variant<'homeworkList'> =>
-  turnedIn > 0 ? 'turnedIn' : active > 0 ? 'active' : 'empty';
-
 /** The list before its sets: as many rows as last time, the door, and the
  *  Turned in box when there was one. */
-function ListSkeleton({
+export function ListSkeleton({
   active,
   turnedIn,
 }: {
@@ -249,17 +235,9 @@ export function HomeworkTab({
             sets.filter((h) => h.turnedInAt).length,
           )
         }
-        neutral={
-          <Box>
-            <DoorAction
-              icon={<Plus aria-hidden />}
-              onClick={() => {}}
-              className="pointer-events-none"
-            >
-              New homework
-            </DoorAction>
-          </Box>
-        }
+        // Nothing remembered for this book: the door under two quiet rows, never a
+        // door alone, which reads as an empty list.
+        neutral={<ListSkeleton active={2} turnedIn={0} />}
         skeletons={{
           empty: (
             <div className="flex h-full flex-col justify-center space-y-4">

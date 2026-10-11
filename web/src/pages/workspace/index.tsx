@@ -52,7 +52,8 @@ import { BookUsageDialog } from '@/components/usage-modal';
 import { usePrefetchIntent } from '@/lib/prefetch-intent';
 import { prefetchBookUsage, useBookUsage } from '@/api/usage';
 import { BookDialog } from './dialogs';
-import { HomeworkTab } from '@/views/homework';
+import { HomeworkTab, ListSkeleton } from '@/views/homework';
+import { isListShape, type ListShape } from '@/views/homework/list-shape';
 import { MemoryDialog, MemoryUndo } from './memory';
 import { BoxingBar, BoxingProvider, PageBoxes } from './boxing';
 import { useBoxing } from './boxing-state';
@@ -1284,6 +1285,12 @@ function WorkspaceSkeleton({
   ratios: Panes['ratios'];
 }) {
   const rail = useLastShape(railKey(id), undefined, RAIL_SHAPE, isRailShape);
+  const list = useLastShape<ListShape | null>(
+    `homework-list-${id}`,
+    undefined,
+    null,
+    isListShape,
+  );
   const showRail = rail.length > 0;
   const widths = total > 0 ? layout(total, ratios, false, showRail) : undefined;
   return (
@@ -1315,8 +1322,13 @@ function WorkspaceSkeleton({
                 <Columns2 />
               </IconButton>
             </div>
-            {/* A book opens on Homework: the list, with no composer. */}
-            <div className="min-h-0 flex-1" />
+            {/* A book opens on Homework: the list, as many rows as last time. */}
+            <div className="min-h-0 flex-1 space-y-4 overflow-hidden p-card">
+              <ListSkeleton
+                active={list?.active ?? 2}
+                turnedIn={list?.turnedIn ?? 0}
+              />
+            </div>
           </aside>
         </div>
       </div>

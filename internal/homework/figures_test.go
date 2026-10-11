@@ -104,6 +104,23 @@ func TestAFigureOnAnotherPageIsFound(t *testing.T) {
 	if got.W <= 0 || got.H <= 0 || ratio < lo || ratio > hi {
 		t.Fatalf("served image %v high per wide; the wire's %v x %v of a page at aspect %v allows %v to %v", ratio, got.W, got.H, aspect, lo, hi)
 	}
+
+	// The set's own summary carries the question it opens on: its figures'
+	// sizes and the help rows left open, so the walkthrough can reserve them.
+	d, err := e.svc.Get(context.Background(), h.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	op := d.Homework.Opening
+	if op == nil || len(op.Figures) != 1 || op.Figures[0].W != got.W || op.Figures[0].H != got.H || op.Revealed == nil {
+		t.Fatalf("opening %+v, want one figure %v x %v", op, got.W, got.H)
+	}
+	if _, err := e.svc.c.DB.Exec(`UPDATE questions SET revealed = '["hint"]' WHERE id = ?`, q.ID); err != nil {
+		t.Fatal(err)
+	}
+	if d, err = e.svc.Get(context.Background(), h.ID); err != nil || len(d.Homework.Opening.Revealed) != 1 || d.Homework.Opening.Revealed[0] != "hint" {
+		t.Fatalf("revealed rows %+v %v", d.Homework.Opening, err)
+	}
 }
 
 // A problem that names no figure by number keeps what was boxed: there's

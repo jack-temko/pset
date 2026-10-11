@@ -26,12 +26,30 @@ export function AutoTextarea({
 }: ComponentProps<'textarea'>) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
+  // The height follows the content. A textarea mounted hidden (the Ask tab
+  // behind Homework) has no layout and a scrollHeight of 0: it keeps its natural
+  // height until it is shown, and is fitted then (its width changes from 0).
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
+    if (el.scrollHeight > 0) el.style.height = `${el.scrollHeight}px`;
   }, [value]);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let width = el.clientWidth;
+    const ro = new ResizeObserver(() => {
+      if (el.clientWidth === width) return;
+      width = el.clientWidth;
+      el.style.height = 'auto';
+      if (el.scrollHeight > 0) el.style.height = `${el.scrollHeight}px`;
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+    };
+  }, []);
 
   return (
     <textarea
