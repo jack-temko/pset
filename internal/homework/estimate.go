@@ -146,8 +146,7 @@ func (s *Service) fillSummaries(ctx context.Context, hs []Summary) error {
 	type one struct {
 		id string
 		estimateItem
-		failed      bool
-		figs, shown string
+		failed bool
 	}
 	bySet := map[string][]one{}
 	var ids []string
