@@ -264,6 +264,9 @@ export function Loaded<T, K extends Views = Views>({
         <div
           ref={layer}
           aria-hidden
+          // Nothing in a skeleton is focusable, clickable or read: its buttons
+          // are drawn to hold their place, not to be used.
+          inert
           data-view={view}
           data-variant={variant}
           style={

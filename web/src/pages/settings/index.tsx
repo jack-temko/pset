@@ -30,6 +30,7 @@ import {
   useTestKey,
   type ModelUse,
 } from '@/api/settings';
+import defaultModels from '@/api/default-models.json';
 import { useLastCount, useLastShape } from '@/lib/last-count';
 import { useSettled, useShowPending } from '@/lib/settled';
 import { applyTheme, getTheme, type Theme } from '@/lib/theme';
@@ -640,21 +641,22 @@ function ResetEverything() {
 
 // ---------------------------------------------------------------- page
 
-/** The models as this build knew them, for a first visit's skeleton. */
-const DEFAULT_MODELS: ModelUse[] = [
-  { job: 'Guides and Ask', model: 'anthropic/claude-haiku-5.5' },
-  { job: 'Finding problems', model: 'perceptron/perceptron-mk1.5' },
-  { job: 'Reading figures', model: 'google/gemini-3.8-flash' },
-  { job: 'Checking answers', model: 'google/gemini-3.8-flash' },
-];
+/** The models as this build knew them, for a first visit's skeleton: pinned to
+ *  the server's list by a Go test (internal/settings/models_test.go). */
+const DEFAULT_MODELS: ModelUse[] = defaultModels;
+// What a saved list may be: a few short job and model names, since it is
+// drawn as text.
 const isModels = (x: unknown): x is ModelUse[] =>
   Array.isArray(x) &&
+  x.length <= 12 &&
   x.every(
     (m) =>
       typeof m === 'object' &&
       m !== null &&
       typeof (m as ModelUse).job === 'string' &&
-      typeof (m as ModelUse).model === 'string',
+      (m as ModelUse).job.length <= 60 &&
+      typeof (m as ModelUse).model === 'string' &&
+      (m as ModelUse).model.length <= 80,
   );
 
 function Connections() {

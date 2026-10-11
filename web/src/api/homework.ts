@@ -10,6 +10,7 @@ import { assets, del, get, patch, post, postForm } from './client';
 import { on } from './events';
 import type { Run } from './gen/doc';
 import { forget, observe } from '@/lib/eta';
+import { openingOf } from './opening';
 import type {
   AssignmentImport,
   AssignmentRead,
@@ -115,8 +116,16 @@ function putSummary(qc: QueryClient, h: Summary) {
   qc.setQueryData<Summary[]>(homeworkKeys.forBook(h.bookId), (list) => {
     if (!list) return list;
     const i = list.findIndex((x) => x.id === h.id);
-    return i === -1 ? [h, ...list] : list.map((x) => (x.id === h.id ? h : x));
+    // The event's summary has no opening (only the book's list carries it): the
+    // row keeps its own, and the list is read again for the next one.
+    return i === -1
+      ? [h, ...list]
+      : list.map((x) => (x.id === h.id ? { ...h, opening: x.opening } : x));
   });
+  void qc.invalidateQueries(
+    { queryKey: homeworkKeys.forBook(h.bookId), exact: true },
+    { cancelRefetch: false },
+  );
   qc.setQueryData<Detail>(
     homeworkKeys.set(h.id),
     (d) => d && { ...d, homework: h },
@@ -160,6 +169,18 @@ function putQuestion(qc: QueryClient, q: Question, force = false) {
   );
 }
 
+/** A question that is a cached set row's opening is kept current: its panels
+ *  opened or its guide written change what the walkthrough's skeleton draws. */
+function updateOpening(qc: QueryClient, q: Question) {
+  qc.setQueriesData<Summary[]>({ queryKey: ['homework', 'book'] }, (list) =>
+    list?.some((h) => h.opening?.question.id === q.id)
+      ? list.map((h) =>
+          h.opening?.question.id === q.id ? { ...h, opening: openingOf(q) } : h,
+        )
+      : list,
+  );
+}
+
 function dropQuestion(qc: QueryClient, id: string, homeworkId: string) {
   qc.setQueryData<Detail>(
     homeworkKeys.set(homeworkId),
@@ -183,6 +204,7 @@ export const questionStep = (q: Pick<Question, 'state'>) =>
 on<QuestionChanged>('question.changed', (d, qc) => {
   observe(`question:${d.question.id}`, questionStep(d.question));
   putQuestion(qc, d.question);
+  updateOpening(qc, d.question);
 });
 on<QuestionRemoved>('question.removed', (d, qc) => {
   forget(`question:${d.id}`);

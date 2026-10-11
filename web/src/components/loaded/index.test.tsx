@@ -55,6 +55,15 @@ describe('Loaded', () => {
     expect(skeletonLayer()?.className).toContain('opacity-100');
   });
 
+  it('makes the skeleton inert, so nothing in it is focusable or clickable', () => {
+    show(pending);
+    expect(skeletonLayer()?.hasAttribute('inert')).toBe(true);
+    act(() => void vi.advanceTimersByTime(GRACE_MS));
+    show(loaded);
+    // Through the crossfade too.
+    expect(skeletonLayer()?.hasAttribute('inert')).toBe(true);
+  });
+
   it('is busy while pending', () => {
     show(pending);
     expect(box().getAttribute('aria-busy')).toBe('true');

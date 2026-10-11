@@ -42,6 +42,7 @@ import {
   toFind,
   useHomeworkSet,
   type Detail,
+  type Opening,
   useRemoveQuestion,
   useRedoReading,
   useRetryQuestion,
@@ -103,16 +104,35 @@ const noop = () => {};
  *  the right. */
 function WalkthroughSkeleton({
   wide,
-  first,
+  opening,
   aspect,
 }: {
   wide: boolean;
-  /** The question it opens on, from the set's row: drawn for real (its label,
-   *  statement, figures, and the help panels it had open), with only what is
-   *  still unknown (the rest of the set, the counts on closed rows) as skeleton. */
-  first?: Question;
+  /** The question it opens on, from the set's row: drawn as the real view
+   *  draws it (its label, statement, figures, the help panels it had open, and
+   *  what its state shows), with only what is still unknown (the rest of the
+   *  set, the counts on closed rows) as skeleton. */
+  opening?: Opening;
   aspect?: number;
 }) {
+  const first = opening?.question;
+  // The same rule as the real view's: a statement that is only the label says
+  // nothing, and one still being found is a skeleton.
+  const statement =
+    first &&
+    first.statement.length > 0 &&
+    runsText(first.statement) !== first.label ? (
+      <div className="text-base">
+        <Runs runs={first.statement} />
+      </div>
+    ) : !first ||
+      (first.inBook &&
+        (first.state === 'pending' || first.state === 'locating')) ? (
+      <p className="space-y-1 text-base">
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-2/3" />
+      </p>
+    ) : null;
   const problem = (
     <>
       <div className="flex items-center gap-2">
@@ -134,18 +154,7 @@ function WalkthroughSkeleton({
           <Ellipsis />
         </IconButton>
       </div>
-      {first &&
-      first.statement.length > 0 &&
-      runsText(first.statement) !== first.label ? (
-        <div className="text-base">
-          <Runs runs={first.statement} />
-        </div>
-      ) : (
-        <p className="space-y-1 text-base">
-          <Skeleton className="h-3 w-full" />
-          <Skeleton className="h-3 w-2/3" />
-        </p>
-      )}
+      {statement}
       {first?.figures.map((f, i) => (
         <figure key={i} className="space-y-1">
           <img
@@ -174,9 +183,11 @@ function WalkthroughSkeleton({
     </>
   );
   const rows = first ? helpRows(first) : null;
-  const help = (
+  const helpRowsSkeleton = (
     <Box className="pointer-events-none">
-      {HELP_NAMES.map((name) => {
+      {HELP_NAMES.filter(
+        (n) => n !== 'answers' || (opening?.hasAnswers ?? true),
+      ).map((name) => {
         const open = first?.revealed.includes(name) ?? false;
         const blocks = rows?.find((r) => r.name === name)?.blocks ?? [];
         return (
@@ -206,6 +217,31 @@ function WalkthroughSkeleton({
       })}
     </Box>
   );
+  // What the real view draws for the question's state: a failed one its way
+  // out, an unwritten one its button, one waiting or being written a status
+  // line over its help rows.
+  const help =
+    first?.state === 'failed' ? (
+      <FailedQuestion q={first} onRetry={noop} onOpenSettings={noop} />
+    ) : first?.state === 'unwritten' ? (
+      <div className="space-y-2">
+        <p className="text-sm text-muted-foreground">
+          This question has no guide yet.
+        </p>
+        <Button variant="outline" disabled>
+          Write the guide
+        </Button>
+      </div>
+    ) : (
+      <>
+        {first && outstanding(first) && (
+          <p className="text-xs">
+            <Skeleton still className="h-3 w-48" />
+          </p>
+        )}
+        {helpRowsSkeleton}
+      </>
+    );
   return (
     <>
       <div
@@ -1175,7 +1211,7 @@ export function Walkthrough({
             {header}
             <WalkthroughSkeleton
               wide={wide}
-              first={summary?.opening}
+              opening={summary?.opening}
               aspect={aspect}
             />
           </>

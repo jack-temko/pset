@@ -291,6 +291,33 @@ func getQuestion(ctx context.Context, q queryer, id string) (row, error) {
 		FROM questions q JOIN homework h ON h.id = q.homework_id WHERE q.id = ?`, id))
 }
 
+// questionsByID is the questions with these ids, keyed by id, in one query.
+// An id that is gone is just not in the map.
+func questionsByID(ctx context.Context, q queryer, ids []string) (map[string]Question, error) {
+	out := make(map[string]Question, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	marks, args := placeholders(len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	rows, err := q.QueryContext(ctx, `SELECT `+questionCols+`
+		FROM questions q JOIN homework h ON h.id = q.homework_id WHERE q.id IN (`+marks+`)`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer cleanup.Close(rows)
+	for rows.Next() {
+		r, err := scanQuestion(rows)
+		if err != nil {
+			return nil, err
+		}
+		out[r.ID] = r.Question
+	}
+	return out, rows.Err()
+}
+
 func listQuestions(ctx context.Context, q queryer, homeworkID string) ([]Question, error) {
 	rows, err := q.QueryContext(ctx, `SELECT `+questionCols+`
 		FROM questions q JOIN homework h ON h.id = q.homework_id WHERE q.homework_id = ? ORDER BY q.position`, homeworkID)

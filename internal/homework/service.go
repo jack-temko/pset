@@ -167,7 +167,7 @@ func (s *Service) ForBook(ctx context.Context, bookID string) ([]Summary, error)
 	if err != nil {
 		return nil, err
 	}
-	return hs, s.fillSummaries(ctx, hs)
+	return hs, s.fillSummaries(ctx, hs, true)
 }
 
 // Due lists every set not yet turned in, across books: dated ones by date,
@@ -178,7 +178,7 @@ func (s *Service) Due(ctx context.Context) ([]Summary, error) {
 	if err != nil {
 		return nil, err
 	}
-	return hs, s.fillSummaries(ctx, hs)
+	return hs, s.fillSummaries(ctx, hs, false)
 }
 
 // Create makes a homework set in a book and queues the work on its questions.
@@ -785,7 +785,7 @@ func (s *Service) WriteGuide(ctx context.Context, id string) (Question, error) {
 // filled is a set with its bar, pace and time left put on.
 func (s *Service) filled(ctx context.Context, h Summary) (Summary, error) {
 	one := []Summary{h}
-	err := s.fillSummaries(ctx, one)
+	err := s.fillSummaries(ctx, one, false)
 	return one[0], err
 }
 

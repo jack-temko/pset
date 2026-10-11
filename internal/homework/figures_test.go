@@ -105,35 +105,59 @@ func TestAFigureOnAnotherPageIsFound(t *testing.T) {
 		t.Fatalf("served image %v high per wide; the wire's %v x %v of a page at aspect %v allows %v to %v", ratio, got.W, got.H, aspect, lo, hi)
 	}
 
-	// The set's own summary carries the question it opens on, as its screen
-	// draws it: the label, statement and figures, and only the help panels it
-	// had open.
-	d, err := e.svc.Get(context.Background(), h.ID)
-	if err != nil {
-		t.Fatal(err)
+	// The book's list of sets carries, on each set still open, the question it
+	// opens on, as its screen draws it: the label, statement and figures, and
+	// only the help panels it had open.
+	opening := func() *Opening {
+		t.Helper()
+		sets, err := e.svc.ForBook(context.Background(), h.BookID)
+		if err != nil || len(sets) != 1 {
+			t.Fatalf("the book's sets: %+v %v", sets, err)
+		}
+		return sets[0].Opening
 	}
-	op := d.Homework.Opening
-	if op == nil || op.ID != q.ID || op.Label != q.Label || len(op.Statement) != len(q.Statement) ||
-		len(op.Figures) != 1 || op.Figures[0].W != got.W || op.Figures[0].H != got.H {
+	op := opening()
+	if op == nil || op.Question.ID != q.ID || op.Question.Label != q.Label || len(op.Question.Statement) != len(q.Statement) ||
+		len(op.Question.Figures) != 1 || op.Question.Figures[0].W != got.W || op.Question.Figures[0].H != got.H {
 		t.Fatalf("opening %+v, want the question %s with one figure %v x %v", op, q.ID, got.W, got.H)
 	}
 	if len(q.Hint) == 0 || len(q.Walkthrough) == 0 {
 		t.Fatalf("the test question has no guide to trim: hint %d, walkthrough %d", len(q.Hint), len(q.Walkthrough))
 	}
-	if len(op.Hint) != 0 || len(op.Walkthrough) != 0 {
-		t.Fatalf("no panel was open, yet the opening carries hint %d, walkthrough %d blocks", len(op.Hint), len(op.Walkthrough))
+	if len(op.Question.Hint) != 0 || len(op.Question.Walkthrough) != 0 {
+		t.Fatalf("no panel was open, yet the opening carries hint %d, walkthrough %d blocks", len(op.Question.Hint), len(op.Question.Walkthrough))
 	}
 	if _, err := e.svc.c.DB.Exec(`UPDATE questions SET revealed = '["hint"]' WHERE id = ?`, q.ID); err != nil {
 		t.Fatal(err)
 	}
-	if d, err = e.svc.Get(context.Background(), h.ID); err != nil || len(d.Homework.Opening.Hint) != len(q.Hint) || len(d.Homework.Opening.Walkthrough) != 0 {
-		t.Fatalf("with the hint open: %+v %v", d.Homework.Opening, err)
+	if op = opening(); len(op.Question.Hint) != len(q.Hint) || len(op.Question.Walkthrough) != 0 {
+		t.Fatalf("with the hint open: %+v", op)
+	}
+	if _, err := e.svc.c.DB.Exec(`UPDATE questions SET revealed = '["walkthrough"]' WHERE id = ?`, q.ID); err != nil {
+		t.Fatal(err)
+	}
+	if op = opening(); len(op.Question.Hint) != 0 || len(op.Question.Walkthrough) != len(q.Walkthrough) {
+		t.Fatalf("with the walkthrough open: %+v", op)
 	}
 	if _, err := e.svc.c.DB.Exec(`UPDATE questions SET revealed = '["answers"]' WHERE id = ?`, q.ID); err != nil {
 		t.Fatal(err)
 	}
-	if d, err = e.svc.Get(context.Background(), h.ID); err != nil || len(d.Homework.Opening.Hint) != 0 || len(d.Homework.Opening.Walkthrough) != len(q.Walkthrough) {
-		t.Fatalf("with the answers open: %+v %v", d.Homework.Opening, err)
+	if op = opening(); len(op.Question.Hint) != 0 || len(op.Question.Walkthrough) != len(q.Walkthrough) {
+		t.Fatalf("with the answers open: %+v", op)
+	}
+	// Only the book's list carries it: not the set, and not the due list.
+	if d, err := e.svc.Get(context.Background(), h.ID); err != nil || d.Homework.Opening != nil {
+		t.Fatalf("the set carries an opening: %+v %v", d.Homework.Opening, err)
+	}
+	if due, err := e.svc.Due(context.Background()); err != nil || len(due) != 1 || due[0].Opening != nil {
+		t.Fatalf("the due list carries an opening: %+v %v", due, err)
+	}
+	// Done questions are skipped, and a finished set has none.
+	if _, err := e.svc.c.DB.Exec(`UPDATE questions SET done_at = ? WHERE id = ?`, "2026-10-09T10:00:00Z", q.ID); err != nil {
+		t.Fatal(err)
+	}
+	if op = opening(); op != nil {
+		t.Fatalf("a finished set has an opening: %+v", op)
 	}
 }
 

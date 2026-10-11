@@ -519,13 +519,16 @@ type HomeShape = {
   covers: number;
   coversDoor: boolean;
 };
+/** A saved count is drawn as that many rows: a small whole number. */
+const count = (n: unknown): n is number =>
+  Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 50;
 const isHomeShape = (x: unknown): x is HomeShape => {
   if (typeof x !== 'object' || x === null) return false;
   const s = x as Partial<HomeShape>;
   return (
     typeof s.firstRun === 'boolean' &&
-    Number.isInteger(s.due) &&
-    Number.isInteger(s.covers) &&
+    count(s.due) &&
+    count(s.covers) &&
     typeof s.dueDoor === 'boolean' &&
     typeof s.coversDoor === 'boolean'
   );
