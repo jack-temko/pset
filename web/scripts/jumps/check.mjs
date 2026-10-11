@@ -22,6 +22,7 @@ export const MAX_JUMP = 0.001;
 // within 2px, and the same variant.
 export const MAX_BLOCK_PX = 8;
 export const MAX_TOTAL_PX = 2;
+export const MAX_OFFSET_PX = 8;
 
 const f = (n, d = 3) => (n === 0 ? '0' : Number(n).toFixed(d));
 
@@ -86,9 +87,13 @@ export function offences(row) {
       out.push(
         `${x.box}: the skeleton is the "${x.skeleton}" variant but the content is "${x.content}"`,
       );
-    else if (x.blockPx > MAX_BLOCK_PX || x.totalPx > MAX_TOTAL_PX)
+    else if (
+      x.blockPx > MAX_BLOCK_PX ||
+      x.extentPx > MAX_TOTAL_PX ||
+      x.offsetPx > MAX_OFFSET_PX
+    )
       out.push(
-        `${x.box}: the skeleton is off from its content by ${x.blockPx}px in a block (limit ${MAX_BLOCK_PX}) and ${x.totalPx}px in all (limit ${MAX_TOTAL_PX})`,
+        `${x.box}: the skeleton is off from its content by ${x.extentPx}px in how far it reaches (limit ${MAX_TOTAL_PX}), ${x.offsetPx}px in where its blocks start (limit ${MAX_OFFSET_PX}) and ${x.blockPx}px in a block (limit ${MAX_BLOCK_PX})`,
       );
   }
   for (const x of a.boxes?.flashes ?? [])

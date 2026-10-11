@@ -106,6 +106,14 @@ func TestBuildHasEveryAuditTarget(t *testing.T) {
 	if n := count(t, d, `SELECT COUNT(*) FROM questions WHERE figures LIKE '%"label":"Figure %'  AND page IS NOT NULL`); n == 0 {
 		t.Error("no question has a captioned figure")
 	}
+	// This week's study on two books (Home's week bar), and a current question
+	// with a figure and its hint open.
+	if n := count(t, d, `SELECT COUNT(DISTINCT book_id) FROM study WHERE ended > datetime('now', '-1 day')`); n != 2 {
+		t.Errorf("study this week on %d books, want 2", n)
+	}
+	if n := count(t, d, `SELECT COUNT(*) FROM questions WHERE figures != '[]' AND revealed LIKE '%hint%' AND done_at = ''`); n == 0 {
+		t.Error("no unfinished question has a figure and its hint open")
+	}
 	// The audit's usage scenarios look for a finished question and an answered
 	// turn that carry a usage line.
 	// A written guide has all its rows, or the page shows a spinner for the

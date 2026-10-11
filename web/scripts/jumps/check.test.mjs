@@ -5,6 +5,7 @@ import {
   MAX_BLOCK_PX,
   MAX_GROWTH_PX,
   MAX_JUMP,
+  MAX_OFFSET_PX,
   MAX_TOTAL_PX,
 } from './check.mjs';
 
@@ -133,7 +134,8 @@ describe('skeleton fidelity', () => {
     skeleton: 'done',
     content: 'done',
     blockPx: 0,
-    totalPx: 0,
+    extentPx: 0,
+    offsetPx: 0,
     blocks: [3, 3],
     ...over,
   });
@@ -160,9 +162,23 @@ describe('skeleton fidelity', () => {
     expect(check(report(at)).failed).toEqual([]);
     expect(check(report(over)).failed).toHaveLength(1);
   });
+  it('where the blocks start is allowed 8px and no more', () => {
+    const at = boxRow({ fidelity: [fid({ offsetPx: MAX_OFFSET_PX })] });
+    const over = boxRow({ fidelity: [fid({ offsetPx: MAX_OFFSET_PX + 1 })] });
+    expect(check(report(at)).failed).toEqual([]);
+    expect(check(report(over)).failed).toHaveLength(1);
+  });
+  it('how far the content reaches is allowed 2px and no more, whatever the block counts', () => {
+    const over = boxRow({
+      fidelity: [fid({ extentPx: 62, blocks: [2, 3] })],
+    });
+    const { failed } = check(report(over));
+    expect(failed).toHaveLength(1);
+    expect(failed[0].why[0]).toContain('62px in how far it reaches');
+  });
   it('the whole is allowed 2px and no more', () => {
-    const at = boxRow({ fidelity: [fid({ totalPx: MAX_TOTAL_PX })] });
-    const over = boxRow({ fidelity: [fid({ totalPx: MAX_TOTAL_PX + 1 })] });
+    const at = boxRow({ fidelity: [fid({ extentPx: MAX_TOTAL_PX })] });
+    const over = boxRow({ fidelity: [fid({ extentPx: MAX_TOTAL_PX + 1 })] });
     expect(check(report(at)).failed).toEqual([]);
     expect(check(report(over)).failed).toHaveLength(1);
   });
