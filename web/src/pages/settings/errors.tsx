@@ -20,7 +20,7 @@ const columns: TableColumn<Incident>[] = [
   {
     key: 'at',
     header: 'Time',
-    width: '9rem',
+    width: '11rem',
     mono: true,
     cell: (i) => incidentTime(i.at),
   },

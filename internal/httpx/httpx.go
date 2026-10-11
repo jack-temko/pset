@@ -9,6 +9,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/errs"
@@ -33,8 +34,10 @@ func H(fn HandlerFunc) http.HandlerFunc {
 // Fail answers err as H does. For a handler that has to answer before it
 // returns, such as one already streaming.
 func Fail(w http.ResponseWriter, r *http.Request, err error) {
+	// A method-and-path pattern ("GET /api/books/{id}") says which route it
+	// was; any other (the catch-all) says nothing, so the path is the route.
 	route := r.Pattern
-	if route == "" {
+	if !strings.Contains(route, " ") {
 		route = r.Method + " " + r.URL.Path
 	}
 	v := errs.Report(r.Context(), err, errs.Where{Route: route})

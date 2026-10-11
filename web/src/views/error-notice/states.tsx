@@ -57,7 +57,7 @@ export function Row({ harness }: { harness: Harness }) {
 /** B: a failure of the whole screen: the banner, once, and nothing else. */
 export function Banner({ harness }: { harness: Harness }) {
   return (
-    <div className="max-w-3xl overflow-hidden rounded-lg border">
+    <div className="max-w-xl overflow-hidden rounded-lg border">
       <UnreachableBanner
         view={viewOf('request.unreachable')}
         onRetry={() => {
@@ -87,7 +87,7 @@ export function FieldLine() {
 /** Settings, Errors: the real section, answered by the scenario's server. */
 export function Kept() {
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-xl">
       <Errors />
     </div>
   );
