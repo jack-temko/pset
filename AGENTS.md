@@ -139,25 +139,32 @@ Three skills:
 
 ## Models and agents
 
-Opus judges, Sonnet builds, Haiku does the mechanical work, so no model pays twice to
-read the same code. `/change` runs in an Opus session: it sizes the change, proposes
-a tier (quick, planned, grilled) for Jack to confirm, plans, and judges the result.
-The workers are Claude Code subagents in `.claude/agents/` (Claude-specific, so they
-live there, not in `.agents/`):
+The judge tier judges, the build tier builds, the mechanical tier does the
+mechanical work, so no model pays twice to read the same code. Which model each
+tier runs on is the model map in
+`.agents/skills/change/references/roles/README.md`; the role briefs live beside
+it, and each harness's agent files are shims pointing at them (Claude Code's
+are committed in `.claude/agents/`; ZCode's are per machine, in
+`~/.zcode/agents/`). The shims stay pointers: role instructions change only in
+`references/roles/`, and only a model id can drift, by hand. `/change` runs in
+a judge-tier session: it sizes the change, proposes a tier (quick, planned,
+grilled) for Jack to confirm, plans, and judges the result.
 
-| Agent           | Model  | Job                                                                           |
-| --------------- | ------ | ----------------------------------------------------------------------------- |
-| `Explore`       | Haiku  | every codebase search (replaces the built-in one)                             |
-| `builder`       | Sonnet | builds the plan in the worktree; stops and reports when stuck                 |
-| `checker`       | Haiku  | `make check`, returning only the failures                                     |
-| `reviewer`      | Sonnet | reads the plan and the diff; escalates risky or unsure changes                |
-| `opus-reviewer` | Opus   | the second review, for escalated changes                                      |
-| `shooter`       | Haiku  | screenshots of changed UI states, Paper and Night                             |
-| `lander`        | Haiku  | push and open the PR; after Jack approves, CI, squash-merge, worktree removal |
+| Role              | Tier       | Job                                                                           |
+| ----------------- | ---------- | ----------------------------------------------------------------------------- |
+| `Explore`         | mechanical | every codebase search (replaces the built-in one)                             |
+| `builder`         | build      | builds the plan in the worktree; stops and reports when stuck                 |
+| `checker`         | mechanical | `make check`, returning only the failures                                     |
+| `reviewer`        | build      | reads the plan and the diff; escalates risky or unsure changes                |
+| `second-reviewer` | judge      | the second review, for escalated changes                                      |
+| `shooter`         | mechanical | screenshots of changed UI states, Paper and Night                             |
+| `lander`          | mechanical | push and open the PR; after Jack approves, CI, squash-merge, worktree removal |
 
 Outside `/change`, the same split holds: search with `Explore`, and hand mechanical
-work to `checker` or `lander` instead of doing it on Opus. Spec and reasons:
-`ideas/agent-workflow-grill.md`.
+work to `checker` or `lander` instead of doing it on the judge tier. Model keys
+stay on the openrouter-keys mod, Claude Code only; from another harness, ask Jack
+in chat. Spec and reasons: `ideas/agent-workflow-grill.md` and
+`ideas/harness-agnostic-grill.md`.
 
 This file is the one set of agent instructions. `CLAUDE.md` only imports
 it (`@AGENTS.md`); put nothing else there.
