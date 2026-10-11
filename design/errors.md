@@ -4,7 +4,7 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-138 entries.
+141 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
@@ -90,6 +90,9 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `import.pdf_unreadable` | This PDF can't be read. | PSet couldn't open it, so it may be damaged or locked. | Try a different copy of the file. |  | inline | library |
 | `import.stopped` | {title} was stopped. | You stopped it before it finished. | Try again to carry on where it left off. | `retry` | inline | library |
 | `import.structure_unreadable` | PSet couldn't read this book's structure. | The PDF's outline couldn't be extracted. | Try again. If it keeps happening, the file may be damaged. | `retry` | inline | library |
+| `internal.data` | PSet couldn't make sense of some of its own data. | A stored or sent value wasn't in the form PSet expects. | Try again. If it keeps happening, copy the details and report it. | `retry` | inline | errs |
+| `internal.database` | PSet's database didn't answer. | Reading or writing its data failed. | Try again. If it keeps happening, check the database in Settings. | `retry` | inline | errs |
+| `internal.disk` | PSet couldn't read or write a file. | The disk may be full, or PSet isn't allowed to use that folder. | Free some space or check the folder's permissions, then try again. | `retry` | inline | errs |
 | `internal.unexpected` | Something went wrong inside PSet. | PSet hit a problem it has no name for. | Try again. If it keeps happening, copy the details and report it. | `retry` | inline | errs |
 | `key.missing` | There's no OpenRouter key yet. | PSet needs a key to read pages and write answers. | Add your key in Settings, under Connections. | `open_settings` | inline | llm |
 | `key.out_of_credit` | Your OpenRouter account is out of credit. | Your OpenRouter account is out of credit, so PSet can't use a model. | Add credit on OpenRouter, then try again. | `retry` | inline | llm |

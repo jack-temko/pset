@@ -82,3 +82,38 @@ var BookNotFound = Define(Entry{
 	Fix:    "Go back to your shelf and open it from there.",
 	Status: http.StatusNotFound,
 })
+
+// The three ways PSet's own machinery fails under any feature: its
+// database, its files, and the shape of its own data. A package wraps what
+// it gets from sql, os or encoding in one of these before it leaves the
+// package (wrapcheck), so a failure always names a cause; the feature's own
+// entry goes around it.
+var (
+	// Database is the database failing.
+	Database = Define(Entry{
+		ID:     "internal.database",
+		What:   "PSet's database didn't answer.",
+		Why:    "Reading or writing its data failed.",
+		Fix:    "Try again. If it keeps happening, check the database in Settings.",
+		Action: ActionRetry,
+		Status: http.StatusInternalServerError,
+	})
+	// Disk is a file that could not be read or written.
+	Disk = Define(Entry{
+		ID:     "internal.disk",
+		What:   "PSet couldn't read or write a file.",
+		Why:    "The disk may be full, or PSet isn't allowed to use that folder.",
+		Fix:    "Free some space or check the folder's permissions, then try again.",
+		Action: ActionRetry,
+		Status: http.StatusInternalServerError,
+	})
+	// Data is a value PSet could not encode, decode or parse.
+	Data = Define(Entry{
+		ID:     "internal.data",
+		What:   "PSet couldn't make sense of some of its own data.",
+		Why:    "A stored or sent value wasn't in the form PSet expects.",
+		Fix:    "Try again. If it keeps happening, copy the details and report it.",
+		Action: ActionRetry,
+		Status: http.StatusInternalServerError,
+	})
+)

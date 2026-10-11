@@ -31,7 +31,7 @@ func scanRead(row interface{ Scan(...any) error }) (AssignmentRead, error) {
 	if result != "" {
 		var a Assignment
 		if err := json.Unmarshal([]byte(result), &a); err != nil {
-			return r, err
+			return r, errs.Data.Wrap(err)
 		}
 		r.Assignment = &a
 	}
@@ -47,7 +47,7 @@ func (s *Service) Reads(ctx context.Context, bookID string) ([]AssignmentRead, e
 	}
 	rows, err := s.c.DB.QueryContext(ctx, `SELECT `+readColumns+` FROM assignment_reads WHERE book_id = ? ORDER BY created_at DESC`, bookID)
 	if err != nil {
-		return nil, err
+		return nil, errs.Database.Wrap(err)
 	}
 	defer cleanup.Close(rows)
 	out := []AssignmentRead{}
@@ -59,7 +59,7 @@ func (s *Service) Reads(ctx context.Context, bookID string) ([]AssignmentRead, e
 		out = append(out, r)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, errs.Database.Wrap(err)
 	}
 	for i := range out {
 		if err := s.mark(ctx, book.Problems, out[i]); err != nil {
@@ -105,13 +105,13 @@ func (s *Service) DismissRead(ctx context.Context, id string) error {
 	if errors.Is(err, sql.ErrNoRows) {
 		return assignmentNotFound.New()
 	} else if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	if err := s.c.Queue.StopSubject(ctx, id); err != nil {
 		return err
 	}
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM assignment_reads WHERE id = ?`, id); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	if err := usage.Forget(ctx, s.c.DB, usage.SubjectRead, id); err != nil {
 		return err
@@ -147,19 +147,19 @@ func (s *Service) mark(ctx context.Context, style probnum.Style, r AssignmentRea
 		rows, err := s.c.DB.QueryContext(ctx, `SELECT due_date, id FROM homework WHERE book_id = ? AND source = ? AND due_date != '' ORDER BY created_at`,
 			r.BookID, a.Source)
 		if err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		for rows.Next() {
 			var due, id string
 			if err := rows.Scan(&due, &id); err != nil {
 				cleanup.Close(rows)
-				return err
+				return errs.Database.Of(err)
 			}
 			sets[due] = id
 		}
 		cleanup.Close(rows)
 		if err := rows.Err(); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 	}
 	for gi := range a.Groups {

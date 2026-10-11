@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/llm"
 )
@@ -67,11 +68,11 @@ var ollamaAPI = strings.TrimSuffix(llm.EmbedEndpoint, "/v1") + "/api"
 func (LiveDialer) Ollama(ctx context.Context) ([]string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ollamaAPI+"/tags", nil)
 	if err != nil {
-		return nil, err
+		return nil, errs.Disk.Wrap(err)
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, errs.Data.Wrap(err)
 	}
 	defer cleanup.Close(resp.Body)
 	if resp.StatusCode != http.StatusOK {
@@ -83,7 +84,7 @@ func (LiveDialer) Ollama(ctx context.Context) ([]string, error) {
 		} `json:"models"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&tags); err != nil {
-		return nil, err
+		return nil, errs.Data.Wrap(err)
 	}
 	out := make([]string, len(tags.Models))
 	for i, m := range tags.Models {
@@ -97,11 +98,11 @@ func (LiveDialer) Pull(ctx context.Context, model string) error {
 	body, _ := json.Marshal(map[string]any{"model": model, "stream": false})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ollamaAPI+"/pull", bytes.NewReader(body))
 	if err != nil {
-		return err
+		return errs.Disk.Wrap(err)
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return errs.Data.Wrap(err)
 	}
 	defer cleanup.Close(resp.Body)
 	if resp.StatusCode != http.StatusOK {

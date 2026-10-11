@@ -186,7 +186,7 @@ func (s *Service) examine(ctx context.Context, b row, path string) ([]string, st
 	meta, err := s.c.Tools.Metadata(ctx, path)
 	if err != nil {
 		if ctx.Err() != nil {
-			return nil, "", ctx.Err()
+			return nil, "", fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		return nil, "", pdfUnreadable.Wrap(err)
 	}
@@ -196,7 +196,7 @@ func (s *Service) examine(ctx context.Context, b row, path string) ([]string, st
 	text, err := s.c.Tools.Text(ctx, path)
 	if err != nil {
 		if ctx.Err() != nil {
-			return nil, "", ctx.Err()
+			return nil, "", fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		return nil, "", pdfUnreadable.Wrap(err)
 	}
@@ -215,7 +215,7 @@ func (s *Service) examine(ctx context.Context, b row, path string) ([]string, st
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE books SET title = ?, author = ?, page_count = ?, page_width = ?, page_height = ?, kind = ?, updated_at = ? WHERE id = ?`,
 			title, author, meta.PageCount, meta.PageWidth, meta.PageHeight, kind, db.Now(), b.ID); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		if kind != "digital" {
 			return nil
@@ -280,13 +280,13 @@ func (s *Service) read(ctx context.Context, bookID, path string, count int) ([]s
 			continue
 		}
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return nil, fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		text, err := s.c.Tools.OCR(ctx, path, n)
 		p := storedPage{Number: n, Text: text, Status: "text"}
 		switch {
 		case err != nil && ctx.Err() != nil:
-			return nil, ctx.Err()
+			return nil, fmt.Errorf("stopped: %w", ctx.Err())
 		case err != nil:
 			p = storedPage{Number: n, Status: "failed"}
 			failed = append(failed, n)
@@ -353,7 +353,7 @@ func (s *Service) index(ctx context.Context, b row, path, kind string, pages []s
 		doc, err := s.c.Tools.XML(ctx, path)
 		if err != nil {
 			if ctx.Err() != nil {
-				return ctx.Err()
+				return fmt.Errorf("stopped: %w", ctx.Err())
 			}
 			return structureUnreadable.Wrap(err)
 		}
@@ -396,7 +396,7 @@ func (s *Service) index(ctx context.Context, b row, path, kind string, pages []s
 		// Never over the student's own numbering.
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET page_runs = ?, page_offset = ? WHERE id = ? AND pages_edited = 0`,
 			runsJSON(runs), runs[0].Offset, b.ID); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 	}
 	return nil
@@ -441,7 +441,7 @@ func (s *Service) buildSearch(ctx context.Context, bookID string) error {
 	client := llm.Open(cfg)
 	for len(todo) > 0 {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		batch := todo[:min(embedBatch, len(todo))]
 		todo = todo[len(batch):]
@@ -452,7 +452,7 @@ func (s *Service) buildSearch(ctx context.Context, bookID string) error {
 		vecs, err := client.Embed(ctx, texts)
 		if err != nil {
 			if ctx.Err() != nil {
-				return ctx.Err()
+				return fmt.Errorf("stopped: %w", ctx.Err())
 			}
 			return err
 		}

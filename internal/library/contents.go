@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pdf"
 )
@@ -128,7 +129,7 @@ type flexInt int
 func (n *flexInt) UnmarshalJSON(b []byte) error {
 	var v any
 	if err := json.Unmarshal(b, &v); err != nil {
-		return err
+		return errs.Data.Wrap(err)
 	}
 	switch t := v.(type) {
 	case float64:
@@ -147,7 +148,7 @@ func (s *Service) readPrinted(ctx context.Context, m model, b row, path string, 
 		data, err := s.scans.get(ctx, b, path, p, contentsImageWidth)
 		if err != nil {
 			if ctx.Err() != nil {
-				return nil, ctx.Err()
+				return nil, fmt.Errorf("stopped: %w", ctx.Err())
 			}
 			return nil, contentsRender.Wrap(err)
 		}
@@ -181,7 +182,7 @@ func (m model) askJSON(ctx context.Context, system string, user llm.Content, out
 		cancel()
 		switch {
 		case ctx.Err() != nil:
-			return ctx.Err()
+			return fmt.Errorf("stopped: %w", ctx.Err())
 		case err != nil && stalled && try == 0:
 			continue
 		case err != nil && stalled:

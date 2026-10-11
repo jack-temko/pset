@@ -70,6 +70,15 @@ func TestResolveOfNoCatalogErrorIsUnexpected(t *testing.T) {
 	}
 }
 
+func TestOfIsNilForNoError(t *testing.T) {
+	if err := mid.Of(nil); err != nil {
+		t.Errorf("Of(nil) = %v", err)
+	}
+	if err := mid.Of(errors.New("x")); !errors.Is(err, mid) {
+		t.Errorf("Of(err) = %v", err)
+	}
+}
+
 func TestFieldAndRefTravelWithTheError(t *testing.T) {
 	v := Resolve(mid.New().OnField("title").About("book-1"))
 	if v.Field != "title" || v.Ref != "book-1" {

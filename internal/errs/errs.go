@@ -118,6 +118,15 @@ func (e *Entry) Wrap(cause error, params ...string) *Error {
 	return &Error{entry: e, params: pairs(e.ID, params), cause: cause}
 }
 
+// Of is Wrap for a result that may be no error at all: a nil cause is nil,
+// so `return errs.Database.Of(rows.Err())` is safe at the end of a function.
+func (e *Entry) Of(cause error, params ...string) error {
+	if cause == nil {
+		return nil
+	}
+	return e.Wrap(cause, params...)
+}
+
 func pairs(id string, kv []string) map[string]string {
 	if len(kv)%2 != 0 {
 		panic("errs: " + id + " params are name, value pairs")
@@ -185,6 +194,7 @@ func catalogChain(err error) []*Error {
 	var walk func(error)
 	walk = func(err error) {
 		for err != nil {
+			//nolint:errorlint // this is the walk itself: one link at a time, so each catalog error is found
 			switch e := err.(type) {
 			case *Error:
 				out = append(out, e)
@@ -192,6 +202,7 @@ func catalogChain(err error) []*Error {
 				// An entry returned as it is, with nothing to fill in.
 				out = append(out, &Error{entry: e})
 			}
+			//nolint:errorlint // the same walk: a joined error's links are its Unwrap() []error
 			switch u := err.(type) {
 			case interface{ Unwrap() []error }:
 				for _, c := range u.Unwrap() {

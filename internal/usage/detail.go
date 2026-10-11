@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/errs"
 )
 
 // CallRow is one stored call, as the detail reads it.
@@ -31,7 +32,7 @@ func scanCalls(rows *sql.Rows) ([]CallRow, error) {
 		var in, outTok, reasoning, cached sql.NullInt64
 		var cost sql.NullFloat64
 		if err := rows.Scan(&c.ID, &c.At, &c.Stage, &c.Run, &c.Tools, &c.Asked, &c.Answered, &c.Ms, &in, &outTok, &reasoning, &cached, &cost, &c.Error, &c.ErrorID); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		c.TokensIn, c.TokensOut, c.Reasoning, c.Cached = nullInt(in), nullInt(outTok), nullInt(reasoning), nullInt(cached)
 		if cost.Valid {
@@ -40,7 +41,7 @@ func scanCalls(rows *sql.Rows) ([]CallRow, error) {
 		}
 		out = append(out, c)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 func nullInt(n sql.NullInt64) *int {
@@ -335,7 +336,7 @@ func countSubjects(ctx context.Context, q queryer, typ, from, bookID string) (in
 	if rows.Next() {
 		err = rows.Scan(&n)
 	}
-	return n, err
+	return n, errs.Database.Of(err)
 }
 
 func isRanking(label string) bool { return strings.HasPrefix(label, "Difficulty ranking") }

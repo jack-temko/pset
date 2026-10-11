@@ -275,15 +275,15 @@ func resolveDataDir(flagValue string) (string, error) {
 	if dir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return "", err
+			return "", errs.Disk.Wrap(err)
 		}
 		dir = platform.DataDir(platform.Current, home, os.Getenv("XDG_DATA_HOME"))
 	}
 	dir, err := filepath.Abs(dir)
 	if err != nil {
-		return "", err
+		return "", errs.Data.Wrap(err)
 	}
-	return dir, os.MkdirAll(dir, 0o700)
+	return dir, errs.Disk.Of(os.MkdirAll(dir, 0o700))
 }
 
 // homeworkLibrary hands homework the book facts it asks for, in its own

@@ -238,7 +238,7 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET page = ?, label = ?, statement = ?, rect = ?, figures = ?, rounds = '[]', reading = '[]', reading_edited = 0, reading_doubts = '[]', state = ?, activity = '', updated_at = ? WHERE id = ?`,
 			loc.Page, label, mustJSON(runsOf(statement)), mustJSON(loc.Rect), mustJSON(loc.Figures), StateLocated, db.Now(), q.ID); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		next := nextStep(q.ID, false)
 		if len(loc.Figures) > 0 {
@@ -268,7 +268,7 @@ func (s *Service) read(ctx context.Context, m model, book Book, q row) error {
 	lines, doubts, err := s.readFigures(ctx, m, book, q, "")
 	if err != nil {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		slog.Warn("question: reading the figures", "question", q.ID, "err", err)
 		lines, doubts = nil, nil
@@ -276,7 +276,7 @@ func (s *Service) read(ctx context.Context, m model, book Book, q row) error {
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = 0, reading_doubts = ?, state = ?, activity = '', updated_at = ? WHERE id = ?`,
 			mustJSON(runLists(orEmpty(lines))), mustJSON(runLists(orEmpty(doubts))), StateLocated, db.Now(), q.ID); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, chained(nextStep(q.ID, false), llm.RunOf(ctx)))
 		return err
@@ -341,7 +341,7 @@ func (s *Service) readFigures(ctx context.Context, m model, book Book, q row, fo
 		}
 	}
 	if ctx.Err() != nil {
-		return nil, nil, ctx.Err()
+		return nil, nil, fmt.Errorf("stopped: %w", ctx.Err())
 	}
 	if len(read) == 0 {
 		return nil, nil, errors.Join(errs...)
@@ -354,7 +354,7 @@ func (s *Service) readFigures(ctx context.Context, m model, book Book, q row, fo
 	settled, err := ask(settlePrompt, "", llm.TextPart(b.String()))
 	if err != nil {
 		if ctx.Err() != nil {
-			return nil, nil, ctx.Err()
+			return nil, nil, fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		slog.Warn("question: settling the reading", "question", q.ID, "err", err)
 		return read[0], nil, nil
@@ -455,7 +455,7 @@ func (s *Service) write(ctx context.Context, m model, book Book, q row) error {
 	hint, walk = s.crossCheck(ctx, m, book, q, hint, walk)
 	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET hint = ?, walkthrough = ?, state = 'ready', error = '', activity = '', rounds = '[]', updated_at = ? WHERE id = ?`,
 		mustJSON(hint), mustJSON(walk), db.Now(), q.ID); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	s.announceQuestion(ctx, q.ID)
 	return nil
@@ -562,7 +562,7 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row, rec
 		parser.Finish()
 		if err != nil {
 			if ctx.Err() != nil {
-				return nil, nil, ctx.Err()
+				return nil, nil, fmt.Errorf("stopped: %w", ctx.Err())
 			}
 			return nil, nil, err
 		}

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/probnum"
 
@@ -198,7 +199,7 @@ func (s *Service) Create(ctx context.Context, bookID string, in Input) (Summary,
 	now := db.Now()
 	if _, err := s.c.DB.ExecContext(ctx, `INSERT INTO homework (id, book_id, title, due_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
 		id, bookID, title, due, now, now); err != nil {
-		return Summary{}, err
+		return Summary{}, errs.Database.Wrap(err)
 	}
 	return s.publishSet(ctx, id)
 }
@@ -324,7 +325,7 @@ func (s *Service) Update(ctx context.Context, id string, p Patch) (Summary, erro
 		}
 		_, err = tx.ExecContext(ctx, `UPDATE homework SET title = ?, due_date = ?, turned_in_at = ?, updated_at = ? WHERE id = ?`,
 			h.Title, h.DueDate, h.TurnedInAt, db.Now(), id)
-		return err
+		return errs.Database.Of(err)
 	})
 	if err != nil {
 		return Summary{}, err
@@ -355,7 +356,7 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 		return err
 	}
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM homework WHERE id = ?`, id); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	// The questions went with the set; their calls go with them.
 	if err := usage.ForgetAll(ctx, s.c.DB, usage.SubjectQuestion, questionIDs(qs)); err != nil {
@@ -417,7 +418,7 @@ func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		var last int
 		if err := tx.QueryRowContext(ctx, `SELECT coalesce(max(position), 0) FROM questions WHERE homework_id = ?`, homeworkID).Scan(&last); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		out, err = s.insertQuestions(ctx, tx, homeworkID, last, keep)
 		return err
@@ -453,7 +454,7 @@ type splitRow struct {
 func (s *Service) insertQuestions(ctx context.Context, tx *sql.Tx, homeworkID string, after int, keep []splitRow) ([]Question, error) {
 	if _, err := tx.ExecContext(ctx, `UPDATE questions SET position = position + ? WHERE homework_id = ? AND position > ?`,
 		len(keep), homeworkID, after); err != nil {
-		return nil, err
+		return nil, errs.Database.Wrap(err)
 	}
 	now := db.Now()
 	var out []Question
@@ -467,7 +468,7 @@ func (s *Service) insertQuestions(ctx context.Context, tx *sql.Tx, homeworkID st
 		if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, notes, state, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
 			id, homeworkID, after+i+1, d.Text, d.InBook, label, mustJSON(runsOf(statement)), mustJSON(runLists(orEmpty(d.notes))), now, now); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		if _, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, d.InBook)); err != nil {
 			return nil, err
@@ -543,7 +544,7 @@ func (s *Service) UpdateQuestion(ctx context.Context, id string, p QuestionPatch
 				q.Revealed = append(q.Revealed, stage)
 			}
 			if _, err := tx.ExecContext(ctx, `UPDATE questions SET revealed = ? WHERE id = ?`, mustJSON(q.Revealed), id); err != nil {
-				return err
+				return errs.Database.Wrap(err)
 			}
 		}
 		if p.Done != nil {
@@ -552,7 +553,7 @@ func (s *Service) UpdateQuestion(ctx context.Context, id string, p QuestionPatch
 				doneAt = db.Now()
 			}
 			if _, err := tx.ExecContext(ctx, `UPDATE questions SET done_at = ? WHERE id = ?`, doneAt, id); err != nil {
-				return err
+				return errs.Database.Wrap(err)
 			}
 		}
 		if p.Position != nil {
@@ -618,7 +619,7 @@ func (s *Service) redoReading(ctx context.Context, q row, corrected *[]string) (
 		res, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET reading = ?, reading_edited = 1, reading_doubts = '[]', updated_at = ? WHERE id = ? AND state IN (?, ?)`,
 			mustJSON(runLists(lines)), db.Now(), q.ID, StateLocated, StateUnwritten)
 		if err != nil {
-			return Question{}, err
+			return Question{}, errs.Database.Wrap(err)
 		}
 		if n, _ := res.RowsAffected(); n == 1 {
 			return s.publishQuestion(ctx, q.ID)
@@ -637,7 +638,7 @@ func (s *Service) redoReading(ctx context.Context, q row, corrected *[]string) (
 func move(ctx context.Context, tx *sql.Tx, homeworkID, id string, from, to int) error {
 	var n int
 	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM questions WHERE homework_id = ?`, homeworkID).Scan(&n); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	if to < 1 || to > n {
 		return badPosition.New("to", strconv.Itoa(to), "n", strconv.Itoa(n)).OnField("position")
@@ -650,10 +651,10 @@ func move(ctx context.Context, tx *sql.Tx, homeworkID, id string, from, to int) 
 		shift = `UPDATE questions SET position = position - 1 WHERE homework_id = ? AND position <= ? AND position > ?`
 	}
 	if _, err := tx.ExecContext(ctx, shift, homeworkID, to, from); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	_, err := tx.ExecContext(ctx, `UPDATE questions SET position = ? WHERE id = ?`, to, id)
-	return err
+	return errs.Database.Of(err)
 }
 
 // RemoveQuestion takes a question out of its set, stopping it if it's
@@ -671,7 +672,7 @@ func (s *Service) RemoveQuestion(ctx context.Context, id string) error {
 	}
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM questions WHERE id = ?`, id); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		if err := usage.Forget(ctx, tx, usage.SubjectQuestion, id); err != nil {
 			return err
@@ -739,7 +740,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 	args = append(args, st, id)
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET `+set+` WHERE id = ?`, args...); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, find))
 		return err
@@ -768,7 +769,7 @@ func (s *Service) WriteGuide(ctx context.Context, id string) (Question, error) {
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET state = ?, error = '', activity = '', updated_at = ? WHERE id = ?`,
 			StateLocated, db.Now(), id); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, false))
 		return err
@@ -881,18 +882,18 @@ func (s *Service) ForgetBookCalls(ctx context.Context, bookID string) error {
 func ids(ctx context.Context, d *sql.DB, query string, args ...any) ([]string, error) {
 	rows, err := d.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, errs.Database.Wrap(err)
 	}
 	defer cleanup.Close(rows)
 	var out []string
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		out = append(out, id)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 // QuestionUsage is everything a question ever spent: its own calls, every
@@ -923,5 +924,5 @@ func (s *Service) setOf(ctx context.Context, questionID string) (set string, n i
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", 0, nil
 	}
-	return set, n, err
+	return set, n, errs.Database.Of(err)
 }

@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pdf"
 )
@@ -180,7 +181,7 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 		url, err := s.pageImage(ctx, book.ID, p, locateWidth)
 		if err != nil {
 			if ctx.Err() != nil {
-				return location{}, false, ctx.Err()
+				return location{}, false, fmt.Errorf("stopped: %w", ctx.Err())
 			}
 			continue
 		}
@@ -198,7 +199,7 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 	}}))
 	if err != nil {
 		if ctx.Err() != nil {
-			return location{}, false, ctx.Err()
+			return location{}, false, fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		return location{}, false, err
 	}
@@ -317,7 +318,7 @@ func decodeReply(reply string, v any) error {
 	if fixed, changed := balance(s); changed && json.Unmarshal([]byte(fixed), v) == nil {
 		return nil
 	}
-	return err
+	return errs.Data.Of(err)
 }
 
 // balance closes what a JSON text leaves open, and whatever a closer
@@ -408,7 +409,7 @@ func (s *Service) writeOut(ctx context.Context, m model, book Book, loc location
 	}}))
 	if err != nil {
 		if ctx.Err() != nil {
-			return "", ctx.Err()
+			return "", fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		return "", err
 	}

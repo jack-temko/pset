@@ -226,7 +226,7 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 		for _, call := range reply.ToolCalls {
 			result, img := l.tool(ctx, call)
 			if ctx.Err() != nil {
-				return ctx.Err()
+				return fmt.Errorf("stopped: %w", ctx.Err())
 			}
 			msgs = append(msgs, llm.ToolMessage(call.ID, result))
 			images = append(images, img...)

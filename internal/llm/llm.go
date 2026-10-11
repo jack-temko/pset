@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/errs"
 )
 
 // DefaultTimeout bounds a whole HTTP exchange, streaming included. It is
@@ -191,20 +192,25 @@ type ImageURL struct {
 
 // MarshalJSON writes plain text as a string and parts as a list, as the API takes both.
 func (c Content) MarshalJSON() ([]byte, error) {
+	var v any = c.text
 	if len(c.parts) > 0 {
-		return json.Marshal(c.parts)
+		v = c.parts
 	}
-	return json.Marshal(c.text)
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, errs.Data.Wrap(err)
+	}
+	return b, nil
 }
 
 // UnmarshalJSON reads either a string or a list of parts.
 func (c *Content) UnmarshalJSON(data []byte) error {
 	if bytes.HasPrefix(bytes.TrimSpace(data), []byte("[")) {
 		c.parts = nil
-		return json.Unmarshal(data, &c.parts)
+		return errs.Data.Of(json.Unmarshal(data, &c.parts))
 	}
 	c.parts = nil
-	return json.Unmarshal(data, &c.text)
+	return errs.Data.Of(json.Unmarshal(data, &c.text))
 }
 
 // Tool declares one function the model may call; Parameters is a JSON
@@ -679,7 +685,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 	}
 	for {
 		if ctx.Err() != nil {
-			return Reply{}, ctx.Err()
+			return Reply{}, fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		raw, ok := next()
 		if !ok {
@@ -718,7 +724,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
 			if ctx.Err() != nil {
 				// Stopped, or shutting down: the drop is ours.
-				return Reply{}, ctx.Err()
+				return Reply{}, fmt.Errorf("stopped: %w", ctx.Err())
 			}
 			if isCut(err) {
 				// The connection dropped mid-event.
@@ -764,7 +770,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 		}
 	}
 	if ctx.Err() != nil {
-		return Reply{}, ctx.Err()
+		return Reply{}, fmt.Errorf("stopped: %w", ctx.Err())
 	}
 	if err := scanner.Err(); err != nil {
 		return Reply{Content: full.String()}, cut("%w: %v", ErrStreamCut, err)
@@ -1000,7 +1006,7 @@ func (c *Client) doWithRetry(ctx context.Context, url string, body any) (*http.R
 			return nil, fmt.Errorf("read model error reply: %w", readErr)
 		}
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return nil, fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		if (resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500) && attempt < 2 && !OutOfCredit(resp.StatusCode, string(data)) {
 			delay := time.Duration(attempt+1) * 2 * time.Second
@@ -1011,7 +1017,7 @@ func (c *Client) doWithRetry(ctx context.Context, url string, body any) (*http.R
 			}
 			select {
 			case <-ctx.Done():
-				return nil, ctx.Err()
+				return nil, fmt.Errorf("stopped: %w", ctx.Err())
 			case <-time.After(delay):
 			}
 			continue

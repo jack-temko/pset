@@ -11,6 +11,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/jackt/pset/internal/errs"
 )
 
 // Generate makes a key pair: the private seed to keep secret, the public key
@@ -18,7 +20,7 @@ import (
 func Generate() (private, public string, err error) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
-		return "", "", err
+		return "", "", errs.Disk.Wrap(err)
 	}
 	return base64.StdEncoding.EncodeToString(priv.Seed()), base64.StdEncoding.EncodeToString(pub), nil
 }

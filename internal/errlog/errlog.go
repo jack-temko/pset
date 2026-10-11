@@ -47,11 +47,11 @@ func New(d *sql.DB) *Store { return &Store{db: d} }
 func (s *Store) Record(ctx context.Context, r errs.Record) error {
 	chain, err := json.Marshal(r.View.Chain)
 	if err != nil {
-		return err
+		return errs.Data.Wrap(err)
 	}
 	params, err := json.Marshal(r.View.Params)
 	if err != nil {
-		return err
+		return errs.Data.Wrap(err)
 	}
 	// A request that went away mid-answer should still leave its error.
 	ctx = context.WithoutCancel(ctx)
@@ -60,7 +60,7 @@ func (s *Store) Record(ctx context.Context, r errs.Record) error {
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		r.Incident, r.View.ID, string(chain), string(params), r.Detail, r.Where.Route,
 		r.Where.Book, r.Where.Set, r.Where.Question, r.At.UTC().Format(time.RFC3339Nano))
-	return err
+	return errs.Database.Of(err)
 }
 
 // List is every kept error grouped by id, the group with the newest

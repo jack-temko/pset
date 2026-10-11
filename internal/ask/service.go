@@ -14,6 +14,7 @@ import (
 	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/events"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
@@ -135,7 +136,7 @@ func (s *Service) Ask(ctx context.Context, bookID string, q Question) (Turn, err
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO turns (id, book_id, question, about, about_text, state, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, 'running', ?, ?)`, id, bookID, text, about, aboutText, now, now); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobTurn, Subject: id, Key: bookID, Payload: turnPayload{TurnID: id}})
 		return err
@@ -169,7 +170,7 @@ func (s *Service) Stop(ctx context.Context, id string) (Turn, error) {
 	// A turn still waiting its turn never started; one running settles
 	// itself as stopped when its handler returns. Either way, say so now.
 	if _, err := s.c.DB.ExecContext(ctx, `UPDATE turns SET state = 'stopped', updated_at = ? WHERE id = ? AND state = 'running'`, db.Now(), id); err != nil {
-		return Turn{}, err
+		return Turn{}, errs.Database.Wrap(err)
 	}
 	return s.publish(ctx, id)
 }
@@ -188,7 +189,7 @@ func (s *Service) Clear(ctx context.Context, bookID string) error {
 		}
 	}
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM turns WHERE book_id = ?`, bookID); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	ids := make([]string, len(rows))
 	for i, r := range rows {

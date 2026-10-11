@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/jobs"
 )
 
@@ -105,14 +106,14 @@ func (s *Service) setNotes(ctx context.Context, q row, lines []string) (Question
 	case StatePending, StateLocating, StateLocated, StateReading, StateUnwritten:
 		// Nothing written from the old notes yet.
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET notes = ?, updated_at = ? WHERE id = ?`, mustJSON(runLists(notes)), db.Now(), q.ID); err != nil {
-			return Question{}, err
+			return Question{}, errs.Database.Wrap(err)
 		}
 		return s.publishQuestion(ctx, q.ID)
 	}
 	if q.Page == nil && q.InBook {
 		// Failed before it was found: the notes wait for the find.
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET notes = ?, updated_at = ? WHERE id = ?`, mustJSON(runLists(notes)), db.Now(), q.ID); err != nil {
-			return Question{}, err
+			return Question{}, errs.Database.Wrap(err)
 		}
 		return s.publishQuestion(ctx, q.ID)
 	}
@@ -130,7 +131,7 @@ func (s *Service) rewrite(ctx context.Context, q row, next jobs.Spec, set string
 		args := append(args, StateLocated, db.Now(), q.ID)
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET `+set+`, hint = '[]', walkthrough = '[]', rounds = '[]',
 			state = ?, error = '', activity = '', updated_at = ? WHERE id = ?`, args...); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, next)
 		return err

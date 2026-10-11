@@ -29,6 +29,7 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 )
 
 // State is where a job is.
@@ -62,7 +63,7 @@ type Job struct {
 }
 
 // Decode unmarshals the payload.
-func (j Job) Decode(v any) error { return json.Unmarshal(j.Payload, v) }
+func (j Job) Decode(v any) error { return errs.Data.Of(json.Unmarshal(j.Payload, v)) }
 
 // Handler does one job. Returning nil marks it done; an error marks it
 // failed, unless the job was stopped (cancelled) or the queue is shutting
@@ -211,7 +212,7 @@ func (q *Queue) Enqueue(ctx context.Context, ex Execer, s Spec) (string, error) 
 	}
 	payload, err := json.Marshal(s.Payload)
 	if err != nil {
-		return "", err
+		return "", errs.Data.Wrap(err)
 	}
 	id := uuid.NewString()
 	now := db.Now()
@@ -258,21 +259,21 @@ func (q *Queue) Stop(ctx context.Context, id string) error {
 	}
 	q.mu.Unlock()
 	_, err := q.db.ExecContext(ctx, `UPDATE jobs SET state = 'cancelled', updated_at = ? WHERE id = ? AND state = 'queued'`, db.Now(), id)
-	return err
+	return errs.Database.Of(err)
 }
 
 // StopSubject stops every unfinished job working on subject.
 func (q *Queue) StopSubject(ctx context.Context, subject string) error {
 	rows, err := q.db.QueryContext(ctx, `SELECT id FROM jobs WHERE subject = ? AND state IN ('queued', 'running')`, subject)
 	if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	var ids []string
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
 			cleanup.Close(rows)
-			return err
+			return errs.Database.Of(err)
 		}
 		ids = append(ids, id)
 	}
@@ -291,7 +292,7 @@ func (q *Queue) StopSubject(ctx context.Context, subject string) error {
 func (q *Queue) Retry(ctx context.Context, id string) error {
 	res, err := q.db.ExecContext(ctx, `UPDATE jobs SET state = 'queued', error = '', updated_at = ? WHERE id = ? AND state IN ('failed', 'cancelled')`, db.Now(), id)
 	if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return ErrNotRetryable
@@ -345,7 +346,7 @@ func (q *Queue) Run(ctx context.Context) error {
 	q.root = ctx
 	q.mu.Unlock()
 	if _, err := q.db.ExecContext(ctx, `UPDATE jobs SET state = 'queued', updated_at = ? WHERE state = 'running'`, db.Now()); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	// Finished jobs are only history; a week of it is plenty.
 	cutoff := db.At(time.Now().Add(-7 * 24 * time.Hour))
@@ -406,7 +407,7 @@ func (q *Queue) schedule(ctx context.Context) error {
 		rows, err := q.db.QueryContext(ctx, `SELECT id, kind, lane, subject, key, priority, state, payload, error, attempts
 			FROM jobs WHERE lane = ? AND state = 'queued' ORDER BY priority DESC, created_at, rowid`, lane)
 		if err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		var next []Job
 		for rows.Next() {
@@ -469,10 +470,10 @@ func (q *Queue) start(ctx context.Context, j Job) error {
 	if !ok {
 		_, err := q.db.ExecContext(ctx, `UPDATE jobs SET state = 'failed', error = ?, updated_at = ? WHERE id = ?`,
 			"no handler for "+j.Kind, db.Now(), j.ID)
-		return err
+		return errs.Database.Of(err)
 	}
 	if _, err := q.db.ExecContext(ctx, `UPDATE jobs SET state = 'running', attempts = attempts + 1, updated_at = ? WHERE id = ?`, db.Now(), j.ID); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	j.State = Running
 	j.Attempts++

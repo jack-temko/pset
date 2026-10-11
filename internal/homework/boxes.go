@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pdf"
 )
@@ -90,13 +91,13 @@ func (s *Service) AddBoxed(ctx context.Context, homeworkID string, boxes []Box) 
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		var last int
 		if err := tx.QueryRowContext(ctx, `SELECT coalesce(max(position), 0) FROM questions WHERE homework_id = ?`, homeworkID).Scan(&last); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		now := db.Now()
 		if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, boxes, state, created_at, updated_at)
 			VALUES (?, ?, ?, '', 1, ?, ?, 'pending', ?, ?)`,
 			id, homeworkID, last+1, label, mustJSON(boxes), now, now); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		if _, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, true)); err != nil {
 			return err
@@ -140,7 +141,7 @@ func (s *Service) PointOut(ctx context.Context, id string, boxes []Box) (Questio
 			hint = '[]', walkthrough = '[]', rounds = '[]', reading = '[]', reading_edited = 0,
 			state = 'pending', error = '', activity = '', updated_at = ? WHERE id = ?`,
 			mustJSON(boxes), db.Now(), id); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, true))
 		return err
@@ -175,7 +176,7 @@ func (s *Service) fromBoxes(ctx context.Context, m model, book Book, q row) (loc
 	}}))
 	if err != nil {
 		if ctx.Err() != nil {
-			return location{}, ctx.Err()
+			return location{}, fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		return location{}, err
 	}

@@ -2,7 +2,6 @@ package llm
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -109,9 +108,9 @@ func embedError(err error) error {
 	var ce *CallError
 	switch {
 	case errors.As(err, &ce):
-		return embedFailed.Wrap(fmt.Errorf("%v", err))
+		return embedFailed.Wrap(errors.New(err.Error()))
 	case errors.Is(err, ModelUnreachable):
-		return EmbedUnreachable.Wrap(fmt.Errorf("%v", err))
+		return EmbedUnreachable.Wrap(errors.New(err.Error()))
 	}
 	return err
 }

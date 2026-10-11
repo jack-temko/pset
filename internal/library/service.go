@@ -148,11 +148,11 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 		return Book{}, err
 	}
 	if err := os.MkdirAll(s.booksDir(), 0o700); err != nil {
-		return Book{}, err
+		return Book{}, errs.Disk.Wrap(err)
 	}
 	tmp, err := os.CreateTemp(s.booksDir(), ".upload-*")
 	if err != nil {
-		return Book{}, err
+		return Book{}, errs.Disk.Wrap(err)
 	}
 	defer cleanup.Remove(tmp.Name()) // a no-op once renamed
 	h := sha256.New()
@@ -162,7 +162,7 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 		return Book{}, fmt.Errorf("stage upload: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
-		return Book{}, err
+		return Book{}, errs.Disk.Wrap(err)
 	}
 	if !head.isPDF() {
 		return Book{}, notPDF.New().OnField("file")
@@ -176,7 +176,7 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 
 	id := uuid.NewString()
 	if err := os.Rename(tmp.Name(), s.pdfPath(id)); err != nil {
-		return Book{}, err
+		return Book{}, errs.Disk.Wrap(err)
 	}
 	// The colours are counted before the transaction, which then only
 	// writes: a read that turns into a write fails outright (SQLITE_BUSY,
@@ -192,7 +192,7 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO books (id, sha256, title, cover, state, created_at, updated_at) VALUES (?, ?, ?, ?, 'queued', ?, ?)`,
 			id, sha, filenameTitle(filename), pickCover(sha, used), now, now); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, examineJob(id))
 		return err
@@ -287,11 +287,11 @@ func (s *Service) Update(ctx context.Context, id string, p BookPatch) (Book, err
 	if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET title = ?, author = ?, page_runs = ?, page_offset = ?, cover = ?,
 		edited = edited OR ?, pages_edited = pages_edited OR ?, updated_at = ? WHERE id = ?`,
 		cur.Title, cur.Author, runsJSON(cur.PageRuns), cur.PageRuns[0].Offset, cur.Cover, named, numbered, db.Now(), id); err != nil {
-		return Book{}, err
+		return Book{}, errs.Database.Wrap(err)
 	}
 	if problems != "" {
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET problem_style = ? WHERE id = ?`, problems, id); err != nil {
-			return Book{}, err
+			return Book{}, errs.Database.Wrap(err)
 		}
 	}
 	return s.publish(ctx, id)
@@ -318,7 +318,7 @@ func (s *Service) Remove(ctx context.Context, id string) error {
 		}
 	}
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM books WHERE id = ?`, id); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	cleanup.Remove(s.pdfPath(id))
 	s.scans.drop(id)
@@ -480,7 +480,7 @@ func (s *Service) Search(ctx context.Context, bookID, query string, k int) ([]in
 		q, err := llm.Open(cfg).Embed(ctx, []string{query})
 		switch {
 		case ctx.Err() != nil:
-			return nil, ctx.Err()
+			return nil, fmt.Errorf("stopped: %w", ctx.Err())
 		case err != nil:
 			// Ollama stopped or is slow: the text ranking still answers, and
 			// a tutor that can't search at all is worse than one that

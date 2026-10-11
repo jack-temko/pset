@@ -134,7 +134,7 @@ var pagesUnreadOld = regexp.MustCompile(`^(.+) couldn't be read \((.+)\)\.`)
 func reasonsToErrors(ctx context.Context, tx *sql.Tx) error {
 	rows, err := tx.QueryContext(ctx, `SELECT id, title, reason FROM books WHERE state = 'failed'`)
 	if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	type old struct{ id, title, reason string }
 	var failed []old
@@ -142,12 +142,12 @@ func reasonsToErrors(ctx context.Context, tx *sql.Tx) error {
 		var o old
 		if err := rows.Scan(&o.id, &o.title, &o.reason); err != nil {
 			cleanup.Close(rows)
-			return err
+			return errs.Database.Of(err)
 		}
 		failed = append(failed, o)
 	}
 	if err := rows.Err(); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	cleanup.Close(rows)
 	for _, o := range failed {
@@ -189,7 +189,7 @@ func reasonsToErrors(ctx context.Context, tx *sql.Tx) error {
 			}
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE books SET error = ? WHERE id = ?`, st.Marshal(), o.id); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 	}
 	return nil
@@ -271,7 +271,7 @@ func listBooks(ctx context.Context, q queryer) ([]Book, error) {
 		}
 		out = append(out, r.Book)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 type queryer interface {
@@ -321,11 +321,11 @@ func loadPages(ctx context.Context, q queryer, bookID string) ([]storedPage, err
 	for rows.Next() {
 		var p storedPage
 		if err := rows.Scan(&p.Number, &p.Text, &p.Status); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		out = append(out, p)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 // settledPages are the pages already read successfully: a resumed read
@@ -340,11 +340,11 @@ func settledPages(ctx context.Context, q queryer, bookID string) (map[int]bool, 
 	for rows.Next() {
 		var n int
 		if err := rows.Scan(&n); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		out[n] = true
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 // section is one stored contents entry.
@@ -358,12 +358,12 @@ type section struct {
 func saveSections(ctx context.Context, d *sql.DB, bookID string, secs []section) error {
 	return db.Tx(ctx, d, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM sections WHERE book_id = ?`, bookID); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		for i, s := range secs {
 			if _, err := tx.ExecContext(ctx, `INSERT INTO sections (book_id, ord, level, title, start_page, end_page) VALUES (?, ?, ?, ?, ?, ?)`,
 				bookID, i, s.Level, s.Title, s.StartPage, s.EndPage); err != nil {
-				return err
+				return errs.Database.Wrap(err)
 			}
 		}
 		return nil
@@ -380,11 +380,11 @@ func loadSections(ctx context.Context, q queryer, bookID string) ([]section, err
 	for rows.Next() {
 		var s section
 		if err := rows.Scan(&s.Level, &s.Title, &s.StartPage, &s.EndPage); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		out = append(out, s)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 func saveEmbedding(ctx context.Context, q queryer, bookID string, n int, model string, v []float32) error {
@@ -409,11 +409,11 @@ func embeddedPages(ctx context.Context, q queryer, bookID, model string) (map[in
 	for rows.Next() {
 		var n int
 		if err := rows.Scan(&n); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		out[n] = true
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 type vectorRow struct {
@@ -436,12 +436,12 @@ func vectors(ctx context.Context, q queryer, bookID, model string) ([]vectorRow,
 		var r vectorRow
 		var blob []byte
 		if err := rows.Scan(&r.Number, &blob); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		r.Vector = decodeVector(blob)
 		out = append(out, r)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 func encodeVector(v []float32) []byte {
@@ -486,7 +486,7 @@ func searchFTS(ctx context.Context, q queryer, bookID, query string, limit int) 
 			var n int
 			if err := rows.Scan(&n); err != nil {
 				cleanup.Close(rows)
-				return nil, err
+				return nil, errs.Database.Of(err)
 			}
 			if !seen[n] {
 				seen[n] = true
@@ -495,7 +495,7 @@ func searchFTS(ctx context.Context, q queryer, bookID, query string, limit int) 
 		}
 		if err := rows.Err(); err != nil {
 			cleanup.Close(rows)
-			return nil, err
+			return nil, errs.Database.Of(err)
 		}
 		cleanup.Close(rows)
 	}
@@ -509,5 +509,5 @@ func pageText(ctx context.Context, q queryer, bookID string, n int) (string, err
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", nil
 	}
-	return t, err
+	return t, errs.Database.Of(err)
 }

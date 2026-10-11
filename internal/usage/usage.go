@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 )
 
@@ -201,7 +202,7 @@ func ForSubjects(ctx context.Context, q queryer, subjectType string, ids []strin
 		var tokens sql.NullInt64
 		var calls, withUsage, failed int
 		if err := rows.Scan(&subjectID, &model, &ms, &cost, &tokens, &calls, &withUsage, &failed); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		u := out[subjectID]
 		if u == nil {
@@ -237,7 +238,7 @@ func ForSubjects(ctx context.Context, q queryer, subjectType string, ids []strin
 		}
 		u.Failed += failed
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 // Forget deletes one subject's call rows, called as the subject goes, so

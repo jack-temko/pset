@@ -137,7 +137,7 @@ func (r *run) loop(ctx context.Context) error {
 	r.parser.Finish()
 	if err != nil {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		return err
 	}

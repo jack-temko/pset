@@ -84,6 +84,9 @@ export type ErrorId =
   | "import.pdf_unreadable"
   | "import.stopped"
   | "import.structure_unreadable"
+  | "internal.data"
+  | "internal.database"
+  | "internal.disk"
   | "internal.unexpected"
   | "key.missing"
   | "key.out_of_credit"
@@ -755,6 +758,33 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 422,
     owner: "library",
+  },
+  "internal.data": {
+    what: "PSet couldn't make sense of some of its own data.",
+    why: "A stored or sent value wasn't in the form PSet expects.",
+    fix: "Try again. If it keeps happening, copy the details and report it.",
+    action: "retry",
+    scope: "inline",
+    status: 500,
+    owner: "errs",
+  },
+  "internal.database": {
+    what: "PSet's database didn't answer.",
+    why: "Reading or writing its data failed.",
+    fix: "Try again. If it keeps happening, check the database in Settings.",
+    action: "retry",
+    scope: "inline",
+    status: 500,
+    owner: "errs",
+  },
+  "internal.disk": {
+    what: "PSet couldn't read or write a file.",
+    why: "The disk may be full, or PSet isn't allowed to use that folder.",
+    fix: "Free some space or check the folder's permissions, then try again.",
+    action: "retry",
+    scope: "inline",
+    status: 500,
+    owner: "errs",
   },
   "internal.unexpected": {
     what: "Something went wrong inside PSet.",

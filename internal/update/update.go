@@ -105,9 +105,13 @@ func New(c Config) *Service {
 func Executable() (string, error) {
 	p, err := os.Executable()
 	if err != nil {
-		return "", err
+		return "", errs.Disk.Wrap(err)
 	}
-	return filepath.EvalSymlinks(p)
+	exe, err := filepath.EvalSymlinks(p)
+	if err != nil {
+		return "", errs.Disk.Wrap(err)
+	}
+	return exe, nil
 }
 
 // Status is what is running and whether it can update; it asks nobody.
@@ -165,7 +169,7 @@ func whyNot(err error) string {
 func (s *Service) Check(ctx context.Context) (Status, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/repos/%s/releases/latest", s.c.API, s.c.Repo), nil)
 	if err != nil {
-		return Status{}, err
+		return Status{}, errs.Disk.Wrap(err)
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "pset/"+s.c.Version)
@@ -334,7 +338,7 @@ func (s *Service) fetch(ctx context.Context, c *checked, dir string) (string, er
 
 	tmp, err := os.CreateTemp(dir, ".pset-update-*.tar.gz")
 	if err != nil {
-		return "", err
+		return "", errs.Disk.Wrap(err)
 	}
 	defer cleanup.Remove(tmp.Name())
 	h := sha256.New()
@@ -343,7 +347,7 @@ func (s *Service) fetch(ctx context.Context, c *checked, dir string) (string, er
 		return "", err
 	}
 	if err := tmp.Close(); err != nil {
-		return "", err
+		return "", errs.Disk.Wrap(err)
 	}
 	if got := hex.EncodeToString(h.Sum(nil)); got != want {
 		return "", notTrusted.Wrap(errors.New("the download doesn't match its signed checksum"))
@@ -351,7 +355,7 @@ func (s *Service) fetch(ctx context.Context, c *checked, dir string) (string, er
 
 	out, err := os.CreateTemp(dir, ".pset-new-*")
 	if err != nil {
-		return "", err
+		return "", errs.Disk.Wrap(err)
 	}
 	if err := extractMember(tmp.Name(), member, out); err != nil {
 		cleanup.Close(out)
@@ -360,11 +364,11 @@ func (s *Service) fetch(ctx context.Context, c *checked, dir string) (string, er
 	}
 	if err := out.Close(); err != nil {
 		cleanup.Remove(out.Name())
-		return "", err
+		return "", errs.Disk.Of(err)
 	}
 	if err := os.Chmod(out.Name(), 0o755); err != nil {
 		cleanup.Remove(out.Name())
-		return "", err
+		return "", errs.Disk.Of(err)
 	}
 	// It runs once to say what it is: the wrong build for this machine, or one
 	// built as another version, is caught before it replaces anything.
@@ -390,7 +394,7 @@ func (s *Service) get(ctx context.Context, url string, limit int64) ([]byte, err
 func (s *Service) copyTo(ctx context.Context, url string, w io.Writer, limit int64) error {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return err
+		return errs.Disk.Wrap(err)
 	}
 	req.Header.Set("User-Agent", "pset/"+s.c.Version)
 	resp, err := s.c.Client.Do(req)
@@ -416,7 +420,7 @@ func (s *Service) copyTo(ctx context.Context, url string, w io.Writer, limit int
 func extractMember(archive, member string, w io.Writer) error {
 	f, err := os.Open(archive)
 	if err != nil {
-		return err
+		return errs.Disk.Wrap(err)
 	}
 	defer cleanup.Close(f)
 	gz, err := gzip.NewReader(f)
@@ -434,7 +438,7 @@ func extractMember(archive, member string, w io.Writer) error {
 		}
 		if h.Typeflag == tar.TypeReg && h.Name == member {
 			if _, err := io.Copy(w, io.LimitReader(tr, maxProgram+1)); err != nil {
-				return err
+				return errs.Disk.Wrap(err)
 			}
 			return nil
 		}

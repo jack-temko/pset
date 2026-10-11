@@ -214,7 +214,7 @@ func (s *Service) Reset(ctx context.Context) error {
 	}
 	entries, err := os.ReadDir(s.c.DataDir)
 	if err != nil {
-		return err
+		return errs.Disk.Wrap(err)
 	}
 	base := filepath.Base(s.c.DBPath)
 	for _, e := range entries {
@@ -223,7 +223,7 @@ func (s *Service) Reset(ctx context.Context) error {
 			continue
 		}
 		if err := os.RemoveAll(filepath.Join(s.c.DataDir, n)); err != nil {
-			return err
+			return errs.Disk.Wrap(err)
 		}
 	}
 	return nil

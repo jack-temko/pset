@@ -95,8 +95,8 @@ func TestChatStreamHTTPError(t *testing.T) {
 
 	client := testClient(t, srv.URL, "")
 	_, err := client.ChatStream(context.Background(), ChatRequest{Model: "m"}, nil)
-	llmErr, ok := err.(*CallError)
-	if !ok {
+	var llmErr *CallError
+	if !errors.As(err, &llmErr) {
 		t.Fatalf("err = %v (%T), want *CallError", err, err)
 	}
 	if llmErr.Status != http.StatusUnauthorized || !strings.Contains(llmErr.Body, "bad key") {

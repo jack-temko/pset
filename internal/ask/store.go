@@ -59,7 +59,7 @@ var errNotFound = errors.New("not found")
 func failuresToErrors(ctx context.Context, tx *sql.Tx) error {
 	rows, err := tx.QueryContext(ctx, `SELECT id, reason FROM turns WHERE state = 'failed'`)
 	if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	type old struct{ id, reason string }
 	var failed []old
@@ -67,12 +67,12 @@ func failuresToErrors(ctx context.Context, tx *sql.Tx) error {
 		var o old
 		if err := rows.Scan(&o.id, &o.reason); err != nil {
 			cleanup.Close(rows)
-			return err
+			return errs.Database.Of(err)
 		}
 		failed = append(failed, o)
 	}
 	if err := rows.Err(); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	cleanup.Close(rows)
 	for _, o := range failed {
@@ -92,7 +92,7 @@ func failuresToErrors(ctx context.Context, tx *sql.Tx) error {
 			chain = append(chain, "agent.no_answer")
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE turns SET error = ? WHERE id = ?`, errs.Chain(chain...), o.id); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 	}
 	return nil
@@ -134,7 +134,7 @@ func getTurn(ctx context.Context, d *sql.DB, id string) (row, error) {
 func listTurns(ctx context.Context, d *sql.DB, bookID string) ([]row, error) {
 	rows, err := d.QueryContext(ctx, `SELECT `+cols+` FROM turns WHERE book_id = ? ORDER BY created_at, rowid`, bookID)
 	if err != nil {
-		return nil, err
+		return nil, errs.Database.Wrap(err)
 	}
 	defer cleanup.Close(rows)
 	var out []row
@@ -145,7 +145,7 @@ func listTurns(ctx context.Context, d *sql.DB, bookID string) ([]row, error) {
 		}
 		out = append(out, r)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 func mustJSON(v any) string {

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/probnum"
 )
 
@@ -43,7 +44,7 @@ func (s *Service) setHas(ctx context.Context, setID string, style probnum.Style)
 	}
 	rows, err := s.c.DB.QueryContext(ctx, `SELECT id, text, in_book, label, notes FROM questions WHERE homework_id = ? ORDER BY position`, setID)
 	if err != nil {
-		return c, err
+		return c, errs.Database.Wrap(err)
 	}
 	defer cleanup.Close(rows)
 	for rows.Next() {
@@ -51,7 +52,7 @@ func (s *Service) setHas(ctx context.Context, setID string, style probnum.Style)
 		var text, notes string
 		var inBook bool
 		if err := rows.Scan(&q.id, &text, &inBook, &q.label, &notes); err != nil {
-			return c, err
+			return c, errs.Database.Wrap(err)
 		}
 		c.texts[normText(text)] = true
 		if !inBook {
@@ -70,7 +71,7 @@ func (s *Service) setHas(ctx context.Context, setID string, style probnum.Style)
 		c.qs = append(c.qs, q)
 	}
 	if err := rows.Err(); err != nil {
-		return c, err
+		return c, errs.Database.Wrap(err)
 	}
 	for i := range c.qs {
 		for _, l := range c.qs[i].labels {

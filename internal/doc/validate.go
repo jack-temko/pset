@@ -14,6 +14,7 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/mathx"
 	"github.com/jackt/pset/internal/pagenum"
 )
@@ -43,17 +44,17 @@ var schemas = sync.OnceValues(func() (map[string]*jsonschema.Schema, error) {
 		name := "schemas/" + k + ".json"
 		data, err := schemaFS.ReadFile(name)
 		if err != nil {
-			return nil, err
+			return nil, errs.Disk.Wrap(err)
 		}
 		doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(data))
 		if err != nil {
-			return nil, err
+			return nil, errs.Disk.Wrap(err)
 		}
 		if err := c.AddResource(name, doc); err != nil {
-			return nil, err
+			return nil, errs.Data.Wrap(err)
 		}
 		if out[k], err = c.Compile(name); err != nil {
-			return nil, err
+			return nil, errs.Data.Wrap(err)
 		}
 	}
 	return out, nil

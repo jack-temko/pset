@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/execx"
 )
 
@@ -76,7 +77,7 @@ func Text(ctx context.Context, path string) (string, error) {
 func parsePageSize(value string) (float64, float64, error) {
 	var w, h float64
 	if _, err := fmt.Sscanf(value, "%f x %f", &w, &h); err != nil {
-		return 0, 0, err
+		return 0, 0, errs.Data.Wrap(err)
 	}
 	return w, h, nil
 }

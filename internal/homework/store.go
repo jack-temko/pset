@@ -153,7 +153,7 @@ var (
 func sentencesToErrors(ctx context.Context, tx *sql.Tx) error {
 	rows, err := tx.QueryContext(ctx, `SELECT id, failure, reason FROM questions WHERE state = 'failed'`)
 	if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	type old struct{ id, failure, reason string }
 	var failed []old
@@ -161,12 +161,12 @@ func sentencesToErrors(ctx context.Context, tx *sql.Tx) error {
 		var o old
 		if err := rows.Scan(&o.id, &o.failure, &o.reason); err != nil {
 			cleanup.Close(rows)
-			return err
+			return errs.Database.Of(err)
 		}
 		failed = append(failed, o)
 	}
 	if err := rows.Err(); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	cleanup.Close(rows)
 	for _, o := range failed {
@@ -202,25 +202,25 @@ func sentencesToErrors(ctx context.Context, tx *sql.Tx) error {
 			st.Chain = append(st.Chain, "homework.guide_incomplete")
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET error = ? WHERE id = ?`, st.Marshal(), o.id); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 	}
 
 	rows, err = tx.QueryContext(ctx, `SELECT id, error FROM assignment_reads WHERE state = 'failed' AND error != ''`)
 	if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	var reads [][2]string
 	for rows.Next() {
 		var id, msg string
 		if err := rows.Scan(&id, &msg); err != nil {
 			cleanup.Close(rows)
-			return err
+			return errs.Database.Of(err)
 		}
 		reads = append(reads, [2]string{id, msg})
 	}
 	if err := rows.Err(); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	cleanup.Close(rows)
 	for _, r := range reads {
@@ -252,7 +252,7 @@ func sentencesToErrors(ctx context.Context, tx *sql.Tx) error {
 			cause("homework.page_empty")
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE assignment_reads SET error = ? WHERE id = ?`, st.Marshal(), r[0]); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 	}
 	return nil
@@ -265,11 +265,11 @@ func structuredGuides(ctx context.Context, tx *sql.Tx) error {
 		state = CASE WHEN state = 'ready' THEN 'unwritten' ELSE state END,
 		hint = '[]', walkthrough = '[]', revealed = '[]', rounds = '[]',
 		memory = coalesce((SELECT json_group_array(json(value)) FROM json_each(memory) WHERE json_extract(value, '$.use') = 'found'), '[]')`); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	rows, err := tx.QueryContext(ctx, `SELECT id, statement, notes, reading FROM questions`)
 	if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	type text struct{ id, statement, notes, reading string }
 	var all []text
@@ -277,17 +277,17 @@ func structuredGuides(ctx context.Context, tx *sql.Tx) error {
 		var t text
 		if err := rows.Scan(&t.id, &t.statement, &t.notes, &t.reading); err != nil {
 			cleanup.Close(rows)
-			return err
+			return errs.Database.Of(err)
 		}
 		all = append(all, t)
 	}
 	if err := rows.Close(); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	for _, t := range all {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET statement = ?, notes = ?, reading = ? WHERE id = ?`,
 			mustJSON(decodeRuns(t.statement)), mustJSON(decodeRunLists(t.notes)), mustJSON(decodeRunLists(t.reading)), t.id); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 	}
 	return nil
@@ -332,7 +332,7 @@ func listSummaries(ctx context.Context, q queryer, where string, args ...any) ([
 		}
 		out = append(out, h)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 // row is a question with what the wire doesn't carry.
@@ -434,7 +434,7 @@ func listQuestions(ctx context.Context, q queryer, homeworkID string) ([]Questio
 		}
 		out = append(out, r.Question)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 // savedRounds is a question's saved guide conversation: every message
@@ -442,7 +442,7 @@ func listQuestions(ctx context.Context, q queryer, homeworkID string) ([]Questio
 func savedRounds(ctx context.Context, q queryer, id string) ([]llm.Message, error) {
 	var raw string
 	if err := q.QueryRowContext(ctx, `SELECT rounds FROM questions WHERE id = ?`, id).Scan(&raw); err != nil {
-		return nil, err
+		return nil, errs.Database.Wrap(err)
 	}
 	var msgs []llm.Message
 	if err := json.Unmarshal([]byte(raw), &msgs); err != nil {

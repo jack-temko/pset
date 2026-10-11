@@ -103,7 +103,7 @@ func (s *Service) StartRead(ctx context.Context, bookID string, file *Assignment
 	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO assignment_reads (id, book_id, source, set_id, url, text, file, state, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, bookID, source, in.SetID, pageURL, text, data, ReadStateReading, now, now); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobAssignment, Subject: id, Payload: readJob{ReadID: id}})
 		return err
@@ -121,7 +121,7 @@ func (s *Service) RetryRead(ctx context.Context, id string) (AssignmentRead, err
 		res, err := tx.ExecContext(ctx, `UPDATE assignment_reads SET state = ?, error = '', updated_at = ? WHERE id = ? AND state = ?`,
 			ReadStateReading, db.Now(), id, ReadStateFailed)
 		if err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		if n, _ := res.RowsAffected(); n == 0 {
 			return readBusy.New()
@@ -162,7 +162,7 @@ func (s *Service) runAssignmentRead(ctx context.Context, j jobs.Job) error {
 		// Dismissed before it started.
 		return nil
 	} else if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	var content []llm.Part
 	switch {
@@ -182,7 +182,7 @@ func (s *Service) runAssignmentRead(ctx context.Context, j jobs.Job) error {
 	if err != nil {
 		if ctx.Err() != nil {
 			// Shutting down or stopped: it's read again on the next start.
-			return ctx.Err()
+			return fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		v := errs.Report(ctx, readFailed.Wrap(err), errs.Where{Route: "job " + JobAssignment, Book: bookID})
 		return s.settleRead(p.ReadID, ReadStateFailed, &v, nil)
@@ -201,7 +201,7 @@ func (s *Service) settleRead(id string, state ReadState, failed *errs.View, a *A
 	if a != nil {
 		b, err := json.Marshal(a)
 		if err != nil {
-			return err
+			return errs.Data.Wrap(err)
 		}
 		result = string(b)
 	}
@@ -211,7 +211,7 @@ func (s *Service) settleRead(id string, state ReadState, failed *errs.View, a *A
 		file = CASE WHEN ? = 'ready' THEN NULL ELSE file END, updated_at = ? WHERE id = ?`,
 		state, stored, result, state, db.Now(), id)
 	if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return nil
@@ -248,7 +248,7 @@ func (s *Service) readOut(ctx context.Context, readID, bookID, source string, co
 	}, OnReasoning: progress.thinking}, progress.writing)
 	if err != nil {
 		if ctx.Err() != nil {
-			return Assignment{}, ctx.Err()
+			return Assignment{}, fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		return Assignment{}, err
 	}
@@ -394,7 +394,7 @@ func (s *Service) ImportAssignment(ctx context.Context, bookID string, in Assign
 			// A set updated from a document it didn't come from is checked
 			// against that document from now on.
 			if _, err := s.c.DB.ExecContext(ctx, `UPDATE homework SET source = ? WHERE id = ? AND source = ''`, in.Source, g.SetID); err != nil {
-				return nil, err
+				return nil, errs.Database.Wrap(err)
 			}
 			if h, err = s.publishSet(ctx, g.SetID); err != nil {
 				return nil, err
@@ -416,7 +416,7 @@ func (s *Service) ImportAssignment(ctx context.Context, bookID string, in Assign
 			return nil, err
 		}
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE homework SET source = ? WHERE id = ?`, in.Source, h.ID); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		if _, err := s.Add(ctx, h.ID, rows); err != nil {
 			return nil, err
@@ -444,7 +444,7 @@ func (s *Service) LastSource(ctx context.Context, bookID string) (AssignmentSour
 	err := s.c.DB.QueryRowContext(ctx, `SELECT source FROM homework WHERE book_id = ? AND (source LIKE 'http://%' OR source LIKE 'https://%')
 		ORDER BY created_at DESC LIMIT 1`, bookID).Scan(&src)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return AssignmentSource{}, err
+		return AssignmentSource{}, errs.Database.Wrap(err)
 	}
 	return AssignmentSource{URL: src}, nil
 }
@@ -460,12 +460,12 @@ func fileParts(ctx context.Context, f AssignmentFile) ([]llm.Part, error) {
 	case kind == "application/pdf":
 		dir, err := os.MkdirTemp("", "pset-assignment-*")
 		if err != nil {
-			return nil, err
+			return nil, errs.Disk.Wrap(err)
 		}
 		defer cleanup.RemoveAll(dir)
 		path := filepath.Join(dir, "a.pdf")
 		if err := os.WriteFile(path, f.Data, 0o600); err != nil {
-			return nil, err
+			return nil, errs.Disk.Wrap(err)
 		}
 		text, err := pdf.Text(ctx, path)
 		if err != nil {
