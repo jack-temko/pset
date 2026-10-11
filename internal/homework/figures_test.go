@@ -1,7 +1,9 @@
 package homework
 
 import (
+	"bytes"
 	"context"
+	"image/jpeg"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -74,10 +76,33 @@ func TestAFigureOnAnotherPageIsFound(t *testing.T) {
 		t.Fatalf("figure on page %d, want 4", r.FigRect[0].Page)
 	}
 	// The wire carries the size of the cropped image (the box with its
-	// padding) as page fractions, so the image holds its place.
-	want := padRect(r.FigRect[0].Rect)
-	if got := q.Figures[0]; got.W != want.W || got.H != want.H || got.W <= 0 || got.H <= 0 {
-		t.Fatalf("figure size %v x %v, want %v x %v", got.W, got.H, want.W, want.H)
+	// padding) as page fractions, so the image can hold its place. The served
+	// image snaps each edge to a gutter, up to 2.5% of the page, so its
+	// proportions lie within what that can move from the wire's.
+	got := q.Figures[0]
+	pageJPG, err := e.svc.c.Library.PageJPEG(context.Background(), h.BookID, r.FigRect[0].Page, cropWidth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pageImg, err := jpeg.Decode(bytes.NewReader(pageJPG))
+	if err != nil {
+		t.Fatal(err)
+	}
+	aspect := float64(pageImg.Bounds().Dy()) / float64(pageImg.Bounds().Dx())
+	jpg, err := e.svc.Figure(context.Background(), q.ID, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	img, err := jpeg.Decode(bytes.NewReader(jpg))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ratio := float64(img.Bounds().Dy()) / float64(img.Bounds().Dx())
+	const snap = 2 * 0.025 // both edges, a fraction of the page
+	lo := (got.H - snap) * aspect / (got.W + snap)
+	hi := (got.H + snap) * aspect / (got.W - snap)
+	if got.W <= 0 || got.H <= 0 || ratio < lo || ratio > hi {
+		t.Fatalf("served image %v high per wide; the wire's %v x %v of a page at aspect %v allows %v to %v", ratio, got.W, got.H, aspect, lo, hi)
 	}
 }
 

@@ -854,10 +854,16 @@ function WalkthroughBody({
                 src={figureURL(q.id, i)}
                 alt={f.label || 'Figure'}
                 // Its box is its crop's proportions from the first frame, so the
-                // figure does not push what is under it when it arrives.
+                // figure does not push what is under it when it arrives. The crop
+                // snaps to the page's gutters, so the image can differ a little
+                // (and on a page of another size than the book's first, more):
+                // contain keeps the box and never stretches the image.
                 style={
                   pageAspect && f.w > 0 && f.h > 0
-                    ? { aspectRatio: `${f.w} / ${f.h * pageAspect}` }
+                    ? {
+                        aspectRatio: `${f.w} / ${f.h * pageAspect}`,
+                        objectFit: 'contain',
+                      }
                     : undefined
                 }
                 className="w-full rounded-md border bg-card"
