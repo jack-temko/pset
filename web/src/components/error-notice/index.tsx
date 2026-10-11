@@ -48,9 +48,16 @@ export function ErrorNotice({
           <p className="text-sm text-muted-foreground">{error.fix}</p>
         )}
       </div>
-      {(action || error.chain.length > 0) && (
+      {(action || onRetry || error.chain.length > 0) && (
         <div className="flex flex-wrap items-center gap-3">
           {action && <Button onClick={action.run}>{action.label}</Button>}
+          {/* The action leads when it is not the retry (Open Settings), and
+              trying again, once that is fixed, steps back to ghost. */}
+          {onRetry && error.action !== 'retry' && (
+            <Button variant={action ? 'ghost' : 'outline'} onClick={onRetry}>
+              Try again
+            </Button>
+          )}
           <Details error={error} />
         </div>
       )}

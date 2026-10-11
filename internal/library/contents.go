@@ -37,7 +37,7 @@ func (s *Service) chatModel(ctx context.Context) (model, error) {
 		return model{}, err
 	}
 	if !cfg.ChatReady() {
-		return model{}, fail(nil, llm.NoKey)
+		return model{}, llm.KeyMissing.New()
 	}
 	return model{client: llm.Open(cfg), name: cfg.ChatModel}, nil
 }
@@ -149,7 +149,7 @@ func (s *Service) readPrinted(ctx context.Context, m model, b row, path string, 
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}
-			return nil, fail(err, "PSet couldn't render the book's contents pages.")
+			return nil, contentsRender.Wrap(err)
 		}
 		content.AppendPart(llm.TextPart(fmt.Sprintf("Image %d:", i+1)))
 		content.AppendPart(llm.ImagePart("data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(data)))
@@ -185,30 +185,18 @@ func (m model) askJSON(ctx context.Context, system string, user llm.Content, out
 		case err != nil && stalled && try == 0:
 			continue
 		case err != nil && stalled:
-			return fail(err, "The model stopped answering while PSet read the book's contents. Try again in a minute.")
+			return contentsStalled.Wrap(err)
 		case err != nil:
-			return modelDown(err)
+			return err
 		}
 		err = json.Unmarshal([]byte(llm.Unfence(reply)), out)
 		if err == nil {
 			return nil
 		}
 		if try == 1 {
-			return fail(err, "The model's answer about the book's contents couldn't be read. Try again.")
+			return contentsUnreadable.Wrap(err)
 		}
 	}
-}
-
-// modelDown words a failed call as the failed row's reason.
-func modelDown(err error) error {
-	trouble, status := llm.Classify(err)
-	if trouble == llm.TroubleCredit {
-		return fail(err, "%s", llm.NoCredit)
-	}
-	if trouble == llm.TroubleRejected {
-		return fail(err, "%s Check the key in Settings, then try again.", llm.Refusal(status))
-	}
-	return fail(err, "OpenRouter didn't answer while PSet read the book's contents. Try again in a minute.")
 }
 
 // ---------------------------------------------------------------- checking

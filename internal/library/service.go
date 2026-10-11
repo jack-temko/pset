@@ -339,12 +339,12 @@ func (s *Service) Stop(ctx context.Context, id string) (Book, error) {
 	if err := s.c.Queue.StopSubject(ctx, id); err != nil {
 		return Book{}, err
 	}
-	reason := "Stopped."
+	why := errs.Resolve(importStopped.New("title", b.Title))
 	if b.State.Kind == StateQueued && b.Kind == KindUnknown {
 		// Nothing has happened to it yet; an examined book has begun.
-		reason = "Cancelled before it started."
+		why = errs.Resolve(importCancelled.New("title", b.Title))
 	}
-	if err := setState(ctx, s.c.DB, id, BookState{Kind: StateFailed, Reason: reason}); err != nil {
+	if err := setState(ctx, s.c.DB, id, BookState{Kind: StateFailed, Error: &why}); err != nil {
 		return Book{}, err
 	}
 	return s.publish(ctx, id)
@@ -367,9 +367,6 @@ func preparable(ctx context.Context, cfg llm.Config) error {
 	}
 	return nil
 }
-
-// noOllama is what an import says when Ollama doesn't answer.
-const noOllama = "PSet can't reach Ollama, which searches your books. Settings, under Health, says how to start it."
 
 // ollamaProbe is how long an upload waits on Ollama: long enough for it
 // to load the model from disk on a first call.

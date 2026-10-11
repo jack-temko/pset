@@ -16,6 +16,8 @@ export type ErrorId =
   | "ask.turn_not_found"
   | "book.duplicate"
   | "book.not_found"
+  | "embed.failed"
+  | "embed.unreachable"
   | "errors.clear_failed"
   | "errors.read_failed"
   | "events.no_streaming"
@@ -66,6 +68,16 @@ export type ErrorId =
   | "homework.too_many_drafts"
   | "homework.too_many_lines"
   | "homework.too_many_notes"
+  | "import.cancelled"
+  | "import.contents_render"
+  | "import.contents_stalled"
+  | "import.contents_unreadable"
+  | "import.failed"
+  | "import.pages_unread"
+  | "import.pdf_empty"
+  | "import.pdf_unreadable"
+  | "import.stopped"
+  | "import.structure_unreadable"
   | "internal.unexpected"
   | "key.missing"
   | "key.out_of_credit"
@@ -232,6 +244,24 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 404,
     owner: "errs",
+  },
+  "embed.failed": {
+    what: "Ollama couldn't build the book's search.",
+    why: "Ollama answered with an error. It may be out of memory or missing its model.",
+    fix: "Settings, under Health, says how to check it, then try again.",
+    action: "open_settings",
+    scope: "inline",
+    status: 502,
+    owner: "llm",
+  },
+  "embed.unreachable": {
+    what: "PSet couldn't reach Ollama.",
+    why: "Ollama searches your books, and it isn't running or isn't answering.",
+    fix: "Settings, under Health, says how to start it.",
+    action: "open_settings",
+    scope: "inline",
+    status: 502,
+    owner: "llm",
   },
   "errors.clear_failed": {
     what: "Couldn't clear the list of errors.",
@@ -569,6 +599,94 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "field",
     status: 422,
     owner: "homework",
+  },
+  "import.cancelled": {
+    what: "{title} was cancelled before it started.",
+    why: "You stopped it before PSet began.",
+    fix: "Try again to start it.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "library",
+  },
+  "import.contents_render": {
+    what: "PSet couldn't render the book's contents pages.",
+    why: "The pages couldn't be turned into pictures for the model.",
+    fix: "Try again.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "library",
+  },
+  "import.contents_stalled": {
+    what: "The model stopped answering while PSet read the book's contents.",
+    why: "OpenRouter took too long to answer.",
+    fix: "Try again in a minute.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "library",
+  },
+  "import.contents_unreadable": {
+    what: "The model's answer about the book's contents couldn't be read.",
+    why: "It wasn't in a form PSet could use.",
+    fix: "Try again.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "library",
+  },
+  "import.failed": {
+    what: "Couldn't prepare {title}.",
+    why: "Something went wrong while PSet was preparing it.",
+    fix: "Try again.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "library",
+  },
+  "import.pages_unread": {
+    what: "Some pages couldn't be read.",
+    why: "PSet's text reader, Tesseract, failed on {count} ({list}).",
+    fix: "Try again, or check that Tesseract works in Settings.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "library",
+  },
+  "import.pdf_empty": {
+    what: "This PDF has no pages.",
+    why: "The file opened but holds nothing to read.",
+    fix: "Try a different copy of the file.",
+    scope: "inline",
+    status: 422,
+    owner: "library",
+  },
+  "import.pdf_unreadable": {
+    what: "This PDF can't be read.",
+    why: "PSet couldn't open it, so it may be damaged or locked.",
+    fix: "Try a different copy of the file.",
+    scope: "inline",
+    status: 422,
+    owner: "library",
+  },
+  "import.stopped": {
+    what: "{title} was stopped.",
+    why: "You stopped it before it finished.",
+    fix: "Try again to carry on where it left off.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "library",
+  },
+  "import.structure_unreadable": {
+    what: "PSet couldn't read this book's structure.",
+    why: "The PDF's outline couldn't be extracted.",
+    fix: "Try again. If it keeps happening, the file may be damaged.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "library",
   },
   "internal.unexpected": {
     what: "Something went wrong inside PSet.",

@@ -78,3 +78,76 @@ var (
 		Scope: errs.ScopeField,
 	})
 )
+
+// Why an import failed. importFailed is the outer entry of every failed
+// book, named by its title; the cause under it says why.
+var (
+	importFailed = errs.Define(errs.Entry{
+		ID:     "import.failed",
+		What:   "Couldn't prepare {title}.",
+		Why:    "Something went wrong while PSet was preparing it.",
+		Fix:    "Try again.",
+		Action: errs.ActionRetry,
+	})
+	importStopped = errs.Define(errs.Entry{
+		ID:     "import.stopped",
+		What:   "{title} was stopped.",
+		Why:    "You stopped it before it finished.",
+		Fix:    "Try again to carry on where it left off.",
+		Action: errs.ActionRetry,
+	})
+	importCancelled = errs.Define(errs.Entry{
+		ID:     "import.cancelled",
+		What:   "{title} was cancelled before it started.",
+		Why:    "You stopped it before PSet began.",
+		Fix:    "Try again to start it.",
+		Action: errs.ActionRetry,
+	})
+	pdfUnreadable = errs.Define(errs.Entry{
+		ID:   "import.pdf_unreadable",
+		What: "This PDF can't be read.",
+		Why:  "PSet couldn't open it, so it may be damaged or locked.",
+		Fix:  "Try a different copy of the file.",
+	})
+	pdfEmpty = errs.Define(errs.Entry{
+		ID:   "import.pdf_empty",
+		What: "This PDF has no pages.",
+		Why:  "The file opened but holds nothing to read.",
+		Fix:  "Try a different copy of the file.",
+	})
+	pagesUnread = errs.Define(errs.Entry{
+		ID:     "import.pages_unread",
+		What:   "Some pages couldn't be read.",
+		Why:    "PSet's text reader, Tesseract, failed on {count} ({list}).",
+		Fix:    "Try again, or check that Tesseract works in Settings.",
+		Action: errs.ActionRetry,
+	})
+	structureUnreadable = errs.Define(errs.Entry{
+		ID:     "import.structure_unreadable",
+		What:   "PSet couldn't read this book's structure.",
+		Why:    "The PDF's outline couldn't be extracted.",
+		Fix:    "Try again. If it keeps happening, the file may be damaged.",
+		Action: errs.ActionRetry,
+	})
+	contentsRender = errs.Define(errs.Entry{
+		ID:     "import.contents_render",
+		What:   "PSet couldn't render the book's contents pages.",
+		Why:    "The pages couldn't be turned into pictures for the model.",
+		Fix:    "Try again.",
+		Action: errs.ActionRetry,
+	})
+	contentsStalled = errs.Define(errs.Entry{
+		ID:     "import.contents_stalled",
+		What:   "The model stopped answering while PSet read the book's contents.",
+		Why:    "OpenRouter took too long to answer.",
+		Fix:    "Try again in a minute.",
+		Action: errs.ActionRetry,
+	})
+	contentsUnreadable = errs.Define(errs.Entry{
+		ID:     "import.contents_unreadable",
+		What:   "The model's answer about the book's contents couldn't be read.",
+		Why:    "It wasn't in a form PSet could use.",
+		Fix:    "Try again.",
+		Action: errs.ActionRetry,
+	})
+)

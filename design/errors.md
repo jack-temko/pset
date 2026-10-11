@@ -4,7 +4,7 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-120 entries.
+132 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
@@ -22,6 +22,8 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `ask.turn_not_found` | That question isn't in this conversation. | It was cleared, or the page is out of date. | Reload the page to see the conversation as it is now. | `reload` | inline | ask |
 | `book.duplicate` | {title} is already on your shelf. | This is the same file as a book you already added. | Open the one on your shelf. | `open_book` | inline | library |
 | `book.not_found` | That book isn't on your shelf. | It was removed, or the link is out of date. | Go back to your shelf and open it from there. |  | inline | errs |
+| `embed.failed` | Ollama couldn't build the book's search. | Ollama answered with an error. It may be out of memory or missing its model. | Settings, under Health, says how to check it, then try again. | `open_settings` | inline | llm |
+| `embed.unreachable` | PSet couldn't reach Ollama. | Ollama searches your books, and it isn't running or isn't answering. | Settings, under Health, says how to start it. | `open_settings` | inline | llm |
 | `errors.clear_failed` | Couldn't clear the list of errors. | PSet's database didn't answer. | Try again. If it keeps happening, check the database in Settings. | `retry` | inline | errlog |
 | `errors.read_failed` | Couldn't read the list of errors. | PSet's database didn't answer. | Try again. If it keeps happening, check the database in Settings. | `retry` | inline | errlog |
 | `events.no_streaming` | PSet can't keep this page up to date. | The connection between the page and PSet can't carry live updates. | Reload the page. If it keeps happening, report it with the details. | `reload` | inline | events |
@@ -72,6 +74,16 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `homework.too_many_drafts` | That's more than {max} questions at once. Add them in smaller batches. |  |  |  | field | homework |
 | `homework.too_many_lines` | That's more than {max} lines at once. |  |  |  | field | homework |
 | `homework.too_many_notes` | Keep it to {max} notes. |  |  |  | field | homework |
+| `import.cancelled` | {title} was cancelled before it started. | You stopped it before PSet began. | Try again to start it. | `retry` | inline | library |
+| `import.contents_render` | PSet couldn't render the book's contents pages. | The pages couldn't be turned into pictures for the model. | Try again. | `retry` | inline | library |
+| `import.contents_stalled` | The model stopped answering while PSet read the book's contents. | OpenRouter took too long to answer. | Try again in a minute. | `retry` | inline | library |
+| `import.contents_unreadable` | The model's answer about the book's contents couldn't be read. | It wasn't in a form PSet could use. | Try again. | `retry` | inline | library |
+| `import.failed` | Couldn't prepare {title}. | Something went wrong while PSet was preparing it. | Try again. | `retry` | inline | library |
+| `import.pages_unread` | Some pages couldn't be read. | PSet's text reader, Tesseract, failed on {count} ({list}). | Try again, or check that Tesseract works in Settings. | `retry` | inline | library |
+| `import.pdf_empty` | This PDF has no pages. | The file opened but holds nothing to read. | Try a different copy of the file. |  | inline | library |
+| `import.pdf_unreadable` | This PDF can't be read. | PSet couldn't open it, so it may be damaged or locked. | Try a different copy of the file. |  | inline | library |
+| `import.stopped` | {title} was stopped. | You stopped it before it finished. | Try again to carry on where it left off. | `retry` | inline | library |
+| `import.structure_unreadable` | PSet couldn't read this book's structure. | The PDF's outline couldn't be extracted. | Try again. If it keeps happening, the file may be damaged. | `retry` | inline | library |
 | `internal.unexpected` | Something went wrong inside PSet. | PSet hit a problem it has no name for. | Try again. If it keeps happening, copy the details and report it. | `retry` | inline | errs |
 | `key.missing` | There's no OpenRouter key yet. | PSet needs a key to read pages and write answers. | Add your key in Settings, under Connections. | `open_settings` | inline | llm |
 | `key.out_of_credit` | Your OpenRouter account is out of credit. | Your OpenRouter account is out of credit, so PSet can't use a model. | Add credit on OpenRouter, then try again. | `retry` | inline | llm |

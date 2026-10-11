@@ -932,7 +932,7 @@ func (c *Client) Embed(ctx context.Context, texts []string) ([][]float32, error)
 		} `json:"data"`
 	}
 	if err := c.post(ctx, c.embedBaseURL+"/embeddings", req, &payload); err != nil {
-		return nil, err
+		return nil, embedError(err)
 	}
 	if len(payload.Data) != len(texts) {
 		return nil, fmt.Errorf("embedding endpoint returned %d vectors for %d inputs", len(payload.Data), len(texts))

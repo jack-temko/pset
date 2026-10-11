@@ -34,8 +34,10 @@ packages:
       probnum.Style: 'Style'
       probnum.Form: 'Form'
       probnum.Where: 'Where'
+      errs.View: 'View'
     frontmatter: |
       // Generated from internal/library/wire.go by tygo. Do not edit.
+      import type { View } from './errs'
       import type { Run } from './pagenum'
       import type { Form, Style, Where } from './probnum'
 

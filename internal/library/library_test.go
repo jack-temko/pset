@@ -348,8 +348,8 @@ func TestScannedBookFailsOnUnreadPagesThenRetries(t *testing.T) {
 	var up BookChanged
 	e.upload(t, "scan.pdf", scannedPDF(t, 5), &up)
 	b := e.waitFor(t, up.Book.ID, StateFailed)
-	if !strings.Contains(b.State.Reason, "1 page couldn't be read (p. 3)") {
-		t.Fatalf("reason %q", b.State.Reason)
+	if !failedBecause(b, "import.pages_unread") || !strings.Contains(b.State.Error.Why, "1 page (p. 3)") {
+		t.Fatalf("error %+v", b.State.Error)
 	}
 
 	var calls []int
@@ -364,14 +364,20 @@ func TestScannedBookFailsOnUnreadPagesThenRetries(t *testing.T) {
 	}
 }
 
+// failedBecause says a failed book's error ends in the catalog entry id.
+func failedBecause(b Book, id string) bool {
+	e := b.State.Error
+	return b.State.Kind == StateFailed && e != nil && e.ID == "import.failed" && e.Chain[len(e.Chain)-1] == id
+}
+
 func TestEmbeddingFailureIsAReadableReason(t *testing.T) {
 	e := newEnv(t)
 	e.llm.FailEmbeddingsAfter(1, 400)
 	var up BookChanged
 	e.upload(t, "a.pdf", fixturePDF(t, 0, 4, "E"), &up)
 	b := e.waitFor(t, up.Book.ID, StateFailed)
-	if !strings.Contains(b.State.Reason, "Ollama stopped answering") {
-		t.Fatalf("reason %q", b.State.Reason)
+	if !failedBecause(b, "embed.failed") {
+		t.Fatalf("error %+v", b.State.Error)
 	}
 	e.llm.FailEmbeddings(0)
 	e.do(t, "POST", "/api/books/"+b.ID+"/retry", nil, nil)
@@ -390,7 +396,7 @@ func TestStopQueuedThenRetry(t *testing.T) {
 
 	var stopped Book
 	e.do(t, "POST", "/api/books/"+up.Book.ID+"/stop", nil, &stopped)
-	if stopped.State.Kind != StateFailed || stopped.State.Reason != "Cancelled before it started." {
+	if stopped.State.Kind != StateFailed || stopped.State.Error == nil || stopped.State.Error.ID != "import.cancelled" {
 		t.Fatalf("stopped %+v", stopped.State)
 	}
 	e.queue.Resume()
@@ -422,7 +428,7 @@ func TestStopWhileReading(t *testing.T) {
 	}
 	e.do(t, "POST", "/api/books/"+up.Book.ID+"/stop", nil, nil)
 	unblock.Do(func() { close(release) })
-	if b := e.waitFor(t, up.Book.ID, StateFailed); b.State.Reason != "Stopped." {
+	if b := e.waitFor(t, up.Book.ID, StateFailed); b.State.Error == nil || b.State.Error.ID != "import.stopped" {
 		t.Fatalf("running stop: %+v", b.State)
 	}
 }
@@ -519,7 +525,7 @@ func TestAnInterruptedScanKeepsItsPagesThroughStopAndRetry(t *testing.T) {
 	// It has begun, so stopping it is Stopped, not Cancelled.
 	var stopped Book
 	e.do(t, "POST", "/api/books/"+b.ID+"/stop", nil, &stopped)
-	if stopped.State.Reason != "Stopped." {
+	if stopped.State.Error == nil || stopped.State.Error.ID != "import.stopped" {
 		t.Fatalf("stop: %+v", stopped.State)
 	}
 	e.queue.Resume()

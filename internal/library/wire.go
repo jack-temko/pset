@@ -1,6 +1,7 @@
 package library
 
 import (
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/probnum"
 )
@@ -15,7 +16,7 @@ const (
 	StatePreparing State = "preparing"
 	// StateReady is on the shelf and can be opened.
 	StateReady State = "ready"
-	// StateFailed could not be read; Reason says why.
+	// StateFailed could not be read; Error says why.
 	StateFailed State = "failed"
 )
 
@@ -58,13 +59,13 @@ const (
 // BookState is a book's import state. Phase is set while preparing; Done
 // and Total only where the phase can count (reading and search), and on a
 // queued scan whose reading was interrupted, as the pages it has read;
-// Reason only when failed, in words written for the student.
+// Error only when failed, from the error catalog.
 type BookState struct {
-	Kind   State  `json:"kind"`
-	Phase  Phase  `json:"phase,omitempty"`
-	Done   *int   `json:"done,omitempty"`
-	Total  *int   `json:"total,omitempty"`
-	Reason string `json:"reason,omitempty"`
+	Kind  State      `json:"kind"`
+	Phase Phase      `json:"phase,omitempty"`
+	Done  *int       `json:"done,omitempty"`
+	Total *int       `json:"total,omitempty"`
+	Error *errs.View `json:"error,omitempty"`
 }
 
 // Kind is what examining a book found: a digital book has a text layer,

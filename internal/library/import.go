@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pdf"
@@ -22,26 +23,6 @@ type importPayload struct {
 	// Run is the examination's job id, carried to the preparation so one
 	// import is one run in the book's usage.
 	Run string `json:"run,omitempty"`
-}
-
-// failure is an import failure in words for the student: it becomes the
-// failed row's reason as written.
-type failure struct {
-	msg string
-	err error
-}
-
-func (f *failure) Error() string {
-	if f.err != nil {
-		return f.msg + ": " + f.err.Error()
-	}
-	return f.msg
-}
-
-func (f *failure) Unwrap() error { return f.err }
-
-func fail(err error, format string, args ...any) error {
-	return &failure{msg: fmt.Sprintf(format, args...), err: err}
 }
 
 // Classification: a page "has text" at ten words (scans carry stray words:
@@ -148,19 +129,15 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 	case err == nil:
 		return nil
 	case jobs.Stopped(ctx):
-		s.setState(settle, b.ID, BookState{Kind: StateFailed, Reason: "Stopped."}, true)
+		stopped := errs.Resolve(importStopped.New("title", b.Title))
+		s.setState(settle, b.ID, BookState{Kind: StateFailed, Error: &stopped}, true)
 		return err
 	case ctx.Err() != nil:
 		s.setState(settle, b.ID, s.requeued(settle, b), true)
 		return err
 	}
-	var f *failure
-	reason := "Something went wrong preparing this book. The details are in the log."
-	if errors.As(err, &f) {
-		reason = f.msg
-	}
-	slog.Warn("import failed", "book", b.ID, "job", j.Kind, "err", err)
-	s.setState(settle, b.ID, BookState{Kind: StateFailed, Reason: reason}, true)
+	v := errs.Report(settle, importFailed.Wrap(err, "title", b.Title), errs.Where{Route: "job " + j.Kind, Book: b.ID})
+	s.setState(settle, b.ID, BookState{Kind: StateFailed, Error: &v}, true)
 	return err
 }
 
@@ -211,17 +188,17 @@ func (s *Service) examine(ctx context.Context, b row, path string) ([]string, st
 		if ctx.Err() != nil {
 			return nil, "", ctx.Err()
 		}
-		return nil, "", fail(err, "This PDF can't be read. PSet couldn't open it.")
+		return nil, "", pdfUnreadable.Wrap(err)
 	}
 	if meta.PageCount <= 0 {
-		return nil, "", fail(nil, "This PDF has no pages.")
+		return nil, "", pdfEmpty.New()
 	}
 	text, err := s.c.Tools.Text(ctx, path)
 	if err != nil {
 		if ctx.Err() != nil {
 			return nil, "", ctx.Err()
 		}
-		return nil, "", fail(err, "This PDF can't be read. PSet couldn't get at its pages.")
+		return nil, "", pdfUnreadable.Wrap(err)
 	}
 	pages := splitPages(text, meta.PageCount)
 	kind := classify(pages)
@@ -325,8 +302,7 @@ func (s *Service) read(ctx context.Context, bookID, path string, count int) ([]s
 		s.progress(ctx, bookID, PhaseRead, done, count, false)
 	}
 	if len(failed) > 0 {
-		return nil, fail(nil, "%s couldn't be read (%s). Try again, or check that Tesseract works in Settings.",
-			plural(len(failed), "page"), pageList(failed))
+		return nil, pagesUnread.New("count", plural(len(failed), "page"), "list", pageList(failed))
 	}
 	return s.pageTexts(ctx, bookID, count)
 }
@@ -379,7 +355,7 @@ func (s *Service) index(ctx context.Context, b row, path, kind string, pages []s
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			return fail(err, "PSet couldn't read this book's structure.")
+			return structureUnreadable.Wrap(err)
 		}
 		secs, lines = outlineSections(doc.Outline), doc.Lines
 	}
@@ -439,7 +415,7 @@ func (s *Service) buildSearch(ctx context.Context, bookID string) error {
 		return err
 	}
 	if !cfg.EmbedReady() {
-		return fail(nil, noOllama)
+		return ollamaDown.New()
 	}
 	pages, err := loadPages(ctx, s.c.DB, bookID)
 	if err != nil {
@@ -478,7 +454,7 @@ func (s *Service) buildSearch(ctx context.Context, bookID string) error {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			return fail(err, "Ollama stopped answering while PSet built the book's search. Settings, under Health, says how to check it, then try again.")
+			return err
 		}
 		err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 			for i, p := range batch {

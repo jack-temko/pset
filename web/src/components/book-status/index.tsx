@@ -51,7 +51,9 @@ export function BookStatus({
 
   if (state.kind === 'failed') {
     return (
-      <span className={cn('text-destructive', className)}>{state.reason}</span>
+      <span className={cn('text-destructive', className)}>
+        {state.error?.what}
+      </span>
     );
   }
 

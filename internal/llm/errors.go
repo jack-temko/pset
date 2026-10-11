@@ -1,6 +1,8 @@
 package llm
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -79,6 +81,40 @@ var (
 		Status: http.StatusBadGateway,
 	})
 )
+
+// The embeddings come from Ollama on this computer, not OpenRouter, so a
+// failed embedding is these and not the model.* entries.
+var (
+	EmbedUnreachable = errs.Define(errs.Entry{
+		ID:     "embed.unreachable",
+		What:   "PSet couldn't reach Ollama.",
+		Why:    "Ollama searches your books, and it isn't running or isn't answering.",
+		Fix:    "Settings, under Health, says how to start it.",
+		Action: errs.ActionOpenSettings,
+		Status: http.StatusBadGateway,
+	})
+	embedFailed = errs.Define(errs.Entry{
+		ID:     "embed.failed",
+		What:   "Ollama couldn't build the book's search.",
+		Why:    "Ollama answered with an error. It may be out of memory or missing its model.",
+		Fix:    "Settings, under Health, says how to check it, then try again.",
+		Action: errs.ActionOpenSettings,
+		Status: http.StatusBadGateway,
+	})
+)
+
+// embedError says a failed embedding call in the embed.* entries. The text
+// of the original stays in the chain; its OpenRouter classification does not.
+func embedError(err error) error {
+	var ce *CallError
+	switch {
+	case errors.As(err, &ce):
+		return embedFailed.Wrap(fmt.Errorf("%v", err))
+	case errors.Is(err, ModelUnreachable):
+		return EmbedUnreachable.Wrap(fmt.Errorf("%v", err))
+	}
+	return err
+}
 
 // catalog is the entry a failed call's status and body mean.
 func (e *CallError) catalog() *errs.Error {
