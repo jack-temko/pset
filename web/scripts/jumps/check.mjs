@@ -1,6 +1,6 @@
 // The jump guard: reads an audit's report.json and fails on any jump.
 //
-//   node scripts/jumps/check.mjs <report.json | report folder> [--allow allow.json]
+//   node scripts/jumps/check.mjs <report.json | report folder> [--allow allow.json] [--fail-on-lost]
 //
 // A row fails when, in either mode, an overlay changed size by more than 2px
 // after opening (median over the runs), the layout shifted by more than 0.001
@@ -8,7 +8,8 @@
 // showing at the timeout in any run). A row listed in allow.json is ignored:
 // each entry is { scenario, mode?, reason }, with a reason that says why the
 // jump is deliberate. A skipped scenario is not a failure but is listed; a discovered one whose
-// trigger was not found is listed as LOST, so coverage dropping shows.
+// trigger was not found is listed as LOST, so coverage dropping shows, and
+// fails with --fail-on-lost (the full profile).
 // Exits 1 with the offenders and the elements that moved. Spec: ideas/jumps-guard.md.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -105,13 +106,20 @@ const allowed = (row, allow) =>
   );
 
 /** Sort a report's rows into offenders, allow-listed offenders and skipped. */
-export function check(report, allow = []) {
+export function check(report, allow = [], { failOnLost = false } = {}) {
   const failed = [];
   const ignored = [];
   const skipped = [];
   for (const row of report.rows) {
     if (!row.agg) {
       skipped.push(row);
+      // In the full profile coverage that drops out is a failure, so it opens
+      // the nightly issue instead of vanishing.
+      if (failOnLost && row.lost)
+        failed.push({
+          row,
+          why: [`coverage lost, its trigger was not found: ${row.skipped}`],
+        });
       continue;
     }
     const why = offences(row);
@@ -150,6 +158,7 @@ function main() {
   const { values: v, positionals } = parseArgs({
     allowPositionals: true,
     options: {
+      'fail-on-lost': { type: 'boolean' },
       allow: {
         type: 'string',
         default: path.join(
@@ -161,7 +170,7 @@ function main() {
   });
   if (positionals.length !== 1) {
     console.error(
-      'usage: check.mjs <report.json | report folder> [--allow allow.json]',
+      'usage: check.mjs <report.json | report folder> [--allow allow.json] [--fail-on-lost]',
     );
     process.exit(2);
   }
@@ -173,7 +182,7 @@ function main() {
     if (!e.scenario || !e.reason)
       throw new Error(`${v.allow}: every entry needs a scenario and a reason`);
   }
-  const result = check(report, allow);
+  const result = check(report, allow, { failOnLost: v['fail-on-lost'] });
   console.log(format(result, report.rows.length));
   process.exit(result.failed.length ? 1 : 0);
 }

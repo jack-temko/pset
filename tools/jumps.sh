@@ -149,5 +149,6 @@ fi
 (cd "$root/web" && node scripts/jumps/run.mjs --url "http://127.0.0.1:$vp" --out "$run/$stamp" $args)
 echo "report: $run/$stamp/report.md"
 if [ -n "$check" ]; then
-	(cd "$root/web" && node scripts/jumps/check.mjs "$run/$stamp")
+	# The full profile also fails when discovered coverage drops out.
+	(cd "$root/web" && node scripts/jumps/check.mjs "$run/$stamp" ${FULL:+--fail-on-lost})
 fi

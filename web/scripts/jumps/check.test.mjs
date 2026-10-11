@@ -264,6 +264,31 @@ describe('a tagged scenario must show its view and variant', () => {
   });
 });
 
+describe('lost coverage in the full profile', () => {
+  const lostRow = () =>
+    row({
+      name: 'Book: Memory',
+      agg: undefined,
+      skipped: 'no trigger',
+      lost: true,
+    });
+  it('fails with failOnLost, and the message says why', () => {
+    const res = check(report(lostRow()), [], { failOnLost: true });
+    expect(res.failed).toHaveLength(1);
+    expect(res.failed[0].why[0]).toContain('coverage lost');
+    expect(format(res, 1)).toContain('FAIL: Book: Memory');
+  });
+  it('a hand-written skip is still only a skip', () => {
+    const res = check(report(row({ agg: undefined, skipped: 'no book' })), [], {
+      failOnLost: true,
+    });
+    expect(res.failed).toEqual([]);
+  });
+  it('is not a failure in core, where the default is a printed line', () => {
+    expect(check(report(lostRow())).failed).toEqual([]);
+  });
+});
+
 describe('lost coverage', () => {
   it('a discovered scenario that lost its trigger is listed as LOST, not failed', () => {
     const res = check(
