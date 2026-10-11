@@ -88,6 +88,24 @@ func TestBuildHasEveryAuditTarget(t *testing.T) {
 	if n := count(t, d, `SELECT COUNT(*) FROM turns WHERE book_id = 'fx-digital' AND state = 'done' AND answer != '[]'`); n != 2 {
 		t.Errorf("answered turns = %d, want 2", n)
 	}
+	// Ask answers carry what real ones do (math of each kind, a long
+	// paragraph), and questions carry captioned figures that can be cropped.
+	var answer string
+	if err := d.QueryRow(`SELECT group_concat(answer) FROM turns WHERE book_id = 'fx-digital'`).Scan(&answer); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"type":"math"`, `"type":"derivation"`, `"type":"callout"`, `"m":`, `\\frac`, `pmatrix`} {
+		if !strings.Contains(answer, want) {
+			t.Errorf("the Ask answers lack %s", want)
+		}
+	}
+	var longest int
+	if err := d.QueryRow(`SELECT max(length(answer)) FROM turns`).Scan(&longest); err != nil || longest < 600 {
+		t.Errorf("the longest Ask answer is %d bytes, want one long enough to wrap", longest)
+	}
+	if n := count(t, d, `SELECT COUNT(*) FROM questions WHERE figures LIKE '%"label":"Figure %'  AND page IS NOT NULL`); n == 0 {
+		t.Error("no question has a captioned figure")
+	}
 	// The audit's usage scenarios look for a finished question and an answered
 	// turn that carry a usage line.
 	// A written guide has all its rows, or the page shows a spinner for the
