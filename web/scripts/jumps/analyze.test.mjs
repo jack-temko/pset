@@ -79,7 +79,8 @@ describe('analyzeRun', () => {
     expect(r.jump).toBeCloseTo(0.2);
     expect(r.afterInput).toBeCloseTo(0.1);
     expect(r.moved.map((m) => m.sel)).toEqual(['b']);
-    expect(r.shiftCount).toBe(2);
+    expect(r.shiftCount).toBe(1);
+    expect(r.afterInputCount).toBe(1);
     expect(r.settleMs).toBe(400);
   });
 

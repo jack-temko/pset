@@ -144,7 +144,8 @@ export function analyzeRun(log) {
   return {
     jump: round(counted.reduce((n, s) => n + s.value, 0)),
     afterInput: round(afterInput.reduce((n, s) => n + s.value, 0)),
-    shiftCount: shifts.length,
+    shiftCount: counted.length,
+    afterInputCount: afterInput.length,
     moved,
     overlays,
     skeletonMs,
