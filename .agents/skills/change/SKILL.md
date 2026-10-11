@@ -1,27 +1,27 @@
 ---
 name: change
-description: Take one change to PSet from ask to merged on dev, with each model doing what it is best at. Opus (this session) triages, proposes a tier for Jack to confirm, plans and judges; Sonnet subagents build and review; Haiku subagents search, check, photograph and land. Nothing merges until Jack has tried the change and approved it. Use when Jack types /change.
+description: Take one change to PSet from ask to merged on dev, with each tier doing what it is best at. The judge tier (this session) triages, proposes a tier for Jack to confirm, plans and judges; build-tier subagents build and review; mechanical-tier subagents search, check, photograph and land. Nothing merges until Jack has tried the change and approved it. Use when Jack types /change.
 argument-hint: '[what to change]'
 disable-model-invocation: true
 ---
 
 # change
 
-You are the orchestrator. You run on Opus in Jack's main session, so every token you
-read is the most expensive in the pipeline. Your job is judgment: how big the change
+You are the orchestrator. You run on the judge tier, the session's strongest model, in
+Jack's main session, so every token you read is the most expensive in the pipeline. Your job is judgment: how big the change
 is, what the plan is, whether the result is right. Everything else goes to a cheaper
 agent. The spec and its reasons are in `ideas/agent-workflow-grill.md`.
 
 ## Rules for you
 
-- **Read reports, not files.** Searching goes to `Explore` (Haiku). Diffs go to the
-  reviewers. Read code yourself only to settle a question a report left open, and
-  then only the lines at issue.
+- **Read reports, not files.** Searching goes to `Explore` (the mechanical tier). Diffs
+  go to the reviewers. Read code yourself only to settle a question a report left
+  open, and then only the lines at issue.
 - **Short briefs.** A brief names the worktree, the plan file and the job. The plan
   file carries the detail, so the brief never repeats it.
 - **Never build or fix yourself**, not even a one-liner: send it to the builder.
 - **Subagents cannot ask Jack.** Anything that needs him comes back to you, and you
-  ask with the ask-user tool.
+  ask with the harness's ask-user tool.
 - **Nothing merges without Jack's approval** at step 8, given in this session in his
   own words. Not a reviewer's, not a subagent's, not an earlier approval of another
   change or of the plan.
@@ -68,22 +68,26 @@ done looks like. No file.
 
 ## 4. Build
 
-Spawn the `builder` in the background, named `builder-<topic>` so you can resume it:
+Spawn the `builder` in the background, named `builder-<topic>` where the harness names
+its subagents, so you can resume it:
 
 > Worktree `/home/jackt/dev/pset-<topic>`. Build `ideas/<topic>.md`. (or: the quick brief)
 
 When it returns `stuck`, answer from the plan if you can. If it is Jack's decision, ask
-him. Then resume the same builder with `SendMessage` to `builder-<topic>`. Never
-replace a stuck builder with a fresh one.
+him. Then resume the same builder through the harness's own resume mechanism (in
+Claude Code, by its name, `builder-<topic>`; in ZCode, by agent id). Never replace a
+stuck builder with a fresh one. Where the harness has no way to resume one, spawn a
+fresh builder on the same plan file with the answer in its brief: the plan carries the
+whole job.
 
 ## 5. Check and review
 
-1. `checker` on the worktree. If it fails, send the failures to `builder-<topic>` and
+1. `checker` on the worktree. If it fails, send the failures back to the builder and
    check again.
 2. `reviewer` with the worktree and the plan (or brief).
-3. If it says `escalate: yes`, `opus-reviewer` with the worktree, the plan and the
+3. If it says `escalate: yes`, `second-reviewer` with the worktree, the plan and the
    first review's findings and reason.
-4. If either says `fix first`, send the findings you agree with to `builder-<topic>`.
+4. If either says `fix first`, send the findings you agree with to the builder.
    Drop findings you judge wrong, and say which and why. After the fixes, `checker`
    again. Re-review only if a fix changed behavior, at most two rounds; after that,
    ask Jack.
@@ -95,8 +99,8 @@ replace a stuck builder with a fresh one.
 2. `shooter` with the worktree and those states.
 3. Look at the pictures yourself, against `design/design-system.md` and the screen's
    spec in `design/`, in both themes. This is the one place you read heavily: design
-   judgment is why you are Opus.
-4. Problems go to `builder-<topic>`, then the shooter again for the states they touch.
+   judgment is why you are the judge tier.
+4. Problems go to the builder, then the shooter again for the states they touch.
 5. Send Jack the key shots (Paper and Night) with your verdict in a line.
 
 ## 7. Open the pull request
@@ -132,7 +136,7 @@ shots from step 6, the PR link, and anything not verified. Ask with the ask-user
 - **Change something** (he says what in the free text)
 - **Park it** (leave the branch, the PR and the worktree; stop the app)
 
-On **change something**: send it to `builder-<topic>` (or, if it changes what the
+On **change something**: send it to the builder (or, if it changes what the
 change is, amend the plan first and show him). Then `checker`, the `reviewer` again
 if behavior changed, the `shooter` for touched UI states, and `lander` in open mode
 to push. Restart the app with `try.sh start` and come back to this step. Loop until he
