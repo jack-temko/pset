@@ -6,8 +6,15 @@ import { Input } from '@/components/input';
 import { cn } from '@/lib/utils';
 import { filterEntries, groupsOf, type GalleryEntry } from './registry';
 
+/** The galleries, for the links at the foot of each index. */
+const GALLERIES = [
+  { label: 'Components', to: '/components' },
+  { label: 'Views', to: '/views' },
+  { label: 'Errors', to: '/errors' },
+];
+
 /**
- * The frame both gallery routes share: a left index and one entry's page.
+ * The frame the gallery routes share: a left index and one entry's page.
  *
  * A filled screen, so the index and the page each scroll on their own and
  * the top bar stays put. The index is the workspace rail's shape (full
@@ -141,6 +148,14 @@ export function GalleryShell({
               </p>
             )}
           </nav>
+          {/* The other galleries, so each is one click from the rest. */}
+          <div className="flex gap-4 border-t px-4 py-3 text-xs text-muted-foreground">
+            {GALLERIES.filter((g) => g.to !== basePath).map((g) => (
+              <Link key={g.to} to={g.to} className="hover:text-foreground">
+                {g.label}
+              </Link>
+            ))}
+          </div>
         </aside>
 
         <div ref={page} className="min-w-0 flex-1 overflow-y-auto">

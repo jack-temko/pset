@@ -9,6 +9,7 @@ import '@/api/memory';
 import { Components } from '@/pages/components';
 import { Home } from '@/pages/home';
 import { Settings } from '@/pages/settings';
+import { Errors as ErrorCatalog } from '@/pages/errors';
 import { Views } from '@/pages/views';
 import { Workspace } from '@/pages/workspace';
 
@@ -33,6 +34,7 @@ export default function App() {
         {/* Not in the nav: where you look at what a change did. */}
         <Route path="/components/:section?" element={<Components />} />
         <Route path="/views/:view?" element={<Views />} />
+        <Route path="/errors/:section?" element={<ErrorCatalog />} />
       </Routes>
     </BrowserRouter>
   );

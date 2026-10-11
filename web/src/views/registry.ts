@@ -28,7 +28,7 @@ const ALL: ViewEntry[] = [
     id: 'error-notice',
     title: 'Error notice',
     group: 'Workspace',
-    note: 'Mockups for the error catalog: inline, banner, toast with dialog, the field line and Settings errors.',
+    note: 'How PSet says something went wrong, in each place it says it: inline, on the shelf, as the screen banner, as a field line, and in Settings’ list of kept errors.',
     scenarios: errorNotice,
     spec: () => import('./error-notice/spec.md?raw').then((m) => m.default),
     Stage: ErrorNoticeStage,

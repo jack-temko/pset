@@ -16,3 +16,23 @@ export function detailsText(view: View): string {
     .filter(Boolean)
     .join('\n');
 }
+
+/** When an error happened, as the errors list says it: the time today, "Yesterday
+ *  23:05", else the date and time. */
+export function incidentTime(at: string, now = new Date()): string {
+  const d = new Date(at);
+  if (Number.isNaN(d.getTime())) return at;
+  const time = d.toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const days = Math.round(
+    (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
+      new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) /
+      86_400_000,
+  );
+  if (days === 0) return `Today ${time}`;
+  if (days === 1) return `Yesterday ${time}`;
+  return `${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ${time}`;
+}

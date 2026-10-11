@@ -37,6 +37,7 @@ import { applyTheme, getTheme, type Theme } from '@/lib/theme';
 import { cn, plural } from '@/lib/utils';
 import { ConfirmPopover } from '@/components/confirm';
 import { useClearActivity } from '@/api/activity';
+import { Errors } from './errors';
 import { Updates } from './updates';
 
 /**
@@ -698,6 +699,10 @@ export function Settings() {
 
         <Section title="Health">
           <Health />
+        </Section>
+
+        <Section id="errors" title="Errors">
+          <Errors />
         </Section>
 
         <Section id="updates" title="Updates">

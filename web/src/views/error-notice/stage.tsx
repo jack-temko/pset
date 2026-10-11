@@ -1,26 +1,27 @@
+import { ErrorActionsContext } from '@/api/error-actions';
 import type { Harness } from '../types';
-import {
-  Banner,
-  FieldError,
-  Inline,
-  Settings,
-  ToastAndDialog,
-} from './mockups';
+import { Banner, FieldLine, Inline, Kept, Row } from './states';
 
-const STATES = {
-  inline: Inline,
-  banner: Banner,
-  toast: ToastAndDialog,
-  field: FieldError,
-  settings: Settings,
-};
-
-/** One error-notice mockup, chosen by the scenario's `state`. */
+/** One error-notice state, chosen by the scenario's `state`. Where an error's
+ *  button would leave the view, the handoff is logged and nothing moves. */
 export function ErrorNoticeStage({ harness }: { harness: Harness }) {
-  const State = STATES[harness.props.state as keyof typeof STATES];
+  const state = harness.props.state as string;
   return (
-    <div className="p-card">
-      <State />
-    </div>
+    <ErrorActionsContext
+      value={(action) => {
+        harness.handoff({
+          to: action === 'open_settings' ? 'Settings' : 'Elsewhere',
+          what: action,
+        });
+      }}
+    >
+      <div className="p-card">
+        {state === 'inline' && <Inline harness={harness} />}
+        {state === 'row' && <Row harness={harness} />}
+        {state === 'banner' && <Banner harness={harness} />}
+        {state === 'field' && <FieldLine />}
+        {state === 'settings' && <Kept />}
+      </div>
+    </ErrorActionsContext>
   );
 }
