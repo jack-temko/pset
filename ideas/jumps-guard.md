@@ -38,7 +38,9 @@ is Jack's own books and the repo is public, and a real import needs a key and Ol
   layers share a grid cell and carry `data-variant`; the probe records, per box at the
   swap, both variants and the heights of each layer's top-level blocks. The check fails
   on a variant mismatch, a block more than 8px off (compared only when both layers have
-  the same number of blocks), or a total more than 2px off; on a box whose content
+  the same number of blocks), content that reaches more than 2px further or less far (the
+  descendants' extent, not the box, whatever the block counts), or one of the first eight
+  shared blocks starting more than 8px away; on a box whose content
   variant changes after its reveal; and on a box revealed twice in one navigation.
   `web/src/variants.ts` (loading-screens) lists each view's variants; the fixture holds
   one of each and `scenarios.mjs` opens each, tagged `variant: "<view>/<name>"`;
