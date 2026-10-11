@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/doc"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/pdf"
 )
 
@@ -50,13 +50,13 @@ func padRect(r pdf.Rect) pdf.Rect {
 func (s *Service) Figure(ctx context.Context, questionID string, n int) ([]byte, error) {
 	q, err := getQuestion(ctx, s.c.DB, questionID)
 	if errors.Is(err, errNotFound) {
-		return nil, httpx.NotFound("question")
+		return nil, errs.Gone.New("thing", "question")
 	}
 	if err != nil {
 		return nil, err
 	}
 	if q.Page == nil || n < 0 || n >= len(q.FigRect) {
-		return nil, httpx.NotFound("figure")
+		return nil, errs.Gone.New("thing", "figure")
 	}
 	return s.crop(ctx, q.BookID, q.FigRect[n].on(q), q.FigRect[n].Rect, cropWidth)
 }
@@ -81,7 +81,7 @@ func (s *Service) Worksheet(ctx context.Context, homeworkID string) ([]byte, err
 		return nil, err
 	}
 	if len(d.Questions) == 0 {
-		return nil, httpx.Errorf(httpx.CodeInvalid, "Add a question before printing the worksheet.")
+		return nil, emptyWorksheet.New()
 	}
 	book, err := s.c.Library.Book(ctx, d.Homework.BookID)
 	if err != nil {

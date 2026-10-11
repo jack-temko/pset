@@ -5,16 +5,19 @@ what is happening, and the controls for exactly that state. A `BoxRow`
 with a `CoverSwatch` leading, `BookStatus` as the description, and the
 buttons trailing.
 
-| state     | line                                         | controls                |
-| --------- | -------------------------------------------- | ----------------------- |
-| queued    | Queued                                       | Cancel                  |
-| preparing | the phase, its count and a bar, or a spinner | Stop                    |
-| failed    | the engine's own sentence                    | **Try again** · Dismiss |
+| state     | line                                         | controls             |
+| --------- | -------------------------------------------- | -------------------- |
+| queued    | Queued                                       | Cancel               |
+| preparing | the phase, its count and a bar, or a spinner | Stop                 |
+| failed    | the error notice, in the row's place         | its action · Dismiss |
 
 - **Stopping leaves a failed row** rather than removing it, so Try again
   is the undo and there is one shape for "not going to finish", not two.
-- **Only Try again is outlined**: it is the one action here that starts
-  work. Everything else is a ghost button.
+- **A failed row is an ErrorNotice** under the title: what, why and fix
+  from the error catalog, with the one button the error asks for (Try
+  again, or Open Settings leading with Try again behind it) and Details.
+  Dismiss stays a ghost button above it.
+- **Only the notice's action is filled.** Everything else is a ghost button.
 - Rows live in **one Box above the shelf, which exists only while there
   is work.** Preparing first, then queued in order, then failed.
 

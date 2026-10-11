@@ -20,7 +20,7 @@ import (
 
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
@@ -34,7 +34,7 @@ var pages = []string{"Cover", "Contents", "Eigenvalues. An eigenvalue of T is a 
 
 func (library) Book(_ context.Context, id string) (Book, error) {
 	if id != "b1" {
-		return Book{}, httpx.NotFound("book")
+		return Book{}, errs.BookNotFound.New()
 	}
 	return Book{ID: "b1", Title: "Linear Algebra", PageCount: len(pages), Pages: pagenum.Single(2)}, nil
 }
@@ -257,20 +257,18 @@ func TestModelOutageFailsReadablyAndClearEmpties(t *testing.T) {
 	var turn Turn
 	e.do(t, "POST", "/api/books/b1/turns", Question{Question: "Hi"}, &turn)
 	got := e.wait(t, turn.ID, TurnFailed)
-	// A 400 is the settings' fault, and says so with its status.
-	if !strings.Contains(got.Reason, "turned the request down (HTTP 400)") || !strings.Contains(got.Reason, "Settings") {
-		t.Fatalf("reason %q", got.Reason)
+	// A 400 is the request the provider turned down: the turn failed, the
+	// cause is under it, and the incident is kept.
+	if got.Error == nil || got.Error.ID != "ask.turn_failed" || got.Error.Chain[len(got.Error.Chain)-1] != "model.rejected" ||
+		got.Error.Incident == "" || got.Error.Fix == "" {
+		t.Fatalf("error %+v", got.Error)
 	}
-	// ...which the page reads from the kind, not from those words.
-	if got.Failure != FailureSetup {
-		t.Fatalf("failure %q, want setup", got.Failure)
-	}
-	var er httpx.Error
+	var er errs.View
 	if code := e.do(t, "POST", "/api/books/b1/turns", Question{Question: "  "}, &er); code != 422 || er.Field != "question" {
 		t.Fatalf("blank: %d", code)
 	}
 	e.cfg.cfg.ChatModel = ""
-	if code := e.do(t, "POST", "/api/books/b1/turns", Question{Question: "Hi"}, &er); code != 422 || er.Code != httpx.CodeNotConfigured {
+	if code := e.do(t, "POST", "/api/books/b1/turns", Question{Question: "Hi"}, &er); code != 422 || er.ID != "key.missing" {
 		t.Fatalf("unconfigured: %d %+v", code, er)
 	}
 	e.do(t, "DELETE", "/api/books/b1/turns", nil, nil)
@@ -281,14 +279,15 @@ func TestModelOutageFailsReadablyAndClearEmpties(t *testing.T) {
 	}
 }
 
-func TestAnOutOfCreditAccountIsASetupFailure(t *testing.T) {
+func TestAnOutOfCreditAccountIsSaidAsTheCause(t *testing.T) {
 	e := newEnv(t)
 	e.llm.Script(llmtest.Reply{Status: 402, Text: `{"error":{"message":"insufficient credits"}}`})
 	var turn Turn
 	e.do(t, "POST", "/api/books/b1/turns", Question{Question: "Hi"}, &turn)
 	got := e.wait(t, turn.ID, TurnFailed)
-	if got.Reason != llm.NoCredit || got.Failure != FailureSetup {
-		t.Fatalf("reason %q failure %q", got.Reason, got.Failure)
+	if got.Error == nil || got.Error.What != "Couldn't answer that." || !strings.Contains(got.Error.Why, "out of credit") ||
+		got.Error.Chain[len(got.Error.Chain)-1] != "key.out_of_credit" {
+		t.Fatalf("error %+v", got.Error)
 	}
 }
 
@@ -308,13 +307,14 @@ func TestOldFailedTurnsGetTheirKind(t *testing.T) {
 		}
 	}
 	migs := Migrations()
-	if err := db.Migrate(ctx, d, migs[:2]); err != nil {
+	if err := db.Migrate(ctx, d, migs[:3]); err != nil {
 		t.Fatal(err)
 	}
 	for id, reason := range map[string]string{
-		"key":    llm.NoKey,
-		"credit": llm.NoCredit,
-		"refuse": llm.Refusal(401) + " Check the key in Settings, then ask again.",
+		"key":    "There's no OpenRouter key yet. Add yours in Settings, under Connections, then try again.",
+		"credit": "Your OpenRouter account is out of credit. Top it up at openrouter.ai, then try again.",
+		"refuse": "OpenRouter turned the request down (HTTP 401). Check the key in Settings, then ask again.",
+		"other":  "Something went wrong answering this. The details are in the log.",
 		"busy":   "OpenRouter didn't answer, or is busy right now. Ask again in a minute.",
 		"cut":    "The answer stopped partway: the connection to the model dropped. Asking again usually works.",
 	} {
@@ -325,17 +325,19 @@ func TestOldFailedTurnsGetTheirKind(t *testing.T) {
 	if err := db.Migrate(ctx, d, migs); err != nil {
 		t.Fatal(err)
 	}
-	for id, want := range map[string]Failure{"key": FailureSetup, "credit": FailureSetup, "refuse": FailureSetup, "busy": FailureUnavailable, "cut": FailureGeneration} {
-		var got Failure
-		if err := d.QueryRowContext(ctx, `SELECT failure FROM turns WHERE id = ?`, id).Scan(&got); err != nil || got != want {
-			t.Errorf("%s: failure %q (%v), want %q", id, got, err, want)
+	for id, want := range map[string]string{
+		"key": "key.missing", "credit": "key.out_of_credit", "refuse": "key.refused", "busy": "model.busy", "cut": "model.cut", "other": "ask.turn_failed",
+	} {
+		got, err := getTurn(ctx, d, id)
+		if err != nil || got.Error == nil || got.Error.ID != "ask.turn_failed" || got.Error.Chain[len(got.Error.Chain)-1] != want {
+			t.Errorf("%s: %+v (%v), want %s", id, got.Error, err, want)
 		}
 	}
 }
 
 func TestWhatAChipCarriesIsBoundedAndNotRepeatedInFull(t *testing.T) {
 	e := newEnv(t)
-	var er httpx.Error
+	var er errs.View
 	huge := About{Label: "3.A", Text: strings.Repeat("x", maxAbout+1)}
 	if code := e.do(t, "POST", "/api/books/b1/turns", Question{Question: "Why?", About: &huge}, &er); code != 422 || er.Field != "about" {
 		t.Fatalf("too long: %d %+v", code, er)

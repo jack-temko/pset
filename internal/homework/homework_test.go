@@ -28,7 +28,7 @@ import (
 	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
@@ -51,7 +51,7 @@ var pages = []string{
 
 func (library) Book(_ context.Context, id string) (Book, error) {
 	if id != "b1" {
-		return Book{}, httpx.NotFound("book")
+		return Book{}, errs.BookNotFound.New()
 	}
 	return Book{ID: "b1", Title: "Circuits", PageCount: len(pages), Pages: pagenum.Single(2),
 		Parts: []probnum.Part{{Number: "3", Title: "3 Methods of Analysis", Start: 2, End: 4}}}, nil
@@ -260,7 +260,7 @@ func (e *env) wait(t *testing.T, id string, st State) Question {
 		time.Sleep(10 * time.Millisecond)
 	}
 	q, _ := getQuestion(context.Background(), e.svc.c.DB, id)
-	t.Fatalf("question %s: %s (%s), want %s", id, q.State, q.Reason, st)
+	t.Fatalf("question %s: %s (%+v), want %s", id, q.State, q.Error, st)
 	return Question{}
 }
 
@@ -268,8 +268,8 @@ func (e *env) wait(t *testing.T, id string, st State) Question {
 
 func TestSetsCreateEditTurnInAndDue(t *testing.T) {
 	e := newEnv(t)
-	var er httpx.Error
-	if code := e.do(t, "POST", "/api/books/b1/homework", Input{Title: "  "}, &er); code != 422 || er.Field != "title" {
+	var er errs.View
+	if code := e.do(t, "POST", "/api/books/b1/homework", Input{Title: "  "}, &er); code != 422 || er.Field != "title" || er.ID != "homework.title_empty" {
 		t.Fatalf("blank title: %d %+v", code, er)
 	}
 	if code := e.do(t, "POST", "/api/books/b1/homework", Input{Title: "x", DueDate: "Friday"}, &er); code != 422 || er.Field != "dueDate" {
@@ -461,10 +461,10 @@ func TestNotFoundThenPinnedPageThenPastedText(t *testing.T) {
 	h := e.newSet(t)
 	qs := e.add(t, h.ID, Draft{Text: "3.99", InBook: true})
 	q := e.wait(t, qs[0].ID, StateFailed)
-	if q.Failure != FailureNotFound || !strings.Contains(q.Reason, "problem 3.99") {
-		t.Fatalf("reason %q", q.Reason)
+	if q.Error == nil || q.Error.ID != "homework.not_found_in_book" || !strings.Contains(q.Error.What, "problem 3.99") {
+		t.Fatalf("error %+v", q.Error)
 	}
-	var er httpx.Error
+	var er errs.View
 	bad := 99
 	if code := e.do(t, "POST", "/api/questions/"+q.ID+"/retry", Retry{Page: &bad}, &er); code != 422 || er.Field != "page" {
 		t.Fatalf("page out of range: %d %+v", code, er)
@@ -472,8 +472,8 @@ func TestNotFoundThenPinnedPageThenPastedText(t *testing.T) {
 	page := 3
 	e.do(t, "POST", "/api/questions/"+q.ID+"/retry", Retry{Page: &page}, nil)
 	q = e.wait(t, q.ID, StateFailed)
-	if q.Failure != FailureNotFound || !strings.Contains(q.Reason, "isn't on p. 1 either") {
-		t.Fatalf("pinned reason %q", q.Reason)
+	if q.Error == nil || q.Error.ID != "homework.not_found_in_book" || !strings.Contains(q.Error.Why, "p. 1") {
+		t.Fatalf("pinned error %+v", q.Error)
 	}
 	text := "Find the voltage across R2 when I = 3 A."
 	e.do(t, "POST", "/api/questions/"+q.ID+"/retry", Retry{Text: &text}, nil)
@@ -501,8 +501,8 @@ func TestIncompleteGuideFailsAfterOneMoreTry(t *testing.T) {
 	})
 	h := e.newSet(t)
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "Why?", InBook: false})[0].ID, StateFailed)
-	if q.Failure != FailureGeneration || !strings.Contains(q.Reason, "missing a part") || calls != 2 {
-		t.Fatalf("%q after %d calls", q.Reason, calls)
+	if !failedWith(q, "agent.no_answer") || calls != 2 {
+		t.Fatalf("%+v after %d calls", q.Error, calls)
 	}
 }
 
@@ -511,8 +511,8 @@ func TestNoChatModelFailsReadably(t *testing.T) {
 	e.cfg.cfg.ChatEndpoint = ""
 	h := e.newSet(t)
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "Why?", InBook: false})[0].ID, StateFailed)
-	if q.Failure != FailureSetup || !strings.Contains(q.Reason, "no OpenRouter key") {
-		t.Fatalf("%q", q.Reason)
+	if !failedWith(q, "key.missing") || q.Error.Action != "open_settings" {
+		t.Fatalf("%+v", q.Error)
 	}
 }
 
@@ -529,7 +529,7 @@ func TestRevealDoneReorderRemove(t *testing.T) {
 	if !got.Done || len(got.Revealed) != 1 {
 		t.Fatalf("%+v", got)
 	}
-	var er httpx.Error
+	var er errs.View
 	nope := "answer"
 	if code := e.do(t, "PATCH", "/api/questions/"+qs[1].ID, QuestionPatch{Reveal: &nope}, &er); code != 422 {
 		t.Fatalf("bad stage %d", code)
@@ -712,8 +712,8 @@ func TestAFoundQuestionIsWrittenAgainWithoutLookingAgain(t *testing.T) {
 	h := e.newSet(t)
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateFailed)
 	// A 500 is the provider being down, not the problem or the settings.
-	if q.Failure != FailureUnavailable || !strings.Contains(q.Reason, "Nothing is wrong with problem 3.36") {
-		t.Fatalf("%s: %q", q.Failure, q.Reason)
+	if !failedWith(q, "model.busy") || !strings.Contains(q.Error.What, "problem 3.36") {
+		t.Fatalf("%+v", q.Error)
 	}
 	if q.Page == nil || locates != 1 {
 		t.Fatalf("page %v after %d locates", q.Page, locates)
@@ -725,8 +725,8 @@ func TestAFoundQuestionIsWrittenAgainWithoutLookingAgain(t *testing.T) {
 		t.Fatalf("retry %d", code)
 	}
 	q = e.wait(t, q.ID, StateReady)
-	if q.Failure != "" || q.Reason != "" {
-		t.Fatalf("a ready question still carries %s %q", q.Failure, q.Reason)
+	if q.Error != nil {
+		t.Fatalf("a ready question still carries %+v", q.Error)
 	}
 	if locates != 1 || q.Page == nil || *q.Page != 3 {
 		t.Fatalf("looked again: %d locates, page %v", locates, q.Page)
@@ -814,4 +814,11 @@ func TestPatchesOfDifferentFieldsDontUndoEachOther(t *testing.T) {
 			t.Fatalf("round %d: title %q, turned in %q: one patch undid the other", i, got.Homework.Title, got.Homework.TurnedInAt)
 		}
 	}
+}
+
+// failedWith says a failed question's error ends in the catalog entry id,
+// under the entry for the step that failed.
+func failedWith(q Question, id string) bool {
+	e := q.Error
+	return q.State == StateFailed && e != nil && len(e.Chain) > 1 && e.Chain[len(e.Chain)-1] == id
 }

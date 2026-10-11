@@ -144,6 +144,11 @@ export interface Call {
   cached?: number /* int */;
   cost?: number /* float64 */;
   error?: string;
+  /**
+   * ErrorID is the catalog id of why a failed call failed; Error is the
+   * text as the provider said it.
+   */
+  errorId?: string;
 }
 /**
  * BookUsage is what a whole book has cost: the total, a row for each

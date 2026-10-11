@@ -5,10 +5,11 @@ import (
 	"database/sql"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/jackt/pset/internal/db"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/jobs"
 )
 
@@ -80,12 +81,12 @@ func cleanNotes(lines []string) ([]string, error) {
 			continue
 		}
 		if len([]rune(l)) > maxNote {
-			return nil, httpx.Invalid("notes", "Keep each note under %d characters.", maxNote)
+			return nil, noteTooLong.New("max", strconv.Itoa(maxNote)).OnField("notes")
 		}
 		out = append(out, l)
 	}
 	if len(out) > maxNotes {
-		return nil, httpx.Invalid("notes", "Keep it to %d notes.", maxNotes)
+		return nil, tooManyNotes.New("max", strconv.Itoa(maxNotes)).OnField("notes")
 	}
 	return out, nil
 }
@@ -105,14 +106,14 @@ func (s *Service) setNotes(ctx context.Context, q row, lines []string) (Question
 	case StatePending, StateLocating, StateLocated, StateReading, StateUnwritten:
 		// Nothing written from the old notes yet.
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET notes = ?, updated_at = ? WHERE id = ?`, mustJSON(runLists(notes)), db.Now(), q.ID); err != nil {
-			return Question{}, err
+			return Question{}, errs.Database.Wrap(err)
 		}
 		return s.publishQuestion(ctx, q.ID)
 	}
 	if q.Page == nil && q.InBook {
 		// Failed before it was found: the notes wait for the find.
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET notes = ?, updated_at = ? WHERE id = ?`, mustJSON(runLists(notes)), db.Now(), q.ID); err != nil {
-			return Question{}, err
+			return Question{}, errs.Database.Wrap(err)
 		}
 		return s.publishQuestion(ctx, q.ID)
 	}
@@ -129,8 +130,8 @@ func (s *Service) rewrite(ctx context.Context, q row, next jobs.Spec, set string
 	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		args := append(args, StateLocated, db.Now(), q.ID)
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET `+set+`, hint = '[]', walkthrough = '[]', rounds = '[]',
-			state = ?, failure = '', reason = '', activity = '', updated_at = ? WHERE id = ?`, args...); err != nil {
-			return err
+			state = ?, error = '', activity = '', updated_at = ? WHERE id = ?`, args...); err != nil {
+			return errs.Database.Wrap(err)
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, next)
 		return err

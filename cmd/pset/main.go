@@ -24,6 +24,8 @@ import (
 	"github.com/jackt/pset/internal/ask"
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errlog"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/events"
 	"github.com/jackt/pset/internal/homework"
 	"github.com/jackt/pset/internal/httpx"
@@ -63,7 +65,8 @@ func main() {
 		level = slog.LevelDebug
 	}
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
-	httpx.Logger = log
+	// Reported errors (internal/errs) log through the default logger.
+	slog.SetDefault(log)
 
 	dir, err := resolveDataDir(*dataDir)
 	if err != nil {
@@ -103,6 +106,7 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	// Every feature's migrations, in dependency order: a table's parent
 	// before the table.
 	migrations := concat(
+		errlog.Migrations(),
 		jobs.Migrations(),
 		settings.Migrations(),
 		usage.Migrations(),
@@ -132,6 +136,10 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	if err := usage.Sweep(ctx, d); err != nil {
 		log.Warn("usage: sweep", "err", err)
 	}
+
+	// Every error a student is shown is kept here, for Settings to list.
+	failures := errlog.New(d)
+	errs.SetRecorder(failures)
 
 	bus := events.NewBus()
 	queue := jobs.New(d, log)
@@ -177,6 +185,7 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	})
 
 	mux := http.NewServeMux()
+	failures.Routes(mux)
 	cfg.Routes(mux)
 	books.Routes(mux)
 	sets.Routes(mux)
@@ -266,15 +275,15 @@ func resolveDataDir(flagValue string) (string, error) {
 	if dir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return "", err
+			return "", errs.Disk.Wrap(err)
 		}
 		dir = platform.DataDir(platform.Current, home, os.Getenv("XDG_DATA_HOME"))
 	}
 	dir, err := filepath.Abs(dir)
 	if err != nil {
-		return "", err
+		return "", errs.Data.Wrap(err)
 	}
-	return dir, os.MkdirAll(dir, 0o700)
+	return dir, errs.Disk.Of(os.MkdirAll(dir, 0o700))
 }
 
 // homeworkLibrary hands homework the book facts it asks for, in its own

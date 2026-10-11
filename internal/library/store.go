@@ -7,9 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"regexp"
+	"strings"
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/probnum"
 )
@@ -112,10 +115,77 @@ CREATE TRIGGER pages_au AFTER UPDATE OF text ON pages BEGIN
 END;
 CREATE TRIGGER pages_ad AFTER DELETE ON pages BEGIN
 	DELETE FROM pages_fts WHERE pages_fts MATCH 'book_id:"' || replace(old.book_id, '"', '""') || '" AND number:"' || old.number || '"';
-END;`}}
+END;`},
+		// A failed book keeps its error as a catalog entry, not as a
+		// sentence: the page draws the entry's words. Books that failed
+		// before get the entries their sentence named, and the old column
+		// goes.
+		{Name: "library/6", SQL: `ALTER TABLE books ADD COLUMN error TEXT NOT NULL DEFAULT ''`, Do: reasonsToErrors},
+		{Name: "library/7", SQL: `ALTER TABLE books DROP COLUMN reason`},
+	}
 }
 
 var errNotFound = errors.New("not found")
+
+// pagesUnreadOld matches the sentence a scan that couldn't be read gave.
+var pagesUnreadOld = regexp.MustCompile(`^(.+) couldn't be read \((.+)\)\.`)
+
+// reasonsToErrors is library/6: the entries a failed book's sentence named.
+func reasonsToErrors(ctx context.Context, tx *sql.Tx) error {
+	rows, err := tx.QueryContext(ctx, `SELECT id, title, reason FROM books WHERE state = 'failed'`)
+	if err != nil {
+		return errs.Database.Wrap(err)
+	}
+	type old struct{ id, title, reason string }
+	var failed []old
+	for rows.Next() {
+		var o old
+		if err := rows.Scan(&o.id, &o.title, &o.reason); err != nil {
+			cleanup.Close(rows)
+			return errs.Database.Of(err)
+		}
+		failed = append(failed, o)
+	}
+	if err := rows.Err(); err != nil {
+		return errs.Database.Wrap(err)
+	}
+	cleanup.Close(rows)
+	for _, o := range failed {
+		st := errs.Stored{Chain: []string{"import.failed"}, Params: map[string]string{"title": o.title}}
+		cause := func(ids ...string) { st.Chain = append(st.Chain, ids...) }
+		switch r := o.reason; {
+		case r == "Stopped.":
+			st.Chain = []string{"import.stopped"}
+		case r == "Cancelled before it started.":
+			st.Chain = []string{"import.cancelled"}
+		case strings.Contains(r, "no OpenRouter key yet"):
+			cause("key.missing")
+		case strings.Contains(r, "out of credit"):
+			cause("key.out_of_credit")
+		case strings.Contains(r, "turned the request down"):
+			cause("key.refused")
+		case strings.Contains(r, "didn't answer while PSet read the book's contents"):
+			cause("model.busy")
+		case strings.Contains(r, "This PDF has no pages"):
+			cause("import.pdf_empty")
+		case strings.Contains(r, "This PDF can't be read"):
+			cause("import.pdf_unreadable")
+		case strings.Contains(r, "Ollama stopped answering"):
+			cause("embed.failed")
+		case strings.Contains(r, "reach Ollama"):
+			cause("library.no_ollama")
+		default:
+			if m := pagesUnreadOld.FindStringSubmatch(r); m != nil {
+				cause("import.pages_unread")
+				st.Params["count"], st.Params["list"] = m[1], m[2]
+			}
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE books SET error = ? WHERE id = ?`, st.Marshal(), o.id); err != nil {
+			return errs.Database.Wrap(err)
+		}
+	}
+	return nil
+}
 
 // row is a book as stored, with the columns the wire doesn't carry.
 type row struct {
@@ -132,16 +202,19 @@ type row struct {
 // Pages is the book's printed numbering.
 func (r row) Pages() pagenum.Map { return pagenum.New(r.PageRuns) }
 
-const bookCols = `id, sha256, title, author, page_count, page_width, page_height, page_offset, page_runs, pages_edited, problem_style, kind, edited, state, phase, done, total, reason, created_at, updated_at, cover`
+const bookCols = `id, sha256, title, author, page_count, page_width, page_height, page_offset, page_runs, pages_edited, problem_style, kind, edited, state, phase, done, total, error, created_at, updated_at, cover`
 
 func scanBook(s interface{ Scan(...any) error }) (row, error) {
 	var r row
 	var done, total sql.NullInt64
-	var runs, style string
+	var runs, style, failed string
 	err := s.Scan(&r.ID, &r.SHA256, &r.Title, &r.Author, &r.PageCount, &r.Width, &r.Height,
-		&r.Offset, &runs, &r.PagesEdited, &style, &r.Kind, &r.Edited, &r.State.Kind, &r.State.Phase, &done, &total, &r.State.Reason, &r.AddedAt, &r.UpdatedAt, &r.Cover)
+		&r.Offset, &runs, &r.PagesEdited, &style, &r.Kind, &r.Edited, &r.State.Kind, &r.State.Phase, &done, &total, &failed, &r.AddedAt, &r.UpdatedAt, &r.Cover)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
+	}
+	if v, ok := errs.ParseStored(failed); ok {
+		r.State.Error = &v
 	}
 	if done.Valid {
 		n := int(done.Int64)
@@ -190,7 +263,7 @@ func listBooks(ctx context.Context, q queryer) ([]Book, error) {
 		}
 		out = append(out, r.Book)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 type queryer interface {
@@ -207,8 +280,12 @@ func setState(ctx context.Context, q queryer, id string, st BookState) error {
 	if st.Total != nil {
 		total = *st.Total
 	}
-	_, err := q.ExecContext(ctx, `UPDATE books SET state = ?, phase = ?, done = ?, total = ?, reason = ?, updated_at = ? WHERE id = ?`,
-		st.Kind, st.Phase, done, total, st.Reason, db.Now(), id)
+	stored := ""
+	if st.Error != nil {
+		stored = st.Error.Stored().Marshal()
+	}
+	_, err := q.ExecContext(ctx, `UPDATE books SET state = ?, phase = ?, done = ?, total = ?, error = ?, updated_at = ? WHERE id = ?`,
+		st.Kind, st.Phase, done, total, stored, db.Now(), id)
 	return err
 }
 
@@ -236,11 +313,11 @@ func loadPages(ctx context.Context, q queryer, bookID string) ([]storedPage, err
 	for rows.Next() {
 		var p storedPage
 		if err := rows.Scan(&p.Number, &p.Text, &p.Status); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		out = append(out, p)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 // settledPages are the pages already read successfully: a resumed read
@@ -255,11 +332,11 @@ func settledPages(ctx context.Context, q queryer, bookID string) (map[int]bool, 
 	for rows.Next() {
 		var n int
 		if err := rows.Scan(&n); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		out[n] = true
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 // section is one stored contents entry.
@@ -273,12 +350,12 @@ type section struct {
 func saveSections(ctx context.Context, d *sql.DB, bookID string, secs []section) error {
 	return db.Tx(ctx, d, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM sections WHERE book_id = ?`, bookID); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		for i, s := range secs {
 			if _, err := tx.ExecContext(ctx, `INSERT INTO sections (book_id, ord, level, title, start_page, end_page) VALUES (?, ?, ?, ?, ?, ?)`,
 				bookID, i, s.Level, s.Title, s.StartPage, s.EndPage); err != nil {
-				return err
+				return errs.Database.Wrap(err)
 			}
 		}
 		return nil
@@ -295,11 +372,11 @@ func loadSections(ctx context.Context, q queryer, bookID string) ([]section, err
 	for rows.Next() {
 		var s section
 		if err := rows.Scan(&s.Level, &s.Title, &s.StartPage, &s.EndPage); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		out = append(out, s)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 func saveEmbedding(ctx context.Context, q queryer, bookID string, n int, model string, v []float32) error {
@@ -324,11 +401,11 @@ func embeddedPages(ctx context.Context, q queryer, bookID, model string) (map[in
 	for rows.Next() {
 		var n int
 		if err := rows.Scan(&n); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		out[n] = true
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 type vectorRow struct {
@@ -351,12 +428,12 @@ func vectors(ctx context.Context, q queryer, bookID, model string) ([]vectorRow,
 		var r vectorRow
 		var blob []byte
 		if err := rows.Scan(&r.Number, &blob); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		r.Vector = decodeVector(blob)
 		out = append(out, r)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 func encodeVector(v []float32) []byte {
@@ -401,7 +478,7 @@ func searchFTS(ctx context.Context, q queryer, bookID, query string, limit int) 
 			var n int
 			if err := rows.Scan(&n); err != nil {
 				cleanup.Close(rows)
-				return nil, err
+				return nil, errs.Database.Of(err)
 			}
 			if !seen[n] {
 				seen[n] = true
@@ -410,7 +487,7 @@ func searchFTS(ctx context.Context, q queryer, bookID, query string, limit int) 
 		}
 		if err := rows.Err(); err != nil {
 			cleanup.Close(rows)
-			return nil, err
+			return nil, errs.Database.Of(err)
 		}
 		cleanup.Close(rows)
 	}
@@ -424,5 +501,5 @@ func pageText(ctx context.Context, q queryer, bookID string, n int) (string, err
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", nil
 	}
-	return t, err
+	return t, errs.Database.Of(err)
 }

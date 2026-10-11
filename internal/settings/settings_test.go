@@ -14,7 +14,7 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/testx"
 )
@@ -139,11 +139,11 @@ func TestAKeyForAnotherEndpointIsntReady(t *testing.T) {
 func TestFailedSaveWritesNothing(t *testing.T) {
 	s := newServer(t)
 	s.dial.chatErr = &llm.CallError{Status: 401, Body: "unauthorized"}
-	var e httpx.Error
+	var e errs.View
 	if code := s.do(t, "PUT", "/api/settings", goodKey, &e); code != 422 {
 		t.Fatalf("status %d", code)
 	}
-	if e.Code != httpx.CodeBadKey || e.Field != "apiKey" {
+	if e.ID != "settings.test_failed" || e.Chain[1] != "key.refused" || e.Field != "apiKey" || e.Fix == "" {
 		t.Fatalf("error %+v", e)
 	}
 	var got Settings
@@ -172,23 +172,23 @@ func TestErrors(t *testing.T) {
 		name  string
 		key   string
 		err   error
-		code  httpx.Code
-		field string
+		id    string
+		cause string
 	}{
-		{"no key", "  ", nil, httpx.CodeInvalid, "apiKey"},
-		{"refused key", "k", &llm.CallError{Status: 403}, httpx.CodeBadKey, "apiKey"},
-		{"unknown model", "k", &llm.CallError{Status: 400, Body: `{"error":"Model not found"}`}, httpx.CodeBadModel, ""},
-		{"server error", "k", &llm.CallError{Status: 500}, httpx.CodeUnreachable, ""},
-		{"timeout", "k", context.DeadlineExceeded, httpx.CodeUnreachable, ""},
+		{"no key", "  ", nil, "settings.key_empty", ""},
+		{"refused key", "k", &llm.CallError{Status: 403}, "settings.test_failed", "key.refused"},
+		{"unknown model", "k", &llm.CallError{Status: 400, Body: `{"error":"Model not found"}`}, "settings.test_failed", "model.unknown"},
+		{"server error", "k", &llm.CallError{Status: 500}, "settings.test_failed", "model.busy"},
+		{"timeout", "k", context.DeadlineExceeded, "settings.test_failed", "model.unreachable"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			s := newServer(t)
 			s.dial.chatErr = c.err
-			var e httpx.Error
+			var e errs.View
 			s.do(t, "POST", "/api/settings/test", KeyInput{APIKey: c.key}, &e)
-			if e.Code != c.code || e.Field != c.field {
-				t.Fatalf("got %s on %q, want %s on %q (%s)", e.Code, e.Field, c.code, c.field, e.Message)
+			if e.ID != c.id || e.Field != "apiKey" || (c.cause != "" && e.Chain[len(e.Chain)-1] != c.cause) {
+				t.Fatalf("got %v on %q, want %s on the key (cause %q)", e.Chain, e.Field, c.id, c.cause)
 			}
 		})
 	}
@@ -219,7 +219,6 @@ func TestHealthAndFix(t *testing.T) {
 	if code := s.do(t, "POST", "/api/health/data_dir/fix", nil, &fixed); code != 200 || !fixed.OK {
 		t.Fatalf("fix: %d %+v", code, fixed)
 	}
-	var e httpx.Error
 	s.svc.c.Migrations = append(s.svc.c.Migrations, db.Migration{Name: "settings/99", SQL: `CREATE TABLE extra (x)`})
 	s.do(t, "GET", "/api/health", nil, &h)
 	if h.Checks[1].OK || !h.Checks[1].Fixable {
@@ -228,11 +227,12 @@ func TestHealthAndFix(t *testing.T) {
 	if code := s.do(t, "POST", "/api/health/database/fix", nil, &fixed); code != 200 || !fixed.OK {
 		t.Fatalf("database fix: %d %+v", code, fixed)
 	}
-	if code := s.do(t, "POST", "/api/health/poppler/fix", nil, &e); code != 422 {
-		t.Fatalf("unfixable fix: %d", code)
+	var e errs.View
+	if code := s.do(t, "POST", "/api/health/poppler/fix", nil, &e); code != 422 || e.ID != "settings.not_fixable" {
+		t.Fatalf("unfixable fix: %d %+v", code, e)
 	}
-	if code := s.do(t, "POST", "/api/health/nope/fix", nil, &e); code != 404 {
-		t.Fatalf("unknown check: %d", code)
+	if code := s.do(t, "POST", "/api/health/nope/fix", nil, &e); code != 404 || e.ID != "request.gone" {
+		t.Fatalf("unknown check: %d %+v", code, e)
 	}
 }
 
@@ -306,8 +306,8 @@ func TestProfileNameIsTidiedAndSurvivesUntilReset(t *testing.T) {
 	if got.Profile.Name != "Jack T" || s.svc.Name(context.Background()) != "Jack T" {
 		t.Fatalf("%+v", got.Profile)
 	}
-	var e httpx.Error
-	if code := s.do(t, "PUT", "/api/settings/profile", Profile{Name: strings.Repeat("x", 61)}, &e); code != 422 || e.Field != "name" {
+	var e errs.View
+	if code := s.do(t, "PUT", "/api/settings/profile", Profile{Name: strings.Repeat("x", 61)}, &e); code != 422 || e.Field != "name" || e.ID != "settings.name_too_long" {
 		t.Fatalf("long name: %d %+v", code, e)
 	}
 	s.do(t, "POST", "/api/reset", nil, nil)
@@ -323,9 +323,9 @@ func TestOutOfCreditPointsAtTheKey(t *testing.T) {
 		{Status: 429, Body: `{"error":{"code":"1113","message":"Insufficient balance or no resource package. Please recharge."}}`},
 		{Status: 402, Body: `{"error":{"code":402,"message":"This request requires more credits"}}`},
 	} {
-		var he *httpx.Error
-		if !errors.As(explain(le), &he) || he.Field != "apiKey" || !strings.Contains(he.Message, "out of credit") {
-			t.Errorf("%d: got %+v, want out of credit on apiKey", le.Status, he)
+		v := errs.Resolve(explain(le))
+		if v.Field != "apiKey" || v.Chain[len(v.Chain)-1] != "key.out_of_credit" || !strings.Contains(v.Why, "out of credit") {
+			t.Errorf("%d: got %+v, want out of credit on apiKey", le.Status, v)
 		}
 	}
 }

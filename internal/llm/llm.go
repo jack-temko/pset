@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/errs"
 )
 
 // DefaultTimeout bounds a whole HTTP exchange, streaming included. It is
@@ -115,6 +116,11 @@ func (e *CallError) Error() string {
 	return fmt.Sprintf("model request failed (HTTP %d)", e.Status)
 }
 
+// cut is a stream that ended partway, in the catalog.
+func cut(format string, args ...any) error {
+	return modelCut.Wrap(fmt.Errorf(format, args...))
+}
+
 // Message is one chat turn. Content may be plain text or multimodal parts —
 // build it with TextMessage or the Content helpers, not by hand. A tool
 // round adds two shapes: an assistant turn carrying ToolCalls, and a
@@ -186,20 +192,25 @@ type ImageURL struct {
 
 // MarshalJSON writes plain text as a string and parts as a list, as the API takes both.
 func (c Content) MarshalJSON() ([]byte, error) {
+	var v any = c.text
 	if len(c.parts) > 0 {
-		return json.Marshal(c.parts)
+		v = c.parts
 	}
-	return json.Marshal(c.text)
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, errs.Data.Wrap(err)
+	}
+	return b, nil
 }
 
 // UnmarshalJSON reads either a string or a list of parts.
 func (c *Content) UnmarshalJSON(data []byte) error {
 	if bytes.HasPrefix(bytes.TrimSpace(data), []byte("[")) {
 		c.parts = nil
-		return json.Unmarshal(data, &c.parts)
+		return errs.Data.Of(json.Unmarshal(data, &c.parts))
 	}
 	c.parts = nil
-	return json.Unmarshal(data, &c.text)
+	return errs.Data.Of(json.Unmarshal(data, &c.text))
 }
 
 // Tool declares one function the model may call; Parameters is a JSON
@@ -674,7 +685,7 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 	}
 	for {
 		if ctx.Err() != nil {
-			return Reply{}, ctx.Err()
+			return Reply{}, fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		raw, ok := next()
 		if !ok {
@@ -713,11 +724,11 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
 			if ctx.Err() != nil {
 				// Stopped, or shutting down: the drop is ours.
-				return Reply{}, ctx.Err()
+				return Reply{}, fmt.Errorf("stopped: %w", ctx.Err())
 			}
 			if isCut(err) {
 				// The connection dropped mid-event.
-				return Reply{Content: full.String()}, fmt.Errorf("%w: %v", ErrStreamCut, err)
+				return Reply{Content: full.String()}, cut("%w: %v", ErrStreamCut, err)
 			}
 			return Reply{}, fmt.Errorf("decode stream chunk: %w", err)
 		}
@@ -759,13 +770,13 @@ func (c *Client) ChatStreamFull(ctx context.Context, req ChatRequest, delta func
 		}
 	}
 	if ctx.Err() != nil {
-		return Reply{}, ctx.Err()
+		return Reply{}, fmt.Errorf("stopped: %w", ctx.Err())
 	}
 	if err := scanner.Err(); err != nil {
-		return Reply{Content: full.String()}, fmt.Errorf("%w: %v", ErrStreamCut, err)
+		return Reply{Content: full.String()}, cut("%w: %v", ErrStreamCut, err)
 	}
 	if !finished {
-		return Reply{Content: full.String()}, fmt.Errorf("%w: the stream ended without finishing", ErrStreamCut)
+		return Reply{Content: full.String()}, cut("%w: the stream ended without finishing", ErrStreamCut)
 	}
 	keepHost(req.SessionID, host)
 	var rd json.RawMessage
@@ -927,7 +938,7 @@ func (c *Client) Embed(ctx context.Context, texts []string) ([][]float32, error)
 		} `json:"data"`
 	}
 	if err := c.post(ctx, c.embedBaseURL+"/embeddings", req, &payload); err != nil {
-		return nil, err
+		return nil, embedError(err)
 	}
 	if len(payload.Data) != len(texts) {
 		return nil, fmt.Errorf("embedding endpoint returned %d vectors for %d inputs", len(payload.Data), len(texts))
@@ -984,7 +995,7 @@ func (c *Client) doWithRetry(ctx context.Context, url string, body any) (*http.R
 		}
 		resp, err := c.http.Do(httpReq)
 		if err != nil {
-			return nil, fmt.Errorf("model request failed: %w", err)
+			return nil, ModelUnreachable.Wrap(fmt.Errorf("model request failed: %w", err))
 		}
 		if resp.StatusCode == http.StatusOK {
 			return resp, nil
@@ -995,7 +1006,7 @@ func (c *Client) doWithRetry(ctx context.Context, url string, body any) (*http.R
 			return nil, fmt.Errorf("read model error reply: %w", readErr)
 		}
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return nil, fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		if (resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500) && attempt < 2 && !OutOfCredit(resp.StatusCode, string(data)) {
 			delay := time.Duration(attempt+1) * 2 * time.Second
@@ -1006,7 +1017,7 @@ func (c *Client) doWithRetry(ctx context.Context, url string, body any) (*http.R
 			}
 			select {
 			case <-ctx.Done():
-				return nil, ctx.Err()
+				return nil, fmt.Errorf("stopped: %w", ctx.Err())
 			case <-time.After(delay):
 			}
 			continue
@@ -1014,23 +1025,6 @@ func (c *Client) doWithRetry(ctx context.Context, url string, body any) (*http.R
 		return nil, readErrorBody(resp.StatusCode, data)
 	}
 }
-
-// Trouble is what a failed call means for the person waiting on it.
-type Trouble string
-
-const (
-	// TroubleCut means the reply stopped partway. Asking again usually works.
-	TroubleCut Trouble = "cut"
-	// TroubleBusy means the provider didn't answer, is overloaded, or the
-	// network failed. Nothing to fix; try again later.
-	TroubleBusy Trouble = "busy"
-	// TroubleRejected means the provider refused the request (a bad key, an
-	// unknown model): something in the connection's settings is wrong.
-	TroubleRejected Trouble = "rejected"
-	// TroubleCredit means the account has no money left. Asking again can't
-	// help until it's topped up; switching provider in Settings can.
-	TroubleCredit Trouble = "credit"
-)
 
 // OutOfCredit reports whether a failed call means the account has run out
 // of money: OpenRouter answers 402. Other providers say it in words, some
@@ -1042,45 +1036,6 @@ func OutOfCredit(status int, body string) bool {
 	b := strings.ToLower(body)
 	return strings.Contains(b, "insufficient balance") || strings.Contains(b, "insufficient credits") ||
 		strings.Contains(b, "more credits")
-}
-
-// NoKey says it in words, wherever a model call would need a key that was
-// never saved. The one sentence: the web tells a setup failure by the
-// failure kind, not by this text, but it should still read the same
-// everywhere.
-const NoKey = "There's no OpenRouter key yet. Add yours in Settings, under Connections, then try again."
-
-// NoCredit says it in words, for the person waiting on the call.
-const NoCredit = "Your OpenRouter account is out of credit. Top it up at openrouter.ai, then try again."
-
-// Classify names a model call's failure, with the HTTP status when the
-// provider gave one.
-func Classify(err error) (Trouble, int) {
-	if errors.Is(err, ErrStreamCut) {
-		return TroubleCut, 0
-	}
-	var e *CallError
-	if errors.As(err, &e) {
-		if OutOfCredit(e.Status, e.Body) {
-			return TroubleCredit, e.Status
-		}
-		if e.Status == http.StatusTooManyRequests || e.Status >= 500 {
-			return TroubleBusy, e.Status
-		}
-		return TroubleRejected, e.Status
-	}
-	return TroubleBusy, 0
-}
-
-// Refusal says in words why a provider refused a request, by its status.
-func Refusal(status int) string {
-	switch status {
-	case http.StatusUnauthorized, http.StatusForbidden:
-		return fmt.Sprintf("OpenRouter turned the request down (HTTP %d): the API key in Settings may be wrong or expired.", status)
-	case http.StatusNotFound:
-		return "OpenRouter doesn't know the model PSet asked for (HTTP 404)."
-	}
-	return fmt.Sprintf("OpenRouter turned the request down (HTTP %d).", status)
 }
 
 // Unfence tolerates JSON wrapped in a code fence.

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -96,8 +95,8 @@ func TestChatStreamHTTPError(t *testing.T) {
 
 	client := testClient(t, srv.URL, "")
 	_, err := client.ChatStream(context.Background(), ChatRequest{Model: "m"}, nil)
-	llmErr, ok := err.(*CallError)
-	if !ok {
+	var llmErr *CallError
+	if !errors.As(err, &llmErr) {
 		t.Fatalf("err = %v (%T), want *CallError", err, err)
 	}
 	if llmErr.Status != http.StatusUnauthorized || !strings.Contains(llmErr.Body, "bad key") {
@@ -307,24 +306,6 @@ func TestChatOnceFullReturnsToolCalls(t *testing.T) {
 	}
 	if reply.Content != "" {
 		t.Errorf("content = %q, want empty", reply.Content)
-	}
-}
-
-func TestClassify(t *testing.T) {
-	for _, c := range []struct {
-		err    error
-		want   Trouble
-		status int
-	}{
-		{fmt.Errorf("round: %w", ErrStreamCut), TroubleCut, 0},
-		{&CallError{Status: 503}, TroubleBusy, 503},
-		{&CallError{Status: 429}, TroubleBusy, 429},
-		{fmt.Errorf("x: %w", &CallError{Status: 401}), TroubleRejected, 401},
-		{errors.New("dial tcp: connection refused"), TroubleBusy, 0},
-	} {
-		if got, st := Classify(c.err); got != c.want || st != c.status {
-			t.Errorf("%v: %s %d", c.err, got, st)
-		}
 	}
 }
 

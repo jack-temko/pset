@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/usage"
@@ -82,7 +83,7 @@ func (s *Service) runRank(ctx context.Context, j jobs.Job) error {
 			continue
 		}
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET difficulty = ? WHERE id = ?`, d, q.ID); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		changed = true
 	}
@@ -109,7 +110,7 @@ func (s *Service) rank(ctx context.Context, qs []Question) (map[string]int, erro
 			return scores, nil
 		}
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return nil, fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		slog.Warn("rank: model failed, using the heuristic", "err", err)
 	}

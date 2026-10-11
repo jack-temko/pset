@@ -8,6 +8,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -16,8 +17,8 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/events"
-	"github.com/jackt/pset/internal/httpx"
 )
 
 // Migrations is the memories table.
@@ -76,7 +77,7 @@ func scan(s interface{ Scan(...any) error }) (Memory, error) {
 func (s *Service) List(ctx context.Context, bookID string) ([]Memory, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT `+cols+` FROM memories WHERE book_id = ? ORDER BY created_at DESC, rowid DESC`, bookID)
 	if err != nil {
-		return nil, err
+		return nil, errs.Database.Wrap(err)
 	}
 	defer cleanup.Close(rows)
 	out := []Memory{}
@@ -87,7 +88,7 @@ func (s *Service) List(ctx context.Context, bookID string) ([]Memory, error) {
 		}
 		out = append(out, m)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 func (s *Service) get(ctx context.Context, id string) (Memory, error) {
@@ -134,9 +135,9 @@ func (s *Service) Save(ctx context.Context, bookID string, in Save) (Memory, Out
 	text := strings.Join(strings.Fields(in.Text), " ")
 	switch {
 	case text == "":
-		return Memory{}, "", httpx.Invalid("text", "Write what to remember.")
+		return Memory{}, "", textEmpty.New().OnField("text")
 	case utf8.RuneCountInString(text) > MaxText:
-		return Memory{}, "", httpx.Invalid("text", "Keep it to a sentence or two (%d characters at most).", MaxText)
+		return Memory{}, "", textTooLong.New("max", strconv.Itoa(MaxText)).OnField("text")
 	}
 	norm := normalize(text)
 
@@ -158,7 +159,7 @@ func (s *Service) Save(ctx context.Context, bookID string, in Save) (Memory, Out
 		return m, OutcomeDuplicate, err
 	}
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return Memory{}, "", err
+		return Memory{}, "", errs.Database.Wrap(err)
 	}
 
 	now := db.Now()
@@ -166,7 +167,7 @@ func (s *Service) Save(ctx context.Context, bookID string, in Save) (Memory, Out
 		// A replacement keeps its place in time as the newest thing known.
 		if _, err := s.db.ExecContext(ctx, `UPDATE memories SET text = ?, norm = ?, source = ?, created_at = ?, updated_at = ? WHERE id = ?`,
 			text, norm, in.Source, now, now, old.ID); err != nil {
-			return Memory{}, "", err
+			return Memory{}, "", errs.Database.Wrap(err)
 		}
 		m, err := s.get(ctx, old.ID)
 		if err == nil {
@@ -178,7 +179,7 @@ func (s *Service) Save(ctx context.Context, bookID string, in Save) (Memory, Out
 	if _, err := s.db.ExecContext(ctx, `INSERT INTO memories (id, book_id, kind, text, norm, source, created_at, updated_at)
 		VALUES (?, ?, 'preference', ?, ?, ?, ?, ?)`, id, bookID, text, norm, in.Source, now, now); err != nil {
 		// The one constraint an insert can break is the book.
-		return Memory{}, "", httpx.NotFound("book")
+		return Memory{}, "", errs.BookNotFound.New()
 	}
 	m, err := s.get(ctx, id)
 	if err == nil {
@@ -191,13 +192,13 @@ func (s *Service) Save(ctx context.Context, bookID string, in Save) (Memory, Out
 func (s *Service) Remove(ctx context.Context, id string) (Memory, error) {
 	m, err := s.get(ctx, id)
 	if errors.Is(err, errNotFound) {
-		return Memory{}, httpx.NotFound("memory")
+		return Memory{}, errs.Gone.New("thing", "memory")
 	}
 	if err != nil {
 		return Memory{}, err
 	}
 	if _, err := s.db.ExecContext(ctx, `DELETE FROM memories WHERE id = ?`, id); err != nil {
-		return Memory{}, err
+		return Memory{}, errs.Database.Wrap(err)
 	}
 	s.events.Publish(EventRemoved, Removed{ID: m.ID, BookID: m.BookID})
 	return m, nil
@@ -224,7 +225,7 @@ func (s *Service) resolve(ctx context.Context, bookID, ref string) (Memory, erro
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT `+cols+` FROM memories WHERE book_id = ? AND id LIKE ? || '%' LIMIT 2`, bookID, ref)
 	if err != nil {
-		return Memory{}, err
+		return Memory{}, errs.Database.Wrap(err)
 	}
 	defer cleanup.Close(rows)
 	var found []Memory

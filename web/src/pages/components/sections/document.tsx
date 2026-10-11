@@ -1,3 +1,4 @@
+import { ErrorNotice } from '@/components/error-notice';
 import { useState } from 'react';
 import {
   AnswersCard,
@@ -5,7 +6,6 @@ import {
   Callout,
   ConversationStart,
   DayDivider,
-  FailedTurn,
   GuidePara,
   MathDisplay,
   MathInline,
@@ -141,7 +141,6 @@ const READ_QUESTION: Question = {
   revealed: [],
   done: false,
   activity: '',
-  reason: '',
   updatedAt: '',
   rev: 1,
   reading: [
@@ -261,14 +260,32 @@ export const documentSections: ComponentEntry[] = [
         <Shelf label="failed">
           <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
             <Steps steps={['Searched ‘spectral theorem’ · 5 pages']} />
-            <FailedTurn reason="The model connection dropped." />
+            <ErrorNotice
+              error={{
+                id: 'ask.turn_failed',
+                what: "Couldn't answer that.",
+                why: 'The connection to the model dropped while it was writing.',
+                fix: 'Trying again usually works.',
+                action: 'retry',
+                scope: 'inline',
+                chain: ['ask.turn_failed', 'model.cut'],
+              }}
+              onRetry={() => {}}
+            />
           </div>
         </Shelf>
         <Shelf label="failed: setup">
           <div className="w-panel space-y-5 rounded-md border bg-rail p-card">
-            <FailedTurn
-              reason="There's no OpenRouter key yet. Add yours in Settings, under Connections, then try again."
-              onSetup={() => {}}
+            <ErrorNotice
+              error={{
+                id: 'ask.turn_failed',
+                what: "Couldn't answer that.",
+                why: 'PSet needs a key to read pages and write answers.',
+                fix: 'Add your key in Settings, under Connections.',
+                action: 'open_settings',
+                scope: 'inline',
+                chain: ['ask.turn_failed', 'key.missing'],
+              }}
             />
           </div>
         </Shelf>

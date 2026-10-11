@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"sync"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pagenum"
@@ -28,22 +28,6 @@ const maxRounds = 8
 
 // historyTurns is how much of the conversation the model sees.
 const historyTurns = 6
-
-// failure is a turn failure in words for the student, and its kind.
-type failure struct {
-	kind Failure
-	msg  string
-	err  error
-}
-
-func (f *failure) Error() string {
-	if f.err != nil {
-		return f.msg + ": " + f.err.Error()
-	}
-	return f.msg
-}
-
-func (f *failure) Unwrap() error { return f.err }
 
 // run is one turn in flight.
 type run struct {
@@ -78,10 +62,10 @@ func (s *Service) runTurn(ctx context.Context, j jobs.Job) error {
 	settle := context.WithoutCancel(ctx)
 	switch {
 	case err == nil:
-		r.finish(settle, TurnDone, "", "")
+		r.finish(settle, TurnDone, nil)
 		return nil
 	case jobs.Stopped(ctx):
-		r.finish(settle, TurnStopped, "", "")
+		r.finish(settle, TurnStopped, nil)
 		return err
 	case ctx.Err() != nil:
 		// Shutting down: the job runs again on the next start, from the
@@ -90,13 +74,8 @@ func (s *Service) runTurn(ctx context.Context, j jobs.Job) error {
 		s.announce(settle, t.ID)
 		return err
 	}
-	reason, kind := "Something went wrong answering this. The details are in the log.", FailureGeneration
-	var f *failure
-	if errors.As(err, &f) {
-		reason, kind = f.msg, f.kind
-	}
-	slog.Warn("turn failed", "turn", t.ID, "err", err)
-	r.finish(settle, TurnFailed, reason, kind)
+	v := errs.Report(settle, turnFailed.Wrap(err), errs.Where{Route: "job " + JobTurn, Book: t.BookID})
+	r.finish(settle, TurnFailed, &v)
 	return err
 }
 
@@ -111,7 +90,7 @@ func (r *run) loop(ctx context.Context) error {
 		return err
 	}
 	if !cfg.ChatReady() {
-		return &failure{kind: FailureSetup, msg: llm.NoKey}
+		return llm.KeyMissing.New()
 	}
 	r.llm, r.model = llm.Open(cfg), cfg.ChatModel
 	// The document's repairs are their own stage: the rounds are the
@@ -158,20 +137,9 @@ func (r *run) loop(ctx context.Context) error {
 	r.parser.Finish()
 	if err != nil {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return fmt.Errorf("stopped: %w", ctx.Err())
 		}
-		if errors.Is(err, agent.ErrNoAnswer) {
-			return &failure{kind: FailureGeneration, msg: "The model stopped without answering. Asking again usually works.", err: err}
-		}
-		switch trouble, status := llm.Classify(err); trouble {
-		case llm.TroubleCut:
-			return &failure{kind: FailureGeneration, msg: "The answer stopped partway: the connection to the model dropped. Asking again usually works.", err: err}
-		case llm.TroubleRejected:
-			return &failure{kind: FailureSetup, msg: llm.Refusal(status) + " Check the key in Settings, then ask again.", err: err}
-		case llm.TroubleCredit:
-			return &failure{kind: FailureSetup, msg: llm.NoCredit, err: err}
-		}
-		return &failure{kind: FailureUnavailable, msg: "OpenRouter didn't answer, or is busy right now. Ask again in a minute.", err: err}
+		return err
 	}
 	return nil
 }
@@ -269,7 +237,7 @@ func (r *run) remembered(ctx context.Context, id string) {
 	r.s.announce(ctx, r.t.ID)
 }
 
-func (r *run) finish(ctx context.Context, st TurnState, reason string, kind Failure) {
+func (r *run) finish(ctx context.Context, st TurnState, failed *errs.View) {
 	var answer []doc.Block
 	steps := []Step{}
 	if r.parser != nil {
@@ -285,8 +253,12 @@ func (r *run) finish(ctx context.Context, st TurnState, reason string, kind Fail
 	if answer == nil {
 		answer = []doc.Block{}
 	}
-	r.s.save(ctx, `UPDATE turns SET state = ?, reason = ?, failure = ?, answer = ?, steps = ?, updated_at = ? WHERE id = ?`,
-		st, reason, kind, mustJSON(answer), mustJSON(steps), db.Now(), r.t.ID)
+	stored := ""
+	if failed != nil {
+		stored = failed.Stored().Marshal()
+	}
+	r.s.save(ctx, `UPDATE turns SET state = ?, error = ?, answer = ?, steps = ?, updated_at = ? WHERE id = ?`,
+		st, stored, mustJSON(answer), mustJSON(steps), db.Now(), r.t.ID)
 	r.s.announce(ctx, r.t.ID)
 }
 

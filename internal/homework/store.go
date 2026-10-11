@@ -5,11 +5,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"regexp"
 	"strings"
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/pdf"
@@ -129,7 +131,136 @@ CREATE INDEX assignment_reads_book ON assignment_reads (book_id, created_at);`},
 ALTER TABLE questions ADD COLUMN failed_at TEXT NOT NULL DEFAULT ''`},
 		// A walkthrough no longer shows what it did with the book's memory.
 		{Name: "homework/17", SQL: `ALTER TABLE questions DROP COLUMN memory`},
+		// A failed question and a failed read keep their error as catalog
+		// entries, not as a kind and a sentence: the page draws the entry's
+		// words. Rows that failed before get the entries their sentence
+		// named, and the old columns go.
+		{Name: "homework/18", SQL: `ALTER TABLE questions ADD COLUMN error TEXT NOT NULL DEFAULT ''`, Do: sentencesToErrors},
+		{Name: "homework/19", SQL: `
+ALTER TABLE questions DROP COLUMN reason;
+ALTER TABLE questions DROP COLUMN failure`},
 	}
+}
+
+var (
+	oldProblem    = regexp.MustCompile(`problem \d+(?:\.\d+)*[A-Za-z]?`)
+	oldPinnedPage = regexp.MustCompile(`It isn't on (.+?) either`)
+	oldScope      = regexp.MustCompile(`Looked through (.+?) for `)
+	oldPageStatus = regexp.MustCompile(`That page answered (\d+)`)
+)
+
+// sentencesToErrors is homework/18: the entries a failed question's kind and
+// sentence named, and the same for a failed read's sentence.
+func sentencesToErrors(ctx context.Context, tx *sql.Tx) error {
+	rows, err := tx.QueryContext(ctx, `SELECT id, failure, reason FROM questions WHERE state = 'failed'`)
+	if err != nil {
+		return errs.Database.Wrap(err)
+	}
+	type old struct{ id, failure, reason string }
+	var failed []old
+	for rows.Next() {
+		var o old
+		if err := rows.Scan(&o.id, &o.failure, &o.reason); err != nil {
+			cleanup.Close(rows)
+			return errs.Database.Of(err)
+		}
+		failed = append(failed, o)
+	}
+	if err := rows.Err(); err != nil {
+		return errs.Database.Wrap(err)
+	}
+	cleanup.Close(rows)
+	for _, o := range failed {
+		name := "this question"
+		if m := oldProblem.FindString(o.reason); m != "" {
+			name = m
+		}
+		st := errs.Stored{Chain: []string{"homework.question_failed"}, Params: map[string]string{"step": "write the guide for", "name": name}}
+		switch r := o.reason; {
+		case o.failure == "not_found":
+			st.Chain = []string{"homework.not_found_in_book"}
+			st.Params["where"] = "the book"
+			if m := oldPinnedPage.FindStringSubmatch(r); m != nil {
+				st.Params["where"] = m[1]
+			} else if m := oldScope.FindStringSubmatch(r); m != nil {
+				st.Params["where"] = m[1]
+			}
+		case strings.Contains(r, "words in the boxes"):
+			st.Chain = []string{"homework.boxes_unreadable"}
+		case strings.Contains(r, "no OpenRouter key yet"):
+			st.Chain = append(st.Chain, "key.missing")
+		case strings.Contains(r, "out of credit"):
+			st.Chain = append(st.Chain, "key.out_of_credit")
+		case strings.Contains(r, "turned the request down"):
+			st.Chain = append(st.Chain, "key.refused")
+		case o.failure == "unavailable":
+			st.Chain = append(st.Chain, "model.busy")
+		case strings.Contains(r, "stopped without writing"):
+			st.Chain = append(st.Chain, "agent.no_answer")
+		case strings.Contains(r, "stopped partway"):
+			st.Chain = append(st.Chain, "model.cut")
+		case strings.Contains(r, "missing a part"):
+			st.Chain = append(st.Chain, "agent.no_answer")
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE questions SET error = ? WHERE id = ?`, st.Marshal(), o.id); err != nil {
+			return errs.Database.Wrap(err)
+		}
+	}
+
+	rows, err = tx.QueryContext(ctx, `SELECT id, error FROM assignment_reads WHERE state = 'failed' AND error != ''`)
+	if err != nil {
+		return errs.Database.Wrap(err)
+	}
+	var reads [][2]string
+	for rows.Next() {
+		var id, msg string
+		if err := rows.Scan(&id, &msg); err != nil {
+			cleanup.Close(rows)
+			return errs.Database.Of(err)
+		}
+		reads = append(reads, [2]string{id, msg})
+	}
+	if err := rows.Err(); err != nil {
+		return errs.Database.Wrap(err)
+	}
+	cleanup.Close(rows)
+	for _, r := range reads {
+		st := errs.Stored{Chain: []string{"homework.read_failed"}}
+		cause := func(id string) { st.Chain = append(st.Chain, id) }
+		switch m := r[1]; {
+		case strings.Contains(m, "no OpenRouter key yet"):
+			cause("key.missing")
+		case strings.Contains(m, "out of credit"):
+			cause("key.out_of_credit")
+		case strings.Contains(m, "turned the request down"):
+			cause("key.refused")
+		case strings.Contains(m, "didn't answer while PSet read the assignment"):
+			cause("model.busy")
+		case strings.Contains(m, "make out the assignment's homework"):
+			cause("homework.reply_unreadable")
+		case strings.Contains(m, "find any homework"):
+			cause("homework.no_homework_found")
+		case strings.Contains(m, "PDF couldn't be read"):
+			cause("homework.pdf_unreadable")
+		case strings.Contains(m, "reach that page"):
+			cause("homework.page_unreachable")
+		case strings.Contains(m, "That page answered"):
+			cause("homework.page_refused")
+			status := "an error"
+			if sub := oldPageStatus.FindStringSubmatch(m); sub != nil {
+				status = sub[1]
+			}
+			st.Params = map[string]string{"status": status}
+		case strings.Contains(m, "read that page"):
+			cause("homework.page_unreadable")
+		case strings.Contains(m, "no text to read"):
+			cause("homework.page_empty")
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE assignment_reads SET error = ? WHERE id = ?`, st.Marshal(), r[0]); err != nil {
+			return errs.Database.Wrap(err)
+		}
+	}
+	return nil
 }
 
 // structuredGuides is homework/12: the guides go, and the text fields that
@@ -139,11 +270,11 @@ func structuredGuides(ctx context.Context, tx *sql.Tx) error {
 		state = CASE WHEN state = 'ready' THEN 'unwritten' ELSE state END,
 		hint = '[]', walkthrough = '[]', revealed = '[]', rounds = '[]',
 		memory = coalesce((SELECT json_group_array(json(value)) FROM json_each(memory) WHERE json_extract(value, '$.use') = 'found'), '[]')`); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	rows, err := tx.QueryContext(ctx, `SELECT id, statement, notes, reading FROM questions`)
 	if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	type text struct{ id, statement, notes, reading string }
 	var all []text
@@ -151,17 +282,17 @@ func structuredGuides(ctx context.Context, tx *sql.Tx) error {
 		var t text
 		if err := rows.Scan(&t.id, &t.statement, &t.notes, &t.reading); err != nil {
 			cleanup.Close(rows)
-			return err
+			return errs.Database.Of(err)
 		}
 		all = append(all, t)
 	}
 	if err := rows.Close(); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	for _, t := range all {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET statement = ?, notes = ?, reading = ? WHERE id = ?`,
 			mustJSON(decodeRuns(t.statement)), mustJSON(decodeRunLists(t.notes)), mustJSON(decodeRunLists(t.reading)), t.id); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 	}
 	return nil
@@ -206,7 +337,7 @@ func listSummaries(ctx context.Context, q queryer, where string, args ...any) ([
 		}
 		out = append(out, h)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 // row is a question with what the wire doesn't carry.
@@ -239,14 +370,14 @@ func (f figure) on(q row) int {
 }
 
 const questionCols = `q.id, q.homework_id, q.position, q.text, q.in_book, q.label, q.statement, q.page, q.pinned_page,
-	q.rect, q.figures, q.hint, q.walkthrough, q.state, q.reason, q.revealed, q.done_at, q.activity, q.failure, q.reading, q.reading_edited, q.reading_doubts, q.boxes, q.notes, q.difficulty, q.attempts, q.failed_at, q.updated_at, q.rev, h.book_id`
+	q.rect, q.figures, q.hint, q.walkthrough, q.state, q.error, q.revealed, q.done_at, q.activity, q.reading, q.reading_edited, q.reading_doubts, q.boxes, q.notes, q.difficulty, q.attempts, q.failed_at, q.updated_at, q.rev, h.book_id`
 
 func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	var r row
 	var page, pinned sql.NullInt64
-	var rect, figs, statement, hint, walk, revealed, doneAt, reading, doubts, boxes, notes string
+	var rect, figs, statement, hint, walk, revealed, doneAt, reading, doubts, boxes, notes, failed string
 	err := s.Scan(&r.ID, &r.HomeworkID, &r.Position, &r.Text, &r.InBook, &r.Label, &statement, &page, &pinned,
-		&rect, &figs, &hint, &walk, &r.State, &r.Reason, &revealed, &doneAt, &r.Activity, &r.Failure, &reading, &r.ReadingEdited, &doubts, &boxes, &notes, &r.Difficulty, &r.Attempts, &r.FailedAt, &r.UpdatedAt, &r.Rev, &r.BookID)
+		&rect, &figs, &hint, &walk, &r.State, &failed, &revealed, &doneAt, &r.Activity, &reading, &r.ReadingEdited, &doubts, &boxes, &notes, &r.Difficulty, &r.Attempts, &r.FailedAt, &r.UpdatedAt, &r.Rev, &r.BookID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
 	}
@@ -260,6 +391,9 @@ func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	if pinned.Valid {
 		n := int(pinned.Int64)
 		r.Pinned = &n
+	}
+	if v, ok := errs.ParseStored(failed); ok {
+		r.Error = &v
 	}
 	decodeColumn("rect", rect, &r.Rect)
 	decodeColumn("figs", figs, &r.FigRect)
@@ -305,7 +439,7 @@ func listQuestions(ctx context.Context, q queryer, homeworkID string) ([]Questio
 		}
 		out = append(out, r.Question)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 // savedRounds is a question's saved guide conversation: every message
@@ -313,7 +447,7 @@ func listQuestions(ctx context.Context, q queryer, homeworkID string) ([]Questio
 func savedRounds(ctx context.Context, q queryer, id string) ([]llm.Message, error) {
 	var raw string
 	if err := q.QueryRowContext(ctx, `SELECT rounds FROM questions WHERE id = ?`, id).Scan(&raw); err != nil {
-		return nil, err
+		return nil, errs.Database.Wrap(err)
 	}
 	var msgs []llm.Message
 	if err := json.Unmarshal([]byte(raw), &msgs); err != nil {

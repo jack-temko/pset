@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pdf"
 )
@@ -37,7 +38,7 @@ func (s *Service) chatModel(ctx context.Context) (model, error) {
 		return model{}, err
 	}
 	if !cfg.ChatReady() {
-		return model{}, fail(nil, llm.NoKey)
+		return model{}, llm.KeyMissing.New()
 	}
 	return model{client: llm.Open(cfg), name: cfg.ChatModel}, nil
 }
@@ -128,7 +129,7 @@ type flexInt int
 func (n *flexInt) UnmarshalJSON(b []byte) error {
 	var v any
 	if err := json.Unmarshal(b, &v); err != nil {
-		return err
+		return errs.Data.Wrap(err)
 	}
 	switch t := v.(type) {
 	case float64:
@@ -147,9 +148,9 @@ func (s *Service) readPrinted(ctx context.Context, m model, b row, path string, 
 		data, err := s.scans.get(ctx, b, path, p, contentsImageWidth)
 		if err != nil {
 			if ctx.Err() != nil {
-				return nil, ctx.Err()
+				return nil, fmt.Errorf("stopped: %w", ctx.Err())
 			}
-			return nil, fail(err, "PSet couldn't render the book's contents pages.")
+			return nil, fmt.Errorf("render the contents pages: %w", err)
 		}
 		content.AppendPart(llm.TextPart(fmt.Sprintf("Image %d:", i+1)))
 		content.AppendPart(llm.ImagePart("data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(data)))
@@ -181,34 +182,22 @@ func (m model) askJSON(ctx context.Context, system string, user llm.Content, out
 		cancel()
 		switch {
 		case ctx.Err() != nil:
-			return ctx.Err()
+			return fmt.Errorf("stopped: %w", ctx.Err())
 		case err != nil && stalled && try == 0:
 			continue
 		case err != nil && stalled:
-			return fail(err, "The model stopped answering while PSet read the book's contents. Try again in a minute.")
+			return fmt.Errorf("the model stopped answering while it read the contents: %w", err)
 		case err != nil:
-			return modelDown(err)
+			return err
 		}
 		err = json.Unmarshal([]byte(llm.Unfence(reply)), out)
 		if err == nil {
 			return nil
 		}
 		if try == 1 {
-			return fail(err, "The model's answer about the book's contents couldn't be read. Try again.")
+			return fmt.Errorf("the model's answer about the contents couldn't be read: %w", err)
 		}
 	}
-}
-
-// modelDown words a failed call as the failed row's reason.
-func modelDown(err error) error {
-	trouble, status := llm.Classify(err)
-	if trouble == llm.TroubleCredit {
-		return fail(err, "%s", llm.NoCredit)
-	}
-	if trouble == llm.TroubleRejected {
-		return fail(err, "%s Check the key in Settings, then try again.", llm.Refusal(status))
-	}
-	return fail(err, "OpenRouter didn't answer while PSet read the book's contents. Try again in a minute.")
 }
 
 // ---------------------------------------------------------------- checking

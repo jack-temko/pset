@@ -5,84 +5,56 @@
 package httpx
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/errs"
 )
-
-func (e *Error) Error() string { return string(e.Code) + ": " + e.Message }
-
-// Status is the HTTP status this error answers with.
-func (e *Error) Status() int {
-	if e.status != 0 {
-		return e.status
-	}
-	switch e.Code {
-	case CodeNotFound:
-		return http.StatusNotFound
-	case CodeForbidden:
-		return http.StatusForbidden
-	case CodeDuplicateBook, CodeBusy:
-		return http.StatusConflict
-	case CodeInternal:
-		return http.StatusInternalServerError
-	default:
-		return http.StatusUnprocessableEntity
-	}
-}
-
-// Errorf builds an Error.
-func Errorf(code Code, format string, args ...any) *Error {
-	return &Error{Code: code, Message: fmt.Sprintf(format, args...)}
-}
-
-// OnField returns a copy of e that points at a field.
-func (e *Error) OnField(field string) *Error {
-	c := *e
-	c.Field = field
-	return &c
-}
-
-// About returns a copy of e that points at a resource.
-func (e *Error) About(id string) *Error {
-	c := *e
-	c.ID = id
-	return &c
-}
-
-// NotFound is the common case.
-func NotFound(what string) *Error { return Errorf(CodeNotFound, "That %s doesn't exist.", what) }
-
-// Invalid is a request that can't be acted on as sent.
-func Invalid(field, format string, args ...any) *Error {
-	return Errorf(CodeInvalid, format, args...).OnField(field)
-}
 
 // HandlerFunc is a handler that returns its error instead of writing it.
 type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
 
-// Logger receives unexpected errors. Set once at startup.
-var Logger = slog.Default()
-
-// H adapts a HandlerFunc. An *Error answers as itself; anything else is a
-// bug or an outage, logged in full and answered with a generic message.
+// H adapts a HandlerFunc. A returned error is resolved against the error
+// catalog (internal/errs), logged and kept with an incident id, and answered
+// as the catalog View with the entry's status. An error with no catalog
+// entry in its chain is a bug or an outage: it answers internal.unexpected,
+// so nothing internal leaks.
 func H(fn HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := fn(w, r)
-		if err == nil {
-			return
+		if err := fn(w, r); err != nil {
+			Fail(w, r, err)
 		}
-		var e *Error
-		if !errors.As(err, &e) {
-			Logger.Error("request failed", "method", r.Method, "path", r.URL.Path, "err", err)
-			e = Errorf(CodeInternal, "Something went wrong. The details are in the log.")
-		}
-		JSON(w, e.Status(), e)
 	}
+}
+
+// Fail answers err as H does. For a handler that has to answer before it
+// returns, such as one already streaming.
+func Fail(w http.ResponseWriter, r *http.Request, err error) {
+	// A client that went away (a tab closed, a request cancelled) is not a
+	// failure and gets no answer.
+	if r.Context().Err() != nil {
+		return
+	}
+	// A method-and-path pattern ("GET /api/books/{id}") says which route it
+	// was; any other (the catch-all) says nothing, so the path is the route.
+	route := r.Pattern
+	if !strings.Contains(route, " ") {
+		route = r.Method + " " + r.URL.Path
+	}
+	// A cancel while the client is still there (a shutdown) still gets an
+	// answer, but it is not a failure of its own and is not kept.
+	if errors.Is(err, context.Canceled) {
+		v := errs.Resolve(err)
+		JSON(w, v.Status, v)
+		return
+	}
+	v := errs.Respond(r.Context(), err, errs.Where{Route: route})
+	JSON(w, v.Status, v)
 }
 
 // JSON writes v with the given status.
@@ -123,9 +95,9 @@ func Decode(r *http.Request, v any) error {
 	if err := dec.Decode(v); err != nil {
 		var tooBig *http.MaxBytesError
 		if errors.As(err, &tooBig) {
-			return Errorf(CodeInvalid, "That's too much to send in one request (over %d MB).", maxBody>>20)
+			return errs.TooLarge.Wrap(err, "limit", strconv.Itoa(maxBody>>20))
 		}
-		return Errorf(CodeInvalid, "The request couldn't be read: %v", err)
+		return errs.InvalidJSON.Wrap(err)
 	}
 	return nil
 }
@@ -133,5 +105,5 @@ func Decode(r *http.Request, v any) error {
 // NotFoundAPI answers every unknown /api/ path, so the API namespace never
 // falls through to the SPA's HTML.
 func NotFoundAPI(w http.ResponseWriter, r *http.Request) {
-	JSON(w, http.StatusNotFound, Errorf(CodeNotFound, "No such endpoint: %s %s", r.Method, r.URL.Path))
+	Fail(w, r, errs.NoSuchEndpoint.New())
 }

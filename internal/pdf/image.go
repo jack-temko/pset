@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/execx"
 )
 
@@ -43,7 +44,11 @@ func rasterize(ctx context.Context, pdfPath string, n, dpi int, ext string, form
 	}
 	for _, entry := range entries {
 		if !entry.IsDir() && strings.HasSuffix(entry.Name(), "."+ext) {
-			return os.ReadFile(filepath.Join(dir, entry.Name()))
+			data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+			if err != nil {
+				return nil, errs.Disk.Wrap(err)
+			}
+			return data, nil
 		}
 	}
 	return nil, fmt.Errorf("rasterize page %d: pdftoppm produced no image", n)

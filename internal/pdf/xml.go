@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
 
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/execx"
 )
 
@@ -77,7 +79,7 @@ func collectChars(d *xml.Decoder, sb *strings.Builder) error {
 	for {
 		tok, err := d.Token()
 		if err != nil {
-			return err
+			return errs.Data.Wrap(err)
 		}
 		switch t := tok.(type) {
 		case xml.CharData:
@@ -190,7 +192,7 @@ func parseOutline(data []byte, out *[]XMLOutlineEntry) error {
 	dec := xml.NewDecoder(bytes.NewReader(data))
 	for {
 		tok, err := dec.Token()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return nil
 		}
 		if err != nil {

@@ -8,6 +8,7 @@ import type {
   Stage,
   Usage,
 } from '@/api/gen/usage';
+import { ERRORS, type ErrorId } from '@/api/gen/errors';
 import { Button } from '@/components/button';
 import { Dialog } from '@/components/dialog';
 import { Loaded } from '@/components/loaded';
@@ -248,6 +249,15 @@ function ToolList({ tools }: { tools: string }) {
   );
 }
 
+/** Why a call failed, in the catalog's words when it names a cause, else as
+ *  the provider said it. */
+function callError(c: Call): string | undefined {
+  if (!c.error) return undefined;
+  return c.errorId && c.errorId in ERRORS
+    ? ERRORS[c.errorId as ErrorId].what
+    : c.error;
+}
+
 const callColumns = (withReasoning: boolean): TableColumn<Call>[] => [
   {
     key: 'at',
@@ -266,7 +276,7 @@ const callColumns = (withReasoning: boolean): TableColumn<Call>[] => [
     // The error may wrap (it matters); the tools stay on one line, cut with an
     // ellipsis and whole in the tooltip.
     secondary: (c) =>
-      c.error || (c.tools ? <ToolList tools={c.tools} /> : undefined),
+      callError(c) || (c.tools ? <ToolList tools={c.tools} /> : undefined),
   },
   {
     key: 'model',

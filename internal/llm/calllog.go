@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/errs"
 )
 
 // The call log: every chat request and what came back, the model's
@@ -50,6 +51,9 @@ type Call struct {
 	Host        string
 	Session     string
 	Error       string
+	// ErrorID is the catalog id of the failure's cause (key.out_of_credit,
+	// model.busy), empty for a call that worked.
+	ErrorID string
 	// Stage and Run are the part of the job and the run of its subject
 	// the call belongs to (WithStage, WithRun). Tools names the tools the
 	// reply asked for, comma-separated.
@@ -95,14 +99,19 @@ type logMsg struct {
 func logCall(req ChatRequest, start time.Time, reply Reply, err error) {
 	at := start.UTC().Format(time.RFC3339)
 	ms := time.Since(start).Milliseconds()
-	errText := ""
+	errText, errID := "", ""
 	if err != nil {
 		errText = err.Error()
+		// Only a cause the catalog knows: a chain that is just the fallback
+		// leaves the provider's own text to be shown.
+		if chain := errs.Resolve(err).Chain; chain[len(chain)-1] != errs.Unexpected.ID {
+			errID = chain[len(chain)-1]
+		}
 	}
 	call := Call{
 		At: at, SubjectType: req.Subject.Type, SubjectID: req.Subject.ID,
 		Model: req.Model, Answered: reply.Model, Ms: ms, Usage: reply.Usage,
-		Host: reply.Host, Session: req.SessionID, Error: errText,
+		Host: reply.Host, Session: req.SessionID, Error: errText, ErrorID: errID,
 		Stage: req.stage, Run: req.run,
 	}
 	names := make([]string, 0, len(reply.ToolCalls))

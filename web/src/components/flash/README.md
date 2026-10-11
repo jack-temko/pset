@@ -1,8 +1,8 @@
 # Flash
 
 A full-width strip directly under the top bar: one sentence about the
-whole screen, not about any one thing on it. "Lost touch with PSet.
-Reconnecting…", "This book is named after its file."
+whole screen, not about any one thing on it. "PSet can't reach its
+server. Start PSet again, then try again.", "This book is named after its file."
 
 - **40px minimum** (`row`), a hairline under it, the sentence centred in
   `text-sm`.
@@ -24,6 +24,6 @@ says it, where it lives); stack two; add a second action.
 ## Changes from baseline
 
 - **New in the app.** The baseline's component set names Flash (Primer's
-  banner) but it wasn't built until two strips needed it: the lost-touch
+  banner) but it wasn't built until two strips needed it: the unreachable
   banner in the shell and the workspace's filename-title prompt. Only
   the full-width form exists; nothing needs an inset one.

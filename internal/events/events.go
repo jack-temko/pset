@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/jackt/pset/internal/httpx"
 )
 
 // Event is one message on the stream. Data is the feature's payload.
@@ -125,7 +127,7 @@ const keepAlive = 15 * time.Second
 func (b *Bus) Handler(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+		httpx.Fail(w, r, noStreaming.New())
 		return
 	}
 	var last uint64

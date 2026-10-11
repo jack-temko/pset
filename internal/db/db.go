@@ -17,6 +17,7 @@ import (
 	_ "modernc.org/sqlite" // registers the "sqlite" driver
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/errs"
 )
 
 // Every connection gets these. Foreign keys are what make a book's removal
@@ -33,7 +34,7 @@ func Open(path string) (*sql.DB, error) {
 	}
 	d, err := sql.Open("sqlite", fmt.Sprintf("file:%s?%s", path, pragmas))
 	if err != nil {
-		return nil, err
+		return nil, errs.Database.Wrap(err)
 	}
 	if err := d.Ping(); err != nil {
 		cleanup.Close(d)
@@ -61,12 +62,12 @@ const ledger = `CREATE TABLE IF NOT EXISTS schema_migrations (
 // given, each in its own transaction.
 func Migrate(ctx context.Context, d *sql.DB, migs []Migration) error {
 	if _, err := d.ExecContext(ctx, ledger); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	for _, m := range migs {
 		var n int
 		if err := d.QueryRowContext(ctx, `SELECT count(*) FROM schema_migrations WHERE name = ?`, m.Name).Scan(&n); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		if n > 0 {
 			continue
@@ -74,7 +75,7 @@ func Migrate(ctx context.Context, d *sql.DB, migs []Migration) error {
 		err := Tx(ctx, d, func(tx *sql.Tx) error {
 			if m.SQL != "" {
 				if _, err := tx.ExecContext(ctx, m.SQL); err != nil {
-					return err
+					return errs.Database.Wrap(err)
 				}
 			}
 			if m.Do != nil {
@@ -84,7 +85,7 @@ func Migrate(ctx context.Context, d *sql.DB, migs []Migration) error {
 			}
 			_, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)`,
 				m.Name, time.Now().UTC().Format(time.RFC3339))
-			return err
+			return errs.Database.Of(err)
 		})
 		if err != nil {
 			return fmt.Errorf("migration %s: %w", m.Name, err)
@@ -96,13 +97,13 @@ func Migrate(ctx context.Context, d *sql.DB, migs []Migration) error {
 // Pending names the migrations not yet applied.
 func Pending(ctx context.Context, d *sql.DB, migs []Migration) ([]string, error) {
 	if _, err := d.ExecContext(ctx, ledger); err != nil {
-		return nil, err
+		return nil, errs.Database.Wrap(err)
 	}
 	var out []string
 	for _, m := range migs {
 		var n int
 		if err := d.QueryRowContext(ctx, `SELECT count(*) FROM schema_migrations WHERE name = ?`, m.Name).Scan(&n); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		if n == 0 {
 			out = append(out, m.Name)
@@ -117,36 +118,36 @@ func Pending(ctx context.Context, d *sql.DB, migs []Migration) ([]string, error)
 func Wipe(ctx context.Context, d *sql.DB, migs []Migration) error {
 	conn, err := d.Conn(ctx)
 	if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	defer cleanup.Close(conn)
 	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys = OFF`); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	rows, err := conn.QueryContext(ctx, `SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`)
 	if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	var tables []string
 	for rows.Next() {
 		var t string
 		if err := rows.Scan(&t); err != nil {
 			cleanup.Close(rows)
-			return err
+			return errs.Database.Of(err)
 		}
 		tables = append(tables, t)
 	}
 	cleanup.Close(rows)
 	for _, t := range tables {
 		if _, err := conn.ExecContext(ctx, fmt.Sprintf(`DROP TABLE IF EXISTS "%s"`, t)); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 	}
 	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys = ON`); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	if _, err := conn.ExecContext(ctx, `VACUUM`); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	return Migrate(ctx, d, migs)
 }
@@ -155,7 +156,7 @@ func Wipe(ctx context.Context, d *sql.DB, migs []Migration) error {
 func Tx(ctx context.Context, d *sql.DB, fn func(*sql.Tx) error) error {
 	tx, err := d.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	if err := fn(tx); err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
@@ -163,7 +164,7 @@ func Tx(ctx context.Context, d *sql.DB, fn func(*sql.Tx) error) error {
 		}
 		return err
 	}
-	return tx.Commit()
+	return errs.Database.Of(tx.Commit())
 }
 
 // Stamp is the one timestamp format the database stores: UTC, RFC 3339,
@@ -196,7 +197,7 @@ func BackupBeforeMigrating(ctx context.Context, d *sql.DB, migs []Migration, dir
 	}
 	backups := filepath.Join(dir, "backups")
 	if err := os.MkdirAll(backups, 0o700); err != nil {
-		return "", err
+		return "", errs.Disk.Wrap(err)
 	}
 	name := "pset-" + time.Now().UTC().Format("20060102-150405") + "-before-" + safeLabel(version) + ".db"
 	path := filepath.Join(backups, name)

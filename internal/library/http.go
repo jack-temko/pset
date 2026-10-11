@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/usage"
 )
@@ -25,15 +26,15 @@ func (s *Service) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/books", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
 		mr, err := r.MultipartReader()
 		if err != nil {
-			return httpx.Invalid("file", "Send the PDF as a multipart upload.")
+			return httpx.NotMultipart.New().OnField("file")
 		}
 		for {
 			part, err := mr.NextPart()
 			if errors.Is(err, io.EOF) {
-				return httpx.Invalid("file", "No file came with the upload.")
+				return httpx.NoFile.New().OnField("file")
 			}
 			if err != nil {
-				return httpx.Invalid("file", "The upload was cut off.")
+				return httpx.UploadCut.Wrap(err).OnField("file")
 			}
 			if part.FormName() != "file" {
 				continue
@@ -76,7 +77,7 @@ func (s *Service) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/books/{id}/pages/{n}/image", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
 		n, err := strconv.Atoi(r.PathValue("n"))
 		if err != nil {
-			return httpx.NotFound("page")
+			return errs.Gone.New("thing", "page")
 		}
 		width, _ := strconv.Atoi(r.URL.Query().Get("w"))
 		if width <= 0 {
@@ -87,7 +88,7 @@ func (s *Service) Routes(mux *http.ServeMux) {
 		}
 		data, err := s.PageJPEG(r.Context(), r.PathValue("id"), n, width)
 		if errors.Is(err, errNotFound) {
-			return httpx.NotFound("page")
+			return errs.Gone.New("thing", "page")
 		}
 		if err != nil {
 			return err
