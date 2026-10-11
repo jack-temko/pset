@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -307,24 +306,6 @@ func TestChatOnceFullReturnsToolCalls(t *testing.T) {
 	}
 	if reply.Content != "" {
 		t.Errorf("content = %q, want empty", reply.Content)
-	}
-}
-
-func TestClassify(t *testing.T) {
-	for _, c := range []struct {
-		err    error
-		want   Trouble
-		status int
-	}{
-		{fmt.Errorf("round: %w", ErrStreamCut), TroubleCut, 0},
-		{&CallError{Status: 503}, TroubleBusy, 503},
-		{&CallError{Status: 429}, TroubleBusy, 429},
-		{fmt.Errorf("x: %w", &CallError{Status: 401}), TroubleRejected, 401},
-		{errors.New("dial tcp: connection refused"), TroubleBusy, 0},
-	} {
-		if got, st := Classify(c.err); got != c.want || st != c.status {
-			t.Errorf("%v: %s %d", c.err, got, st)
-		}
 	}
 }
 

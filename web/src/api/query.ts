@@ -1,6 +1,16 @@
-import { QueryClient } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 
 import { ApiError } from './client';
+import { screenError } from './screen-error';
+
+const clear = () => {
+  screenError.clear();
+};
+
+function raiseScreenError(e: unknown) {
+  if (e instanceof ApiError && e.view.scope === 'screen')
+    screenError.raise(e.view);
+}
 
 /**
  * The one query client (and `makeQueryClient`, for /views, which gives
@@ -10,6 +20,13 @@ import { ApiError } from './client';
  */
 export const makeQueryClient = () =>
   new QueryClient({
+    // A failure of the whole screen (the server not answering) is said once,
+    // by the shell's banner; any answer at all means it is back.
+    queryCache: new QueryCache({ onError: raiseScreenError, onSuccess: clear }),
+    mutationCache: new MutationCache({
+      onError: raiseScreenError,
+      onSuccess: clear,
+    }),
     defaultOptions: {
       queries: {
         staleTime: Infinity,

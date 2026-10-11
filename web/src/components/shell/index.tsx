@@ -7,9 +7,15 @@ import {
   type ReactNode,
 } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
+
+import { viewOf } from '@/api/client';
 import { useLiveStream } from '@/api/events';
+import { screenError, useScreenError } from '@/api/screen-error';
+import { Button } from '@/components/button';
 import { Flash } from '@/components/flash';
 import { TopBar } from '@/components/top-bar';
+import { errorLine } from '@/lib/error-text';
 import { cn } from '@/lib/utils';
 
 /**
@@ -35,13 +41,35 @@ import { cn } from '@/lib/utils';
  *  what to call the page when it has. */
 const TitleSlot = createContext<(title: string | null) => void>(() => {});
 
-/** Shown while the live stream is down, on every screen. It says only
- *  what's true: touch was lost and the app is reconnecting. Recovery is
- *  the stream's own doing; there is nothing to click. */
-function LostTouch() {
+/** Shown while PSet can't be reached, on every screen: the live stream is
+ *  down, or a request found the server not answering. It says the catalog's
+ *  words once, with the one thing to do: try again (the stream also
+ *  reconnects by itself). Nothing else on the screen repeats it. */
+function Unreachable() {
   const live = useLiveStream();
-  if (live) return null;
-  return <Flash tone="warning">Lost touch with PSet. Reconnecting…</Flash>;
+  const raised = useScreenError();
+  const qc = useQueryClient();
+  if (live && !raised) return null;
+  const view = raised ?? viewOf('request.unreachable');
+  return (
+    <Flash
+      tone="warning"
+      action={
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            screenError.clear();
+            void qc.refetchQueries({ type: 'active' });
+          }}
+        >
+          Try again
+        </Button>
+      }
+    >
+      {errorLine(view)}
+    </Flash>
+  );
 }
 
 export function AppShell({
@@ -74,7 +102,7 @@ export function AppShell({
           )
         }
       />
-      <LostTouch />
+      <Unreachable />
       <TitleSlot value={setScrolledTitle}>
         <div
           className={

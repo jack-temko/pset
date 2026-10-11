@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackt/pset/internal/errs"
+
 	"github.com/jackt/pset/internal/testx"
 )
 
@@ -219,8 +221,8 @@ func TestOutOfCredit(t *testing.T) {
 			testx.Check(t, testx.Err(io.WriteString(w, tc.body)))
 		})
 		_, err := c.ChatOnce(context.Background(), ChatRequest{Model: "m", Messages: []Message{TextMessage("user", "hi")}})
-		if trouble, _ := Classify(err); trouble != TroubleCredit {
-			t.Errorf("%s: trouble = %s, want credit", tc.base, trouble)
+		if v := errs.Resolve(err); v.Chain[len(v.Chain)-1] != "key.out_of_credit" {
+			t.Errorf("%s: chain = %v, want key.out_of_credit", tc.base, v.Chain)
 		}
 		if calls != 1 {
 			t.Errorf("%s: %d calls, want 1: an empty account isn't retried", tc.base, calls)

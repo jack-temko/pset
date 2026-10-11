@@ -1020,23 +1020,6 @@ func (c *Client) doWithRetry(ctx context.Context, url string, body any) (*http.R
 	}
 }
 
-// Trouble is what a failed call means for the person waiting on it.
-type Trouble string
-
-const (
-	// TroubleCut means the reply stopped partway. Asking again usually works.
-	TroubleCut Trouble = "cut"
-	// TroubleBusy means the provider didn't answer, is overloaded, or the
-	// network failed. Nothing to fix; try again later.
-	TroubleBusy Trouble = "busy"
-	// TroubleRejected means the provider refused the request (a bad key, an
-	// unknown model): something in the connection's settings is wrong.
-	TroubleRejected Trouble = "rejected"
-	// TroubleCredit means the account has no money left. Asking again can't
-	// help until it's topped up; switching provider in Settings can.
-	TroubleCredit Trouble = "credit"
-)
-
 // OutOfCredit reports whether a failed call means the account has run out
 // of money: OpenRouter answers 402. Other providers say it in words, some
 // under a status they also shed load with (429), so the body counts too.
@@ -1047,45 +1030,6 @@ func OutOfCredit(status int, body string) bool {
 	b := strings.ToLower(body)
 	return strings.Contains(b, "insufficient balance") || strings.Contains(b, "insufficient credits") ||
 		strings.Contains(b, "more credits")
-}
-
-// NoKey says it in words, wherever a model call would need a key that was
-// never saved. The one sentence: the web tells a setup failure by the
-// failure kind, not by this text, but it should still read the same
-// everywhere.
-const NoKey = "There's no OpenRouter key yet. Add yours in Settings, under Connections, then try again."
-
-// NoCredit says it in words, for the person waiting on the call.
-const NoCredit = "Your OpenRouter account is out of credit. Top it up at openrouter.ai, then try again."
-
-// Classify names a model call's failure, with the HTTP status when the
-// provider gave one.
-func Classify(err error) (Trouble, int) {
-	if errors.Is(err, ErrStreamCut) {
-		return TroubleCut, 0
-	}
-	var e *CallError
-	if errors.As(err, &e) {
-		if OutOfCredit(e.Status, e.Body) {
-			return TroubleCredit, e.Status
-		}
-		if e.Status == http.StatusTooManyRequests || e.Status >= 500 {
-			return TroubleBusy, e.Status
-		}
-		return TroubleRejected, e.Status
-	}
-	return TroubleBusy, 0
-}
-
-// Refusal says in words why a provider refused a request, by its status.
-func Refusal(status int) string {
-	switch status {
-	case http.StatusUnauthorized, http.StatusForbidden:
-		return fmt.Sprintf("OpenRouter turned the request down (HTTP %d): the API key in Settings may be wrong or expired.", status)
-	case http.StatusNotFound:
-		return "OpenRouter doesn't know the model PSet asked for (HTTP 404)."
-	}
-	return fmt.Sprintf("OpenRouter turned the request down (HTTP %d).", status)
 }
 
 // Unfence tolerates JSON wrapped in a code fence.

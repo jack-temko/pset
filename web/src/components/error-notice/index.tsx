@@ -26,6 +26,9 @@ export function ErrorNotice({
   className?: string;
 }) {
   const action = useErrorAction(error, onRetry);
+  // A failure of the whole screen is the shell's banner; saying it again here
+  // would stack two notices for one thing.
+  if (error.scope === 'screen') return null;
   if (error.scope === 'field') {
     return (
       <p className={cn('text-xs text-destructive', className)}>{error.what}</p>

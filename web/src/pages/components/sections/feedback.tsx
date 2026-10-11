@@ -632,7 +632,17 @@ export const feedbackSections: ComponentEntry[] = [
       <>
         <Shelf label="warning">
           <div className="w-full max-w-xl overflow-hidden rounded-md border">
-            <Flash tone="warning">Lost touch with PSet. Reconnecting…</Flash>
+            <Flash
+              tone="warning"
+              action={
+                <Button size="sm" variant="outline">
+                  Try again
+                </Button>
+              }
+            >
+              PSet can&apos;t reach its server. Start PSet again, then try
+              again.
+            </Flash>
           </div>
         </Shelf>
         <Shelf label="default, with action">
