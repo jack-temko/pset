@@ -328,8 +328,10 @@ to stay empty. The default is the **core** profile (the hand-written scenarios, 
 which CI runs inside the `check` job when a pull request touches `web/`, `tools/jumps.sh`,
 `tools/fixturelib/` or `web/scripts/jumps/`; `make jumps-check FULL=1` adds discovery and
 `--runs 3`, and runs nightly in CI (`jumps-nightly.yml`, which keeps one issue open while it fails). The guard also reads each `Loaded` box at its swap (its layers carry `data-variant`):
-it fails on a skeleton of another variant than its content, a block more than 8px off or a
-total more than 2px off, a box whose variant changes after its reveal, and a box revealed
+it fails on a skeleton of another variant than its content, content that reaches more than 2px
+further or less far than the skeleton's (measured on the content, not its box, so a
+fill-height panel can't hide it), a shared block that starts more than 8px away, or a block
+more than 8px taller or shorter, a box whose variant changes after its reveal, and a box revealed
 twice in one navigation. The fixture holds one instance of every view variant and the audit
 opens each (`web/scripts/jumps/variants.mjs`, a copy of `web/src/variants.ts` until that
 lands; a test fails when a variant has no scenario). Spec: `ideas/jumps-guard.md`.
