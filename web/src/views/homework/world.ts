@@ -36,6 +36,7 @@ export const BOOK: Book = {
   } as Book['problems'],
   cover: COVERS[2],
   aspect: 11 / 8.5,
+  rail: [3, 4, 2],
   kind: 'digital',
   state: { kind: 'ready' },
   addedAt: '2026-09-03T12:00:00Z',

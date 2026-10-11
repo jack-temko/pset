@@ -29,10 +29,17 @@ export function AssignmentReads({
   bookId: string;
   onReview: (id: string) => void;
 }) {
-  const reads = useAssignmentReads(bookId).data ?? [];
+  const readsQuery = useAssignmentReads(bookId);
+  const reads = readsQuery.data ?? [];
   const titles = Object.fromEntries(
     (useBookHomework(bookId).data ?? []).map((h) => [h.id, h.title]),
   );
+  if (readsQuery.isError && readsQuery.data === undefined)
+    return (
+      <p role="status" className="text-sm text-destructive/80">
+        Couldn&apos;t load the assignments being read.
+      </p>
+    );
   if (reads.length === 0) return null;
   return (
     <Box>

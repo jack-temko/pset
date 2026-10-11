@@ -222,7 +222,23 @@ func ForSubjects(ctx context.Context, q queryer, subjectType string, ids []strin
 		}
 		u.Failed += failed
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	_ = rows.Close()
+	by, names, err := shapes(ctx, q, subjectType, ids)
+	if err != nil {
+		return nil, err
+	}
+	for id, u := range out {
+		sh := by[id]
+		if sh.Sections == nil {
+			sh.Sections = []ShapeSection{}
+		}
+		u.Shape = &sh
+		u.stages = names[id]
+	}
+	return out, nil
 }
 
 // Forget deletes one subject's call rows, called as the subject goes, so

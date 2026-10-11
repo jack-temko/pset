@@ -1,4 +1,5 @@
 import {
+  keepPreviousData,
   useMutation,
   useQuery,
   useQueryClient,
@@ -83,6 +84,24 @@ export const useHomeworkSet = (id: string | null) =>
     refetchInterval: (query) =>
       query.state.data?.questions.some(outstanding) ? 5000 : false,
   });
+
+/**
+ * A set as some list already has it (a book's homework list, or Home's due
+ * list), for the screen that opens it: the row says whether the set is done,
+ * turned in or empty before its own request is back, so the right skeleton
+ * is drawn at click time. Undefined when no list holding it was ever fetched.
+ */
+export function useListedSet(id: string | null): Summary | undefined {
+  const qc = useQueryClient();
+  if (!id) return undefined;
+  for (const key of [['homework', 'book'], homeworkKeys.due]) {
+    for (const [, rows] of qc.getQueriesData<Summary[]>({ queryKey: key })) {
+      const row = rows?.find((h) => h.id === id);
+      if (row) return row;
+    }
+  }
+  return undefined;
+}
 
 export const useDue = () =>
   useQuery({
@@ -634,4 +653,6 @@ export const useLineReadings = (bookId: string | undefined, lines: string[]) =>
       ),
     enabled: !!bookId && lines.length > 0,
     staleTime: Infinity,
+    // Typing changes the key: the last readings stay until the new ones land.
+    placeholderData: keepPreviousData,
   });

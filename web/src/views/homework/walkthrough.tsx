@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronDown,
   ChevronUp,
+  Ellipsis,
   Pencil,
   Plus,
   Printer,
@@ -13,7 +14,10 @@ import {
   Trash2,
   TriangleAlert,
 } from 'lucide-react';
+import { Box } from '@/components/box';
+import { Loaded } from '@/components/loaded';
 import { Button, IconButton } from '@/components/button';
+import { Disclosure } from '@/components/disclosure';
 import { Label } from '@/components/label';
 import {
   Menu,
@@ -37,6 +41,7 @@ import {
   questionStep,
   toFind,
   useHomeworkSet,
+  type Detail,
   useRemoveQuestion,
   useRedoReading,
   useRetryQuestion,
@@ -61,15 +66,17 @@ import { PageMap, usePages } from '@/lib/pages';
 import { useSettled } from '@/lib/settled';
 import { cn, plural } from '@/lib/utils';
 import { FailedQuestion } from './failed-question';
+import { detailVariant, opening, summaryVariant } from './walkthrough-variant';
 import { HelpRows } from './help';
 import { Finish } from './finish';
-import { helpRows, type HelpName } from './help-meta';
+import { HELP_NAMES, TITLE, helpRows, type HelpName } from './help-meta';
 import { isTyping, walkthroughKey } from './keys';
 import {
   PRIMARY_LABEL,
   barLabel,
+  listSegments,
+  setBarLabel,
   countWords,
-  firstUnfinished,
   nextUnfinished,
   ordinal,
   primaryOf,
@@ -78,37 +85,180 @@ import {
   stageWord,
   timeLeftWords,
   isWorking,
+  type HomeworkSet,
   type Q,
 } from './progress';
 
-const STAGE_NAMES = ['hint', 'walkthrough', 'answers'] as const;
+const noop = () => {};
 
-/** A stage still being written: skeleton lines at a stage's usual size,
- *  so the guide lands in space already made for it. A hint runs two
- *  lines, a walkthrough about five and the answers two; the last stops
- *  short, as prose does. */
-function StageSkeleton({
-  name,
-  still,
-}: {
-  name: (typeof STAGE_NAMES)[number];
-  still?: boolean;
-}) {
-  const lines = name === 'walkthrough' ? 5 : 2;
-  return (
-    <div className="space-y-1">
-      <p className="text-xs text-muted-foreground uppercase">{name}</p>
-      <div className="space-y-1 text-base">
-        {Array.from({ length: lines }, (_, j) => (
-          <p key={j}>
-            <Skeleton
-              still={still}
-              className={cn('h-3', j === lines - 1 ? 'w-2/3' : 'w-full')}
-            />
-          </p>
-        ))}
+/** The body of a set before it arrives, in the layout it will have: the
+ *  question's label and menu, its statement, the three help rows and the
+ *  footer's buttons. In Focus the statement is on the left and the help on
+ *  the right. */
+function WalkthroughSkeleton({ wide }: { wide: boolean }) {
+  const problem = (
+    <>
+      <div className="flex items-center gap-2">
+        <span className="min-w-0 flex-1 truncate text-lg font-semibold">
+          <Skeleton className="h-4 w-24" />
+        </span>
+        <IconButton
+          variant="ghost"
+          size="sm"
+          aria-label="Question actions"
+          disabled
+        >
+          <Ellipsis />
+        </IconButton>
       </div>
+      <p className="space-y-1 text-base">
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-2/3" />
+      </p>
+    </>
+  );
+  const help = (
+    <Box className="pointer-events-none">
+      {HELP_NAMES.map((name) => (
+        <Disclosure
+          key={name}
+          title={TITLE[name]}
+          meta={<Skeleton className="h-3 w-12" />}
+          open={false}
+          onOpenChange={noop}
+        >
+          {null}
+        </Disclosure>
+      ))}
+    </Box>
+  );
+  return (
+    <>
+      <div
+        className={cn(
+          'min-h-0 flex-1',
+          wide
+            ? 'grid grid-cols-2 grid-rows-1'
+            : 'grid grid-cols-1 auto-rows-max content-start gap-5 overflow-y-auto p-card',
+        )}
+        aria-hidden
+      >
+        <div
+          className={
+            wide
+              ? 'grid min-h-0 grid-cols-1 auto-rows-max content-start gap-5 overflow-y-auto border-r p-card'
+              : 'contents'
+          }
+        >
+          {problem}
+        </div>
+        <div
+          className={
+            wide
+              ? 'grid min-h-0 grid-cols-1 auto-rows-max content-start gap-5 overflow-y-auto p-card'
+              : 'contents'
+          }
+        >
+          {help}
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center justify-between border-t p-card">
+        <Button variant="ghost" size="sm" disabled>
+          Ask about this
+        </Button>
+        <Button disabled>{PRIMARY_LABEL.next}</Button>
+      </div>
+    </>
+  );
+}
+
+/** The set's header before the set: what the list knows (title, count, bar),
+ *  in the shapes of the real one, and the back button, which works. */
+function SetHeaderSkeleton({
+  summary,
+  onBack,
+}: {
+  summary?: HomeworkSet;
+  onBack: () => void;
+}) {
+  const counted = summary !== undefined && summary.total > 0;
+  const left = timeLeftWords(summary);
+  return (
+    <div className="relative flex h-row shrink-0 items-center gap-1 border-b px-2">
+      <IconButton
+        variant="ghost"
+        size="sm"
+        aria-label="Back to homework"
+        onClick={onBack}
+      >
+        <ChevronLeft />
+      </IconButton>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+        {summary ? summary.title : <Skeleton className="h-3 w-40" />}
+      </span>
+      {summary?.turnedInAt && <Label tone="success">Turned in</Label>}
+      {counted && (
+        <Button variant="ghost" size="sm" disabled className="tabular-nums">
+          {setBarLabel(summary).replace(' done', '')}
+          <ChevronDown />
+        </Button>
+      )}
+      {left && (
+        <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground tabular-nums">
+          {left}
+        </span>
+      )}
+      <IconButton
+        variant="ghost"
+        size="sm"
+        aria-label="Homework actions"
+        disabled
+      >
+        <Ellipsis />
+      </IconButton>
+      {counted && (
+        <ProgressBar
+          segments={listSegments(summary)}
+          label={setBarLabel(summary)}
+          className="absolute inset-x-0 -bottom-px"
+        />
+      )}
     </div>
+  );
+}
+
+/** The finish page before the numbers: its heading and the pinned footer. */
+function FinishSkeleton({
+  turnedIn,
+  onBack,
+}: {
+  turnedIn: boolean;
+  onBack: () => void;
+}) {
+  return (
+    <>
+      <div
+        className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 p-card py-8 text-center"
+        aria-hidden
+      >
+        <h2 className="font-heading text-4xl">
+          <Skeleton className="h-8 w-64" />
+        </h2>
+        <p className="font-heading text-lg">
+          <Skeleton className="h-4 w-64" />
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center justify-between border-t p-card">
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          Back to list
+        </Button>
+        {turnedIn ? (
+          <Label tone="success">Turned in</Label>
+        ) : (
+          <Button disabled>Turn in</Button>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -175,7 +325,8 @@ function waitingLine(
  *  header holds the count (which opens the list of questions), the time
  *  left and the bar; the footer has one primary button. The help is three
  *  rows that open in place. Spec: web/src/views/homework/spec.md. */
-export function Walkthrough({
+function WalkthroughBody({
+  data,
   setId,
   onEdit,
   onDelete,
@@ -189,6 +340,7 @@ export function Walkthrough({
   onQuestion,
   wide = false,
 }: {
+  data: Detail;
   setId: string;
   /** The question on screen (null on the finish page), for counting time. */
   onQuestion?: (id: string | null) => void;
@@ -212,7 +364,6 @@ export function Walkthrough({
   onOpenSettings: () => void;
 }) {
   const pages = usePages();
-  const detail = useHomeworkSet(setId);
   const updateSet = useUpdateHomework(setId);
   const update = useUpdateQuestion(setId);
   const removeQ = useRemoveQuestion(setId);
@@ -222,10 +373,17 @@ export function Walkthrough({
   const { bookId } = useBookHere();
   const boxing = useBoxing();
   const [adding, setAdding] = useState(false);
-  const [index, setIndex] = useState<number | null>(null);
+  // Open where you'd pick up: the first question not yet done, and on the
+  // finish page when every one is. Both are worked out here, in the first
+  // render, never in an effect after a first screen has already shown.
+  const [index, setIndex] = useState<number | null>(
+    () => opening(data.questions).index,
+  );
   // The finish page fills the pane once every question is done; it is where
   // the last Next lands, and where a set that is already all done opens.
-  const [finishing, setFinishing] = useState(false);
+  const [finishing, setFinishing] = useState(
+    () => opening(data.questions).finishing,
+  );
   // What the student opened by hand, by question: the notes box for
   // editing, the figure's reading and the guide's memory lines, which are
   // behind the question's menu until asked for. And the help rows: a
@@ -234,31 +392,22 @@ export function Walkthrough({
   const [peeked, setPeeked] = useState<Record<string, 'reading'[]>>({});
   const [rowsOpen, setRowsOpen] = useState<Record<string, string[]>>({});
 
-  const set = detail.data?.homework;
-  const questions = detail.data?.questions ?? [];
-  // Open where you'd pick up: the first question not yet done, once the
-  // set has loaded.
-  useEffect(() => {
-    if (index !== null || !detail.data) return;
-    const first = firstUnfinished(detail.data.questions);
-    // oxlint-disable-next-line react/set-state-in-effect -- opens the walkthrough where you would pick up once the set has loaded
-    setIndex(first ?? 0);
-    if (first === null && detail.data.questions.length > 0) setFinishing(true);
-  }, [detail.data, index]);
+  const set = data.homework;
+  const questions = data.questions;
   // A question boxed on the page opens once it's in the set.
   const [openedBoxed, setOpenedBoxed] = useState<string | null>(null);
   useEffect(() => {
-    if (!boxing.added || boxing.added === openedBoxed || !detail.data) return;
-    const i = detail.data.questions.findIndex((x) => x.id === boxing.added);
+    if (!boxing.added || boxing.added === openedBoxed) return;
+    const i = data.questions.findIndex((x) => x.id === boxing.added);
     if (i !== -1) {
       // oxlint-disable-next-line react/set-state-in-effect -- opens the walkthrough where you would pick up once the set has loaded
       setIndex(i);
       setOpenedBoxed(boxing.added);
     }
-  }, [boxing.added, openedBoxed, detail.data]);
+  }, [boxing.added, openedBoxed, data]);
   const at = Math.min(index ?? 0, Math.max(questions.length - 1, 0));
   const q = questions[at] as Q | undefined;
-  const turnedIn = !!set?.turnedInAt;
+  const turnedIn = !!set.turnedInAt;
   // Only while every question is done: add one, or take a mark back, and it is over.
   const finished =
     finishing && questions.length > 0 && questions.every((x) => x.done);
@@ -285,7 +434,7 @@ export function Walkthrough({
     <AddHomeworkDialog
       open={adding}
       bookId={bookId}
-      set={{ id: setId, title: detail.data?.homework.title ?? '' }}
+      set={{ id: setId, title: set.title }}
       onBox={() => {
         boxing.start({ kind: 'add', setId });
       }}
@@ -315,7 +464,7 @@ export function Walkthrough({
         <ChevronLeft />
       </IconButton>
       <span className="min-w-0 flex-1 truncate text-sm font-medium">
-        {set ? set.title : <Skeleton className="h-3 w-40" />}
+        {set.title}
       </span>
       {turnedIn && <Label tone="success">Turned in</Label>}
       {questions.length > 0 && (
@@ -408,25 +557,23 @@ export function Walkthrough({
           {turnedIn ? 'Turned in' : 'Turn in'}
         </MenuCheckItem>
         {/* Last and apart, as on the book's menu. It asks first, naming
-            what goes; the set has to have loaded to say so. */}
-        {set && (
-          <>
-            <MenuDivider />
-            <MenuConfirmItem
-              icon={<Trash2 />}
-              question={`Delete ${set.title}?`}
-              detail={
-                set.total === 0
-                  ? 'It has no questions yet.'
-                  : `Its ${plural(set.total, 'question')} go with it, with their guides and what you checked off.`
-              }
-              action="Delete homework"
-              onConfirm={onDelete}
-            >
-              Delete homework
-            </MenuConfirmItem>
-          </>
-        )}
+            what goes. */}
+        <>
+          <MenuDivider />
+          <MenuConfirmItem
+            icon={<Trash2 />}
+            question={`Delete ${set.title}?`}
+            detail={
+              set.total === 0
+                ? 'It has no questions yet.'
+                : `Its ${plural(set.total, 'question')} go with it, with their guides and what you checked off.`
+            }
+            action="Delete homework"
+            onConfirm={onDelete}
+          >
+            Delete homework
+          </MenuConfirmItem>
+        </>
       </Menu>
       {questions.length > 0 && (
         <ProgressBar
@@ -437,23 +584,6 @@ export function Walkthrough({
       )}
     </div>
   );
-
-  if (!detail.data) {
-    return (
-      <div className="flex min-h-0 flex-1 flex-col">
-        {header}
-        <div className="space-y-5 p-card">
-          <Skeleton className="h-4 w-24" />
-          <p className="space-y-1">
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-2/3" />
-          </p>
-          <StageSkeleton name="hint" />
-          <StageSkeleton name="walkthrough" />
-        </div>
-      </div>
-    );
-  }
 
   if (!q) {
     return (
@@ -555,7 +685,7 @@ export function Walkthrough({
     e.preventDefault();
   };
 
-  if (finished && set) {
+  if (finished) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         {header}
@@ -915,3 +1045,70 @@ export function Walkthrough({
 /** What a question's usage modal is titled: the problem, by its label. */
 const usageName = (q: { label: string }) =>
   q.label ? `Problem ${q.label}` : 'Question';
+
+/** An open set. It draws the screen it will be, known from the list's row
+ *  (or the quiet one when the row was not seen), then the set itself. */
+export function Walkthrough({
+  summary,
+  ...props
+}: Omit<Parameters<typeof WalkthroughBody>[0], 'data'> & {
+  summary?: HomeworkSet;
+}) {
+  const detail = useHomeworkSet(props.setId);
+  const header = <SetHeaderSkeleton summary={summary} onBack={props.onBack} />;
+  if (detail.isError && !detail.data) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        {header}
+        <p role="status" className="p-card text-sm text-destructive/80">
+          Couldn&apos;t load this set. Try again in a moment.
+        </p>
+      </div>
+    );
+  }
+  const wide = props.wide ?? false;
+  return (
+    <Loaded
+      query={detail}
+      boxClassName="min-h-0 flex-1 grid-rows-[minmax(0,1fr)]"
+      className="flex min-h-0 flex-col"
+      variant={summaryVariant(summary)}
+      view="homeworkSet"
+      variantOf={detailVariant}
+      neutral={
+        <>
+          {header}
+          <div className="min-h-0 flex-1" />
+        </>
+      }
+      skeletons={{
+        question: (
+          <>
+            {header}
+            <WalkthroughSkeleton wide={wide} />
+          </>
+        ),
+        finish: (
+          <>
+            {header}
+            <FinishSkeleton turnedIn={false} onBack={props.onBack} />
+          </>
+        ),
+        turnedIn: (
+          <>
+            {header}
+            <FinishSkeleton turnedIn onBack={props.onBack} />
+          </>
+        ),
+        empty: (
+          <>
+            {header}
+            <div className="min-h-0 flex-1" />
+          </>
+        ),
+      }}
+    >
+      {(data) => <WalkthroughBody {...props} data={data} />}
+    </Loaded>
+  );
+}

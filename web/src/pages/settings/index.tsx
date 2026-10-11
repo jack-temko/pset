@@ -13,6 +13,8 @@ import { Box, BoxBody, BoxFooter, BoxHeader, BoxRow } from '@/components/box';
 import { Button } from '@/components/button';
 import { Field, Input } from '@/components/input';
 import { SegmentedControl } from '@/components/segmented-control';
+import { Loaded } from '@/components/loaded';
+import type { Variant } from '@/variants';
 import { Skeleton } from '@/components/skeleton';
 import { Spinner } from '@/components/spinner';
 import { ApiError } from '@/api/client';
@@ -202,7 +204,14 @@ function KeySkeleton() {
         <Field label="API key" hint={KEY_HINT}>
           <Skeleton className="block h-control w-full rounded-md" />
         </Field>
-        <Skeleton className="block h-3 w-3/4" />
+        {/* The models line: PSet's own sentence, three lines at this width. */}
+        <span className="block" aria-hidden>
+          {['w-full', 'w-full', 'w-2/3'].map((w, i) => (
+            <span key={i} className="flex h-4 items-center">
+              <Skeleton className={`block h-3 ${w}`} />
+            </span>
+          ))}
+        </span>
       </BoxBody>
       <BoxFooter>
         <span />
@@ -253,43 +262,60 @@ function StatusLine({ status }: { status: Status }) {
 /** The name PSet greets you by, and the tutor calls you. Same shape as a
  *  connection Box: Save appears once there's something to save. */
 function You() {
-  const { data } = useSettings();
+  const settings = useSettings();
+  return (
+    <Loaded
+      query={settings}
+      skeleton={
+        <Box>
+          <BoxBody>
+            <Field label="Your name" hint={YOU_HINT}>
+              <Skeleton className="block h-control w-full rounded-md" />
+            </Field>
+          </BoxBody>
+        </Box>
+      }
+    >
+      {(data) => <YouForm saved={data.profile.name} />}
+    </Loaded>
+  );
+}
+
+const YOU_HINT =
+  'Home greets you by it, and so does the tutor. Leave it empty to go without.';
+
+function YouForm({ saved }: { saved: string }) {
   const saveProfile = useSaveProfile();
   const savingShown = useShowPending(saveProfile);
   const [value, setValue] = useState<string | null>(null);
-  const saved = data?.profile.name ?? '';
   const current = value ?? saved;
-  const dirty = data !== undefined && current.trim() !== saved;
+  const dirty = current.trim() !== saved;
 
   return (
     <Box>
       <BoxBody>
         <Field
           label="Your name"
-          hint="Home greets you by it, and so does the tutor. Leave it empty to go without."
+          hint={YOU_HINT}
           error={
             saveProfile.error instanceof ApiError
               ? saveProfile.error.message
               : undefined
           }
         >
-          {data ? (
-            <Input
-              value={current}
-              maxLength={60}
-              autoComplete="given-name"
-              onChange={(e) => {
-                setValue(e.target.value);
-                saveProfile.reset();
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && dirty && !saveProfile.isPending)
-                  saveProfile.mutate({ name: current });
-              }}
-            />
-          ) : (
-            <Skeleton className="block h-control w-full rounded-md" />
-          )}
+          <Input
+            value={current}
+            maxLength={60}
+            autoComplete="given-name"
+            onChange={(e) => {
+              setValue(e.target.value);
+              saveProfile.reset();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && dirty && !saveProfile.isPending)
+                saveProfile.mutate({ name: current });
+            }}
+          />
         </Field>
       </BoxBody>
       {(dirty || saveProfile.isSuccess) && (
@@ -342,26 +368,32 @@ const HEALTH_PURPOSE: Record<string, string> = {
  *  machine. OpenRouter isn't here: its status lives beside the key, so
  *  each fact is said once. */
 function Health() {
-  const { data } = useHealth();
+  const health = useHealth();
   const fix = useFixCheck();
-  const checks = data?.checks ?? null;
   // "Fixing…" only for a fix that takes a while; a quick one just lands.
   const fixing = useShowPending(fix) ? fix.variables : null;
 
   return (
-    <Box>
-      {checks === null
-        ? // The checks are always the same five, so draw five rows at their
-          // real height; the results then land without moving anything.
-          HEALTH_NAMES.map((name) => (
+    <Loaded
+      query={health}
+      skeleton={
+        // The checks are always the same five, so draw five rows at their
+        // real height; the results then land without moving anything.
+        <Box>
+          {HEALTH_NAMES.map((name) => (
             <BoxRow
               key={name}
               leading={<Skeleton className="size-4 rounded-full" />}
               title={name}
               description={<Skeleton className="h-3 w-48" />}
             />
-          ))
-        : checks.map((c) => (
+          ))}
+        </Box>
+      }
+    >
+      {({ checks }) => (
+        <Box>
+          {checks.map((c) => (
             <BoxRow
               key={c.id}
               leading={
@@ -400,7 +432,9 @@ function Health() {
               }
             />
           ))}
-    </Box>
+        </Box>
+      )}
+    </Loaded>
   );
 }
 
@@ -612,23 +646,44 @@ function ResetEverything() {
 // ---------------------------------------------------------------- page
 
 function Connections() {
-  const { data } = useSettings();
-  if (!data) return <KeySkeleton />;
+  // The key box has the same shape saved or not; the variant is named so the
+  // audit opens both, and it is the data's, so the neutral skeleton is the same.
   return (
-    <KeyBox initial={data.apiKey} ready={data.ready.key} models={data.models} />
+    <Loaded
+      query={useSettings()}
+      view="settingsKey"
+      variant={undefined}
+      neutral={<KeySkeleton />}
+      skeletons={{ missing: <KeySkeleton />, saved: <KeySkeleton /> }}
+      variantOf={(data): Variant<'settingsKey'> =>
+        data.ready.key ? 'saved' : 'missing'
+      }
+    >
+      {(data) => (
+        <KeyBox
+          initial={data.apiKey}
+          ready={data.ready.key}
+          models={data.models}
+        />
+      )}
+    </Loaded>
   );
 }
 
 function AboutLine() {
-  const { data } = useAbout();
   return (
-    <p className="font-mono text-xs text-muted-foreground">
-      {data ? (
-        `pset ${data.version} · ${data.dataDir}`
-      ) : (
-        <Skeleton className="h-3 w-80" />
+    <Loaded
+      query={useAbout()}
+      skeleton={
+        <p className="font-mono text-xs text-muted-foreground">
+          <Skeleton className="h-3 w-80" />
+        </p>
+      }
+    >
+      {(data) => (
+        <p className="font-mono text-xs text-muted-foreground">{`pset ${data.version} · ${data.dataDir}`}</p>
       )}
-    </p>
+    </Loaded>
   );
 }
 
@@ -650,19 +705,11 @@ function Section({
 }
 
 export function Settings() {
-  // /settings#connections, from a failure that needs the key fixed.
-  // Scrolled to twice on purpose: once right away, and once after the
-  // connection cards resolve, since their loading height shifts everything
-  // below and would otherwise leave the target half off screen.
+  // /settings#connections, from a failure that needs the key fixed. Every
+  // section holds its size while it loads, so one scroll lands.
   useEffect(() => {
     const id = window.location.hash.slice(1);
-    if (!id) return;
-    const scroll = () => document.getElementById(id)?.scrollIntoView();
-    scroll();
-    const settle = setTimeout(scroll, 400);
-    return () => {
-      clearTimeout(settle);
-    };
+    if (id) document.getElementById(id)?.scrollIntoView();
   }, []);
   return (
     // No middle of its own: the bar picks up "Settings" once the h1 has

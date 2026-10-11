@@ -40,6 +40,11 @@ describe('useLastCount', () => {
     expect(render('b')).toBe('3');
   });
 
+  it('remembers an empty list as 0', () => {
+    render('a', 0);
+    expect(render('a')).toBe('0');
+  });
+
   it('falls back to 3 when storage throws', () => {
     const spy = vi
       .spyOn(Storage.prototype, 'getItem')

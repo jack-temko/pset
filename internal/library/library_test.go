@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -141,6 +142,16 @@ func newEnv(t *testing.T) *env {
 	if err := db.Migrate(context.Background(), d, append(append(jobs.Migrations(), usage.Migrations()...), Migrations()...)); err != nil {
 		t.Fatal(err)
 	}
+	// The tables other features own, which the book's usage shape reads; the
+	// library's tests don't run their migrations (those packages import this one).
+	for _, q := range []string{
+		`CREATE TABLE homework (id TEXT, book_id TEXT)`, `CREATE TABLE questions (id TEXT, homework_id TEXT)`,
+		`CREATE TABLE turns (id TEXT, book_id TEXT)`, `CREATE TABLE assignment_reads (id TEXT, book_id TEXT)`,
+	} {
+		if _, err := d.Exec(q); err != nil {
+			t.Fatal(err)
+		}
+	}
 	e := &env{llm: llmtest.New(t), events: &recorder{}, dir: dir}
 	e.models = &models{cfg: e.llm.Config()}
 	// A book without an outline asks the model for its contents; unless a
@@ -259,6 +270,25 @@ func TestDigitalBookImportsToReady(t *testing.T) {
 	if len(c.Entries) != 3 || c.Entries[0].Title != "Chapter 1" || c.Entries[0].Page != 4 ||
 		len(c.Entries[0].Children) != 1 || c.Entries[1].Page != 8 {
 		t.Fatalf("contents %+v", c)
+	}
+
+	// The rail's shape rides on the book, from the shelf and from the book
+	// itself, so the workspace knows it before the contents arrive.
+	if want := []int{1, 1, 1}; !slices.Equal(b.Rail, want) {
+		t.Fatalf("rail %v, want %v", b.Rail, want)
+	}
+	if all, err := e.svc.List(context.Background()); err != nil || len(all) != 1 || !slices.Equal(all[0].Rail, b.Rail) {
+		t.Fatalf("shelf rail %+v %v", all, err)
+	}
+	// A book whose only structure is the whole-book fallback has no rail, and
+	// says so as an empty list, never null.
+	if err := saveSections(context.Background(), e.svc.c.DB, b.ID, []section{{Level: 1, Title: "Whole book", StartPage: 1}}); err != nil {
+		t.Fatal(err)
+	}
+	var bare Book
+	e.do(t, "GET", "/api/books/"+b.ID, nil, &bare)
+	if bare.Rail == nil || len(bare.Rail) != 0 {
+		t.Fatalf("a book with no contents has rail %#v, want []", bare.Rail)
 	}
 
 	hits, err := e.svc.Search(context.Background(), b.ID, "determinants of matrices", 3)
@@ -610,6 +640,71 @@ func TestBuildContents(t *testing.T) {
 	}
 	if c := buildContents([]section{{Level: 1, Title: "Whole book", StartPage: 1}}); len(c.Entries) != 0 {
 		t.Fatalf("fallback section made a rail: %+v", c)
+	}
+}
+
+// The shelf and the book's own events carry the shape of its usage dialog:
+// the kinds that spent anything and the import's tables, counted in SQL.
+func TestTheShelfAndTheEventsCarryTheUsageShape(t *testing.T) {
+	e := newEnv(t)
+	var up BookChanged
+	if code := e.upload(t, "linear_algebra-notes.pdf", fixturePDF(t, 3, 12, "Linear Maps"), &up); code != 201 {
+		t.Fatalf("upload %d", code)
+	}
+	b := e.waitFor(t, up.Book.ID, StateReady)
+	ctx := context.Background()
+	if b.Usage != nil {
+		t.Fatalf("nothing spent yet: %+v", b.Usage)
+	}
+	d := e.svc.c.DB
+	put := func(typ, id, stage, run, tools string) {
+		usage.Sink(d)(llm.Call{At: "2026-09-29T10:00:00Z", SubjectType: typ, SubjectID: id, Model: "m", Answered: "m", Ms: 5, Stage: stage, Run: run, Tools: tools})
+	}
+	put(usage.SubjectBook, b.ID, "Naming", "r1", "")
+	put(usage.SubjectBook, b.ID, "Contents", "r1", "read_page")
+	put(usage.SubjectBook, b.ID, "Contents", "r2", "")
+	for _, q := range []string{`INSERT INTO turns VALUES ('t1', '` + b.ID + `')`} {
+		if _, err := d.Exec(q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	put(usage.SubjectTurn, "t1", "Round 1", "r", "")
+
+	want := func(where string, got *usage.BookShape) {
+		t.Helper()
+		if got == nil || got.Kinds != 2 || got.Import == nil || got.Import.Stages != 2 || len(got.Import.Sections) != 2 ||
+			got.Import.Sections[0].Rows != 2 || got.Import.Sections[0].Tall != 1 || got.Import.Sections[1].Rows != 1 {
+			t.Fatalf("%s: usage shape %+v", where, got)
+		}
+	}
+	all, err := e.svc.List(ctx)
+	if err != nil || len(all) != 1 {
+		t.Fatalf("shelf %v %v", all, err)
+	}
+	want("shelf", all[0].Usage)
+	one, err := e.svc.Get(ctx, b.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want("get", one.Usage)
+	e.events.events = nil
+	if _, err := e.svc.publish(ctx, b.ID); err != nil {
+		t.Fatal(err)
+	}
+	if !e.events.has(EventBookChanged, `"kinds":2`) {
+		t.Fatalf("the published book carries no usage shape: %v", e.events.events)
+	}
+}
+
+func TestRailShape(t *testing.T) {
+	many := make([]ContentsEntry, RailRows+3)
+	many[0].Children = make([]ContentsEntry, RailRows+5)
+	got := railShape(Contents{Entries: many})
+	if len(got) != RailRows || got[0] != RailRows || got[1] != 0 {
+		t.Fatalf("capped shape %v", got)
+	}
+	if got := railShape(Contents{}); got == nil || len(got) != 0 {
+		t.Fatalf("no contents: %#v", got)
 	}
 }
 

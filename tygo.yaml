@@ -29,10 +29,12 @@ packages:
       probnum.Style: 'Style'
       probnum.Form: 'Form'
       probnum.Where: 'Where'
+      usage.BookShape: 'BookShape'
     frontmatter: |
       // Generated from internal/library/wire.go by tygo. Do not edit.
       import type { Run } from './pagenum'
       import type { Form, Style, Where } from './probnum'
+      import type { BookShape } from './usage'
 
   - path: github.com/jackt/pset/internal/doc
     include_files: [wire.go]

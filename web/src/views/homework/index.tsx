@@ -4,19 +4,24 @@ import { Box, BoxRow } from '@/components/box';
 import { ProgressBar } from '@/components/progress-bar';
 import { DoorAction } from '@/components/door';
 import { HomeworkStatusLabel } from '@/components/homework-status';
+import { Loaded } from '@/components/loaded';
 import { Skeleton } from '@/components/skeleton';
 import { HomeworkDialog } from '@/pages/workspace/dialogs';
 import { AddHomeworkDialog } from '@/pages/workspace/add-homework';
 import { AssignmentReads } from '@/pages/workspace/assignment-reads';
 import {
+  useAssignmentReads,
   useBookHomework,
   useDeleteHomework,
   useHomeworkSet,
+  useListedSet,
   useUpdateHomework,
 } from '@/api/homework';
 import type { About } from '@/api/ask';
 import type { PendingSel } from '@/components/document/selection';
 import { dueLine, dueStatus } from '@/lib/due';
+import { useLastShape } from '@/lib/last-count';
+import type { Variant } from '@/variants';
 import { cn } from '@/lib/utils';
 import {
   setBarLabel,
@@ -59,6 +64,76 @@ function SetRow({
   );
 }
 
+/** A set's row before it arrives: the same two lines and the bar. */
+function SetRowSkeleton({ bar = true }: { bar?: boolean }) {
+  return (
+    <BoxRow
+      title={<Skeleton className="h-3 w-40" />}
+      description={
+        <span className="block space-y-2 pt-1">
+          {bar && <Skeleton className="block h-1 w-full rounded-full" />}
+          <Skeleton className="block h-3 w-48" />
+        </span>
+      }
+      trailing={<Skeleton className="h-3 w-16" />}
+    />
+  );
+}
+
+/** How many sets the list showed last time, per book, for its skeleton. */
+type ListShape = { active: number; turnedIn: number };
+const isListShape = (x: unknown): x is ListShape => {
+  if (typeof x !== 'object' || x === null) return false;
+  const s = x as Partial<ListShape>;
+  return Number.isInteger(s.active) && Number.isInteger(s.turnedIn);
+};
+
+const listVariant = (
+  active: number,
+  turnedIn: number,
+): Variant<'homeworkList'> =>
+  turnedIn > 0 ? 'turnedIn' : active > 0 ? 'active' : 'empty';
+
+/** The list before its sets: as many rows as last time, the door, and the
+ *  Turned in box when there was one. */
+function ListSkeleton({
+  active,
+  turnedIn,
+}: {
+  active: number;
+  turnedIn: number;
+}) {
+  return (
+    <>
+      <Box>
+        {Array.from({ length: active }, (_, i) => (
+          <SetRowSkeleton key={i} />
+        ))}
+        <DoorAction
+          icon={<Plus aria-hidden />}
+          onClick={() => {}}
+          className={cn(
+            'pointer-events-none',
+            active > 0 && 'border-t border-border-muted',
+          )}
+        >
+          New homework
+        </DoorAction>
+      </Box>
+      {turnedIn > 0 && (
+        <>
+          <p className="text-xs text-muted-foreground">Turned in</p>
+          <Box>
+            {Array.from({ length: turnedIn }, (_, i) => (
+              <SetRowSkeleton key={i} bar={false} />
+            ))}
+          </Box>
+        </>
+      )}
+    </>
+  );
+}
+
 /** The homework list: active sets, then turned-in ones under a quiet
  *  label. Opening a set fills the panel with its walkthrough. */
 export function HomeworkTab({
@@ -97,9 +172,18 @@ export function HomeworkTab({
   const [editing, setEditing] = useState(false);
   const openSet = useHomeworkSet(openId).data?.homework;
   const updateOpen = useUpdateHomework(openId ?? '');
+  const reads = useAssignmentReads(bookId);
+  // The row the open set was opened from: the book's list, or Home's due list.
+  const listed = useListedSet(openId);
   const sets = list.data;
   const active = (sets ?? []).filter((h) => !h.turnedInAt);
   const turnedIn = (sets ?? []).filter((h) => h.turnedInAt);
+  const last = useLastShape<ListShape | null>(
+    `homework-list-${bookId}`,
+    sets && { active: active.length, turnedIn: turnedIn.length },
+    null,
+    isListShape,
+  );
 
   if (openId) {
     return (
@@ -107,6 +191,7 @@ export function HomeworkTab({
         <Walkthrough
           key={openId}
           setId={openId}
+          summary={listed}
           onEdit={() => {
             setEditing(true);
           }}
@@ -146,81 +231,137 @@ export function HomeworkTab({
     );
   }
 
+  // The reads box, the sets and "Turned in" arrive as one: the list and the
+  // reads are waited on together, so nothing is added above a row you could
+  // already see.
   return (
-    <div
-      className={cn(
-        'min-h-0 flex-1 space-y-4 overflow-y-auto p-card',
-        // An empty tab centers its one sentence and the way out.
-        sets?.length === 0 && 'flex flex-col justify-center',
-      )}
-    >
-      {sets?.length === 0 && (
-        <p className="text-center text-sm text-muted-foreground">
-          No homework here yet. New homework takes your professor&apos;s
-          assignment (a file, a web page or pasted text), or the questions you
-          type.
-        </p>
-      )}
-      {/* Assignments reading in the background, or read and waiting to
-          be looked over, first: they're what's new. */}
-      <AssignmentReads
-        bookId={bookId}
-        onReview={(id) => {
-          setReviewing(id);
-          setAdding(true);
-        }}
-      />
-      {/* No header: the tab already says Homework, and a second label on
-          the box only said it again. The way to add one is the list's last
-          row, shaped like the Door. */}
-      <Box>
-        {sets === undefined
-          ? [0, 1].map((i) => (
-              <BoxRow
-                key={i}
-                title={<Skeleton className="h-3 w-40" />}
-                description={<Skeleton className="h-3 w-48" />}
-              />
-            ))
-          : active.map((h) => (
-              <SetRow
-                key={h.id}
-                h={h}
-                onOpen={() => {
-                  setOpenId(h.id);
-                }}
-              />
-            ))}
-        <DoorAction
-          icon={<Plus aria-hidden />}
-          onClick={() => {
-            setAdding(true);
-          }}
-          className={cn(
-            (sets === undefined || active.length > 0) &&
-              'border-t border-border-muted',
-          )}
-        >
-          New homework
-        </DoorAction>
-      </Box>
-      {turnedIn.length > 0 && (
-        <>
-          <p className="text-xs text-muted-foreground">Turned in</p>
+    <div className="min-h-0 flex-1 overflow-y-auto p-card">
+      <Loaded
+        query={list}
+        queries={[reads]}
+        fill
+        className="h-full space-y-4"
+        variant={last ? listVariant(last.active, last.turnedIn) : undefined}
+        view="homeworkList"
+        variantOf={(sets: HomeworkSet[]) =>
+          listVariant(
+            sets.filter((h) => !h.turnedInAt).length,
+            sets.filter((h) => h.turnedInAt).length,
+          )
+        }
+        neutral={
           <Box>
-            {turnedIn.map((h) => (
-              <SetRow
-                key={h.id}
-                h={h}
-                bar={false}
-                onOpen={() => {
-                  setOpenId(h.id);
+            <DoorAction
+              icon={<Plus aria-hidden />}
+              onClick={() => {}}
+              className="pointer-events-none"
+            >
+              New homework
+            </DoorAction>
+          </Box>
+        }
+        skeletons={{
+          empty: (
+            <div className="flex h-full flex-col justify-center space-y-4">
+              <div className="space-y-0" aria-hidden>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="py-1">
+                    <Skeleton className="mx-auto block h-3 w-5/6" />
+                  </div>
+                ))}
+              </div>
+              <Box>
+                <DoorAction
+                  icon={<Plus aria-hidden />}
+                  onClick={() => {}}
+                  className="pointer-events-none"
+                >
+                  New homework
+                </DoorAction>
+              </Box>
+            </div>
+          ),
+          active: <ListSkeleton active={last?.active ?? 0} turnedIn={0} />,
+          turnedIn: (
+            <ListSkeleton
+              active={last?.active ?? 0}
+              turnedIn={last?.turnedIn ?? 0}
+            />
+          ),
+        }}
+      >
+        {(sets) => {
+          const active = sets.filter((h) => !h.turnedInAt);
+          const turnedIn = sets.filter((h) => h.turnedInAt);
+          return (
+            <div
+              className={cn(
+                'space-y-4',
+                sets.length === 0 && 'flex h-full flex-col justify-center',
+              )}
+            >
+              {sets.length === 0 && (
+                <p className="text-center text-sm text-muted-foreground">
+                  No homework here yet. New homework takes your professor&apos;s
+                  assignment (a file, a web page or pasted text), or the
+                  questions you type.
+                </p>
+              )}
+              {/* Assignments reading in the background, or read and waiting to
+                  be looked over, first: they're what's new. */}
+              <AssignmentReads
+                bookId={bookId}
+                onReview={(id) => {
+                  setReviewing(id);
+                  setAdding(true);
                 }}
               />
-            ))}
-          </Box>
-        </>
-      )}
+              {/* No header: the tab already says Homework, and a second label on
+                  the box only said it again. The way to add one is the list's last
+                  row, shaped like the Door. */}
+              <Box>
+                {active.map((h) => (
+                  <SetRow
+                    key={h.id}
+                    h={h}
+                    onOpen={() => {
+                      setOpenId(h.id);
+                    }}
+                  />
+                ))}
+                <DoorAction
+                  icon={<Plus aria-hidden />}
+                  onClick={() => {
+                    setAdding(true);
+                  }}
+                  className={cn(
+                    active.length > 0 && 'border-t border-border-muted',
+                  )}
+                >
+                  New homework
+                </DoorAction>
+              </Box>
+              {turnedIn.length > 0 && (
+                <>
+                  <p className="text-xs text-muted-foreground">Turned in</p>
+                  <Box>
+                    {turnedIn.map((h) => (
+                      <SetRow
+                        key={h.id}
+                        h={h}
+                        bar={false}
+                        onOpen={() => {
+                          setOpenId(h.id);
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </>
+              )}
+            </div>
+          );
+        }}
+      </Loaded>
 
       {/* One set made lands you in it; several stay on the list, where
           they all are. */}

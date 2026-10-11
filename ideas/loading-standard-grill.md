@@ -29,6 +29,15 @@ back a jump.
 
 D9 dropped (2026-10-09): the height animation jittered, flashed and snapped at the end in Jack's look at /components; skeletons are made exact instead, which the jump check enforces. Content crossfades over the skeleton in one place.
 
+**Variant first (2026-10-09).** A view whose layout depends on its data (a set done or in progress, empty or not, first run, a book with or without contents, Ask empty or with turns, key saved or not) is a view with variants. Opening a finished set drew the question skeleton, rendered question 1 for a frame, then switched to the summary in an effect: a skeleton that guessed, and a variant chosen after paint. Nothing in the jump check could see it, because a same-size swap moves nothing.
+
+| #   | Decision                                                                                                                                                                                                                                                                                                  | Why                                     | Beat                                                                |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------- |
+| D10 | A view declares its variants; `Loaded` takes one skeleton per variant and a `variant` resolved before the data, from what is already known (the clicked row's summary, the route, cached data); with nothing known it draws the neutral skeleton: the chrome every variant shares, real, and a quiet body | Never a wrong guess; fuller when known  | last-seen variant per item; hold the old screen with a progress bar |
+| D11 | Navigation carries the summary: every list-to-detail move seeds the detail query from the list's cached row, so the variant is known at click time                                                                                                                                                        | In-app moves never guess                | fetching first and guessing                                         |
+| D12 | The variant is chosen during render, never in an effect; `Loaded` stamps skeleton and content with `data-variant`; types require a skeleton per variant, a mismatch warns on screen in development and fails the jump check, as does a box that changes variant after its reveal                          | Caught while building and in CI         | check only                                                          |
+| D13 | One manifest lists every view's variants; the public fixture library holds one of each; the core CI check opens every variant; a test fails when a manifest variant has no fixture or scenario                                                                                                            | Every state is exercised on every UI PR | nightly only                                                        |
+
 ### The artifact: what each surface does
 
 | Surface              | Before data                                          | When it arrives                 | Today's offenders                                                  |
@@ -102,3 +111,10 @@ Note: Q8 (fonts) was assumed, not asked (A1).
 - Jack: "can we make the skeletons shrink as they fade out to match the size of the loading text or card?"
 - Q10 Morph: "With the skeleton morphing to the content's size, should the jump check still flag a skeleton that's the wrong size?" Options: Morph, and still flag (Recommended) / Morph, allow it / No morph. Answer: "Morph, and still flag (Recommended)".
 - Jack, on the built morph: "The morph is fucked up, either fix it or drop it if its too much work. It jitters, flashes, and still jumps as it settles slighlty." Answer: "Dropped (Jack delegated the call)."
+
+### Batch 4 (2026-10-09, Jack's report)
+
+- Jack: "When a homework is done and I select it, the skeleton loads for a question page, but then flashes to the summary, and the skeltons dont match. Why do the checks not catch this? What class of issues is this? We need to cover stuff like this where we might not know what the underlying view will look like. I want a strong architectural decision on this so it works everywhere" and "The new component should account for yhis".
+- Q11 Unknown: "When a view's variant really can't be known before its data (a cold link, nothing cached), what should it draw?" Options: Neutral skeleton (Recommended) / Last-seen variant / Hold the old screen. Answer: "Neutral skeleton (Recommended)".
+- Q12 Enforce: "How strictly should variants be enforced?" Options: Types + dev warning + check (Recommended) / Check only. Answer: "Types + dev warning + check (Recommended)".
+- Q13 Coverage: "How should every variant be exercised?" Options: Manifest + fixture + CI (Recommended) / Nightly only. Answer: "Manifest + fixture + CI (Recommended)".

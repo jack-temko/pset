@@ -130,7 +130,14 @@ func (s *Service) Get(ctx context.Context, id string) (Book, error) {
 	if errors.Is(err, errNotFound) {
 		return Book{}, httpx.NotFound("book")
 	}
-	return r.Book, err
+	if err != nil {
+		return Book{}, err
+	}
+	one := []Book{r.Book}
+	if err := decorate(ctx, s.c.DB, one); err != nil {
+		return Book{}, err
+	}
+	return one[0], nil
 }
 
 // Upload stages a PDF, hashing it on the way in. A book already on the
@@ -409,7 +416,9 @@ func (s *Service) Retry(ctx context.Context, id string) (Book, error) {
 // Contents is the book's structure as the rail shows it: every level
 // the contents gives, as a tree.
 func (s *Service) Contents(ctx context.Context, id string) (Contents, error) {
-	if _, err := s.Get(ctx, id); err != nil {
+	if _, err := getBook(ctx, s.c.DB, id); errors.Is(err, errNotFound) {
+		return Contents{}, httpx.NotFound("book")
+	} else if err != nil {
 		return Contents{}, err
 	}
 	secs, err := loadSections(ctx, s.c.DB, id)

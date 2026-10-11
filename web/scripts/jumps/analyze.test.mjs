@@ -38,7 +38,36 @@ describe('analyzeRun', () => {
     expect(r.settleMs).toBe(0);
   });
 
-  it('counts only shifts after t0, and keeps the ones after input', () => {
+  it('counts a shift after input when a response came in between: that is a load after the click', () => {
+    const shift = {
+      t: 1300,
+      value: 0.2,
+      hadRecentInput: true,
+      sources: [src('a')],
+    };
+    const waiting = analyzeRun({
+      ...base,
+      shifts: [shift],
+      requests: [{ start: 1010, end: 1400, url: '/api/x' }],
+    });
+    expect(waiting.jump).toBe(0);
+    expect(waiting.afterInput).toBeCloseTo(0.2);
+    const loaded = analyzeRun({
+      ...base,
+      shifts: [shift],
+      requests: [{ start: 1010, end: 1200, url: '/api/x' }],
+    });
+    expect(loaded.jump).toBeCloseTo(0.2);
+    expect(loaded.afterInput).toBe(0);
+    const before = analyzeRun({
+      ...base,
+      shifts: [shift],
+      requests: [{ start: 100, end: 900, url: '/api/x' }],
+    });
+    expect(before.jump).toBe(0);
+  });
+
+  it('counts only shifts after t0, and reports the ones after input apart, like CLS', () => {
     const r = analyzeRun({
       ...base,
       shifts: [
@@ -47,7 +76,9 @@ describe('analyzeRun', () => {
         { t: 1400, value: 0.2, hadRecentInput: false, sources: [src('b')] },
       ],
     });
-    expect(r.jump).toBeCloseTo(0.3);
+    expect(r.jump).toBeCloseTo(0.2);
+    expect(r.afterInput).toBeCloseTo(0.1);
+    expect(r.moved.map((m) => m.sel)).toEqual(['b']);
     expect(r.shiftCount).toBe(2);
     expect(r.settleMs).toBe(400);
   });

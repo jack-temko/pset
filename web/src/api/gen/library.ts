@@ -2,6 +2,7 @@
 // Generated from internal/library/wire.go by tygo. Do not edit.
 import type { Run } from './pagenum'
 import type { Form, Style, Where } from './probnum'
+import type { BookShape } from './usage'
 
 //////////
 // source: wire.go
@@ -138,7 +139,21 @@ export interface Book {
    * ones, then scans.
    */
   kind: Kind;
+  /**
+   * Rail is the shape of the contents rail: how many rows sit under each
+   * top-level heading (the first RailRows headings, each count capped at
+   * RailRows). Empty when the book has no contents and so no rail. It is on
+   * the book so the workspace draws the rail's skeleton, or none, on a first
+   * visit, before the contents arrive.
+   */
+  rail: number /* int */[];
   state: BookState;
+  /**
+   * Usage is the layout of the book's usage dialog (the rows of "By kind",
+   * the import's tables), so the dialog's skeleton is the right size on a
+   * first open. Absent when the book spent nothing.
+   */
+  usage?: BookShape;
   /**
    * AddedAt is when it was put on the shelf (RFC 3339).
    */
@@ -149,6 +164,10 @@ export interface Book {
    */
   updatedAt: string;
 }
+/**
+ * RailRows caps the rail's shape on a Book.
+ */
+export const RailRows = 12;
 /**
  * Books is GET /api/books.
  */

@@ -4,7 +4,9 @@ import { Trash2 } from 'lucide-react';
 import { Button, IconButton } from '@/components/button';
 import { Dialog } from '@/components/dialog';
 import { Field, Input } from '@/components/input';
+import { Loaded } from '@/components/loaded';
 import { Skeleton } from '@/components/skeleton';
+import { useLastCount } from '@/lib/last-count';
 import { StepAction } from '@/components/transcript';
 import { ApiError } from '@/api/client';
 import {
@@ -84,14 +86,14 @@ export function MemoryDialog({
       { text: text.trim() },
       {
         onSuccess: (m) => {
-          setAlready(all.some((x) => x.id === m.id));
+          setAlready((memories.data ?? []).some((x) => x.id === m.id));
           setText('');
         },
       },
     );
   };
 
-  const all = memories.data ?? [];
+  const rows = useLastCount(`memory-rows-${bookId}`, memories.data?.length, 2);
 
   return (
     <Dialog
@@ -137,33 +139,80 @@ export function MemoryDialog({
           </div>
         </form>
 
-        <div className="space-y-3">
-          {!memories.data ? (
-            <div className="space-y-3" aria-busy="true">
-              <Skeleton className="h-3 w-full" />
-              <Skeleton className="h-3 w-2/3" />
-            </div>
-          ) : all.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No preferences yet. How you want answers, like units or notation:
-              add one above, or tell Ask to remember it.
-            </p>
-          ) : (
-            <ul className="divide-y divide-border-muted">
-              {all.map((m) => (
-                <MemoryRow
-                  key={m.id}
-                  m={m}
-                  onDelete={() => {
-                    remove.mutate(m.id);
-                  }}
-                />
-              ))}
-            </ul>
-          )}
-        </div>
+        <Loaded
+          grace={false}
+          query={memories}
+          className="space-y-3"
+          errorText="Couldn't load the preferences. Try again in a moment."
+          skeleton={<MemorySkeleton rows={rows} />}
+        >
+          {(all) =>
+            all.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No preferences yet. How you want answers, like units or
+                notation: add one above, or tell Ask to remember it.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border-muted">
+                {all.map((m) => (
+                  <MemoryRow
+                    key={m.id}
+                    m={m}
+                    onDelete={() => {
+                      remove.mutate(m.id);
+                    }}
+                  />
+                ))}
+              </ul>
+            )
+          }
+        </Loaded>
       </div>
     </Dialog>
+  );
+}
+
+/** The preferences before they arrive: as many rows as last time, each the
+ *  two lines of a real one and the delete button. */
+function MemorySkeleton({ rows }: { rows: number }) {
+  if (rows === 0)
+    return (
+      // The empty sentence is two lines at the dialog's width.
+      <div aria-hidden>
+        <p className="text-sm">
+          <Skeleton className="h-3 w-full" />
+        </p>
+        <p className="text-sm">
+          <Skeleton className="h-3 w-2/3" />
+        </p>
+      </div>
+    );
+  return (
+    <ul className="divide-y divide-border-muted">
+      {Array.from({ length: rows }, (_, i) => (
+        <li
+          key={i}
+          className="flex items-start gap-2 py-3 first:pt-0 last:pb-0"
+        >
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-sm">
+              <Skeleton className="h-3 w-2/3" />
+            </p>
+            <p className="text-xs">
+              <Skeleton className="h-3 w-24" />
+            </p>
+          </div>
+          <IconButton
+            variant="ghost"
+            size="sm"
+            aria-label="Delete this preference"
+            disabled
+          >
+            <Trash2 />
+          </IconButton>
+        </li>
+      ))}
+    </ul>
   );
 }
 

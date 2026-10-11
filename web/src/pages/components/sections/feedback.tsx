@@ -806,6 +806,7 @@ function LoadedDemo() {
       return { n };
     });
   };
+  const [train, setTrain] = useState(0);
   const [dialog, setDialog] = useState<{
     n: number;
     mode: 'before' | 'after';
@@ -861,6 +862,20 @@ function LoadedDemo() {
         </div>
         <SimBox key={sim.n} id={sim.n} latency={latency} />
       </Shelf>
+      <Shelf label="three sections, out of order">
+        <Button
+          onClick={() => {
+            setTrain((n) => n + 1);
+          }}
+        >
+          Replay
+        </Button>
+        <div key={train} className="grid grid-cols-3 gap-4">
+          {[1100, 400, 700].map((ms) => (
+            <TrainBox key={ms} id={train} latency={ms} />
+          ))}
+        </div>
+      </Shelf>
       <Shelf label="usage dialog, before and after (uses the latency above)">
         <div className="flex gap-2">
           <Button
@@ -909,6 +924,38 @@ function SimBox({ id, latency }: { id: number; latency: number }) {
   return (
     <Loaded
       className="w-panel space-y-2"
+      query={query}
+      skeleton={ROWS.map((r) => (
+        <p key={r} className="text-sm">
+          <Skeleton className="h-3 w-full" />
+        </p>
+      ))}
+    >
+      {(rows) =>
+        rows.map((r) => (
+          <p key={r} className="text-sm">
+            {r}
+          </p>
+        ))
+      }
+    </Loaded>
+  );
+}
+
+/** One of three sections that answer at different times: the ones that land
+ *  close together appear together (the reveal train), not one by one. */
+function TrainBox({ id, latency }: { id: number; latency: number }) {
+  const query = useQuery({
+    queryKey: ['loaded-demo-train', id, latency],
+    queryFn: async () => {
+      await sleep(latency);
+      return ROWS;
+    },
+    gcTime: 0,
+  });
+  return (
+    <Loaded
+      className="space-y-2"
       query={query}
       skeleton={ROWS.map((r) => (
         <p key={r} className="text-sm">

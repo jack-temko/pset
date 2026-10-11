@@ -1,14 +1,17 @@
 import type { ReactNode } from 'react';
 
 import type {
+  BookShape,
   BookUsage,
   Call,
   Detail,
   DetailTotal,
+  Shape as UsageShape,
   Stage,
   Usage,
 } from '@/api/gen/usage';
 import { Button } from '@/components/button';
+import { ROW, reachesCap } from './cap';
 import { Dialog } from '@/components/dialog';
 import { Loaded } from '@/components/loaded';
 import { Skeleton } from '@/components/skeleton';
@@ -379,17 +382,49 @@ export const isShape = (x: unknown): x is Shape =>
 const isImportShape = (x: unknown): x is Shape | null =>
   x === null || isShape(x);
 
-/** The shape the job's own summary line implies, before the detail arrives:
- *  its stages are as many as this kind of job had last time, and its calls
- *  are the summary's call count in one run, the first `failed` of them with
- *  an error line. A job that ran more than once will have more tables. */
+/** A shape from the wire (Usage.shape, BookShape.import): the server counted
+ *  the stage rows and each table's rows, with how many take a second line. */
+const shapeFromWire = (w: UsageShape): Shape => {
+  const rows = (n: number, tall: number) =>
+    Array.from({ length: Math.min(n, MAX_ROWS) }, (_, i) => (i < tall ? 1 : 0));
+  return {
+    stages: rows(w.stages, w.stagesTall ?? 0),
+    runs: w.sections
+      .slice(0, MAX_RUNS)
+      .map((sec) => rows(sec.rows, sec.tall ?? 0)),
+  };
+};
+
+/** The shape the job's own summary line carries, before the detail arrives:
+ *  the server's count of its stage rows and of each table. Without it (an old
+ *  line), what this kind of job looked like last time, with the summary's call
+ *  count in one run. */
 const shapeFromSummary = (u: Usage, remembered: Shape): Shape => {
+  if (u.shape) return shapeFromWire(u.shape);
   const calls = Math.min(u.total.calls, MAX_ROWS);
   return {
     stages: remembered.stages,
     runs: [Array.from({ length: calls }, (_, i) => (i < u.failed ? 1 : 0))],
   };
 };
+
+/** A skeleton body, held to the dialog's cap when the real one would reach it. */
+function SkeletonBody({
+  atCap,
+  children,
+}: {
+  atCap: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="space-y-4"
+      style={atCap ? { minHeight: '80vh' } : undefined}
+    >
+      {children}
+    </div>
+  );
+}
 
 /** The breakdown before it arrives: the stages table and a table for each run. */
 function BreakdownSkeleton({ shape }: { shape: Shape }) {
@@ -531,10 +566,10 @@ export function UsageModal({
       <Body
         state={{ data: detail, loading, error }}
         skeleton={
-          <>
+          <SkeletonBody atCap={reachesCap([shape])}>
             <TotalsSkeleton />
             <BreakdownSkeleton shape={shape} />
-          </>
+          </SkeletonBody>
         }
       >
         {(d) => (
@@ -565,18 +600,32 @@ export function BookUsageDialog({
   data,
   loading,
   error,
-}: { open: boolean; onClose: () => void; title: string } & State<BookUsage>) {
-  const kindRows = useLastCount(
+  shape,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  /** What the book carries about this dialog (Book.usage): its kinds and the
+   *  import's tables, so a first open draws them. Remembered otherwise. */
+  shape?: BookShape;
+} & State<BookUsage>) {
+  const remembered = useLastCount(
     'usage-book-kinds',
     data ? Math.min(data.kinds.length, 12) : undefined,
     2,
   );
-  const importShape = useLastShape<Shape | null>(
+  const rememberedImport = useLastShape<Shape | null>(
     'usage-book-import',
     data ? (data.import ? shapeOf(data.import) : null) : undefined,
     null,
     isImportShape,
   );
+  const kindRows = shape ? Math.min(shape.kinds, 12) : remembered;
+  const importShape = shape
+    ? shape.import
+      ? shapeFromWire(shape.import)
+      : null
+    : rememberedImport;
   return (
     <Dialog
       open={open}
@@ -592,7 +641,12 @@ export function BookUsageDialog({
       <Body
         state={{ data, loading, error }}
         skeleton={
-          <>
+          <SkeletonBody
+            atCap={reachesCap(
+              importShape ? [importShape] : [],
+              39 + 24 + kindRows * ROW,
+            )}
+          >
             <TotalsSkeleton />
             <Section title="By kind">
               <TableSkeleton
@@ -607,7 +661,7 @@ export function BookUsageDialog({
                 <BreakdownSkeleton shape={importShape} />
               </>
             )}
-          </>
+          </SkeletonBody>
         }
       >
         {(d) => (
