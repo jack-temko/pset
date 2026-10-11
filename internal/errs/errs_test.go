@@ -92,6 +92,13 @@ func TestIsAndAsWorkThroughWrap(t *testing.T) {
 	}
 }
 
+func TestAnEntryReturnedBareIsInTheChain(t *testing.T) {
+	v := Resolve(fmt.Errorf("while saving: %w", deep))
+	if v.ID != "test.deep" || v.Fix != "Deep fix." {
+		t.Errorf("%+v", v)
+	}
+}
+
 func TestJoinedErrorsAreWalked(t *testing.T) {
 	v := Resolve(errors.Join(errors.New("a"), deep.New("who", "x")))
 	if v.ID != "test.deep" {

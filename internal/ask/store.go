@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
+	"github.com/jackt/pset/internal/errs"
 )
 
 // Migrations creates one conversation per book, as its turns.
@@ -40,24 +42,78 @@ UPDATE turns SET failure = 'setup' WHERE state = 'failed' AND (
 	reason LIKE '%no OpenRouter key yet%' OR reason LIKE '%out of credit%' OR reason LIKE '%turned the request down%');
 UPDATE turns SET failure = 'unavailable' WHERE state = 'failed' AND failure = '' AND reason LIKE '%busy right now%';
 UPDATE turns SET failure = 'generation' WHERE state = 'failed' AND failure = '';`},
+		// A failed turn keeps its error as a catalog entry (the ids of its
+		// chain), not as a sentence and a kind: the page draws the entry's
+		// words. Turns that failed before get the entries their sentence
+		// named, and the old columns go.
+		{Name: "ask/4", SQL: `ALTER TABLE turns ADD COLUMN error TEXT NOT NULL DEFAULT ''`, Do: failuresToErrors},
+		{Name: "ask/5", SQL: `
+ALTER TABLE turns DROP COLUMN reason;
+ALTER TABLE turns DROP COLUMN failure;`},
 	}
 }
 
 var errNotFound = errors.New("not found")
+
+// failuresToErrors is ask/4: the entries a failed turn's sentence named.
+func failuresToErrors(ctx context.Context, tx *sql.Tx) error {
+	rows, err := tx.QueryContext(ctx, `SELECT id, reason FROM turns WHERE state = 'failed'`)
+	if err != nil {
+		return err
+	}
+	type old struct{ id, reason string }
+	var failed []old
+	for rows.Next() {
+		var o old
+		if err := rows.Scan(&o.id, &o.reason); err != nil {
+			cleanup.Close(rows)
+			return err
+		}
+		failed = append(failed, o)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	cleanup.Close(rows)
+	for _, o := range failed {
+		chain := []string{"ask.turn_failed"}
+		switch {
+		case strings.Contains(o.reason, "no OpenRouter key yet"):
+			chain = append(chain, "key.missing")
+		case strings.Contains(o.reason, "out of credit"):
+			chain = append(chain, "key.out_of_credit")
+		case strings.Contains(o.reason, "turned the request down"):
+			chain = append(chain, "key.refused")
+		case strings.Contains(o.reason, "busy right now"):
+			chain = append(chain, "model.busy")
+		case strings.Contains(o.reason, "stopped partway"):
+			chain = append(chain, "model.cut")
+		case strings.Contains(o.reason, "stopped without answering"):
+			chain = append(chain, "agent.no_answer")
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE turns SET error = ? WHERE id = ?`, errs.Chain(chain...), o.id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 type row struct {
 	Turn
 	AboutText string
 }
 
-const cols = `id, book_id, question, about, about_text, steps, answer, state, reason, failure, created_at, updated_at`
+const cols = `id, book_id, question, about, about_text, steps, answer, state, error, created_at, updated_at`
 
 func scan(s interface{ Scan(...any) error }) (row, error) {
 	var r row
-	var steps, answer string
-	err := s.Scan(&r.ID, &r.BookID, &r.Question, &r.About, &r.AboutText, &steps, &answer, &r.State, &r.Reason, &r.Failure, &r.CreatedAt, &r.UpdatedAt)
+	var steps, answer, failed string
+	err := s.Scan(&r.ID, &r.BookID, &r.Question, &r.About, &r.AboutText, &steps, &answer, &r.State, &failed, &r.CreatedAt, &r.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, errNotFound
+	}
+	if v, ok := errs.ParseStored(failed); ok {
+		r.Error = &v
 	}
 	decodeColumn("steps", steps, &r.Steps)
 	decodeColumn("answer", answer, &r.Answer)

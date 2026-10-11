@@ -1,5 +1,7 @@
 package errs
 
+import "encoding/json"
+
 // Action is the one thing a notice's button does. The set is fixed; the web
 // app maps each to a behaviour (web/src/api/error-actions.ts).
 type Action string
@@ -66,3 +68,31 @@ type Stored struct {
 func (v View) Stored() Stored {
 	return Stored{Chain: v.Chain, Params: v.Params, Incident: v.Incident}
 }
+
+// Marshal is the stored view as the JSON a row keeps in its error column.
+func (s Stored) Marshal() string {
+	b, err := json.Marshal(s)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+// ParseStored reads what Marshal wrote. An empty column is no error (ok is
+// false); a column that can't be read is the fallback view, so a damaged row
+// still says something went wrong.
+func ParseStored(col string) (v View, ok bool) {
+	if col == "" {
+		return View{}, false
+	}
+	var s Stored
+	if err := json.Unmarshal([]byte(col), &s); err != nil {
+		return Stored{}.View(), true
+	}
+	return s.View(), true
+}
+
+// Chain is the stored form of a fixed chain of ids, outermost first, for a
+// migration that turns old text into catalog errors. It names ids, not
+// entries, so a migration never changes when the catalog does.
+func Chain(ids ...string) string { return Stored{Chain: ids}.Marshal() }

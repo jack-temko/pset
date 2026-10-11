@@ -4,7 +4,7 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-118 entries.
+120 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
@@ -14,9 +14,11 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `activity.bad_times` | Say when the stretch started and ended, as RFC 3339 times. |  |  |  | field | activity |
 | `activity.not_homework` | Only homework time is for a question. |  |  |  | field | activity |
 | `activity.unknown_kind` | There's no activity called {kind}. |  |  |  | field | activity |
+| `agent.no_answer` | The model stopped without writing an answer. | It ended its turn with nothing written, even when asked again. | Trying again usually works. | `retry` | inline | agent |
 | `ask.empty_question` | Ask something. |  |  |  | field | ask |
 | `ask.question_too_long` | That's too long for one question. |  |  |  | field | ask |
 | `ask.selection_too_long` | That selection is too long to ask about. Pick a smaller piece. |  |  |  | field | ask |
+| `ask.turn_failed` | Couldn't answer that. | Something went wrong while the tutor was answering. | Ask again. | `retry` | inline | ask |
 | `ask.turn_not_found` | That question isn't in this conversation. | It was cleared, or the page is out of date. | Reload the page to see the conversation as it is now. | `reload` | inline | ask |
 | `book.duplicate` | {title} is already on your shelf. | This is the same file as a book you already added. | Open the one on your shelf. | `open_book` | inline | library |
 | `book.not_found` | That book isn't on your shelf. | It was removed, or the link is out of date. | Go back to your shelf and open it from there. |  | inline | errs |
@@ -73,7 +75,7 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `internal.unexpected` | Something went wrong inside PSet. | PSet hit a problem it has no name for. | Try again. If it keeps happening, copy the details and report it. | `retry` | inline | errs |
 | `key.missing` | There's no OpenRouter key yet. | PSet needs a key to read pages and write answers. | Add your key in Settings, under Connections. | `open_settings` | inline | llm |
 | `key.out_of_credit` | Your OpenRouter account is out of credit. | Your OpenRouter account is out of credit, so PSet can't use a model. | Add credit on OpenRouter, then try again. | `retry` | inline | llm |
-| `key.refused` | OpenRouter refused the key. | The key in Settings may be wrong, expired or deleted (HTTP {status}). | Check the key in Settings, then try again. | `open_settings` | inline | llm |
+| `key.refused` | OpenRouter refused the key. | The key in Settings may be wrong, expired or deleted. | Check the key in Settings, then try again. | `open_settings` | inline | llm |
 | `library.bad_cover` | That isn't one of the cover colours. |  |  |  | field | library |
 | `library.bad_problem_form` | That isn't a way of numbering problems. |  |  |  | field | library |
 | `library.bad_problem_where` | Problems sit after each section or at each chapter's end. |  |  |  | field | library |
@@ -88,10 +90,10 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `memory.empty` | Write what to remember. |  |  |  | field | memory |
 | `memory.not_found` | That memory isn't there. | It was already forgotten, or the list is out of date. | Reload the page to see what is remembered now. | `reload` | inline | memory |
 | `memory.too_long` | Keep it to a sentence or two ({max} characters at most). |  |  |  | field | memory |
-| `model.busy` | OpenRouter didn't answer properly. | OpenRouter is busy or having trouble right now (HTTP {status}). | Try again in a minute. | `retry` | inline | llm |
+| `model.busy` | OpenRouter didn't answer properly. | OpenRouter is busy or having trouble right now. | Try again in a minute. | `retry` | inline | llm |
 | `model.cut` | The model's answer stopped partway. | The connection to the model dropped while it was writing. | Trying again usually works. | `retry` | inline | llm |
-| `model.rejected` | OpenRouter turned the request down. | OpenRouter refused it for a reason PSet has no name for (HTTP {status}). | Try again. If it keeps happening, copy the details and report it. | `retry` | inline | llm |
-| `model.unknown` | OpenRouter doesn't know a model PSet uses. | A model PSet relies on was renamed or removed (HTTP {status}). | Check for a PSet update. | `check_update` | inline | llm |
+| `model.rejected` | OpenRouter turned the request down. | OpenRouter refused it for a reason PSet has no name for. | Try again. If it keeps happening, copy the details and report it. | `retry` | inline | llm |
+| `model.unknown` | OpenRouter doesn't know a model PSet uses. | A model PSet relies on was renamed or removed. | Check for a PSet update. | `check_update` | inline | llm |
 | `model.unreachable` | PSet couldn't reach OpenRouter. | The internet connection is down, or OpenRouter didn't answer in time. | Check the internet connection, then try again. | `retry` | inline | llm |
 | `request.foreign_origin` | PSet refused that change. | PSet takes changes only from its own page. | Make the change from PSet's own page. |  | inline | errs |
 | `request.invalid_json` | PSet couldn't read what was sent. | The page and PSet's server are out of step, which happens after an update. | Reload the page and try again. | `reload` | inline | errs |

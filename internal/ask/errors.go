@@ -22,6 +22,13 @@ var (
 		What:  "That selection is too long to ask about. Pick a smaller piece.",
 		Scope: errs.ScopeField,
 	})
+	turnFailed = errs.Define(errs.Entry{
+		ID:     "ask.turn_failed",
+		What:   "Couldn't answer that.",
+		Why:    "Something went wrong while the tutor was answering.",
+		Fix:    "Ask again.",
+		Action: errs.ActionRetry,
+	})
 	turnNotFound = errs.Define(errs.Entry{
 		ID:     "ask.turn_not_found",
 		What:   "That question isn't in this conversation.",

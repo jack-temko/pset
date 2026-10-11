@@ -1,3 +1,4 @@
+import { ErrorNotice } from '@/components/error-notice';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useCallback,
@@ -30,7 +31,6 @@ import {
   AssistantTurn,
   ConversationStart,
   DayDivider,
-  FailedTurn,
   StoppedNote,
   Steps,
   Thinking,
@@ -64,7 +64,7 @@ import {
   type Book,
   type ContentsEntry,
 } from '@/api/library';
-import { ApiError } from '@/api/client';
+import { ApiError, errorView, viewOf } from '@/api/client';
 import { useBookHomework, useAddBoxed, usePointOut } from '@/api/homework';
 import { BlockSkeleton, Document } from '@/components/document';
 import {
@@ -621,7 +621,6 @@ function TurnView({
   onSelect: (about: About, selection: PendingSel) => void;
   onClearAbout: () => void;
 }) {
-  const navigate = useNavigate();
   const pages = usePages();
   const source = turnSource(t.id);
   const running = t.state === 'running';
@@ -716,16 +715,9 @@ function TurnView({
       )}
       {t.state === 'stopped' && <StoppedNote />}
       {t.state === 'failed' && (
-        <FailedTurn
-          reason={t.reason ?? ''}
+        <ErrorNotice
+          error={t.error ?? viewOf('internal.unexpected')}
           onRetry={onRetry}
-          onSetup={
-            t.failure === 'setup'
-              ? () => {
-                  void navigate('/settings#connections');
-                }
-              : undefined
-          }
         />
       )}
       {/* A turn that ended before it wrote a thing (the first call refused, a
@@ -776,7 +768,6 @@ function AskTab({
   const ask = useAsk(bookId);
   const stop = useStopTurn();
   const clear = useClearTurns(bookId);
-  const navigate = useNavigate();
   const [text, setText] = useState('');
   const scroller = useRef<HTMLDivElement | null>(null);
   const pinned = useRef(true);
@@ -886,19 +877,11 @@ function AskTab({
         )}
         {ask.isError && (
           <div className="mb-2">
-            <FailedTurn
-              reason={ask.error.message}
+            <ErrorNotice
+              error={errorView(ask.error)}
               onRetry={() => {
                 send(text, about, true);
               }}
-              onSetup={
-                ask.error instanceof ApiError &&
-                ask.error.view.action === 'open_settings'
-                  ? () => {
-                      void navigate('/settings#connections');
-                    }
-                  : undefined
-              }
             />
           </div>
         )}

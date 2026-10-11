@@ -296,10 +296,6 @@ const cutRetries = 2
 // ended with neither an answer nor a tool call.
 const emptyNudges = 1
 
-// ErrNoAnswer is a run whose model stopped without writing anything, even
-// when asked again. Trying the whole thing again usually works.
-var ErrNoAnswer = errors.New("the model stopped without writing an answer")
-
 func (l *Loop) step(label string, running bool) {
 	if l.Step != nil {
 		l.Step(label, running)

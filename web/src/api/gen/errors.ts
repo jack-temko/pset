@@ -8,9 +8,11 @@ export type ErrorId =
   | "activity.bad_times"
   | "activity.not_homework"
   | "activity.unknown_kind"
+  | "agent.no_answer"
   | "ask.empty_question"
   | "ask.question_too_long"
   | "ask.selection_too_long"
+  | "ask.turn_failed"
   | "ask.turn_not_found"
   | "book.duplicate"
   | "book.not_found"
@@ -169,6 +171,15 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 422,
     owner: "activity",
   },
+  "agent.no_answer": {
+    what: "The model stopped without writing an answer.",
+    why: "It ended its turn with nothing written, even when asked again.",
+    fix: "Trying again usually works.",
+    action: "retry",
+    scope: "inline",
+    status: 502,
+    owner: "agent",
+  },
   "ask.empty_question": {
     what: "Ask something.",
     scope: "field",
@@ -184,6 +195,15 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
   "ask.selection_too_long": {
     what: "That selection is too long to ask about. Pick a smaller piece.",
     scope: "field",
+    status: 422,
+    owner: "ask",
+  },
+  "ask.turn_failed": {
+    what: "Couldn't answer that.",
+    why: "Something went wrong while the tutor was answering.",
+    fix: "Ask again.",
+    action: "retry",
+    scope: "inline",
     status: 422,
     owner: "ask",
   },
@@ -579,7 +599,7 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
   },
   "key.refused": {
     what: "OpenRouter refused the key.",
-    why: "The key in Settings may be wrong, expired or deleted (HTTP {status}).",
+    why: "The key in Settings may be wrong, expired or deleted.",
     fix: "Check the key in Settings, then try again.",
     action: "open_settings",
     scope: "inline",
@@ -683,7 +703,7 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
   },
   "model.busy": {
     what: "OpenRouter didn't answer properly.",
-    why: "OpenRouter is busy or having trouble right now (HTTP {status}).",
+    why: "OpenRouter is busy or having trouble right now.",
     fix: "Try again in a minute.",
     action: "retry",
     scope: "inline",
@@ -701,7 +721,7 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
   },
   "model.rejected": {
     what: "OpenRouter turned the request down.",
-    why: "OpenRouter refused it for a reason PSet has no name for (HTTP {status}).",
+    why: "OpenRouter refused it for a reason PSet has no name for.",
     fix: "Try again. If it keeps happening, copy the details and report it.",
     action: "retry",
     scope: "inline",
@@ -710,7 +730,7 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
   },
   "model.unknown": {
     what: "OpenRouter doesn't know a model PSet uses.",
-    why: "A model PSet relies on was renamed or removed (HTTP {status}).",
+    why: "A model PSet relies on was renamed or removed.",
     fix: "Check for a PSet update.",
     action: "check_update",
     scope: "inline",

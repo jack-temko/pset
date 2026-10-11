@@ -2,7 +2,6 @@ package llm
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/jackt/pset/internal/errs"
@@ -24,7 +23,7 @@ var (
 	keyRefused = errs.Define(errs.Entry{
 		ID:     "key.refused",
 		What:   "OpenRouter refused the key.",
-		Why:    "The key in Settings may be wrong, expired or deleted (HTTP {status}).",
+		Why:    "The key in Settings may be wrong, expired or deleted.",
 		Fix:    "Check the key in Settings, then try again.",
 		Action: errs.ActionOpenSettings,
 		Status: http.StatusUnprocessableEntity,
@@ -40,7 +39,7 @@ var (
 	modelUnknown = errs.Define(errs.Entry{
 		ID:     "model.unknown",
 		What:   "OpenRouter doesn't know a model PSet uses.",
-		Why:    "A model PSet relies on was renamed or removed (HTTP {status}).",
+		Why:    "A model PSet relies on was renamed or removed.",
 		Fix:    "Check for a PSet update.",
 		Action: errs.ActionCheckUpdate,
 		Status: http.StatusUnprocessableEntity,
@@ -48,7 +47,7 @@ var (
 	modelBusy = errs.Define(errs.Entry{
 		ID:     "model.busy",
 		What:   "OpenRouter didn't answer properly.",
-		Why:    "OpenRouter is busy or having trouble right now (HTTP {status}).",
+		Why:    "OpenRouter is busy or having trouble right now.",
 		Fix:    "Try again in a minute.",
 		Action: errs.ActionRetry,
 		Status: http.StatusBadGateway,
@@ -56,7 +55,7 @@ var (
 	modelRejected = errs.Define(errs.Entry{
 		ID:     "model.rejected",
 		What:   "OpenRouter turned the request down.",
-		Why:    "OpenRouter refused it for a reason PSet has no name for (HTTP {status}).",
+		Why:    "OpenRouter refused it for a reason PSet has no name for.",
 		Fix:    "Try again. If it keeps happening, copy the details and report it.",
 		Action: errs.ActionRetry,
 		Status: http.StatusBadGateway,
@@ -83,19 +82,18 @@ var (
 
 // catalog is the entry a failed call's status and body mean.
 func (e *CallError) catalog() *errs.Error {
-	status := strconv.Itoa(e.Status)
 	switch {
 	case OutOfCredit(e.Status, e.Body):
 		return keyOutOfCredit.New()
 	case e.Status == http.StatusUnauthorized || e.Status == http.StatusForbidden:
-		return keyRefused.New("status", status)
+		return keyRefused.New()
 	case e.Status == http.StatusNotFound,
 		e.Status >= 400 && e.Status < 500 && strings.Contains(strings.ToLower(e.Body), "model"):
-		return modelUnknown.New("status", status)
+		return modelUnknown.New()
 	case e.Status == http.StatusTooManyRequests || e.Status >= 500:
-		return modelBusy.New("status", status)
+		return modelBusy.New()
 	}
-	return modelRejected.New("status", status)
+	return modelRejected.New()
 }
 
 // Unwrap is the catalog entry the call's status and body mean, so a caller

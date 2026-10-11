@@ -185,8 +185,12 @@ func catalogChain(err error) []*Error {
 	var walk func(error)
 	walk = func(err error) {
 		for err != nil {
-			if e, ok := err.(*Error); ok {
+			switch e := err.(type) {
+			case *Error:
 				out = append(out, e)
+			case *Entry:
+				// An entry returned as it is, with nothing to fill in.
+				out = append(out, &Error{entry: e})
 			}
 			switch u := err.(type) {
 			case interface{ Unwrap() []error }:

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 
 	_ "github.com/jackt/pset/internal/activity"
+	_ "github.com/jackt/pset/internal/agent"
 	_ "github.com/jackt/pset/internal/ask"
 	_ "github.com/jackt/pset/internal/errlog"
 	"github.com/jackt/pset/internal/errs"
