@@ -6,6 +6,11 @@ export function errorLine(view: View): string {
   return view.fix ? `${view.what} ${view.fix}` : view.what;
 }
 
+/** What, why and fix in one run, for a dense line that has room for them. */
+export function errorFull(view: View): string {
+  return [view.what, view.why, view.fix].filter(Boolean).join(' ');
+}
+
 /** The ids and incident, as text to paste into a bug report. */
 export function detailsText(view: View): string {
   return [

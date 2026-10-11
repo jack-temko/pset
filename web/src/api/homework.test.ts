@@ -59,10 +59,10 @@ describe('applyQuestion', () => {
         id: 'x',
         state: 'failed',
         error: {
-          id: 'homework.guide_failed',
+          id: 'homework.question_failed',
           what: "Couldn't write the guide.",
           scope: 'inline',
-          chain: ['homework.guide_failed', 'key.missing'],
+          chain: ['homework.question_failed', 'key.missing'],
         },
         rev: 2,
       }),

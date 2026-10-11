@@ -84,7 +84,7 @@ func (s *Service) Reads(ctx context.Context, bookID string) ([]AssignmentRead, e
 func (s *Service) Read(ctx context.Context, id string) (AssignmentRead, error) {
 	r, err := scanRead(s.c.DB.QueryRowContext(ctx, `SELECT `+readColumns+` FROM assignment_reads WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
-		return r, assignmentNotFound.New()
+		return r, errs.Gone.New("thing", "assignment")
 	} else if err != nil {
 		return r, err
 	}
@@ -103,7 +103,7 @@ func (s *Service) DismissRead(ctx context.Context, id string) error {
 	var bookID string
 	err := s.c.DB.QueryRowContext(ctx, `SELECT book_id FROM assignment_reads WHERE id = ?`, id).Scan(&bookID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return assignmentNotFound.New()
+		return errs.Gone.New("thing", "assignment")
 	} else if err != nil {
 		return errs.Database.Wrap(err)
 	}
@@ -130,7 +130,7 @@ func (s *Service) publishRead(ctx context.Context, id string) (AssignmentRead, e
 }
 
 func isNotFound(err error) bool {
-	return errors.Is(err, assignmentNotFound)
+	return errors.Is(err, errs.Gone)
 }
 
 // mark compares a read's dates with the sets they'd update: a set made

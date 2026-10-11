@@ -230,7 +230,7 @@ func cleanDate(d string) (string, error) {
 func (s *Service) Get(ctx context.Context, id string) (Detail, error) {
 	h, err := getSummary(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Detail{}, setNotFound.New()
+		return Detail{}, errs.Gone.New("thing", "homework set")
 	}
 	if err != nil {
 		return Detail{}, err
@@ -300,7 +300,7 @@ func (s *Service) Update(ctx context.Context, id string, p Patch) (Summary, erro
 	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		h, err := getSummary(ctx, tx, id)
 		if errors.Is(err, errNotFound) {
-			return setNotFound.New()
+			return errs.Gone.New("thing", "homework set")
 		}
 		if err != nil {
 			return err
@@ -338,7 +338,7 @@ func (s *Service) Update(ctx context.Context, id string, p Patch) (Summary, erro
 func (s *Service) Delete(ctx context.Context, id string) error {
 	h, err := getSummary(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return setNotFound.New()
+		return errs.Gone.New("thing", "homework set")
 	}
 	if err != nil {
 		return err
@@ -386,7 +386,7 @@ func questionIDs(qs []Question) []string {
 func (s *Service) Add(ctx context.Context, homeworkID string, drafts []Draft) ([]Question, error) {
 	h, err := getSummary(ctx, s.c.DB, homeworkID)
 	if errors.Is(err, errNotFound) {
-		return nil, setNotFound.New()
+		return nil, errs.Gone.New("thing", "homework set")
 	} else if err != nil {
 		return nil, err
 	}
@@ -523,7 +523,7 @@ func labelFromText(text string) string {
 func (s *Service) UpdateQuestion(ctx context.Context, id string, p QuestionPatch) (Question, error) {
 	q, err := getQuestion(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Question{}, questionNotFound.New()
+		return Question{}, errs.Gone.New("thing", "question")
 	}
 	if err != nil {
 		return Question{}, err
@@ -662,7 +662,7 @@ func move(ctx context.Context, tx *sql.Tx, homeworkID, id string, from, to int) 
 func (s *Service) RemoveQuestion(ctx context.Context, id string) error {
 	q, err := getQuestion(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return questionNotFound.New()
+		return errs.Gone.New("thing", "question")
 	}
 	if err != nil {
 		return err
@@ -696,13 +696,13 @@ func (s *Service) RemoveQuestion(ctx context.Context, id string) error {
 func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Question, error) {
 	q, err := getQuestion(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Question{}, questionNotFound.New()
+		return Question{}, errs.Gone.New("thing", "question")
 	}
 	if err != nil {
 		return Question{}, err
 	}
 	if q.State != StateFailed {
-		return Question{}, questionNotFailed.New()
+		return Question{}, errs.Stale.New("thing", "question")
 	}
 	set := `attempts = attempts + 1, error = '', hint = '[]', walkthrough = '[]', updated_at = ?`
 	args := []any{db.Now()}
@@ -758,13 +758,13 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 func (s *Service) WriteGuide(ctx context.Context, id string) (Question, error) {
 	q, err := getQuestion(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Question{}, questionNotFound.New()
+		return Question{}, errs.Gone.New("thing", "question")
 	}
 	if err != nil {
 		return Question{}, err
 	}
 	if q.State != StateUnwritten {
-		return Question{}, guideExists.New()
+		return Question{}, errs.Stale.New("thing", "question")
 	}
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET state = ?, error = '', activity = '', updated_at = ? WHERE id = ?`,

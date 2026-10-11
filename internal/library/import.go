@@ -355,7 +355,7 @@ func (s *Service) index(ctx context.Context, b row, path, kind string, pages []s
 			if ctx.Err() != nil {
 				return fmt.Errorf("stopped: %w", ctx.Err())
 			}
-			return structureUnreadable.Wrap(err)
+			return fmt.Errorf("read the book's structure: %w", err)
 		}
 		secs, lines = outlineSections(doc.Outline), doc.Lines
 	}

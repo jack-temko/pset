@@ -31,10 +31,9 @@ var (
 	})
 	keyOutOfCredit = errs.Define(errs.Entry{
 		ID:     "key.out_of_credit",
-		What:   "Your OpenRouter account is out of credit.",
-		Why:    "Your OpenRouter account is out of credit, so PSet can't use a model.",
+		What:   "PSet can't use OpenRouter.",
+		Why:    "Your OpenRouter account is out of credit.",
 		Fix:    "Add credit on OpenRouter, then try again.",
-		Action: errs.ActionRetry,
 		Status: http.StatusUnprocessableEntity,
 	})
 	modelUnknown = errs.Define(errs.Entry{

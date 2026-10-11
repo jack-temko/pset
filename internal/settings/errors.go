@@ -1,8 +1,6 @@
 package settings
 
 import (
-	"net/http"
-
 	"github.com/jackt/pset/internal/errs"
 )
 
@@ -23,14 +21,6 @@ var (
 		Why:    "PSet couldn't finish the test.",
 		Fix:    "Try again in a minute.",
 		Action: errs.ActionRetry,
-	})
-	checkNotFound = errs.Define(errs.Entry{
-		ID:     "settings.check_not_found",
-		What:   "PSet has no such check.",
-		Why:    "The page and PSet are out of step, which happens after an update.",
-		Fix:    "Reload the page.",
-		Action: errs.ActionReload,
-		Status: http.StatusNotFound,
 	})
 	notFixable = errs.Define(errs.Entry{
 		ID:   "settings.not_fixable",

@@ -71,7 +71,7 @@ func (s *Service) StartRead(ctx context.Context, bookID string, file *Assignment
 	if in.SetID != "" {
 		h, err := getSummary(ctx, s.c.DB, in.SetID)
 		if errors.Is(err, errNotFound) || (err == nil && h.BookID != bookID) {
-			return AssignmentRead{}, setNotFound.New()
+			return AssignmentRead{}, errs.Gone.New("thing", "homework set")
 		} else if err != nil {
 			return AssignmentRead{}, err
 		}
@@ -124,7 +124,7 @@ func (s *Service) RetryRead(ctx context.Context, id string) (AssignmentRead, err
 			return errs.Database.Wrap(err)
 		}
 		if n, _ := res.RowsAffected(); n == 0 {
-			return readBusy.New()
+			return errs.Stale.New("thing", "assignment")
 		}
 		_, err = s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobAssignment, Subject: id, Payload: readJob{ReadID: id}})
 		return err
@@ -132,7 +132,7 @@ func (s *Service) RetryRead(ctx context.Context, id string) (AssignmentRead, err
 	if err != nil {
 		var n int
 		if cerr := s.c.DB.QueryRowContext(ctx, `SELECT count(*) FROM assignment_reads WHERE id = ?`, id).Scan(&n); cerr == nil && n == 0 {
-			return AssignmentRead{}, assignmentNotFound.New()
+			return AssignmentRead{}, errs.Gone.New("thing", "assignment")
 		}
 		return AssignmentRead{}, err
 	}
@@ -380,7 +380,7 @@ func (s *Service) ImportAssignment(ctx context.Context, bookID string, in Assign
 		if g.SetID != "" {
 			h, err := getSummary(ctx, s.c.DB, g.SetID)
 			if errors.Is(err, errNotFound) || (err == nil && h.BookID != bookID) {
-				return nil, setNotFound.New()
+				return nil, errs.Gone.New("thing", "homework set")
 			} else if err != nil {
 				return nil, err
 			}

@@ -71,7 +71,7 @@ export function ErrorNotice({
 /** The collapsed Details: the chain of ids and the incident id, with Copy. */
 function Details({ error }: { error: View }) {
   const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'yes' | 'failed' | null>(null);
   return (
     <div className="min-w-0 space-y-2">
       <button
@@ -94,15 +94,24 @@ function Details({ error }: { error: View }) {
             variant="outline"
             size="sm"
             onClick={() => {
-              void navigator.clipboard
-                .writeText(detailsText(error))
-                .then(() => {
-                  setCopied(true);
-                });
+              // Clipboard access can be refused (a page without focus, a
+              // browser that won't): say so, don't fail quietly.
+              navigator.clipboard.writeText(detailsText(error)).then(
+                () => {
+                  setCopied('yes');
+                },
+                () => {
+                  setCopied('failed');
+                },
+              );
             }}
           >
-            {copied ? <Check /> : <Copy />}
-            {copied ? 'Copied' : 'Copy'}
+            {copied === 'yes' ? <Check /> : <Copy />}
+            {copied === 'yes'
+              ? 'Copied'
+              : copied === 'failed'
+                ? "Couldn't copy"
+                : 'Copy'}
           </Button>
         </div>
       )}

@@ -47,6 +47,7 @@ func TestOldFailuresGetTheirEntries(t *testing.T) {
 		"part":     {"generation", "The walkthrough for problem 4.4 came back missing a part. Trying again usually works."},
 		"boxes":    {"generation", "Couldn't read the words in the boxes. Box the problem's text again, a little larger."},
 		"whatever": {"generation", "Something went wrong writing the walkthrough for this question. Trying again usually works."},
+		"scoped":   {"not_found", "Looked through chapter 4 for problem 3.99 and didn't see it. Show where it is on the page, or give its printed page; if it isn't from this book, paste it below."},
 	} {
 		if _, err := d.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, state, failure, reason, created_at, updated_at) VALUES (?, 'h', 1, 't', 1, 'failed', ?, ?, '', '')`, id, old[0], old[1]); err != nil {
 			t.Fatal(err)
@@ -68,13 +69,14 @@ func TestOldFailuresGetTheirEntries(t *testing.T) {
 	for id, want := range map[string][]string{
 		"missing":  {"homework.not_found_in_book"},
 		"pinned":   {"homework.not_found_in_book"},
-		"nokey":    {"homework.guide_failed", "key.missing"},
-		"credit":   {"homework.guide_failed", "key.out_of_credit"},
-		"busy":     {"homework.guide_failed", "model.busy"},
-		"cut":      {"homework.guide_failed", "model.cut"},
-		"part":     {"homework.guide_failed", "homework.guide_incomplete"},
+		"nokey":    {"homework.question_failed", "key.missing"},
+		"credit":   {"homework.question_failed", "key.out_of_credit"},
+		"busy":     {"homework.question_failed", "model.busy"},
+		"cut":      {"homework.question_failed", "model.cut"},
+		"part":     {"homework.question_failed", "agent.no_answer"},
 		"boxes":    {"homework.boxes_unreadable"},
-		"whatever": {"homework.guide_failed"},
+		"whatever": {"homework.question_failed"},
+		"scoped":   {"homework.not_found_in_book"},
 	} {
 		q, err := getQuestion(ctx, d, id)
 		if err != nil || q.Error == nil || len(q.Error.Chain) != len(want) {
@@ -90,6 +92,10 @@ func TestOldFailuresGetTheirEntries(t *testing.T) {
 	missing, _ := getQuestion(ctx, d, "missing")
 	if got := missing.Error.What; got != "Couldn't find problem 3.99 in this book." {
 		t.Errorf("missing: %q", got)
+	}
+	scoped, _ := getQuestion(ctx, d, "scoped")
+	if got := scoped.Error.Why; got != "PSet looked through chapter 4 and didn't see it." {
+		t.Errorf("scoped: %q", got)
 	}
 	pinned, _ := getQuestion(ctx, d, "pinned")
 	if got := pinned.Error.Why; got != "PSet looked through p. 1 and didn't see it." {

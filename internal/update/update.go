@@ -198,7 +198,7 @@ func (s *Service) Check(ctx context.Context) (Status, error) {
 	}
 	latest, ok := parseVersion(rel.Tag)
 	if !ok {
-		return Status{}, badTag.New("tag", strconv.Quote(rel.Tag))
+		return Status{}, unreadableRelease.Wrap(fmt.Errorf("the latest release is tagged %q, which is not a version number", rel.Tag))
 	}
 	cur, _ := parseVersion(s.c.Version)
 	c := &checked{

@@ -13,7 +13,6 @@ export type ErrorId =
   | "ask.question_too_long"
   | "ask.selection_too_long"
   | "ask.turn_failed"
-  | "ask.turn_not_found"
   | "book.duplicate"
   | "book.not_found"
   | "embed.failed"
@@ -21,7 +20,6 @@ export type ErrorId =
   | "errors.clear_failed"
   | "errors.read_failed"
   | "events.no_streaming"
-  | "homework.assignment_not_found"
   | "homework.bad_due_date"
   | "homework.bad_position"
   | "homework.bad_stage"
@@ -34,14 +32,8 @@ export type ErrorId =
   | "homework.draft_too_long"
   | "homework.empty_worksheet"
   | "homework.figure_busy"
-  | "homework.figure_not_found"
-  | "homework.figure_read_failed"
   | "homework.file_kind"
   | "homework.file_too_big"
-  | "homework.find_failed"
-  | "homework.guide_exists"
-  | "homework.guide_failed"
-  | "homework.guide_incomplete"
   | "homework.no_boxes"
   | "homework.no_drafts"
   | "homework.no_figure"
@@ -49,7 +41,6 @@ export type ErrorId =
   | "homework.no_homework_found"
   | "homework.no_page_for_question"
   | "homework.no_source"
-  | "homework.not_failed"
   | "homework.not_found_in_book"
   | "homework.note_too_long"
   | "homework.nothing_to_add"
@@ -59,14 +50,12 @@ export type ErrorId =
   | "homework.page_unreachable"
   | "homework.page_unreadable"
   | "homework.pdf_unreadable"
-  | "homework.question_not_found"
-  | "homework.read_busy"
+  | "homework.question_failed"
   | "homework.read_failed"
   | "homework.reading_empty"
   | "homework.reading_line_too_long"
   | "homework.reading_too_long"
   | "homework.reply_unreadable"
-  | "homework.set_not_found"
   | "homework.text_too_long"
   | "homework.title_empty"
   | "homework.title_too_long"
@@ -75,15 +64,11 @@ export type ErrorId =
   | "homework.too_many_lines"
   | "homework.too_many_notes"
   | "import.cancelled"
-  | "import.contents_render"
-  | "import.contents_stalled"
-  | "import.contents_unreadable"
   | "import.failed"
   | "import.pages_unread"
   | "import.pdf_empty"
   | "import.pdf_unreadable"
   | "import.stopped"
-  | "import.structure_unreadable"
   | "internal.data"
   | "internal.database"
   | "internal.disk"
@@ -95,15 +80,12 @@ export type ErrorId =
   | "library.bad_problem_form"
   | "library.bad_problem_where"
   | "library.no_ollama"
-  | "library.not_failed"
   | "library.not_pdf"
-  | "library.page_not_found"
   | "library.run_bad_offset"
   | "library.run_outside"
   | "library.runs_empty"
   | "library.title_empty"
   | "memory.empty"
-  | "memory.not_found"
   | "memory.too_long"
   | "model.busy"
   | "model.cut"
@@ -111,15 +93,16 @@ export type ErrorId =
   | "model.unknown"
   | "model.unreachable"
   | "request.foreign_origin"
+  | "request.gone"
   | "request.invalid_json"
   | "request.no_file"
   | "request.not_found"
   | "request.not_local"
   | "request.not_multipart"
+  | "request.stale"
   | "request.too_large"
   | "request.unreachable"
   | "request.upload_cut"
-  | "settings.check_not_found"
   | "settings.fix_data_dir"
   | "settings.fix_database"
   | "settings.fix_ollama"
@@ -128,7 +111,6 @@ export type ErrorId =
   | "settings.not_fixable"
   | "settings.test_failed"
   | "update.already_installing"
-  | "update.bad_tag"
   | "update.check_unreachable"
   | "update.download_failed"
   | "update.github_error"
@@ -194,7 +176,7 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
   },
   "agent.no_answer": {
     what: "The model stopped without writing an answer.",
-    why: "It ended its turn with nothing written, even when asked again.",
+    why: "It ended its turn with nothing written, or left a part out, even when asked again.",
     fix: "Trying again usually works.",
     action: "retry",
     scope: "inline",
@@ -226,15 +208,6 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     action: "retry",
     scope: "inline",
     status: 422,
-    owner: "ask",
-  },
-  "ask.turn_not_found": {
-    what: "That question isn't in this conversation.",
-    why: "It was cleared, or the page is out of date.",
-    fix: "Reload the page to see the conversation as it is now.",
-    action: "reload",
-    scope: "inline",
-    status: 404,
     owner: "ask",
   },
   "book.duplicate": {
@@ -298,14 +271,6 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 500,
     owner: "events",
-  },
-  "homework.assignment_not_found": {
-    what: "That assignment isn't there.",
-    why: "It was dismissed, or the page is out of date.",
-    fix: "Add the assignment again.",
-    scope: "inline",
-    status: 404,
-    owner: "homework",
   },
   "homework.bad_due_date": {
     what: "That isn't a date.",
@@ -383,24 +348,6 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 422,
     owner: "homework",
   },
-  "homework.figure_not_found": {
-    what: "That figure isn't there.",
-    why: "The question has no figure, or it was removed.",
-    fix: "Reload the page to see the question as it is now.",
-    action: "reload",
-    scope: "inline",
-    status: 404,
-    owner: "homework",
-  },
-  "homework.figure_read_failed": {
-    what: "Couldn't read the figures in {name}.",
-    why: "Something went wrong while PSet was reading them.",
-    fix: "Trying again usually works.",
-    action: "retry",
-    scope: "inline",
-    status: 422,
-    owner: "homework",
-  },
   "homework.file_kind": {
     what: "Send a PDF, a photo, or a text file.",
     scope: "field",
@@ -410,42 +357,6 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
   "homework.file_too_big": {
     what: "That file is too big for an assignment.",
     scope: "field",
-    status: 422,
-    owner: "homework",
-  },
-  "homework.find_failed": {
-    what: "Couldn't look for {name} in the book.",
-    why: "Something went wrong while PSet was searching.",
-    fix: "Trying again usually works.",
-    action: "retry",
-    scope: "inline",
-    status: 422,
-    owner: "homework",
-  },
-  "homework.guide_exists": {
-    what: "This question already has a guide, or is being written.",
-    why: "A guide was started for it a moment ago, so the page is out of date.",
-    fix: "Reload the page to see the guide.",
-    action: "reload",
-    scope: "inline",
-    status: 422,
-    owner: "homework",
-  },
-  "homework.guide_failed": {
-    what: "Couldn't write the guide for {name}.",
-    why: "Something went wrong while it was being written.",
-    fix: "Trying again usually works.",
-    action: "retry",
-    scope: "inline",
-    status: 422,
-    owner: "homework",
-  },
-  "homework.guide_incomplete": {
-    what: "The guide came back missing a part.",
-    why: "The model left out the hint or the answer.",
-    fix: "Trying again usually works.",
-    action: "retry",
-    scope: "inline",
     status: 422,
     owner: "homework",
   },
@@ -490,15 +401,6 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
   "homework.no_source": {
     what: "Give a file, a web page's address, or the assignment's text.",
     scope: "field",
-    status: 422,
-    owner: "homework",
-  },
-  "homework.not_failed": {
-    what: "Only a question that failed can be tried again.",
-    why: "This question isn't in a failed state, so the page is out of date.",
-    fix: "Reload the page to see where the question stands.",
-    action: "reload",
-    scope: "inline",
     status: 422,
     owner: "homework",
   },
@@ -568,19 +470,11 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 422,
     owner: "homework",
   },
-  "homework.question_not_found": {
-    what: "That question isn't there.",
-    why: "It was removed, or the page is out of date.",
-    fix: "Go back to the set's list of questions.",
-    scope: "inline",
-    status: 404,
-    owner: "homework",
-  },
-  "homework.read_busy": {
-    what: "That assignment is already read, or being read.",
-    why: "It isn't in a failed state, so there is nothing to try again.",
-    fix: "Reload the page to see where it stands.",
-    action: "reload",
+  "homework.question_failed": {
+    what: "Couldn't {step} {name}.",
+    why: "Something went wrong while it was being worked on.",
+    fix: "Trying again usually works.",
+    action: "retry",
     scope: "inline",
     status: 422,
     owner: "homework",
@@ -619,14 +513,6 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     action: "retry",
     scope: "inline",
     status: 422,
-    owner: "homework",
-  },
-  "homework.set_not_found": {
-    what: "That homework set isn't there.",
-    why: "It was removed, or the page is out of date.",
-    fix: "Go back to the book's homework list.",
-    scope: "inline",
-    status: 404,
     owner: "homework",
   },
   "homework.text_too_long": {
@@ -680,33 +566,6 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 422,
     owner: "library",
   },
-  "import.contents_render": {
-    what: "PSet couldn't render the book's contents pages.",
-    why: "The pages couldn't be turned into pictures for the model.",
-    fix: "Try again.",
-    action: "retry",
-    scope: "inline",
-    status: 422,
-    owner: "library",
-  },
-  "import.contents_stalled": {
-    what: "The model stopped answering while PSet read the book's contents.",
-    why: "OpenRouter took too long to answer.",
-    fix: "Try again in a minute.",
-    action: "retry",
-    scope: "inline",
-    status: 422,
-    owner: "library",
-  },
-  "import.contents_unreadable": {
-    what: "The model's answer about the book's contents couldn't be read.",
-    why: "It wasn't in a form PSet could use.",
-    fix: "Try again.",
-    action: "retry",
-    scope: "inline",
-    status: 422,
-    owner: "library",
-  },
   "import.failed": {
     what: "Couldn't prepare {title}.",
     why: "Something went wrong while PSet was preparing it.",
@@ -745,15 +604,6 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     what: "{title} was stopped.",
     why: "You stopped it before it finished.",
     fix: "Try again to carry on where it left off.",
-    action: "retry",
-    scope: "inline",
-    status: 422,
-    owner: "library",
-  },
-  "import.structure_unreadable": {
-    what: "PSet couldn't read this book's structure.",
-    why: "The PDF's outline couldn't be extracted.",
-    fix: "Try again. If it keeps happening, the file may be damaged.",
     action: "retry",
     scope: "inline",
     status: 422,
@@ -805,10 +655,9 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     owner: "llm",
   },
   "key.out_of_credit": {
-    what: "Your OpenRouter account is out of credit.",
-    why: "Your OpenRouter account is out of credit, so PSet can't use a model.",
+    what: "PSet can't use OpenRouter.",
+    why: "Your OpenRouter account is out of credit.",
     fix: "Add credit on OpenRouter, then try again.",
-    action: "retry",
     scope: "inline",
     status: 422,
     owner: "llm",
@@ -849,27 +698,10 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 422,
     owner: "library",
   },
-  "library.not_failed": {
-    what: "Only a book that failed to import can be tried again.",
-    why: "This book isn't in a failed state, so the page is out of date.",
-    fix: "Reload the page to see where the book stands.",
-    action: "reload",
-    scope: "inline",
-    status: 422,
-    owner: "library",
-  },
   "library.not_pdf": {
     what: "That isn't a PDF.",
     scope: "field",
     status: 422,
-    owner: "library",
-  },
-  "library.page_not_found": {
-    what: "That page isn't in this book.",
-    why: "The page number is past the end of the book, or isn't a number.",
-    fix: "Go to a page inside the book.",
-    scope: "inline",
-    status: 404,
     owner: "library",
   },
   "library.run_bad_offset": {
@@ -900,15 +732,6 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     what: "Write what to remember.",
     scope: "field",
     status: 422,
-    owner: "memory",
-  },
-  "memory.not_found": {
-    what: "That memory isn't there.",
-    why: "It was already forgotten, or the list is out of date.",
-    fix: "Reload the page to see what is remembered now.",
-    action: "reload",
-    scope: "inline",
-    status: 404,
     owner: "memory",
   },
   "memory.too_long": {
@@ -970,6 +793,15 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 403,
     owner: "errs",
   },
+  "request.gone": {
+    what: "That {thing} isn't there.",
+    why: "It was removed, or the page is out of date.",
+    fix: "Reload the page to see what is there now.",
+    action: "reload",
+    scope: "inline",
+    status: 404,
+    owner: "errs",
+  },
   "request.invalid_json": {
     what: "PSet couldn't read what was sent.",
     why: "The page and PSet's server are out of step, which happens after an update.",
@@ -1008,6 +840,15 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 422,
     owner: "httpx",
   },
+  "request.stale": {
+    what: "That {thing} has moved on.",
+    why: "It isn't in the state this needs, so the page is out of date.",
+    fix: "Reload the page to see where it stands.",
+    action: "reload",
+    scope: "inline",
+    status: 422,
+    owner: "errs",
+  },
   "request.too_large": {
     what: "That's too much to send in one request.",
     why: "A single request is limited to {limit} MB.",
@@ -1030,15 +871,6 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "field",
     status: 422,
     owner: "httpx",
-  },
-  "settings.check_not_found": {
-    what: "PSet has no such check.",
-    why: "The page and PSet are out of step, which happens after an update.",
-    fix: "Reload the page.",
-    action: "reload",
-    scope: "inline",
-    status: 404,
-    owner: "settings",
   },
   "settings.fix_data_dir": {
     what: "Couldn't create the data folder.",
@@ -1100,14 +932,6 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     fix: "Wait for PSet to restart.",
     scope: "inline",
     status: 409,
-    owner: "update",
-  },
-  "update.bad_tag": {
-    what: "Couldn't look for an update.",
-    why: "The latest release is tagged {tag}, which isn't a version number.",
-    fix: "Try again later. If it keeps happening, copy the details and report it.",
-    scope: "inline",
-    status: 502,
     owner: "update",
   },
   "update.check_unreachable": {

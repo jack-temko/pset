@@ -28,7 +28,7 @@ Built, branch `error-catalog`, waiting for Jack to try it. Spec: [error-catalog-
 
 **`internal/httpx`**: `H`, `Reply`, `Send`, `Take`, `Act` and `Decode` answer every error through `errs.Report`, status from the entry. `Errorf`, `Invalid`, `NotFound`, `Code` and `httpx.Error` go away; generic entries (`request.invalid_json`, `request.too_large`, `request.not_found`) live in `errs`. `internal/events/events.go:127` answers in the same shape.
 
-**Background rows** (D11), one migration per owning feature: questions (`failure`, `reason`), Ask turns (`failure`, `reason`), books (`reason`), jobs (`error`), usage calls (`error`) gain `error_id` and `incident`, backfilled from the old kinds through a fixed map (unknown text to `internal.unexpected`); the old columns are dropped. Wire types carry an `error: View` where they carried a failure kind or reason. The homework `Failure` and ask failure enums go.
+**Background rows** (D11), one migration per owning feature: questions (`failure`, `reason`), Ask turns (`failure`, `reason`), books (`reason`), assignment reads (`error`) gain one `error` column holding the ids, params and incident (`errs.Stored`); usage calls (`error`) gain `error_id`. ~~jobs (`error`)~~: no migration, `jobs.error` stays a string for the log, and it already starts with the catalog id because a catalog error's text does; a second report there would give one failure two incidents, backfilled from the old kinds through a fixed map (unknown text to `internal.unexpected`); the old columns are dropped. Wire types carry an `error: View` where they carried a failure kind or reason. The homework `Failure` and ask failure enums go.
 
 **Generator** `tools/errcatalog`: blank-imports every package with entries, writes `web/src/api/gen/errors.ts` (the `ErrorId` union, `Action` and `Scope` types, and the entries for the `/errors` page) and `design/errors.md` (the table: id, what, why, fix, action, scope, owner package). `make gen` runs it; `check-gen` diffs both.
 
@@ -52,7 +52,7 @@ Built, branch `error-catalog`, waiting for Jack to try it. Spec: [error-catalog-
 - `internal/httpx/{httpx.go,handle.go,wire.go,*_test.go}`: on errs
 - `internal/events/events.go`: stream error shape
 - `internal/<pkg>/errors.go` for each package that raises: homework, library, settings, update, activity, ask, memory, llm, pdf, ocr, doc, db, usage, jobs, mathx (only where its errors reach a student), and their call sites
-- `internal/homework/{store.go,question.go,service.go,notes.go,boxes.go,wire.go}`, `internal/ask/{store.go,loop.go,wire.go}`, `internal/library/{store.go,import.go,service.go,wire.go}`, `internal/jobs/jobs.go`, `internal/usage/{usage.go,wire.go}`: background rows and migrations
+- `internal/homework/{store.go,question.go,service.go,notes.go,boxes.go,wire.go}`, `internal/ask/{store.go,loop.go,wire.go}`, `internal/library/{store.go,import.go,service.go,wire.go}`, `internal/usage/{usage.go,wire.go}`: background rows and migrations
 - `cmd/pset/main.go`: errlog migrations, recorder, routes
 - `tools/errcatalog/main.go`, `tygo.yaml` (add errs, errlog), `Makefile` (gen, check-gen)
 - `.golangci.yml`, `tools/lint/catalogerr/` (+ `.custom-gcl.yml` if the plugin route)
@@ -96,3 +96,9 @@ Each a commit; `make check` green at each.
 ### Out of scope
 
 Toasts; translations; sending errors anywhere off the machine; reworking screens beyond swapping their error display; retention limits (D12 keeps everything until cleared).
+
+## Built differently
+
+- **catalogerr** is the A4 Go test (`tools/errcatalog/handlers_test.go`), not a golangci-lint plugin. It reads handler bodies as syntax, so it only sees a literal `fmt.Errorf` or `errors.New` returned inside the handler; an error built elsewhere and returned by a variable is not seen. wrapcheck and errorlint cover the rest.
+- **Recording** (reviewed 2026-10-10): only server failures (status 500 or more) and background failures become incidents and rows; a 4xx request error is answered with its view and chain and nothing is kept. A cancelled request, and a host or origin refused by `LocalOnly`, keep nothing.
+- **Merged entries**: not-found is `request.gone` and out-of-date is `request.stale`, each with a `{thing}`; the import contents steps are plain `import.failed`; a failed question is `homework.question_failed` with a `{step}`; a missing part of a guide is `agent.no_answer`.

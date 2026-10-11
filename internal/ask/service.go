@@ -156,7 +156,7 @@ func (s *Service) Ask(ctx context.Context, bookID string, q Question) (Turn, err
 func (s *Service) Stop(ctx context.Context, id string) (Turn, error) {
 	t, err := getTurn(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Turn{}, turnNotFound.New()
+		return Turn{}, errs.Gone.New("thing", "question")
 	}
 	if err != nil {
 		return Turn{}, err

@@ -1,8 +1,6 @@
 package ask
 
 import (
-	"net/http"
-
 	"github.com/jackt/pset/internal/errs"
 )
 
@@ -28,13 +26,5 @@ var (
 		Why:    "Something went wrong while the tutor was answering.",
 		Fix:    "Ask again.",
 		Action: errs.ActionRetry,
-	})
-	turnNotFound = errs.Define(errs.Entry{
-		ID:     "ask.turn_not_found",
-		What:   "That question isn't in this conversation.",
-		Why:    "It was cleared, or the page is out of date.",
-		Fix:    "Reload the page to see the conversation as it is now.",
-		Action: errs.ActionReload,
-		Status: http.StatusNotFound,
 	})
 )

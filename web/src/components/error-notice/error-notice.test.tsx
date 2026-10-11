@@ -69,6 +69,23 @@ describe('ErrorNotice', () => {
     vi.unstubAllGlobals();
   });
 
+  it('says so when the clipboard refuses', async () => {
+    vi.stubGlobal('navigator', {
+      clipboard: { writeText: () => Promise.reject(new Error('denied')) },
+    });
+    const { host, button } = render(view);
+    act(() => {
+      button('Details')?.click();
+    });
+    await act(async () => {
+      button('Copy')?.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain("Couldn't copy");
+    vi.unstubAllGlobals();
+  });
+
   it('shows the retry button only when the caller can retry', () => {
     const onRetry = vi.fn();
     const withRetry = render(view, onRetry);

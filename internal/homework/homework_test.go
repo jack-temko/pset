@@ -501,7 +501,7 @@ func TestIncompleteGuideFailsAfterOneMoreTry(t *testing.T) {
 	})
 	h := e.newSet(t)
 	q := e.wait(t, e.add(t, h.ID, Draft{Text: "Why?", InBook: false})[0].ID, StateFailed)
-	if !failedWith(q, "homework.guide_incomplete") || calls != 2 {
+	if !failedWith(q, "agent.no_answer") || calls != 2 {
 		t.Fatalf("%+v after %d calls", q.Error, calls)
 	}
 }

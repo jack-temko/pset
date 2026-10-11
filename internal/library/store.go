@@ -166,18 +166,10 @@ func reasonsToErrors(ctx context.Context, tx *sql.Tx) error {
 			cause("key.refused")
 		case strings.Contains(r, "didn't answer while PSet read the book's contents"):
 			cause("model.busy")
-		case strings.Contains(r, "stopped answering while PSet read the book's contents"):
-			cause("import.contents_stalled")
-		case strings.Contains(r, "answer about the book's contents couldn't be read"):
-			cause("import.contents_unreadable")
-		case strings.Contains(r, "render the book's contents pages"):
-			cause("import.contents_render")
 		case strings.Contains(r, "This PDF has no pages"):
 			cause("import.pdf_empty")
 		case strings.Contains(r, "This PDF can't be read"):
 			cause("import.pdf_unreadable")
-		case strings.Contains(r, "read this book's structure"):
-			cause("import.structure_unreadable")
 		case strings.Contains(r, "Ollama stopped answering"):
 			cause("embed.failed")
 		case strings.Contains(r, "reach Ollama"):

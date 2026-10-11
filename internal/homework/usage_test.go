@@ -218,7 +218,7 @@ func TestAQuestionsCallsCarryTheirStageAndRun(t *testing.T) {
 	}
 
 	// A retry is a run of its own.
-	v := errs.Resolve(guideFailed.New("name", "this question"))
+	v := errs.Resolve(questionFailed.New("step", "write the guide for", "name", "this question"))
 	e.svc.setFailed(context.Background(), q.ID, &v)
 	if code := e.do(t, "POST", "/api/questions/"+q.ID+"/retry", Retry{}, nil); code != 200 {
 		t.Fatalf("retry %d", code)

@@ -146,6 +146,7 @@ var (
 	oldProblem    = regexp.MustCompile(`problem \d+(?:\.\d+)*[A-Za-z]?`)
 	oldPinnedPage = regexp.MustCompile(`It isn't on (.+?) either`)
 	oldScope      = regexp.MustCompile(`Looked through (.+?) for `)
+	oldPageStatus = regexp.MustCompile(`That page answered (\d+)`)
 )
 
 // sentencesToErrors is homework/18: the entries a failed question's kind and
@@ -174,7 +175,7 @@ func sentencesToErrors(ctx context.Context, tx *sql.Tx) error {
 		if m := oldProblem.FindString(o.reason); m != "" {
 			name = m
 		}
-		st := errs.Stored{Chain: []string{"homework.guide_failed"}, Params: map[string]string{"name": name}}
+		st := errs.Stored{Chain: []string{"homework.question_failed"}, Params: map[string]string{"step": "write the guide for", "name": name}}
 		switch r := o.reason; {
 		case o.failure == "not_found":
 			st.Chain = []string{"homework.not_found_in_book"}
@@ -199,7 +200,7 @@ func sentencesToErrors(ctx context.Context, tx *sql.Tx) error {
 		case strings.Contains(r, "stopped partway"):
 			st.Chain = append(st.Chain, "model.cut")
 		case strings.Contains(r, "missing a part"):
-			st.Chain = append(st.Chain, "homework.guide_incomplete")
+			st.Chain = append(st.Chain, "agent.no_answer")
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET error = ? WHERE id = ?`, st.Marshal(), o.id); err != nil {
 			return errs.Database.Wrap(err)
@@ -245,7 +246,11 @@ func sentencesToErrors(ctx context.Context, tx *sql.Tx) error {
 			cause("homework.page_unreachable")
 		case strings.Contains(m, "That page answered"):
 			cause("homework.page_refused")
-			st.Params = map[string]string{"status": strings.TrimSuffix(strings.Fields(m[strings.Index(m, "answered")+len("answered"):])[0], ".")}
+			status := "an error"
+			if sub := oldPageStatus.FindStringSubmatch(m); sub != nil {
+				status = sub[1]
+			}
+			st.Params = map[string]string{"status": status}
 		case strings.Contains(m, "read that page"):
 			cause("homework.page_unreadable")
 		case strings.Contains(m, "no text to read"):

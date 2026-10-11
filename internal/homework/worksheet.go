@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/doc"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/pdf"
 )
 
@@ -49,13 +50,13 @@ func padRect(r pdf.Rect) pdf.Rect {
 func (s *Service) Figure(ctx context.Context, questionID string, n int) ([]byte, error) {
 	q, err := getQuestion(ctx, s.c.DB, questionID)
 	if errors.Is(err, errNotFound) {
-		return nil, questionNotFound.New()
+		return nil, errs.Gone.New("thing", "question")
 	}
 	if err != nil {
 		return nil, err
 	}
 	if q.Page == nil || n < 0 || n >= len(q.FigRect) {
-		return nil, figureNotFound.New()
+		return nil, errs.Gone.New("thing", "figure")
 	}
 	return s.crop(ctx, q.BookID, q.FigRect[n].on(q), q.FigRect[n].Rect, cropWidth)
 }

@@ -150,7 +150,7 @@ func (s *Service) readPrinted(ctx context.Context, m model, b row, path string, 
 			if ctx.Err() != nil {
 				return nil, fmt.Errorf("stopped: %w", ctx.Err())
 			}
-			return nil, contentsRender.Wrap(err)
+			return nil, fmt.Errorf("render the contents pages: %w", err)
 		}
 		content.AppendPart(llm.TextPart(fmt.Sprintf("Image %d:", i+1)))
 		content.AppendPart(llm.ImagePart("data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(data)))
@@ -186,7 +186,7 @@ func (m model) askJSON(ctx context.Context, system string, user llm.Content, out
 		case err != nil && stalled && try == 0:
 			continue
 		case err != nil && stalled:
-			return contentsStalled.Wrap(err)
+			return fmt.Errorf("the model stopped answering while it read the contents: %w", err)
 		case err != nil:
 			return err
 		}
@@ -195,7 +195,7 @@ func (m model) askJSON(ctx context.Context, system string, user llm.Content, out
 			return nil
 		}
 		if try == 1 {
-			return contentsUnreadable.Wrap(err)
+			return fmt.Errorf("the model's answer about the contents couldn't be read: %w", err)
 		}
 	}
 }

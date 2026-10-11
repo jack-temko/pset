@@ -72,13 +72,6 @@ var (
 		Action: errs.ActionRetry,
 		Status: http.StatusBadGateway,
 	})
-	badTag = errs.Define(errs.Entry{
-		ID:     "update.bad_tag",
-		What:   "Couldn't look for an update.",
-		Why:    "The latest release is tagged {tag}, which isn't a version number.",
-		Fix:    "Try again later. If it keeps happening, copy the details and report it.",
-		Status: http.StatusBadGateway,
-	})
 	nothingToInstall = errs.Define(errs.Entry{
 		ID:   "update.nothing_to_install",
 		What: "There is no newer version to install.",

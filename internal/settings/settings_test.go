@@ -231,7 +231,7 @@ func TestHealthAndFix(t *testing.T) {
 	if code := s.do(t, "POST", "/api/health/poppler/fix", nil, &e); code != 422 || e.ID != "settings.not_fixable" {
 		t.Fatalf("unfixable fix: %d %+v", code, e)
 	}
-	if code := s.do(t, "POST", "/api/health/nope/fix", nil, &e); code != 404 || e.ID != "settings.check_not_found" {
+	if code := s.do(t, "POST", "/api/health/nope/fix", nil, &e); code != 404 || e.ID != "request.gone" {
 		t.Fatalf("unknown check: %d %+v", code, e)
 	}
 }

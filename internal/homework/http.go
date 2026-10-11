@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/usage"
 )
@@ -119,7 +120,7 @@ func (s *Service) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/questions/{id}/figures/{n}", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
 		n, err := strconv.Atoi(r.PathValue("n"))
 		if err != nil {
-			return figureNotFound.New()
+			return errs.Gone.New("thing", "figure")
 		}
 		data, err := s.Figure(r.Context(), r.PathValue("id"), n)
 		if err != nil {

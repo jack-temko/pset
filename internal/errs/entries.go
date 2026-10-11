@@ -117,3 +117,26 @@ var (
 		Status: http.StatusInternalServerError,
 	})
 )
+
+// The two answers a request gets when the page is behind the server: it names
+// something that is gone, or asks for what the thing's state no longer
+// allows. Both are the page being out of date, and say so the same way.
+var (
+	// Gone is a thing a request names that isn't there.
+	Gone = Define(Entry{
+		ID:     "request.gone",
+		What:   "That {thing} isn't there.",
+		Why:    "It was removed, or the page is out of date.",
+		Fix:    "Reload the page to see what is there now.",
+		Action: ActionReload,
+		Status: http.StatusNotFound,
+	})
+	// Stale is a request for what the thing's state no longer allows.
+	Stale = Define(Entry{
+		ID:     "request.stale",
+		What:   "That {thing} has moved on.",
+		Why:    "It isn't in the state this needs, so the page is out of date.",
+		Fix:    "Reload the page to see where it stands.",
+		Action: ActionReload,
+	})
+)

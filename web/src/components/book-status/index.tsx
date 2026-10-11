@@ -2,6 +2,7 @@ import { Spinner } from '@/components/spinner';
 import { bookStep, IMPORT_PHASES, type BookState } from '@/api/library';
 import { useTimeLeft } from '@/lib/eta';
 import { useSettled } from '@/lib/settled';
+import { errorFull } from '@/lib/error-text';
 import { cn } from '@/lib/utils';
 
 /**
@@ -52,7 +53,7 @@ export function BookStatus({
   if (state.kind === 'failed') {
     return (
       <span className={cn('text-destructive', className)}>
-        {state.error?.what}
+        {state.error ? errorFull(state.error) : null}
       </span>
     );
   }

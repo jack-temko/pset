@@ -380,7 +380,7 @@ func (s *Service) Retry(ctx context.Context, id string) (Book, error) {
 		return Book{}, err
 	}
 	if b.State.Kind != StateFailed {
-		return Book{}, notFailed.New()
+		return Book{}, errs.Stale.New("thing", "book")
 	}
 	cfg, err := s.c.Models.LLM(ctx)
 	if err != nil {

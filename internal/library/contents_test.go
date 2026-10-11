@@ -406,7 +406,7 @@ func TestContentsModelFailureFailsTheImportThenRetries(t *testing.T) {
 	e.llm.Script(noName, llmtest.Reply{Text: "Here are the contents!"}, llmtest.Reply{Text: "Sorry."})
 	e.do(t, "POST", "/api/books/"+b.ID+"/retry", nil, nil)
 	b = e.waitFor(t, b.ID, StateFailed)
-	if !failedBecause(b, "import.contents_unreadable") {
+	if b.State.Error == nil || b.State.Error.ID != "import.failed" {
 		t.Fatalf("error %+v", b.State.Error)
 	}
 

@@ -11,7 +11,7 @@ import (
 var ErrNoAnswer = errs.Define(errs.Entry{
 	ID:     "agent.no_answer",
 	What:   "The model stopped without writing an answer.",
-	Why:    "It ended its turn with nothing written, even when asked again.",
+	Why:    "It ended its turn with nothing written, or left a part out, even when asked again.",
 	Fix:    "Trying again usually works.",
 	Action: errs.ActionRetry,
 	Status: http.StatusBadGateway,

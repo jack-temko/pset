@@ -5,7 +5,6 @@ import type {
   QuestionPatch,
   Retry,
 } from '@/api/homework';
-import type { ErrorId } from '@/api/gen/errors';
 import { MockError, type Route } from '@/views/mock/server';
 import { BOOK_ID, World, makeQuestion, makeRead, makeSet } from './world';
 
@@ -17,14 +16,9 @@ const labelOf = (text: string) =>
   (text.length > 28 ? `${text.slice(0, 27)}…` : text);
 
 const notFound = (what: 'question' | 'homework set' | 'read') =>
-  new MockError(
-    404,
-    {
-      question: 'homework.question_not_found',
-      'homework set': 'homework.set_not_found',
-      read: 'homework.assignment_not_found',
-    }[what] as ErrorId,
-  );
+  new MockError(404, 'request.gone', undefined, {
+    thing: what === 'read' ? 'assignment' : what,
+  });
 
 /** The server's homework routes over a `World`: what the view's hooks call,
  *  answered the way the server answers, with the events it would send. */

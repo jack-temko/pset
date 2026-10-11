@@ -73,7 +73,7 @@ func firstText(boxes []Box) Box {
 func (s *Service) AddBoxed(ctx context.Context, homeworkID string, boxes []Box) (Question, error) {
 	h, err := getSummary(ctx, s.c.DB, homeworkID)
 	if errors.Is(err, errNotFound) {
-		return Question{}, setNotFound.New()
+		return Question{}, errs.Gone.New("thing", "homework set")
 	} else if err != nil {
 		return Question{}, err
 	}
@@ -121,7 +121,7 @@ func (s *Service) AddBoxed(ctx context.Context, homeworkID string, boxes []Box) 
 func (s *Service) PointOut(ctx context.Context, id string, boxes []Box) (Question, error) {
 	q, err := getQuestion(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Question{}, questionNotFound.New()
+		return Question{}, errs.Gone.New("thing", "question")
 	}
 	if err != nil {
 		return Question{}, err

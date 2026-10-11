@@ -20,13 +20,6 @@ var (
 		Action: errs.ActionOpenBook,
 		Status: http.StatusConflict,
 	})
-	pageNotFound = errs.Define(errs.Entry{
-		ID:     "library.page_not_found",
-		What:   "That page isn't in this book.",
-		Why:    "The page number is past the end of the book, or isn't a number.",
-		Fix:    "Go to a page inside the book.",
-		Status: http.StatusNotFound,
-	})
 	titleEmpty = errs.Define(errs.Entry{
 		ID:    "library.title_empty",
 		What:  "A book needs a title.",
@@ -44,13 +37,6 @@ var (
 		Fix:    "Settings, under Health, says how to start it.",
 		Action: errs.ActionOpenSettings,
 		Status: http.StatusUnprocessableEntity,
-	})
-	notFailed = errs.Define(errs.Entry{
-		ID:     "library.not_failed",
-		What:   "Only a book that failed to import can be tried again.",
-		Why:    "This book isn't in a failed state, so the page is out of date.",
-		Fix:    "Reload the page to see where the book stands.",
-		Action: errs.ActionReload,
 	})
 	runsEmpty = errs.Define(errs.Entry{
 		ID:    "library.runs_empty",
@@ -120,34 +106,6 @@ var (
 		What:   "Some pages couldn't be read.",
 		Why:    "PSet's text reader, Tesseract, failed on {count} ({list}).",
 		Fix:    "Try again, or check that Tesseract works in Settings.",
-		Action: errs.ActionRetry,
-	})
-	structureUnreadable = errs.Define(errs.Entry{
-		ID:     "import.structure_unreadable",
-		What:   "PSet couldn't read this book's structure.",
-		Why:    "The PDF's outline couldn't be extracted.",
-		Fix:    "Try again. If it keeps happening, the file may be damaged.",
-		Action: errs.ActionRetry,
-	})
-	contentsRender = errs.Define(errs.Entry{
-		ID:     "import.contents_render",
-		What:   "PSet couldn't render the book's contents pages.",
-		Why:    "The pages couldn't be turned into pictures for the model.",
-		Fix:    "Try again.",
-		Action: errs.ActionRetry,
-	})
-	contentsStalled = errs.Define(errs.Entry{
-		ID:     "import.contents_stalled",
-		What:   "The model stopped answering while PSet read the book's contents.",
-		Why:    "OpenRouter took too long to answer.",
-		Fix:    "Try again in a minute.",
-		Action: errs.ActionRetry,
-	})
-	contentsUnreadable = errs.Define(errs.Entry{
-		ID:     "import.contents_unreadable",
-		What:   "The model's answer about the book's contents couldn't be read.",
-		Why:    "It wasn't in a form PSet could use.",
-		Fix:    "Try again.",
 		Action: errs.ActionRetry,
 	})
 )

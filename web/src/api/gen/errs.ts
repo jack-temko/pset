@@ -77,6 +77,13 @@ export interface View {
  */
 export interface Stored {
   chain: string[];
+  /**
+   * Links are the params of each link, in the chain's order. Params is the
+   * older merged form, read when there are no Links.
+   */
+  links?: { [key: string]: string}[];
   params?: { [key: string]: string};
+  field?: string;
+  ref?: string;
   incident?: string;
 }

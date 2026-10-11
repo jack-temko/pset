@@ -373,7 +373,8 @@ function StateWalkthrough({ state }: { state: 'writing' | 'failed' }) {
               position: 3,
               label: '4.32',
               state: 'failed',
-              error: mockError(['homework.guide_failed', 'model.busy'], {
+              error: mockError(['homework.question_failed', 'model.busy'], {
+                step: 'write the guide for',
                 name: 'problem 4.32',
               }),
             })}

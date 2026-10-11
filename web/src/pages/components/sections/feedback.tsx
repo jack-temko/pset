@@ -30,7 +30,7 @@ import { Shelf } from './shared';
 const NOTICE: View = {
   id: 'import.failed',
   what: "Couldn't prepare Calculus.",
-  why: "Your OpenRouter account is out of credit, so PSet can't use a model.",
+  why: 'Your OpenRouter account is out of credit.',
   fix: 'Add credit on OpenRouter, then try again.',
   action: 'retry',
   scope: 'inline',

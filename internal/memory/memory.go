@@ -192,7 +192,7 @@ func (s *Service) Save(ctx context.Context, bookID string, in Save) (Memory, Out
 func (s *Service) Remove(ctx context.Context, id string) (Memory, error) {
 	m, err := s.get(ctx, id)
 	if errors.Is(err, errNotFound) {
-		return Memory{}, memoryNotFound.New()
+		return Memory{}, errs.Gone.New("thing", "memory")
 	}
 	if err != nil {
 		return Memory{}, err

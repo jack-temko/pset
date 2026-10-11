@@ -33,7 +33,7 @@ describe('failedLine', () => {
         q({
           attempts: 1,
           failedAt: at(2),
-          error: err('homework.guide_failed'),
+          error: err('homework.question_failed'),
         }),
         now,
       ),
@@ -43,7 +43,7 @@ describe('failedLine', () => {
         q({
           attempts: 3,
           failedAt: at(0),
-          error: err('homework.guide_failed', 'model.busy'),
+          error: err('homework.question_failed', 'model.busy'),
         }),
         now,
       ),
@@ -56,7 +56,7 @@ describe('failedLine', () => {
         q({
           attempts: 0,
           failedAt: at(5),
-          error: err('homework.guide_failed', 'model.busy'),
+          error: err('homework.question_failed', 'model.busy'),
         }),
         now,
       ),
@@ -69,13 +69,16 @@ describe('failedLine', () => {
         q({
           attempts: 0,
           failedAt: at(5),
-          error: err('homework.guide_failed'),
+          error: err('homework.question_failed'),
         }),
         now,
       ),
     ).toBeNull();
     expect(
-      failedLine(q({ error: err('homework.guide_failed', 'model.busy') }), now),
+      failedLine(
+        q({ error: err('homework.question_failed', 'model.busy') }),
+        now,
+      ),
     ).toBeNull();
     expect(failedLine(q({ attempts: 2 }), now)).toBe(
       'Tried 2 more times and it failed again.',

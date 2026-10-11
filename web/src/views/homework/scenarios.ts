@@ -151,7 +151,8 @@ const slow: Scenario = {
 const failedKinds: { label: string; error: View }[] = [
   {
     label: '4.27',
-    error: mockError(['homework.guide_failed', 'model.cut'], {
+    error: mockError(['homework.question_failed', 'model.cut'], {
+      step: 'write the guide for',
       name: 'problem 4.27',
     }),
   },
@@ -164,13 +165,15 @@ const failedKinds: { label: string; error: View }[] = [
   },
   {
     label: '4.32',
-    error: mockError(['homework.guide_failed', 'model.busy'], {
+    error: mockError(['homework.question_failed', 'model.busy'], {
+      step: 'write the guide for',
       name: 'problem 4.32',
     }),
   },
   {
     label: '3.12',
-    error: mockError(['homework.guide_failed', 'key.refused'], {
+    error: mockError(['homework.question_failed', 'key.refused'], {
+      step: 'write the guide for',
       name: 'problem 3.12',
     }),
   },
@@ -192,7 +195,8 @@ const failed: Scenario = {
           error: k.error,
         })),
       );
-      w.retryError = mockError(['homework.guide_failed', 'model.busy'], {
+      w.retryError = mockError(['homework.question_failed', 'model.busy'], {
+        step: 'write the guide for',
         name: 'problem 4.32',
       });
       return { props: { initialSet: s.id } };

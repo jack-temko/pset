@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/platform"
 )
@@ -33,7 +34,7 @@ func (s *Service) Health(ctx context.Context) Health {
 func (s *Service) Fix(ctx context.Context, id string) (HealthCheck, error) {
 	c := s.check(ctx, id)
 	if c.ID == "" {
-		return HealthCheck{}, checkNotFound.New()
+		return HealthCheck{}, errs.Gone.New("thing", "check")
 	}
 	if c.OK {
 		return c, nil

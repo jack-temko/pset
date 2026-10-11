@@ -8,37 +8,7 @@ import (
 
 // Not found: a set, a question, an assignment read, a figure. Each is its
 // own entry because each is found somewhere else.
-var (
-	setNotFound = errs.Define(errs.Entry{
-		ID:     "homework.set_not_found",
-		What:   "That homework set isn't there.",
-		Why:    "It was removed, or the page is out of date.",
-		Fix:    "Go back to the book's homework list.",
-		Status: http.StatusNotFound,
-	})
-	questionNotFound = errs.Define(errs.Entry{
-		ID:     "homework.question_not_found",
-		What:   "That question isn't there.",
-		Why:    "It was removed, or the page is out of date.",
-		Fix:    "Go back to the set's list of questions.",
-		Status: http.StatusNotFound,
-	})
-	assignmentNotFound = errs.Define(errs.Entry{
-		ID:     "homework.assignment_not_found",
-		What:   "That assignment isn't there.",
-		Why:    "It was dismissed, or the page is out of date.",
-		Fix:    "Add the assignment again.",
-		Status: http.StatusNotFound,
-	})
-	figureNotFound = errs.Define(errs.Entry{
-		ID:     "homework.figure_not_found",
-		What:   "That figure isn't there.",
-		Why:    "The question has no figure, or it was removed.",
-		Fix:    "Reload the page to see the question as it is now.",
-		Action: errs.ActionReload,
-		Status: http.StatusNotFound,
-	})
-)
+var ()
 
 // A set and its questions, as typed.
 var (
@@ -111,29 +81,7 @@ var (
 
 // What the student may do to a question depends on its state; the page is
 // out of date when it offers what no longer applies.
-var (
-	questionNotFailed = errs.Define(errs.Entry{
-		ID:     "homework.not_failed",
-		What:   "Only a question that failed can be tried again.",
-		Why:    "This question isn't in a failed state, so the page is out of date.",
-		Fix:    "Reload the page to see where the question stands.",
-		Action: errs.ActionReload,
-	})
-	guideExists = errs.Define(errs.Entry{
-		ID:     "homework.guide_exists",
-		What:   "This question already has a guide, or is being written.",
-		Why:    "A guide was started for it a moment ago, so the page is out of date.",
-		Fix:    "Reload the page to see the guide.",
-		Action: errs.ActionReload,
-	})
-	readBusy = errs.Define(errs.Entry{
-		ID:     "homework.read_busy",
-		What:   "That assignment is already read, or being read.",
-		Why:    "It isn't in a failed state, so there is nothing to try again.",
-		Fix:    "Reload the page to see where it stands.",
-		Action: errs.ActionReload,
-	})
-)
+var ()
 
 // Figure readings.
 var (
@@ -303,34 +251,6 @@ var (
 		Why:  "PSet looked through {where} and didn't see it.",
 		Fix:  "Show where it is on the page, or give its printed page. If it isn't from this book, paste it.",
 	})
-	findFailed = errs.Define(errs.Entry{
-		ID:     "homework.find_failed",
-		What:   "Couldn't look for {name} in the book.",
-		Why:    "Something went wrong while PSet was searching.",
-		Fix:    "Trying again usually works.",
-		Action: errs.ActionRetry,
-	})
-	figureReadFailed = errs.Define(errs.Entry{
-		ID:     "homework.figure_read_failed",
-		What:   "Couldn't read the figures in {name}.",
-		Why:    "Something went wrong while PSet was reading them.",
-		Fix:    "Trying again usually works.",
-		Action: errs.ActionRetry,
-	})
-	guideFailed = errs.Define(errs.Entry{
-		ID:     "homework.guide_failed",
-		What:   "Couldn't write the guide for {name}.",
-		Why:    "Something went wrong while it was being written.",
-		Fix:    "Trying again usually works.",
-		Action: errs.ActionRetry,
-	})
-	guideIncomplete = errs.Define(errs.Entry{
-		ID:     "homework.guide_incomplete",
-		What:   "The guide came back missing a part.",
-		Why:    "The model left out the hint or the answer.",
-		Fix:    "Trying again usually works.",
-		Action: errs.ActionRetry,
-	})
 	boxesUnreadable = errs.Define(errs.Entry{
 		ID:   "homework.boxes_unreadable",
 		What: "Couldn't read the words in the boxes.",
@@ -338,3 +258,13 @@ var (
 		Fix:  "Box the problem's text again, a little larger.",
 	})
 )
+
+// questionFailed is the outer entry of a question that failed: what step it
+// was at, and which question. The cause under it says why.
+var questionFailed = errs.Define(errs.Entry{
+	ID:     "homework.question_failed",
+	What:   "Couldn't {step} {name}.",
+	Why:    "Something went wrong while it was being worked on.",
+	Fix:    "Trying again usually works.",
+	Action: errs.ActionRetry,
+})

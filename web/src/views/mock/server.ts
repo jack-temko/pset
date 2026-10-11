@@ -1,4 +1,4 @@
-import { viewOf } from '@/api/client';
+import { mockError } from './errors';
 import type { ErrorId } from '@/api/gen/errors';
 
 /**
@@ -34,12 +34,20 @@ export class MockError extends Error {
   readonly status: number;
   readonly id: ErrorId;
   readonly field?: string;
+  /** What fills the entry's {placeholders}. */
+  readonly params: Record<string, string>;
 
-  constructor(status: number, id: ErrorId, field?: string) {
+  constructor(
+    status: number,
+    id: ErrorId,
+    field?: string,
+    params: Record<string, string> = {},
+  ) {
     super(id);
     this.status = status;
     this.id = id;
     this.field = field;
+    this.params = params;
   }
 }
 
@@ -131,7 +139,7 @@ export class MockServer {
     } catch (e) {
       if (!(e instanceof MockError)) throw e;
       res = json(e.status, {
-        ...viewOf(e.id),
+        ...mockError([e.id], e.params),
         ...(e.field && { field: e.field }),
       });
     }

@@ -152,11 +152,11 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 	// are their own outer entry; anything else is the step that failed.
 	failed := err
 	if !errors.Is(err, notFoundInBook) && !errors.Is(err, boxesUnreadable) {
-		outer := map[string]*errs.Entry{JobLocate: findFailed, JobRead: figureReadFailed}[j.Kind]
-		if outer == nil {
-			outer = guideFailed
+		step := map[string]string{JobLocate: "look for", JobRead: "read the figures in"}[j.Kind]
+		if step == "" {
+			step = "write the guide for"
 		}
-		failed = outer.Wrap(err, "name", problemName(q))
+		failed = questionFailed.Wrap(err, "step", step, "name", problemName(q))
 	}
 	v := errs.Report(settle, failed, errs.Where{Route: "job " + j.Kind, Book: q.BookID, Set: q.HomeworkID, Question: q.ID})
 	s.setFailed(settle, q.ID, &v)
@@ -578,7 +578,7 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row, rec
 		slog.Info("guide written", "question", q.ID, "blocks", len(parser.Blocks()), "raw", parser.Failed(), "repairs", parser.RepairCalls(), "recheck", recheck != "")
 		return hint, walk, nil
 	}
-	return nil, nil, guideIncomplete.New()
+	return nil, nil, agent.ErrNoAnswer
 }
 
 // readingCheck is the guide writer's check_reading: when it sees the
