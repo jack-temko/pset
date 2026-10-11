@@ -69,8 +69,7 @@ export function homeworkRoutes(w: World): Route[] {
   ) => {
     w.patch(id, {
       state: 'pending',
-      failure: undefined,
-      reason: undefined,
+      error: undefined,
       activity: undefined,
       hint: [],
       walkthrough: [],
@@ -230,8 +229,8 @@ export function homeworkRoutes(w: World): Route[] {
         const q = question(params.id);
         // A scenario can make the first retry fail again, so the student
         // sees a second failure before the guide lands.
-        const failure = w.retryFails;
-        w.retryFails = undefined;
+        const error = w.retryError;
+        w.retryError = undefined;
         w.patch(
           q.id,
           { attempts: (q.attempts ?? 0) + 1, failedAt: undefined },
@@ -249,9 +248,7 @@ export function homeworkRoutes(w: World): Route[] {
             : r.page
               ? { page: r.page }
               : {},
-          failure && {
-            fail: { at: 'writing', failure, reason: w.retryReason },
-          },
+          error && { fail: { at: 'writing', error } },
         );
         return question(q.id);
       },

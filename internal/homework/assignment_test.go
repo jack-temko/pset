@@ -250,7 +250,7 @@ func TestReadingAnAssignmentFromAWebPage(t *testing.T) {
 	// A page that isn't there fails on the read, said plainly; one that
 	// isn't a web page is refused before it starts.
 	bad := e.read(t, AssignmentText{URL: page.URL + "/private"})
-	if bad.State != ReadStateFailed || !strings.Contains(bad.Error, "404") {
+	if bad.State != ReadStateFailed || bad.Error == nil || bad.Error.ID != "homework.read_failed" || !strings.Contains(bad.Error.What, "Couldn't read the assignment") || !strings.Contains(bad.Error.Why, "404") {
 		t.Fatalf("missing page: %+v", bad)
 	}
 	// Tried again, once the page is there, it reads.
@@ -264,7 +264,7 @@ func TestReadingAnAssignmentFromAWebPage(t *testing.T) {
 		(retried.State != ReadStateReading && retried.State != ReadStateReady) {
 		t.Fatalf("retry %d %+v", code, retried)
 	}
-	if again := e.waitRead(t, bad.ID); again.State != ReadStateReady || again.Error != "" {
+	if again := e.waitRead(t, bad.ID); again.State != ReadStateReady || again.Error != nil {
 		t.Fatalf("retried %+v", again)
 	}
 	page.Config.Handler = pageUp

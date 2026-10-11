@@ -65,7 +65,7 @@ func TestShowingWhereAFailedFindIs(t *testing.T) {
 		t.Fatalf("point out %d", code)
 	}
 	q = e.wait(t, q.ID, StateReady)
-	if q.Page == nil || *q.Page != 3 || q.Label != "3.99" || q.Failure != "" {
+	if q.Page == nil || *q.Page != 3 || q.Label != "3.99" || q.Error != nil {
 		t.Fatalf("pointed out %+v", q)
 	}
 }
@@ -83,7 +83,7 @@ func TestUnreadableBoxes(t *testing.T) {
 	var q Question
 	e.do(t, "POST", "/api/homework/"+h.ID+"/boxed", Boxes{Boxes: []Box{{Page: 2, X: 0.1, Y: 0.1, W: 0.8, H: 0.2, Kind: BoxKindText}}}, &q)
 	q = e.wait(t, q.ID, StateFailed)
-	if !strings.Contains(q.Reason, "Box the problem's text again") {
-		t.Fatalf("reason %q", q.Reason)
+	if q.Error == nil || q.Error.ID != "homework.boxes_unreadable" || !strings.Contains(q.Error.Fix, "Box the problem's text again") {
+		t.Fatalf("error %+v", q.Error)
 	}
 }

@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
+import type { View } from '@/api/gen/errs';
 import type { Question } from '@/api/homework';
 import { agoWords, failedLine } from './failed-line';
 
 const now = Date.parse('2026-09-30T12:00:00Z');
 const q = (over: Partial<Question>) => over as Question;
+const err = (...chain: string[]): View => ({
+  id: chain[0],
+  what: 'It failed.',
+  scope: 'inline',
+  chain,
+});
 
 describe('agoWords', () => {
   it('reads mid-sentence', () => {
@@ -23,13 +30,21 @@ describe('failedLine', () => {
   it('says a second failure is one', () => {
     expect(
       failedLine(
-        q({ attempts: 1, failedAt: at(2), failure: 'generation' }),
+        q({
+          attempts: 1,
+          failedAt: at(2),
+          error: err('homework.guide_failed'),
+        }),
         now,
       ),
     ).toBe('Tried once more and it failed again, 2 minutes ago.');
     expect(
       failedLine(
-        q({ attempts: 3, failedAt: at(0), failure: 'unavailable' }),
+        q({
+          attempts: 3,
+          failedAt: at(0),
+          error: err('homework.guide_failed', 'model.busy'),
+        }),
         now,
       ),
     ).toBe('Tried 3 more times and it failed again, just now.');
@@ -38,7 +53,11 @@ describe('failedLine', () => {
   it('tells a model outage from the start how long ago it was', () => {
     expect(
       failedLine(
-        q({ attempts: 0, failedAt: at(5), failure: 'unavailable' }),
+        q({
+          attempts: 0,
+          failedAt: at(5),
+          error: err('homework.guide_failed', 'model.busy'),
+        }),
         now,
       ),
     ).toBe('It failed 5 minutes ago.');
@@ -47,11 +66,17 @@ describe('failedLine', () => {
   it('has nothing to add to a first failure of another kind, or with no time', () => {
     expect(
       failedLine(
-        q({ attempts: 0, failedAt: at(5), failure: 'generation' }),
+        q({
+          attempts: 0,
+          failedAt: at(5),
+          error: err('homework.guide_failed'),
+        }),
         now,
       ),
     ).toBeNull();
-    expect(failedLine(q({ failure: 'unavailable' }), now)).toBeNull();
+    expect(
+      failedLine(q({ error: err('homework.guide_failed', 'model.busy') }), now),
+    ).toBeNull();
     expect(failedLine(q({ attempts: 2 }), now)).toBe(
       'Tried 2 more times and it failed again.',
     );

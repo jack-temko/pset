@@ -138,7 +138,7 @@ func (s *Service) PointOut(ctx context.Context, id string, boxes []Box) (Questio
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET attempts = attempts + (state = 'failed'), boxes = ?, in_book = 1, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]',
 			hint = '[]', walkthrough = '[]', rounds = '[]', reading = '[]', reading_edited = 0,
-			state = 'pending', failure = '', reason = '', activity = '', updated_at = ? WHERE id = ?`,
+			state = 'pending', error = '', activity = '', updated_at = ? WHERE id = ?`,
 			mustJSON(boxes), db.Now(), id); err != nil {
 			return err
 		}
@@ -177,14 +177,14 @@ func (s *Service) fromBoxes(ctx context.Context, m model, book Book, q row) (loc
 		if ctx.Err() != nil {
 			return location{}, ctx.Err()
 		}
-		return location{}, modelDown(err, q)
+		return location{}, err
 	}
 	var read struct {
 		Label     string `json:"label"`
 		Statement string `json:"statement"`
 	}
 	if err := json.Unmarshal([]byte(llm.Unfence(reply)), &read); err != nil || strings.TrimSpace(read.Statement) == "" {
-		return location{}, fail(FailureGeneration, err, "Couldn't read the words in the boxes. Box the problem's text again, a little larger.")
+		return location{}, boxesUnreadable.Wrap(err)
 	}
 	rect := pdf.Rect{X: first.X, Y: first.Y, W: first.W, H: first.H}
 	loc := location{Page: first.Page, Statement: strings.TrimSpace(read.Statement), Rect: &rect,

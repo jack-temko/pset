@@ -221,9 +221,10 @@ var (
 		Scope: errs.ScopeField,
 	})
 	pdfUnreadable = errs.Define(errs.Entry{
-		ID:    "homework.pdf_unreadable",
-		What:  "That PDF couldn't be read.",
-		Scope: errs.ScopeField,
+		ID:   "homework.pdf_unreadable",
+		What: "That PDF couldn't be read.",
+		Why:  "PSet couldn't get any text or pages out of it.",
+		Fix:  "Photograph the page, or paste the text instead.",
 	})
 	fileTooBig = errs.Define(errs.Entry{
 		ID:    "homework.file_too_big",
@@ -241,24 +242,28 @@ var (
 		Scope: errs.ScopeField,
 	})
 	pageUnreachable = errs.Define(errs.Entry{
-		ID:    "homework.page_unreachable",
-		What:  "Couldn't reach that page.",
-		Scope: errs.ScopeField,
+		ID:   "homework.page_unreachable",
+		What: "Couldn't reach that page.",
+		Why:  "The address didn't answer, or the internet connection is down.",
+		Fix:  "Check the address and the connection, then try again.",
 	})
 	pageRefused = errs.Define(errs.Entry{
-		ID:    "homework.page_refused",
-		What:  "That page answered {status}. A page behind a login can be pasted or photographed instead.",
-		Scope: errs.ScopeField,
+		ID:   "homework.page_refused",
+		What: "That page wouldn't open.",
+		Why:  "It answered {status}, which usually means it is behind a login.",
+		Fix:  "Paste its text or photograph it instead.",
 	})
 	pageUnreadable = errs.Define(errs.Entry{
-		ID:    "homework.page_unreadable",
-		What:  "Couldn't read that page.",
-		Scope: errs.ScopeField,
+		ID:   "homework.page_unreadable",
+		What: "Couldn't read that page.",
+		Why:  "The page's answer broke off.",
+		Fix:  "Try again.",
 	})
 	pageEmpty = errs.Define(errs.Entry{
-		ID:    "homework.page_empty",
-		What:  "That page has no text to read.",
-		Scope: errs.ScopeField,
+		ID:   "homework.page_empty",
+		What: "That page has no text to read.",
+		Why:  "It may be an image, or built with scripts PSet doesn't run.",
+		Fix:  "Paste its text or photograph it instead.",
 	})
 	readFailed = errs.Define(errs.Entry{
 		ID:     "homework.read_failed",
@@ -286,5 +291,50 @@ var (
 		Why:    "A worksheet needs at least one question.",
 		Fix:    "Add a question before printing the worksheet.",
 		Status: http.StatusUnprocessableEntity,
+	})
+)
+
+// Why a question failed. Each outer entry names the question and the step;
+// the cause under it (the key, the model, the book) says why.
+var (
+	notFoundInBook = errs.Define(errs.Entry{
+		ID:   "homework.not_found_in_book",
+		What: "Couldn't find {name} in this book.",
+		Why:  "PSet looked through {where} and didn't see it.",
+		Fix:  "Show where it is on the page, or give its printed page. If it isn't from this book, paste it.",
+	})
+	findFailed = errs.Define(errs.Entry{
+		ID:     "homework.find_failed",
+		What:   "Couldn't look for {name} in the book.",
+		Why:    "Something went wrong while PSet was searching.",
+		Fix:    "Trying again usually works.",
+		Action: errs.ActionRetry,
+	})
+	figureReadFailed = errs.Define(errs.Entry{
+		ID:     "homework.figure_read_failed",
+		What:   "Couldn't read the figures in {name}.",
+		Why:    "Something went wrong while PSet was reading them.",
+		Fix:    "Trying again usually works.",
+		Action: errs.ActionRetry,
+	})
+	guideFailed = errs.Define(errs.Entry{
+		ID:     "homework.guide_failed",
+		What:   "Couldn't write the guide for {name}.",
+		Why:    "Something went wrong while it was being written.",
+		Fix:    "Trying again usually works.",
+		Action: errs.ActionRetry,
+	})
+	guideIncomplete = errs.Define(errs.Entry{
+		ID:     "homework.guide_incomplete",
+		What:   "The guide came back missing a part.",
+		Why:    "The model left out the hint or the answer.",
+		Fix:    "Trying again usually works.",
+		Action: errs.ActionRetry,
+	})
+	boxesUnreadable = errs.Define(errs.Entry{
+		ID:   "homework.boxes_unreadable",
+		What: "Couldn't read the words in the boxes.",
+		Why:  "The boxed text was too small or unclear to read.",
+		Fix:  "Box the problem's text again, a little larger.",
 	})
 )

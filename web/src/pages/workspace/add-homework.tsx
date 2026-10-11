@@ -154,7 +154,8 @@ export function AddHomeworkDialog({
 
   // A read that failed goes back to where it was given, saying why.
   useEffect(() => {
-    if (read?.state === 'failed') setError(read.error ?? "Couldn't read it.");
+    if (read?.state === 'failed')
+      setError(read.error ? errorLine(read.error) : "Couldn't read it.");
     if (
       read?.state === 'ready' &&
       read.assignment &&

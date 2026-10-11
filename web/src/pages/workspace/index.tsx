@@ -956,7 +956,6 @@ function Panel({
   /** Pixels, from the pane layout; the token until it's measured. */
   width?: number;
 }) {
-  const navigate = useNavigate();
   // A book always opens on Homework, at the list (or on the set the URL
   // names). Both tabs stay mounted, so Ask about a question and Homework
   // again is the same question, scrolled where it was; a reload is a new visit.
@@ -1063,9 +1062,6 @@ function Panel({
           onPickSelection={pickSelection}
           onClearAbout={clearAbout}
           selection={selection}
-          onOpenSettings={() => {
-            void navigate('/settings#connections');
-          }}
           onQuestion={onQuestion}
           wide={focus}
         />

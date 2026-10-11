@@ -141,7 +141,6 @@ const READ_QUESTION: Question = {
   revealed: [],
   done: false,
   activity: '',
-  reason: '',
   updatedAt: '',
   rev: 1,
   reading: [

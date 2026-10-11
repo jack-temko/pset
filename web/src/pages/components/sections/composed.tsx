@@ -145,8 +145,14 @@ const READS: AssignmentRead[] = [
     bookId: 'b',
     source: 'https://canvas.example.edu/courses/461/assignments',
     state: 'failed',
-    error:
-      'That page answered 401. A page behind a login can be pasted or photographed instead.',
+    error: {
+      id: 'homework.read_failed',
+      what: "Couldn't read the assignment.",
+      why: 'It answered 401, which usually means it is behind a login.',
+      fix: 'Paste its text or photograph it instead.',
+      scope: 'inline',
+      chain: ['homework.read_failed', 'homework.page_refused'],
+    },
     createdAt: '',
     updatedAt: '',
   },

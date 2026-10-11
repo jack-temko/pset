@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
@@ -217,7 +218,8 @@ func TestAQuestionsCallsCarryTheirStageAndRun(t *testing.T) {
 	}
 
 	// A retry is a run of its own.
-	e.svc.setFailed(context.Background(), q.ID, FailureGeneration, "Something went wrong.")
+	v := errs.Resolve(guideFailed.New("name", "this question"))
+	e.svc.setFailed(context.Background(), q.ID, &v)
 	if code := e.do(t, "POST", "/api/questions/"+q.ID+"/retry", Retry{}, nil); code != 200 {
 		t.Fatalf("retry %d", code)
 	}

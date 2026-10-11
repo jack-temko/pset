@@ -30,13 +30,18 @@ export type ErrorId =
   | "homework.box_no_text"
   | "homework.box_off_book"
   | "homework.box_off_page"
+  | "homework.boxes_unreadable"
   | "homework.draft_too_long"
   | "homework.empty_worksheet"
   | "homework.figure_busy"
   | "homework.figure_not_found"
+  | "homework.figure_read_failed"
   | "homework.file_kind"
   | "homework.file_too_big"
+  | "homework.find_failed"
   | "homework.guide_exists"
+  | "homework.guide_failed"
+  | "homework.guide_incomplete"
   | "homework.no_boxes"
   | "homework.no_drafts"
   | "homework.no_figure"
@@ -45,6 +50,7 @@ export type ErrorId =
   | "homework.no_page_for_question"
   | "homework.no_source"
   | "homework.not_failed"
+  | "homework.not_found_in_book"
   | "homework.note_too_long"
   | "homework.nothing_to_add"
   | "homework.page_empty"
@@ -346,6 +352,14 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 422,
     owner: "homework",
   },
+  "homework.boxes_unreadable": {
+    what: "Couldn't read the words in the boxes.",
+    why: "The boxed text was too small or unclear to read.",
+    fix: "Box the problem's text again, a little larger.",
+    scope: "inline",
+    status: 422,
+    owner: "homework",
+  },
   "homework.draft_too_long": {
     what: "One of these is too long for a single question.",
     scope: "field",
@@ -375,6 +389,15 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 404,
     owner: "homework",
   },
+  "homework.figure_read_failed": {
+    what: "Couldn't read the figures in {name}.",
+    why: "Something went wrong while PSet was reading them.",
+    fix: "Trying again usually works.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "homework",
+  },
   "homework.file_kind": {
     what: "Send a PDF, a photo, or a text file.",
     scope: "field",
@@ -387,11 +410,38 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 422,
     owner: "homework",
   },
+  "homework.find_failed": {
+    what: "Couldn't look for {name} in the book.",
+    why: "Something went wrong while PSet was searching.",
+    fix: "Trying again usually works.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "homework",
+  },
   "homework.guide_exists": {
     what: "This question already has a guide, or is being written.",
     why: "A guide was started for it a moment ago, so the page is out of date.",
     fix: "Reload the page to see the guide.",
     action: "reload",
+    scope: "inline",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.guide_failed": {
+    what: "Couldn't write the guide for {name}.",
+    why: "Something went wrong while it was being written.",
+    fix: "Trying again usually works.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.guide_incomplete": {
+    what: "The guide came back missing a part.",
+    why: "The model left out the hint or the answer.",
+    fix: "Trying again usually works.",
+    action: "retry",
     scope: "inline",
     status: 422,
     owner: "homework",
@@ -449,6 +499,14 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 422,
     owner: "homework",
   },
+  "homework.not_found_in_book": {
+    what: "Couldn't find {name} in this book.",
+    why: "PSet looked through {where} and didn't see it.",
+    fix: "Show where it is on the page, or give its printed page. If it isn't from this book, paste it.",
+    scope: "inline",
+    status: 422,
+    owner: "homework",
+  },
   "homework.note_too_long": {
     what: "Keep each note under {max} characters.",
     scope: "field",
@@ -463,7 +521,9 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
   },
   "homework.page_empty": {
     what: "That page has no text to read.",
-    scope: "field",
+    why: "It may be an image, or built with scripts PSet doesn't run.",
+    fix: "Paste its text or photograph it instead.",
+    scope: "inline",
     status: 422,
     owner: "homework",
   },
@@ -474,26 +534,34 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     owner: "homework",
   },
   "homework.page_refused": {
-    what: "That page answered {status}. A page behind a login can be pasted or photographed instead.",
-    scope: "field",
+    what: "That page wouldn't open.",
+    why: "It answered {status}, which usually means it is behind a login.",
+    fix: "Paste its text or photograph it instead.",
+    scope: "inline",
     status: 422,
     owner: "homework",
   },
   "homework.page_unreachable": {
     what: "Couldn't reach that page.",
-    scope: "field",
+    why: "The address didn't answer, or the internet connection is down.",
+    fix: "Check the address and the connection, then try again.",
+    scope: "inline",
     status: 422,
     owner: "homework",
   },
   "homework.page_unreadable": {
     what: "Couldn't read that page.",
-    scope: "field",
+    why: "The page's answer broke off.",
+    fix: "Try again.",
+    scope: "inline",
     status: 422,
     owner: "homework",
   },
   "homework.pdf_unreadable": {
     what: "That PDF couldn't be read.",
-    scope: "field",
+    why: "PSet couldn't get any text or pages out of it.",
+    fix: "Photograph the page, or paste the text instead.",
+    scope: "inline",
     status: 422,
     owner: "homework",
   },

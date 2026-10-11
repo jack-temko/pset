@@ -16,6 +16,7 @@ import (
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/usage"
@@ -52,45 +53,6 @@ func stageOf(kind string, boxed bool) string {
 		return "Boxed read"
 	}
 	return "Find"
-}
-
-// failure is a question failure in words for the student: it becomes the
-// failed question's one line, as written.
-type failure struct {
-	kind Failure
-	msg  string
-	err  error
-}
-
-func (f *failure) Error() string {
-	if f.err != nil {
-		return f.msg + ": " + f.err.Error()
-	}
-	return f.msg
-}
-
-func (f *failure) Unwrap() error { return f.err }
-
-func fail(kind Failure, err error, format string, args ...any) error {
-	return &failure{kind: kind, msg: fmt.Sprintf(format, args...), err: err}
-}
-
-// modelDown is what a failed model call means to the student, about the
-// question it was for: the page names the kind, this says what happened.
-func modelDown(err error, q row) error {
-	if errors.Is(err, agent.ErrNoAnswer) {
-		return fail(FailureGeneration, err, "The model stopped without writing the guide for %s. Trying again usually works.", problemName(q))
-	}
-	trouble, status := llm.Classify(err)
-	switch trouble {
-	case llm.TroubleCut:
-		return fail(FailureGeneration, err, "The walkthrough for %s stopped partway: the connection to the model dropped. Trying again usually works.", problemName(q))
-	case llm.TroubleRejected:
-		return fail(FailureSetup, err, "%s Check the key in Settings, then try again.", llm.Refusal(status))
-	case llm.TroubleCredit:
-		return fail(FailureSetup, err, "%s", llm.NoCredit)
-	}
-	return fail(FailureUnavailable, err, "OpenRouter didn't answer, or is busy right now. Nothing is wrong with %s: try again in a minute.", problemName(q))
 }
 
 // problemName is a question as a sentence names it: "problem 4.44", or
@@ -183,20 +145,28 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 	case ctx.Err() != nil:
 		// Shutting down: the step runs again on the next start. A find
 		// starts over; a guide carries on from its last saved round.
-		s.setState(settle, q.ID, waiting(q), "")
+		s.setState(settle, q.ID, waiting(q))
 		return err
 	}
-	f := &failure{kind: FailureGeneration, msg: fmt.Sprintf("Something went wrong writing the walkthrough for %s. Trying again usually works.", problemName(q))}
-	errors.As(err, &f)
-	slog.Warn("question failed", "question", q.ID, "kind", j.Kind, "err", err)
-	s.setFailed(settle, q.ID, f.kind, f.msg)
+	// A find that didn't see the question, and boxes that couldn't be read,
+	// are their own outer entry; anything else is the step that failed.
+	failed := err
+	if !errors.Is(err, notFoundInBook) && !errors.Is(err, boxesUnreadable) {
+		outer := map[string]*errs.Entry{JobLocate: findFailed, JobRead: figureReadFailed}[j.Kind]
+		if outer == nil {
+			outer = guideFailed
+		}
+		failed = outer.Wrap(err, "name", problemName(q))
+	}
+	v := errs.Report(settle, failed, errs.Where{Route: "job " + j.Kind, Book: q.BookID, Set: q.HomeworkID, Question: q.ID})
+	s.setFailed(settle, q.ID, &v)
 	return err
 }
 
-// setFailed marks a question failed: what kind, and in words.
-func (s *Service) setFailed(ctx context.Context, id string, kind Failure, reason string) {
-	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET state = 'failed', failure = ?, reason = ?, activity = '', failed_at = ?, updated_at = ? WHERE id = ?`,
-		kind, reason, db.Now(), db.Now(), id); err != nil {
+// setFailed marks a question failed, with the catalog error that says why.
+func (s *Service) setFailed(ctx context.Context, id string, v *errs.View) {
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET state = 'failed', error = ?, activity = '', failed_at = ?, updated_at = ? WHERE id = ?`,
+		v.Stored().Marshal(), db.Now(), db.Now(), id); err != nil {
 		slog.Error("question: set failed", "question", id, "err", err)
 		return
 	}
@@ -208,9 +178,9 @@ func (s *Service) setFailed(ctx context.Context, id string, kind Failure, reason
 	}
 }
 
-func (s *Service) setState(ctx context.Context, id string, st State, reason string) {
-	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET state = ?, reason = ?, activity = '', updated_at = ? WHERE id = ?`,
-		st, reason, db.Now(), id); err != nil {
+func (s *Service) setState(ctx context.Context, id string, st State) {
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET state = ?, error = '', activity = '', updated_at = ? WHERE id = ?`,
+		st, db.Now(), id); err != nil {
 		slog.Error("question: set state", "question", id, "err", err)
 		return
 	}
@@ -229,7 +199,7 @@ func (s *Service) withModel(ctx context.Context, q row, step func(context.Contex
 		return err
 	}
 	if !cfg.ChatReady() {
-		return fail(FailureSetup, nil, "%s", llm.NoKey)
+		return llm.KeyMissing.New()
 	}
 	return step(ctx, model{client: llm.Open(cfg), name: cfg.ChatModel}, book, q)
 }
@@ -238,7 +208,7 @@ func (s *Service) withModel(ctx context.Context, q row, step func(context.Contex
 // guide is queued in the same write, so a found question is never left
 // without one.
 func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
-	s.setState(ctx, q.ID, StateLocating, "")
+	s.setState(ctx, q.ID, StateLocating)
 	// A reference the parser couldn't read, rewritten by the model in the
 	// book's form first, if it can be.
 	next, err := s.rewriteReference(ctx, m, book, q)
@@ -294,7 +264,7 @@ func (s *Service) find(ctx context.Context, m model, book Book, q row) error {
 // and the guide reads the figures itself, as it did before readings: a
 // question never fails over its reading.
 func (s *Service) read(ctx context.Context, m model, book Book, q row) error {
-	s.setState(ctx, q.ID, StateReading, "")
+	s.setState(ctx, q.ID, StateReading)
 	lines, doubts, err := s.readFigures(ctx, m, book, q, "")
 	if err != nil {
 		if ctx.Err() != nil {
@@ -477,13 +447,13 @@ func orEmpty(lines []string) []string {
 
 // write writes a question's guide, found or never looked for.
 func (s *Service) write(ctx context.Context, m model, book Book, q row) error {
-	s.setState(ctx, q.ID, StateWriting, "")
+	s.setState(ctx, q.ID, StateWriting)
 	hint, walk, err := s.writeGuide(ctx, m, book, q, "")
 	if err != nil {
 		return err
 	}
 	hint, walk = s.crossCheck(ctx, m, book, q, hint, walk)
-	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET hint = ?, walkthrough = ?, state = 'ready', reason = '', activity = '', rounds = '[]', updated_at = ? WHERE id = ?`,
+	if _, err := s.c.DB.ExecContext(ctx, `UPDATE questions SET hint = ?, walkthrough = ?, state = 'ready', error = '', activity = '', rounds = '[]', updated_at = ? WHERE id = ?`,
 		mustJSON(hint), mustJSON(walk), db.Now(), q.ID); err != nil {
 		return err
 	}
@@ -594,7 +564,7 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row, rec
 			if ctx.Err() != nil {
 				return nil, nil, ctx.Err()
 			}
-			return nil, nil, modelDown(err, q)
+			return nil, nil, err
 		}
 		if len(parser.Blocks()) > 0 {
 			s.setActivity(ctx, q.ID, "Checking the guide…")
@@ -608,7 +578,7 @@ func (s *Service) writeGuide(ctx context.Context, m model, book Book, q row, rec
 		slog.Info("guide written", "question", q.ID, "blocks", len(parser.Blocks()), "raw", parser.Failed(), "repairs", parser.RepairCalls(), "recheck", recheck != "")
 		return hint, walk, nil
 	}
-	return nil, nil, fail(FailureGeneration, nil, "The walkthrough for %s came back missing a part. Trying again usually works.", problemName(q))
+	return nil, nil, guideIncomplete.New()
 }
 
 // readingCheck is the guide writer's check_reading: when it sees the

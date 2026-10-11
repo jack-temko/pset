@@ -26,6 +26,7 @@ import { UnderlineNav, UnderlineTab } from '@/components/underline-nav';
 import { cn } from '@/lib/utils';
 import { sampleFigure } from '@/views/mock/assets';
 import { FailedQuestion } from './failed-question';
+import { mockError } from '@/views/mock/errors';
 import { makeQuestion } from './world';
 
 /**
@@ -372,12 +373,11 @@ function StateWalkthrough({ state }: { state: 'writing' | 'failed' }) {
               position: 3,
               label: '4.32',
               state: 'failed',
-              failure: 'unavailable',
-              reason:
-                "OpenRouter didn't answer in time. Nothing is wrong with 4.32.",
+              error: mockError(['homework.guide_failed', 'model.busy'], {
+                name: 'problem 4.32',
+              }),
             })}
             onRetry={() => {}}
-            onOpenSettings={() => {}}
           />
         )}
       </div>

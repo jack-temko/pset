@@ -4,7 +4,7 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-132 entries.
+138 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
@@ -36,13 +36,18 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `homework.box_no_text` | Box the problem's words too, not only its figure. |  |  |  | field | homework |
 | `homework.box_off_book` | A box is on a page the book doesn't have. |  |  |  | field | homework |
 | `homework.box_off_page` | A box runs off its page. |  |  |  | field | homework |
+| `homework.boxes_unreadable` | Couldn't read the words in the boxes. | The boxed text was too small or unclear to read. | Box the problem's text again, a little larger. |  | inline | homework |
 | `homework.draft_too_long` | One of these is too long for a single question. |  |  |  | field | homework |
 | `homework.empty_worksheet` | There is nothing to print yet. | A worksheet needs at least one question. | Add a question before printing the worksheet. |  | inline | homework |
 | `homework.figure_busy` | Its figure is still being read. |  |  |  | field | homework |
 | `homework.figure_not_found` | That figure isn't there. | The question has no figure, or it was removed. | Reload the page to see the question as it is now. | `reload` | inline | homework |
+| `homework.figure_read_failed` | Couldn't read the figures in {name}. | Something went wrong while PSet was reading them. | Trying again usually works. | `retry` | inline | homework |
 | `homework.file_kind` | Send a PDF, a photo, or a text file. |  |  |  | field | homework |
 | `homework.file_too_big` | That file is too big for an assignment. |  |  |  | field | homework |
+| `homework.find_failed` | Couldn't look for {name} in the book. | Something went wrong while PSet was searching. | Trying again usually works. | `retry` | inline | homework |
 | `homework.guide_exists` | This question already has a guide, or is being written. | A guide was started for it a moment ago, so the page is out of date. | Reload the page to see the guide. | `reload` | inline | homework |
+| `homework.guide_failed` | Couldn't write the guide for {name}. | Something went wrong while it was being written. | Trying again usually works. | `retry` | inline | homework |
+| `homework.guide_incomplete` | The guide came back missing a part. | The model left out the hint or the answer. | Trying again usually works. | `retry` | inline | homework |
 | `homework.no_boxes` | Draw a box around the problem first. |  |  |  | field | homework |
 | `homework.no_drafts` | Write at least one question. |  |  |  | field | homework |
 | `homework.no_figure` | This question has no figure to read. |  |  |  | field | homework |
@@ -51,14 +56,15 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `homework.no_page_for_question` | This question isn't in the book, so it has no page. |  |  |  | field | homework |
 | `homework.no_source` | Give a file, a web page's address, or the assignment's text. |  |  |  | field | homework |
 | `homework.not_failed` | Only a question that failed can be tried again. | This question isn't in a failed state, so the page is out of date. | Reload the page to see where the question stands. | `reload` | inline | homework |
+| `homework.not_found_in_book` | Couldn't find {name} in this book. | PSet looked through {where} and didn't see it. | Show where it is on the page, or give its printed page. If it isn't from this book, paste it. |  | inline | homework |
 | `homework.note_too_long` | Keep each note under {max} characters. |  |  |  | field | homework |
 | `homework.nothing_to_add` | There's nothing left to add or change in those. |  |  |  | field | homework |
-| `homework.page_empty` | That page has no text to read. |  |  |  | field | homework |
+| `homework.page_empty` | That page has no text to read. | It may be an image, or built with scripts PSet doesn't run. | Paste its text or photograph it instead. |  | inline | homework |
 | `homework.page_outside` | The book doesn't have that page. |  |  |  | field | homework |
-| `homework.page_refused` | That page answered {status}. A page behind a login can be pasted or photographed instead. |  |  |  | field | homework |
-| `homework.page_unreachable` | Couldn't reach that page. |  |  |  | field | homework |
-| `homework.page_unreadable` | Couldn't read that page. |  |  |  | field | homework |
-| `homework.pdf_unreadable` | That PDF couldn't be read. |  |  |  | field | homework |
+| `homework.page_refused` | That page wouldn't open. | It answered {status}, which usually means it is behind a login. | Paste its text or photograph it instead. |  | inline | homework |
+| `homework.page_unreachable` | Couldn't reach that page. | The address didn't answer, or the internet connection is down. | Check the address and the connection, then try again. |  | inline | homework |
+| `homework.page_unreadable` | Couldn't read that page. | The page's answer broke off. | Try again. |  | inline | homework |
+| `homework.pdf_unreadable` | That PDF couldn't be read. | PSet couldn't get any text or pages out of it. | Photograph the page, or paste the text instead. |  | inline | homework |
 | `homework.question_not_found` | That question isn't there. | It was removed, or the page is out of date. | Go back to the set's list of questions. |  | inline | homework |
 | `homework.read_busy` | That assignment is already read, or being read. | It isn't in a failed state, so there is nothing to try again. | Reload the page to see where it stands. | `reload` | inline | homework |
 | `homework.read_failed` | Couldn't read the assignment. | Something went wrong while PSet was reading it. | Try again, or paste just the part with the problems. | `retry` | inline | homework |

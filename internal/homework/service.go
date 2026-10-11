@@ -703,7 +703,7 @@ func (s *Service) RetryQuestion(ctx context.Context, id string, r Retry) (Questi
 	if q.State != StateFailed {
 		return Question{}, questionNotFailed.New()
 	}
-	set := `attempts = attempts + 1, reason = '', failure = '', hint = '[]', walkthrough = '[]', updated_at = ?`
+	set := `attempts = attempts + 1, error = '', hint = '[]', walkthrough = '[]', updated_at = ?`
 	args := []any{db.Now()}
 	// What's left to do, and the state it waits in: the step that failed,
 	// unless the retry changes what there is to find.
@@ -766,7 +766,7 @@ func (s *Service) WriteGuide(ctx context.Context, id string) (Question, error) {
 		return Question{}, guideExists.New()
 	}
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `UPDATE questions SET state = ?, failure = '', reason = '', activity = '', updated_at = ? WHERE id = ?`,
+		if _, err := tx.ExecContext(ctx, `UPDATE questions SET state = ?, error = '', activity = '', updated_at = ? WHERE id = ?`,
 			StateLocated, db.Now(), id); err != nil {
 			return err
 		}

@@ -63,10 +63,12 @@ packages:
     type_mappings:
       doc.Block: 'Block'
       doc.Run: 'Run'
+      errs.View: 'View'
       usage.Usage: 'Usage'
     frontmatter: |
       // Generated from internal/homework/wire.go by tygo. Do not edit.
       import type { Block, Run } from './doc'
+      import type { View } from './errs'
       import type { Usage } from './usage'
   - path: github.com/jackt/pset/internal/ask
     include_files: [wire.go]

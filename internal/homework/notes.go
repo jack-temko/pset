@@ -129,7 +129,7 @@ func (s *Service) rewrite(ctx context.Context, q row, next jobs.Spec, set string
 	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		args := append(args, StateLocated, db.Now(), q.ID)
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET `+set+`, hint = '[]', walkthrough = '[]', rounds = '[]',
-			state = ?, failure = '', reason = '', activity = '', updated_at = ? WHERE id = ?`, args...); err != nil {
+			state = ?, error = '', activity = '', updated_at = ? WHERE id = ?`, args...); err != nil {
 			return err
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, next)

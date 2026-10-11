@@ -184,22 +184,20 @@ func (s *Service) runAssignmentRead(ctx context.Context, j jobs.Job) error {
 			// Shutting down or stopped: it's read again on the next start.
 			return ctx.Err()
 		}
-		msg := "Couldn't read it. Try again, or paste just the part with the problems."
-		if v := errs.Resolve(err); v.ID != errs.Unexpected.ID {
-			msg = strings.TrimSpace(v.What + " " + v.Why + " " + v.Fix)
-		} else {
-			slog.Warn("assignment: read failed", "read", p.ReadID, "err", err)
-		}
-		return s.settleRead(p.ReadID, ReadStateFailed, msg, nil)
+		v := errs.Report(ctx, readFailed.Wrap(err), errs.Where{Route: "job " + JobAssignment, Book: bookID})
+		return s.settleRead(p.ReadID, ReadStateFailed, &v, nil)
 	}
-	return s.settleRead(p.ReadID, ReadStateReady, "", &a)
+	return s.settleRead(p.ReadID, ReadStateReady, nil, &a)
 }
 
 // settleRead records how a read ended and says so. On a fresh context:
 // the job's may be ending.
-func (s *Service) settleRead(id string, state ReadState, msg string, a *Assignment) error {
+func (s *Service) settleRead(id string, state ReadState, failed *errs.View, a *Assignment) error {
 	ctx := context.Background()
-	result := ""
+	result, stored := "", ""
+	if failed != nil {
+		stored = failed.Stored().Marshal()
+	}
 	if a != nil {
 		b, err := json.Marshal(a)
 		if err != nil {
@@ -211,7 +209,7 @@ func (s *Service) settleRead(id string, state ReadState, msg string, a *Assignme
 	// database until the review. A failed one keeps it, to try again.
 	res, err := s.c.DB.ExecContext(ctx, `UPDATE assignment_reads SET state = ?, error = ?, activity = '', result = ?,
 		file = CASE WHEN ? = 'ready' THEN NULL ELSE file END, updated_at = ? WHERE id = ?`,
-		state, msg, result, state, db.Now(), id)
+		state, stored, result, state, db.Now(), id)
 	if err != nil {
 		return err
 	}
@@ -252,7 +250,7 @@ func (s *Service) readOut(ctx context.Context, readID, bookID, source string, co
 		if ctx.Err() != nil {
 			return Assignment{}, ctx.Err()
 		}
-		return Assignment{}, readFailed.Wrap(err)
+		return Assignment{}, err
 	}
 	var read struct {
 		Title  string `json:"title"`

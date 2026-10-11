@@ -185,7 +185,6 @@ export function Walkthrough({
   onPickSelection,
   onClearAbout,
   selection,
-  onOpenSettings,
   onQuestion,
   wide = false,
 }: {
@@ -209,7 +208,6 @@ export function Walkthrough({
   onClearAbout: () => void;
   /** The pending selection, for the outline while its chip rides. */
   selection: PendingSel | null;
-  onOpenSettings: () => void;
 }) {
   const pages = usePages();
   const detail = useHomeworkSet(setId);
@@ -774,7 +772,6 @@ export function Walkthrough({
                 onRetry={(retry) => {
                   retryQ.mutate({ id: q.id, retry });
                 }}
-                onOpenSettings={onOpenSettings}
               />
               {/* What the failed attempt spent: the calls cost even when
                   the guide didn't land. */}

@@ -7,6 +7,7 @@ import (
 	"errors"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/probnum"
 	"github.com/jackt/pset/internal/usage"
 )
@@ -20,9 +21,12 @@ const readColumns = `id, book_id, source, set_id, state, error, activity, result
 
 func scanRead(row interface{ Scan(...any) error }) (AssignmentRead, error) {
 	var r AssignmentRead
-	var result string
-	if err := row.Scan(&r.ID, &r.BookID, &r.Source, &r.SetID, &r.State, &r.Error, &r.Activity, &result, &r.CreatedAt, &r.UpdatedAt); err != nil {
+	var result, failed string
+	if err := row.Scan(&r.ID, &r.BookID, &r.Source, &r.SetID, &r.State, &failed, &r.Activity, &result, &r.CreatedAt, &r.UpdatedAt); err != nil {
 		return r, err
+	}
+	if v, ok := errs.ParseStored(failed); ok {
+		r.Error = &v
 	}
 	if result != "" {
 		var a Assignment

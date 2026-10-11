@@ -2,6 +2,7 @@ package homework
 
 import (
 	"github.com/jackt/pset/internal/doc"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/usage"
 )
 
@@ -80,30 +81,12 @@ const (
 	StateWriting State = "writing"
 	// StateReady has a guide, written and checked.
 	StateReady State = "ready"
-	// StateFailed could not be found or written; Reason says why.
+	// StateFailed could not be found or written; Error says why.
 	StateFailed State = "failed"
 	// StateUnwritten is found, with no guide: the guides written before
 	// documents were deleted, and nothing writes one until the student
 	// asks ("Write the guide").
 	StateUnwritten State = "unwritten"
-)
-
-// Failure is what kind of failure a failed question had.
-type Failure string
-
-const (
-	// FailureNotFound means locate couldn't find it. Give the page, or paste it.
-	FailureNotFound Failure = "not_found"
-	// FailureGeneration means the guide didn't finish (cut off, missing a part).
-	// Try again.
-	FailureGeneration Failure = "generation"
-	// FailureUnavailable means the provider didn't answer or was busy. Try
-	// again later.
-	FailureUnavailable Failure = "unavailable"
-	// FailureSetup means there's no OpenRouter key, OpenRouter refused it, or
-	// the account is out of credit.
-	// Fix it in Settings.
-	FailureSetup Failure = "setup"
 )
 
 // Figure is a figure the question refers to, cropped from its page and
@@ -129,10 +112,9 @@ type Question struct {
 	Hint        []doc.Block `json:"hint"`
 	Walkthrough []doc.Block `json:"walkthrough"`
 	State       State       `json:"state"`
-	// Failure is what kind of failure a failed question had, which picks
-	// its ways out; Reason says what happened, in a sentence.
-	Failure Failure `json:"failure,omitempty"`
-	Reason  string  `json:"reason,omitempty"`
+	// Error is why a failed question failed, from the error catalog: its
+	// chain tells the page which ways out to offer.
+	Error *errs.View `json:"error,omitempty"`
 	// Activity is what the guide's writer is doing right now, while it
 	// writes: "Thinking…", a tool call ("Computing…"), or "Writing the
 	// guide…". Empty otherwise.
@@ -399,7 +381,7 @@ type AssignmentRead struct {
 	SetID string    `json:"setId,omitempty"`
 	State ReadState `json:"state"`
 	// Error says why it couldn't be read, when it failed.
-	Error string `json:"error,omitempty"`
+	Error *errs.View `json:"error,omitempty"`
 	// Activity is what a read under way is doing: "Thinking it over…",
 	// then "Found 12 lines so far…" as the lines come in. Empty otherwise.
 	Activity string `json:"activity,omitempty"`
