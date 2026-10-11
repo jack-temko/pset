@@ -1,6 +1,6 @@
 # Error catalog: grill
 
-- status: approved
+- status: built
 - date: 2026-10-09
 - brief: one table of every error PSet can show (stable id to what happened, why, how to fix), shown the same way everywhere; judged from the tired student's point of view
 - sources: internal/httpx/{httpx,wire,handle}.go, internal/llm/llm.go, internal/settings/service.go, internal/homework/wire.go, internal/library/{import,wire}.go, internal/jobs/jobs.go, web/src/api/client.ts, design/backend.md "Errors", design/import.md, design/model-usage.md, web/src/components/flash

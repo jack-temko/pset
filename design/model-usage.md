@@ -52,7 +52,7 @@ time (a retry adds calls). From the top:
    ranking's figures, and the shares add up to the whole.
 3. **Calls**, grouped by run (Run 1 is the first find, Run 2 a retry or a
    rewrite after notes; the ranking is its own group): time of day, stage
-   (with the tools a round called, or the error), model (the one that
+   (with the tools a round called, or why it failed in the error catalog's words, `errorId`), model (the one that
    answered, with "asked X" under it when a fallback served), ms, tokens in
    and out, reasoning, cost. A failed call is a soft red row with its error
    and no counts. A missing cost never reads as a zero.

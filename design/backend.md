@@ -144,16 +144,60 @@ aspect box.
 
 ## Errors
 
-One shape, everywhere: `{code, message, field?}`.
+Every error a student can see is an entry in the Go catalog
+(`internal/errs`): a dotted id (`key.out_of_credit`), what happened, why,
+how to fix it, at most one typed action (`retry`, `open_settings`,
+`open_book`, `check_update`, `reload`), a scope and an HTTP status. The
+table of all of them is `design/errors.md`, generated; `/errors` shows it in
+the app. Spec and reasons: `ideas/error-catalog-grill.md`.
 
-- `code` is a stable enum the UI switches on (`not_found`, `invalid`,
-  `not_configured`, `duplicate_book`, `unreachable`, `bad_key`,
-  `bad_model`, `busy`, ...). Generated into TS.
-- `message` is display-ready copy, written to the design system's
-  writing rules (no em dashes).
-- `field` names the input at fault, so Settings can mark it.
+**On the wire** one shape, everywhere: `{id, what, why?, fix?, action?, scope,
+field?, ref?, incident?, chain[]}`. `scope` is `inline` (where the failure
+belongs), `screen` (the one banner: the server not answering) or `field` (one
+line under an input, no why or Details). `field` names the input, `ref` the
+resource (the book that is already on the shelf). Rows that keep a failure
+(a book, a question, an Ask turn, an assignment read) carry the same
+`error`; a failed model call carries `errorId`.
 
-`duplicate_book` carries the existing book's id; the UI navigates to it.
+**Composition.** `errs.Resolve` reads the chain of a returned error: the
+**what** comes from the outermost catalog error, the **why**, **fix** and
+**action** from the deepest one that has them, so the fix lives where the
+cause is known (`import.failed` wrapping `key.out_of_credit` says "Couldn't
+prepare Calculus. Your account is out of credit. Add credit, then try
+again."). A chain with no catalog error is `internal.unexpected`. A field
+error is shown as its what alone.
+
+**Ownership.** An entry lives in the package that detects the cause, as an
+unexported var in that package's `errors.go` (so `unused` flags a dead one).
+A cause two packages raise belongs to the lower one, and the others wrap it:
+`llm` owns `key.*`, `model.*` and `embed.*`; `errs` owns `internal.*`,
+`request.*` and `book.not_found`; `httpx` owns the upload entries.
+
+**Adding an error** is five lines:
+
+1. In the package's `errors.go`: `var x = errs.Define(errs.Entry{ID: "area.cause", What: "...", Why: "...", Fix: "...", Action: errs.ActionRetry, Status: 422})`.
+2. Raise it: `return x.New("name", v)` (params fill `{name}` in the text), or `x.Wrap(err)` to keep the cause in the chain.
+3. Wrap what comes from `database/sql`, `os` or `encoding` in `errs.Database`, `errs.Disk` or `errs.Data` before it leaves the package (wrapcheck enforces it).
+4. If the package has no `errors.go` yet, import it in `tools/errcatalog/main.go` (a test fails until it is).
+5. `make gen` rewrites `design/errors.md` and `web/src/api/gen/errors.ts`; nothing is copied by hand into the web app.
+
+Every entry's sentences end in a period and hold no em dash; a test checks.
+
+**Reporting.** `httpx.H` (and so `Reply`, `Send`, `Take`, `Act`) answers a
+returned error through `errs.Report`: it resolves it, gives it a six-character
+incident id, writes one structured slog line with the whole chain and every Go
+error text, and keeps it in the errors table (`internal/errlog`, never keys,
+prompts or answers). `GET /api/errors` lists them grouped by id and
+`DELETE /api/errors` clears them; Settings, Errors shows them. Field errors are
+the student's typing, not failures: they are answered and not kept. A job that
+fails reports the same way and stores the error on its row as ids and params
+(`errs.Stored`), so a row shows the catalog's current words.
+
+**Lint.** wrapcheck and errorlint are on. A handler passed to `httpx.H`,
+`Reply`, `Send`, `Take` or `Act` returns no `fmt.Errorf` or `errors.New` as it
+is: that is a Go test (`tools/errcatalog/handlers_test.go`), not a golangci-lint
+plugin, since a plugin means building a custom golangci-lint binary for one
+syntactic rule.
 
 ## Live updates
 
@@ -161,24 +205,24 @@ One stream: `GET /api/events` (SSE). Events are small and typed, and
 each names what changed so the client can patch or invalidate exactly
 those queries:
 
-| Event                       | Carries                                                                            | Client does                                   |
-| --------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------- |
-| `book.changed`              | the book (state: queued, preparing {phase, done?, total?}, ready, failed {reason}) | patch the book                                |
-| `book.removed`              | id                                                                                 | drop it                                       |
-| `homework.changed`          | the set's summary                                                                  | patch the set                                 |
-| `homework.removed`          | id, bookId                                                                         | drop it                                       |
-| `question.changed`          | the question, with its `rev`                                                       | patch the question                            |
-| `question.removed`          | id, homeworkId                                                                     | drop it                                       |
-| `assignment.changed`        | the assignment read (reading, ready to review, failed)                             | patch the read                                |
-| `assignment.removed`        | id, bookId                                                                         | drop it                                       |
-| `turn.changed`              | the turn, with the blocks saved so far                                             | patch the turn                                |
-| `turn.block.start`          | turnId, type                                                                       | that block's skeleton                         |
-| `turn.block.text`           | turnId, runs                                                                       | append to the open text block                 |
-| `turn.block.repairing`      | turnId, type                                                                       | "Tidying"                                     |
-| `turn.block` / `.failed`    | turnId, block                                                                      | replace the skeleton (`.failed`: a raw block) |
-| `turns.cleared`             | bookId                                                                             | empty the conversation                        |
-| `memory.saved` / `.removed` | the memory / id                                                                    | patch the menu                                |
-| `reset`                     | nothing                                                                            | refetch everything                            |
+| Event                       | Carries                                                                           | Client does                                   |
+| --------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------- |
+| `book.changed`              | the book (state: queued, preparing {phase, done?, total?}, ready, failed {error}) | patch the book                                |
+| `book.removed`              | id                                                                                | drop it                                       |
+| `homework.changed`          | the set's summary                                                                 | patch the set                                 |
+| `homework.removed`          | id, bookId                                                                        | drop it                                       |
+| `question.changed`          | the question, with its `rev`                                                      | patch the question                            |
+| `question.removed`          | id, homeworkId                                                                    | drop it                                       |
+| `assignment.changed`        | the assignment read (reading, ready to review, failed)                            | patch the read                                |
+| `assignment.removed`        | id, bookId                                                                        | drop it                                       |
+| `turn.changed`              | the turn, with the blocks saved so far                                            | patch the turn                                |
+| `turn.block.start`          | turnId, type                                                                      | that block's skeleton                         |
+| `turn.block.text`           | turnId, runs                                                                      | append to the open text block                 |
+| `turn.block.repairing`      | turnId, type                                                                      | "Tidying"                                     |
+| `turn.block` / `.failed`    | turnId, block                                                                     | replace the skeleton (`.failed`: a raw block) |
+| `turns.cleared`             | bookId                                                                            | empty the conversation                        |
+| `memory.saved` / `.removed` | the memory / id                                                                   | patch the menu                                |
+| `reset`                     | nothing                                                                           | refetch everything                            |
 
 `reset` is the bus's own: it is sent to a client that reconnects with an
 id the ring no longer holds, or one this run of the server never issued.

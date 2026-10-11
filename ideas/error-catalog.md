@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress, branch `error-catalog`. Spec: [error-catalog-grill.md](error-catalog-grill.md) (approved 2026-10-09). The grill's Summary is binding; this file is how to build it.
+Built, branch `error-catalog`, waiting for Jack to try it. Spec: [error-catalog-grill.md](error-catalog-grill.md) (approved 2026-10-09). The grill's Summary is binding; this file is how to build it.
 
 ## Information
 
