@@ -463,10 +463,10 @@ func addStudy(ctx context.Context, d *sql.DB, now time.Time) error {
 	if span := now.Sub(weekStart(now)).Minutes(); span < need {
 		scale = span / need
 	}
-	min := func(m float64) time.Duration { return time.Duration(m * scale * float64(time.Minute)) }
+	mins := func(m float64) time.Duration { return time.Duration(m * scale * float64(time.Minute)) }
 	for i, st := range stretches {
-		started := now.Add(-min(st.ago))
-		ended := started.Add(min(st.mins))
+		started := now.Add(-mins(st.ago))
+		ended := started.Add(mins(st.mins))
 		if _, err := d.ExecContext(ctx, `INSERT INTO study (id, book_id, kind, started, ended) VALUES (?, ?, ?, ?, ?)`,
 			fmt.Sprintf("fx-study-%d", i+1), st.book, st.kind, started.UTC().Format(time.RFC3339Nano), ended.UTC().Format(time.RFC3339Nano)); err != nil {
 			return err
