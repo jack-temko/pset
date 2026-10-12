@@ -2,8 +2,11 @@
 
 ## Status
 
-In progress, branch `loading-screens` (change 2b of the loading standard, after
-`loading-overlays`). The guard (part 3, `jumps-guard`) lands after this.
+Done (change 2b of the loading standard, after `loading-overlays`). The rules it
+settled are in `design/design-system.md` ("Loading"). The guard (part 3,
+`jumps-guard`) lands after this. Left for later: the built app's cold book
+startup task is about 240 to 330ms (splitting KaTeX out of the first bundle would
+bring it under 200ms).
 
 ## Information
 
