@@ -8,19 +8,21 @@ import (
 	"strings"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/errs"
 )
 
 // CallRow is one stored call, as the detail reads it.
 type CallRow struct {
 	ID                                            int64
 	At, Stage, Run, Tools, Asked, Answered, Error string
+	ErrorID                                       string
 	Ms                                            int64
 	TokensIn, TokensOut, Reasoning, Cached        *int
 	Cost                                          *float64
 }
 
 const callColumns = `id, at, coalesce(stage, ''), coalesce(run, ''), coalesce(tools, ''), model, coalesce(answered, ''), ms,
-	prompt_tokens, completion_tokens, reasoning_tokens, cached_tokens, cost, coalesce(error, '')`
+	prompt_tokens, completion_tokens, reasoning_tokens, cached_tokens, cost, coalesce(error, ''), coalesce(error_id, '')`
 
 func scanCalls(rows *sql.Rows) ([]CallRow, error) {
 	defer cleanup.Close(rows)
@@ -29,8 +31,8 @@ func scanCalls(rows *sql.Rows) ([]CallRow, error) {
 		var c CallRow
 		var in, outTok, reasoning, cached sql.NullInt64
 		var cost sql.NullFloat64
-		if err := rows.Scan(&c.ID, &c.At, &c.Stage, &c.Run, &c.Tools, &c.Asked, &c.Answered, &c.Ms, &in, &outTok, &reasoning, &cached, &cost, &c.Error); err != nil {
-			return nil, err
+		if err := rows.Scan(&c.ID, &c.At, &c.Stage, &c.Run, &c.Tools, &c.Asked, &c.Answered, &c.Ms, &in, &outTok, &reasoning, &cached, &cost, &c.Error, &c.ErrorID); err != nil {
+			return nil, errs.Database.Wrap(err)
 		}
 		c.TokensIn, c.TokensOut, c.Reasoning, c.Cached = nullInt(in), nullInt(outTok), nullInt(reasoning), nullInt(cached)
 		if cost.Valid {
@@ -39,7 +41,7 @@ func scanCalls(rows *sql.Rows) ([]CallRow, error) {
 		}
 		out = append(out, c)
 	}
-	return out, rows.Err()
+	return out, errs.Database.Of(rows.Err())
 }
 
 func nullInt(n sql.NullInt64) *int {
@@ -160,7 +162,7 @@ func Build(own, shared []CallRow, n int) *Detail {
 			}
 			r.Calls = append(r.Calls, Call{
 				ID: c.ID, At: c.At, Stage: name, Tools: c.Tools, Asked: c.Asked, Answered: c.Answered, Ms: c.Ms,
-				TokensIn: c.TokensIn, TokensOut: c.TokensOut, Reasoning: c.Reasoning, Cached: c.Cached, Cost: c.Cost, Error: c.Error,
+				TokensIn: c.TokensIn, TokensOut: c.TokensOut, Reasoning: c.Reasoning, Cached: c.Cached, Cost: c.Cost, Error: c.Error, ErrorID: c.ErrorID,
 			})
 		}
 	}
@@ -337,7 +339,7 @@ func countSubjects(ctx context.Context, q queryer, typ, from, bookID string) (in
 	if rows.Next() {
 		err = rows.Scan(&n)
 	}
-	return n, err
+	return n, errs.Database.Of(err)
 }
 
 func isRanking(label string) bool { return strings.HasPrefix(label, "Difficulty ranking") }
@@ -410,13 +412,13 @@ func shapes(ctx context.Context, q queryer, subjectType string, ids []string) (m
 		var c CallRow
 		var in, outTok, reasoning, cached sql.NullInt64
 		var cost sql.NullFloat64
-		if err := rows.Scan(&id, &c.ID, &c.At, &c.Stage, &c.Run, &c.Tools, &c.Asked, &c.Answered, &c.Ms, &in, &outTok, &reasoning, &cached, &cost, &c.Error); err != nil {
-			return nil, nil, err
+		if err := rows.Scan(&id, &c.ID, &c.At, &c.Stage, &c.Run, &c.Tools, &c.Asked, &c.Answered, &c.Ms, &in, &outTok, &reasoning, &cached, &cost, &c.Error, &c.ErrorID); err != nil {
+			return nil, nil, errs.Database.Wrap(err)
 		}
 		by[id] = append(by[id], c)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, nil, err
+		return nil, nil, errs.Database.Wrap(err)
 	}
 	out := make(map[string]Shape, len(by))
 	names := make(map[string]map[string]bool, len(by))
@@ -479,13 +481,13 @@ func ForBookShapes(ctx context.Context, q queryer, ids []string) (map[string]*Bo
 			var id string
 			if err := rows.Scan(&id); err != nil {
 				_ = rows.Close()
-				return nil, err
+				return nil, errs.Database.Wrap(err)
 			}
 			of(id).Kinds++
 		}
 		if err := rows.Err(); err != nil {
 			_ = rows.Close()
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		_ = rows.Close()
 	}
@@ -508,7 +510,7 @@ func ForBookShapes(ctx context.Context, q queryer, ids []string) (map[string]*Bo
 		var id, run, stage string
 		var n, tall int
 		if err := rows.Scan(&id, &run, &stage, &n, &tall); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		a := by[id]
 		if a == nil {
@@ -526,7 +528,7 @@ func ForBookShapes(ctx context.Context, q queryer, ids []string) (map[string]*Bo
 		sec.Tall += tall
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, errs.Database.Wrap(err)
 	}
 	for id, a := range by {
 		sh := Shape{Stages: len(a.stages), Sections: []ShapeSection{}}

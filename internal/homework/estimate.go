@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/doc"
+	"github.com/jackt/pset/internal/errs"
 )
 
 // The time left on a set, from how long its finished questions took the
@@ -145,7 +146,7 @@ func (s *Service) fillSummaries(ctx context.Context, hs []Summary, opening bool)
 	rows, err := s.c.DB.QueryContext(ctx, `SELECT id, homework_id, done_at != '', state = 'failed', difficulty
 		FROM questions WHERE homework_id IN (`+marks+`) ORDER BY homework_id, position`, args...)
 	if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	type one struct {
 		id string
@@ -159,14 +160,14 @@ func (s *Service) fillSummaries(ctx context.Context, hs []Summary, opening bool)
 		var set string
 		if err := rows.Scan(&o.id, &set, &o.Done, &o.failed, &o.Difficulty); err != nil {
 			cleanup.Close(rows)
-			return err
+			return errs.Database.Of(err)
 		}
 		bySet[set] = append(bySet[set], o)
 		ids = append(ids, o.id)
 	}
 	cleanup.Close(rows)
 	if err := rows.Err(); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	var seconds map[string]int
 	if s.c.Time != nil {

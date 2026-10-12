@@ -2,6 +2,7 @@ package ask
 
 import (
 	"github.com/jackt/pset/internal/doc"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/usage"
 )
 
@@ -15,24 +16,8 @@ const (
 	TurnDone TurnState = "done"
 	// TurnStopped was stopped by the student.
 	TurnStopped TurnState = "stopped"
-	// TurnFailed could not be answered; Reason says why.
+	// TurnFailed could not be answered; Error says why.
 	TurnFailed TurnState = "failed"
-)
-
-// Failure is what kind of failure a failed turn had, which picks what the
-// page offers beside its reason: Settings for a setup failure.
-type Failure string
-
-const (
-	// FailureSetup means there's no OpenRouter key, OpenRouter refused it, or
-	// the account is out of credit. Fix it in Settings.
-	FailureSetup Failure = "setup"
-	// FailureUnavailable means the provider didn't answer or was busy. Ask again
-	// later.
-	FailureUnavailable Failure = "unavailable"
-	// FailureGeneration means the answer didn't finish (cut off, or the model
-	// stopped without one). Ask again.
-	FailureGeneration Failure = "generation"
 )
 
 // Step is one tool call on the feed: present tense while it runs
@@ -66,9 +51,8 @@ type Turn struct {
 	Steps    []Step      `json:"steps"`
 	Answer   []doc.Block `json:"answer"`
 	State    TurnState   `json:"state" tstype:"'running' | 'done' | 'stopped' | 'failed'"`
-	Reason   string      `json:"reason,omitempty"`
-	// Failure is what kind of failure a failed turn had.
-	Failure Failure `json:"failure,omitempty"`
+	// Error is why a failed turn failed, from the error catalog.
+	Error *errs.View `json:"error,omitempty"`
 	// Usage is what answering this turn spent on model calls, once it has
 	// finished; nil until it has made a call, and nothing is drawn.
 	Usage     *usage.Usage `json:"usage,omitempty"`

@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/errs"
 )
 
 // Kind is the sort of machine.
@@ -125,7 +126,7 @@ func OpenBrowser(url string) error {
 	}
 	cmd := exec.Command(c.Name, c.Args...)
 	if err := cmd.Start(); err != nil {
-		return err
+		return errs.Data.Wrap(err)
 	}
 	go func() { cleanup.Log("open the browser", cmd.Wait()) }()
 	return nil

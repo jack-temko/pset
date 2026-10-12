@@ -7,12 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
 
 	"github.com/jackt/pset/internal/db"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pdf"
 )
@@ -29,29 +30,29 @@ const maxBoxes = 12
 // words, every one inside the book and the page.
 func checkBoxes(boxes []Box, pageCount int) error {
 	if len(boxes) == 0 {
-		return httpx.Invalid("boxes", "Draw a box around the problem first.")
+		return noBoxes.New().OnField("boxes")
 	}
 	if len(boxes) > maxBoxes {
-		return httpx.Invalid("boxes", "That's more than %d boxes for one problem.", maxBoxes)
+		return tooManyBoxes.New("max", strconv.Itoa(maxBoxes)).OnField("boxes")
 	}
 	words := false
 	for _, b := range boxes {
 		if b.Page < 1 || b.Page > pageCount {
-			return httpx.Invalid("boxes", "A box is on a page the book doesn't have.")
+			return boxOffBook.New().OnField("boxes")
 		}
 		if !(pdf.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}).Valid() {
-			return httpx.Invalid("boxes", "A box runs off its page.")
+			return boxOffPage.New().OnField("boxes")
 		}
 		switch b.Kind {
 		case BoxKindText:
 			words = true
 		case BoxKindFigure:
 		default:
-			return httpx.Invalid("boxes", "A box is either the problem's words or a figure.")
+			return boxKindMixed.New().OnField("boxes")
 		}
 	}
 	if !words {
-		return httpx.Invalid("boxes", "Box the problem's words too, not only its figure.")
+		return boxNoText.New().OnField("boxes")
 	}
 	return nil
 }
@@ -72,7 +73,7 @@ func firstText(boxes []Box) Box {
 func (s *Service) AddBoxed(ctx context.Context, homeworkID string, boxes []Box) (Question, error) {
 	h, err := getSummary(ctx, s.c.DB, homeworkID)
 	if errors.Is(err, errNotFound) {
-		return Question{}, httpx.NotFound("homework set")
+		return Question{}, errs.Gone.New("thing", "homework set")
 	} else if err != nil {
 		return Question{}, err
 	}
@@ -90,13 +91,13 @@ func (s *Service) AddBoxed(ctx context.Context, homeworkID string, boxes []Box) 
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		var last int
 		if err := tx.QueryRowContext(ctx, `SELECT coalesce(max(position), 0) FROM questions WHERE homework_id = ?`, homeworkID).Scan(&last); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		now := db.Now()
 		if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, boxes, state, created_at, updated_at)
 			VALUES (?, ?, ?, '', 1, ?, ?, 'pending', ?, ?)`,
 			id, homeworkID, last+1, label, mustJSON(boxes), now, now); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		if _, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, true)); err != nil {
 			return err
@@ -120,7 +121,7 @@ func (s *Service) AddBoxed(ctx context.Context, homeworkID string, boxes []Box) 
 func (s *Service) PointOut(ctx context.Context, id string, boxes []Box) (Question, error) {
 	q, err := getQuestion(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Question{}, httpx.NotFound("question")
+		return Question{}, errs.Gone.New("thing", "question")
 	}
 	if err != nil {
 		return Question{}, err
@@ -138,9 +139,9 @@ func (s *Service) PointOut(ctx context.Context, id string, boxes []Box) (Questio
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET attempts = attempts + (state = 'failed'), boxes = ?, in_book = 1, page = NULL, pinned_page = NULL, rect = 'null', figures = '[]',
 			hint = '[]', walkthrough = '[]', rounds = '[]', reading = '[]', reading_edited = 0,
-			state = 'pending', failure = '', reason = '', activity = '', updated_at = ? WHERE id = ?`,
+			state = 'pending', error = '', activity = '', updated_at = ? WHERE id = ?`,
 			mustJSON(boxes), db.Now(), id); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, nextStep(id, true))
 		return err
@@ -175,16 +176,16 @@ func (s *Service) fromBoxes(ctx context.Context, m model, book Book, q row) (loc
 	}}))
 	if err != nil {
 		if ctx.Err() != nil {
-			return location{}, ctx.Err()
+			return location{}, fmt.Errorf("stopped: %w", ctx.Err())
 		}
-		return location{}, modelDown(err, q)
+		return location{}, err
 	}
 	var read struct {
 		Label     string `json:"label"`
 		Statement string `json:"statement"`
 	}
 	if err := json.Unmarshal([]byte(llm.Unfence(reply)), &read); err != nil || strings.TrimSpace(read.Statement) == "" {
-		return location{}, fail(FailureGeneration, err, "Couldn't read the words in the boxes. Box the problem's text again, a little larger.")
+		return location{}, boxesUnreadable.Wrap(err)
 	}
 	rect := pdf.Rect{X: first.X, Y: first.Y, W: first.W, H: first.H}
 	loc := location{Page: first.Page, Statement: strings.TrimSpace(read.Statement), Rect: &rect,

@@ -4,6 +4,7 @@ import { Box, BoxRow } from '@/components/box';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/button';
 import { Dialog } from '@/components/dialog';
+import { ErrorNotice } from '@/components/error-notice';
 import { Flash } from '@/components/flash';
 import { HomeworkStatusLabel } from '@/components/homework-status';
 import { Label } from '@/components/label';
@@ -19,9 +20,23 @@ import {
   UsageModal,
 } from '@/components/usage-modal';
 import { clock, cost, shortModel, timeOfDay, tokens } from '@/lib/usage-format';
+import type { View } from '@/api/gen/errs';
 import type { BookUsage, Detail as UsageDetail, Usage } from '@/api/gen/usage';
 import type { ComponentEntry } from './types';
 import { Shelf } from './shared';
+
+/** A failed import, as the server sends it: what from the outer entry, why
+ *  and fix from the cause under it. */
+const NOTICE: View = {
+  id: 'import.failed',
+  what: "Couldn't prepare Calculus.",
+  why: 'Your OpenRouter account is out of credit.',
+  fix: 'Add credit on OpenRouter, then try again.',
+  action: 'retry',
+  scope: 'inline',
+  incident: 'E7K2QF',
+  chain: ['import.failed', 'key.out_of_credit'],
+};
 
 /** What one walkthrough cost, as the server reports it: rows ordered by
  *  tokens, the headline model first. */
@@ -223,6 +238,7 @@ const DETAIL: UsageDetail = {
           asked: 'anthropic/claude-haiku-5.5',
           ms: 900,
           error: 'rate limited (429)',
+          errorId: 'model.busy',
         },
         {
           id: 6,
@@ -562,6 +578,51 @@ export const feedbackSections: ComponentEntry[] = [
     ),
   },
   {
+    id: 'error-notice',
+    title: 'Error notice',
+    group: 'Feedback',
+    note: 'What went wrong where it went wrong: the what, a quiet why and fix, the one button the error asks for, and Details with the ids and an incident id to copy.',
+    docs: ['error-notice'],
+    Demo: () => (
+      <>
+        <Shelf label="inline, with its action">
+          <div className="w-full max-w-xl">
+            <ErrorNotice error={NOTICE} onRetry={() => {}} />
+          </div>
+        </Shelf>
+        <Shelf label="no action to take">
+          <div className="w-full max-w-xl">
+            <ErrorNotice
+              error={{
+                ...NOTICE,
+                id: 'update.no_release',
+                what: 'There is no published release yet.',
+                why: 'No version of PSet has been published to update to.',
+                fix: undefined,
+                action: undefined,
+                incident: undefined,
+                chain: ['update.no_release'],
+              }}
+            />
+          </div>
+        </Shelf>
+        <Shelf label="a field's one line">
+          <div className="w-full max-w-xl">
+            <ErrorNotice
+              error={{
+                id: 'library.title_empty',
+                what: 'A book needs a title.',
+                scope: 'field',
+                field: 'title',
+                chain: ['library.title_empty'],
+              }}
+            />
+          </div>
+        </Shelf>
+      </>
+    ),
+  },
+  {
     id: 'flash',
     title: 'Flash',
     group: 'Feedback',
@@ -571,7 +632,17 @@ export const feedbackSections: ComponentEntry[] = [
       <>
         <Shelf label="warning">
           <div className="w-full max-w-xl overflow-hidden rounded-md border">
-            <Flash tone="warning">Lost touch with PSet. Reconnecting…</Flash>
+            <Flash
+              tone="warning"
+              action={
+                <Button size="sm" variant="outline">
+                  Try again
+                </Button>
+              }
+            >
+              PSet can&apos;t reach its server. Start PSet again, then try
+              again.
+            </Flash>
           </div>
         </Shelf>
         <Shelf label="default, with action">

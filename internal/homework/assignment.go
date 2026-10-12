@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,9 +24,9 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/jobs"
 
-	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pdf"
 	"github.com/jackt/pset/internal/probnum"
@@ -70,7 +71,7 @@ func (s *Service) StartRead(ctx context.Context, bookID string, file *Assignment
 	if in.SetID != "" {
 		h, err := getSummary(ctx, s.c.DB, in.SetID)
 		if errors.Is(err, errNotFound) || (err == nil && h.BookID != bookID) {
-			return AssignmentRead{}, httpx.NotFound("homework set")
+			return AssignmentRead{}, errs.Gone.New("thing", "homework set")
 		} else if err != nil {
 			return AssignmentRead{}, err
 		}
@@ -95,14 +96,14 @@ func (s *Service) StartRead(ctx context.Context, bookID string, file *Assignment
 	case strings.TrimSpace(in.Text) != "":
 		source, text = "pasted", clip(in.Text, maxAssignmentText)
 	default:
-		return AssignmentRead{}, httpx.Invalid("source", "Give a file, a web page's address, or the assignment's text.")
+		return AssignmentRead{}, noSource.New().OnField("source")
 	}
 	id := uuid.NewString()
 	now := db.Now()
 	err := db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO assignment_reads (id, book_id, source, set_id, url, text, file, state, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, bookID, source, in.SetID, pageURL, text, data, ReadStateReading, now, now); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobAssignment, Subject: id, Payload: readJob{ReadID: id}})
 		return err
@@ -120,10 +121,10 @@ func (s *Service) RetryRead(ctx context.Context, id string) (AssignmentRead, err
 		res, err := tx.ExecContext(ctx, `UPDATE assignment_reads SET state = ?, error = '', updated_at = ? WHERE id = ? AND state = ?`,
 			ReadStateReading, db.Now(), id, ReadStateFailed)
 		if err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		if n, _ := res.RowsAffected(); n == 0 {
-			return httpx.Errorf(httpx.CodeInvalid, "That assignment is already read, or reading.")
+			return errs.Stale.New("thing", "assignment")
 		}
 		_, err = s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobAssignment, Subject: id, Payload: readJob{ReadID: id}})
 		return err
@@ -131,7 +132,7 @@ func (s *Service) RetryRead(ctx context.Context, id string) (AssignmentRead, err
 	if err != nil {
 		var n int
 		if cerr := s.c.DB.QueryRowContext(ctx, `SELECT count(*) FROM assignment_reads WHERE id = ?`, id).Scan(&n); cerr == nil && n == 0 {
-			return AssignmentRead{}, httpx.NotFound("assignment")
+			return AssignmentRead{}, errs.Gone.New("thing", "assignment")
 		}
 		return AssignmentRead{}, err
 	}
@@ -161,7 +162,7 @@ func (s *Service) runAssignmentRead(ctx context.Context, j jobs.Job) error {
 		// Dismissed before it started.
 		return nil
 	} else if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	var content []llm.Part
 	switch {
@@ -181,29 +182,26 @@ func (s *Service) runAssignmentRead(ctx context.Context, j jobs.Job) error {
 	if err != nil {
 		if ctx.Err() != nil {
 			// Shutting down or stopped: it's read again on the next start.
-			return ctx.Err()
+			return fmt.Errorf("stopped: %w", ctx.Err())
 		}
-		msg := "Couldn't read it. Try again, or paste just the part with the problems."
-		var he *httpx.Error
-		if errors.As(err, &he) {
-			msg = he.Message
-		} else {
-			slog.Warn("assignment: read failed", "read", p.ReadID, "err", err)
-		}
-		return s.settleRead(p.ReadID, ReadStateFailed, msg, nil)
+		v := errs.Report(ctx, readFailed.Wrap(err), errs.Where{Route: "job " + JobAssignment, Book: bookID})
+		return s.settleRead(p.ReadID, ReadStateFailed, &v, nil)
 	}
-	return s.settleRead(p.ReadID, ReadStateReady, "", &a)
+	return s.settleRead(p.ReadID, ReadStateReady, nil, &a)
 }
 
 // settleRead records how a read ended and says so. On a fresh context:
 // the job's may be ending.
-func (s *Service) settleRead(id string, state ReadState, msg string, a *Assignment) error {
+func (s *Service) settleRead(id string, state ReadState, failed *errs.View, a *Assignment) error {
 	ctx := context.Background()
-	result := ""
+	result, stored := "", ""
+	if failed != nil {
+		stored = failed.Stored().Marshal()
+	}
 	if a != nil {
 		b, err := json.Marshal(a)
 		if err != nil {
-			return err
+			return errs.Data.Wrap(err)
 		}
 		result = string(b)
 	}
@@ -211,9 +209,9 @@ func (s *Service) settleRead(id string, state ReadState, msg string, a *Assignme
 	// database until the review. A failed one keeps it, to try again.
 	res, err := s.c.DB.ExecContext(ctx, `UPDATE assignment_reads SET state = ?, error = ?, activity = '', result = ?,
 		file = CASE WHEN ? = 'ready' THEN NULL ELSE file END, updated_at = ? WHERE id = ?`,
-		state, msg, result, state, db.Now(), id)
+		state, stored, result, state, db.Now(), id)
 	if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return nil
@@ -236,7 +234,7 @@ func (s *Service) readOut(ctx context.Context, readID, bookID, source string, co
 		return Assignment{}, err
 	}
 	if !cfg.ChatReady() {
-		return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "%s", llm.NoKey)
+		return Assignment{}, llm.KeyMissing.New()
 	}
 	m := model{client: llm.Open(cfg), name: cfg.ChatModel}
 	msg := llm.PartsContent(llm.TextPart("The assignment:"))
@@ -250,16 +248,9 @@ func (s *Service) readOut(ctx context.Context, readID, bookID, source string, co
 	}, OnReasoning: progress.thinking}, progress.writing)
 	if err != nil {
 		if ctx.Err() != nil {
-			return Assignment{}, ctx.Err()
+			return Assignment{}, fmt.Errorf("stopped: %w", ctx.Err())
 		}
-		trouble, status := llm.Classify(err)
-		if trouble == llm.TroubleCredit {
-			return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "%s", llm.NoCredit)
-		}
-		if trouble == llm.TroubleRejected {
-			return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "%s Check the key in Settings, then try again.", llm.Refusal(status))
-		}
-		return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "OpenRouter didn't answer while PSet read the assignment. Try again in a minute.")
+		return Assignment{}, err
 	}
 	var read struct {
 		Title  string `json:"title"`
@@ -274,7 +265,7 @@ func (s *Service) readOut(ctx context.Context, readID, bookID, source string, co
 	}
 	if err := json.Unmarshal([]byte(llm.Unfence(reply)), &read); err != nil {
 		slog.Warn("assignment: reply wasn't JSON", "err", err)
-		return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "Couldn't make out the assignment's homework. Try again, or paste just the part with the problems.")
+		return Assignment{}, replyUnreadable.Wrap(err)
 	}
 
 	out := Assignment{Source: source, Title: strings.TrimSpace(read.Title), Groups: []AssignmentGroup{}}
@@ -304,7 +295,7 @@ func (s *Service) readOut(ctx context.Context, readID, bookID, source string, co
 		}
 	}
 	if len(out.Groups) == 0 {
-		return Assignment{}, httpx.Errorf(httpx.CodeInvalid, "Didn't find any homework in it. If it's there, paste just that part.")
+		return Assignment{}, noHomeworkFound.New()
 	}
 	for i, g := range out.Groups {
 		if g.Title == "" {
@@ -342,7 +333,7 @@ func (s *Service) ReadLines(ctx context.Context, bookID string, lines []string) 
 		return LineReadings{}, err
 	}
 	if len(lines) > maxDrafts {
-		return LineReadings{}, httpx.Invalid("lines", "That's more than %d lines at once.", maxDrafts)
+		return LineReadings{}, tooManyLines.New("max", strconv.Itoa(maxDrafts)).OnField("lines")
 	}
 	out := LineReadings{Lines: make([]LineReading, len(lines))}
 	for i, l := range lines {
@@ -378,7 +369,7 @@ func defaultTitle(doc, due string, several bool) string {
 // its changes to that set instead. The read they came from is done with.
 func (s *Service) ImportAssignment(ctx context.Context, bookID string, in AssignmentImport) ([]Summary, error) {
 	if len(in.Groups) == 0 {
-		return nil, httpx.Invalid("groups", "Pick at least one due date to add.")
+		return nil, noGroups.New().OnField("groups")
 	}
 	book, err := s.c.Library.Book(ctx, bookID)
 	if err != nil {
@@ -389,7 +380,7 @@ func (s *Service) ImportAssignment(ctx context.Context, bookID string, in Assign
 		if g.SetID != "" {
 			h, err := getSummary(ctx, s.c.DB, g.SetID)
 			if errors.Is(err, errNotFound) || (err == nil && h.BookID != bookID) {
-				return nil, httpx.NotFound("homework set")
+				return nil, errs.Gone.New("thing", "homework set")
 			} else if err != nil {
 				return nil, err
 			}
@@ -403,7 +394,7 @@ func (s *Service) ImportAssignment(ctx context.Context, bookID string, in Assign
 			// A set updated from a document it didn't come from is checked
 			// against that document from now on.
 			if _, err := s.c.DB.ExecContext(ctx, `UPDATE homework SET source = ? WHERE id = ? AND source = ''`, in.Source, g.SetID); err != nil {
-				return nil, err
+				return nil, errs.Database.Wrap(err)
 			}
 			if h, err = s.publishSet(ctx, g.SetID); err != nil {
 				return nil, err
@@ -425,7 +416,7 @@ func (s *Service) ImportAssignment(ctx context.Context, bookID string, in Assign
 			return nil, err
 		}
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE homework SET source = ? WHERE id = ?`, in.Source, h.ID); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		if _, err := s.Add(ctx, h.ID, rows); err != nil {
 			return nil, err
@@ -436,7 +427,7 @@ func (s *Service) ImportAssignment(ctx context.Context, bookID string, in Assign
 		out = append(out, h)
 	}
 	if len(out) == 0 {
-		return nil, httpx.Invalid("groups", "There's nothing left to add or change in those.")
+		return nil, nothingToAdd.New().OnField("groups")
 	}
 	if in.ReadID != "" {
 		if err := s.DismissRead(ctx, in.ReadID); err != nil && !isNotFound(err) {
@@ -453,7 +444,7 @@ func (s *Service) LastSource(ctx context.Context, bookID string) (AssignmentSour
 	err := s.c.DB.QueryRowContext(ctx, `SELECT source FROM homework WHERE book_id = ? AND (source LIKE 'http://%' OR source LIKE 'https://%')
 		ORDER BY created_at DESC LIMIT 1`, bookID).Scan(&src)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return AssignmentSource{}, err
+		return AssignmentSource{}, errs.Database.Wrap(err)
 	}
 	return AssignmentSource{URL: src}, nil
 }
@@ -469,16 +460,16 @@ func fileParts(ctx context.Context, f AssignmentFile) ([]llm.Part, error) {
 	case kind == "application/pdf":
 		dir, err := os.MkdirTemp("", "pset-assignment-*")
 		if err != nil {
-			return nil, err
+			return nil, errs.Disk.Wrap(err)
 		}
 		defer cleanup.RemoveAll(dir)
 		path := filepath.Join(dir, "a.pdf")
 		if err := os.WriteFile(path, f.Data, 0o600); err != nil {
-			return nil, err
+			return nil, errs.Disk.Wrap(err)
 		}
 		text, err := pdf.Text(ctx, path)
 		if err != nil {
-			return nil, httpx.Invalid("file", "That PDF couldn't be read.")
+			return nil, pdfUnreadable.Wrap(err).OnField("file")
 		}
 		if len(strings.TrimSpace(strings.ReplaceAll(text, "\f", ""))) > 40 {
 			return []llm.Part{llm.TextPart(clip(text, maxAssignmentText))}, nil
@@ -493,7 +484,7 @@ func fileParts(ctx context.Context, f AssignmentFile) ([]llm.Part, error) {
 			parts = append(parts, llm.ImagePart("data:image/jpeg;base64,"+base64.StdEncoding.EncodeToString(img)))
 		}
 		if len(parts) == 0 {
-			return nil, httpx.Invalid("file", "That PDF couldn't be read.")
+			return nil, pdfUnreadable.Wrap(err).OnField("file")
 		}
 		return parts, nil
 	case strings.HasPrefix(kind, "image/"):
@@ -506,13 +497,13 @@ func fileParts(ctx context.Context, f AssignmentFile) ([]llm.Part, error) {
 // an image, or text.
 func fileKind(data []byte) (string, error) {
 	if len(data) > maxAssignmentBytes {
-		return "", httpx.Invalid("file", "That file is too big for an assignment.")
+		return "", fileTooBig.New().OnField("file")
 	}
 	kind := http.DetectContentType(data)
 	if kind == "application/pdf" || strings.HasPrefix(kind, "image/") || strings.HasPrefix(kind, "text/") {
 		return kind, nil
 	}
-	return "", httpx.Invalid("file", "Send a PDF, a photo, or a text file.")
+	return "", fileKindRefused.New().OnField("file")
 }
 
 // fetchPage is a course web page as text, its tables kept as rows.
@@ -525,23 +516,23 @@ func fetchPage(ctx context.Context, raw string) (string, error) {
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 	if err != nil {
-		return "", httpx.Invalid("url", "That isn't a web page's address.")
+		return "", badURL.New().OnField("url")
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", httpx.Invalid("url", "Couldn't reach that page.")
+		return "", pageUnreachable.Wrap(err).OnField("url")
 	}
 	defer cleanup.Close(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return "", httpx.Invalid("url", "That page answered %d. A page behind a login can be pasted or photographed instead.", resp.StatusCode)
+		return "", pageRefused.New("status", strconv.Itoa(resp.StatusCode)).OnField("url")
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxAssignmentBytes))
 	if err != nil {
-		return "", httpx.Invalid("url", "Couldn't read that page.")
+		return "", pageUnreadable.Wrap(err).OnField("url")
 	}
 	text := htmlText(string(body))
 	if strings.TrimSpace(text) == "" {
-		return "", httpx.Invalid("url", "That page has no text to read.")
+		return "", pageEmpty.New().OnField("url")
 	}
 	return clip(text, maxAssignmentText), nil
 }
@@ -551,7 +542,7 @@ func fetchPage(ctx context.Context, raw string) (string, error) {
 func pageAddress(raw string) (*url.URL, error) {
 	u, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return nil, httpx.Invalid("url", "That isn't a web page's address.")
+		return nil, badURL.New().OnField("url")
 	}
 	return u, nil
 }

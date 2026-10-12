@@ -58,8 +58,12 @@ describe('applyQuestion', () => {
       q({
         id: 'x',
         state: 'failed',
-        failure: 'setup',
-        reason: 'no OpenRouter key',
+        error: {
+          id: 'homework.question_failed',
+          what: "Couldn't write the guide.",
+          scope: 'inline',
+          chain: ['homework.question_failed', 'key.missing'],
+        },
         rev: 2,
       }),
     );

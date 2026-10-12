@@ -9,6 +9,7 @@ dev:
 
 gen:
 	go tool tygo generate
+	go run ./tools/errcatalog
 
 # The test library: a read-only snapshot of Jack's books and a sample of his
 # homework at ~/.local/share/pset-test-library, with no key. `make test-library`
@@ -22,7 +23,7 @@ seed:
 
 # Fails when a wire.go changed and the generated TS wasn't committed.
 check-gen: gen
-	git diff --exit-code -- web/src/api/gen
+	git diff --exit-code -- web/src/api/gen design/errors.md
 
 # The web app's KaTeX, bundled for the server to check math with
 # (internal/doc/katex-check.js, embedded). Run after changing the katex pin

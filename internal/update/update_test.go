@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/releasesign"
 	"github.com/jackt/pset/internal/testx"
 )
@@ -183,8 +184,24 @@ func TestCheckFindsANewerReleaseAndNothingElseTalksToGitHub(t *testing.T) {
 		t.Fatal("the same version reported as newer")
 	}
 	f.tag = ""
-	if _, err := f.svc.Check(ctx); err == nil {
-		t.Fatal("no release at all should be said")
+	_, err = f.svc.Check(ctx)
+	if v := errs.Resolve(err); v.ID != "update.no_release" || v.Status != http.StatusNotFound {
+		t.Fatalf("no release at all should be said: %+v", v)
+	}
+}
+
+// A build from source says why it can't update, as the one sentence Status
+// carries.
+func TestAFailureToCheckAndABuildFromSourceAreInTheCatalog(t *testing.T) {
+	f := newFixture(t)
+	f.svc.c.API = "http://127.0.0.1:1"
+	_, err := f.svc.Check(context.Background())
+	if v := errs.Resolve(err); v.ID != "update.check_unreachable" || v.Status != http.StatusBadGateway {
+		t.Errorf("unreachable: %+v", v)
+	}
+	f.svc.c.Version = "dev"
+	if st := f.svc.Status(context.Background()); st.CanUpdate || !strings.Contains(st.Why, "build from source") {
+		t.Errorf("source build: %+v", st)
 	}
 }
 

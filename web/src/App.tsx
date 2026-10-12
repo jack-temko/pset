@@ -9,6 +9,7 @@ import '@/api/ask';
 import '@/api/memory';
 import { Home } from '@/pages/home';
 import { Settings } from '@/pages/settings';
+import { Errors as ErrorCatalog } from '@/pages/errors';
 import { Workspace } from '@/pages/workspace';
 
 // The galleries are big (every component's section, every view's mock) and the
@@ -56,6 +57,7 @@ export default function App() {
             </Suspense>
           }
         />
+        <Route path="/errors/:section?" element={<ErrorCatalog />} />
       </Routes>
     </BrowserRouter>
   );

@@ -1,4 +1,5 @@
-import type { Failure } from '@/api/homework';
+import type { View } from '@/api/gen/errs';
+import { mockError } from '@/views/mock/errors';
 import type { Scenario, ScenarioContext, Session } from '@/views/mock/scenario';
 import { homeworkRoutes } from './routes';
 import {
@@ -146,23 +147,36 @@ const slow: Scenario = {
     }),
 };
 
-const failedKinds: { label: string; failure: Failure; reason: string }[] = [
+/** One failed question of each kind, as the server's catalog says it. */
+const failedKinds: { label: string; error: View }[] = [
   {
     label: '4.27',
-    failure: 'generation',
-    reason: 'The guide was cut off before its last part.',
+    error: mockError(['homework.question_failed', 'model.cut'], {
+      step: 'write the guide for',
+      name: 'problem 4.27',
+    }),
   },
   {
     label: '4.25',
-    failure: 'not_found',
-    reason: 'It isn’t under 4.25 in this book’s Problems lists.',
+    error: mockError(['homework.not_found_in_book'], {
+      name: 'problem 4.25',
+      where: 'chapter 4',
+    }),
   },
   {
     label: '4.32',
-    failure: 'unavailable',
-    reason: 'OpenRouter didn’t answer in time.',
+    error: mockError(['homework.question_failed', 'model.busy'], {
+      step: 'write the guide for',
+      name: 'problem 4.32',
+    }),
   },
-  { label: '3.12', failure: 'setup', reason: 'OpenRouter refused the key.' },
+  {
+    label: '3.12',
+    error: mockError(['homework.question_failed', 'key.refused'], {
+      step: 'write the guide for',
+      name: 'problem 3.12',
+    }),
+  },
 ];
 
 const failed: Scenario = {
@@ -178,12 +192,13 @@ const failed: Scenario = {
         failedKinds.map((k) => ({
           label: k.label,
           state: 'failed' as const,
-          failure: k.failure,
-          reason: k.reason,
+          error: k.error,
         })),
       );
-      w.retryFails = 'unavailable';
-      w.retryReason = 'OpenRouter didn’t answer in time, again.';
+      w.retryError = mockError(['homework.question_failed', 'model.busy'], {
+        step: 'write the guide for',
+        name: 'problem 4.32',
+      });
       return { props: { initialSet: s.id } };
     }),
 };
@@ -281,8 +296,9 @@ const importing: Scenario = {
         makeRead({
           state: 'failed',
           source: 'https://canvas.example.edu/courses/461/assignments',
-          error:
-            'That page answered 401. A page behind a login can be pasted or photographed instead.',
+          error: mockError(['homework.read_failed', 'homework.page_refused'], {
+            status: '401',
+          }),
         }),
       ];
       return {

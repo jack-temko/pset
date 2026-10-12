@@ -1,3 +1,5 @@
+import { errorView } from '@/api/client';
+import { errorLine } from '@/lib/error-text';
 import { useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -340,7 +342,7 @@ function Shelf({ books, settings }: { books: Book[]; settings?: Settings }) {
     setRefused([]);
     upload.mutate(files, {
       onSuccess: ({ duplicates, errors }) => {
-        setRefused(errors.map((e) => e.message));
+        setRefused(errors.map((e) => errorLine(e.view)));
         // A book you already have: you asked for it, so here it is. Only
         // when it's the one file you picked, and only if it can be opened;
         // one still on its way is already a row above the shelf.
@@ -350,7 +352,7 @@ function Shelf({ books, settings }: { books: Book[]; settings?: Settings }) {
         if (dup?.state.kind === 'ready') void navigate(`/books/${dup.id}`);
       },
       onError: (e) => {
-        setRefused([e.message]);
+        setRefused([errorLine(errorView(e))]);
       },
     });
   };

@@ -11,7 +11,7 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/platform"
 )
@@ -34,26 +34,26 @@ func (s *Service) Health(ctx context.Context) Health {
 func (s *Service) Fix(ctx context.Context, id string) (HealthCheck, error) {
 	c := s.check(ctx, id)
 	if c.ID == "" {
-		return HealthCheck{}, httpx.NotFound("check")
+		return HealthCheck{}, errs.Gone.New("thing", "check")
 	}
 	if c.OK {
 		return c, nil
 	}
 	if !c.Fixable {
-		return HealthCheck{}, httpx.Errorf(httpx.CodeInvalid, "PSet can't fix this one itself. %s", c.Detail)
+		return HealthCheck{}, notFixable.New()
 	}
 	switch id {
 	case "data_dir":
 		if err := os.MkdirAll(s.c.DataDir, 0o700); err != nil {
-			return HealthCheck{}, httpx.Errorf(httpx.CodeInvalid, "Couldn't create it: %v", err)
+			return HealthCheck{}, fixDataDir.Wrap(err)
 		}
 	case "database":
 		if err := db.Migrate(ctx, s.c.DB, s.c.Migrations); err != nil {
-			return HealthCheck{}, httpx.Errorf(httpx.CodeInvalid, "The migration failed: %v", err)
+			return HealthCheck{}, fixDatabase.Wrap(err)
 		}
 	case "ollama":
 		if err := s.c.Dialer.Pull(ctx, llm.EmbedModel); err != nil {
-			return HealthCheck{}, httpx.Errorf(httpx.CodeInvalid, "Ollama couldn't download %s: %v", llm.EmbedModel, err)
+			return HealthCheck{}, fixOllama.Wrap(err, "model", llm.EmbedModel)
 		}
 	}
 	return s.check(ctx, id), nil

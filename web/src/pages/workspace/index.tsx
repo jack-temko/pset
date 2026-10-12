@@ -1,3 +1,4 @@
+import { ErrorNotice } from '@/components/error-notice';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useCallback,
@@ -31,7 +32,6 @@ import {
   AssistantTurn,
   ConversationStart,
   DayDivider,
-  FailedTurn,
   StoppedNote,
   Steps,
   Thinking,
@@ -67,7 +67,7 @@ import {
   type Book,
   type ContentsEntry,
 } from '@/api/library';
-import { ApiError } from '@/api/client';
+import { ApiError, errorView, viewOf } from '@/api/client';
 import {
   useBookHomework,
   useAddBoxed,
@@ -730,7 +730,6 @@ function TurnView({
   onSelect: (about: About, selection: PendingSel) => void;
   onClearAbout: () => void;
 }) {
-  const navigate = useNavigate();
   const pages = usePages();
   const source = turnSource(t.id);
   const running = t.state === 'running';
@@ -825,16 +824,9 @@ function TurnView({
       )}
       {t.state === 'stopped' && <StoppedNote />}
       {t.state === 'failed' && (
-        <FailedTurn
-          reason={t.reason ?? ''}
+        <ErrorNotice
+          error={t.error ?? viewOf('internal.unexpected')}
           onRetry={onRetry}
-          onSetup={
-            t.failure === 'setup'
-              ? () => {
-                  void navigate('/settings#connections');
-                }
-              : undefined
-          }
         />
       )}
       {/* A turn that ended before it wrote a thing (the first call refused, a
@@ -901,7 +893,6 @@ function AskTab({
   const ask = useAsk(bookId);
   const stop = useStopTurn();
   const clear = useClearTurns(bookId);
-  const navigate = useNavigate();
   const [text, setText] = useState('');
   const scroller = useRef<HTMLDivElement | null>(null);
   const pinned = useRef(true);
@@ -1049,19 +1040,11 @@ function AskTab({
         )}
         {ask.isError && (
           <div className="mb-2">
-            <FailedTurn
-              reason={ask.error.message}
+            <ErrorNotice
+              error={errorView(ask.error)}
               onRetry={() => {
                 send(text, about, true);
               }}
-              onSetup={
-                ask.error instanceof ApiError &&
-                ask.error.code === 'not_configured'
-                  ? () => {
-                      void navigate('/settings#connections');
-                    }
-                  : undefined
-              }
             />
           </div>
         )}
@@ -1136,7 +1119,6 @@ function Panel({
   /** Pixels, from the pane layout; the token until it's measured. */
   width?: number;
 }) {
-  const navigate = useNavigate();
   // A book always opens on Homework, at the list (or on the set the URL
   // names). Both tabs stay mounted, so Ask about a question and Homework
   // again is the same question, scrolled where it was; a reload is a new visit.
@@ -1243,9 +1225,6 @@ function Panel({
           onPickSelection={pickSelection}
           onClearAbout={clearAbout}
           selection={selection}
-          onOpenSettings={() => {
-            void navigate('/settings#connections');
-          }}
           onQuestion={onQuestion}
           wide={focus}
         />
@@ -1368,7 +1347,7 @@ export function Workspace() {
   const panes = usePanes();
   if (
     bookQuery.error instanceof ApiError &&
-    bookQuery.error.code === 'not_found'
+    bookQuery.error.view.id === 'book.not_found'
   )
     return <WorkspaceMessage>There is no book here.</WorkspaceMessage>;
   if (bookQuery.error)

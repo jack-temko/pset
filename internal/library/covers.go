@@ -6,6 +6,7 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 )
 
 // Covers: every book is a clothbound board in one of six colours, the
@@ -57,11 +58,11 @@ func coversInUse(ctx context.Context, q queryer) (map[Cover]int, error) {
 		var c Cover
 		var n int
 		if err := rows.Scan(&c, &n); err != nil {
-			return nil, err
+			return nil, errs.Database.Wrap(err)
 		}
 		used[c] = n
 	}
-	return used, rows.Err()
+	return used, errs.Database.Of(rows.Err())
 }
 
 // fillCovers gives a colour to every book without one, oldest first, as
@@ -78,13 +79,16 @@ func fillCovers(ctx context.Context, d queryer) error {
 		var b bare
 		if err := rows.Scan(&b.id, &b.sha); err != nil {
 			cleanup.Close(rows)
-			return err
+			return errs.Database.Of(err)
 		}
 		todo = append(todo, b)
 	}
 	cleanup.Close(rows)
-	if err := rows.Err(); err != nil || len(todo) == 0 {
-		return err
+	if err := rows.Err(); err != nil {
+		return errs.Database.Wrap(err)
+	}
+	if len(todo) == 0 {
+		return nil
 	}
 	used, err := coversInUse(ctx, d)
 	if err != nil {

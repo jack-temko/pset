@@ -7,6 +7,7 @@
   "useTabs": false,
   "ignorePatterns": [
     "web/src/api/gen",
+    "design/errors.md",
     "**/package-lock.json",
     "web/dist",
     "**/node_modules",

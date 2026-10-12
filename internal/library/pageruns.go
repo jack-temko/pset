@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"slices"
+	"strconv"
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/pagenum"
 )
 
@@ -33,14 +34,14 @@ func runsJSON(runs []pagenum.Run) string {
 // the book, and its offset keeps printed page 1 inside it too.
 func checkRuns(runs []pagenum.Run, pageCount int) error {
 	if len(runs) == 0 {
-		return httpx.Invalid("pageRuns", "Say where printed page 1 is.")
+		return runsEmpty.New().OnField("pageRuns")
 	}
 	for _, r := range runs {
 		if r.From < 1 || (pageCount > 0 && r.From > pageCount) {
-			return httpx.Invalid("pageRuns", "Each PDF page has to be inside the book: 1 to %d.", max(pageCount, 1))
+			return runOutside.New("max", strconv.Itoa(max(pageCount, 1))).OnField("pageRuns")
 		}
 		if printed := r.From - r.Offset; printed < 1-pageCount || (pageCount > 0 && r.Offset >= pageCount) {
-			return httpx.Invalid("pageRuns", "PDF page %d can't be printed as page %d.", r.From, printed)
+			return runBadOffset.New("from", strconv.Itoa(r.From), "printed", strconv.Itoa(printed)).OnField("pageRuns")
 		}
 	}
 	return nil
@@ -66,13 +67,13 @@ func fillPageRuns(ctx context.Context, d queryer) error {
 		var b bare
 		if err := rows.Scan(&b.id, &b.count, &b.offset, &b.edited); err != nil {
 			cleanup.Close(rows)
-			return err
+			return errs.Database.Of(err)
 		}
 		todo = append(todo, b)
 	}
 	cleanup.Close(rows)
 	if err := rows.Err(); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	for _, b := range todo {
 		pages, err := loadPages(ctx, d, b.id)

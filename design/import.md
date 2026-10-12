@@ -54,13 +54,13 @@ title (the tidied filename until the PDF's metadata, then the title
 page, replaces it), one
 line of status, and the controls for that state.
 
-| state                             | line                                                                                                | controls                |
-| --------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------- |
-| queued                            | Queued: no spinner, nothing is happening yet                                                        | Cancel                  |
-| queued, a scan that stepped aside | "Queued · 140 of 312 pages read", still, no bar                                                     | Cancel                  |
-| preparing, can count              | "Read the pages · 140 of 312 · about 12 minutes left" and a bar                                     | Stop                    |
-| preparing, can't count            | the phase name and a `Spinner`, then "· less than a minute left" once past imports give an estimate | Stop                    |
-| failed                            | the engine's own sentence, in destructive ink                                                       | **Try again** · Dismiss |
+| state                             | line                                                                                                | controls             |
+| --------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------- |
+| queued                            | Queued: no spinner, nothing is happening yet                                                        | Cancel               |
+| queued, a scan that stepped aside | "Queued · 140 of 312 pages read", still, no bar                                                     | Cancel               |
+| preparing, can count              | "Read the pages · 140 of 312 · about 12 minutes left" and a bar                                     | Stop                 |
+| preparing, can't count            | the phase name and a `Spinner`, then "· less than a minute left" once past imports give an estimate | Stop                 |
+| failed                            | an error notice in the row's place: what, why and fix from the error catalog, Details               | its action · Dismiss |
 
 - **Time left** (2026-09-22) is for the phase, never the whole import,
   in rounded words that coarsen with distance ("a few seconds", "less

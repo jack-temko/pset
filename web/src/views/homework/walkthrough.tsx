@@ -222,7 +222,7 @@ function WalkthroughSkeleton({
   // line over its help rows.
   const help =
     first?.state === 'failed' ? (
-      <FailedQuestion q={first} onRetry={noop} onOpenSettings={noop} />
+      <FailedQuestion q={first} onRetry={noop} />
     ) : first?.state === 'unwritten' ? (
       <div className="space-y-2">
         <p className="text-sm text-muted-foreground">
@@ -446,7 +446,6 @@ function WalkthroughBody({
   onPickSelection,
   onClearAbout,
   selection,
-  onOpenSettings,
   onQuestion,
   wide = false,
 }: {
@@ -471,7 +470,6 @@ function WalkthroughBody({
   onClearAbout: () => void;
   /** The pending selection, for the outline while its chip rides. */
   selection: PendingSel | null;
-  onOpenSettings: () => void;
 }) {
   const pages = usePages();
   const updateSet = useUpdateHomework(setId);
@@ -1027,7 +1025,6 @@ function WalkthroughBody({
                 onRetry={(retry) => {
                   retryQ.mutate({ id: q.id, retry });
                 }}
-                onOpenSettings={onOpenSettings}
               />
               {/* What the failed attempt spent: the calls cost even when
                   the guide didn't land. */}

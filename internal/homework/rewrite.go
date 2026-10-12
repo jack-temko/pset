@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 )
 
@@ -63,7 +64,7 @@ func (s *Service) rewriteReference(ctx context.Context, m model, book Book, q ro
 	}})
 	if err != nil {
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return nil, fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		// Only a help: without it the question is looked for by its words.
 		slog.Warn("reference: rewrite failed", "question", q.ID, "err", err)
@@ -98,7 +99,7 @@ func (s *Service) rewriteReference(ctx context.Context, m model, book Book, q ro
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE questions SET text = ?, label = ?, notes = ?, updated_at = ? WHERE id = ?`,
 			first.Text, first.label, mustJSON(runLists(orEmpty(first.notes))), db.Now(), q.ID); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		added, err = s.insertQuestions(ctx, tx, q.HomeworkID, q.Position, rest)
 		return err

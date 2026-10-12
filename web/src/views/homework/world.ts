@@ -3,12 +3,12 @@ import type {
   AssignmentRead,
   Detail,
   Estimate,
-  Failure,
   Question,
   Summary,
 } from '@/api/homework';
 import type { Book } from '@/api/library';
 import type { Block, Run } from '@/api/gen/doc';
+import type { View } from '@/api/gen/errs';
 import type { Usage } from '@/api/gen/usage';
 import type { ScenarioContext } from '@/views/mock/scenario';
 import type { HomeworkSet, Q } from './progress';
@@ -243,8 +243,7 @@ export interface QuestionInit {
   state: Question['state'];
   done?: boolean;
   revealed?: string[];
-  failure?: Failure;
-  reason?: string;
+  error?: View;
   activity?: string;
   notes?: Run[][];
   inBook?: boolean;
@@ -290,8 +289,7 @@ export function makeQuestion(init: QuestionInit): Q {
     hint: init.state === 'ready' || init.state === 'writing' ? HINT : [],
     walkthrough: init.state === 'ready' ? WALKTHROUGH : [],
     state: init.state,
-    failure: init.failure,
-    reason: init.reason,
+    error: init.error,
     activity: init.activity,
     reading: found && sample?.reading ? sample.reading : [],
     readingEdited: false,
@@ -412,8 +410,7 @@ export class World {
   /** When the finder is next free. */
   private finderFree = 0;
   /** What the next retry of a failed question does: set by a scenario. */
-  retryFails?: Failure;
-  retryReason = 'It failed again, the same way.';
+  retryError?: View;
 
   constructor(ctx: ScenarioContext) {
     this.ctx = ctx;
@@ -491,7 +488,7 @@ export class World {
   work(
     id: string,
     opts: {
-      fail?: { at: 'locating' | 'writing'; failure: Failure; reason: string };
+      fail?: { at: 'locating' | 'writing'; error: View };
     } = {},
   ) {
     const q = must(
@@ -512,8 +509,7 @@ export class World {
         this.finderFree = v;
         step(v, {
           state: 'failed',
-          failure: opts.fail.failure,
-          reason: opts.fail.reason,
+          error: opts.fail.error,
           activity: undefined,
           failedAt: new Date().toISOString(),
         });
@@ -550,8 +546,7 @@ export class World {
       this.writerFree = v;
       step(v, {
         state: 'failed',
-        failure: opts.fail.failure,
-        reason: opts.fail.reason,
+        error: opts.fail.error,
         activity: undefined,
         failedAt: new Date().toISOString(),
       });

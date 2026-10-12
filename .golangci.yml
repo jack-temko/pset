@@ -6,6 +6,8 @@ linters:
     - revive
     - misspell
     - nolintlint
+    - wrapcheck
+    - errorlint
   settings:
     staticcheck:
       checks: ['all']
@@ -38,6 +40,37 @@ linters:
     nolintlint:
       require-explanation: true
       require-specific: true
+    wrapcheck:
+      # An error from another package is wrapped in a catalog entry before it
+      # leaves a function; PSet's own packages already return errors that
+      # carry one, or are wrapped where they are raised.
+      ignore-package-globs:
+        - github.com/jackt/pset/*
+      ignore-sigs:
+        - .New(
+        - .Wrap(
+        - .Of(
+        - .OnField(
+        - .About(
+        - errors.New(
+        - errors.Join(
+        - fmt.Errorf(
+    errorlint:
+      errorf: true
+      asserts: true
+      comparison: true
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [wrapcheck]
+      - path: ^tools/
+        linters: [wrapcheck]
+
+issues:
+  # Every finding, not the first fifty: a lint that hides some is not a lint.
+  max-issues-per-linter: 0
+  max-same-issues: 0
 
 formatters:
   enable:
