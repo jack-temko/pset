@@ -51,8 +51,20 @@ export const prefetchBookUsage = (client: QueryClient, bookId: string) =>
 // A job that finished, or a book that changed or lost something, has changed
 // what was spent: mark every cached usage stale. What is open refetches and swaps in place; the
 // rest refetches when it is next opened, showing the old figures meanwhile.
-const stale = (_: unknown, qc: QueryClient) =>
+//
+// A book carries the shape of its usage dialog (Book.usage: how many kinds
+// spent anything), which a guide, an Ask turn or a read can change without a
+// book event, so the books are marked stale too and the next first open knows.
+const stale = (type: string, qc: QueryClient) => {
   void qc.invalidateQueries({ queryKey: ['usage'] }, { cancelRefetch: false });
+  if (type !== 'book.changed')
+    void qc.invalidateQueries(
+      // The shelf and each book (['books'], ['books', id]), not a book's
+      // contents or anything else under it. The dialog reads the book.
+      { predicate: (q) => q.queryKey[0] === 'books' && q.queryKey.length <= 2 },
+      { cancelRefetch: false },
+    );
+};
 for (const type of [
   'question.changed',
   'question.removed',
@@ -63,4 +75,6 @@ for (const type of [
   'turns.cleared',
   'book.changed',
 ])
-  on(type, stale);
+  on(type, (_, qc) => {
+    stale(type, qc);
+  });

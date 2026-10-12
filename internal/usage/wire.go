@@ -12,6 +12,35 @@ type Usage struct {
 	// Failed is the calls that errored, which cost too: the card's
 	// footnote.
 	Failed int `json:"failed"`
+	// Shape is the size of the modal this line opens, so the modal can draw
+	// its skeleton at the right size on a first open.
+	Shape *Shape `json:"shape,omitempty"`
+	// stages are the stage names of the job's own calls, for AddShare.
+	stages map[string]bool
+}
+
+// Shape is the layout of a job's detail, by counts: how many stage rows, and
+// for each run's table how many call rows. Tall counts the rows that take a
+// second line (a stage shared with other questions; a call with tools or an
+// error). The detail itself arrives later; this is what its skeleton needs.
+type Shape struct {
+	Stages     int            `json:"stages"`
+	StagesTall int            `json:"stagesTall,omitempty"`
+	Sections   []ShapeSection `json:"sections"`
+}
+
+// ShapeSection is one table of calls: a run, or the shared ranking.
+type ShapeSection struct {
+	Rows int `json:"rows"`
+	Tall int `json:"tall,omitempty"`
+}
+
+// BookShape is the layout of a book's usage dialog, kept on the Book: how
+// many kinds of thing spent anything (the rows of "By kind"), and the
+// import's own stages and calls. Nil when the book spent nothing.
+type BookShape struct {
+	Kinds  int    `json:"kinds"`
+	Import *Shape `json:"import,omitempty"`
 }
 
 // Row is one model's share of a job. Tokens and Cost are absent

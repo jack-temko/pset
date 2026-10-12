@@ -32,32 +32,29 @@ const slug = (s) =>
 
 class Missing extends Error {}
 
-/** Wait until nothing has moved, resized, loaded or spun for QUIET_MS. */
-async function settle(page, track) {
+/** Wait until nothing has moved, resized, loaded or spun for QUIET_MS. The
+ *  waiting is timed in the page (the probe's settle), so a busy main thread
+ *  does not starve it; the wall clock here is only a backstop. */
+async function settle(page) {
   const start = Date.now();
-  for (;;) {
-    await sleep(50);
-    const now = Date.now();
-    if (now - start > TIMEOUT_MS) return true;
-    let page_ = null;
+  while (Date.now() - start < TIMEOUT_MS) {
+    const left = TIMEOUT_MS - (Date.now() - start);
     try {
-      page_ = await page.evaluate(() => {
-        const J = window.__jumps;
-        return (
-          J && {
-            last: J.origin + J.last,
-            skel: J.visible('[data-skeleton], .skeleton').length,
-            status: J.visible('[role=status]').length,
-          }
-        );
-      });
+      const r = await Promise.race([
+        page.evaluate(
+          ([q, t]) => window.__jumps?.settle(q, t),
+          [QUIET_MS, left],
+        ),
+        sleep(left + 2000).then(() => 'backstop'),
+      ]);
+      if (r === 'settled') return false;
+      if (r === 'timeout' || r === 'backstop') return true;
     } catch {
-      continue; // navigating
+      // navigating: the page's context was replaced
     }
-    if (!page_ || page_.skel || page_.status || track.inflight() > 0) continue;
-    if (now - Math.max(start, page_.last, track.lastEnd()) >= QUIET_MS)
-      return false;
+    await sleep(50);
   }
+  return true;
 }
 
 /** Watch a page's requests: how many are in flight, when the last ended. */
@@ -143,10 +140,10 @@ async function runOne(browser, app, sc, mode, opts) {
       });
       t0 = Date.now();
       await page.goto(app + sc.url, { waitUntil: 'commit' });
-      timedOut = await settle(page, track);
+      timedOut = await settle(page);
     } else {
       await page.goto(app + sc.url, { waitUntil: 'commit' });
-      await settle(page, track);
+      await settle(page);
       await cdp.send('Page.startScreencast', {
         format: 'jpeg',
         quality: 60,
@@ -165,7 +162,7 @@ async function runOne(browser, app, sc, mode, opts) {
       for (const [i, step] of plan.entries()) {
         if (step.key) {
           await page.keyboard.press(step.key);
-          await settle(page, track);
+          await settle(page);
           continue;
         }
         const target = locate(page, step);
@@ -189,9 +186,9 @@ async function runOne(browser, app, sc, mode, opts) {
         }
         if (i === plan.length - 1) t0 = Date.now();
         await target.click({ timeout: 4000 });
-        if (i < plan.length - 1) await settle(page, track);
+        if (i < plan.length - 1) await settle(page);
       }
-      timedOut = await settle(page, track);
+      timedOut = await settle(page);
     }
     const end = Date.now();
     await cdp.send('Page.stopScreencast').catch(() => {});
@@ -255,9 +252,8 @@ async function discoverOverlays(browser, app, pages) {
     try {
       await ctx.addInitScript({ path: path.join(here, 'probe.js') });
       const page = await ctx.newPage();
-      const track = trackRequests(page);
       await page.goto(app + pg.url, { waitUntil: 'commit' });
-      await settle(page, track);
+      await settle(page);
       const triggers = await page.evaluate((css) => {
         const seen = new Set();
         const out = [];
@@ -293,7 +289,7 @@ async function discoverOverlays(browser, app, pages) {
         });
         if (!t.menu) continue;
         await page.reload({ waitUntil: 'commit' });
-        await settle(page, track);
+        await settle(page);
         try {
           await locate(page, step).click({ timeout: 4000 });
         } catch {

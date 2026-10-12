@@ -88,7 +88,7 @@ export function scenarios({ book, set, usageQuestion, askBook }) {
     },
     {
       name: 'Homework list to a set',
-      url: b,
+      url: set && `/books/${set.bookId}`,
       steps: [tab('Homework'), { text: set?.title }],
       skip: noSet,
     },

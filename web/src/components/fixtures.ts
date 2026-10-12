@@ -25,6 +25,7 @@ export function sampleBook(
     pageCount: 312,
     pageRuns: [{ from: 1, offset: 16 }],
     aspect: 11 / 8.5,
+    rail: [3, 4, 2],
     kind: 'digital',
     addedAt: '2026-09-03T12:00:00Z',
     updatedAt: '2026-09-03T12:00:00.000000000Z',

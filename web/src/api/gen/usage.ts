@@ -21,6 +21,38 @@ export interface Usage {
    * footnote.
    */
   failed: number /* int */;
+  /**
+   * Shape is the size of the modal this line opens, so the modal can draw
+   * its skeleton at the right size on a first open.
+   */
+  shape?: Shape;
+}
+/**
+ * Shape is the layout of a job's detail, by counts: how many stage rows, and
+ * for each run's table how many call rows. Tall counts the rows that take a
+ * second line (a stage shared with other questions; a call with tools or an
+ * error). The detail itself arrives later; this is what its skeleton needs.
+ */
+export interface Shape {
+  stages: number /* int */;
+  stagesTall?: number /* int */;
+  sections: ShapeSection[];
+}
+/**
+ * ShapeSection is one table of calls: a run, or the shared ranking.
+ */
+export interface ShapeSection {
+  rows: number /* int */;
+  tall?: number /* int */;
+}
+/**
+ * BookShape is the layout of a book's usage dialog, kept on the Book: how
+ * many kinds of thing spent anything (the rows of "By kind"), and the
+ * import's own stages and calls. Nil when the book spent nothing.
+ */
+export interface BookShape {
+  kinds: number /* int */;
+  import?: Shape;
 }
 /**
  * Row is one model's share of a job. Tokens and Cost are absent

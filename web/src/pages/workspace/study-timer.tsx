@@ -1,5 +1,10 @@
 import { Tooltip } from '@/components/tooltip';
-import { IDLE, type StudyTime } from '@/api/activity';
+import {
+  IDLE,
+  useStudyClock,
+  type StudyClock,
+  type StudyTime,
+} from '@/api/activity';
 
 /** "1h 05m", or "42m" under the hour. */
 function studyDuration(seconds: number): string {
@@ -31,4 +36,9 @@ export function StudyTimer({ time }: { time: StudyTime }) {
       </span>
     </Tooltip>
   );
+}
+
+/** The timer on the live clock: the only thing that re-renders as it counts. */
+export function LiveStudyTimer({ clock }: { clock: StudyClock }) {
+  return <StudyTimer time={useStudyClock(clock)} />;
 }

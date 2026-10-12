@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { BookUsage, Detail } from '@/api/gen/usage';
 import { BookUsageDialog, Fig, isShape, UsageModal } from '.';
+import { reachesCap } from './cap';
 import { must } from '@/lib/must';
 
 (
@@ -525,5 +526,58 @@ describe('UsageModal skeleton from the summary', () => {
       root.unmount();
     });
     host.remove();
+  });
+
+  it("draws the tables the summary's shape says, with a first open that has nothing remembered", () => {
+    localStorage.clear();
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const summary = {
+      rows: [],
+      total: { ms: 1, calls: 4 },
+      failed: 0,
+      shape: {
+        stages: 4,
+        stagesTall: 1,
+        sections: [{ rows: 3 }, { rows: 1, tall: 1 }],
+      },
+    };
+    act(() => {
+      root.render(
+        <UsageModal open onClose={noop} name="x" loading summary={summary} />,
+      );
+    });
+    const rows = (caption: string) =>
+      [...document.querySelectorAll('dialog table')]
+        .filter((t) => t.querySelector('caption')?.textContent === caption)
+        .map((t) => t.querySelectorAll('tbody tr').length);
+    expect(rows('Stages')).toEqual([4]);
+    expect(rows('Calls')).toEqual([3, 1]);
+    act(() => {
+      root.unmount();
+    });
+    host.remove();
+  });
+});
+
+describe('reachesCap', () => {
+  it('is false for a small shape and true once the estimate is within a row of the cap', () => {
+    const small = { stages: [0], runs: [[0, 0]] };
+    expect(reachesCap([small])).toBe(false);
+    const big = { stages: [0, 0, 0], runs: [Array(9).fill(0)] };
+    window.innerHeight = 1000;
+    expect(reachesCap([big])).toBe(true);
+    window.innerHeight = 2000;
+    expect(reachesCap([big])).toBe(false);
+  });
+
+  it('counts the rows that take a second line, and extra height', () => {
+    window.innerHeight = 1000;
+    const rows = { stages: [0], runs: [Array(7).fill(0)] };
+    const tall = { stages: [0], runs: [Array(7).fill(1)] };
+    expect(reachesCap([rows])).toBe(false);
+    expect(reachesCap([tall])).toBe(true);
+    expect(reachesCap([rows], 200)).toBe(true);
   });
 });

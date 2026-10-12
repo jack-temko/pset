@@ -33,7 +33,7 @@ export function StatTile({
   label: string;
   /** Already formatted. Unit letters go in `<small>`: see DurationValue. */
   value: ReactNode;
-  context: string;
+  context: ReactNode;
   chart?: Chart;
   className?: string;
 }) {

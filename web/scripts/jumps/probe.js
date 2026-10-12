@@ -9,6 +9,9 @@
     sizes: [],
     frames: [],
     last: 0,
+    // Requests the page makes with fetch (not the event stream), for settle.
+    inflight: 0,
+    lastNet: 0,
   });
 
   // A short, stable-enough name for an element: tag, id or role, a few
@@ -151,4 +154,56 @@
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
+
+  // The page's own fetches: how many are open and when the last ended.
+  const realFetch = window.fetch.bind(window);
+  window.fetch = (input, init) => {
+    const url = typeof input === 'string' ? input : input.url || String(input);
+    if (url.includes('/api/events')) return realFetch(input, init);
+    J.inflight++;
+    return realFetch(input, init).finally(() => {
+      J.inflight--;
+      J.lastNet = performance.now();
+    });
+  };
+
+  // Scripts, styles and fonts the page loads (not images or the event stream):
+  // when the last finished. A request still open shows only once it ends, so
+  // settle also waits for the document itself to be complete.
+  try {
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries()) {
+        if (e.initiatorType === 'img' || e.name.includes('/api/events'))
+          continue;
+        J.lastNet = Math.max(J.lastNet, e.responseEnd);
+      }
+    }).observe({ type: 'resource', buffered: true });
+  } catch {}
+
+  // Settle, timed in the page: resolves 'settled' once nothing has moved,
+  // resized, loaded or spun for `quiet` ms, or 'timeout' after `timeout` ms.
+  // It runs on timers in the page, so it does not depend on the runner
+  // polling a page whose main thread is busy.
+  J.settle = (quiet, timeout) =>
+    new Promise((resolve) => {
+      const t0 = performance.now();
+      const id = setInterval(() => {
+        const now = performance.now();
+        if (now - t0 > timeout) {
+          clearInterval(id);
+          resolve('timeout');
+          return;
+        }
+        if (
+          J.visible(SKELETON).length ||
+          J.visible('[role=status]').length ||
+          J.inflight > 0
+        )
+          return;
+        if (now - Math.max(t0, J.last, J.lastNet) >= quiet) {
+          clearInterval(id);
+          resolve('settled');
+        }
+      }, 50);
+    });
 })();

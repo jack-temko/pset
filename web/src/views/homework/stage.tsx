@@ -98,6 +98,7 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
             value={{
               bookId: BOOK_ID,
               problems: BOOK.problems,
+              aspect: BOOK.aspect,
               editBook: () => {
                 harness.handoff({
                   to: 'Book dialog',

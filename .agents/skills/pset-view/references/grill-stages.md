@@ -12,7 +12,7 @@ viewpoint: the tired student: hour 7, 1am, Night theme, glancing between the sca
            this view, low patience, low working memory
 locked:    design/design-system.md; the view's screen spec in design/ (dated decisions);
            the guardrail list in pset-view/SKILL.md; the view's spec.md `why`
-stages:    gates 0 to 4 below
+stages:    gates 0 to 5 below
 ```
 
 A locked decision that an answer would contradict becomes a reversal question, asked
@@ -106,7 +106,29 @@ are extended, which are new.
 Artifact: the **state table** (state | what shows | how to reach it) and the component
 list. Exit: every state of the flow is named and decided.
 
-## Gate 4: Data, backend and acceptance
+## Gate 4: Loading and variants
+
+The standard is `design/design-system.md` ("One loading standard") and
+`web/src/components/loaded/README.md`; this gate applies it to the view, it does not
+restate it. Seeds:
+
+- Which **variants** the view has, by data: empty, done, first run, turned in, error. One
+  line each, named as in `web/src/variants.ts`.
+- For each **entry point** (a click from a list, a route, a reload), what is known before
+  the fetch: the clicked row's summary, the route, a cache. So which skeleton each entry
+  draws, and when nothing is known, the **neutral skeleton** (the chrome every variant
+  shares, real, and a quiet body). Never a guess at a variant.
+- What the view **prefetches**, and on what intent (the page, a hover, a press).
+- Which **values sit in fixed-width slots** (a count inside a sentence).
+- How many **rows a list draws** while loading (the last known count).
+- What **keeps the last data** when a key changes (typing, a switch of set).
+- The **error line**: one line, never a skeleton forever.
+
+Artifact: a small table, **entry point | variant | skeleton drawn | how the variant is
+known**. Exit: every variant has a skeleton that matches its content, an entry in
+`web/src/variants.ts`, a `/views` scenario and a fixture case.
+
+## Gate 5: Data, backend and acceptance
 
 Seeds: what it reads, writes and listens for; the backend wants (fields, endpoints,
 events) and what each costs; anything to migrate; the scenarios the harness needs; the
@@ -120,7 +142,7 @@ Also run the **cross-view consistency check** here, before asking:
   that view, not assumed.
 
 Artifact: the **data table**, the **wants**, and the **acceptance list** (scenarios and
-budget numbers). Exit: the acceptance list is confirmed.
+budget numbers, and the loading table's scenarios). Exit: the acceptance list is confirmed.
 
 ## The student walkthrough simulation
 

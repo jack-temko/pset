@@ -58,6 +58,12 @@ const { chromium } = require(
 ## The checklist (step 8)
 
 - [ ] Every scenario of the view loads with no console errors, in Paper and in Night.
+- [ ] Every variant of the view has a `/views` scenario, and each has a slow-loading
+      scenario too (the mock server's latency). Shots include each variant mid-load and
+      loaded, in both themes: the skeleton must be the content's shape, with no flash of
+      another variant.
+- [ ] `make jumps-check FULL=1` passes (0px growth, jump at most 0.001, no dev warning
+      from `Loaded` about a variant mismatch).
 - [ ] The main flow works with the keyboard alone; tab stops to the main action counted.
 - [ ] The flow meets its `budget`, counted again after the change.
 - [ ] Each handoff out shows in the log with its context, and Back returns as
