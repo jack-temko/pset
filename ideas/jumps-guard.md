@@ -2,10 +2,15 @@
 
 ## Status
 
-In progress, branch `jumps-guard` (change 2c of the loading standard). Its CI step
-lands after part 2 (`loading-screens`), so it turns on green. Built: the fixture,
-`check.mjs`, `make jumps-check`, the CI step and the docs; the CI step is not yet proven
-on a PR run, and its time is not measured (locally the audit takes 26 minutes on WSL).
+Done (change 2c of the loading standard, after `loading-screens`). `make
+jumps-check` builds a public fixture library, runs the core profile (every
+hand-written scenario, both modes, `--runs 2`, three jobs at once) and fails on any
+jump over 0.001, any overlay that grows more than 2px, a scenario that never
+settles, a skeleton that is another variant or off its content (what is visible), a
+variant that flashes after its reveal and a box revealed twice. In CI it adds about
+4 minutes to the `check` job on a UI change. `FULL=1` adds discovery and `--runs 3`
+and runs nightly (`.github/workflows/jumps-nightly.yml`); lost discovered
+scenarios fail it. The allow-list (`web/scripts/jumps/allow.json`) is empty.
 
 ## Information
 
