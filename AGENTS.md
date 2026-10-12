@@ -15,6 +15,16 @@
   never a generated name like `claude/laughing-gauss-1135o5`. Parked and
   throwaway branches are named the same way. Commits carry no
   Co-Authored-By and no "Generated with" lines.
+- **The courses redesign lands on `courses`, not `dev`** (decided 2026-10-11,
+  D24 in `ideas/courses-grill.md`). While it runs, each of its tracks branches
+  from `origin/courses` and opens its pull request with `--base courses`,
+  under every other rule here: a named branch and worktree, `make check`,
+  Jack's approval before a merge, a squash-merge. `courses` takes `dev` in by
+  merge when `dev` moves, and only Jack takes `courses` into `dev`, at a
+  milestone. The one direct push allowed is a change to `ideas/courses.md`
+  alone, the program's tracker, by the orchestrator. Work that is not part of
+  the redesign lands on `dev` as before. The tracks and who has each are in
+  `ideas/courses.md`. Remove this bullet when the redesign is done.
 
 **Landing a change** (the tests, and the real app for a UI change, first):
 
