@@ -31,6 +31,13 @@ The words are fixed in the grill's Glossary: use them, in code and on screen.
   merges. Everything else in `AGENTS.md` holds.
 - The truth is the copy on `courses`:
   `git fetch origin courses && git show origin/courses:ideas/courses.md`.
+  Only the orchestrator pushes a change to this file alone straight to
+  `courses`, and formats it with `oxfmt` first, since that push skips `make
+  check`.
+- The `/change` skill and its role briefs name `dev` as the base; for a track of the redesign, read `courses` wherever they say `dev` (the worktree from `origin/courses`, `--base courses`, diffs against `origin/courses`), and every brief says so.
+- `courses` is cut from `dev` when track 0 opens, and track 0's pull request
+  is the first into it. `courses` takes `dev` in through a pull request from
+  `dev` into `courses`, merged with a merge commit after Jack approves it.
 - Take only a track whose "Needs" tracks are Done. The orchestrator puts your
   branch on its row when you start and the pull request when it opens.
 - Leave the row true when you stop: its status, and a note of anything the
@@ -74,14 +81,14 @@ needs Jack for its layout grill, so his time sets the pace.
 **Build (milestone 1).** Each track replaces sample data with the real thing
 for its part. Track 8 is first; 10, 11 and 12 can run side by side after 9.
 
-| #   | Track                  | What it does                                                                                                                                                                                                                                                   | Needs    | Try                                                              | Status      | Branch and pull request |
-| --- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------- | ----------- | ----------------------- |
-| 8   | Courses and materials  | One baseline schema; the old data folder set aside (D25). Courses; the abstract document and the kind on top (D31); import for each kind; changing a kind; removing. Home's courses, the overview and the material views read the API. `make seed` for courses | 7        | Make a course, add a textbook and slides, read them, re-kind one | Not started |                         |
-| 9   | Search across a course | Search and the agent's tools take a course; every result names its material and page (D32)                                                                                                                                                                     | 8        | No screen: approved on its tests                                 | Not started |                         |
-| 10  | Homework in a course   | Sets belong to a course; the sheet is kept as a material (D7); a problem is found in any material (D6); guides read everything and name it (D5); removal keeps the work (D29). The set view and Home's Tonight read the API                                    | 9        | Import a sheet, work a problem, see a step cite the slides       | Not started |                         |
-| 11  | Ask in a course        | One conversation per course (D17); the tools read every material; a page selection from any kind of material. The dialog reads the API                                                                                                                         | 9        | Ask across the textbook and the slides, follow a citation        | Not started |                         |
-| 12  | What the course owns   | Memory, study time, cost, errors and events keyed by the course; this week on Home                                                                                                                                                                             | 8        | Memory and usage dialogs, this week on Home                      | Not started |                         |
-| 13  | Clearing out           | The book-centred code and the leftover sample data removed; the test library rebuilt for courses; `design/` rewritten (workspace, backend, import, memory, Home). Jack's scanned textbook carried over (A14)                                                   | 10 to 12 | A full evening's use, then `courses` into `dev`                  | Not started |                         |
+| #   | Track                  | What it does                                                                                                                                                                                                                                                                    | Needs    | Try                                                              | Status      | Branch and pull request |
+| --- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------- | ----------- | ----------------------- |
+| 8   | Courses and materials  | One baseline schema; the old data folder set aside (D25). Courses; the abstract document and the kind on top (D31); import for each kind; changing a kind; removing. Home's courses, the overview and the material views read the API. `make seed` for courses                  | 7        | Make a course, add a textbook and slides, read them, re-kind one | Not started |                         |
+| 9   | Search across a course | Search and the agent's tools take a course; every result names its material and page (D32)                                                                                                                                                                                      | 8        | No screen: approved on its tests                                 | Not started |                         |
+| 10  | Homework in a course   | Sets belong to a course; the sheet is kept as a material (D7); a problem is found in any material (D6); guides read everything and name it (D5); removal keeps the work (D29). The set view and Home's Tonight read the API                                                     | 9        | Import a sheet, work a problem, see a step cite the slides       | Not started |                         |
+| 11  | Ask in a course        | One conversation per course (D17); the tools read every material; a page selection from any kind of material. The dialog reads the API                                                                                                                                          | 9        | Ask across the textbook and the slides, follow a citation        | Not started |                         |
+| 12  | What the course owns   | Memory, study time, cost, errors and events keyed by the course; this week on Home                                                                                                                                                                                              | 8        | Memory and usage dialogs, this week on Home                      | Not started |                         |
+| 13  | Clearing out           | The book-centred code and the leftover sample data removed; `courses` taken out of `ci.yml` and its bullet out of `AGENTS.md`; the test library rebuilt for courses; `design/` rewritten (workspace, backend, import, memory, Home). Jack's scanned textbook carried over (A14) | 10 to 12 | A full evening's use, then `courses` into `dev`                  | Not started |                         |
 
 **What waited (milestone 2)**, each its own track after milestone 1:
 
@@ -102,9 +109,10 @@ risk list: planned at least, with a second review.
 ### Other work touching the same screens
 
 Not part of this program. It lands on `dev` as usual and reaches `courses`
-when `courses` takes `dev` in: PR #35 `loading-screens` (open), PR #30
-`jumps-guard` (draft), and the `selection-entry-options` and
-`haiku-usability` worktrees.
+when `courses` takes `dev` in. PR #35 `loading-screens` merged into `dev` on
+2026-10-11 and is in `courses` from the start. Still pending: PR #30
+`jumps-guard` (draft), and the `selection-entry-options` and `haiku-usability`
+worktrees.
 
 ### Log
 

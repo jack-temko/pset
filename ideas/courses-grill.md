@@ -116,7 +116,7 @@ The main flows:
 
 ### Milestones and tracks
 
-The tracks, their order and who has each are in `ideas/courses.md`. In short: the mock tracks build each view on `/views` and end with the screens joined on sample data; the build tracks then replace the sample data with the real backend one package at a time; milestone 1 takes `courses` into `dev`; milestone 2 adds the four things that wait (D30); exam prep gets its own grill.
+The tracks, their order and who has each are in `ideas/courses.md`. In short: milestone 0 is the spec; the mock tracks build each view on `/views` and end with the screens joined on sample data (milestone A, the course app on sample data); the build tracks then replace the sample data with the real backend one package at a time; milestone 1 takes `courses` into `dev`; milestone 2 adds the four things that wait (D30); milestone 3 is exam prep, after its own grill.
 
 ### Assumed
 
@@ -136,10 +136,10 @@ Taken at my recommendation because Jack did not decide. He overrules any.
 - A12: A course is a name only, and removing it is the only way to put it away for now.
 - A13: Adding a sheet starts today's assignment read, and its review makes the set. Pasting text, a link and making a set by hand stay.
 - A14: Jack's scanned textbook is carried into its course once, by an agent with his go-ahead at that moment, so it is not read again. It is not a feature.
-- A15: The orchestrator may commit changes to `ideas/courses.md` alone straight to `courses`, so a status never waits on a pull request. Everything else goes by pull request. Agents read `origin/courses:ideas/courses.md`.
+- A15: The orchestrator may commit changes to `ideas/courses.md` alone straight to `courses`, so a status never waits on a pull request. Everything else goes by pull request. Agents read `origin/courses:ideas/courses.md`. The file is formatted (`oxfmt`) before such a push, since it skips `make check`.
 - A16: The mock phase ends with the new screens joined on the real routes over one sample data file, which is the contract the backend is built against, as in the September overhaul.
 - A17: The exact URLs are the builder's, within the Screens table.
-- A18: `courses` takes `dev` in by merge whenever `dev` moves, so the other work in flight (loading-screens, jumps-guard) arrives as it lands.
+- A18: `courses` takes `dev` in through a pull request from `dev`, merged with a merge commit after Jack approves it, so other work in flight (jumps-guard) arrives as it lands on `dev`.
 
 ### Open
 
@@ -204,11 +204,11 @@ Gathered on 2026-10-11, first for the earlier grill and then for this one, and s
 - The import plumbing takes any PDF (the page is the unit everywhere). What is textbook-shaped is the prompts (naming, contents, heading picks all say "textbook") and the per-book detection of problem numbering and page runs.
 - An import is refused when Ollama is down, since search needs local embeddings.
 - Figure crops are cut from the book's PDF on request. A problem that is not in the book has no page, so no figure and no boxing.
-- The workspace is 19 files and about 4.4k lines; Rail, Scan and AskTab are page code. `/views` holds two views (homework, error notice). `/components` shows about 52 entries from 36 components.
+- As of dev 4b02f3f, before PR #35: the workspace is 19 files and about 4.4k lines; Rail, Scan and AskTab are page code. `/views` holds two views (homework, error notice). `/components` shows about 52 entries from 36 components.
 - `design/workspace.md` still says `/books/{sha}`; the code and `design/backend.md` use the book's UUID.
 - There is no design file for Home.
 - The test library is 3 textbooks (one scanned), 7 sets, 55 questions, 10 turns. It is book-shaped and is rebuilt for courses.
-- In flight and touching the same screens: PR #35 loading-screens (open), PR #30 jumps-guard (draft), the `selection-entry-options` and `haiku-usability` worktrees.
+- In flight and touching the same screens: PR #35 loading-screens merged into `dev` on 2026-10-11 after this audit (so it is in `courses` from the start), PR #30 jumps-guard is still a draft, and the `selection-entry-options` and `haiku-usability` worktrees.
 
 ## Stage plan
 
