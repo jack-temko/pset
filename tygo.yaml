@@ -1,10 +1,15 @@
 # Go wire types -> TypeScript. Run with `make gen`; never edit the output.
 packages:
-  - path: github.com/jackt/pset/internal/httpx
+  - path: github.com/jackt/pset/internal/errs
     include_files: [wire.go]
     enum_style: union
-    output_path: web/src/api/gen/httpx.ts
-    frontmatter: '// Generated from internal/httpx/wire.go by tygo. Do not edit.'
+    output_path: web/src/api/gen/errs.ts
+    frontmatter: '// Generated from internal/errs/wire.go by tygo. Do not edit.'
+  - path: github.com/jackt/pset/internal/errlog
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/errlog.ts
+    frontmatter: '// Generated from internal/errlog/wire.go by tygo. Do not edit.'
   - path: github.com/jackt/pset/internal/settings
     include_files: [wire.go]
     enum_style: union
@@ -29,8 +34,10 @@ packages:
       probnum.Style: 'Style'
       probnum.Form: 'Form'
       probnum.Where: 'Where'
+      errs.View: 'View'
     frontmatter: |
       // Generated from internal/library/wire.go by tygo. Do not edit.
+      import type { View } from './errs'
       import type { Run } from './pagenum'
       import type { Form, Style, Where } from './probnum'
 
@@ -56,10 +63,12 @@ packages:
     type_mappings:
       doc.Block: 'Block'
       doc.Run: 'Run'
+      errs.View: 'View'
       usage.Usage: 'Usage'
     frontmatter: |
       // Generated from internal/homework/wire.go by tygo. Do not edit.
       import type { Block, Run } from './doc'
+      import type { View } from './errs'
       import type { Usage } from './usage'
   - path: github.com/jackt/pset/internal/ask
     include_files: [wire.go]
@@ -68,10 +77,12 @@ packages:
     type_mappings:
       doc.Block: 'Block'
       doc.Run: 'Run'
+      errs.View: 'View'
       usage.Usage: 'Usage'
     frontmatter: |
       // Generated from internal/ask/wire.go by tygo. Do not edit.
       import type { Block, Run } from './doc'
+      import type { View } from './errs'
       import type { Usage } from './usage'
   - path: github.com/jackt/pset/internal/memory
     include_files: [wire.go]

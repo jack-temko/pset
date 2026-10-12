@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 )
 
@@ -40,7 +41,7 @@ func (s *Service) nameBook(ctx context.Context, m model, b row, path string, pag
 	title, author, err := s.readName(ctx, m, b, path, pages, printed)
 	if err != nil {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return fmt.Errorf("stopped: %w", ctx.Err())
 		}
 		slog.Warn("naming: no name read", "book", b.ID, "err", err)
 		return nil
@@ -48,12 +49,12 @@ func (s *Service) nameBook(ctx context.Context, m model, b row, path string, pag
 	// Never over the student's own name for the book.
 	if title != "" {
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET title = ?, updated_at = ? WHERE id = ? AND edited = 0`, title, db.Now(), b.ID); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 	}
 	if author != "" {
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET author = ?, updated_at = ? WHERE id = ? AND edited = 0`, author, db.Now(), b.ID); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 	}
 	if title != "" || author != "" {

@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/cleanup"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
 	"github.com/jackt/pset/internal/probnum"
@@ -250,7 +250,7 @@ func TestReadingAnAssignmentFromAWebPage(t *testing.T) {
 	// A page that isn't there fails on the read, said plainly; one that
 	// isn't a web page is refused before it starts.
 	bad := e.read(t, AssignmentText{URL: page.URL + "/private"})
-	if bad.State != ReadStateFailed || !strings.Contains(bad.Error, "404") {
+	if bad.State != ReadStateFailed || bad.Error == nil || bad.Error.ID != "homework.read_failed" || !strings.Contains(bad.Error.What, "Couldn't read the assignment") || !strings.Contains(bad.Error.Why, "404") {
 		t.Fatalf("missing page: %+v", bad)
 	}
 	// Tried again, once the page is there, it reads.
@@ -264,18 +264,18 @@ func TestReadingAnAssignmentFromAWebPage(t *testing.T) {
 		(retried.State != ReadStateReading && retried.State != ReadStateReady) {
 		t.Fatalf("retry %d %+v", code, retried)
 	}
-	if again := e.waitRead(t, bad.ID); again.State != ReadStateReady || again.Error != "" {
+	if again := e.waitRead(t, bad.ID); again.State != ReadStateReady || again.Error != nil {
 		t.Fatalf("retried %+v", again)
 	}
 	page.Config.Handler = pageUp
 	if code := e.do(t, "POST", "/api/assignment-reads/"+bad.ID+"/retry", nil, nil); code != 422 {
 		t.Fatalf("retrying a ready read %d", code)
 	}
-	var er httpx.Error
+	var er errs.View
 	if code := e.do(t, "POST", "/api/books/b1/assignments/read", AssignmentText{URL: "file:///etc/passwd"}, &er); code != 422 || er.Field != "url" {
 		t.Fatalf("file URL: %d %+v", code, er)
 	}
-	if code := e.do(t, "POST", "/api/books/b1/assignments/read", AssignmentText{}, &er); code != 422 || er.Field != "source" {
+	if code := e.do(t, "POST", "/api/books/b1/assignments/read", AssignmentText{}, &er); code != 422 || er.Field != "source" || er.ID != "homework.no_source" {
 		t.Fatalf("nothing given: %d %+v", code, er)
 	}
 	if m.asked != 2 {
@@ -377,7 +377,7 @@ func TestImportingAnAssignmentMakesItsSets(t *testing.T) {
 	defer page.Close()
 	first := e.read(t, AssignmentText{URL: page.URL})
 
-	var er httpx.Error
+	var er errs.View
 	if code := e.do(t, "POST", "/api/books/b1/assignments", AssignmentImport{Source: page.URL}, &er); code != 422 || er.Field != "groups" {
 		t.Fatalf("nothing kept: %d %+v", code, er)
 	}

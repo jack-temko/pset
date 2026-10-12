@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pdf"
 )
@@ -28,14 +29,14 @@ type location struct {
 // candidate; otherwise the exact tiers and search first, a wider search
 // second, then a sweep of the chapter's pages as images.
 func (s *Service) locate(ctx context.Context, m model, book Book, q row) (location, error) {
-	notFound := fail(FailureNotFound, nil, "Searched the book for %s and didn't see it. Show where it is on the page, or give its printed page; if it isn't from this book, paste it below.", problemName(q))
+	notFound := notFoundInBook.New("name", problemName(q), "where", "the book")
 	if q.Pinned != nil {
 		loc, ok, err := s.locateOnce(ctx, m, book, q, []int{*q.Pinned}, pinnedHint(book, q))
 		if err != nil {
 			return location{}, err
 		}
 		if !ok {
-			return location{}, fail(FailureNotFound, nil, "It isn't on %s either. Check the page number, or paste the problem below.", book.Pages.Name(*q.Pinned))
+			return location{}, notFoundInBook.New("name", problemName(q), "where", book.Pages.Name(*q.Pinned))
 		}
 		return loc, nil
 	}
@@ -56,7 +57,7 @@ func (s *Service) locate(ctx context.Context, m model, book Book, q row) (locati
 				return location{}, err
 			}
 			if !found {
-				return location{}, fail(FailureNotFound, nil, "Looked through %s for %s and didn't see it. Show where it is on the page, or give its printed page; if it isn't from this book, paste it below.", sc.where, ref.Name(book.Problems))
+				return location{}, notFoundInBook.New("name", ref.Name(book.Problems), "where", sc.where)
 			}
 			return loc, nil
 		}
@@ -180,7 +181,7 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 		url, err := s.pageImage(ctx, book.ID, p, locateWidth)
 		if err != nil {
 			if ctx.Err() != nil {
-				return location{}, false, ctx.Err()
+				return location{}, false, fmt.Errorf("stopped: %w", ctx.Err())
 			}
 			continue
 		}
@@ -198,9 +199,9 @@ func (s *Service) locateOnce(ctx context.Context, m model, book Book, q row, pag
 	}}))
 	if err != nil {
 		if ctx.Err() != nil {
-			return location{}, false, ctx.Err()
+			return location{}, false, fmt.Errorf("stopped: %w", ctx.Err())
 		}
-		return location{}, false, modelDown(err, q)
+		return location{}, false, err
 	}
 	var pin struct {
 		Image   int       `json:"image"`
@@ -317,7 +318,7 @@ func decodeReply(reply string, v any) error {
 	if fixed, changed := balance(s); changed && json.Unmarshal([]byte(fixed), v) == nil {
 		return nil
 	}
-	return err
+	return errs.Data.Of(err)
 }
 
 // balance closes what a JSON text leaves open, and whatever a closer
@@ -408,9 +409,9 @@ func (s *Service) writeOut(ctx context.Context, m model, book Book, loc location
 	}}))
 	if err != nil {
 		if ctx.Err() != nil {
-			return "", ctx.Err()
+			return "", fmt.Errorf("stopped: %w", ctx.Err())
 		}
-		return "", modelDown(err, q)
+		return "", err
 	}
 	return strings.TrimSpace(llm.Unfence(reply)), nil
 }

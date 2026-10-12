@@ -398,16 +398,16 @@ func TestContentsModelFailureFailsTheImportThenRetries(t *testing.T) {
 	var up BookChanged
 	e.upload(t, "kettles.pdf", scannedPDF(t, len(pages)), &up)
 	b := e.waitFor(t, up.Book.ID, StateFailed)
-	if !strings.Contains(b.State.Reason, "HTTP 401") || !strings.Contains(b.State.Reason, "Settings") {
-		t.Fatalf("reason %q", b.State.Reason)
+	if !failedBecause(b, "key.refused") || b.State.Error.Fix == "" || b.State.Error.Incident == "" {
+		t.Fatalf("error %+v", b.State.Error)
 	}
 
 	// A reply that isn't JSON gets one more try, then fails too.
 	e.llm.Script(noName, llmtest.Reply{Text: "Here are the contents!"}, llmtest.Reply{Text: "Sorry."})
 	e.do(t, "POST", "/api/books/"+b.ID+"/retry", nil, nil)
 	b = e.waitFor(t, b.ID, StateFailed)
-	if !strings.Contains(b.State.Reason, "couldn't be read") {
-		t.Fatalf("reason %q", b.State.Reason)
+	if b.State.Error == nil || b.State.Error.ID != "import.failed" {
+		t.Fatalf("error %+v", b.State.Error)
 	}
 
 	// A stalled call gets one more try too.

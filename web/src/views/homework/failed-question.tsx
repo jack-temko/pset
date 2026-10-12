@@ -1,30 +1,30 @@
 import { useState } from 'react';
-import { CircleAlert, SquareDashedMousePointer } from 'lucide-react';
+import { SquareDashedMousePointer } from 'lucide-react';
 import { AutoTextarea, Field, Input } from '@/components/input';
 import { Button } from '@/components/button';
+import { ErrorNotice } from '@/components/error-notice';
 import { useBoxing } from '@/pages/workspace/boxing-state';
-import type { Failure, Question, Retry } from '@/api/homework';
+import type { Question, Retry } from '@/api/homework';
+import { viewOf } from '@/api/client';
 import { usePages } from '@/lib/pages';
 import { failedLine } from './failed-line';
+import { failureKind } from './failure-kind';
 
 /**
  * A question the engine couldn't write a guide for, as a recoverable
- * state about that question: a title naming what failed, a sentence
- * saying what happened, and the ways out that fit the kind. Not found:
- * give the page. The guide didn't finish, or the provider didn't answer:
- * Try again. The connection is wrong: Open Settings. Below, where it can
- * help, pasting the problem as a fallback. Every action is enabled; one
- * with nothing to go on says what it needs.
+ * state about that question: the error notice (what happened, why, and the
+ * one button that fits: Try again, or Open Settings with Try again behind
+ * it), and the ways out that fit the kind. Not found: show the page, give
+ * the page, or paste it. Below, where it can help, pasting the problem as a
+ * fallback. Every action is enabled; one with nothing to go on says what it
+ * needs.
  */
 export function FailedQuestion({
   q,
   onRetry,
-  onOpenSettings,
 }: {
   q: Question;
   onRetry: (r: Retry) => void;
-  /** The way out of a setup failure: the OpenRouter key is fixed in Settings. */
-  onOpenSettings: () => void;
 }) {
   const pages = usePages();
   const boxing = useBoxing();
@@ -35,30 +35,8 @@ export function FailedQuestion({
   // A plain text field, not a number spinner: people type "57", "p. 57"
   // or "page 57", and all of them mean the first number in it.
   const pageNumber = Number(page.match(/\d+/)?.[0] ?? 0);
-  // Failed before failures had kinds: found (or never looked for) means
-  // the guide failed, otherwise it wasn't found.
-  const kind: Failure =
-    q.failure ||
-    (q.page !== undefined || !q.inBook ? 'generation' : 'not_found');
+  const kind = failureKind(q.error);
   const name = /^\d/.test(q.label) ? q.label : 'this question';
-
-  const title = {
-    generation: "Couldn't write the guide",
-    unavailable: "OpenRouter isn't responding",
-    setup: 'OpenRouter needs setting up',
-    not_found: `Couldn't find ${name} in this book`,
-  }[kind];
-
-  const retryButton = (variant: 'primary' | 'ghost') => (
-    <Button
-      variant={variant}
-      onClick={() => {
-        onRetry({});
-      }}
-    >
-      Try again
-    </Button>
-  );
 
   // Pasting helps when the book is the trouble (not found, or found and
   // read wrong); it can't help a model that isn't answering.
@@ -78,17 +56,21 @@ export function FailedQuestion({
   return (
     <div className="space-y-5">
       <div className="space-y-3">
-        <div className="space-y-1">
-          <p className="flex items-center gap-2 text-base font-semibold">
-            <CircleAlert className="size-4 shrink-0 text-destructive" />
-            {title}
-          </p>
-          <p className="text-sm text-muted-foreground">{q.reason}</p>
-          {/* A second failure says it is one; a model outage, how long ago. */}
-          {failedLine(q) && (
-            <p className="text-xs text-muted-foreground">{failedLine(q)}</p>
-          )}
-        </div>
+        <ErrorNotice
+          error={q.error ?? viewOf('internal.unexpected')}
+          onRetry={
+            // Not found is retried by showing, naming or pasting it below.
+            kind === 'not_found'
+              ? undefined
+              : () => {
+                  onRetry({});
+                }
+          }
+        />
+        {/* A second failure says it is one; a model outage, how long ago. */}
+        {failedLine(q) && (
+          <p className="text-xs text-muted-foreground">{failedLine(q)}</p>
+        )}
 
         {kind === 'not_found' ? (
           <div className="space-y-3">
@@ -131,14 +113,7 @@ export function FailedQuestion({
               </Button>
             </form>
           </div>
-        ) : kind === 'setup' ? (
-          <div className="flex items-center gap-2">
-            <Button onClick={onOpenSettings}>Open Settings</Button>
-            {retryButton('ghost')}
-          </div>
-        ) : (
-          retryButton('primary')
-        )}
+        ) : null}
       </div>
 
       {fallback && (

@@ -43,7 +43,7 @@ describe('the mock server', () => {
     )) as ApiError;
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(404);
-    expect(err.code).toBe('not_found');
+    expect(err.view.id).toBe('request.not_found');
     expect(real).not.toHaveBeenCalled();
   });
 
@@ -53,14 +53,14 @@ describe('the mock server', () => {
     expect(real).toHaveBeenCalledTimes(1);
   });
 
-  it('fails as the server does, with its code, message and field', async () => {
+  it('fails as the server does, with its catalog words and field', async () => {
     mount(
       new MockServer([
         [
           'POST',
           '/api/things',
           () => {
-            throw new MockError(422, 'invalid', 'Name it first.', 'title');
+            throw new MockError(422, 'homework.title_empty', 'title');
           },
         ],
       ]),
@@ -70,8 +70,7 @@ describe('the mock server', () => {
     )) as ApiError;
     expect(err).toMatchObject({
       status: 422,
-      code: 'invalid',
-      message: 'Name it first.',
+      message: 'Give it a title.',
       field: 'title',
     });
   });

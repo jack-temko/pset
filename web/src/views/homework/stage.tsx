@@ -11,6 +11,7 @@ import { useBoxing } from '@/pages/workspace/boxing-state';
 import { BookHereContext } from '@/pages/workspace/book-here';
 import { PageMap, Pages } from '@/lib/pages';
 import { cn } from '@/lib/utils';
+import { ErrorActionsContext } from '@/api/error-actions';
 import type { Harness } from '../types';
 import { HomeworkTab } from '.';
 import { BOOK, BOOK_ID } from './world';
@@ -72,124 +73,129 @@ export function HomeworkStage({ harness }: { harness: Harness }) {
   // above the tabs; every way out logs the handoff.
   const [selection, setSelection] = useState<PendingSel | null>(null);
 
+  // An error's button that would leave the view is logged, not followed.
+  const leave = (action: string) => {
+    harness.handoff({
+      to: action === 'open_settings' ? 'Settings' : 'Elsewhere',
+      what: action === 'open_settings' ? 'Open Settings' : action,
+      carries: 'the connections section',
+    });
+  };
+
   return (
-    <Pages value={pages}>
-      <BoxingProvider
-        onDone={async (target, boxes) => {
-          if (target.kind === 'add')
-            return (await addBoxed.mutateAsync({ setId: target.setId, boxes }))
-              .id;
-          await pointOut.mutateAsync({ id: target.questionId, boxes });
-        }}
-      >
-        <BookHereContext
-          value={{
-            bookId: BOOK_ID,
-            problems: BOOK.problems,
-            editBook: () => {
-              harness.handoff({
-                to: 'Book dialog',
-                what: 'Edit how the book numbers its problems',
-              });
-            },
+    <ErrorActionsContext value={leave}>
+      <Pages value={pages}>
+        <BoxingProvider
+          onDone={async (target, boxes) => {
+            if (target.kind === 'add')
+              return (
+                await addBoxed.mutateAsync({ setId: target.setId, boxes })
+              ).id;
+            await pointOut.mutateAsync({ id: target.questionId, boxes });
           }}
         >
-          <aside
-            style={{ height: 'min(760px, calc(100dvh - 15rem))' }}
-            className={cn(
-              'flex shrink-0 flex-col overflow-hidden rounded-md border bg-rail',
-              harness.wide ? 'w-panel-wide' : 'w-panel',
-            )}
+          <BookHereContext
+            value={{
+              bookId: BOOK_ID,
+              problems: BOOK.problems,
+              editBook: () => {
+                harness.handoff({
+                  to: 'Book dialog',
+                  what: 'Edit how the book numbers its problems',
+                });
+              },
+            }}
           >
-            <div className="flex h-row shrink-0 items-center justify-between border-b px-card">
-              <UnderlineNav className="-mb-px h-full">
-                <UnderlineTab
-                  active={tab === 'ask'}
-                  onClick={() => {
+            <aside
+              style={{ height: 'min(760px, calc(100dvh - 15rem))' }}
+              className={cn(
+                'flex shrink-0 flex-col overflow-hidden rounded-md border bg-rail',
+                harness.wide ? 'w-panel-wide' : 'w-panel',
+              )}
+            >
+              <div className="flex h-row shrink-0 items-center justify-between border-b px-card">
+                <UnderlineNav className="-mb-px h-full">
+                  <UnderlineTab
+                    active={tab === 'ask'}
+                    onClick={() => {
+                      setTab('ask');
+                    }}
+                  >
+                    Ask
+                  </UnderlineTab>
+                  <UnderlineTab
+                    active={tab === 'homework'}
+                    onClick={() => {
+                      setTab('homework');
+                    }}
+                  >
+                    Homework
+                  </UnderlineTab>
+                </UnderlineNav>
+                <IconButton
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Focus on the panel"
+                  disabled
+                >
+                  <Columns2 />
+                </IconButton>
+              </div>
+              <BoxingStandIn />
+              <div
+                className={cn(
+                  'flex min-h-0 flex-1 flex-col',
+                  tab !== 'ask' && 'hidden',
+                )}
+              >
+                <AskStub about={about} />
+              </div>
+              <div
+                className={cn(
+                  'flex min-h-0 flex-1 flex-col',
+                  tab !== 'homework' && 'hidden',
+                )}
+              >
+                <HomeworkTab
+                  bookId={BOOK_ID}
+                  initialSet={harness.props.initialSet as string | undefined}
+                  onJump={(page) => {
+                    harness.handoff({
+                      to: 'Page scan',
+                      what: 'Jump to a page',
+                      carries: `PDF page ${page}`,
+                    });
+                  }}
+                  onAskAbout={(a, sel) => {
+                    harness.handoff({
+                      to: 'Ask',
+                      what: 'Ask about this question',
+                      carries: `${a.label}: ${a.text.slice(0, 70)}`,
+                    });
+                    setAbout(a);
+                    setSelection(sel ?? null);
                     setTab('ask');
                   }}
-                >
-                  Ask
-                </UnderlineTab>
-                <UnderlineTab
-                  active={tab === 'homework'}
-                  onClick={() => {
-                    setTab('homework');
+                  onPickSelection={(sel) => {
+                    setSelection(sel);
                   }}
-                >
-                  Homework
-                </UnderlineTab>
-              </UnderlineNav>
-              <IconButton
-                variant="ghost"
-                size="sm"
-                aria-label="Focus on the panel"
-                disabled
-              >
-                <Columns2 />
-              </IconButton>
-            </div>
-            <BoxingStandIn />
-            <div
-              className={cn(
-                'flex min-h-0 flex-1 flex-col',
-                tab !== 'ask' && 'hidden',
-              )}
-            >
-              <AskStub about={about} />
-            </div>
-            <div
-              className={cn(
-                'flex min-h-0 flex-1 flex-col',
-                tab !== 'homework' && 'hidden',
-              )}
-            >
-              <HomeworkTab
-                bookId={BOOK_ID}
-                initialSet={harness.props.initialSet as string | undefined}
-                onJump={(page) => {
-                  harness.handoff({
-                    to: 'Page scan',
-                    what: 'Jump to a page',
-                    carries: `PDF page ${page}`,
-                  });
-                }}
-                onAskAbout={(a, sel) => {
-                  harness.handoff({
-                    to: 'Ask',
-                    what: 'Ask about this question',
-                    carries: `${a.label}: ${a.text.slice(0, 70)}`,
-                  });
-                  setAbout(a);
-                  setSelection(sel ?? null);
-                  setTab('ask');
-                }}
-                onPickSelection={(sel) => {
-                  setSelection(sel);
-                }}
-                onClearAbout={() => {
-                  setSelection(null);
-                  setAbout(null);
-                  harness.handoff({
-                    to: 'Ask',
-                    what: 'Drop the context chip',
-                    carries: 'the chip and its outline go together',
-                  });
-                }}
-                selection={selection}
-                onOpenSettings={() => {
-                  harness.handoff({
-                    to: 'Settings',
-                    what: 'Open Settings',
-                    carries: 'the connections section',
-                  });
-                }}
-                wide={harness.wide}
-              />
-            </div>
-          </aside>
-        </BookHereContext>
-      </BoxingProvider>
-    </Pages>
+                  onClearAbout={() => {
+                    setSelection(null);
+                    setAbout(null);
+                    harness.handoff({
+                      to: 'Ask',
+                      what: 'Drop the context chip',
+                      carries: 'the chip and its outline go together',
+                    });
+                  }}
+                  selection={selection}
+                  wide={harness.wide}
+                />
+              </div>
+            </aside>
+          </BookHereContext>
+        </BoxingProvider>
+      </Pages>
+    </ErrorActionsContext>
   );
 }

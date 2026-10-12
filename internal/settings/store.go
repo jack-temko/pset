@@ -7,6 +7,7 @@ import (
 	"errors"
 
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 )
 
 // Migrations creates one row per saved side, as JSON. Two sides don't earn a
@@ -34,18 +35,18 @@ func load(ctx context.Context, d *sql.DB, key string, v any) (bool, error) {
 		return false, nil
 	}
 	if err != nil {
-		return false, err
+		return false, errs.Database.Wrap(err)
 	}
-	return true, json.Unmarshal([]byte(raw), v)
+	return true, errs.Data.Of(json.Unmarshal([]byte(raw), v))
 }
 
 func save(ctx context.Context, d *sql.DB, key string, v any) error {
 	raw, err := json.Marshal(v)
 	if err != nil {
-		return err
+		return errs.Data.Wrap(err)
 	}
 	_, err = d.ExecContext(ctx, `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
 		ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
 		key, string(raw), db.Now())
-	return err
+	return errs.Database.Of(err)
 }

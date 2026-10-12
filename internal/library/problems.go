@@ -8,7 +8,7 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/probnum"
 )
 
@@ -88,12 +88,12 @@ func patchProblems(cur *probnum.Style, p ProblemsPatch) (probnum.Style, error) {
 	switch p.Form {
 	case probnum.FormChapter, probnum.FormSection, probnum.FormLocal:
 	default:
-		return probnum.Style{}, httpx.Invalid("problems", "That isn't a way of numbering problems.")
+		return probnum.Style{}, badProblemForm.New().OnField("problems")
 	}
 	switch p.Where {
 	case probnum.WhereChapter, probnum.WhereSection:
 	default:
-		return probnum.Style{}, httpx.Invalid("problems", "Problems sit after each section or at each chapter's end.")
+		return probnum.Style{}, badProblemWhere.New().OnField("problems")
 	}
 	st := probnum.Style{Form: p.Form, Where: p.Where, Sure: true, Confirmed: true}
 	if cur != nil {
@@ -121,13 +121,13 @@ func fillProblems(ctx context.Context, d queryer) error {
 		var b bare
 		if err := rows.Scan(&b.id, &b.count); err != nil {
 			cleanup.Close(rows)
-			return err
+			return errs.Database.Of(err)
 		}
 		todo = append(todo, b)
 	}
 	cleanup.Close(rows)
 	if err := rows.Err(); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	for _, b := range todo {
 		secs, err := loadSections(ctx, d, b.id)

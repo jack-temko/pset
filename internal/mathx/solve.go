@@ -37,7 +37,7 @@ func SolveLinear(a [][]string, b []string) ([]Value, error) {
 		for j := 0; j < n; j++ {
 			v, err := Eval(a[i][j])
 			if err != nil {
-				return nil, fmt.Errorf("matrix entry %d,%d: %v", i+1, j+1, err)
+				return nil, fmt.Errorf("matrix entry %d,%d: %w", i+1, j+1, err)
 			}
 			A[i][j] = v
 			if v.rat == nil {
@@ -49,7 +49,7 @@ func SolveLinear(a [][]string, b []string) ([]Value, error) {
 	for i := 0; i < n; i++ {
 		v, err := Eval(b[i])
 		if err != nil {
-			return nil, fmt.Errorf("right side entry %d: %v", i+1, err)
+			return nil, fmt.Errorf("right side entry %d: %w", i+1, err)
 		}
 		B[i] = v
 		if v.rat == nil {

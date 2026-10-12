@@ -1,6 +1,8 @@
 import { HomeworkStage } from './homework/stage';
 import { HomeworkWireframes } from './homework/wireframes';
 import { SCENARIOS as homework } from './homework/scenarios';
+import { ErrorNoticeStage } from './error-notice/stage';
+import { SCENARIOS as errorNotice } from './error-notice/scenarios';
 import type { ViewEntry } from './types';
 
 /** Every view on /views, in the sidebar's order. A view is added here when
@@ -21,6 +23,15 @@ const ALL: ViewEntry[] = [
     Stage: HomeworkStage,
     wideLabel: 'Focus',
     wireframes: HomeworkWireframes,
+  },
+  {
+    id: 'error-notice',
+    title: 'Error notice',
+    group: 'Workspace',
+    note: 'How PSet says something went wrong, in each place it says it: inline, on the shelf, as the screen banner, as a field line, and in Settings’ list of kept errors.',
+    scenarios: errorNotice,
+    spec: () => import('./error-notice/spec.md?raw').then((m) => m.default),
+    Stage: ErrorNoticeStage,
   },
 ];
 

@@ -226,7 +226,7 @@ func (l *Loop) Run(ctx context.Context, msgs []llm.Message) error {
 		for _, call := range reply.ToolCalls {
 			result, img := l.tool(ctx, call)
 			if ctx.Err() != nil {
-				return ctx.Err()
+				return fmt.Errorf("stopped: %w", ctx.Err())
 			}
 			msgs = append(msgs, llm.ToolMessage(call.ID, result))
 			images = append(images, img...)
@@ -295,10 +295,6 @@ const cutRetries = 2
 // emptyNudges is how many times one run asks again after a round that
 // ended with neither an answer nor a tool call.
 const emptyNudges = 1
-
-// ErrNoAnswer is a run whose model stopped without writing anything, even
-// when asked again. Trying the whole thing again usually works.
-var ErrNoAnswer = errors.New("the model stopped without writing an answer")
 
 func (l *Loop) step(label string, running bool) {
 	if l.Step != nil {

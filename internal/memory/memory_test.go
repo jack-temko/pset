@@ -15,7 +15,7 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/testx"
 )
 
@@ -75,9 +75,9 @@ func TestSaveRefuses(t *testing.T) {
 		"empty":    {Text: "   ", Source: SourceYou},
 		"too long": {Text: strings.Repeat("a", MaxText+1), Source: SourceYou},
 	} {
-		var e *httpx.Error
-		if _, _, err := s.Save(ctx, "b1", in); !errors.As(err, &e) || e.Code != httpx.CodeInvalid {
-			t.Errorf("%s: %v", name, err)
+		_, _, err := s.Save(ctx, "b1", in)
+		if v := errs.Resolve(err); v.Scope != errs.ScopeField || v.Field != "text" {
+			t.Errorf("%s: %+v", name, v)
 		}
 	}
 	// The tutor never overwrites the student's own.
@@ -204,13 +204,14 @@ func TestHTTP(t *testing.T) {
 		t.Fatalf("%+v", m)
 	}
 	resp, body = do("POST", "/api/books/b1/memories", `{"text":"  "}`)
-	var e httpx.Error
+	var e errs.View
 	testx.Check(t, json.Unmarshal(body, &e))
-	if resp.StatusCode != http.StatusUnprocessableEntity || e.Field != "text" {
+	if resp.StatusCode != http.StatusUnprocessableEntity || e.Field != "text" || e.ID != "memory.empty" {
 		t.Fatalf("%d %s", resp.StatusCode, body)
 	}
-	if resp, _ := do("POST", "/api/books/nope/memories", `{"text":"x"}`); resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("unknown book: %d", resp.StatusCode)
+	resp, body = do("POST", "/api/books/nope/memories", `{"text":"x"}`)
+	if resp.StatusCode != http.StatusNotFound || !strings.Contains(string(body), `"id":"book.not_found"`) {
+		t.Fatalf("unknown book: %d %s", resp.StatusCode, body)
 	}
 	_, body = do("GET", "/api/books/b1/memories", "")
 	var list Memories

@@ -7,7 +7,7 @@ import (
 	"errors"
 
 	"github.com/jackt/pset/internal/cleanup"
-	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/probnum"
 	"github.com/jackt/pset/internal/usage"
 )
@@ -21,14 +21,17 @@ const readColumns = `id, book_id, source, set_id, state, error, activity, result
 
 func scanRead(row interface{ Scan(...any) error }) (AssignmentRead, error) {
 	var r AssignmentRead
-	var result string
-	if err := row.Scan(&r.ID, &r.BookID, &r.Source, &r.SetID, &r.State, &r.Error, &r.Activity, &result, &r.CreatedAt, &r.UpdatedAt); err != nil {
+	var result, failed string
+	if err := row.Scan(&r.ID, &r.BookID, &r.Source, &r.SetID, &r.State, &failed, &r.Activity, &result, &r.CreatedAt, &r.UpdatedAt); err != nil {
 		return r, err
+	}
+	if v, ok := errs.ParseStored(failed); ok {
+		r.Error = &v
 	}
 	if result != "" {
 		var a Assignment
 		if err := json.Unmarshal([]byte(result), &a); err != nil {
-			return r, err
+			return r, errs.Data.Wrap(err)
 		}
 		r.Assignment = &a
 	}
@@ -44,7 +47,7 @@ func (s *Service) Reads(ctx context.Context, bookID string) ([]AssignmentRead, e
 	}
 	rows, err := s.c.DB.QueryContext(ctx, `SELECT `+readColumns+` FROM assignment_reads WHERE book_id = ? ORDER BY created_at DESC`, bookID)
 	if err != nil {
-		return nil, err
+		return nil, errs.Database.Wrap(err)
 	}
 	defer cleanup.Close(rows)
 	out := []AssignmentRead{}
@@ -56,7 +59,7 @@ func (s *Service) Reads(ctx context.Context, bookID string) ([]AssignmentRead, e
 		out = append(out, r)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, errs.Database.Wrap(err)
 	}
 	for i := range out {
 		if err := s.mark(ctx, book.Problems, out[i]); err != nil {
@@ -81,7 +84,7 @@ func (s *Service) Reads(ctx context.Context, bookID string) ([]AssignmentRead, e
 func (s *Service) Read(ctx context.Context, id string) (AssignmentRead, error) {
 	r, err := scanRead(s.c.DB.QueryRowContext(ctx, `SELECT `+readColumns+` FROM assignment_reads WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
-		return r, httpx.NotFound("assignment")
+		return r, errs.Gone.New("thing", "assignment")
 	} else if err != nil {
 		return r, err
 	}
@@ -100,15 +103,15 @@ func (s *Service) DismissRead(ctx context.Context, id string) error {
 	var bookID string
 	err := s.c.DB.QueryRowContext(ctx, `SELECT book_id FROM assignment_reads WHERE id = ?`, id).Scan(&bookID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return httpx.NotFound("assignment")
+		return errs.Gone.New("thing", "assignment")
 	} else if err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	if err := s.c.Queue.StopSubject(ctx, id); err != nil {
 		return err
 	}
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM assignment_reads WHERE id = ?`, id); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	if err := usage.Forget(ctx, s.c.DB, usage.SubjectRead, id); err != nil {
 		return err
@@ -127,8 +130,7 @@ func (s *Service) publishRead(ctx context.Context, id string) (AssignmentRead, e
 }
 
 func isNotFound(err error) bool {
-	var he *httpx.Error
-	return errors.As(err, &he) && he.Code == httpx.CodeNotFound
+	return errors.Is(err, errs.Gone)
 }
 
 // mark compares a read's dates with the sets they'd update: a set made
@@ -145,19 +147,19 @@ func (s *Service) mark(ctx context.Context, style probnum.Style, r AssignmentRea
 		rows, err := s.c.DB.QueryContext(ctx, `SELECT due_date, id FROM homework WHERE book_id = ? AND source = ? AND due_date != '' ORDER BY created_at`,
 			r.BookID, a.Source)
 		if err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		for rows.Next() {
 			var due, id string
 			if err := rows.Scan(&due, &id); err != nil {
 				cleanup.Close(rows)
-				return err
+				return errs.Database.Of(err)
 			}
 			sets[due] = id
 		}
 		cleanup.Close(rows)
 		if err := rows.Err(); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 	}
 	for gi := range a.Groups {

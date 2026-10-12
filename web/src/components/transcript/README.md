@@ -27,13 +27,10 @@ chat where you ask, page where it answers. No bubbles.
 - **`ConversationStart`**: the top of the endless history:
   "Start of conversation · Clear". Clear asks first, in a
   ConfirmPopover under it.
-- **`FailedTurn`**: one destructive-ink line + Try again; the feed above
-  stays frozen, partial text stays. A setup failure (no OpenRouter key) passes
-  `onSetup` and gains **Open Settings**, which leads (outline) while Try
-  again steps back to ghost: retrying can't help until Settings is fixed.
-  The two buttons take their own row under the sentence, which is too
-  long to share a line with them in the panel.
-  The same line serves a question that never sent.
+- **A failed turn** is an `ErrorNotice` under the frozen feed: partial text
+  stays, the notice says what, why and the fix, and its Try again re-asks.
+  A setup failure (no OpenRouter key) gains Open Settings from the error's
+  own action. The same notice serves a question that never sent.
 
 **Don't:** give steps chevrons or results; render citations as bare
 links or cards; put actions on user turns; auto-clear anything.

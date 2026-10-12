@@ -68,7 +68,7 @@ func (c *scanCache) get(ctx context.Context, b row, path string, page, width int
 		case <-f.done:
 			return f.data, f.err
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return nil, fmt.Errorf("stopped: %w", ctx.Err())
 		}
 	}
 	f := &flight{done: make(chan struct{})}

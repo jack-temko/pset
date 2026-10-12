@@ -24,8 +24,8 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/events"
-	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pagenum"
@@ -128,7 +128,7 @@ func (s *Service) List(ctx context.Context) ([]Book, error) { return listBooks(c
 func (s *Service) Get(ctx context.Context, id string) (Book, error) {
 	r, err := getBook(ctx, s.c.DB, id)
 	if errors.Is(err, errNotFound) {
-		return Book{}, httpx.NotFound("book")
+		return Book{}, errs.BookNotFound.New()
 	}
 	return r.Book, err
 }
@@ -148,11 +148,11 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 		return Book{}, err
 	}
 	if err := os.MkdirAll(s.booksDir(), 0o700); err != nil {
-		return Book{}, err
+		return Book{}, errs.Disk.Wrap(err)
 	}
 	tmp, err := os.CreateTemp(s.booksDir(), ".upload-*")
 	if err != nil {
-		return Book{}, err
+		return Book{}, errs.Disk.Wrap(err)
 	}
 	defer cleanup.Remove(tmp.Name()) // a no-op once renamed
 	h := sha256.New()
@@ -162,21 +162,21 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 		return Book{}, fmt.Errorf("stage upload: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
-		return Book{}, err
+		return Book{}, errs.Disk.Wrap(err)
 	}
 	if !head.isPDF() {
-		return Book{}, httpx.Invalid("file", "That isn't a PDF.")
+		return Book{}, notPDF.New().OnField("file")
 	}
 	sha := hex.EncodeToString(h.Sum(nil))
 	if existing, err := bookBySHA(ctx, s.c.DB, sha); err == nil {
-		return Book{}, httpx.Errorf(httpx.CodeDuplicateBook, "%s is already on your shelf.", existing.Title).About(existing.ID)
+		return Book{}, bookDuplicate.New("title", existing.Title).About(existing.ID)
 	} else if !errors.Is(err, errNotFound) {
 		return Book{}, err
 	}
 
 	id := uuid.NewString()
 	if err := os.Rename(tmp.Name(), s.pdfPath(id)); err != nil {
-		return Book{}, err
+		return Book{}, errs.Disk.Wrap(err)
 	}
 	// The colours are counted before the transaction, which then only
 	// writes: a read that turns into a write fails outright (SQLITE_BUSY,
@@ -192,7 +192,7 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO books (id, sha256, title, cover, state, created_at, updated_at) VALUES (?, ?, ?, ?, 'queued', ?, ?)`,
 			id, sha, filenameTitle(filename), pickCover(sha, used), now, now); err != nil {
-			return err
+			return errs.Database.Wrap(err)
 		}
 		_, err := s.c.Queue.Enqueue(ctx, tx, examineJob(id))
 		return err
@@ -202,7 +202,7 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 		// Two uploads of the same file at once: the second loses the race
 		// on the unique sha and is the duplicate after all.
 		if existing, e := bookBySHA(ctx, s.c.DB, sha); e == nil {
-			return Book{}, httpx.Errorf(httpx.CodeDuplicateBook, "%s is already on your shelf.", existing.Title).About(existing.ID)
+			return Book{}, bookDuplicate.New("title", existing.Title).About(existing.ID)
 		}
 		return Book{}, err
 	}
@@ -251,7 +251,7 @@ func (s *Service) Update(ctx context.Context, id string, p BookPatch) (Book, err
 	if p.Title != nil {
 		t := strings.TrimSpace(*p.Title)
 		if t == "" {
-			return Book{}, httpx.Invalid("title", "A book needs a title.")
+			return Book{}, titleEmpty.New().OnField("title")
 		}
 		cur.Title = t
 	}
@@ -275,7 +275,7 @@ func (s *Service) Update(ctx context.Context, id string, p BookPatch) (Book, err
 	}
 	if p.Cover != nil {
 		if !validCover(*p.Cover) {
-			return Book{}, httpx.Invalid("cover", "That isn't one of the cover colours.")
+			return Book{}, badCover.New().OnField("cover")
 		}
 		cur.Cover = *p.Cover
 	}
@@ -287,11 +287,11 @@ func (s *Service) Update(ctx context.Context, id string, p BookPatch) (Book, err
 	if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET title = ?, author = ?, page_runs = ?, page_offset = ?, cover = ?,
 		edited = edited OR ?, pages_edited = pages_edited OR ?, updated_at = ? WHERE id = ?`,
 		cur.Title, cur.Author, runsJSON(cur.PageRuns), cur.PageRuns[0].Offset, cur.Cover, named, numbered, db.Now(), id); err != nil {
-		return Book{}, err
+		return Book{}, errs.Database.Wrap(err)
 	}
 	if problems != "" {
 		if _, err := s.c.DB.ExecContext(ctx, `UPDATE books SET problem_style = ? WHERE id = ?`, problems, id); err != nil {
-			return Book{}, err
+			return Book{}, errs.Database.Wrap(err)
 		}
 	}
 	return s.publish(ctx, id)
@@ -318,7 +318,7 @@ func (s *Service) Remove(ctx context.Context, id string) error {
 		}
 	}
 	if _, err := s.c.DB.ExecContext(ctx, `DELETE FROM books WHERE id = ?`, id); err != nil {
-		return err
+		return errs.Database.Wrap(err)
 	}
 	cleanup.Remove(s.pdfPath(id))
 	s.scans.drop(id)
@@ -339,12 +339,12 @@ func (s *Service) Stop(ctx context.Context, id string) (Book, error) {
 	if err := s.c.Queue.StopSubject(ctx, id); err != nil {
 		return Book{}, err
 	}
-	reason := "Stopped."
+	why := errs.Resolve(importStopped.New("title", b.Title))
 	if b.State.Kind == StateQueued && b.Kind == KindUnknown {
 		// Nothing has happened to it yet; an examined book has begun.
-		reason = "Cancelled before it started."
+		why = errs.Resolve(importCancelled.New("title", b.Title))
 	}
-	if err := setState(ctx, s.c.DB, id, BookState{Kind: StateFailed, Reason: reason}); err != nil {
+	if err := setState(ctx, s.c.DB, id, BookState{Kind: StateFailed, Error: &why}); err != nil {
 		return Book{}, err
 	}
 	return s.publish(ctx, id)
@@ -355,21 +355,18 @@ func (s *Service) Stop(ctx context.Context, id string) (Book, error) {
 // it's a program on this machine that may not be running.
 func preparable(ctx context.Context, cfg llm.Config) error {
 	if !cfg.ChatReady() {
-		return httpx.Errorf(httpx.CodeNotConfigured, "Add your OpenRouter key in Settings first. Books need it to be prepared.")
+		return llm.KeyMissing.New()
 	}
 	if !cfg.EmbedReady() {
-		return httpx.Errorf(httpx.CodeNotConfigured, noOllama)
+		return ollamaDown.New()
 	}
 	probe, cancel := context.WithTimeout(ctx, ollamaProbe)
 	defer cancel()
 	if _, err := llm.Open(cfg).Embed(probe, []string{"probe"}); err != nil {
-		return httpx.Errorf(httpx.CodeNotConfigured, noOllama)
+		return ollamaDown.New()
 	}
 	return nil
 }
-
-// noOllama is what an import says when Ollama doesn't answer.
-const noOllama = "PSet can't reach Ollama, which searches your books. Settings, under Health, says how to start it."
 
 // ollamaProbe is how long an upload waits on Ollama: long enough for it
 // to load the model from disk on a first call.
@@ -383,7 +380,7 @@ func (s *Service) Retry(ctx context.Context, id string) (Book, error) {
 		return Book{}, err
 	}
 	if b.State.Kind != StateFailed {
-		return Book{}, httpx.Errorf(httpx.CodeInvalid, "Only a book that failed to import can be tried again.")
+		return Book{}, errs.Stale.New("thing", "book")
 	}
 	cfg, err := s.c.Models.LLM(ctx)
 	if err != nil {
@@ -483,7 +480,7 @@ func (s *Service) Search(ctx context.Context, bookID, query string, k int) ([]in
 		q, err := llm.Open(cfg).Embed(ctx, []string{query})
 		switch {
 		case ctx.Err() != nil:
-			return nil, ctx.Err()
+			return nil, fmt.Errorf("stopped: %w", ctx.Err())
 		case err != nil:
 			// Ollama stopped or is slow: the text ranking still answers, and
 			// a tutor that can't search at all is worse than one that

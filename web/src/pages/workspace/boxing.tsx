@@ -1,3 +1,5 @@
+import { errorView } from '@/api/client';
+import { errorLine } from '@/lib/error-text';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Image as ImageIcon, Type, X } from 'lucide-react';
 
@@ -96,7 +98,7 @@ export function BoxingProvider({
           } catch (e) {
             setError(
               e instanceof Error
-                ? e.message
+                ? errorLine(errorView(e))
                 : "Couldn't send the boxes. Try again.",
             );
           } finally {

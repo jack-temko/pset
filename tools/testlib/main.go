@@ -194,7 +194,7 @@ func snapshot(args []string) error {
 		}
 	}
 	if after, err := listing(src); err != nil || after != before {
-		return fmt.Errorf("the source %s changed during the snapshot (err %v)", src, err)
+		return fmt.Errorf("the source %s changed during the snapshot (err %w)", src, err)
 	}
 	m, err := manifest(ctx, f, src, tmp)
 	cleanup.Close(f)

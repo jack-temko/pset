@@ -69,7 +69,6 @@ export function HomeworkTab({
   onPickSelection,
   onClearAbout,
   selection,
-  onOpenSettings,
   onQuestion,
   wide,
 }: {
@@ -81,7 +80,6 @@ export function HomeworkTab({
   onPickSelection: (selection: PendingSel) => void;
   onClearAbout: () => void;
   selection: PendingSel | null;
-  onOpenSettings: () => void;
   /** The question on screen, or null when none is (the list, the finish
    *  page): the workspace counts time against it. */
   onQuestion?: (id: string | null) => void;
@@ -126,7 +124,6 @@ export function HomeworkTab({
           onPickSelection={onPickSelection}
           onClearAbout={onClearAbout}
           selection={selection}
-          onOpenSettings={onOpenSettings}
           onQuestion={onQuestion}
           wide={wide}
         />

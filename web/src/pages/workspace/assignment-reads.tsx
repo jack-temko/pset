@@ -1,3 +1,4 @@
+import { errorLine } from '@/lib/error-text';
 import { CircleAlert, FileCheck, X } from 'lucide-react';
 
 import { Box, BoxRow } from '@/components/box';
@@ -120,7 +121,9 @@ export function AssignmentReadRow({
         wrapDescription={!!r.usage}
         description={
           <>
-            <span className="text-warning">{r.error}</span>
+            <span className="text-warning">
+              {r.error ? errorLine(r.error) : null}
+            </span>
             {r.usage && (
               <>
                 {'\u00A0·'}{' '}

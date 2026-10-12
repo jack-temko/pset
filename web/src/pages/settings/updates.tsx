@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { CircleAlert, CircleCheck } from 'lucide-react';
+import { CircleCheck } from 'lucide-react';
 
 import { Box, BoxBody, BoxFooter, BoxRow } from '@/components/box';
 import { Button } from '@/components/button';
 import { Skeleton } from '@/components/skeleton';
 import { Spinner } from '@/components/spinner';
-import { get } from '@/api/client';
+import { errorView, get } from '@/api/client';
+import { ErrorNotice } from '@/components/error-notice';
 import {
   useApplyUpdate,
   useCheckUpdate,
@@ -124,9 +125,8 @@ export function Updates() {
         }
       />
       {error && (
-        <BoxBody className="flex items-start gap-2 text-sm text-destructive">
-          <CircleAlert className="mt-1 size-4 shrink-0" />
-          {error.message}
+        <BoxBody>
+          <ErrorNotice error={errorView(error)} className="border-0 p-0" />
         </BoxBody>
       )}
       {available && coming === null && (

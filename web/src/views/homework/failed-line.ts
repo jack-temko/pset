@@ -1,4 +1,5 @@
 import type { Question } from '@/api/homework';
+import { failureKind } from './failure-kind';
 
 /** How long ago, in words that read mid-sentence. */
 export function agoWords(ms: number): string {
@@ -21,6 +22,6 @@ export function failedLine(q: Question, now = Date.now()): string | null {
   const tries = q.attempts ?? 0;
   if (tries > 0)
     return `${tries === 1 ? 'Tried once more' : `Tried ${tries} more times`} and it failed again${ago ? `, ${ago}` : ''}.`;
-  if (q.failure === 'unavailable' && ago) return `It failed ${ago}.`;
+  if (failureKind(q.error) === 'unavailable' && ago) return `It failed ${ago}.`;
   return null;
 }

@@ -96,7 +96,14 @@ export const BOOKS: Book[] = [
     author: 'Clayden and Greeves',
     state: {
       kind: 'failed',
-      reason: "This PDF can't be read. pset couldn't open it.",
+      error: {
+        id: 'import.failed',
+        what: "Couldn't prepare Organic Chemistry.",
+        why: "PSet couldn't open it, so it may be damaged or locked.",
+        fix: 'Try a different copy of the file.',
+        scope: 'inline',
+        chain: ['import.failed', 'import.pdf_unreadable'],
+      },
     },
   }),
   sampleBook({
