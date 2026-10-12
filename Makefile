@@ -2,7 +2,7 @@
 # Vite with /api proxied. Go lives in /usr/local/go/bin, nvm's node first.
 export PATH := $(HOME)/.nvm/versions/node/v24.18.0/bin:$(PATH):/usr/local/go/bin
 
-.PHONY: dev test-library seed gen check-gen katex-check fmt fmt-check lint test check build release jumps
+.PHONY: dev test-library seed gen check-gen katex-check fmt fmt-check lint test check check-fast build release jumps
 
 dev:
 	go run ./tools/dev
@@ -69,6 +69,12 @@ test:
 # generated TypeScript against Go's wire types.
 check: fmt-check lint test check-gen
 	go test -race ./...
+
+# What CI runs on the courses branch while the redesign iterates (D33 in
+# ideas/courses-grill.md): the format check, the linters (golangci-lint compiles
+# the Go code) and the web's types. No tests, no race run. Track 13 removes it.
+check-fast: fmt-check lint
+	cd web && npx tsc -b
 
 build:
 	cd web && npm run build
