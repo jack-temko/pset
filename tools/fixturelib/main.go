@@ -26,6 +26,7 @@ import (
 	"github.com/jackt/pset/internal/ask"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/homework"
 	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/library"
@@ -348,19 +349,22 @@ func addHomework(ctx context.Context, d *sql.DB, b book, now, at time.Time) erro
 			if n == 1 && !s.finished {
 				revealed = `["hint"]`
 			}
-			doneAt, reason, failure, activity := "", "", "", ""
+			doneAt, failed, activity := "", "", ""
 			if s.finished {
 				doneAt = ts
 			}
 			switch state {
 			case "failed":
-				reason, failure = "The guide could not be written.", "generation"
+				failed = errs.Stored{
+					Chain:  []string{"homework.question_failed"},
+					Params: map[string]string{"step": "write the guide for", "name": label},
+				}.Marshal()
 			case "writing":
 				activity = "Getting started…"
 			}
-			if _, err := d.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, page, figures, revealed, hint, walkthrough, state, reason, failure, activity, difficulty, done_at, created_at, updated_at)
-				VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				qid, s.id, n, text, label, statement(text), 1+n%b.pages, figs, revealed, hnt, walk, state, reason, failure, activity, 1+n%5, doneAt, ts, ts); err != nil {
+			if _, err := d.ExecContext(ctx, `INSERT INTO questions (id, homework_id, position, text, in_book, label, statement, page, figures, revealed, hint, walkthrough, state, error, activity, difficulty, done_at, created_at, updated_at)
+				VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				qid, s.id, n, text, label, statement(text), 1+n%b.pages, figs, revealed, hnt, walk, state, failed, activity, 1+n%5, doneAt, ts, ts); err != nil {
 				return err
 			}
 			if state == "ready" {
