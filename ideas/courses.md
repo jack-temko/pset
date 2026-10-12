@@ -24,7 +24,8 @@ The words are fixed in the grill's Glossary: use them, in code and on screen.
 - Read the Summary of `ideas/courses-grill.md` before deciding anything. Do
   not decide again what is there. What is not there is Jack's to decide: send
   it back to the orchestrator, who asks him.
-- The work lands on the integration branch `courses`, not `dev`. A track is
+- The work lands on the integration branch `courses`, not `dev`, until
+  milestone 1. A track is
   one `/change`: its own branch and worktree from `origin/courses`
   (`git worktree add ../pset-<topic> -b <topic> origin/courses`), `make
   check`, a pull request with `--base courses`, and Jack's approval before it
@@ -32,12 +33,20 @@ The words are fixed in the grill's Glossary: use them, in code and on screen.
 - The truth is the copy on `courses`:
   `git fetch origin courses && git show origin/courses:ideas/courses.md`.
   Only the orchestrator pushes a change to this file alone straight to
-  `courses`, and formats it with `oxfmt` first, since that push skips `make
-  check`.
-- The `/change` skill and its role briefs name `dev` as the base; for a track of the redesign, read `courses` wherever they say `dev` (the worktree from `origin/courses`, `--base courses`, diffs against `origin/courses`), and every brief says so.
+  `courses`, and formats it with `oxfmt` first, since nothing checks it before it lands, and the check that runs after the push turns `courses` red if it is badly formatted.
+- The `/change` skill and its role briefs name `dev` as the base; for a
+  track of the redesign, read `courses` wherever they say `dev` (the
+  worktree from `origin/courses`, `--base courses`, diffs against
+  `origin/courses`), and every brief says so.
 - `courses` is cut from `dev` when track 0 opens, and track 0's pull request
-  is the first into it. `courses` takes `dev` in through a pull request from
-  `dev` into `courses`, merged with a merge commit after Jack approves it.
+  is the first into it. `courses` takes `dev` in through a pull request from a
+  branch cut from `origin/courses` with `origin/dev` merged into it (named
+  `courses-take-dev`), not from `dev` itself, so a conflict can be fixed on
+  that branch. It is merged into `courses` with a merge commit after Jack
+  approves it.
+- No ruleset guards `courses` (the `dev` ruleset covers `dev` only), so the
+  lander itself waits for a green `check` and an up-to-date branch before
+  any merge into `courses`, and squash-merges a track.
 - Take only a track whose "Needs" tracks are Done. The orchestrator puts your
   branch on its row when you start and the pull request when it opens.
 - Leave the row true when you stop: its status, and a note of anything the
@@ -60,7 +69,7 @@ The words are fixed in the grill's Glossary: use them, in code and on screen.
 
 ### Tracks
 
-One track is one pull request into `courses`. Statuses: Not started, In
+Tracks 0 to 13: one track is one pull request into `courses`. Statuses: Not started, In
 progress, In review (pull request open), Waiting on Jack, Done, Dropped.
 "Try" is what Jack does to approve it.
 
@@ -90,7 +99,9 @@ for its part. Track 8 is first; 10, 11 and 12 can run side by side after 9.
 | 12  | What the course owns   | Memory, study time, cost, errors and events keyed by the course; this week on Home                                                                                                                                                                                              | 8        | Memory and usage dialogs, this week on Home                      | Not started |                         |
 | 13  | Clearing out           | The book-centred code and the leftover sample data removed; `courses` taken out of `ci.yml` and its bullet out of `AGENTS.md`; the test library rebuilt for courses; `design/` rewritten (workspace, backend, import, memory, Home). Jack's scanned textbook carried over (A14) | 10 to 12 | A full evening's use, then `courses` into `dev`                  | Not started |                         |
 
-**What waited (milestone 2)**, each its own track after milestone 1:
+**What waited (milestone 2).** `courses` ends at milestone 1. Tracks 14 to 17
+land on `dev` as ordinary changes after it, under the usual `AGENTS.md`
+rules:
 
 | #   | Track                   | What it does                                                                                | Needs | Status      | Branch and pull request |
 | --- | ----------------------- | ------------------------------------------------------------------------------------------- | ----- | ----------- | ----------------------- |
@@ -105,6 +116,8 @@ risk list: planned at least, with a second review.
 ### Waiting on Jack
 
 - His approval of track 0's pull request.
+- Whether he adds a ruleset on `courses` in GitHub: require `check`, block
+  force pushes and deletion, with a bypass for the tracker push.
 
 ### Other work touching the same screens
 

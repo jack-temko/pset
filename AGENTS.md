@@ -16,21 +16,26 @@
   throwaway branches are named the same way. Commits carry no
   Co-Authored-By and no "Generated with" lines.
 - **The courses redesign lands on `courses`, not `dev`** (decided 2026-10-11,
-  D24 in `ideas/courses-grill.md`). While it runs, each of its tracks branches
-  from `origin/courses` and opens its pull request with `--base courses`,
-  under every other rule here: a named branch and worktree, `make check`,
-  Jack's approval before a merge, a squash-merge. `courses` takes `dev` in
-  through a pull request from `dev` into `courses`, merged with a merge commit
-  (not a squash) after Jack approves it like any other, and only Jack takes
-  `courses` into `dev`, at a milestone. The one direct push allowed is a change to `ideas/courses.md`
+  D24 in `ideas/courses-grill.md`). Until milestone 1, each of its tracks
+  branches from `origin/courses` and opens its pull request with `--base
+  courses`, under every other rule here: a named branch and worktree, `make
+  check`, Jack's approval before a merge, a squash-merge. No ruleset guards
+  `courses` (the `dev` ruleset covers `dev` only), so the lander itself waits
+  for a green `check` and an up-to-date branch before any merge into
+  `courses`, and squash-merges a track. `courses` takes `dev` in through a
+  pull request from a branch cut from `origin/courses` with `origin/dev`
+  merged into it (`courses-take-dev`), so a conflict is fixed on that branch;
+  it is merged into `courses` with a merge commit (not a squash) after Jack
+  approves it like any other. Only Jack takes `courses` into `dev`, at a
+  milestone. The one direct push allowed is a change to `ideas/courses.md`
   alone, the program's tracker, by the orchestrator. Work that is not part of
   the redesign lands on `dev` as before. The tracks and who has each are in
   `ideas/courses.md`. The `/change` skill and its role briefs name `dev` as
   the base; for a track of the redesign, read `courses` wherever they say
   `dev` (the worktree from `origin/courses`, `--base courses`, diffs against
-  `origin/courses`), and the orchestrator says so in every brief. When the
-  redesign is done, remove this bullet and take `courses` out of
-  `.github/workflows/ci.yml`.
+  `origin/courses`), and the orchestrator says so in every brief. When
+  `courses` has gone into `dev` (milestone 1), remove this bullet and take
+  `courses` out of `.github/workflows/ci.yml`.
 
 **Landing a change** (the tests, and the real app for a UI change, first):
 

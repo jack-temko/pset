@@ -136,16 +136,17 @@ Taken at my recommendation because Jack did not decide. He overrules any.
 - A12: A course is a name only, and removing it is the only way to put it away for now.
 - A13: Adding a sheet starts today's assignment read, and its review makes the set. Pasting text, a link and making a set by hand stay.
 - A14: Jack's scanned textbook is carried into its course once, by an agent with his go-ahead at that moment, so it is not read again. It is not a feature.
-- A15: The orchestrator may commit changes to `ideas/courses.md` alone straight to `courses`, so a status never waits on a pull request. Everything else goes by pull request. Agents read `origin/courses:ideas/courses.md`. The file is formatted (`oxfmt`) before such a push, since it skips `make check`.
+- A15: The orchestrator may commit changes to `ideas/courses.md` alone straight to `courses`, so a status never waits on a pull request. Everything else goes by pull request. Agents read `origin/courses:ideas/courses.md`. The file is formatted (`oxfmt`) before such a push, since nothing checks it before it lands, and the check that runs after the push turns `courses` red if it is badly formatted.
 - A16: The mock phase ends with the new screens joined on the real routes over one sample data file, which is the contract the backend is built against, as in the September overhaul.
 - A17: The exact URLs are the builder's, within the Screens table.
-- A18: `courses` takes `dev` in through a pull request from `dev`, merged with a merge commit after Jack approves it, so other work in flight (jumps-guard) arrives as it lands on `dev`.
+- A18: `courses` takes `dev` in through a pull request from a branch cut from `origin/courses` with `origin/dev` merged into it (`courses-take-dev`), not from `dev` itself, so a conflict can be fixed on that branch. It is merged into `courses` with a merge commit after Jack approves it. Other work in flight (jumps-guard) arrives as it lands on `dev`.
+- A19: `courses` ends at milestone 1. The tracks of milestone 2 land on `dev` as ordinary changes.
 
 ### Open
 
 - What exam prep holds (D9): its own grill, when Jack says.
 - Each view's layout: its own `pset-view` grill in the mock tracks.
-- How `courses` reaches `dev` at a milestone (a merge commit or a squash): Jack's, at the milestone.
+- How `courses` reaches `dev` at a milestone (a merge commit or a squash): Jack's, at the milestone. The `dev` ruleset allows only a squash, so a merge commit would need Jack's bypass or a ruleset change; since `courses` ends there (A19), a squash loses nothing but the track history on `dev`.
 - Notes, posted solutions and an "other" kind (D18): after milestone 2.
 
 ## Reversals
