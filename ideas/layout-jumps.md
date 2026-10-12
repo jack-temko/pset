@@ -2,10 +2,10 @@
 
 ## Status
 
-In progress, branch `layout-jump-audit` (change 1 of 2: the audit, built; `make jumps`
-is documented in `design/design-system.md`). Change 2, the loading standard and its
-fixes, is settled in `ideas/loading-standard-grill.md` (approved) and builds on the
-follow-up branch `loading-overlays`.
+Done. The audit (`make jumps`, #28), the loading standard's primitive and dialogs
+(`loading-overlays`, #29), every screen (`loading-screens`, #35) and the guard that
+fails a PR on any jump (`jumps-guard`, #30) have all landed; the rules are in
+`design/design-system.md` and the decisions in `ideas/loading-standard-grill.md`.
 
 ## Information
 

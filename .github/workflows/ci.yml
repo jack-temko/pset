@@ -13,7 +13,10 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      # All history, so the jump guard can diff a pull request against its base.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -27,6 +30,61 @@ jobs:
       - run: npm ci
         working-directory: web
       - run: make check
+
+      # The jump guard (ideas/jumps-guard.md): only for a change that can make
+      # something jump. It builds a public fixture library, so it needs no
+      # secret and calls no model.
+      - name: Does this change touch the UI or the guard?
+        id: ui
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            range="origin/${{ github.base_ref }}...HEAD"
+          else
+            range="${{ github.event.before }}...HEAD"
+          fi
+          if git diff --name-only "$range" 2>/dev/null | grep -Eq '^(web/|tools/jumps\.sh|tools/fixturelib/)'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif ! git diff --name-only "$range" >/dev/null 2>&1; then
+            # No usable range (a new branch's first push): run it.
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Playwright version
+        if: steps.ui.outputs.changed == 'true'
+        id: pw
+        working-directory: web
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      # Restored and saved apart, so a failing guard still saves the browser.
+      - uses: actions/cache/restore@v4
+        id: browser
+        if: steps.ui.outputs.changed == 'true'
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - name: Install Chromium
+        if: steps.ui.outputs.changed == 'true'
+        working-directory: web
+        run: |
+          npx playwright install --with-deps chromium
+          command -v sqlite3 >/dev/null || sudo apt-get install -y sqlite3
+      - uses: actions/cache/save@v4
+        if: always() && steps.browser.outputs.cache-hit != 'true' && steps.ui.outputs.changed == 'true'
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - name: Jump guard
+        if: steps.ui.outputs.changed == 'true'
+        run: make jumps-check
+      - name: Jump report
+        if: failure() && steps.ui.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jumps-report
+          path: |
+            /tmp/pset-jumps-*/20*
+            /tmp/pset-jumps-*/server.log
+            /tmp/pset-jumps-*/vite.log
 
   # What friends run: the shipped web bundle and the server, built. Only for
   # a release.
