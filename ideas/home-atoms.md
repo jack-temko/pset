@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress, branch `home-atoms` (base `design`).
+Done, branch `home-atoms` (base `design`), pending Jack's try and approval.
 
 ## Information
 

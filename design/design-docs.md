@@ -91,6 +91,17 @@ deliberately broken fixture.
 `web/src/design/sample/` is a test fixture (a component and a view), shown at the hidden
 `/design/sample` and deleted when the format is locked.
 
+## The first units
+
+Three components are the first real units, built for Home (`ideas/home-atoms.md`): Button
+(four variants, one size, never disabled: busy or not ready instead), Text link (underlined
+inside text, plain when standing alone) and Tag (one shape, two tones). The Components tab
+now appears with them. They added `danger-solid`, `on-danger`, `neutral-soft` and the
+interaction steps (`hover`, `pressed`, and hover and pressed for each solid ground) to the
+foundations, and two rules, `one-primary` and `links-go-buttons-do`. A solid ground takes
+black for hover and pressed, so its white label keeps 4.5:1; a transparent control takes
+`fg`.
+
 ## Freeze and lock
 
 The spec is frozen when this system merges. Then enough components are built for one view,

@@ -77,7 +77,7 @@ export function Button({
         aria-disabled={notReady ? true : undefined}
         aria-describedby={notReady ? reasonId : undefined}
         style={{ fontWeight: 500, width: pinned }}
-        className={`ds-body inline-flex h-(--ds-control) max-w-full min-w-16 items-center justify-center rounded-(--ds-radius-control) border ${tight ? 'gap-1 px-0.5' : 'gap-2 px-3'} whitespace-nowrap ${look}`}
+        className={`ds-body inline-flex h-(--ds-control) max-w-full min-w-16 items-center justify-center rounded-(--ds-radius-control) border ${tight ? 'gap-1 px-[2px]' : 'gap-2 px-3'} whitespace-nowrap ${look}`}
         onClick={(e) => {
           if (busy) {
             e.preventDefault();

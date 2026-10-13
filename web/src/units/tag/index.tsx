@@ -22,7 +22,7 @@ export function Tag({
     <span
       className={`ds-small inline-flex h-6 max-w-full items-center gap-1 rounded-(--ds-radius-tag) px-2 whitespace-nowrap ${TONES[tone]}`}
     >
-      {Icon && <Icon className="size-3.5 shrink-0" aria-hidden />}
+      {Icon && <Icon className="size-4 shrink-0" aria-hidden />}
       <span className="min-w-0 truncate">{children}</span>
     </span>
   );
