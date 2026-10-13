@@ -18,8 +18,12 @@
 - **The courses redesign lands on `courses`, not `dev`** (decided 2026-10-11,
   D24 in `ideas/courses-grill.md`). Until milestone 1, each of its tracks
   branches from `origin/courses` and opens its pull request with `--base
-  courses`, under every other rule here: a named branch and worktree, `make
-  check`, Jack's approval before a merge, a squash-merge. No ruleset guards
+  courses`, under every other rule here: a named branch and worktree, Jack's
+  approval before a merge, a squash-merge. Until milestone 1 a track runs
+  `make check-fast` (format, lint, typecheck) instead of `make check`, and
+  keeps Jack's approval, one review and the screenshots in both themes; there
+  is no second review. The full `make check` returns in track 13, before
+  `courses` goes into `dev` (D33, D34). No ruleset guards
   `courses` (the `dev` ruleset covers `dev` only), so the lander itself waits
   for a green `check` and an up-to-date branch before any merge into
   `courses`, and squash-merges a track. `courses` takes `dev` in through a

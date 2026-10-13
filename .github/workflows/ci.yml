@@ -2,8 +2,10 @@ name: CI
 
 # Every change lands on dev by pull request (the courses redesign lands on
 # its integration branch `courses`, temporary, see AGENTS.md), and the ruleset
-# needs `check` green. A pull request into main (a release) or a push to it also runs the
-# bundle build and the vulnerability scan. Spec: ideas/git-workflow-grill.md.
+# needs `check` green. On `courses` (a pull request into it or a push to it)
+# `check` runs `make check-fast`: format, lint and typecheck, no tests, until
+# track 13 brings the full check back. A pull request into main (a release) or
+# a push to it also runs the bundle build and the vulnerability scan. Spec: ideas/git-workflow-grill.md.
 on:
   push:
     branches: [dev, main, courses]
@@ -27,7 +29,10 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y poppler-utils tesseract-ocr
       - run: npm ci
         working-directory: web
-      - run: make check
+      - run: |
+          if [ "$BASE" = courses ]; then make check-fast; else make check; fi
+        env:
+          BASE: ${{ github.base_ref || github.ref_name }}
 
   # What friends run: the shipped web bundle and the server, built. Only for
   # a release.
