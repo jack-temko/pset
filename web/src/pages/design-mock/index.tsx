@@ -684,7 +684,7 @@ function UnitList({ title, tab }: { title: string; tab: string }) {
   const [q, setQ] = useState('');
   return (
     <nav
-      className="sticky w-56 shrink-0 space-y-3 overflow-auto border-r bg-rail p-3"
+      className="sticky w-56 shrink-0 space-y-4 overflow-auto border-r bg-rail p-3"
       style={{ top: 88, height: 'calc(100dvh - 88px)' }}
     >
       <Input
@@ -702,13 +702,13 @@ function UnitList({ title, tab }: { title: string; tab: string }) {
         if (names.length === 0) return null;
         return (
           <div key={g.group} className="space-y-1">
-            <p className="px-2 text-xs text-muted-foreground">{g.group}</p>
+            <p className="mb-1 px-2 text-xs text-muted-foreground">{g.group}</p>
             {names.map((n) => (
               <a
                 key={n}
                 href="#"
                 className={cn(
-                  'block rounded-md px-2 py-2 text-sm hover:bg-muted/50',
+                  'flex h-control items-center rounded-md px-2 text-sm hover:bg-muted/50',
                   n === title && 'bg-primary-soft font-medium text-primary',
                 )}
               >

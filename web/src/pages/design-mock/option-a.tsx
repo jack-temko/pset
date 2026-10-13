@@ -41,7 +41,7 @@ function Toolbar({ ex }: { ex: Ex }) {
   const { s } = ex;
   const width = ex.full ? 'full' : 'default';
   return (
-    <div className="flex flex-wrap items-end gap-x-4 gap-y-4">
+    <div className="flex flex-wrap items-end gap-x-3 gap-y-4">
       <Group label="State">
         <select
           aria-label="State"
@@ -49,7 +49,8 @@ function Toolbar({ ex }: { ex: Ex }) {
           onChange={(e) => {
             ex.setState(e.target.value);
           }}
-          className="h-control w-40 rounded-md border border-input bg-card px-3 text-sm text-foreground"
+          style={{ width: 144 }}
+          className="h-control rounded-md border border-input bg-card px-3 text-sm text-foreground"
         >
           {s.states.map((st) => (
             <option key={st.id} value={st.id}>
@@ -167,7 +168,12 @@ function Stage({ ex }: { ex: Ex }) {
     >
       <div className="flex items-stretch">
         <div
-          className={cn('shrink-0', pane && '[&_aside]:h-[640px]!')}
+          className={cn(
+            'shrink-0',
+            pane
+              ? '[&_aside]:h-[640px]!'
+              : 'rounded-md border bg-background p-card',
+          )}
           style={{ width }}
         >
           {ex.mode === 'both' ? (
@@ -318,32 +324,6 @@ function UnitBox({
   );
 }
 
-/** A box with its arrow in the 40px gutter beside it, centred on it. */
-function SideRow({
-  r,
-  label,
-  side,
-}: {
-  r: Ref;
-  label: string;
-  side: 'left' | 'right';
-}) {
-  return (
-    <div className="relative">
-      <UnitBox r={r} label={label} />
-      <span
-        aria-hidden
-        className={cn(
-          'absolute inset-y-0 flex w-10 items-center justify-center text-muted-foreground',
-          side === 'left' ? '-right-10' : '-left-10',
-        )}
-      >
-        →
-      </span>
-    </div>
-  );
-}
-
 function Down() {
   return (
     <p aria-hidden className="py-2 text-center text-muted-foreground">
@@ -352,73 +332,104 @@ function Down() {
   );
 }
 
+function Row({ label, refs }: { label: string; refs: Ref[] }) {
+  return (
+    <div className="space-y-2">
+      <Quiet>{label}</Quiet>
+      <div className="flex flex-wrap gap-2">
+        {refs.map((r) => (
+          <UnitBox key={r.name} r={r} small />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Side({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: { id: string; r: Ref; label: string }[];
+}) {
+  if (rows.length === 0) return <div />;
+  return (
+    <div className="space-y-2">
+      <Quiet>{title}</Quiet>
+      {rows.map((x) => (
+        <UnitBox key={x.id} r={x.r} label={x.label} />
+      ))}
+    </div>
+  );
+}
+
+const GUTTER =
+  'absolute inset-y-0 flex w-10 items-center justify-center text-muted-foreground';
+
+/** Three rows: Inside, then the band (Leads here, the unit alone, Leads
+ *  to, one arrow per gutter at the unit's centre), then Made of. A unit
+ *  with no sides is just what holds it and what it holds. */
 function NeighbourMap({ s }: { s: Sample }) {
   const here = UNIT_INFO[s.unit];
-  const from = OTHER_ACTIONS.filter((o) => o.action.target?.unit === s.unit);
-  const to = s.actions.filter((a) => a.target && a.target.unit !== s.unit);
+  const from = OTHER_ACTIONS.filter(
+    (o) => o.action.target?.unit === s.unit,
+  ).map((o) => ({
+    id: o.action.id,
+    r: UNIT_INFO[o.unit],
+    label: o.action.does,
+  }));
+  const to = s.actions.flatMap((a) =>
+    a.target && a.target.unit !== s.unit
+      ? [{ id: a.id, r: UNIT_INFO[a.target.unit], label: a.does }]
+      : [],
+  );
+  const made = s.madeOf.map((m) => ({
+    name: m.name,
+    kind: 'component' as const,
+  }));
+  if (from.length === 0 && to.length === 0)
+    return (
+      <div className="space-y-4">
+        {s.inside.length > 0 && <Row label="Used in" refs={s.inside} />}
+        {made.length > 0 && <Row label="Made of" refs={made} />}
+      </div>
+    );
   return (
-    <div className="grid grid-cols-3 items-center gap-x-10">
-      <div className="space-y-2">
-        {from.length > 0 && (
-          <>
-            <Quiet>Leads here</Quiet>
-            {from.map((o) => (
-              <SideRow
-                key={o.action.id}
-                r={UNIT_INFO[o.unit]}
-                label={o.action.does}
-                side="left"
-              />
+    <div>
+      {s.inside.length > 0 && (
+        <div className="space-y-2">
+          <Quiet>Inside</Quiet>
+          <div className="flex flex-wrap justify-center gap-2">
+            {s.inside.map((r) => (
+              <UnitBox key={r.name} r={r} small />
             ))}
-          </>
-        )}
+          </div>
+          <Down />
+        </div>
+      )}
+      <div className="grid grid-cols-3 items-center gap-x-10">
+        <Side title="Leads here" rows={from} />
+        <div className="relative">
+          <UnitBox r={here} center />
+          {from.length > 0 && (
+            <span aria-hidden className={cn(GUTTER, '-left-10')}>
+              →
+            </span>
+          )}
+          {to.length > 0 && (
+            <span aria-hidden className={cn(GUTTER, '-right-10')}>
+              →
+            </span>
+          )}
+        </div>
+        <Side title="Leads to" rows={to} />
       </div>
-      <div>
-        {s.inside.length > 0 && (
-          <>
-            <Quiet>Inside</Quiet>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {s.inside.map((r) => (
-                <UnitBox key={r.name} r={r} small />
-              ))}
-            </div>
-            <Down />
-          </>
-        )}
-        <UnitBox r={here} center />
-        {s.madeOf.length > 0 && (
-          <>
-            <Down />
-            <Quiet>Made of</Quiet>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {s.madeOf.map((m) => (
-                <UnitBox
-                  key={m.name}
-                  r={{ name: m.name, kind: 'component' }}
-                  small
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-      <div className="space-y-2">
-        {to.length > 0 && (
-          <>
-            <Quiet>Leads to</Quiet>
-            {to.map((a) =>
-              a.target ? (
-                <SideRow
-                  key={a.id}
-                  r={UNIT_INFO[a.target.unit]}
-                  label={a.does}
-                  side="right"
-                />
-              ) : null,
-            )}
-          </>
-        )}
-      </div>
+      {made.length > 0 && (
+        <div>
+          <Down />
+          <Row label="Made of" refs={made} />
+        </div>
+      )}
     </div>
   );
 }
@@ -427,7 +438,10 @@ function NeighbourMap({ s }: { s: Sample }) {
 
 /** `fit` columns are mono, never wrap and are only as wide as their
  *  longest value; the others share what is left and wrap. */
-type Col<T> = Omit<TableColumn<T>, 'className' | 'mono'> & { fit?: boolean };
+type Col<T> = Omit<TableColumn<T>, 'className'> & {
+  fit?: boolean;
+  cls?: string;
+};
 
 function Tbl<T>({
   caption,
@@ -445,10 +459,12 @@ function Tbl<T>({
       rowKey={(r) => JSON.stringify(r)}
       columns={columns.map((c) => ({
         ...c,
-        mono: c.fit,
-        className: c.fit
-          ? 'w-px align-top whitespace-nowrap'
-          : 'align-top break-words whitespace-normal',
+        mono: c.mono ?? c.fit,
+        className:
+          c.cls ??
+          (c.fit
+            ? 'w-px align-top whitespace-nowrap'
+            : 'align-top break-words whitespace-normal'),
       }))}
     />
   );
@@ -550,9 +566,27 @@ export function OptionA({ s }: { s: Sample }) {
           rows={s.inputs}
           columns={[
             { key: 'n', header: 'Name', fit: true, cell: (r) => r.name },
-            { key: 't', header: 'Type', fit: true, cell: (r) => r.type },
+            {
+              key: 't',
+              header: 'Type',
+              mono: true,
+              cls: 'w-1/3 align-top break-words whitespace-normal',
+              cell: (r) =>
+                r.type.split(' | ').map((p, i) => (
+                  <span key={p}>
+                    {i > 0 && ' | '}
+                    <wbr />
+                    {p}
+                  </span>
+                )),
+            },
             { key: 'd', header: 'Default', fit: true, cell: (r) => r.default },
-            { key: 'w', header: 'Does', cell: (r) => r.does },
+            {
+              key: 'w',
+              header: 'Does',
+              cls: 'w-2/5 align-top break-words whitespace-normal',
+              cell: (r) => r.does,
+            },
           ]}
         />
       </Sec>
