@@ -19,7 +19,16 @@
   --ds-fg-muted: #9da4ad;
   --ds-accent: #4493f8;
   --ds-accent-solid: #1f6feb;
+  --ds-accent-solid-hover: #1d66d8;
+  --ds-accent-solid-pressed: #1b5fca;
   --ds-on-accent: #ffffff;
+  --ds-danger-solid: #da3633;
+  --ds-danger-solid-hover: #c9322f;
+  --ds-danger-solid-pressed: #bb2e2c;
+  --ds-on-danger: #ffffff;
+  --ds-hover: #272a2e;
+  --ds-pressed: #35383b;
+  --ds-neutral-soft: #272a2e;
   --ds-attention: #d29922;
   --ds-attention-soft: #322c1e;
   --ds-danger: #f85149;

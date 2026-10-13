@@ -14,8 +14,8 @@ export interface Rule {
 }
 
 /** The rulebook: the eleven principles of `ideas/vision-grill.md`, worded as
- *  what to do, then the six of the foundations (`ideas/theme-grill.md`).
- *  Further rules are written as each thing is designed. */
+ *  what to do, then the six of the foundations (`ideas/theme-grill.md`),
+ *  then two for controls. Further rules are written as each thing is designed. */
 export const RULES: readonly Rule[] = [
   {
     id: 'smallest-help-first',
@@ -120,6 +120,18 @@ export const RULES: readonly Rule[] = [
     id: 'room-for-big-type',
     rule: 'Give display type 96 above and 56 below, and a heading 64 above and 16 below',
     check: 'The gaps around each display line and heading, measured',
+    scope: 'all',
+  },
+  {
+    id: 'one-primary',
+    rule: 'Use one primary button in a region, for the one thing the student most likely does next',
+    check: 'Count the primary buttons in each region: at most one',
+    scope: 'all',
+  },
+  {
+    id: 'links-go-buttons-do',
+    rule: 'Use a link to go somewhere and a button to do something',
+    check: 'No link runs an action, and no button only navigates',
     scope: 'all',
   },
 ];
