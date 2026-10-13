@@ -127,7 +127,7 @@ to it for Claude Code: edit the skill in `.agents/skills`, never a copy.
 Three skills:
 
 - `grill` interviews the user in weighted batches (recommended option first, four
-  questions a batch) until a decision or spec is ironed out, then writes a one-page
+  questions a batch, with light prior-art research on interface topics) until a decision or spec is ironed out, then writes a one-page
   summary they can read at a glance. Use it for a redesign, a feature, what to cut,
   an architecture choice or positioning: anything with decisions only the user can make.
 - `pset-view` works on one view on `/views`, judged from the tired student's point of

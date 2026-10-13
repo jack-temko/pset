@@ -72,7 +72,10 @@ Changed:
   `react/only-export-components` exception the sections have, with the reason.
 - `.agents/skills/grill/SKILL.md`, `references/grill-file.md`: a unit grill writes its
   decisions into the unit's `spec.ts` and keeps only the word-for-word log
-  (`log.md` beside the spec); other grills are unchanged.
+  (`log.md` beside the spec); other grills are unchanged. Gate 0 gains a "Prior art"
+  part (D25): `references/prior-art.md`, light research on Primer first, cited in the
+  recommendations. `pset-view` asks for it by default; `AGENTS.md`'s `grill` bullet
+  names it.
 - `.agents/skills/pset-view/SKILL.md` and `references/` (`spec-template.md`,
   `verify.md`, any other that names `spec.md`, `grill.md`, a README, `/views` or
   `/components`): they produce `spec.ts` and `examples.tsx` in `web/src/units/<id>/`
@@ -107,7 +110,7 @@ what the new page imports from them.
 4. The theme scope in `index.css`, and the Theme control reading the themes that
    exist.
 5. Routes and the top bar link; delete the mockup and its brief.
-6. The two skills.
+6. The two skills, including the grill's prior-art step (D25).
 7. Docs: `design/design-docs.md`, the pointers, `AGENTS.md`, `ideas/courses.md`,
    `ideas/README.md`, and this file's Status.
 

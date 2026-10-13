@@ -48,6 +48,7 @@ which rules it follows and what was decided.
 | D23 | The spec is frozen when this change merges. Jack then builds enough components for one view, the pane view and one pane; what that shows is changed; then the spec is locked | All three kinds proven before the lock | Freezing only after the first pane; one redesigned component in this change |
 
 | D24 | Design starts from scratch: vision, theme, foundations (colour, type, spacing, the mark), every component, and all rules. Views and panes are built as their components exist | Jack: "wipe the rulebook clean", "same thing for vision and theme" | Keeping the foundations as given; re-confirming them first |
+| D25 | A grill does light research on what established design systems do (GitHub's Primer first) when the topic calls for it or Jack asks, and its recommendations cite it | Recommendations rest on proven practice, not taste alone | Recommending from memory |
 
 ### The artifact(s)
 
@@ -364,3 +365,7 @@ componenents for them."**
   at a hidden address so he can see the page (assumed, D20).
 
 Jack, unprompted: **"Same thing for vision and theme."**
+
+### After the OK
+
+Jack: **"One final add, one part of the grill should be (when required or asked) it should do some light preliminary research on what big companies do (especial GitHub since we use its theme). That will influence the grills reccomeneded decisions where applicable."** (D25.)

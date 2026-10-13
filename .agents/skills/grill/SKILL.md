@@ -44,7 +44,8 @@ asking only for what is missing:
 1. **Audit alone (Gate 0).** Read what exists: code, docs, earlier grills, data. Write
    a short brief of what is true today, what you could not determine, and what looks
    wrong. Show it to the user in one message; they correct facts only. Ask no design
-   questions yet.
+   questions yet. When the topic calls for it, the brief includes **prior art**: a
+   light look at what established design systems do (`references/prior-art.md`).
 2. **Build the frontier.** List every open decision as a question: an id, its gate, the
    question, two to four options with the recommended one first and why, a weight, and
    what it depends on. Drop what the sources already answer. See
@@ -89,6 +90,9 @@ asking only for what is missing:
 - **Be short.** The user may be tired. Questions fit two lines, option descriptions one
   or two sentences, batches at most four. No preamble before a batch beyond the
   frontier's state in a line or two.
+- **Prior art informs, never decides.** Where a recommendation rests on what a system
+  like GitHub's Primer does, the one-line why says so ("Primer does X because Y"). If
+  you recommend against common practice, the question says that and why.
 - **Do not lead.** Options are distinct, not variants of one idea, and the ones you do
   not recommend get their strongest honest case.
 - **Never invent the user's answers.** An assumption is labelled assumed. A decision
@@ -99,6 +103,7 @@ asking only for what is missing:
 
 - `references/frontier.md`: weighting, dependencies, batching, writing a good question.
 - `references/grill-file.md`: the grill file, heading by heading.
+- `references/prior-art.md`: the light research on what established design systems do.
 - `references/packs.md`: default gates and question seeds for redesign, feature or
   functionality, removal, architecture, and positioning or marketing.
 - `references/fallback.md`: grilling without an ask-user tool.
