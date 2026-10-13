@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress, branch `vision` (base `design`).
+Built, awaiting approval. Branch `vision` (base `design`).
 
 ## Information
 

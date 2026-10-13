@@ -155,8 +155,8 @@ Three skills:
   summary they can read at a glance. Use it for a redesign, a feature, what to cut,
   an architecture choice or positioning: anything with decisions only the user can make.
 - `pset-view` works on one unit (new work in the `/design` format, old views on
-  `/views`), judged from the tired student's point of
-  view. Modes: `redesign` (grills first, using `grill`, stops for the user's OK, then
+  `/views`), judged from the student's point of view (an ordinary student,
+  maybe a bit tired) and the rulebook. Modes: `redesign` (grills first, using `grill`, stops for the user's OK, then
   builds, verifies, photographs and documents), `tweak` (a bug or one friction row) and
   `extract` (put a view still inside its screen onto `/views`). New work is a
   `spec.ts`, not a `spec.md` (`ideas/gallery-docs-grill.md`). Its design is

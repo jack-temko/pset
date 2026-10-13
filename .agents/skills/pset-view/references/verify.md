@@ -67,7 +67,7 @@ const { chromium } = require(
 - [ ] `make jumps-check FULL=1` passes (0px growth, jump at most 0.001, no dev warning
       from `Loaded` about a variant mismatch).
 - [ ] The main flow works with the keyboard alone; tab stops to the main action counted.
-- [ ] The flow meets the unit's limit rules (global, and its own local `limit` rules), counted again after the change.
+- [ ] The flow meets the unit's limit rules (global, and its own local rules that state a number), counted again after the change.
 - [ ] Each handoff out shows in the log with its context, and Back returns as
       designed (also after a reload).
 - [ ] Text is at or above the 15px floor and readable in Night; targets are at least

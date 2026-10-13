@@ -1,16 +1,24 @@
 # The student lens
 
-The persona (the vision grill will replace this lens; until then it is the skill's point of view, and a unit's `purpose` carries its one sentence): hour 7 of a study marathon, 1am, Night theme, glancing between a
-textbook scan and the panel, low patience, low working memory. Everything below
-is a question asked of the view in that state. Each lens produces friction items;
-a lens that finds nothing says so in the run's notes and produces no row.
+The student (V4 of `ideas/vision-grill.md`): an ordinary student, maybe a bit tired,
+not the worst case. PSet is a study tool for problem-set courses, and the student
+opens it to get this week's work done, understanding it. The principles every view
+answers to are the rules in the rulebook (`/design/rules`, `web/src/design/rules.ts`):
+read them first, and cite the one a finding breaks. Everything below is a question
+asked of the view from this student's seat. Each lens produces friction items; a lens
+that finds nothing says so in the run's notes and produces no row.
+
+Kept from the old lens, since none contradicts the rules: all ten lenses, with two
+edits. Dropped: "Night is the primary theme and must read" (the theme is being
+redesigned; judge in both themes), and the worst-case framing (1am, hour 7, low
+patience, low working memory) wherever it set the bar.
 
 ## Before the lenses: walk the flow
 
 Write it down before judging it: the trigger (what brought them here), their
 goal, and the happy path as numbered steps, each with what they see, what they
 decide and what they do. Then count, on the path as it is now: clicks, decisions,
-typing. Those counts are checked against the unit's limit rules and are the numbers
+typing. Those counts are checked against the unit's rules that state a number and are the numbers
 a redesign has to beat. Note the exits and the re-entry after a break.
 
 ## The ten lenses
@@ -31,12 +39,12 @@ a redesign has to beat. Note the exits and the re-entry after a break.
    or what to try. Irreversible acts (undo beats confirm when it can be undone).
 6. **Confused.** Jargon. Internal states leaking into the UI ("located", "pending").
    Unlabelled icons. Look-alike actions. State changes with no feedback.
-7. **Tired-body ergonomics.** No precision aiming (targets at least the control
+7. **Ergonomics.** No precision aiming (targets at least the control
    height, and not crowded); no hover-only affordances; the whole flow works from
    the keyboard with a sensible tab order (count the tab stops to the main
    action), Enter to confirm, Esc to back out; scroll position, drafts and the
-   current place survive a reload or a tab switch; Night is the primary theme and
-   must read, not just pass; motion is calm and honours reduced motion.
+   current place survive a reload or a tab switch (`keep-the-place`); both themes
+   read, not just pass; motion is calm and honours reduced motion.
 8. **Re-entry.** After a break, does the view say where you left off and what is
    next, without opening anything?
 9. **Trust.** When the model is slow or wrong, is the student ever blamed? Can they
@@ -53,8 +61,8 @@ a redesign has to beat. Note the exits and the re-entry after a break.
   reachable (`slow`, `failed`, `mid-flow-reload`, `return-after-break`).
 - Count the **tab stops** from opening the view to the main action and put the number in
   the report; recount it every run (one log said 6, the real count was 9). Do the main
-  flow **keyboard only** once, and **in Night**, before writing the
-  log. A view that passes in Paper at a mouse's pace often fails there.
+  flow **keyboard only** once, and **in both themes**, before writing the
+  log. A view that passes in one theme at a mouse's pace often fails the other.
 - Judge at 1280 wide. Below 1024 the app shows a gate; it is desktop only.
 - Look for what is missing as much as what is wrong: no way to see the set at a
   glance, no place in line, no "where was I".
@@ -63,8 +71,8 @@ a redesign has to beat. Note the exits and the re-entry after a break.
 
 A list in the audit report to Jack (and, in a grill, its log), not in the spec. A row is:
 
-| id  | where | what goes wrong for a tired student | severity | fix | status | shown in |
-| --- | ----- | ----------------------------------- | -------- | --- | ------ | -------- |
+| id  | where | what goes wrong for the student | severity | fix | status | shown in |
+| --- | ----- | ------------------------------- | -------- | --- | ------ | -------- |
 
 - **id**: `F<n>`, never reused.
 - **where**: the element or moment, findable in a scenario.

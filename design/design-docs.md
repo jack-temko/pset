@@ -44,10 +44,21 @@ tokens only.
 
 ## Rules
 
-`web/src/design/rules.ts` holds the rulebook, empty by design: a rule is written when the
-thing it governs is designed. A rule has a permanent id, a kind (always, never, limit),
-one sentence, a "how to check it" line, a scope and what enforces it. A spec cites rules by
-id and may add local ones. A rule's page lists every unit that cites it.
+`web/src/design/rules.ts` holds the rulebook. It starts with the eleven principles of the
+vision (`ideas/vision-grill.md`); further rules are written when the thing they govern is
+designed. A rule has a permanent id, one sentence, a "how to check it" line, a scope and
+what enforces it. It has no kind: every rule is worded as what to do ("Keep a row title on
+one line"), and a rule with a number just states the number. A spec cites rules by id and
+may add local ones. A rule's page lists every unit that cites it.
+
+## The vision
+
+`web/src/design/vision.ts` is plain data: the one line that says what PSet is, then a
+short list of facts (who it is for, the job, the centre, the student, what PSet is not,
+the feel). The Rules tab of `/design` opens with it, above the rules, so the principles
+are read with what they serve. The principles themselves are rules, not part of that
+header. `check-before-cost` is about the backend's pipelines (scope `pipelines`), so
+the docs of those pipelines cite it, not units on `/design`.
 
 ## The checks
 
