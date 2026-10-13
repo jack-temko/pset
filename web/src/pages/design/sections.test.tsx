@@ -5,7 +5,10 @@ import { describe, expect, it } from 'vitest';
 
 import { fixture } from '@/design/registry';
 import { LOG_BRANCH, logUrl } from './lookup';
-import { Decisions, PriorityAndSizes } from './sections';
+import { RulesPage } from './rules';
+import { Decisions, PriorityAndSizes, RulesSection } from './sections';
+import { RULES } from '@/design/rules';
+import { VISION } from '@/design/vision';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -50,5 +53,20 @@ describe('the sections', () => {
     );
     expect(el.textContent).toContain('Replaced by sample-row-d2');
     expect(el.textContent.match(/Replaced by/g)).toHaveLength(1);
+  });
+
+  it('opens the Rules tab with the vision, then every rule in one list', () => {
+    const el = render(<RulesPage />);
+    expect(el.textContent).toContain(VISION.line);
+    expect(el.querySelectorAll('dt')).toHaveLength(VISION.facts.length);
+    expect(el.querySelectorAll('section li')).toHaveLength(RULES.length);
+    expect(el.textContent).toContain('failure-says-what');
+    expect(el.textContent).toContain('1 unit');
+  });
+
+  it("lists a unit's rules flat, local ones labelled", () => {
+    const el = render(<RulesSection spec={row} rulebook={RULES} />);
+    expect(el.querySelectorAll('li')).toHaveLength(2);
+    expect(el.textContent).toContain('local');
   });
 });
