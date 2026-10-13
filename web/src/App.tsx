@@ -22,10 +22,6 @@ const Views = lazy(() =>
   import('@/pages/views').then((m) => ({ default: m.Views })),
 );
 
-const ThemeMock = lazy(() =>
-  import('@/pages/theme-mock').then((m) => ({ default: m.ThemeMock })),
-);
-
 const Design = lazy(() =>
   import('@/pages/design').then((m) => ({ default: m.Design })),
 );
@@ -66,15 +62,6 @@ export default function App() {
           }
         />
         <Route path="/errors/:section?" element={<ErrorCatalog />} />
-        {/* Throwaway: mocks for the theme grill (ideas/theme-mocks.md). */}
-        <Route
-          path="/theme-mock/:screen"
-          element={
-            <Suspense>
-              <ThemeMock />
-            </Suspense>
-          }
-        />
         {/* The design system: one typed spec per unit, rendered. */}
         <Route
           path="/design/*"
