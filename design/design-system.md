@@ -1,5 +1,9 @@
 # Ink & Paper
 
+> From 2026-10-13 this describes the old app and binds nothing new: the design is
+> redone from scratch in the `/design` format (`design/design-docs.md`, D24 in
+> `ideas/gallery-docs-grill.md`). It stays until the old app is gone.
+
 The design system, as the app actually implements it. It covers what has
 been built and decided: it grows as the rewrite does, and nothing is
 written here before it exists in code.

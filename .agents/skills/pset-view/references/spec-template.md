@@ -1,3 +1,21 @@
+# The spec format
+
+**From 2026-10-13 a unit's spec is `web/src/units/<id>/spec.ts`**, plain data written through
+`defineSpec()` (`web/src/design/spec.ts`), with its live states in `examples.tsx` beside
+it, written through `defineExamples()`. `design/design-docs.md` is the one-page guide and
+`web/src/design/sample/` holds a worked example of a component and a view. The fields,
+in page order: id, kind, title, group, purpose, states, stress, flows, components,
+actions, data, inputs, priority, sizes, rules, decisions. Every text field is one line
+(purpose 200 characters, any other 160); a test fails on more. Links are written once,
+as an action with a target (unit and state); exits, entrances and used-by are derived.
+Rules are cited by id from the rulebook (`web/src/design/rules.ts`). A new field is added
+as optional and never changes meaning. Check a unit on `/design/<kind>/<id>`.
+
+The rest of this file is the old `spec.md` format, kept for views not yet migrated. Do not
+write new specs in it.
+
+---
+
 # The `spec.md` format
 
 One file per view, at `web/src/views/<name>/spec.md`. Compact and readable by a

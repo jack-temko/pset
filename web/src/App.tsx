@@ -22,6 +22,10 @@ const Views = lazy(() =>
   import('@/pages/views').then((m) => ({ default: m.Views })),
 );
 
+const Design = lazy(() =>
+  import('@/pages/design').then((m) => ({ default: m.Design })),
+);
+
 /** The product's screens hold the live stream open. The gallery routes
  *  don't: a component or a view never talks to a real server. */
 function Live() {
@@ -58,6 +62,15 @@ export default function App() {
           }
         />
         <Route path="/errors/:section?" element={<ErrorCatalog />} />
+        {/* The design system: one typed spec per unit, rendered. */}
+        <Route
+          path="/design/*"
+          element={
+            <Suspense>
+              <Design />
+            </Suspense>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

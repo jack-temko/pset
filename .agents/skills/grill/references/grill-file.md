@@ -66,8 +66,18 @@ exactly as given (including free text). This is the evidence for every decision.
 - **Length.** The Summary is a page. The Log can be as long as the grill.
 - **Style.** No em dashes. Plain words. The user's own names for things.
 
+## A unit's grill
+
+A grill about one unit of the `/design` system (a component, pane or view) keeps its
+decisions in the unit's `spec.ts`, not in the grill file (`design/design-docs.md`). The
+Decisions table is not written here: each decision goes into `decisions` in
+`web/src/units/<id>/spec.ts` with a permanent id (`<unit>-d<n>`), its why, what it beat,
+the date and, when a later one replaces it, `supersededBy`. The file kept beside the spec
+is `log.md`: the Log section only, word for word, and the spec's `log` field points at
+it. Any other grill (vision, theme, a plan) keeps the whole file.
+
 ## Where it goes
 
 The brief names the path. A caller such as `pset-view` fixes it
-(`web/src/views/<name>/grill.md`). Called directly with nothing named, ask once, and
+(`web/src/units/<id>/log.md`). Called directly with nothing named, ask once, and
 default to `ideas/<topic>-grill.md` in a repo with an `ideas/` folder.

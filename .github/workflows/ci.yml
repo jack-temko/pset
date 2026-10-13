@@ -1,13 +1,15 @@
 name: CI
 
-# Every change lands on dev by pull request, and the ruleset needs `check`
-# green. A pull request into main (a release) or a push to it also runs the
-# bundle build and the vulnerability scan. Spec: ideas/git-workflow-grill.md.
+# Every change lands on dev by pull request (the design work lands on the
+# long-lived `design` branch, temporary, see AGENTS.md), and the ruleset
+# needs `check` green. A pull request into main (a release) or a push to it
+# also runs the bundle build and the vulnerability scan. Spec:
+# ideas/git-workflow-grill.md.
 on:
   push:
-    branches: [dev, main]
+    branches: [dev, main, design]
   pull_request:
-    branches: [dev, main]
+    branches: [dev, main, design]
 
 jobs:
   check:

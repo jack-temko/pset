@@ -15,6 +15,28 @@
   never a generated name like `claude/laughing-gauss-1135o5`. Parked and
   throwaway branches are named the same way. Commits carry no
   Co-Authored-By and no "Generated with" lines.
+- **The from-scratch design work lands on `design`, not `dev`** (decided
+  2026-10-13, D26 in `ideas/gallery-docs-grill.md`). The `/design` spec system,
+  then vision, theme, foundations, components, views and panes, each branch
+  from `origin/design` and open their pull request with `--base design`, under
+  every other rule here: a named branch and worktree, the full `make check`,
+  one review, screenshots in both themes, Jack's approval before a merge, a
+  squash-merge. No ruleset guards `design` (the `dev` ruleset covers `dev`
+  only), so the lander itself waits for a green `check` and an up-to-date
+  branch before any merge into `design`. `design` takes `dev` in through a
+  pull request from a branch cut from `origin/design` with `origin/dev` merged
+  into it (`design-take-dev`), so a conflict is fixed on that branch (when
+  `.github/workflows/ci.yml` conflicts, the resolved branch lists keep every live
+  integration branch: `design`, and `courses` if it is there; the lander treats a
+  missing `check` run as not green); it is merged into `design` with a merge
+  commit (not a squash) after Jack approves it like any other. Only Jack takes `design` into `dev`. Meanwhile `dev`
+  takes only critical bug fixes, so Jack can keep using PSet for his work. The
+  `/change` skill and its role briefs name `dev` as the base; for this work,
+  read `design` wherever they say `dev` (the worktree from `origin/design`,
+  `--base design`, diffs against `origin/design`), and the orchestrator says
+  so in every brief. When `design` has gone into `dev`, remove this bullet and
+  take `design` out of `.github/workflows/ci.yml`, and switch `LOG_BRANCH` in
+  `web/src/pages/design/lookup.ts` to `dev`.
 
 **Landing a change** (the tests, and the real app for a UI change, first):
 
@@ -67,8 +89,10 @@ app before calling it done:
   `.dev/data`, never Jack's library.
 - Look at every state you changed, in **both themes** (Paper and Night),
   at a desktop width of 1280 or more.
-- A new or changed component also belongs on `/components`, the page
-  that shows every component and variant: a section in a group file under
+- A new unit (a component, pane or view of the from-scratch design) is a
+  `spec.ts` and an `examples.tsx` in `web/src/units/<id>/`, judged on
+  `/design/<kind>/<id>` (`design/design-docs.md`). A changed component of the
+  old app still belongs on `/components`: a section in a group file under
   `web/src/pages/components/sections/`, with the component's README as its
   Docs.
 - `make jumps-check` must pass before the pull request: nothing may jump (see
@@ -127,13 +151,15 @@ to it for Claude Code: edit the skill in `.agents/skills`, never a copy.
 Three skills:
 
 - `grill` interviews the user in weighted batches (recommended option first, four
-  questions a batch) until a decision or spec is ironed out, then writes a one-page
+  questions a batch, with light prior-art research on interface topics) until a decision or spec is ironed out, then writes a one-page
   summary they can read at a glance. Use it for a redesign, a feature, what to cut,
   an architecture choice or positioning: anything with decisions only the user can make.
-- `pset-view` works on one view on `/views`, judged from the tired student's point of
+- `pset-view` works on one unit (new work in the `/design` format, old views on
+  `/views`), judged from the tired student's point of
   view. Modes: `redesign` (grills first, using `grill`, stops for the user's OK, then
   builds, verifies, photographs and documents), `tweak` (a bug or one friction row) and
-  `extract` (put a view still inside its screen onto `/views`). Its design is
+  `extract` (put a view still inside its screen onto `/views`). New work is a
+  `spec.ts`, not a `spec.md` (`ideas/gallery-docs-grill.md`). Its design is
   `ideas/views-gallery.md` and `ideas/grill-skill.md`.
 - `change` takes one change from ask to merged on `dev`, splitting the work by model
   (below), with a gate where Jack tries the change and approves it before it merges. Jack starts it with `/change`; it uses the other two when a change needs a

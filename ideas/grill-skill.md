@@ -1,5 +1,8 @@
 # Grill skill
 
+> New work uses the `/design` format: a typed `spec.ts` per unit, not `spec.md` and
+> `grill.md` (`ideas/gallery-docs-grill.md`, D3, D15, D16). This file describes the old one.
+
 ## Status
 
 **Done** (2026-09-30), merged with the homework redesign. Grilled with Jack the way the

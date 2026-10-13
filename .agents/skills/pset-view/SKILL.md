@@ -1,13 +1,18 @@
 ---
 name: pset-view
-description: Redesign, tweak or extract one of PSet's views (the homework panel, and others as they are put on /views). A redesign starts by grilling the user in gates (purpose and inventory, flow and layout, behavior and states, loading and variants, data and acceptance) using the grill skill, stops for their OK, then builds, verifies, photographs and documents it. A tweak fixes a bug or one friction row. Extract puts a view still inside its screen onto /views. Judges everything from the tired student's point of view. Use when asked to work on a PSet view, screen or panel, redesign it, audit its UX, or put a view on /views.
+description: Redesign, tweak or extract one of PSet's views, panes or components (the homework panel, and others as they are put on /views, or any unit on /design). A redesign starts by grilling the user in gates (purpose and inventory, flow and layout, behavior and states, loading and variants, data and acceptance) using the grill skill, stops for their OK, then builds, verifies, photographs and documents it. A tweak fixes a bug or one friction row. Extract puts a view still inside its screen onto /views. Judges everything from the tired student's point of view. Use when asked to work on a PSet view, screen or panel, redesign it, audit its UX, or put a view on /views.
 ---
 
 # pset-view
 
-Work on one PSet view at a time, from the student's point of view to code, docs and a
-merge. A view is a separable piece of the UI (today the homework panel) that stands
-alone at `/views/<name>` on sample data, with its spec beside it.
+Work on one PSet unit at a time (a component, a pane or a view), from the student's point
+of view to code, docs and a merge. From 2026-10-13 a unit is documented by the `/design`
+format (`design/design-docs.md`): a typed `spec.ts` and an `examples.tsx` in
+`web/src/units/<id>/`, judged on `/design/<kind>/<id>`. There is no `spec.md`, `grill.md`
+or README for new work (D16 in `ideas/gallery-docs-grill.md`), and the old design docs
+(`design/design-system.md` and the screen specs) bind nothing new. The old `/views`
+harness and `/components` still exist until the migration deletes them; the steps below
+say where they still apply.
 
 This skill knows about views: the gates, the harness, the build, the checks. It does
 **not** know how to interview someone: that is the `grill` skill, which this one calls
@@ -36,23 +41,23 @@ If the view or mode is missing, ask. If the view is not on `/views` and the mode
 ## Redesign
 
 1. **Set up.** Read `AGENTS.md`: work in a worktree (`git worktree add ../pset-<topic> -b <topic>`), never in the main checkout. Node needs `export PATH="$HOME/.nvm/versions/node/v24.18.0/bin:$PATH"`. Run frontend tools from `web/`. `npm ci` in a fresh worktree.
-2. **Frame (gate 0), alone.** Read the view's `spec.md`, scenarios, any earlier `grill.md`, `design/design-system.md`, the screen spec in `design/`, the components' READMEs, and the code. Drive the view in every scenario (see `references/verify.md`) and count its flow: clicks, decisions, typing, tab stops. Write the audit brief (`references/grill-stages.md`, gate 0) and photograph the current state.
-3. **Grill.** Load the `grill` skill and hand it the brief in `references/grill-stages.md`: the topic, the output path `web/src/views/<name>/grill.md`, the tired student as point of view, the locked decisions, and the gates with their question seeds, artifacts and exit tests. Archive an existing `grill.md` to `grills/<date>.md` first. The grill ends with the summary written at that path. Gate 2's wireframes are built from the real components (`references/grill-stages.md`), never drawn in ASCII.
-4. **Stop for the OK.** Hand back the summary (it is drawn on `/views/<name>`). Do not build until the user approves it or amends it. If they cannot be reached, stop; do not build on assumptions.
-5. **Build.** When run from `/change`, this step goes to the builder (build tier) with the approved `grill.md` as its plan, and step 8 (docs) goes to it too; framing, grilling, the visual verdict and the post-build review stay with the orchestrator. Implement what the spec says. The view goes through `Loaded` with the variant API (`web/src/components/loaded/README.md`): a skeleton per variant, the neutral one when the variant is not known, the screen chosen in render, never in an effect; list rows seed the detail (`useListedSet`); add each variant to `web/src/variants.ts`. Exits from a view stay props: a view never navigates, it calls a prop, so `/views` can log the handoff. Reuse a component, then extend one, then create one (folder, README, a section under `web/src/pages/components/sections/`). Backend: write what the frontend needs into the spec's `wants` and propose it; build it only if asked, and run `make gen` if a `wire.go` changes.
-6. **Verify.** `references/verify.md`: every scenario (including every variant and a slow-loading one for each), both themes, 1280 wide or more, keyboard-only for the main flow, the flow's counts against the spec's `budget`, `make test`, `cd web && npm run build`, `make jumps-check FULL=1`.
-7. **Post-build review round.** Photograph the real view (both themes, every key scenario, framed on the panel and its log) and show the photos to the user. Run a short grill on what feels off, what to cut and what is missing (at most two batches, recommended fixes first). Record the answers as dated post-build decisions in `grill.md`. Small ones become a `tweak`; a large one reopens a gate.
-8. **Docs.** Rewrite the view's `spec.md` to match what was built (mission, inventory, states, actions, handoffs, data, why, a fresh friction log, wants, open). Update the READMEs of components you changed or created, `design/design-system.md` if a token or rule moved, and the screen's `design/*.md` for any reversal the grill approved. Set `grill.md` to `status: built`.
+2. **Frame (gate 0), alone.** Read the unit's `spec.ts` (its `decisions` are the locked ones) and `log.md` (or, for an old view not yet migrated, its `spec.md`, scenarios and `grill.md`), the `/design` rulebook, `design/design-docs.md`, and the code. The old `design/design-system.md` is background only. Drive the view in every scenario (see `references/verify.md`) and count its flow: clicks, decisions, typing, tab stops. Write the audit brief (`references/grill-stages.md`, gate 0) and photograph the current state.
+3. **Grill.** Load the `grill` skill and hand it the brief in `references/grill-stages.md`: the topic, the output path `web/src/units/<id>/log.md` (the decisions go into `spec.ts`, see the grill's `references/grill-file.md`), the tired student as point of view, the locked decisions (read from the unit's `spec.ts` `decisions`, and the rulebook), prior art asked for by default (the grill's `references/prior-art.md`), and the gates with their question seeds, artifacts and exit tests. The grill ends with its decisions and reversals written into the unit's `spec.ts` `decisions` (a replaced one gets `supersededBy`) and the word-for-word log at that path. Gate 2's wireframes are built from the real components (`references/grill-stages.md`), never drawn in ASCII.
+4. **Stop for the OK.** Hand back the summary (it is drawn on `/design/<kind>/<id>`). Do not build until the user approves it or amends it. If they cannot be reached, stop; do not build on assumptions.
+5. **Build.** When run from `/change`, this step goes to the builder (build tier) with the approved `spec.ts` as its plan, and step 8 (docs) goes to it too; framing, grilling, the visual verdict and the post-build review stay with the orchestrator. Implement what the spec says. The view goes through `Loaded` with the variant API (`web/src/components/loaded/README.md`): a skeleton per variant, the neutral one when the variant is not known, the screen chosen in render, never in an effect; list rows seed the detail (`useListedSet`); add each variant to `web/src/variants.ts`. Exits from a view stay props: a view never navigates, it calls a prop, so the example can show the handoff. Write `spec.ts` and `examples.tsx` beside the code (a render per state, a stress render, a skeleton per state when it reads data); list the components it imports in `components`. Reuse a component, then extend one, then create one. Backend: what the unit reads is its `data` rows; what the backend does not yet provide goes in the change's plan file in `ideas/`, proposed. Build it only if asked, and run `make gen` if a `wire.go` changes.
+6. **Verify.** `references/verify.md`: every scenario (including every variant and a slow-loading one for each), both themes, 1280 wide or more, keyboard-only for the main flow, the flow's counts against the unit's limit rules (global in the rulebook, its own as local rules of kind `limit`), `make test`, `cd web && npm run build`, `make jumps-check FULL=1`, and the unit's page on `/design` (the checks in `web/src/design/checks.test.ts`).
+7. **Post-build review round.** Photograph the real view (both themes, every key scenario, framed on the panel and its log) and show the photos to the user. Run a short grill on what feels off, what to cut and what is missing (at most two batches, recommended fixes first). Record the answers as dated decisions in `spec.ts` and the words in `log.md`. Small ones become a `tweak`; a large one reopens a gate.
+8. **Docs.** Make `spec.ts` match what was built; it is the only doc, so there is no README to update. A rule the work creates goes in the rulebook (`web/src/design/rules.ts`) and is cited by id.
 9. **Land it.** Follow `AGENTS.md`. The user has asked to be asked before any merge into `main`: ask, and merge only on a yes. If told to park, stop after the commit and leave the branch and worktree.
 
 ## Tweak
 
-1. Set up as above. Read the spec, the scenarios and the friction log; the brief is the row or the bug the user named.
+1. Set up as above. Read the spec and its scenarios; the brief is the bug or the friction the user named.
 2. Reproduce it in a scenario (add one if the state is unreachable). Count the flow if the fix touches it.
-3. Make the smallest change that closes it. Prefer removing to adding. A tweak never reverses a locked decision: mark the row `raise with Jack` and stop.
-4. Verify as in redesign step 6. Mark the friction row fixed in the spec; update any README the change touched. Land it as in step 9.
+3. Make the smallest change that closes it. Prefer removing to adding. A tweak never reverses a locked decision (one in `decisions` or a rule): say `raise with Jack` and stop.
+4. Verify as in redesign step 6. Update whatever spec facts changed (a state, an action, a rule, a decision if one was made); no friction row is marked and no README is updated. Land it as in step 9.
 
-**With no target,** `tweak` is the read-only audit: apply the ten lenses in `references/student-lens.md`, update the spec's `student`, `flow`, `budget` and `friction`, add scenarios for states you could not reach, and report. No code.
+**With no target,** `tweak` is the read-only audit: apply the ten lenses in `references/student-lens.md`, add scenarios for states you could not reach, and report. The friction list goes in the report to Jack (and, in a grill, its log), never in the spec. A unit's spec changes only where a fact was wrong. No code.
 
 ## Extract
 
@@ -78,7 +83,7 @@ extract lands like any change (step 9). No grill: nothing is being decided.
 ## References
 
 - `references/grill-stages.md`: the brief handed to `grill`: gates 0 to 5, seeds, artifacts, exit tests, the walkthrough simulation, the cross-view check, the post-build review.
-- `references/student-lens.md`: the ten lenses and the friction log.
-- `references/spec-template.md`: the `spec.md` format.
+- `references/student-lens.md`: the ten lenses and how a friction list is written.
+- `references/spec-template.md`: the `spec.ts` format, and the old `spec.md` it replaces.
 - `references/mock-layer.md`: how a view runs on `/views`, and extracting one.
 - `references/verify.md`: running, driving and checking a view.

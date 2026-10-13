@@ -12,7 +12,7 @@ PSET_API_TARGET=http://127.0.0.1:9 npx vite --port 5198 --strictPort
 
 - **Port 8420 is the user's own PSet** and its library. Never proxy to it and never
   use it. The dead `PSET_API_TARGET` above means nothing can reach a real server
-  even by mistake; `/views` and `/components` need none.
+  even by mistake; `/design`, `/views` and `/components` need none.
 - Open `/views/<name>?scenario=<id>&speed=4&wide=1`. Scenario, speed and width are
   in the URL, so a state can be linked and reloaded.
 - Stop Vite by PID (`ss -ltnp | grep 5198`, then `kill <pid>`). Do not `pkill -f` a
@@ -51,21 +51,23 @@ const { chromium } = require(
 - Photo framing: at 1440x1000 a handoff log falls below the fold. Use a viewport about
   1500 tall and clip to the panel plus the log, so a phone shows the panel and what it did.
 - Keyboard-only pass: use `page.keyboard.press('Tab')` and count the stops to the
-  main action; that number goes in the friction log.
+  main action; that number goes in the report.
 - Wait for the timeline, not a fixed guess: at `speed=4` a question is written
   in about five seconds.
 
 ## The checklist (step 8)
 
 - [ ] Every scenario of the view loads with no console errors, in Paper and in Night.
-- [ ] Every variant of the view has a `/views` scenario, and each has a slow-loading
+- [ ] A unit in the `/design` format: its page on `/design/<kind>/<id>` shows every
+      state, Stress, Loading and Both in both themes; `checks.test.ts` passes.
+- [ ] Every variant of an old-format view has a `/views` scenario, and each has a slow-loading
       scenario too (the mock server's latency). Shots include each variant mid-load and
       loaded, in both themes: the skeleton must be the content's shape, with no flash of
       another variant.
 - [ ] `make jumps-check FULL=1` passes (0px growth, jump at most 0.001, no dev warning
       from `Loaded` about a variant mismatch).
 - [ ] The main flow works with the keyboard alone; tab stops to the main action counted.
-- [ ] The flow meets its `budget`, counted again after the change.
+- [ ] The flow meets the unit's limit rules (global, and its own local `limit` rules), counted again after the change.
 - [ ] Each handoff out shows in the log with its context, and Back returns as
       designed (also after a reload).
 - [ ] Text is at or above the 15px floor and readable in Night; targets are at least
@@ -77,8 +79,7 @@ const { chromium } = require(
 - [ ] `cd web && npm run build` passes: it fails on fractional or off-scale
       utilities and on theme utilities missing from the CSS.
 - [ ] No screenshots, logs or traces in the repo (`git status` shows source only).
-- [ ] The spec (with its friction log), component READMEs and any design doc
-      were updated in the same change.
+- [ ] The spec (`spec.ts`; for old-format work its `spec.md` and component READMEs) was updated in the same change.
 - [ ] Anything not verified is said so in the report (a real server, a real book).
 
 ## Reporting
@@ -86,7 +87,7 @@ const { chromium } = require(
 If you cannot write a report file (a subagent often cannot), return the report as text
 and let the caller file it.
 
-Say what changed and why in the student's terms; list the friction rows closed
-and opened; show before and after screenshots when the look changed; name what
+Say what changed and why in the student's terms; list the friction closed
+and found; show before and after screenshots when the look changed; name what
 you did not verify. Photos go where the user can see them (a published page or a
 file), not in the repo.
