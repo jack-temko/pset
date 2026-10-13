@@ -86,7 +86,10 @@ function Tbl<T>({
       <Table
         dense
         caption={caption}
-        columns={columns}
+        columns={columns.map((c) => ({
+          ...c,
+          className: cn('break-words whitespace-normal', c.className),
+        }))}
         rows={rows}
         rowKey={(r) => JSON.stringify(r)}
       />
@@ -112,7 +115,7 @@ function UnitBox({
         )}
       >
         {label && <p className="text-xs text-muted-foreground">{label}</p>}
-        <p className="flex items-center justify-between gap-2 text-sm font-medium">
+        <p className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm font-medium">
           {r.name}
           <Label tone={center ? 'primary' : 'default'}>{r.kind}</Label>
         </p>
@@ -147,73 +150,79 @@ function NeighbourMap({ s }: { s: Sample }) {
   const leadsTo = s.actions.filter((a) => a.target && a.target.unit !== s.unit);
   const side = (leftOrRight: boolean) =>
     leftOrRight ? hereFrom.length > 0 : leadsTo.length > 0;
-  const cols = [side(true), true, side(false)];
+  const l = side(true);
+  const r = side(false);
+  const template = l
+    ? r
+      ? '@xl:grid-cols-[1fr_1fr_1fr]'
+      : '@xl:grid-cols-[1fr_1fr_0]'
+    : r
+      ? '@xl:grid-cols-[0_1fr_1fr]'
+      : '@xl:grid-cols-[0_1fr_0]';
   return (
-    <div
-      className="grid items-center gap-x-3 gap-y-2"
-      style={{
-        gridTemplateColumns: cols
-          .map((on, i) =>
-            i === 1 ? 'minmax(0,1fr)' : on ? 'minmax(0,1fr)' : '0',
-          )
-          .join(' '),
-      }}
-    >
-      {s.inside.length > 0 && (
-        <div className="col-start-2 space-y-1">
-          <p className="text-xs text-muted-foreground">Inside</p>
-          <div className="flex flex-wrap gap-2">
-            {s.inside.map((r) => (
-              <UnitBox key={r.name} r={r} />
-            ))}
+    <div className="@container">
+      <div
+        className={cn(
+          'grid grid-cols-1 items-center gap-x-3 gap-y-2',
+          template,
+        )}
+      >
+        {s.inside.length > 0 && (
+          <div className="@xl:col-start-2 space-y-1">
+            <p className="text-xs text-muted-foreground">Inside</p>
+            <div className="flex flex-wrap gap-2">
+              {s.inside.map((r) => (
+                <UnitBox key={r.name} r={r} />
+              ))}
+            </div>
+            <p className="text-center">{ARROW}</p>
           </div>
-          <p className="text-center">{ARROW}</p>
-        </div>
-      )}
-      {side(true) && (
-        <div className="col-start-1 row-start-2">
-          <Side title="Leads here">
-            {hereFrom.map((o) => (
-              <div key={o.action.id} className="flex items-center gap-1">
-                <div className="min-w-0 flex-1">
-                  <UnitBox r={UNIT_INFO[o.unit]} label={o.action.does} />
-                </div>
-                <span aria-hidden>→</span>
-              </div>
-            ))}
-          </Side>
-        </div>
-      )}
-      <div className="col-start-2 row-start-2">
-        <UnitBox r={here} center />
-      </div>
-      {side(false) && (
-        <div className="col-start-3 row-start-2">
-          <Side title="Leads to">
-            {leadsTo.map((a) =>
-              a.target ? (
-                <div key={a.id} className="flex items-center gap-1">
-                  <span aria-hidden>→</span>
+        )}
+        {side(true) && (
+          <div className="@xl:col-start-1 @xl:row-start-2">
+            <Side title="Leads here">
+              {hereFrom.map((o) => (
+                <div key={o.action.id} className="flex items-center gap-1">
                   <div className="min-w-0 flex-1">
-                    <UnitBox r={UNIT_INFO[a.target.unit]} label={a.does} />
+                    <UnitBox r={UNIT_INFO[o.unit]} label={o.action.does} />
                   </div>
+                  <span aria-hidden>→</span>
                 </div>
-              ) : null,
-            )}
-          </Side>
-        </div>
-      )}
-      {s.madeOf.length > 0 && (
-        <div className="col-start-2 row-start-3 space-y-1">
-          <p className="text-center">{ARROW}</p>
-          <p className="text-xs text-muted-foreground">Made of</p>
-          <div className="flex flex-wrap gap-2">
-            {s.madeOf.map((m) => (
-              <UnitBox key={m.name} r={{ name: m.name, kind: 'component' }} />
-            ))}
+              ))}
+            </Side>
           </div>
+        )}
+        <div className="@xl:col-start-2 @xl:row-start-2">
+          <UnitBox r={here} center />
         </div>
-      )}
+        {side(false) && (
+          <div className="@xl:col-start-3 @xl:row-start-2">
+            <Side title="Leads to">
+              {leadsTo.map((a) =>
+                a.target ? (
+                  <div key={a.id} className="flex items-center gap-1">
+                    <span aria-hidden>→</span>
+                    <div className="min-w-0 flex-1">
+                      <UnitBox r={UNIT_INFO[a.target.unit]} label={a.does} />
+                    </div>
+                  </div>
+                ) : null,
+              )}
+            </Side>
+          </div>
+        )}
+        {s.madeOf.length > 0 && (
+          <div className="@xl:col-start-2 @xl:row-start-3 space-y-1">
+            <p className="text-center">{ARROW}</p>
+            <p className="text-xs text-muted-foreground">Made of</p>
+            <div className="flex flex-wrap gap-2">
+              {s.madeOf.map((m) => (
+                <UnitBox key={m.name} r={{ name: m.name, kind: 'component' }} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -611,7 +620,15 @@ function OptionB({ s }: Body) {
   const ex = useExample(s);
   return (
     <div className="flex items-start gap-6">
-      <div className="sticky top-0 max-h-full w-[55%] shrink-0 overflow-auto">
+      <div
+        className="sticky shrink-0 overflow-auto"
+        style={{
+          top: 96,
+          maxHeight: 'calc(100dvh - 112px)',
+          width: Math.max(ex.width + 34, 400),
+          maxWidth: '60%',
+        }}
+      >
         <ExampleFrame ex={ex} />
       </div>
       <div className="min-w-0 flex-1 space-y-6">
@@ -741,7 +758,10 @@ interface Body {
 function UnitList({ title }: { title: string }) {
   const [q, setQ] = useState('');
   return (
-    <nav className="w-56 shrink-0 space-y-3 overflow-auto border-r bg-rail p-3">
+    <nav
+      className="sticky w-56 shrink-0 space-y-3 overflow-auto border-r bg-rail p-3"
+      style={{ top: 88, height: 'calc(100dvh - 88px)' }}
+    >
       <Input
         placeholder="Filter"
         aria-label="Filter units"
@@ -790,8 +810,8 @@ export function DesignMock() {
   };
   const Layout = Body[o];
   return (
-    <div className="flex h-dvh flex-col bg-background text-foreground">
-      <div className="flex h-row shrink-0 items-center gap-4 border-b bg-muted px-card text-xs">
+    <div className="min-h-dvh bg-background text-foreground">
+      <div className="sticky top-0 z-20 flex h-row items-center gap-4 border-b bg-muted px-card text-xs">
         <span className="text-muted-foreground">Mockup (temporary)</span>
         <nav className="flex gap-4">
           {OPTIONS.map((x) => (
@@ -826,7 +846,7 @@ export function DesignMock() {
           <span className="text-muted-foreground">View: skipped</span>
         </nav>
       </div>
-      <div className="flex h-12 shrink-0 items-center gap-6 border-b px-card">
+      <div className="sticky top-row z-20 flex h-12 items-center gap-6 border-b bg-background px-card">
         <Mark className="size-5" />
         <UnderlineNav className="h-full">
           {TABS.map((t) => (
@@ -840,9 +860,9 @@ export function DesignMock() {
           ))}
         </UnderlineNav>
       </div>
-      <div className="flex min-h-0 flex-1">
+      <div className="flex items-start">
         <UnitList title={s.title} />
-        <main className="min-w-0 flex-1 overflow-auto p-6">
+        <main className="min-w-0 flex-1 p-6">
           <Layout key={`${o}${k}`} s={s} />
         </main>
       </div>
