@@ -38,10 +38,11 @@ describe('the derived map', () => {
     expect(madeOf(screen)).toEqual(['sample-row']);
   });
 
-  it('lists local rules with their unit', () => {
-    expect(ruleUses(specs).map((u) => [u.rule.id, u.units])).toEqual([
-      ['sample-row-truncate', ['sample-row']],
-    ]);
+  it('lists the rulebook and local rules with their units', () => {
+    const uses = ruleUses(specs).map((u) => [u.rule.id, u.units]);
+    expect(uses).toContainEqual(['failure-says-what', ['sample-row']]);
+    expect(uses).toContainEqual(['keep-the-place', []]);
+    expect(uses.at(-1)).toEqual(['sample-row-truncate', ['sample-row']]);
   });
 
   it('finds a unit by kind and id', () => {

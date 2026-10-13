@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkUnit, importedUnits, type Context, type Subject } from './checks';
+import {
+  checkRulebook,
+  checkUnit,
+  checkVision,
+  importedUnits,
+  type Context,
+  type Subject,
+} from './checks';
 import { LINE_MAX, PURPOSE_MAX } from './limits';
 import { fixture, FIXTURES, UNITS } from './registry';
 import { RULES } from './rules';
+import { VISION } from './vision';
 import { defineSpec, type AnySpec } from './spec';
 
 // Every unit's source, raw, for the imports check. Test-only: the page
@@ -339,5 +347,32 @@ describe('the checks', () => {
       decisions: [],
     });
     expect(spec.id).toBe('x');
+  });
+});
+
+describe('the rulebook and the vision', () => {
+  it('the rulebook is sound', () => {
+    expect(checkRulebook(RULES)).toEqual([]);
+    expect(RULES).toHaveLength(11);
+  });
+
+  it('fails on a duplicate or a badly spelled rule id', () => {
+    const r = { rule: 'r', check: 'c', scope: 'all' };
+    const bad = checkRulebook([
+      { id: 'a-b', ...r },
+      { id: 'a-b', ...r },
+      { id: 'Not_Kebab', ...r },
+    ]);
+    expect(bad).toContain('duplicate rule id a-b');
+    expect(bad.join()).toContain('Not_Kebab is not kebab-case');
+  });
+
+  it('the vision keeps to one line each', () => {
+    expect(checkVision(VISION)).toEqual([]);
+  });
+
+  it('fails on a vision line over the limit', () => {
+    const long = 'x'.repeat(LINE_MAX + 1);
+    expect(checkVision({ line: long, facts: [] })).toHaveLength(1);
   });
 });
