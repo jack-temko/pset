@@ -26,6 +26,10 @@ const Design = lazy(() =>
   import('@/pages/design').then((m) => ({ default: m.Design })),
 );
 
+const Vibes = lazy(() =>
+  import('@/pages/vibes').then((m) => ({ default: m.Vibes })),
+);
+
 /** The product's screens hold the live stream open. The gallery routes
  *  don't: a component or a view never talks to a real server. */
 function Live() {
@@ -58,6 +62,14 @@ export default function App() {
           element={
             <Suspense>
               <Views />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/vibes/:vibe?/:screen?"
+          element={
+            <Suspense>
+              <Vibes />
             </Suspense>
           }
         />
