@@ -182,13 +182,13 @@ export const COLOURS: readonly Colour[] = [
   {
     name: 'hover',
     value: mix(FG, BG_RAISED, HOVER_SHARE),
-    use: 'a quiet or default control under the pointer',
+    use: 'a transparent control under the pointer: fg mixed over bg-raised, used on every plain ground',
     on: [],
   },
   {
     name: 'pressed',
     value: mix(FG, BG_RAISED, PRESSED_SHARE),
-    use: 'a quiet or default control while pressed',
+    use: 'a transparent control while pressed: fg mixed over bg-raised, used on every plain ground',
     on: [],
   },
   {

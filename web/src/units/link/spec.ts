@@ -62,6 +62,18 @@ export default defineSpec({
       default: 'none',
       does: 'The link text.',
     },
+    {
+      name: 'onClick, ref and the other anchor props',
+      type: 'anchor props',
+      default: 'none',
+      does: 'Pass through to the anchor, so a router-aware screen can intercept navigation.',
+    },
+    {
+      name: 'forceState',
+      type: "'hover' | 'focus'",
+      default: 'none',
+      does: 'Draws the hover or focus look without either; for the design page only.',
+    },
   ],
   priority: {
     first: 'Its text, in the accent colour.',

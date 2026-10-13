@@ -41,7 +41,7 @@ export default defineSpec({
     {
       id: 'not-ready',
       name: 'Not ready',
-      when: 'It cannot act yet. A press or focus shows why in one line under it.',
+      when: 'It cannot act yet; every variant takes the default shape. A press or focus shows why under it, and an overflow: hidden ancestor will cut that off.',
       text: 'Add a file first.',
     },
     {
@@ -107,6 +107,12 @@ export default defineSpec({
       type: 'ReactNode',
       default: 'none',
       does: 'The label, on one line.',
+    },
+    {
+      name: 'reasonOpen',
+      type: 'boolean',
+      default: 'false',
+      does: 'Shows the not-ready reason without a press or focus; for the design page only.',
     },
   ],
   priority: {

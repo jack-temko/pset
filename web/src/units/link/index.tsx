@@ -1,18 +1,21 @@
-import type { ReactNode } from 'react';
+import type { ComponentPropsWithRef } from 'react';
 
 /** Goes somewhere (link-d2). Underlined inside text; plain when it stands
- *  alone, underlined on hover and focus (link-d1). */
+ *  alone, underlined on hover and focus (link-d1). The anchor's own props
+ *  (`onClick`, `ref` and the rest) pass through, so a router-aware screen
+ *  can intercept navigation. */
 export function Link({
   href,
   inline = false,
   forceState,
+  className,
   children,
-}: {
+  ...rest
+}: Omit<ComponentPropsWithRef<'a'>, 'href'> & {
   href: string;
   inline?: boolean;
   /** Draws the hover or focus look without either (the design page only). */
   forceState?: 'hover' | 'focus';
-  children: ReactNode;
 }) {
   const underline =
     inline || forceState
@@ -24,8 +27,9 @@ export function Link({
       : '';
   return (
     <a
+      {...rest}
       href={href}
-      className={`text-(--ds-accent) underline-offset-2 ${inline ? '' : 'ds-body'} ${underline} ${forced}`}
+      className={`text-(--ds-accent) underline-offset-2 ${inline ? '' : 'ds-body'} ${underline} ${forced} ${className ?? ''}`}
     >
       {children}
     </a>
