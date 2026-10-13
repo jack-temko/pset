@@ -36,7 +36,7 @@ export const VISION: Vision = {
     },
     {
       label: 'The feel, acting',
-      text: 'A precise tool where they act: ruled rows, mono figures, compact controls, one accent.',
+      text: 'A precise tool where they act: ruled rows, figures in the font of their text, compact controls, one accent.',
     },
   ],
 };

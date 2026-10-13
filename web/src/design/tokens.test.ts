@@ -1,12 +1,13 @@
-/// <reference types="node" />
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
   COLOURS,
   contrast,
   colour,
+  BORDER,
+  FOCUS,
   FONTS,
+  ROOM,
   LAYOUT,
   MUTED_FLOOR,
   RADII,
@@ -14,6 +15,7 @@ import {
   TEXT_FLOOR,
   TYPE,
 } from './tokens';
+import css from './tokens.css?raw';
 
 /** The custom properties declared in the `.ds` block. */
 function declared(): Map<string, string> {
@@ -26,8 +28,6 @@ function declared(): Map<string, string> {
     ]),
   );
 }
-
-const css = readFileSync(`${import.meta.dirname}/tokens.css`, 'utf8');
 
 describe('contrast', () => {
   const cases = COLOURS.flatMap((c) =>
@@ -97,6 +97,22 @@ describe('tokens.css and tokens.ts', () => {
       expect(vars.get(k)).toBe(`${String(v)}px`);
     for (const r of RADII)
       expect(vars.get(`radius-${r.name}`)).toBe(`${String(r.px)}px`);
+  });
+
+  it('agree on the border, the focus ring and the room around big type', () => {
+    expect(vars.get('border-width')).toBe(`${String(BORDER)}px`);
+    expect(vars.get('focus-width')).toBe(`${String(FOCUS.width)}px`);
+    expect(vars.get('focus-offset')).toBe(`${String(FOCUS.offset)}px`);
+    for (const [step, r] of Object.entries(ROOM)) {
+      const m = new RegExp(`\\.ds-room-${step} \\{([^}]*)\\}`).exec(css);
+      const body = m?.[1] ?? '';
+      expect(body, step).toContain(
+        `margin-top: var(--ds-space-${String(r.above)})`,
+      );
+      expect(body, step).toContain(
+        `margin-bottom: var(--ds-space-${String(r.below)})`,
+      );
+    }
   });
 
   it('declares nothing that tokens.ts does not know', () => {

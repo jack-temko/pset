@@ -106,3 +106,7 @@ the network; `/theme-mock` is gone; nothing in the old app looks different.
 - Layout of any screen.
 
 If a decision is missing or two conflict, stop and report; do not guess.
+
+### Follow-ups
+
+- When these fonts replace the app's, they need metric-matched fallbacks and a preload in `main.tsx` (today they load with `font-display: swap` on `/design` only).

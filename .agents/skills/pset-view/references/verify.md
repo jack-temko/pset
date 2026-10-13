@@ -39,7 +39,7 @@ const { chromium } = require(
 - **Save every screenshot outside the repo**: give an explicit path in a scratch
   directory. Tools default to the working directory; never let them.
 - Themes: `browser.newContext({ colorScheme: 'light' | 'dark', viewport: { width: 1440, height: 1000 } })`.
-  The app follows the system, so this is Paper and Night.
+  The app follows the system, so this is Paper and Night. Units under `/design` have one theme (dark): check them with the app in either setting; the old app's screens are still checked in both.
 - Scope selectors to the view's frame. On `/views` the homework panel is
   `aside.w-panel`; the page has other `aside` elements.
 - Buttons are found by accessible name (`getByRole('button', { name: 'Next question' })`);
