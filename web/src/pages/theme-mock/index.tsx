@@ -5,27 +5,34 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import './mock.css';
 import {
-  type Contrast,
+  ACCENT,
+  ACCENT_SOLID,
+  ATTENTION,
+  DANGER,
   FONTS_HREF,
   type Kind,
-  PAGE,
+  ON_ACCENT,
+  PAGE_INK,
   PALETTES,
-  STRONG,
-  TYPE_SETS,
+  SANS,
+  SERIF,
+  type Sheet,
+  SHEETS,
 } from './palettes';
 
-const KINDS: Kind[] = ['ink', 'warm', 'slate'];
-const CONTRASTS: Contrast[] = ['normal', 'strong'];
+const KINDS: Kind[] = ['ink', 'half', 'neutral', 'warmgrey'];
+const SHEET_KEYS: Sheet[] = ['cream', 'grey', 'cool'];
 
-function Fig({ children }: { children: ReactNode }) {
-  return <span className="tm-fig">{children}</span>;
-}
-
-function Segments({ done }: { done: number }) {
+function Segments({ done, muted }: { done: number; muted?: boolean }) {
   return (
     <span className="tm-bar6" aria-hidden>
       {[0, 1, 2, 3, 4, 5].map((i) => (
-        <span key={i} className="tm-seg" data-done={i < done} />
+        <span
+          key={i}
+          className="tm-seg"
+          data-done={i < done}
+          data-muted={muted}
+        />
       ))}
     </span>
   );
@@ -70,12 +77,22 @@ function Top({ crumb }: { crumb?: boolean }) {
   );
 }
 
-const COURSES = [
+type Course = {
+  name: string;
+  mats: number;
+  work: string;
+  done: number;
+  kind: 'due' | 'plain' | 'turned' | 'failed';
+  date: string;
+};
+
+const COURSES: Course[] = [
   {
     name: 'Circuits I',
     mats: 7,
     work: 'Problem set 4',
     done: 2,
+    kind: 'due',
     date: 'due Fri',
   },
   {
@@ -83,6 +100,7 @@ const COURSES = [
     mats: 5,
     work: 'Problem set 7',
     done: 4,
+    kind: 'plain',
     date: 'due Mon 20',
   },
   {
@@ -90,9 +108,94 @@ const COURSES = [
     mats: 4,
     work: 'Problem set 2',
     done: 0,
+    kind: 'plain',
     date: 'no date',
   },
+  {
+    name: 'Linear Algebra',
+    mats: 6,
+    work: 'Problem set 5',
+    done: 6,
+    kind: 'turned',
+    date: 'turned in',
+  },
+  {
+    name: 'Thermodynamics',
+    mats: 3,
+    work: 'Could not read the assignment',
+    done: 0,
+    kind: 'failed',
+    date: '',
+  },
 ];
+
+function Glyph({ d }: { d: ReactNode }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {d}
+    </svg>
+  );
+}
+
+const CLOCK = (
+  <>
+    <circle cx="8" cy="8" r="6" />
+    <path d="M8 4.5V8l2.5 1.5" />
+  </>
+);
+const CHECK = <path d="M3 8.5l3.5 3.5L13 4.5" />;
+
+function CourseRow({ c }: { c: Course }) {
+  const failed = c.kind === 'failed';
+  return (
+    <div className="tm-row">
+      <span className="tm-row-name">{c.name}</span>
+      <span className="tm-small tm-muted tm-tab">{c.mats} materials</span>
+      {failed ? (
+        <span className="tm-failed">
+          <span className="tm-small" style={{ color: 'var(--danger)' }}>
+            {c.work}
+          </span>
+          <button type="button" className="tm-textbtn">
+            Try again
+          </button>
+        </span>
+      ) : (
+        <>
+          <span className="tm-small">{c.work}</span>
+          <span className="tm-prog">
+            <Segments done={c.done} muted={c.kind === 'turned'} />
+            <span className="tm-date tm-small tm-tab">
+              {c.kind === 'due' && (
+                <span className="tm-tag tm-tag-attention">
+                  <Glyph d={CLOCK} />
+                  {c.date}
+                </span>
+              )}
+              {c.kind === 'turned' && (
+                <span className="tm-muted tm-inline">
+                  <Glyph d={CHECK} />
+                  {c.date}
+                </span>
+              )}
+              {c.kind === 'plain' && <span className="tm-muted">{c.date}</span>}
+            </span>
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
 
 function HomeScreen({ vars }: { vars: CSSProperties }) {
   return (
@@ -107,8 +210,7 @@ function HomeScreen({ vars }: { vars: CSSProperties }) {
           <div>
             <div className="tm-band-title">Problem set 4</div>
             <div className="tm-small tm-muted">
-              Circuits I · problem <Fig>4.27</Fig> · <Fig>2</Fig> of{' '}
-              <Fig>6</Fig>
+              Circuits I · problem 4.27 · 2 of 6
             </div>
           </div>
           <button type="button" className="tm-btn tm-btn-primary">
@@ -118,32 +220,16 @@ function HomeScreen({ vars }: { vars: CSSProperties }) {
         <section className="tm-sec">
           <div className="tm-sec-head">
             <h2 className="tm-h2">Courses</h2>
-            <span className="tm-small tm-muted">
-              <Fig>3</Fig>
-            </span>
+            <span className="tm-small tm-muted tm-tab">5</span>
           </div>
           {COURSES.map((c) => (
-            <div key={c.name} className="tm-row">
-              <span className="tm-row-name">{c.name}</span>
-              <span className="tm-small tm-muted">
-                <Fig>{c.mats}</Fig> materials
-              </span>
-              <span className="tm-small">{c.work}</span>
-              <span className="tm-prog">
-                <Segments done={c.done} />
-                <span className="tm-date tm-small tm-muted">
-                  <Fig>{c.date}</Fig>
-                </span>
-              </span>
-            </div>
+            <CourseRow key={c.name} c={c} />
           ))}
           <a className="tm-add" href="#add">
             + Add a course
           </a>
         </section>
-        <p className="tm-week tm-small tm-muted">
-          This week <Fig>6</Fig> h <Fig>20</Fig> m
-        </p>
+        <p className="tm-week tm-small tm-muted">This week 6 h 20 m</p>
       </main>
     </div>
   );
@@ -172,26 +258,18 @@ function HomeworkScreen({ vars }: { vars: CSSProperties }) {
             <div className="tm-sheet">
               <div className="tm-line tm-line-head" />
               <Lines widths={PARA} />
-              <div className="tm-figbox">
-                Fig.&nbsp;<Fig>4.109</Fig>
-              </div>
+              <div className="tm-figbox">Fig.&nbsp;4.109</div>
               <Lines widths={PARA2} />
-              <div className="tm-foot">
-                <Fig>142</Fig>
-              </div>
+              <div className="tm-foot">142</div>
             </div>
           </div>
         </div>
         <div className="tm-right">
           <div className="tm-rhead">
-            <span className="tm-small tm-muted">
-              Problem <Fig>4.27</Fig>
-            </span>
+            <span className="tm-small tm-muted">Problem 4.27</span>
             <span className="tm-rhead-r">
               <Segments done={2} />
-              <span className="tm-small tm-muted">
-                <Fig>2</Fig> of <Fig>6</Fig>
-              </span>
+              <span className="tm-small tm-muted">2 of 6</span>
             </span>
           </div>
           <div className="tm-scroll">
@@ -205,7 +283,7 @@ function HomeworkScreen({ vars }: { vars: CSSProperties }) {
                   <b>Hint</b>
                   <span className="tm-tag">generated</span>
                   <a className="tm-pg tm-small" href="#p142">
-                    <Fig>p. 142</Fig>
+                    p. 142
                   </a>
                 </div>
                 <p className="tm-help-text">
@@ -247,11 +325,8 @@ function HomeworkScreen({ vars }: { vars: CSSProperties }) {
 export function ThemeMock() {
   const { screen = 'home' } = useParams();
   const [q, setQ] = useSearchParams();
-  const k = KINDS.find((x) => x === q.get('k')) ?? 'ink';
-  const t =
-    q.get('t') === '2' || q.get('t') === '3' ? (q.get('t') ?? '1') : '1';
-  const c = CONTRASTS.find((x) => x === q.get('c')) ?? 'normal';
-  const f = q.get('f') === 'sans' ? 'sans' : 'mono';
+  const k = KINDS.find((x) => x === q.get('k')) ?? 'neutral';
+  const p = SHEET_KEYS.find((x) => x === q.get('p')) ?? 'cream';
 
   useEffect(() => {
     const link = document.createElement('link');
@@ -263,9 +338,7 @@ export function ThemeMock() {
     };
   }, []);
 
-  const pal = { ...PALETTES[k], ...(c === 'strong' ? STRONG[k] : {}) };
-  const set = TYPE_SETS[t];
-  const page = PAGE[c];
+  const pal = PALETTES[k];
   const vars = {
     '--bg': pal.bg,
     '--bg-raised': pal.raised,
@@ -274,14 +347,17 @@ export function ThemeMock() {
     '--border-muted': pal.borderMuted,
     '--fg': pal.fg,
     '--fg-muted': pal.fgMuted,
-    '--accent': pal.accent,
-    '--accent-solid': pal.accentSolid,
-    '--on-accent': pal.onAccent,
-    '--page': page.page,
-    '--page-ink': page.ink,
-    '--font-serif': set.serif,
-    '--font-sans': set.sans,
-    '--font-fig': f === 'mono' ? set.mono : set.sans,
+    '--accent': ACCENT,
+    '--accent-solid': ACCENT_SOLID,
+    '--on-accent': ON_ACCENT,
+    '--attention': ATTENTION,
+    '--danger': DANGER,
+    '--attention-soft': pal.attentionSoft,
+    '--danger-soft': pal.dangerSoft,
+    '--page': SHEETS[p],
+    '--page-ink': PAGE_INK,
+    '--font-serif': SERIF,
+    '--font-sans': SANS,
   } as CSSProperties;
 
   const pick = (key: string, value: string) => () => {
@@ -309,9 +385,7 @@ export function ThemeMock() {
     <>
       <div className="tm-bar">
         {group('palette', 'k', k, KINDS)}
-        {group('type', 't', t, ['1', '2', '3'])}
-        {group('contrast', 'c', c, CONTRASTS)}
-        {group('figures', 'f', f, ['mono', 'sans'])}
+        {group('page', 'p', p, SHEET_KEYS)}
         <div className="tm-bar-group">
           <span className="tm-bar-label">screen</span>
           {['home', 'homework'].map((s) => (
