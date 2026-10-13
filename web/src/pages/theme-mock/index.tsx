@@ -196,8 +196,8 @@ function HomeworkScreen({ vars }: { vars: CSSProperties }) {
           </div>
           <div className="tm-scroll">
             <p className="tm-statement">
-              For the circuit in Fig. <Fig>4.109</Fig>, find the current i
-              through the 8 Ω resistor and the power it absorbs.
+              For the circuit in Fig. 4.109, find the current i through the 8 Ω
+              resistor and the power it absorbs.
             </p>
             <div className="tm-help">
               <div className="tm-help-row">
