@@ -66,18 +66,18 @@ function Colours() {
         <li
           key={c.name}
           data-colour={c.name}
-          className="flex items-start gap-4 px-4 py-3"
+          className="grid grid-cols-[48px_224px_256px_1fr] items-start gap-4 px-4 py-3"
         >
           <span
             aria-hidden
-            className="size-12 shrink-0 rounded-(--ds-radius-control) border border-(--ds-border)"
+            className="size-12 rounded-(--ds-radius-control) border border-(--ds-border)"
             style={{ background: c.value }}
           />
-          <div className="w-56 shrink-0">
+          <div>
             <p className="ds-body font-medium">{c.name}</p>
             <p className="ds-code text-(--ds-fg-muted)">{c.value}</p>
           </div>
-          <p className="ds-body w-64 shrink-0">{c.use}</p>
+          <p className="ds-body">{c.use}</p>
           <ul className="min-w-0 flex-1 space-y-1">
             {c.on.map((a) => (
               <Ratio key={a.ground} text={c.name} {...a} />

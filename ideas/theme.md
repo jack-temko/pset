@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress, branch `theme` (base `design`).
+Built, awaiting approval (branch `theme`, base `design`).
 
 ## Information
 
