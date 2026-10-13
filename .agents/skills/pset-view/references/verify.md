@@ -12,7 +12,7 @@ PSET_API_TARGET=http://127.0.0.1:9 npx vite --port 5198 --strictPort
 
 - **Port 8420 is the user's own PSet** and its library. Never proxy to it and never
   use it. The dead `PSET_API_TARGET` above means nothing can reach a real server
-  even by mistake; `/views` and `/components` need none.
+  even by mistake; `/design`, `/views` and `/components` need none.
 - Open `/views/<name>?scenario=<id>&speed=4&wide=1`. Scenario, speed and width are
   in the URL, so a state can be linked and reloaded.
 - Stop Vite by PID (`ss -ltnp | grep 5198`, then `kill <pid>`). Do not `pkill -f` a
@@ -58,7 +58,9 @@ const { chromium } = require(
 ## The checklist (step 8)
 
 - [ ] Every scenario of the view loads with no console errors, in Paper and in Night.
-- [ ] Every variant of the view has a `/views` scenario, and each has a slow-loading
+- [ ] A unit in the `/design` format: its page on `/design/<kind>/<id>` shows every
+      state, Stress, Loading and Both in both themes; `checks.test.ts` passes.
+- [ ] Every variant of an old-format view has a `/views` scenario, and each has a slow-loading
       scenario too (the mock server's latency). Shots include each variant mid-load and
       loaded, in both themes: the skeleton must be the content's shape, with no flash of
       another variant.
@@ -77,8 +79,8 @@ const { chromium } = require(
 - [ ] `cd web && npm run build` passes: it fails on fractional or off-scale
       utilities and on theme utilities missing from the CSS.
 - [ ] No screenshots, logs or traces in the repo (`git status` shows source only).
-- [ ] The spec (with its friction log), component READMEs and any design doc
-      were updated in the same change.
+- [ ] The spec (`spec.ts`, or an old view's `spec.md` with its friction log) and, for
+      old-format work, component READMEs were updated in the same change.
 - [ ] Anything not verified is said so in the report (a real server, a real book).
 
 ## Reporting

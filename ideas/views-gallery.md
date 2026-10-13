@@ -1,5 +1,8 @@
 # Views gallery
 
+> New work uses the `/design` format: a typed `spec.ts` per unit, not `spec.md` and
+> `grill.md` (`ideas/gallery-docs-grill.md`, D3, D15, D16). This file describes the old one.
+
 ## Status
 
 **In progress** (2026-09-30). Three branches, in order; each merges on its
