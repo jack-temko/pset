@@ -3,6 +3,8 @@ import { HomeworkWireframes } from './homework/wireframes';
 import { SCENARIOS as homework } from './homework/scenarios';
 import { ErrorNoticeStage } from './error-notice/stage';
 import { SCENARIOS as errorNotice } from './error-notice/scenarios';
+import { DockStage } from './dock/stage';
+import { SCENARIOS as dock } from './dock/scenarios';
 import type { ViewEntry } from './types';
 
 /** Every view on /views, in the sidebar's order. A view is added here when
@@ -32,6 +34,16 @@ const ALL: ViewEntry[] = [
     scenarios: errorNotice,
     spec: () => import('./error-notice/spec.md?raw').then((m) => m.default),
     Stage: ErrorNoticeStage,
+  },
+  {
+    id: 'dock',
+    title: 'Dock',
+    group: 'Workspace',
+    note: 'The split a course’s work happens in: the thing opened, locked on the right, and a left pane of tabs for whatever is needed beside it. On stand-in views.',
+    scenarios: dock,
+    spec: () => import('./dock/spec.md?raw').then((m) => m.default),
+    Stage: DockStage,
+    wideLabel: 'Full width',
   },
 ];
 

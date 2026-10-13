@@ -38,6 +38,7 @@ export function Menu({
   label,
   trigger,
   align,
+  icon,
   intent,
   children,
 }: {
@@ -47,6 +48,9 @@ export function Menu({
   trigger?: ReactNode;
   /** Which edge of the trigger the card lines up with. */
   align?: 'start' | 'end';
+  /** The glyph of the icon trigger when there is no `trigger`: a "+" for a
+   *  menu of things to add. Defaults to "⋯". */
+  icon?: ReactNode;
   /** `usePrefetchIntent`'s handlers, to warm what an item will open as the
    *  pointer rests on the trigger. */
   intent?: PrefetchIntent;
@@ -206,7 +210,7 @@ export function Menu({
               'relative z-[60] rounded-b-none border-border bg-card text-foreground hover:bg-card',
           )}
         >
-          <Ellipsis />
+          {icon ?? <Ellipsis />}
         </IconButton>
       )}
       {open &&
@@ -390,6 +394,19 @@ export function MenuCheckItem({
       )}
       {children}
     </button>
+  );
+}
+
+/** A heading over a run of rows, to group a long list ("Slides"). Not a row:
+ *  arrow keys and focus pass over it. */
+export function MenuLabel({ children }: { children: ReactNode }) {
+  return (
+    <div
+      role="presentation"
+      className="px-3 pt-3 pb-1 text-xs text-muted-foreground"
+    >
+      {children}
+    </div>
   );
 }
 

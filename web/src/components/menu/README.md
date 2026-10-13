@@ -37,6 +37,12 @@ right-aligned to the trigger.
   it: a press inside the popover isn't "outside" the menu, and its Esc
   is caught before the menu's. Cancel or Esc lands you back on the row;
   only the act closes the menu.
+- **`MenuLabel`**: a muted `text-xs` heading over a run of rows, for a list
+  long enough to group by kind (the dock's +: Textbooks, Slides, Sets). It is
+  not a row: arrows and focus skip it. It leaves the card's no-padding rule
+  alone, since it is text in the card, not a wash.
+- **`icon`** swaps the "⋯" of the icon trigger for another glyph (a "+"), the
+  label still naming it.
 - **`MenuDivider`**: a `border-muted` hairline, for setting a state
   apart from the actions above it, and the destructive act from the
   rest.
@@ -62,6 +68,8 @@ the rest); nest menus; put a form or anything that needs typing in one
 - **A labelled trigger, a `current` row and one-at-a-time** arrived with the homework header's
   question list, which had to be this same menu and not a look-alike.
 
+- **`MenuLabel` and `icon`** (2026-10-13) arrived with the dock's + menu,
+  which lists a course's materials and sets grouped by kind.
 - **New in the app.** It was deferred once ("inline buttons until it's
   proven") and arrived when the walkthrough header filled up with Add
   questions, Edit, Print and Turned in beside the set's title.

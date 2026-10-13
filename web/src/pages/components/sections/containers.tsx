@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, ListChecks, Plus, Presentation } from 'lucide-react';
 import { BookCover, CoverPicker } from '@/components/book-cover';
 import {
   Box,
@@ -11,6 +11,9 @@ import {
   RowValue,
 } from '@/components/box';
 import { Button } from '@/components/button';
+import { Menu, MenuItem, MenuLabel } from '@/components/menu';
+import { PaneHeader, PaneTabs, type PaneTab } from '@/components/pane-tabs';
+import { Split } from '@/components/split';
 import { Disclosure } from '@/components/disclosure';
 import { ImportRow } from '@/components/import-row';
 import { Door } from '@/components/door';
@@ -22,6 +25,95 @@ import { BOOKS, DUE, sampleBook } from '@/components/fixtures';
 import { BookTile } from '@/components/book-tile';
 import type { ComponentEntry } from './types';
 import { Shelf } from './shared';
+
+/** The dock's two panes and the seam between them, live. */
+function SplitDemo() {
+  return (
+    <Split
+      id="components-demo"
+      className="h-48 w-full max-w-layout-reading overflow-hidden rounded-md border"
+      left={
+        <div className="p-card text-sm text-muted-foreground">
+          Drag the seam or tab to it and use the arrows. Each pane stops at
+          360px.
+        </div>
+      }
+      right={
+        <div className="p-card text-sm text-muted-foreground">
+          Enter or a double-click puts the halves back.
+        </div>
+      }
+    />
+  );
+}
+
+const TAB_POOL: PaneTab[] = [
+  {
+    id: 'a',
+    kind: 'Textbook',
+    title: 'Signals and Systems',
+    icon: <BookOpen />,
+  },
+  {
+    id: 'b',
+    kind: 'Slides',
+    title: 'Lecture 7: Fourier series',
+    icon: <Presentation />,
+  },
+  { id: 'c', kind: 'Set', title: 'Problem set 4', icon: <ListChecks /> },
+  {
+    id: 'd',
+    kind: 'Slides',
+    title: 'Lecture 8: The Fourier transform',
+    icon: <Presentation />,
+  },
+];
+
+/** A pane's tabs, live: the + adds the next one, the X closes. */
+function PaneTabsDemo({ count }: { count: number }) {
+  const [tabs, setTabs] = useState(TAB_POOL.slice(0, count));
+  const [current, setCurrent] = useState<string | null>(tabs[0]?.id ?? null);
+  const more = TAB_POOL.filter((t) => !tabs.some((x) => x.id === t.id));
+  return (
+    <div className="w-full max-w-layout-reading overflow-hidden rounded-md border">
+      <PaneTabs
+        label="Open here"
+        tabs={tabs}
+        current={current}
+        onSelect={setCurrent}
+        onClose={(id) => {
+          const i = tabs.findIndex((t) => t.id === id);
+          const rest = tabs.filter((t) => t.id !== id);
+          setTabs(rest);
+          if (current === id)
+            setCurrent(rest[Math.min(i, rest.length - 1)]?.id ?? null);
+        }}
+        end={
+          <Menu label="Open in this pane" icon={<Plus />}>
+            <MenuLabel>Not open</MenuLabel>
+            {more.map((t) => (
+              <MenuItem
+                key={t.id}
+                icon={t.icon}
+                onSelect={() => {
+                  setTabs([...tabs, t]);
+                  setCurrent(t.id);
+                }}
+              >
+                {t.title}
+              </MenuItem>
+            ))}
+            {more.length === 0 && (
+              <p className="p-3 text-sm text-muted-foreground">
+                Everything is open.
+              </p>
+            )}
+          </Menu>
+        }
+      />
+    </div>
+  );
+}
 
 /** The Door needs state to be worth looking at, so it gets a live demo. */
 function DoorDemo() {
@@ -381,6 +473,49 @@ export const containersSections: ComponentEntry[] = [
               <p />
             </Disclosure>
           </Box>
+        </Shelf>
+      </>
+    ),
+  },
+  {
+    id: 'split',
+    title: 'Split',
+    group: 'Containers',
+    note: 'Two panes and the ResizeHandle on the seam: the shape of the dock. Each pane holds at 360px; the ratio is kept per id.',
+    docs: ['split'],
+    Demo: () => (
+      <Shelf label="live">
+        <SplitDemo />
+      </Shelf>
+    ),
+  },
+  {
+    id: 'pane-tabs',
+    title: 'PaneTabs',
+    group: 'Containers',
+    note: 'The tabs of a pane, each with its kind, title and a close, and the + pinned at the end. The pane locked to one thing has a PaneHeader instead.',
+    docs: ['pane-tabs'],
+    Demo: () => (
+      <>
+        <Shelf label="a few tabs">
+          <PaneTabsDemo count={3} />
+        </Shelf>
+        <Shelf label="empty, only the +">
+          <PaneTabsDemo count={0} />
+        </Shelf>
+        <Shelf label="past the floor, scrolling sideways">
+          <div className="w-80">
+            <PaneTabsDemo count={4} />
+          </div>
+        </Shelf>
+        <Shelf label="header of a locked pane">
+          <div className="w-full max-w-layout-reading overflow-hidden rounded-md border">
+            <PaneHeader
+              kind="Set"
+              title="Problem set 4"
+              icon={<ListChecks />}
+            />
+          </div>
         </Shelf>
       </>
     ),
