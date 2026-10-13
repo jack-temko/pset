@@ -23,7 +23,7 @@ a redesign has to beat. Note the exits and the re-entry after a break.
 
 ## The ten lenses
 
-1. **Glance test.** Eyes half shut for two seconds: what is this, what state is it
+1. **Glance test.** Look for two seconds: what is this, what state is it
    in, what is the one next action? One primary action per region. If two things
    compete, one of them is wrong.
 2. **Visibility ladder.** Every element sits on one rung: always visible, on focus
@@ -34,8 +34,8 @@ a redesign has to beat. Note the exits and the re-entry after a break.
    is noise.
 4. **Decision load.** Count the choices on screen at once. Prefer recognition to
    recall. The common path takes defaults and no typing.
-5. **Stuck.** Dead ends. Empty states that do not say what to do. Waits with no
-   sign of progress or time left. Errors that do not say whether the work is safe
+5. **Stuck.** Dead ends. Empty states that do not say what to do. Waits that
+   say nothing about what is happening (`honest-waits`). Errors that do not say whether the work is safe
    or what to try. Irreversible acts (undo beats confirm when it can be undone).
 6. **Confused.** Jargon. Internal states leaking into the UI ("located", "pending").
    Unlabelled icons. Look-alike actions. State changes with no feedback.

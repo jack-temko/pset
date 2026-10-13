@@ -1,6 +1,7 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Design } from './index';
 import { describe, expect, it } from 'vitest';
 
 import { fixture } from '@/design/registry';
@@ -68,5 +69,41 @@ describe('the sections', () => {
     const el = render(<RulesSection spec={row} rulebook={RULES} />);
     expect(el.querySelectorAll('li')).toHaveLength(2);
     expect(el.textContent).toContain('local');
+  });
+
+  it('renders the page of every rule, and a plain state for an unknown id', () => {
+    const at = (path: string) => {
+      const el = document.createElement('div');
+      act(() => {
+        createRoot(el).render(
+          <MemoryRouter initialEntries={[path]}>
+            <Routes>
+              <Route path="/design/*" element={<Design />} />
+            </Routes>
+          </MemoryRouter>,
+        );
+      });
+      return el;
+    };
+    for (const r of RULES) {
+      const el = at(`/design/rules/${r.id}`);
+      expect(el.querySelector('h1')?.textContent).toBe(r.id);
+      expect(el.textContent).toContain(r.check);
+      expect(el.textContent).toContain(r.scope);
+      expect(el.textContent).toContain('Cited by');
+    }
+    const keep = at('/design/rules/keep-the-place');
+    expect(keep.textContent).toContain('No unit cites it.');
+    const cited = at('/design/rules/failure-says-what');
+    expect(cited.textContent).toContain('Sample row');
+    const none = at('/design/rules/no-such-rule');
+    expect(none.textContent).toContain('No rule with this id');
+    expect(
+      [...none.querySelectorAll('a')].some(
+        (a) =>
+          a.getAttribute('href') === '/design/rules' &&
+          a.textContent === 'Back to Rules',
+      ),
+    ).toBe(true);
   });
 });

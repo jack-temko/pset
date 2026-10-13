@@ -61,7 +61,18 @@ export function RulesPage() {
 export function RulePage() {
   const { id } = useParams();
   const use = RULE_USES.find((u) => u.rule.id === id);
-  if (!use) return <Quiet>No rule {id ?? ''}.</Quiet>;
+  if (!use)
+    return (
+      <div className="space-y-1">
+        <Quiet>No rule with this id.</Quiet>
+        <Link
+          to="/design/rules"
+          className="text-sm text-primary hover:underline"
+        >
+          Back to Rules
+        </Link>
+      </div>
+    );
   const { rule, units } = use;
   return (
     <div>
