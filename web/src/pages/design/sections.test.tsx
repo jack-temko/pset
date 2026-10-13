@@ -49,6 +49,6 @@ describe('the sections', () => {
       />,
     );
     expect(el.textContent).toContain('Replaced by sample-row-d2');
-    expect(el.textContent?.match(/Replaced by/g)).toHaveLength(1);
+    expect(el.textContent.match(/Replaced by/g)).toHaveLength(1);
   });
 });
