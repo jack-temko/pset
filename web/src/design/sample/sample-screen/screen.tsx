@@ -10,7 +10,7 @@ export function SampleScreen({
 }) {
   return (
     <div className="space-y-3">
-      <h2 className="font-heading text-lg">{open ? 'Item' : 'Items'}</h2>
+      <h2 className="ds-heading">{open ? 'Item' : 'Items'}</h2>
       {(open ? items.slice(0, 1) : items).map((i) => (
         <SampleRow key={i.title} title={i.title} detail={i.detail} />
       ))}
@@ -21,7 +21,7 @@ export function SampleScreen({
 export function SampleScreenSkeleton() {
   return (
     <div className="space-y-3">
-      <h2 className="font-heading text-lg">Items</h2>
+      <h2 className="ds-heading">Items</h2>
       <SampleRowSkeleton />
       <SampleRowSkeleton />
     </div>

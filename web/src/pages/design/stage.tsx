@@ -14,8 +14,8 @@ import { SegmentedControl } from '@/components/segmented-control';
 import type { AnyExamples } from '@/design/examples';
 import type { Entry } from '@/design/registry';
 import type { AnySpec } from '@/design/spec';
-import { THEMES } from '@/design/themes';
 import { cn } from '@/lib/utils';
+import '@/design/tokens.css';
 import { unitPath } from './lookup';
 import {
   DEFAULT_WIDTH,
@@ -75,16 +75,6 @@ function Toolbar({
           ]}
           onChange={(load) => {
             change({ load });
-          }}
-        />
-      </Group>
-      <Group label="Theme">
-        <SegmentedControl
-          label="Theme"
-          value={s.theme}
-          options={THEMES.map((t) => ({ value: t.id, label: t.label }))}
-          onChange={(theme) => {
-            change({ theme });
           }}
         />
       </Group>
@@ -225,8 +215,9 @@ function Render({
 }
 
 /** One stage, on the muted ground: the unit at its chosen width, left
- *  aligned, with the resize handle on its right edge. The theme's scope
- *  class sets the tokens for the stage alone. */
+ *  aligned, with the resize handle on its right edge. The example sits under
+ *  the `ds` class, so it is drawn in the foundations' one theme whatever the
+ *  app's own theme is. */
 function Stage({
   entry,
   s,
@@ -240,21 +231,18 @@ function Stage({
   const ref = useRef<HTMLDivElement>(null);
   const inner = useInnerWidth(ref);
   const got = useExamples(entry);
-  const scope = THEMES.find((t) => t.id === s.theme)?.scope;
   const width = s.w === 'full' ? inner : Math.min(s.w, inner || s.w);
   return (
     <div
       ref={ref}
-      className={cn(
-        'overflow-hidden rounded-md border bg-muted p-card text-foreground',
-        scope,
-      )}
+      className="overflow-hidden rounded-md border bg-muted p-card text-foreground"
     >
       <div className="flex items-stretch">
         <div
           className={cn(
-            'shrink-0',
-            spec.kind !== 'pane' && 'rounded-md border bg-background p-card',
+            'ds shrink-0',
+            spec.kind !== 'pane' &&
+              'rounded-lg border border-(--ds-border-muted) p-6',
           )}
           style={{ width }}
         >
