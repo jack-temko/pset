@@ -17,6 +17,7 @@ import { RULES } from '@/design/rules';
 import type { Kind } from '@/design/spec';
 import { cn } from '@/lib/utils';
 import { unitPath } from './lookup';
+import { Foundations } from './foundations';
 import { RulePage, RulesPage } from './rules';
 import { Quiet } from './sections';
 import { UnitPage } from './unit';
@@ -39,8 +40,6 @@ const TABS: readonly Tab[] = [
 ];
 
 const EMPTY: Record<string, string> = {
-  foundations:
-    'Nothing here yet. Colour, type, spacing and the mark are designed from scratch, and each appears here when it is.',
   components: 'No components yet.',
   panes: 'No panes yet.',
   views: 'No views yet.',
@@ -162,7 +161,13 @@ function TabPage() {
   if (!t) return <Navigate to="/design" replace />;
   return (
     <Shell tab={t}>
-      {t.id === 'rules' ? <RulesPage /> : <Quiet>{EMPTY[t.id]}</Quiet>}
+      {t.id === 'rules' ? (
+        <RulesPage />
+      ) : t.id === 'foundations' ? (
+        <Foundations />
+      ) : (
+        <Quiet>{EMPTY[t.id]}</Quiet>
+      )}
     </Shell>
   );
 }

@@ -38,9 +38,5 @@ export const VISION: Vision = {
       label: 'The feel, acting',
       text: 'A precise tool where they act: ruled rows, mono figures, compact controls, one accent.',
     },
-    {
-      label: 'Not settled',
-      text: 'The colours and the finish of the feel.',
-    },
   ],
 };
