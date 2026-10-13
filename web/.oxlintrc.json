@@ -88,7 +88,13 @@
     {
       // The gallery's registries are data that carry their own demo
       // components; nothing hot-reloads them as components.
-      "files": ["src/pages/components/sections/**"],
+      // Likewise a unit's examples.tsx: a default export of render
+      // functions keyed by state, not a component.
+      "files": [
+        "src/pages/components/sections/**",
+        "src/design/sample/*/examples.tsx",
+        "src/units/*/examples.tsx"
+      ],
       "rules": { "react/only-export-components": "off" }
     },
     {

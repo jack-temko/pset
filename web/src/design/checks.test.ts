@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { checkUnit, importedUnits, type Context, type Subject } from './checks';
 import { LINE_MAX, PURPOSE_MAX } from './limits';
-import { FIXTURES, UNITS } from './registry';
+import { fixture, FIXTURES, UNITS } from './registry';
 import { RULES } from './rules';
 import { defineSpec, type AnySpec } from './spec';
 
@@ -50,8 +50,17 @@ describe('every registered unit', () => {
 
 // ---- the checks themselves, each against a deliberately broken fixture.
 
-const ROW = FIXTURES.find((e) => e.spec.id === 'sample-row')!;
-const SCREEN = FIXTURES.find((e) => e.spec.id === 'sample-screen')!;
+const ROW = fixture('sample-row');
+const SCREEN = fixture('sample-screen');
+
+function ex(s: Subject) {
+  if (!s.examples) throw new Error('no examples');
+  return s.examples;
+}
+
+function never(): never {
+  throw new Error('missing');
+}
 
 async function broken(
   base: typeof ROW,
@@ -164,8 +173,8 @@ describe('the checks', () => {
       () => ({}),
       (s) => ({
         examples: {
-          ...s.examples!,
-          states: { rest: s.examples!.states.rest },
+          ...ex(s),
+          states: { rest: ex(s).states.rest },
         },
       }),
     );
@@ -175,7 +184,7 @@ describe('the checks', () => {
       () => ({}),
       (s) => ({
         examples: {
-          ...s.examples!,
+          ...ex(s),
           stress: undefined as unknown as () => null,
         },
       }),
@@ -189,8 +198,8 @@ describe('the checks', () => {
       () => ({}),
       (s) => ({
         examples: {
-          ...s.examples!,
-          skeletons: { rest: s.examples!.skeletons!.rest },
+          ...ex(s),
+          skeletons: { rest: ex(s).skeletons?.rest ?? never() },
         },
       }),
     );
@@ -202,7 +211,7 @@ describe('the checks', () => {
     const noData = await broken(
       ROW,
       () => ({ data: [] }),
-      (s) => ({ examples: { ...s.examples!, skeletons: undefined } }),
+      (s) => ({ examples: { ...ex(s), skeletons: undefined } }),
     );
     expect(noData).toEqual([]);
   });

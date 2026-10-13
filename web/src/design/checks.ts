@@ -66,8 +66,10 @@ export function checkUnit(u: Subject, ctx: Context): string[] {
     'rules',
     'decisions',
   ] as const;
-  for (const k of required)
-    if (spec[k] === undefined || spec[k] === '') fail(`missing ${k}`);
+  for (const k of required) {
+    const v = (spec as unknown as Record<string, unknown>)[k];
+    if (v === undefined || v === '') fail(`missing ${k}`);
+  }
   if (spec.states.length === 0) fail('needs at least one state');
   if (spec.kind !== 'component') {
     if (!spec.flows || spec.flows.length === 0)

@@ -220,8 +220,10 @@
   --text-4xl--letter-spacing: -0.02em;
 }
 
-/* Paper. */
-:root {
+/* Paper. `.theme-paper` scopes the same tokens to one element, so the design
+   page can show Paper inside a Night app. */
+:root,
+.theme-paper {
   --background: oklch(0.984 0.005 95);
   --foreground: oklch(0.245 0.012 90);
   --card: oklch(0.998 0.003 95);
@@ -336,7 +338,8 @@
   html {
     @apply font-sans;
   }
-  :root {
+  :root,
+  .theme-paper {
     color-scheme: light;
   }
   .dark {

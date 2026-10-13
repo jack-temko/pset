@@ -112,3 +112,10 @@ export function ruleUses(specs: readonly AnySpec[]): RuleUse[] {
   );
   return [...global, ...local];
 }
+
+/** A fixture by id; throws when it is missing, for tests. */
+export function fixture(id: string): Entry {
+  const e = FIXTURES.find((f) => f.spec.id === id);
+  if (!e) throw new Error(`no fixture ${id}`);
+  return e;
+}

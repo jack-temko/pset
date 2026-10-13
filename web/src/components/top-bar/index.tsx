@@ -17,19 +17,19 @@ import { cn } from '@/lib/utils';
  * (plus the dev-only components toggle): the theme lives in Settings, not
  * here, because one preference doesn't earn permanent chrome.
  */
-/** Dev only: flip between wherever you are and /components, and back. */
+/** Dev only: flip between wherever you are and /design, and back. */
 function ComponentsToggle() {
   const location = useLocation();
-  const there = location.pathname === '/components';
+  const there = location.pathname.startsWith('/design');
   return (
     <Link
       to={
         there
           ? ((location.state as { from?: string } | null)?.from ?? '/')
-          : '/components'
+          : '/design'
       }
       state={there ? undefined : { from: location.pathname }}
-      aria-label={there ? 'Back to the app' : 'Components'}
+      aria-label={there ? 'Back to the app' : 'Design'}
       className={cn(
         buttonVariants({ variant: 'ghost' }),
         'size-control-lg px-0',

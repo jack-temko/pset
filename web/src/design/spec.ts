@@ -119,7 +119,7 @@ export interface Spec<
 }
 
 /** Any spec, for code that does not care about its ids. */
-export type AnySpec = Spec<string, string, readonly DataRead[]>;
+export type AnySpec = Spec;
 
 /** The one way to write a spec: it keeps the ids as literal types, so a
  *  flow step or `priority.main` that is not an action of the unit fails
