@@ -7,7 +7,7 @@ import { Quiet, RuleList, Sec } from './sections';
 
 const RULE_USES = ruleUses(ALL_SPECS);
 
-/** The rulebook, grouped Always, Never, Limits. */
+/** The rulebook. */
 export function RulesPage() {
   if (RULES.length === 0)
     return (
@@ -38,9 +38,7 @@ export function RulePage() {
   return (
     <div>
       <header className="space-y-1">
-        <p className="text-xs tracking-wide text-primary uppercase">
-          Rule, {rule.kind}
-        </p>
+        <p className="text-xs tracking-wide text-primary uppercase">Rule</p>
         <h1 className="font-heading text-xl">{rule.id}</h1>
         <p className="text-sm text-muted-foreground">{rule.rule}</p>
       </header>

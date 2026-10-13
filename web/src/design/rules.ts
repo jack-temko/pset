@@ -1,10 +1,7 @@
-export type RuleKind = 'always' | 'never' | 'limit';
-
 /** One rule of the rulebook. The id is permanent: specs cite it, so it is
  *  never renamed or reused, only superseded in the rule text. */
 export interface Rule {
   id: string;
-  kind: RuleKind;
   /** One sentence. */
   rule: string;
   /** How anyone can tell the rule is kept. */

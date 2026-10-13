@@ -53,22 +53,17 @@ interface Group {
 
 function groupsFor(tab: Tab): Group[] {
   if (tab.id === 'rules') {
-    return (['always', 'never', 'limit'] as const).flatMap((kind) => {
-      const items = RULES.filter((r) => r.kind === kind).map((r) => ({
-        to: `/design/rules/${r.id}`,
-        name: r.id,
-      }));
-      return items.length
-        ? [
-            {
-              label: { always: 'Always', never: 'Never', limit: 'Limits' }[
-                kind
-              ],
-              items,
-            },
-          ]
-        : [];
-    });
+    return RULES.length
+      ? [
+          {
+            label: 'Rules',
+            items: RULES.map((r) => ({
+              to: `/design/rules/${r.id}`,
+              name: r.id,
+            })),
+          },
+        ]
+      : [];
   }
   const map = new Map<string, Group>();
   for (const { spec } of UNITS) {

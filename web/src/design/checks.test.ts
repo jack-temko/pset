@@ -250,7 +250,6 @@ describe('the checks', () => {
         rules: [
           {
             id: 'sample-row-truncate',
-            kind: 'always',
             rule: 'r',
             check: 'c',
             scope: 'all',

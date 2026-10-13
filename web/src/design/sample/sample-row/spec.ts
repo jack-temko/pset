@@ -98,8 +98,7 @@ export default defineSpec({
     local: [
       {
         id: 'sample-row-truncate',
-        kind: 'never',
-        rule: 'A row never wraps its title onto a second line.',
+        rule: 'Keep a row title on one line.',
         check: 'Set Stress on the page: the title ends in an ellipsis.',
         scope: 'sample-row',
       },
