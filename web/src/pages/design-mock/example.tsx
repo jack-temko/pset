@@ -1,4 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+
+import { cn } from '@/lib/utils';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Trash2 } from 'lucide-react';
 
@@ -188,21 +190,61 @@ export function Both({
       night: String(night),
       w: String(width),
       ah: String(height),
+      t: '1',
     }).toString()}`;
+  const loaded = src(false);
+  const loading = src(true);
+  return (
+    <BothLayers
+      key={loaded}
+      loaded={loaded}
+      loading={loading}
+      height={height}
+    />
+  );
+}
+
+/** The two layers are windows of their own and load on their own time, so
+ *  the box says so until the Loaded one is in, shows that one alone at full
+ *  strength until the Loading one is in too, and only then lays the
+ *  skeleton over it at half strength. Never blank. */
+function BothLayers({
+  loaded,
+  loading,
+  height,
+}: {
+  loaded: string;
+  loading: string;
+  height: number;
+}) {
+  const [ready, setReady] = useState({ loaded: false, loading: false });
+  const both = ready.loaded && ready.loading;
   return (
     <div className="relative w-full overflow-hidden" style={{ height }}>
+      <p className="absolute inset-0 p-card text-xs text-muted-foreground">
+        Loading both layers.
+      </p>
       {/* The app asks for 1024px of window, so the frame is that wide and
           the box clips it to the example. */}
       <iframe
         title="Loaded"
-        src={src(false)}
-        className="absolute inset-y-0 left-0 h-full w-[1100px] border-0 opacity-50"
+        src={loaded}
+        onLoad={() => {
+          setReady((r) => ({ ...r, loaded: true }));
+        }}
+        className="absolute inset-y-0 left-0 h-full w-[1100px] border-0"
       />
       <iframe
         title="Loading"
-        src={src(true)}
+        src={loading}
         tabIndex={-1}
-        className="pointer-events-none absolute inset-y-0 left-0 h-full w-[1100px] border-0 opacity-50"
+        onLoad={() => {
+          setReady((r) => ({ ...r, loading: true }));
+        }}
+        className={cn(
+          'pointer-events-none absolute inset-y-0 left-0 h-full w-[1100px] border-0',
+          both ? 'opacity-50' : 'opacity-0',
+        )}
       />
     </div>
   );
@@ -216,11 +258,11 @@ export function PaneFrame() {
   const [q] = useSearchParams();
   return (
     <div
-      className={
-        q.get('night') === 'true'
-          ? 'dark min-h-dvh bg-background text-foreground'
-          : 'min-h-dvh bg-background text-foreground'
-      }
+      className={cn(
+        'min-h-dvh text-foreground',
+        q.get('t') ? '' : 'bg-background',
+        q.get('night') === 'true' && 'dark',
+      )}
     >
       <div
         style={{ width: Number(q.get('w') ?? 440) }}

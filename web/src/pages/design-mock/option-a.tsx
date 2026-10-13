@@ -398,7 +398,9 @@ function NeighbourMap({ s }: { s: Sample }) {
     <div>
       {s.inside.length > 0 && (
         <div className="space-y-2">
-          <Quiet>Inside</Quiet>
+          <div className="text-center">
+            <Quiet>Inside</Quiet>
+          </div>
           <div className="flex flex-wrap justify-center gap-2">
             {s.inside.map((r) => (
               <UnitBox key={r.name} r={r} small />
