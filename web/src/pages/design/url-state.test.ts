@@ -14,26 +14,22 @@ describe('the stage state in the URL', () => {
       load: 'loaded',
       stress: false,
       w: 480,
-      theme: 'paper',
     });
     expect(parseStage(q, SCREEN).w).toBe('full');
   });
 
   it('reads every control', () => {
-    const q = new URLSearchParams(
-      'state=menu&load=both&stress=1&w=280&theme=night',
-    );
+    const q = new URLSearchParams('state=menu&load=both&stress=1&w=280');
     expect(parseStage(q, ROW)).toEqual({
       state: 'menu',
       load: 'both',
       stress: true,
       w: 280,
-      theme: 'night',
     });
   });
 
   it('ignores what is not valid', () => {
-    const q = new URLSearchParams('state=zzz&load=x&w=-4&theme=neon');
+    const q = new URLSearchParams('state=zzz&load=x&w=-4');
     expect(parseStage(q, ROW)).toEqual(parseStage(new URLSearchParams(), ROW));
   });
 

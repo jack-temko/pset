@@ -21,5 +21,7 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // tokens.test.ts reads tokens.css as text, so vitest must not process it.
+    css: { include: [/tokens\.css/] },
   },
 });

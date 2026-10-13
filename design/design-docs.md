@@ -31,21 +31,33 @@ from imports).
 
 ## The page
 
-`/design/<kind>/<id>?state=&load=&stress=&w=&theme=`, top to bottom: kind, title and
-purpose; the example live at real size, with State, Load (Loaded, Loading, Both), Theme,
+`/design/<kind>/<id>?state=&load=&stress=&w=`, top to bottom: kind, title and
+purpose; the example live at real size, with State, Load (Loaded, Loading, Both),
 Content (Normal, Stress), Width (draggable, px shown) and the flow strip; the neighbourhood
 map; tables for actions, data and loading, inputs, priority and sizes; rules; decisions.
 Tabs across the top (Foundations, Components, Panes, Views, Errors, Rules; a tab with no
 units is hidden, except Foundations and Rules) and a grouped list with a filter on the left. Errors joins `/design` when it is rebuilt.
 
-The stage sets the theme with a scope class, so tokens follow the chosen theme. Tailwind
-`dark:` variants follow the app's theme, not the stage's, so new units style themes through
-tokens only.
+## The foundations
+
+There is one theme: dark (`ideas/theme-grill.md`). `web/src/design/tokens.ts` holds its
+colour, type, space and shape as typed data, with each text colour's allowed grounds;
+`web/src/design/tokens.css` carries the same values as `--ds-*` variables, and a class per
+type step (`ds-display`, `ds-body`, `ds-code` and so on), under the root class `ds`. The
+stage draws every example under `ds`, and the Foundations tab shows the tokens with their
+measured contrast, so they look the same whatever the app's own Paper or Night is. New
+units style through these tokens only; the old `index.css` tokens and Tailwind `dark:`
+variants are not used. `tokens.test.ts` measures the contrast of every text colour on
+every ground it declares (4.5:1, and 7:1 for grey text), fails when `tokens.css` and
+`tokens.ts` disagree, and fails on a spacing step that is not a multiple of 4. Fonts are
+bundled with `@fontsource` (Source Serif 4 and IBM Plex Sans variable, IBM Plex Mono 400),
+never fetched from a CDN.
 
 ## Rules
 
 `web/src/design/rules.ts` holds the rulebook. It starts with the eleven principles of the
-vision (`ideas/vision-grill.md`); further rules are written when the thing they govern is
+vision (`ideas/vision-grill.md`), then six for the foundations (serif to read, mono for
+copy, figures follow text, colour has a word, contrast floors, room for big type); further rules are written when the thing they govern is
 designed. A rule has a permanent id, one sentence, a "how to check it" line, a scope and
 what enforces it. It has no kind: every rule is worded as what to do ("Keep a row title on
 one line"), and a rule with a number just states the number. A spec cites rules by id and

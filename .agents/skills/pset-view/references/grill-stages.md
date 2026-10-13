@@ -88,7 +88,7 @@ asked about a page the user can open:
 - **Options are side by side and labelled** (A, B) on the same page, drawn from the
   survivors of the student walkthrough simulation. Only the chosen layout is kept in
   the final version.
-- **Both themes.** Look at them in Paper and Night before asking.
+- **Both themes.** Look at them in Paper and Night before asking. Units under `/design` have one theme (dark): check them with the app in either setting; the old app's screens are still checked in both.
 - **Start it for the user.** Run Vite on a private port (`PSET_API_TARGET=http://127.0.0.1:9`;
   never 8420) and give the URL in the question. If the user is away from the machine,
   take screenshots to a scratch folder and offer them as a private page.

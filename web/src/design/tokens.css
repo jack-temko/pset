@@ -1,0 +1,162 @@
+/* The foundations (ideas/theme-grill.md). The same values as tokens.ts, which
+   tokens.test.ts holds them to. Everything is scoped to the `ds` class, so the
+   old app's tokens in index.css are untouched. */
+@import '@fontsource-variable/source-serif-4/wght.css';
+@import '@fontsource-variable/ibm-plex-sans/wght.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+
+.ds {
+  color-scheme: dark;
+  --ds-font-serif: 'Source Serif 4 Variable', serif;
+  --ds-font-sans: 'IBM Plex Sans Variable', sans-serif;
+  --ds-font-mono: 'IBM Plex Mono', monospace;
+  --ds-bg: #0f1114;
+  --ds-bg-raised: #16191d;
+  --ds-bg-inset: #08090b;
+  --ds-border: #3a3f46;
+  --ds-border-muted: #282c32;
+  --ds-fg: #f0f3f6;
+  --ds-fg-muted: #9da4ad;
+  --ds-accent: #4493f8;
+  --ds-accent-solid: #1f6feb;
+  --ds-on-accent: #ffffff;
+  --ds-attention: #d29922;
+  --ds-attention-soft: #322c1e;
+  --ds-danger: #f85149;
+  --ds-danger-soft: #342124;
+  --ds-success: #3fb950;
+  --ds-success-soft: #1c3125;
+  --ds-page: #e4e7ea;
+  --ds-page-ink: #2b2823;
+  --ds-display-size: 44px;
+  --ds-display-line: 48px;
+  --ds-display-weight: 500;
+  --ds-display-font: var(--ds-font-serif);
+  --ds-heading-size: 22px;
+  --ds-heading-line: 28px;
+  --ds-heading-weight: 500;
+  --ds-heading-font: var(--ds-font-serif);
+  --ds-reading-l-size: 20px;
+  --ds-reading-l-line: 30px;
+  --ds-reading-l-weight: 400;
+  --ds-reading-l-font: var(--ds-font-serif);
+  --ds-reading-size: 17px;
+  --ds-reading-line: 28px;
+  --ds-reading-weight: 400;
+  --ds-reading-font: var(--ds-font-serif);
+  --ds-body-size: 15px;
+  --ds-body-line: 22px;
+  --ds-body-weight: 400;
+  --ds-body-font: var(--ds-font-sans);
+  --ds-small-size: 14px;
+  --ds-small-line: 20px;
+  --ds-small-weight: 400;
+  --ds-small-font: var(--ds-font-sans);
+  --ds-code-size: 14px;
+  --ds-code-line: 20px;
+  --ds-code-weight: 400;
+  --ds-code-font: var(--ds-font-mono);
+  --ds-space-4: 4px;
+  --ds-space-8: 8px;
+  --ds-space-12: 12px;
+  --ds-space-16: 16px;
+  --ds-space-20: 20px;
+  --ds-space-24: 24px;
+  --ds-space-32: 32px;
+  --ds-space-40: 40px;
+  --ds-space-48: 48px;
+  --ds-space-56: 56px;
+  --ds-space-64: 64px;
+  --ds-space-96: 96px;
+  --ds-gutter: 40px;
+  --ds-row: 44px;
+  --ds-control: 32px;
+  --ds-radius-tag: 4px;
+  --ds-radius-control: 6px;
+  --ds-radius-panel: 8px;
+  --ds-border-width: 1px;
+  --ds-focus-width: 2px;
+  --ds-focus-offset: 2px;
+
+  background: var(--ds-bg);
+  color: var(--ds-fg);
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-body-size);
+  line-height: var(--ds-body-line);
+}
+
+.ds :focus-visible {
+  outline: var(--ds-focus-width) solid var(--ds-accent);
+  outline-offset: var(--ds-focus-offset);
+}
+
+/* Columns of figures line up. */
+.ds .ds-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* One class per type step: font, size, line and weight together. */
+.ds .ds-display {
+  font-family: var(--ds-display-font);
+  font-size: var(--ds-display-size);
+  line-height: var(--ds-display-line);
+  font-weight: var(--ds-display-weight);
+}
+
+.ds .ds-heading {
+  font-family: var(--ds-heading-font);
+  font-size: var(--ds-heading-size);
+  line-height: var(--ds-heading-line);
+  font-weight: var(--ds-heading-weight);
+}
+
+.ds .ds-reading-l {
+  font-family: var(--ds-reading-l-font);
+  font-size: var(--ds-reading-l-size);
+  line-height: var(--ds-reading-l-line);
+  font-weight: var(--ds-reading-l-weight);
+}
+
+.ds .ds-reading {
+  font-family: var(--ds-reading-font);
+  font-size: var(--ds-reading-size);
+  line-height: var(--ds-reading-line);
+  font-weight: var(--ds-reading-weight);
+}
+
+.ds .ds-body {
+  font-family: var(--ds-body-font);
+  font-size: var(--ds-body-size);
+  line-height: var(--ds-body-line);
+  font-weight: var(--ds-body-weight);
+}
+
+.ds .ds-small {
+  font-family: var(--ds-small-font);
+  font-size: var(--ds-small-size);
+  line-height: var(--ds-small-line);
+  font-weight: var(--ds-small-weight);
+}
+
+.ds .ds-code {
+  font-family: var(--ds-code-font);
+  font-size: var(--ds-code-size);
+  line-height: var(--ds-code-line);
+  font-weight: var(--ds-code-weight);
+}
+
+/* Reading text runs at most 66 characters wide. */
+.ds .ds-measure {
+  max-width: 66ch;
+}
+
+/* Room around big type: 96 above and 56 below the display size, 64 above and
+   16 below a heading. */
+.ds .ds-room-display {
+  margin-top: var(--ds-space-96);
+  margin-bottom: var(--ds-space-56);
+}
+.ds .ds-room-heading {
+  margin-top: var(--ds-space-64);
+  margin-bottom: var(--ds-space-16);
+}
