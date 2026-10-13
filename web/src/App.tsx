@@ -22,6 +22,13 @@ const Views = lazy(() =>
   import('@/pages/views').then((m) => ({ default: m.Views })),
 );
 
+const DesignMock = lazy(() =>
+  import('@/pages/design-mock').then((m) => ({ default: m.DesignMock })),
+);
+const PaneFrame = lazy(() =>
+  import('@/pages/design-mock/example').then((m) => ({ default: m.PaneFrame })),
+);
+
 /** The product's screens hold the live stream open. The gallery routes
  *  don't: a component or a view never talks to a real server. */
 function Live() {
@@ -58,6 +65,23 @@ export default function App() {
           }
         />
         <Route path="/errors/:section?" element={<ErrorCatalog />} />
+        {/* Temporary: mockups for the gallery docs grill. */}
+        <Route
+          path="/design-mock/frame/pane/:state"
+          element={
+            <Suspense>
+              <PaneFrame />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/design-mock/:option?/:kind?"
+          element={
+            <Suspense>
+              <DesignMock />
+            </Suspense>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );
