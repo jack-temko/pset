@@ -1,4 +1,4 @@
-/** Each pane stops here: today's narrowest panel. */
+/** Each pane stops here: today's narrowest pane beside the page. */
 export const SPLIT_MIN = 360;
 /** Where a split starts: equal halves. */
 export const HALF = 0.5;

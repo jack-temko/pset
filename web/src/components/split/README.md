@@ -8,9 +8,10 @@ hairline between them (the left pane's right border).
   fraction so a layout set on a wide screen looks the same on a narrow one.
   It starts at half and is saved in this browser under the `id` the caller
   gives (the course), when a move ends.
-- **Each pane stops at 360px** (`SPLIT_MIN` in `width.ts`, today's narrowest panel), and the
-  seam does not move further. On a split too narrow for two panes of 360, the
-  limits meet and the seam sits still.
+- **Each pane stops at 360px** (`SPLIT_MIN` in `width.ts`, today's narrowest pane beside the page), and the
+  seam does not move further. When the frame is narrower than two minimums,
+  the left pane holds its minimum and the right takes what is left (the frame
+  clips it); the seam sits still.
 - **The seam** is the `ResizeHandle` as it is: drag, arrows (Shift for 64),
   Home and End to the limits, Enter or double-click for halves.
 - **Each pane scrolls on its own.** The Split gives each a flex column of the

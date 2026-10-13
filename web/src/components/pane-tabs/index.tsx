@@ -5,6 +5,10 @@ import { IconButton } from '@/components/button';
 import { Tooltip } from '@/components/tooltip';
 import { cn } from '@/lib/utils';
 
+/** A tab never gets narrower than this (the strip scrolls instead) or wider. */
+const TAB_MIN = 144;
+const TAB_MAX = 240;
+
 export interface PaneTab {
   id: string;
   /** What kind of thing it is, in words: "Slides". */
@@ -21,7 +25,7 @@ export interface PaneTab {
  * The tab that is shown is marked with Primer's 2px underline, which lands
  * on the strip's own hairline.
  *
- * Tabs share the strip, shrink to a floor (192px) and cut their titles
+ * Tabs share the strip, share the strip between a floor (144px) and a ceiling (240px) and cut their titles
  * short; the full "Kind: title" is the tooltip. Past the floor the strip
  * scrolls sideways, and the tab shown is scrolled into view.
  */
@@ -43,6 +47,19 @@ export function PaneTabs({
   end?: ReactNode;
 }) {
   const strip = useRef<HTMLDivElement>(null);
+  const endSlot = useRef<HTMLDivElement>(null);
+  // Set when a tab is closed: focus follows to the tab now shown, or the +.
+  const refocus = useRef(false);
+
+  useEffect(() => {
+    if (!refocus.current) return;
+    refocus.current = false;
+    const next =
+      strip.current?.querySelector<HTMLElement>(
+        'button[aria-current="true"]',
+      ) ?? endSlot.current?.querySelector<HTMLElement>('button');
+    next?.focus();
+  }, [tabs, current]);
 
   useEffect(() => {
     if (current === null) return;
@@ -52,6 +69,11 @@ export function PaneTabs({
     // oxlint-disable-next-line typescript/no-unnecessary-condition -- jsdom has no scrollIntoView
     tab?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }, [current]);
+
+  const close = (id: string) => {
+    refocus.current = true;
+    onClose(id);
+  };
 
   return (
     <div className="flex h-row shrink-0 items-center border-b bg-rail">
@@ -66,8 +88,10 @@ export function PaneTabs({
           return (
             <div
               key={t.id}
+              // Tabs share the strip between a floor and a ceiling.
+              style={{ minWidth: TAB_MIN, maxWidth: TAB_MAX }}
               className={cn(
-                'relative flex h-full min-w-48 max-w-64 flex-1 items-center border-r pr-1',
+                'relative flex h-full flex-1 items-center border-r pr-1',
                 shown ? 'bg-background' : 'hover:bg-muted',
               )}
             >
@@ -79,10 +103,10 @@ export function PaneTabs({
                     onSelect(t.id);
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Delete') onClose(t.id);
+                    if (e.key === 'Delete') close(t.id);
                   }}
                   className={cn(
-                    'flex h-full min-w-0 flex-1 items-center gap-2 pl-3 text-left text-sm outline-none focus-visible:underline',
+                    'flex h-full min-w-0 flex-1 items-center gap-2 pl-3 text-left text-sm focus-visible:-outline-offset-2',
                     shown
                       ? 'font-medium text-foreground'
                       : 'text-muted-foreground hover:text-foreground',
@@ -100,7 +124,7 @@ export function PaneTabs({
                 aria-label={`Close ${t.title}`}
                 tabIndex={shown ? 0 : -1}
                 onClick={() => {
-                  onClose(t.id);
+                  close(t.id);
                 }}
                 className="shrink-0"
               >
@@ -116,7 +140,11 @@ export function PaneTabs({
           );
         })}
       </div>
-      {end && <div className="flex shrink-0 items-center px-1">{end}</div>}
+      {end && (
+        <div ref={endSlot} className="flex shrink-0 items-center px-1">
+          {end}
+        </div>
+      )}
     </div>
   );
 }

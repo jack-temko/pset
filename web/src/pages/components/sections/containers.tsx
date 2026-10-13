@@ -82,9 +82,11 @@ function PaneTabsDemo({ count }: { count: number }) {
         current={current}
         onSelect={setCurrent}
         onClose={(id) => {
+          const i = tabs.findIndex((t) => t.id === id);
           const rest = tabs.filter((t) => t.id !== id);
           setTabs(rest);
-          if (current === id) setCurrent(rest[0]?.id ?? null);
+          if (current === id)
+            setCurrent(rest[Math.min(i, rest.length - 1)]?.id ?? null);
         }}
         end={
           <Menu label="Open in this pane" icon={<Plus />}>

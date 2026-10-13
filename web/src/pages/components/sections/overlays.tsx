@@ -16,6 +16,7 @@ import {
   MenuConfirmItem,
   MenuDivider,
   MenuItem,
+  MenuLabel,
 } from '@/components/menu';
 import { ConfirmPopover } from '@/components/confirm';
 import { Dialog } from '@/components/dialog';
@@ -23,6 +24,19 @@ import { Spinner } from '@/components/spinner';
 import { cn } from '@/lib/utils';
 import type { ComponentEntry } from './types';
 import { Shelf } from './shared';
+
+/** A + menu of things to open, grouped under headings, as the dock's. */
+function GroupedMenuDemo() {
+  return (
+    <Menu label="Open in this pane" icon={<Plus className="size-4" />}>
+      <MenuLabel>Slides</MenuLabel>
+      <MenuItem onSelect={() => {}}>Lecture 7: Fourier series</MenuItem>
+      <MenuItem onSelect={() => {}}>Lecture 8: The Fourier transform</MenuItem>
+      <MenuLabel>Sets</MenuLabel>
+      <MenuItem onSelect={() => {}}>Problem set 5</MenuItem>
+    </Menu>
+  );
+}
 
 function MenuDemo() {
   const [on, setOn] = useState(false);
@@ -260,6 +274,9 @@ export const overlaysSections: ComponentEntry[] = [
         </Shelf>
         <Shelf label="labelled trigger, current row">
           <QuestionsMenuDemo />
+        </Shelf>
+        <Shelf label="icon trigger (a +), grouped by MenuLabel">
+          <GroupedMenuDemo />
         </Shelf>
         <Shelf label="one at a time">
           <MenuDemo />

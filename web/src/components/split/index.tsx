@@ -1,4 +1,10 @@
-import { useCallback, useLayoutEffect, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { ResizeHandle } from '@/components/resize-handle';
 import { cn } from '@/lib/utils';
@@ -66,13 +72,18 @@ export function Split({
 
   const measured = total > 0;
   const width = leftWidth(total, ratio, min);
-  // Reads the newest ratio: a key press changes it and commits in one event.
+  // The newest ratio, for the commit: a key press changes it and commits in
+  // one event, before the state has re-rendered.
+  const latest = useRef(ratio);
   const commit = useCallback(() => {
-    setRatio((r) => (write(id, r), r));
+    write(id, latest.current);
   }, [id]);
 
   return (
-    <div ref={frame} className={cn('flex min-h-0 min-w-0', className)}>
+    <div
+      ref={frame}
+      className={cn('flex min-h-0 min-w-0 overflow-hidden', className)}
+    >
       <div
         style={{ width: measured ? width : `${String(HALF * 100)}%` }}
         className="flex min-w-0 shrink-0 flex-col border-r"
@@ -86,10 +97,13 @@ export function Split({
         min={min}
         max={Math.max(min, total - min)}
         onChange={(px) => {
-          if (measured) setRatio(px / total);
+          if (!measured) return;
+          latest.current = px / total;
+          setRatio(px / total);
         }}
         onCommit={commit}
         onReset={() => {
+          latest.current = HALF;
           setRatio(HALF);
           write(id, HALF);
         }}

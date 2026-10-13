@@ -32,7 +32,7 @@ export const THINGS: Thing[] = [
   SET_5,
 ];
 
-/** A course with more than a strip holds: eleven slides decks and the rest. */
+/** A course with more than a strip holds: eleven slide decks and the rest. */
 export const MANY_THINGS: Thing[] = [
   TEXTBOOK,
   t('m-oppenheim-2', 'textbook', 'Signals and Systems, study guide'),

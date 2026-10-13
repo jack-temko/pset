@@ -48,17 +48,17 @@ DockStage                       the course's name (leaving) over the dock, at a 
 
 ## states
 
-| state           | shows                                                                           | scenario          |
-| --------------- | ------------------------------------------------------------------------------- | ----------------- |
-| Just opened     | Right: the thing. Left: empty with the list                                     | `just-opened`     |
-| One tab         | Left: its view under a strip of one tab and the +                               | `one-tab`         |
-| Several tabs    | The shown tab marked; the others keep their scroll while hidden                 | `several-tabs`    |
-| Many tabs       | Tabs at a floor of 192px, titles cut with a tooltip, the strip scrolls sideways | `many-tabs`       |
-| Last tab closed | Left returns to empty                                                           | `last-tab-closed` |
-| Already open    | Picking an open thing shows its tab; the right's thing is not offered           | `already-open`    |
-| A link followed | A page named in a view opens that material on the left at that page             | `link-followed`   |
-| At a limit      | A pane at 360px; the seam does not move further                                 | `at-a-limit`      |
-| Reloaded        | The same right thing (the scenario's, standing for the URL), the saved split    | `reloaded`        |
+| state           | shows                                                                                                           | scenario          |
+| --------------- | --------------------------------------------------------------------------------------------------------------- | ----------------- |
+| Just opened     | Right: the thing. Left: empty with the list                                                                     | `just-opened`     |
+| One tab         | Left: its view under a strip of one tab and the +                                                               | `one-tab`         |
+| Several tabs    | The shown tab marked; the others keep their scroll while hidden                                                 | `several-tabs`    |
+| Many tabs       | Tabs share the strip between 144px and 240px, titles cut with a tooltip, the strip scrolls only below the floor | `many-tabs`       |
+| Last tab closed | Left returns to empty                                                                                           | `last-tab-closed` |
+| Already open    | Picking an open thing shows its tab; the right's thing is not offered                                           | `already-open`    |
+| A link followed | A page named in a view opens that material on the left at that page                                             | `link-followed`   |
+| At a limit      | A pane at 360px; the seam does not move further                                                                 | `at-a-limit`      |
+| Reloaded        | The same right thing (the scenario's, standing for the URL), the saved split                                    | `reloaded`        |
 
 ## actions
 
@@ -85,7 +85,10 @@ events: none
 - **The dock does not know what a view is**: it takes the thing, the course's things and `render`, and gives each view one call, `open(thing, place)` (A6). Replaces the homework view's private wire into the scan.
 - **Hidden tabs stay mounted, invisible and inert, not `display: none`**: `display: none` loses a pane's scroll position; `visibility: hidden` keeps it, and `inert` keeps it out of the tab order.
 - **The + sits pinned beside the strip**, not after the last tab, so it never scrolls away with many tabs. It is at the strip's end either way.
-- **Only the shown tab's X is a tab stop**, so ten tabs are not twenty stops. Delete closes a focused tab.
+- **Every tab is a tab stop; only the hidden tabs' X is skipped**, so ten tabs are not twenty stops. Delete closes a focused tab, and focus moves to the tab now shown, or to the + when none is left.
+- **The strip is `role="group"` with `aria-current`, like `UnderlineNav`, not a tablist**: a tab holds a close button, which a tablist's tab may not.
+- **The screen keys the Dock by course** (`<Dock key={courseId} ...>`): the dock keeps its tabs in its own state, and the split's saved ratio is read once.
+- **The right pane's thing is never a left tab**: if `right` changes to a thing already open on the left, that tab is dropped.
 - **A thing is open once** (A2) and **every left tab closes** (A1). The left pane may be empty (A3 asks later whether it should be narrow).
 - **Leaving is the screen's**: the course's name in the top bar. The dock has no prop for it; the stage draws the name and logs the handoff.
 - **A new `Split` and `PaneTabs` rather than reusing `UnderlineNav` and the workspace's `usePanes`**: those have no close, no kind, no shrinking, and size three panes of one screen. They stay as they are until the workspace becomes the dock.
@@ -94,9 +97,9 @@ events: none
 
 | id  | where                                  | what goes wrong                                                                                                      | severity | fix                                                                       | status | shown in       |
 | --- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------- | ------ | -------------- |
-| F1  | many tabs                              | At 192px a title is cut to about a dozen characters; two lectures can look alike until the tooltip                   | medium   | none yet: it is the strip's nature; a Focus-free "list all" is the + menu | open   | `many-tabs`    |
+| F1  | many tabs                              | At 144px a title is cut to about a dozen characters; two lectures can look alike until the tooltip                   | medium   | none yet: it is the strip's nature; a Focus-free "list all" is the + menu | open   | `many-tabs`    |
 | F2  | left, empty                            | The empty pane takes half the split for a list (A3)                                                                  | low      | ask Jack after he tries it                                                | open   | `just-opened`  |
-| F3  | tab X                                  | Only the shown tab has a close in the tab order; a hidden tab is closed by its X with the pointer, or by Delete      | low      | keep unless a keyboard user asks for more                                 | open   | `several-tabs` |
+| F3  | tab X                                  | A hidden tab's close is not a tab stop: it is closed by its X with the pointer, or by Delete once focused            | low      | keep unless a keyboard user asks for more                                 | open   | `several-tabs` |
 | F4  | a link into the right pane's own thing | A view on the left linking to the right pane's thing moves the right view to the page, with no sign on the tab strip | low      | judge in the real views (tracks 2 and 3)                                  | open   | none           |
 
 ## wants

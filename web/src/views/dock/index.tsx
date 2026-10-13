@@ -61,11 +61,18 @@ export function Dock({
   ) => ReactNode;
   start?: DockStart;
 }) {
-  const [tabs, setTabs] = useState<DockTab[]>(() => start?.tabs ?? []);
-  const [shown, setShown] = useState<string | null>(
+  const [allTabs, setTabs] = useState<DockTab[]>(() => start?.tabs ?? []);
+  const [shownId, setShown] = useState<string | null>(
     () => start?.shown ?? start?.tabs.at(-1)?.thing.id ?? null,
   );
   const [rightPlace, setRightPlace] = useState<Place | undefined>();
+
+  // The right pane's thing is never also a left tab, whichever way it got there.
+  const tabs = allTabs.filter((t) => t.thing.id !== right.id);
+  const shown =
+    tabs.find((t) => t.thing.id === shownId)?.thing.id ??
+    tabs.at(-1)?.thing.id ??
+    null;
 
   const open: OpenThing = (thing, place) => {
     if (thing.id === right.id) {

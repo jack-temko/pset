@@ -71,7 +71,7 @@ D2 and D3 amend D19 and D20 of `ideas/courses-grill.md` for this first dock: onl
 - A1: Every left tab can be closed. The right pane cannot: the way out is the course's name in the top bar. Jack: no preference.
 - A2: A thing is open once. Jack: no preference.
 - A3: The empty left pane takes its half of the split, as Jack described it. Whether it should be narrow until the first tab is opened is asked after he has tried it.
-- A4: The split's ratio is remembered per course in the browser, defaults to equal halves, and each pane stops at 360, today's narrowest panel.
+- A4: The split's ratio is remembered per course in the browser, defaults to equal halves, and each pane stops at 360, today's narrowest pane beside the page.
 - A5: The left pane's tabs are remembered for the visit. Remembering them per course across visits waits for the real workspace.
 - A6: A view asks the dock to open something through one call the dock gives it (the thing, and where in it). This replaces today's private wire from the homework view into the scan.
 - A7: This track builds the dock with stand-in views on sample data. The real material views are track 2 and the set view is track 3.
