@@ -30,7 +30,8 @@ The words are fixed in the grill's Glossary: use them, in code and on screen.
   (`git worktree add ../pset-<topic> -b <topic> origin/courses`), `make
   check-fast` (D33), a pull request with `--base courses`, and the three gates
   of D34: Jack tries it and approves, one review, screenshots in both themes.
-  A checker's brief for a track says `make check-fast`. Everything else in `AGENTS.md` holds.
+  A checker's brief for a track says `make check-fast`. Everything else in
+  `AGENTS.md` holds.
 - The truth is the copy on `courses`:
   `git fetch origin courses && git show origin/courses:ideas/courses.md`.
   Only the orchestrator pushes a change to this file alone straight to

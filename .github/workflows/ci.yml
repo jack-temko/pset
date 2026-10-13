@@ -4,8 +4,8 @@ name: CI
 # its integration branch `courses`, temporary, see AGENTS.md), and the ruleset
 # needs `check` green. On `courses` (a pull request into it or a push to it)
 # `check` runs `make check-fast`: format, lint and typecheck, no tests, until
-# track 13 brings the full check back. A pull request into main (a release) or a push to it also runs the
-# bundle build and the vulnerability scan. Spec: ideas/git-workflow-grill.md.
+# track 13 brings the full check back. A pull request into main (a release) or
+# a push to it also runs the bundle build and the vulnerability scan. Spec: ideas/git-workflow-grill.md.
 on:
   push:
     branches: [dev, main, courses]

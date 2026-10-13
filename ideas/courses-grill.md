@@ -156,7 +156,7 @@ Taken at my recommendation because Jack did not decide. He overrules any.
 - **"Structure is book-centric, three screens"** (Home, the book workspace at `/books/{id}`, Settings), locked 2026-09-17 in the overhaul grill and written into `design/workspace.md`. Reversed 2026-10-11 by Jack's ask, quoted in the Log. Each document is corrected when its part ships.
 - **"One running conversation per book"** and the Ask tab in the panel (`design/workspace.md`, 2026-09-18). Reversed 2026-10-11 by D17 and D21: one conversation per course, in a floating dialog.
 - **"A duplicate is refused by sha256"** (`design/import.md:8`, 2026-09-20). Reversed 2026-10-11 by D27: the same PDF is refused only inside one course.
-- **"Every change lands on `dev`"** (`AGENTS.md`, since 2026-10-08). Amended 2026-10-11 by D24 for this program only: its tracks land on `courses`, under the same rules (a branch and worktree per track, `make check`, Jack's approval before a merge). `AGENTS.md` gets the line in the first pull request.
+- **"Every change lands on `dev`"** (`AGENTS.md`, since 2026-10-08). Amended 2026-10-11 by D24 for this program only: its tracks land on `courses`, under the same rules (a branch and worktree per track, `make check-fast` (D33), Jack's approval before a merge). `AGENTS.md` gets the line in the first pull request.
 
 ## Disagreements
 
