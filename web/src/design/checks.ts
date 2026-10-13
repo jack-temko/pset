@@ -37,10 +37,30 @@ function dupes(ids: readonly string[]) {
 export function importedUnits(source: string): string[] {
   const found = new Set<string>();
   for (const m of source.matchAll(
-    /from\s+['"]@\/(?:units|design\/sample)\/([a-z0-9-]+)(?:\/[^'"]*)?['"]/g,
+    /(?:from|import)\s*\(?\s*['"]@\/(?:units|design\/sample)\/([a-z0-9-]+)(?:\/[^'"]*)?['"]/g,
   ))
     found.add(m[1]);
   return [...found];
+}
+
+/** Relative imports in a source text. */
+function relativeImports(source: string): string[] {
+  return [
+    ...source.matchAll(/(?:from|import)\s*\(?\s*['"](\.{1,2}\/[^'"]*)['"]/g),
+  ].map((m) => m[1]);
+}
+
+/** Whether a relative import, from a file at `from` (a path inside the
+ *  unit's folder), ends up outside that folder. */
+function leaves(from: string, spec: string): boolean {
+  const parts = from.split('/').slice(0, -1);
+  for (const seg of spec.split('/')) {
+    if (seg === '..') {
+      if (parts.length === 0) return true;
+      parts.pop();
+    } else if (seg !== '.') parts.push(seg);
+  }
+  return false;
 }
 
 /** Runs every check of the format on one unit and returns what failed, one
@@ -104,6 +124,8 @@ export function checkUnit(u: Subject, ctx: Context): string[] {
   if (same.length > 1) fail('the id is used by another unit');
 
   // Actions, flows, priority.
+  if (!spec.priority.first) fail('priority.first is empty');
+  if (!(spec.sizes.narrowest > 0)) fail('sizes.narrowest must be above 0');
   const actionIds = spec.actions.map((a) => a.id);
   for (const a of spec.actions) {
     if (!a.target) continue;
@@ -137,6 +159,15 @@ export function checkUnit(u: Subject, ctx: Context): string[] {
       fail(`lists unknown component ${id}`);
   }
   if (u.sources) {
+    for (const [path, src] of Object.entries(u.sources)) {
+      const at = path.indexOf(`/${u.dir}/`);
+      const inside = at >= 0 ? path.slice(at + u.dir.length + 2) : path;
+      for (const rel of relativeImports(src))
+        if (leaves(inside, rel))
+          fail(
+            `${path} imports ${rel}, out of the unit's folder: use the @/units/ alias`,
+          );
+    }
     const imported = [
       ...new Set(Object.values(u.sources).flatMap(importedUnits)),
     ]

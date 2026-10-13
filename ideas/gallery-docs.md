@@ -10,7 +10,7 @@ In progress, branch `gallery-docs` (base `design`, D26).
 three separate pages that do not link to each other. Jack wants one lasting spec
 format every future feature fits, shown on one page he can judge a design from.
 
-**Decisions.** All in `ideas/gallery-docs-grill.md` (D1 to D24, A1 to A11). Read its
+**Decisions.** All in `ideas/gallery-docs-grill.md` (D1 to D26, A1 to A11). Read its
 Summary before anything else; it is the spec. The mockup of the chosen arrangement is
 `web/src/pages/design-mock/` option A (`/design-mock/a/pane`): the real page looks and
 behaves like it. Design starts from scratch (D24), so this change ships no real unit

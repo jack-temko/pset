@@ -51,7 +51,7 @@ const { chromium } = require(
 - Photo framing: at 1440x1000 a handoff log falls below the fold. Use a viewport about
   1500 tall and clip to the panel plus the log, so a phone shows the panel and what it did.
 - Keyboard-only pass: use `page.keyboard.press('Tab')` and count the stops to the
-  main action; that number goes in the friction log.
+  main action; that number goes in the report.
 - Wait for the timeline, not a fixed guess: at `speed=4` a question is written
   in about five seconds.
 
@@ -67,7 +67,7 @@ const { chromium } = require(
 - [ ] `make jumps-check FULL=1` passes (0px growth, jump at most 0.001, no dev warning
       from `Loaded` about a variant mismatch).
 - [ ] The main flow works with the keyboard alone; tab stops to the main action counted.
-- [ ] The flow meets its `budget`, counted again after the change.
+- [ ] The flow meets the unit's limit rules (global, and its own local `limit` rules), counted again after the change.
 - [ ] Each handoff out shows in the log with its context, and Back returns as
       designed (also after a reload).
 - [ ] Text is at or above the 15px floor and readable in Night; targets are at least
@@ -79,8 +79,7 @@ const { chromium } = require(
 - [ ] `cd web && npm run build` passes: it fails on fractional or off-scale
       utilities and on theme utilities missing from the CSS.
 - [ ] No screenshots, logs or traces in the repo (`git status` shows source only).
-- [ ] The spec (`spec.ts`, or an old view's `spec.md` with its friction log) and, for
-      old-format work, component READMEs were updated in the same change.
+- [ ] The spec (`spec.ts`; for old-format work its `spec.md` and component READMEs) was updated in the same change.
 - [ ] Anything not verified is said so in the report (a real server, a real book).
 
 ## Reporting
@@ -88,7 +87,7 @@ const { chromium } = require(
 If you cannot write a report file (a subagent often cannot), return the report as text
 and let the caller file it.
 
-Say what changed and why in the student's terms; list the friction rows closed
-and opened; show before and after screenshots when the look changed; name what
+Say what changed and why in the student's terms; list the friction closed
+and found; show before and after screenshots when the look changed; name what
 you did not verify. Photos go where the user can see them (a published page or a
 file), not in the repo.

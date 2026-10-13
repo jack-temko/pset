@@ -25,15 +25,18 @@
   only), so the lander itself waits for a green `check` and an up-to-date
   branch before any merge into `design`. `design` takes `dev` in through a
   pull request from a branch cut from `origin/design` with `origin/dev` merged
-  into it (`design-take-dev`), so a conflict is fixed on that branch; it is
-  merged into `design` with a merge commit (not a squash) after Jack approves
-  it like any other. Only Jack takes `design` into `dev`. Meanwhile `dev`
+  into it (`design-take-dev`), so a conflict is fixed on that branch (when
+  `.github/workflows/ci.yml` conflicts, the resolved branch lists keep every live
+  integration branch: `design`, and `courses` if it is there; the lander treats a
+  missing `check` run as not green); it is merged into `design` with a merge
+  commit (not a squash) after Jack approves it like any other. Only Jack takes `design` into `dev`. Meanwhile `dev`
   takes only critical bug fixes, so Jack can keep using PSet for his work. The
   `/change` skill and its role briefs name `dev` as the base; for this work,
   read `design` wherever they say `dev` (the worktree from `origin/design`,
   `--base design`, diffs against `origin/design`), and the orchestrator says
   so in every brief. When `design` has gone into `dev`, remove this bullet and
-  take `design` out of `.github/workflows/ci.yml`.
+  take `design` out of `.github/workflows/ci.yml`, and switch `LOG_BRANCH` in
+  `web/src/pages/design/lookup.ts` to `dev`.
 
 **Landing a change** (the tests, and the real app for a UI change, first):
 

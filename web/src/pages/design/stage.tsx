@@ -320,16 +320,22 @@ function FlowStrip({
     <div className="mt-card space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
         <div className="flex flex-wrap items-center gap-3">
+          <p className="text-xs text-muted-foreground">Flow: {flow.name}</p>
           {(spec.flows?.length ?? 0) > 1 && (
-            <SegmentedControl
-              label="Flow"
+            <select
+              aria-label="Flow"
               value={flow.id}
-              options={(spec.flows ?? []).map((f) => ({
-                value: f.id,
-                label: f.name,
-              }))}
-              onChange={setChosen}
-            />
+              onChange={(e) => {
+                setChosen(e.target.value);
+              }}
+              className="h-control rounded-md border border-input bg-card px-3 text-sm text-foreground"
+            >
+              {(spec.flows ?? []).map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
           )}
           <SegmentedControl
             label="Step"
@@ -364,9 +370,7 @@ function FlowStrip({
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        {at >= 0
-          ? `Step ${String(at + 1)}: ${steps[at].does}`
-          : `${flow.name}: not on a step. Next goes to step 1.`}
+        {at >= 0 ? `Step ${String(at + 1)}: ${steps[at].does}` : 'Not started.'}
       </p>
     </div>
   );

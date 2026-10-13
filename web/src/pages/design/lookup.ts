@@ -19,3 +19,12 @@ export function unitPath(id: string, state?: string) {
   const kind = kindOf(id);
   return `/design/${kind ?? 'component'}/${id}${state ? `?state=${state}` : ''}`;
 }
+
+/** The branch the "Full log" links read from. Switches to `dev` when the
+ *  `design` branch has gone into `dev` (see AGENTS.md). */
+export const LOG_BRANCH = 'design';
+
+/** Where a unit's log file is read: the repo on GitHub. */
+export function logUrl(path: string) {
+  return `https://github.com/jack-temko/pset/blob/${LOG_BRANCH}/${path}`;
+}

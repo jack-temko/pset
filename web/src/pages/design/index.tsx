@@ -24,7 +24,7 @@ import { UnitPage } from './unit';
 interface Tab {
   id: string;
   label: string;
-  /** The kind of unit it lists; none for Foundations, Errors and Rules. */
+  /** The kind of unit it lists; none for Foundations and Rules. */
   kind?: Kind;
   /** Shown even with nothing in it. */
   always?: boolean;
@@ -35,7 +35,6 @@ const TABS: readonly Tab[] = [
   { id: 'components', label: 'Components', kind: 'component' },
   { id: 'panes', label: 'Panes', kind: 'pane' },
   { id: 'views', label: 'Views', kind: 'view' },
-  { id: 'errors', label: 'Errors' },
   { id: 'rules', label: 'Rules', always: true },
 ];
 
@@ -45,7 +44,6 @@ const EMPTY: Record<string, string> = {
   components: 'No components yet.',
   panes: 'No panes yet.',
   views: 'No views yet.',
-  errors: 'No errors yet.',
 };
 
 interface Group {

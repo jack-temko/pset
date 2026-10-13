@@ -25,6 +25,10 @@ the neighbourhood map. A flow is an ordered list of the unit's action ids; a ste
 land in any unit. A pane or view lists its components by id, and a test checks the list
 against its imports.
 
+Units import each other only through the `@/units/` alias; a relative import that leaves the
+unit's folder is not allowed, and a check fails on it (so the components list can be read
+from imports).
+
 ## The page
 
 `/design/<kind>/<id>?state=&load=&stress=&w=&theme=`, top to bottom: kind, title and
@@ -32,7 +36,11 @@ purpose; the example live at real size, with State, Load (Loaded, Loading, Both)
 Content (Normal, Stress), Width (draggable, px shown) and the flow strip; the neighbourhood
 map; tables for actions, data and loading, inputs, priority and sizes; rules; decisions.
 Tabs across the top (Foundations, Components, Panes, Views, Errors, Rules; a tab with no
-units is hidden, except Foundations and Rules) and a grouped list with a filter on the left.
+units is hidden, except Foundations and Rules) and a grouped list with a filter on the left. Errors joins `/design` when it is rebuilt.
+
+The stage sets the theme with a scope class, so tokens follow the chosen theme. Tailwind
+`dark:` variants follow the app's theme, not the stage's, so new units style themes through
+tokens only.
 
 ## Rules
 

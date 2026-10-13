@@ -5,7 +5,7 @@ import { Label } from '@/components/label';
 import { Table, type TableColumn } from '@/components/table';
 import type { Rule } from '@/design/rules';
 import type { AnySpec } from '@/design/spec';
-import { specOf, unitPath } from './lookup';
+import { logUrl, specOf, unitPath } from './lookup';
 
 export function Quiet({ children }: { children: ReactNode }) {
   return <p className="text-xs text-muted-foreground">{children}</p>;
@@ -165,16 +165,11 @@ export function Inputs({ spec }: { spec: AnySpec }) {
 
 export function PriorityAndSizes({ spec }: { spec: AnySpec }) {
   const main = spec.actions.find((a) => a.id === spec.priority.main);
-  const rows = [
+  const rows: { k: string; v: string; list?: readonly string[] }[] = [
     { k: 'Seen first', v: spec.priority.first },
     { k: 'Main action', v: main ? `${main.label} (${main.id})` : 'None' },
     { k: 'Narrowest', v: `${String(spec.sizes.narrowest)}px` },
-    {
-      k: 'Gives way first',
-      v: spec.sizes.gives.length
-        ? spec.sizes.gives.map((g, i) => `${String(i + 1)}. ${g}`).join('  ')
-        : 'Nothing',
-    },
+    { k: 'Gives way first', v: '', list: spec.sizes.gives },
   ];
   return (
     <Sec title="Priority and sizes">
@@ -189,7 +184,24 @@ export function PriorityAndSizes({ spec }: { spec: AnySpec }) {
             mono: false,
             cell: (r) => r.k,
           },
-          { key: 'v', header: 'Is', cell: (r) => r.v },
+          {
+            key: 'v',
+            header: 'Is',
+            cell: (r) =>
+              r.list ? (
+                r.list.length ? (
+                  <ol className="list-decimal pl-5">
+                    {r.list.map((g) => (
+                      <li key={g}>{g}</li>
+                    ))}
+                  </ol>
+                ) : (
+                  'Nothing'
+                )
+              ) : (
+                r.v
+              ),
+          },
         ]}
       />
     </Sec>
@@ -268,7 +280,7 @@ export function Decisions({ spec }: { spec: AnySpec }) {
       aside={
         spec.log && (
           <a
-            href={`https://github.com/jack-temko/pset/blob/dev/${spec.log}`}
+            href={logUrl(spec.log)}
             className="text-sm text-primary hover:underline"
           >
             Full log
@@ -280,27 +292,44 @@ export function Decisions({ spec }: { spec: AnySpec }) {
         caption="Decisions"
         rows={spec.decisions}
         columns={[
-          { key: 'i', header: 'Id', fit: true, cell: (r) => r.id },
           {
             key: 'w',
             header: 'What',
-            cell: (r) =>
-              r.supersededBy ? (
-                <span className="text-muted-foreground line-through">
+            cell: (r) => (
+              <>
+                <span
+                  className={
+                    r.supersededBy
+                      ? 'text-muted-foreground line-through'
+                      : undefined
+                  }
+                >
                   {r.decision}
                 </span>
-              ) : (
-                r.decision
-              ),
+                {r.supersededBy && (
+                  <span className="block text-xs text-muted-foreground">
+                    Replaced by {r.supersededBy}
+                  </span>
+                )}
+              </>
+            ),
           },
           { key: 'y', header: 'Why', cell: (r) => r.why },
           { key: 'b', header: 'Beat', cell: (r) => r.beat },
-          { key: 'd', header: 'Date', fit: true, cell: (r) => r.date },
           {
-            key: 's',
-            header: 'Replaced by',
-            fit: true,
-            cell: (r) => r.supersededBy ?? '',
+            key: 'i',
+            header: 'Id',
+            cls: 'w-px align-top whitespace-nowrap',
+            cell: (r) => (
+              <>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {r.id}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {r.date}
+                </span>
+              </>
+            ),
           },
         ]}
       />

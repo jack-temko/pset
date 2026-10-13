@@ -105,6 +105,7 @@ export default defineSpec({
       },
     ],
   },
+  log: 'web/src/design/sample/sample-row/log.md',
   decisions: [
     {
       id: 'sample-row-d1',

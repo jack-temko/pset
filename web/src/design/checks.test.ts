@@ -10,8 +10,8 @@ import { defineSpec, type AnySpec } from './spec';
 // never loads these.
 const SOURCES = import.meta.glob<string>(
   [
-    '/src/units/*/*.{ts,tsx}',
-    '/src/design/sample/*/*.{ts,tsx}',
+    '/src/units/*/**/*.{ts,tsx}',
+    '/src/design/sample/*/**/*.{ts,tsx}',
     '!**/spec.ts',
     '!**/*.test.*',
   ],
@@ -24,7 +24,7 @@ const CTX: Context = { specs: ALL.map((e) => e.spec), rules: RULES };
 function sourcesOf(dir: string) {
   return Object.fromEntries(
     Object.entries(SOURCES)
-      .filter(([p]) => p.split('/').at(-2) === dir)
+      .filter(([p]) => p.includes(`/${dir}/`))
       .map(([p, s]) => [p, s]),
   );
 }
@@ -216,12 +216,102 @@ describe('the checks', () => {
     expect(noData).toEqual([]);
   });
 
+  it('fails on a duplicate flow, decision or input', async () => {
+    const f = await broken(SCREEN, (s) => ({
+      flows: [...(s.flows ?? []), ...(s.flows ?? [])],
+    }));
+    expect(f.join()).toContain('duplicate flow id browse');
+    const d = await broken(ROW, (s) => ({
+      decisions: [...s.decisions, s.decisions[0]],
+    }));
+    expect(d.join()).toContain('duplicate decision id');
+    const i = await broken(ROW, (s) => ({
+      inputs: [...s.inputs, s.inputs[0]],
+    }));
+    expect(i.join()).toContain('duplicate input id title');
+  });
+
+  it('fails on an id used by another unit', async () => {
+    const examples = await ROW.examples();
+    const twin = { ...ROW.spec };
+    const r = checkUnit(
+      { spec: ROW.spec, dir: 'sample-row', examples, sources: null },
+      { ...CTX, specs: [...CTX.specs, twin] },
+    );
+    expect(r.join()).toContain('the id is used by another unit');
+  });
+
+  it('fails on a local rule with a global id', async () => {
+    const examples = await ROW.examples();
+    const r = checkUnit(
+      { spec: ROW.spec, dir: 'sample-row', examples, sources: null },
+      {
+        ...CTX,
+        rules: [
+          {
+            id: 'sample-row-truncate',
+            kind: 'always',
+            rule: 'r',
+            check: 'c',
+            scope: 'all',
+          },
+        ],
+      },
+    );
+    expect(r.join()).toContain('has the id of a global rule');
+  });
+
+  it('fails on a folder that does not match the id', async () => {
+    const r = await broken(
+      ROW,
+      () => ({}),
+      () => ({ dir: 'elsewhere' }),
+    );
+    expect(r.join()).toContain('folder elsewhere does not match the id');
+  });
+
+  it('fails on a missing stress line, priority or narrowest', async () => {
+    expect((await broken(ROW, () => ({ stress: '' }))).join()).toContain(
+      'missing stress',
+    );
+    expect(
+      (
+        await broken(ROW, (s) => ({ priority: { ...s.priority, first: '' } }))
+      ).join(),
+    ).toContain('priority.first is empty');
+    expect(
+      (
+        await broken(ROW, (s) => ({ sizes: { ...s.sizes, narrowest: 0 } }))
+      ).join(),
+    ).toContain('sizes.narrowest');
+  });
+
+  it('fails on a relative import into another unit', async () => {
+    const r = await broken(
+      ROW,
+      () => ({}),
+      (s) => ({
+        sources: {
+          ...s.sources,
+          '/src/design/sample/sample-row/bad.tsx':
+            "import { SampleScreen } from '../sample-screen/screen';",
+          '/src/design/sample/sample-row/sub/bad.tsx':
+            "import { x } from '../../sample-screen/screen';",
+          '/src/design/sample/sample-row/sub/ok.tsx':
+            "import { y } from '../row';",
+        },
+      }),
+    );
+    const out = r.filter((m) => m.includes('use the @/units/ alias'));
+    expect(out).toHaveLength(2);
+  });
+
   it('finds imports of other units', () => {
     expect(
       importedUnits(
-        "import { A } from '@/design/sample/sample-row/row';\nimport { B } from '@/units/button';\nimport { C } from '@/components/box';",
+        "import { A } from '@/design/sample/sample-row/row';\nimport { B } from '@/units/button';\nimport { C } from '@/components/box';\nimport '@/units/side-effect';\nconst d = import('@/units/lazy/deep/x');",
       ),
-    ).toEqual(['sample-row', 'button']);
+    ).toEqual(['sample-row', 'button', 'side-effect', 'lazy']);
   });
 
   it('fails the typecheck for a step that is not an action', () => {

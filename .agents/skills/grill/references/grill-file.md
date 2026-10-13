@@ -79,5 +79,5 @@ it. Any other grill (vision, theme, a plan) keeps the whole file.
 ## Where it goes
 
 The brief names the path. A caller such as `pset-view` fixes it
-(`web/src/views/<name>/grill.md`). Called directly with nothing named, ask once, and
+(`web/src/units/<id>/log.md`). Called directly with nothing named, ask once, and
 default to `ideas/<topic>-grill.md` in a repo with an `ideas/` folder.

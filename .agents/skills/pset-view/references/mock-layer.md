@@ -1,5 +1,8 @@
 # How a view runs on /views, and adding one
 
+> The old app only. New units run on `/design` (`design/design-docs.md`); this file
+> applies to a view not yet migrated, until the migration deletes `/views`.
+
 Read `web/src/views/README.md` first; it is the reference. This is the working
 summary and the procedure.
 

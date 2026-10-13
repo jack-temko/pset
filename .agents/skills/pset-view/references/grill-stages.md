@@ -7,17 +7,17 @@ specific about a grill lives here; the interviewing itself is `grill`'s.
 
 ```
 topic:     <view name>: redesign
-output:    web/src/views/<name>/grill.md   (archive an existing one to grills/<date>.md)
+output:    web/src/units/<id>/log.md   (decisions and reversals go into the unit's spec.ts)
 viewpoint: the tired student: hour 7, 1am, Night theme, glancing between the scan and
            this view, low patience, low working memory
 locked:    design/design-system.md; the view's screen spec in design/ (dated decisions);
-           the guardrail list in pset-view/SKILL.md; the view's spec.md `why`
+           the guardrail list in pset-view/SKILL.md; the unit's spec.ts `decisions` and the rulebook
 stages:    gates 0 to 5 below
 ```
 
 A locked decision that an answer would contradict becomes a reversal question, asked
 as "this reverses <decision>, written <date> in <file>. Reverse it?". If approved, the
-reversal goes in `grill.md`, the view's `why`, and the design doc that held it.
+reversal goes in the log, the unit's `decisions` (the old one gets `supersededBy`), and the design doc that held it.
 
 ## Gate 0: Frame (alone, no questions)
 
@@ -27,7 +27,7 @@ Read and drive the view; do not design. The audit brief, shown in one message, h
 - **The flow as it is:** the happy path in steps, with counts: clicks, decisions, typing,
   tab stops to the main action.
 - **States reachable** in the scenarios, each photographed (both themes).
-- **The friction log** (from the spec, and anything new the lenses in `student-lens.md`
+- **The friction list** (from the last audit, and anything new the lenses in `student-lens.md`
   turn up).
 - **Handoffs** out and in, and whether Back works.
 - **Data:** what it reads, writes and listens for.
@@ -59,7 +59,7 @@ quick confirm of the mission and the inventory, not a full interview.
 Before asking, **simulate the student** (below) on each candidate layout, and drop the
 ones that fail. Seeds:
 
-- The flow's steps and their count budget (clicks, decisions, tab stops).
+- The flow's steps and their count limits (clicks, decisions, tab stops).
 - The hierarchy: what is seen first; where the primary action sits; what is always
   visible, on focus, one click away, or gone.
 - Placement within the panel width (440px; 800px in Focus), and how the view uses the
@@ -78,10 +78,10 @@ are confirmed.
 ASCII wireframes are hard to read and never look like the thing. A layout question is
 asked about a page the user can open:
 
-- **Build them** in `web/src/views/<name>/wireframes.tsx`, exported as the view's
-  `wireframes` in `views/registry.ts`, from the real component library on static sample
-  data. The frame is the real pane at its real width (440px; 800px in Focus). They show
-  under the **Wireframes** mode of `/views/<name>?mode=wireframes`.
+- **Build them** at a temporary route (for example `/design-mock/<option>`), from the
+  real component library on static sample data, and delete them before the pull request
+  (A8 in `ideas/gallery-docs-grill.md`). The frame is the real pane at its real width.
+  The old `/views` Wireframes mode is gone with the old app.
 - **Keep them live.** The real `Veil`s lift, the real `Menu`s open. A part that does not
   exist yet (a progress strip, a finish page) is a local stand-in built from tokens and
   existing components, so it can be judged in place; it becomes a component when built.
@@ -130,19 +130,19 @@ known**. Exit: every variant has a skeleton that matches its content, an entry i
 
 ## Gate 5: Data, backend and acceptance
 
-Seeds: what it reads, writes and listens for; the backend wants (fields, endpoints,
+Seeds: what it reads, writes and listens for; what the backend must add (fields, endpoints,
 events) and what each costs; anything to migrate; the scenarios the harness needs; the
-**budget** as numbers (clicks, decisions, tab stops, seconds to the main action); risks.
+**limits** as numbers, written as limit rules (clicks, decisions, tab stops, seconds to the main action); risks.
 
 Also run the **cross-view consistency check** here, before asking:
 
 - The same concept is named and placed the same way as in the other views and screens.
 - Every handoff's target exists, accepts what it is sent, and can send the student back.
-- A handoff that needs the neighbouring view to change is written down as a want for
+- A handoff that needs the neighbouring view to change is written down in the plan file for
   that view, not assumed.
 
-Artifact: the **data table**, the **wants**, and the **acceptance list** (scenarios and
-budget numbers, and the loading table's scenarios). Exit: the acceptance list is confirmed.
+Artifact: the **data table**, the **backend additions** (they go in the change's plan file), and the **acceptance list** (scenarios and
+limit numbers, and the loading table's scenarios). Exit: the acceptance list is confirmed.
 
 ## The student walkthrough simulation
 
@@ -159,13 +159,13 @@ user the ones that survive, with the counts.
 After the build and the checks: photograph the real view (both themes, every key
 scenario, viewport about 1500 tall, clipped to the panel and its log). Show the photos.
 Then a short grill (at most two batches): what feels off, what to cut, what is missing,
-with your recommended fix on each. Record the answers in `grill.md` under the dated
-heading **Post-build**, as decisions or as assumed. Small fixes become a `tweak`; a
+with your recommended fix on each. Record the answers in the log under the dated
+heading **Post-build**, and the decisions in `spec.ts`, as decisions or as assumed. Small fixes become a `tweak`; a
 large one reopens the gate it belongs to.
 
 ## Mapping onto the grill file
 
-`grill.md` follows `grill/references/grill-file.md`. Its Summary's "In one line" is the
+For a unit, the grill file is split as `grill/references/grill-file.md` says: decisions in `spec.ts`, the log in `log.md`. A Summary's "In one line" is the
 mission sentence; its artifacts are the inventory table, the wireframes, the state
 table and the data and acceptance tables. The Q&A log is verbatim. `status` moves
 grilling, awaiting OK, approved, built.

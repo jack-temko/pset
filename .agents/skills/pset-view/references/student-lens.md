@@ -1,8 +1,8 @@
 # The student lens
 
-The persona: hour 7 of a study marathon, 1am, Night theme, glancing between a
+The persona (the vision grill will replace this lens; until then it is the skill's point of view, and a unit's `purpose` carries its one sentence): hour 7 of a study marathon, 1am, Night theme, glancing between a
 textbook scan and the panel, low patience, low working memory. Everything below
-is a question asked of the view in that state. Each lens produces friction rows;
+is a question asked of the view in that state. Each lens produces friction items;
 a lens that finds nothing says so in the run's notes and produces no row.
 
 ## Before the lenses: walk the flow
@@ -10,7 +10,7 @@ a lens that finds nothing says so in the run's notes and produces no row.
 Write it down before judging it: the trigger (what brought them here), their
 goal, and the happy path as numbered steps, each with what they see, what they
 decide and what they do. Then count, on the path as it is now: clicks, decisions,
-typing. Those counts are checked against the spec's `budget` and are the numbers
+typing. Those counts are checked against the unit's limit rules and are the numbers
 a redesign has to beat. Note the exits and the re-entry after a break.
 
 ## The ten lenses
@@ -52,17 +52,16 @@ a redesign has to beat. Note the exits and the re-entry after a break.
 - Drive it, do not just read it: the scenarios exist so the awkward states are
   reachable (`slow`, `failed`, `mid-flow-reload`, `return-after-break`).
 - Count the **tab stops** from opening the view to the main action and put the number in
-  `budget`; recount it every run (one log said 6, the real count was 9). Do the main
+  the report; recount it every run (one log said 6, the real count was 9). Do the main
   flow **keyboard only** once, and **in Night**, before writing the
   log. A view that passes in Paper at a mouse's pace often fails there.
 - Judge at 1280 wide. Below 1024 the app shows a gate; it is desktop only.
 - Look for what is missing as much as what is wrong: no way to see the set at a
   glance, no place in line, no "where was I".
 
-## The friction log
+## The friction list
 
-One table in the spec, kept across runs: fixed rows are marked, unfixed rows carry
-to the next run. A row is:
+A list in the audit report to Jack (and, in a grill, its log), not in the spec. A row is:
 
 | id  | where | what goes wrong for a tired student | severity | fix | status | shown in |
 | --- | ----- | ----------------------------------- | -------- | --- | ------ | -------- |
