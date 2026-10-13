@@ -24,7 +24,7 @@ export default defineSpec({
       id: 'failed',
       name: 'Failed',
       when: 'The item did not load.',
-      text: 'Could not load this item. Try again.',
+      text: 'Could not load this item: the connection dropped. Try again.',
       skeleton: 'The rest skeleton.',
     },
   ],
@@ -94,12 +94,11 @@ export default defineSpec({
     gives: ['The second line truncates', 'The title truncates'],
   },
   rules: {
-    cite: [],
+    cite: ['failure-says-what'],
     local: [
       {
         id: 'sample-row-truncate',
-        kind: 'never',
-        rule: 'A row never wraps its title onto a second line.',
+        rule: 'Keep a row title on one line.',
         check: 'Set Stress on the page: the title ends in an ellipsis.',
         scope: 'sample-row',
       },

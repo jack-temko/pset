@@ -208,12 +208,6 @@ export function PriorityAndSizes({ spec }: { spec: AnySpec }) {
   );
 }
 
-const GROUPS: { kind: Rule['kind']; title: string }[] = [
-  { kind: 'always', title: 'Always' },
-  { kind: 'never', title: 'Never' },
-  { kind: 'limit', title: 'Limits' },
-];
-
 export function RuleList({
   rules,
   localIds,
@@ -222,34 +216,23 @@ export function RuleList({
   localIds?: readonly string[];
 }) {
   return (
-    <div className="space-y-4">
-      {GROUPS.map((g) => {
-        const rows = rules.filter((r) => r.kind === g.kind);
-        if (rows.length === 0) return null;
-        return (
-          <div key={g.kind} className="space-y-2">
-            <Quiet>{g.title}</Quiet>
-            <ul className="divide-y divide-border-muted rounded-lg border bg-card">
-              {rows.map((r) => (
-                <li
-                  key={r.id}
-                  className="flex items-baseline gap-4 px-card py-2 text-sm"
-                >
-                  <span className="min-w-0 flex-1">{r.rule}</span>
-                  {localIds?.includes(r.id) && <Label>local</Label>}
-                  <Link
-                    to={`/design/rules/${r.id}`}
-                    className="shrink-0 font-mono text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    {r.id}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        );
-      })}
-    </div>
+    <ul className="divide-y divide-border-muted rounded-lg border bg-card">
+      {rules.map((r) => (
+        <li
+          key={r.id}
+          className="flex items-baseline gap-4 px-card py-2 text-sm"
+        >
+          <span className="min-w-0 flex-1">{r.rule}</span>
+          {localIds?.includes(r.id) && <Label>local</Label>}
+          <Link
+            to={`/design/rules/${r.id}`}
+            className="shrink-0 font-mono text-xs text-muted-foreground hover:text-foreground"
+          >
+            {r.id}
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
 

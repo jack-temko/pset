@@ -8,8 +8,8 @@ specific about a grill lives here; the interviewing itself is `grill`'s.
 ```
 topic:     <view name>: redesign
 output:    web/src/units/<id>/log.md   (decisions and reversals go into the unit's spec.ts)
-viewpoint: the tired student: hour 7, 1am, Night theme, glancing between the scan and
-           this view, low patience, low working memory
+viewpoint: the student (V4): an ordinary student, maybe a bit tired, getting this
+           week's work done; judged against the rulebook (web/src/design/rules.ts)
 locked:    design/design-system.md; the view's screen spec in design/ (dated decisions);
            the guardrail list in pset-view/SKILL.md; the unit's spec.ts `decisions` and the rulebook
 stages:    gates 0 to 5 below
@@ -132,7 +132,7 @@ known**. Exit: every variant has a skeleton that matches its content, an entry i
 
 Seeds: what it reads, writes and listens for; what the backend must add (fields, endpoints,
 events) and what each costs; anything to migrate; the scenarios the harness needs; the
-**limits** as numbers, written as limit rules (clicks, decisions, tab stops, seconds to the main action); risks.
+**limits** as numbers, written as rules that state the number (clicks, decisions, tab stops, seconds to the main action); risks.
 
 Also run the **cross-view consistency check** here, before asking:
 
@@ -146,10 +146,10 @@ limit numbers, and the loading table's scenarios). Exit: the acceptance list is 
 
 ## The student walkthrough simulation
 
-Before a wireframe goes to the user, walk it as the tired student. For each candidate:
+Before a wireframe goes to the user, walk it as the student. For each candidate:
 name the moment they arrive; take the main flow step by step (what they see, what they
 decide, what they tap); count clicks, decisions, typing and tab stops; then try the
-awkward cases: they are half asleep and mis-tap; the guide is still being written; the
+awkward cases: they are tired and mis-tap; the guide is still being written; the
 model failed; they came back from Ask; they reloaded. Report where they get stuck or
 confused, in a line each. Drop a candidate that fails a hard case, and say why. Show the
 user the ones that survive, with the counts.

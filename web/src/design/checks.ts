@@ -2,6 +2,7 @@ import type { AnyExamples } from './examples';
 import { LINE_MAX, PURPOSE_MAX } from './limits';
 import type { Rule } from './rules';
 import type { AnySpec } from './spec';
+import type { Vision } from './vision';
 
 /** Everything the checks may need to know about the other units. */
 export interface Context {
@@ -61,6 +62,45 @@ function leaves(from: string, spec: string): boolean {
     } else if (seg !== '.') parts.push(seg);
   }
   return false;
+}
+
+/** Checks the rulebook: unique kebab-case ids, one-line rules within the
+ *  limit. Returns what failed, one line each. */
+export function checkRulebook(rules: readonly Rule[]): string[] {
+  const bad: string[] = [];
+  for (const id of dupes(rules.map((r) => r.id)))
+    bad.push(`duplicate rule id ${id}`);
+  for (const r of rules) {
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(r.id))
+      bad.push(`rule id ${r.id} is not kebab-case`);
+    for (const [k, v] of [
+      ['rule', r.rule],
+      ['check', r.check],
+    ] as const)
+      if (!v || v.includes('\n') || v.length > LINE_MAX)
+        bad.push(
+          `rule ${r.id}: ${k} is empty, not one line, or over ${String(LINE_MAX)}`,
+        );
+  }
+  return bad;
+}
+
+/** Checks the vision: every line is one line within the limit. */
+export function checkVision(v: Vision): string[] {
+  const bad: string[] = [];
+  const lines: [string, string][] = [
+    ['line', v.line],
+    ...v.facts.flatMap((f): [string, string][] => [
+      [`${f.label} label`, f.label],
+      [f.label, f.text],
+    ]),
+  ];
+  for (const [what, s] of lines)
+    if (!s || s.includes('\n') || s.length > LINE_MAX)
+      bad.push(
+        `vision ${what} is empty, not one line, or over ${String(LINE_MAX)}`,
+      );
+  return bad;
 }
 
 /** Runs every check of the format on one unit and returns what failed, one

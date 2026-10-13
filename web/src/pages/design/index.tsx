@@ -53,22 +53,15 @@ interface Group {
 
 function groupsFor(tab: Tab): Group[] {
   if (tab.id === 'rules') {
-    return (['always', 'never', 'limit'] as const).flatMap((kind) => {
-      const items = RULES.filter((r) => r.kind === kind).map((r) => ({
-        to: `/design/rules/${r.id}`,
-        name: r.id,
-      }));
-      return items.length
-        ? [
-            {
-              label: { always: 'Always', never: 'Never', limit: 'Limits' }[
-                kind
-              ],
-              items,
-            },
-          ]
-        : [];
-    });
+    return [
+      {
+        label: 'Rules',
+        items: RULES.map((r) => ({
+          to: `/design/rules/${r.id}`,
+          name: r.id,
+        })),
+      },
+    ];
   }
   const map = new Map<string, Group>();
   for (const { spec } of UNITS) {
@@ -160,6 +153,7 @@ function Shell({ tab, children }: { tab: Tab; children: React.ReactNode }) {
   );
 }
 
+const tabOfId = (id: string) => TABS.find((t) => t.id === id) ?? TABS[0];
 const tabOfKind = (kind: Kind) => TABS.find((t) => t.kind === kind) ?? TABS[0];
 
 function TabPage() {
@@ -201,7 +195,7 @@ export function Design() {
       <Route
         path="rules/:id"
         element={
-          <Shell tab={TABS[5]}>
+          <Shell tab={tabOfId('rules')}>
             <RulePage />
           </Shell>
         }

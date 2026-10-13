@@ -53,7 +53,7 @@ screen. `views/homework/` is the worked example; copy its shape.
 4. Write the stage: the providers the screen gave it (`Pages`, `BookHereContext`,
    `BoxingProvider` for the workspace), the frame at its real width, exits wired
    to the harness.
-5. Write scenarios: the happy path and the tired paths (`empty`, `slow`,
+5. Write scenarios: the happy path and the awkward paths (`empty`, `slow`,
    `failed`, `mid-flow-reload`, `return-after-break`, `handoff-in`, and any state
    particular to this view).
 6. Add the entry to `views/registry.ts` (`id`, `title`, `group`, `note`,

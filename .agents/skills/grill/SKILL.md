@@ -36,7 +36,7 @@ asking only for what is missing:
   `references/packs.md` that fits the topic (redesign, feature, removal, architecture,
   positioning), or one gate if none fits.
 - **Locked decisions** to respect, and where they are written.
-- **Point of view**: whose experience is being designed for (the tired student, the
+- **Point of view**: whose experience is being designed for (the student, the
   reader, the buyer). Every recommendation is judged from there.
 
 ## The loop

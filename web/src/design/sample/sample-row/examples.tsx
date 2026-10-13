@@ -22,7 +22,7 @@ export default defineExamples(spec, {
     failed: () => (
       <SampleRow
         title="Problem set 4"
-        detail="Could not load this item. Try again."
+        detail="Could not load this item: the connection dropped. Try again."
         failed
       />
     ),

@@ -28,8 +28,8 @@ New, the system (`web/src/design/`):
 - `examples.ts`: `defineExamples(spec, {...})`: one render per state id (required by
   type), a `stress` render (required), and a `skeleton` render per state, required by
   type when the spec's `data` is not empty.
-- `rules.ts`: the `Rule` type (id, kind `always | never | limit`, rule, check, scope,
-  enforcedBy?) and `RULES`, an empty array.
+- `rules.ts`: the `Rule` type (id, rule, check, scope, enforcedBy?; no kind, V13 of `ideas/vision-grill.md`)
+  and `RULES`, the rulebook.
 - `registry.ts`: every unit's spec and its lazy examples, found with `import.meta.glob`
   over `web/src/units/*/spec.ts`; derived data: used by, leads here, leads to, units
   citing a rule.
@@ -57,7 +57,7 @@ New, the page (`web/src/pages/design/`):
   over it at half opacity, in the page, no iframes.
 - `map.tsx`: the neighbourhood map, derived only.
 - `sections.tsx`: Actions, Data and loading, Inputs, Priority and sizes, Rules
-  (Always, Never, Limits), Decisions with the Full log link.
+  (one flat list), Decisions with the Full log link.
 - `rules.tsx`: the Rules tab and a rule's page with the units citing it.
 - Tests beside them for the URL state and the derived map.
 
