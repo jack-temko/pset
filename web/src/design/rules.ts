@@ -14,7 +14,8 @@ export interface Rule {
 }
 
 /** The rulebook: the eleven principles of `ideas/vision-grill.md`, worded as
- *  what to do. Further rules are written as each thing is designed. */
+ *  what to do, then the six of the foundations (`ideas/theme-grill.md`).
+ *  Further rules are written as each thing is designed. */
 export const RULES: readonly Rule[] = [
   {
     id: 'smallest-help-first',
@@ -80,6 +81,45 @@ export const RULES: readonly Rule[] = [
     id: 'failure-says-what',
     rule: 'Name what failed, why and the one thing to do next, in words that put no blame on the student',
     check: 'Every error state has all three',
+    scope: 'all',
+  },
+  {
+    id: 'serif-to-read',
+    rule: 'Set what the student reads in the serif and what they act on in the sans',
+    check:
+      'Problems, help and greetings are serif; labels, buttons and rows are sans',
+    scope: 'all',
+  },
+  {
+    id: 'mono-for-copy',
+    rule: 'Use mono only for codes, ids and anything the student may copy',
+    check: 'Every mono run is a code, an id or copyable text',
+    scope: 'all',
+  },
+  {
+    id: 'figures-follow-text',
+    rule: 'Set a figure in the font of the text it sits in',
+    check:
+      '"Problem 5.3" is in one font; columns of figures use tabular numbers',
+    scope: 'all',
+  },
+  {
+    id: 'colour-has-a-word',
+    rule: 'Give every meaning colour its word or glyph, so colour is never the only signal',
+    check: 'In greyscale, every status still reads',
+    scope: 'all',
+  },
+  {
+    id: 'contrast-floors',
+    rule: 'Keep text at 4.5:1 or more and grey text at 7:1 or more, on every ground it sits on',
+    check: 'tokens.test.ts passes',
+    scope: 'all',
+    enforcedBy: 'tokens.test.ts',
+  },
+  {
+    id: 'room-for-big-type',
+    rule: 'Give display type 96 above and 56 below, and a heading 64 above and 16 below',
+    check: 'The gaps around each display line and heading, measured',
     scope: 'all',
   },
 ];

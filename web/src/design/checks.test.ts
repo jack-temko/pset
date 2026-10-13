@@ -353,7 +353,7 @@ describe('the checks', () => {
 describe('the rulebook and the vision', () => {
   it('the rulebook is sound', () => {
     expect(checkRulebook(RULES)).toEqual([]);
-    expect(RULES).toHaveLength(11);
+    expect(RULES).toHaveLength(17);
   });
 
   it('fails on a duplicate or a badly spelled rule id', () => {
