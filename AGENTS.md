@@ -15,6 +15,25 @@
   never a generated name like `claude/laughing-gauss-1135o5`. Parked and
   throwaway branches are named the same way. Commits carry no
   Co-Authored-By and no "Generated with" lines.
+- **The from-scratch design work lands on `design`, not `dev`** (decided
+  2026-10-13, D26 in `ideas/gallery-docs-grill.md`). The `/design` spec system,
+  then vision, theme, foundations, components, views and panes, each branch
+  from `origin/design` and open their pull request with `--base design`, under
+  every other rule here: a named branch and worktree, the full `make check`,
+  one review, screenshots in both themes, Jack's approval before a merge, a
+  squash-merge. No ruleset guards `design` (the `dev` ruleset covers `dev`
+  only), so the lander itself waits for a green `check` and an up-to-date
+  branch before any merge into `design`. `design` takes `dev` in through a
+  pull request from a branch cut from `origin/design` with `origin/dev` merged
+  into it (`design-take-dev`), so a conflict is fixed on that branch; it is
+  merged into `design` with a merge commit (not a squash) after Jack approves
+  it like any other. Only Jack takes `design` into `dev`. Meanwhile `dev`
+  takes only critical bug fixes, so Jack can keep using PSet for his work. The
+  `/change` skill and its role briefs name `dev` as the base; for this work,
+  read `design` wherever they say `dev` (the worktree from `origin/design`,
+  `--base design`, diffs against `origin/design`), and the orchestrator says
+  so in every brief. When `design` has gone into `dev`, remove this bullet and
+  take `design` out of `.github/workflows/ci.yml`.
 
 **Landing a change** (the tests, and the real app for a UI change, first):
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress, branch `gallery-docs` (base `courses`).
+In progress, branch `gallery-docs` (base `design`, D26).
 
 ## Information
 
@@ -80,11 +80,12 @@ Changed:
   `verify.md`, any other that names `spec.md`, `grill.md`, a README, `/views` or
   `/components`): they produce `spec.ts` and `examples.tsx` in `web/src/units/<id>/`
   and check on `/design`; the skill covers all three kinds; the old design docs bind
-  nothing new (D24). Also fix `make jumps-check`, which `verify.md` cites and the
-  Makefile does not have: cite `make jumps`.
+  nothing new (D24).
 - `AGENTS.md`: "Checking UI changes" and "Skills" name `/design` and `spec.ts` for new
-  units; the `courses` bullet says the tracks are paused (D22).
-- `ideas/courses.md`: tracks marked paused, with a pointer to the grill.
+  units; "Branches" gains a `design` paragraph (D26), modelled on the `courses` one.
+- `.github/workflows/ci.yml`: `design` joins `dev` and `main` in the two branch lists
+  (full `make check`); the smallest change. Pausing the courses tracks (D22) is a
+  separate change: neither `ideas/courses.md` nor the `courses` paragraph exists here.
 - `ideas/views-gallery.md`, `ideas/grill-skill.md`: a line at the top pointing here
   for new work.
 - `design/design-system.md` and `design/README` if there is one: one line saying
@@ -111,13 +112,12 @@ what the new page imports from them.
    exist.
 5. Routes and the top bar link; delete the mockup and its brief.
 6. The two skills, including the grill's prior-art step (D25).
-7. Docs: `design/design-docs.md`, the pointers, `AGENTS.md`, `ideas/courses.md`,
+7. Docs: `design/design-docs.md`, the pointers, `AGENTS.md`,
    `ideas/README.md`, and this file's Status.
 
 ### Tests
 
-- `make check-fast` (the `courses` rule), and `cd web && npx vitest run` for the new
-  tests, which `check-fast` does not run.
+- `make check`, which runs the new tests too.
 - New: `web/src/design/checks.test.ts`; the page's URL-state and map tests.
 - To photograph, Paper and Night at 1280: `/design` (empty), `/design/rules` (empty),
   `/design/sample`, `/design/sample?load=loading`, `/design/sample?load=both`,

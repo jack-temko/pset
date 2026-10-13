@@ -2,7 +2,7 @@
 
 - status: approved
 - date: 2026-10-13
-- brief: one dev URL for components, panes and views, and a typed, renderable spec per unit; judged from Jack reading a unit to judge its design, and an agent reading the same file to build
+- brief: lands on the long-lived `design` branch (D26); one dev URL for components, panes and views, and a typed, renderable spec per unit; judged from Jack reading a unit to judge its design, and an agent reading the same file to build
 - sources:
   - `web/src/App.tsx`, `web/src/pages/gallery/`, `web/src/pages/components/`, `web/src/pages/views/`, `web/src/views/`
   - `design/design-system.md` and the other `design/` specs (45 written rules, no ids)
@@ -49,6 +49,7 @@ which rules it follows and what was decided.
 
 | D24 | Design starts from scratch: vision, theme, foundations (colour, type, spacing, the mark), every component, and all rules. Views and panes are built as their components exist | Jack: "wipe the rulebook clean", "same thing for vision and theme" | Keeping the foundations as given; re-confirming them first |
 | D25 | A grill does light research on what established design systems do (GitHub's Primer first) when the topic calls for it or Jack asks, and its recommendations cite it | Recommendations rest on proven practice, not taste alone | Recommending from memory |
+| D26 | The design work lands on a long-lived `design` branch cut from `dev`; `dev` takes only critical fixes meanwhile | Jack keeps a working PSet until the redesign is finished | Landing on `courses`; landing straight on `dev` |
 
 ### The artifact(s)
 
@@ -121,8 +122,7 @@ state with no render) and see the checks fail.
 - A8: mockups during a grill are built at a temporary route and deleted, as here.
 - A9: `design/design-system.md` and the other `design/` specs keep describing the old
   app until it is gone, and bind nothing new. This change adds that line to them.
-- A10: this change marks the tracks paused in `ideas/courses.md` and says so in the
-  `courses` bullet of `AGENTS.md`.
+- A10: the courses tracks are paused (D22). Pausing them is a separate change: `ideas/courses.md` and the `courses` paragraph of `AGENTS.md` do not exist on `design`.
 - A11: order after this change: a vision grill, a theme and foundations grill,
   components, one view, the pane view, one pane, then the lock.
 
@@ -369,3 +369,5 @@ Jack, unprompted: **"Same thing for vision and theme."**
 ### After the OK
 
 Jack: **"One final add, one part of the grill should be (when required or asked) it should do some light preliminary research on what big companies do (especial GitHub since we use its theme). That will influence the grills reccomeneded decisions where applicable."** (D25.)
+
+Jack: **"Lets also move this to its own branch. Having on another large migration (courses) is a bad idea."** and **"a new long lived branch. So I can continue working with pset and literally just critical bug fixes so I can continue to use it for my work before this is finished."** (D26.)
