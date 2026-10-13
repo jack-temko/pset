@@ -40,7 +40,7 @@ export function PaneRun({
   stress: boolean;
 }) {
   const base = HOMEWORK?.scenarios.find(
-    (s) => s.id === (stress ? 'long-set' : state),
+    (s) => s.id === (stress && !loading ? 'long-set' : state),
   );
   const scenario = useMemo(
     () =>
@@ -170,12 +170,14 @@ export function Both({
   stress,
   night,
   width,
+  height = 800,
 }: {
   kind: Kind;
   state: string;
   stress: boolean;
   night: boolean;
   width: number;
+  height?: number;
 }) {
   if (kind !== 'pane')
     return <Example kind={kind} state={state} stress={stress} loading />;
@@ -185,9 +187,10 @@ export function Both({
       stress: String(stress),
       night: String(night),
       w: String(width),
+      ah: String(height),
     }).toString()}`;
   return (
-    <div className="relative h-[800px] w-full overflow-hidden">
+    <div className="relative w-full overflow-hidden" style={{ height }}>
       {/* The app asks for 1024px of window, so the frame is that wide and
           the box clips it to the example. */}
       <iframe
@@ -219,7 +222,10 @@ export function PaneFrame() {
           : 'min-h-dvh bg-background text-foreground'
       }
     >
-      <div style={{ width: Number(q.get('w') ?? 440) }}>
+      <div
+        style={{ width: Number(q.get('w') ?? 440) }}
+        className={q.get('ah') === '640' ? '[&_aside]:h-[640px]!' : undefined}
+      >
         <PaneRun
           state={state}
           loading={q.get('loading') === 'true'}

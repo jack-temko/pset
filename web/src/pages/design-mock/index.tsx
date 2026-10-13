@@ -9,7 +9,9 @@ import { Mark } from '@/components/brand';
 import { cn } from '@/lib/utils';
 import { ResizeHandle } from '@/components/resize-handle';
 import { Button } from '@/components/button';
-import { Both, Example, type Mode } from './example';
+import { Both, Example } from './example';
+import { OptionA } from './option-a';
+import { useExample, type Ex } from './use-example';
 import { Box } from '@/components/box';
 import { Label } from '@/components/label';
 import {
@@ -364,74 +366,11 @@ function Header({ s }: { s: Sample }) {
   );
 }
 
-function Chips({
-  s,
-  current,
-  onPick,
-}: {
-  s: Sample;
-  current: string;
-  onPick: (id: string) => void;
-}) {
-  return (
-    <div
-      className="flex flex-wrap gap-1.5"
-      role="radiogroup"
-      aria-label="State"
-    >
-      {s.states.map((st) => (
-        <button
-          key={st.id}
-          type="button"
-          role="radio"
-          aria-checked={st.id === current}
-          title={st.when}
-          onClick={() => {
-            onPick(st.id);
-          }}
-          className={cn(
-            'h-control-sm rounded-md border px-2 text-xs',
-            st.id === current
-              ? 'border-primary bg-primary-soft font-medium text-primary'
-              : 'bg-card text-muted-foreground hover:bg-muted',
-          )}
-        >
-          {st.name}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 const MODES = [
   { value: 'loaded', label: 'Loaded' },
   { value: 'loading', label: 'Loading' },
   { value: 'both', label: 'Both' },
 ] as const;
-
-/** Everything the example's controls hold, so each arrangement places
- *  the same controls and shares the same state. */
-function useExample(s: Sample) {
-  const [state, setState] = useState(s.states[0].id);
-  const [width, setWidth] = useState(s.kind === 'pane' ? 440 : 480);
-  const [stress, setStress] = useState(false);
-  const [mode, setMode] = useState<Mode>('loaded');
-  const [night, setNight] = useState(false);
-  return {
-    s,
-    state,
-    setState,
-    width,
-    setWidth,
-    stress,
-    setStress,
-    mode,
-    setMode,
-    night,
-    setNight,
-  };
-}
-type Ex = ReturnType<typeof useExample>;
 
 function FlowStrip({ ex }: { ex: Ex }) {
   const ids = ex.s.flow;
@@ -602,20 +541,6 @@ function ExampleFrame({ ex, chips }: { ex: Ex; chips?: ReactNode }) {
   );
 }
 
-function OptionA({ s }: Body) {
-  const ex = useExample(s);
-  return (
-    <div className="space-y-6">
-      <Header s={s} />
-      <ExampleFrame
-        ex={ex}
-        chips={<Chips s={s} current={ex.state} onPick={ex.setState} />}
-      />
-      <SpecSections s={s} grid />
-    </div>
-  );
-}
-
 function OptionB({ s }: Body) {
   const ex = useExample(s);
   return (
@@ -755,7 +680,7 @@ interface Body {
   s: Sample;
 }
 
-function UnitList({ title }: { title: string }) {
+function UnitList({ title, tab }: { title: string; tab: string }) {
   const [q, setQ] = useState('');
   return (
     <nav
@@ -770,20 +695,20 @@ function UnitList({ title }: { title: string }) {
           setQ(e.target.value);
         }}
       />
-      {UNITS.map((g) => {
+      {UNITS.filter((g) => g.tab === tab).map((g) => {
         const names = g.names.filter((n) =>
           n.toLowerCase().includes(q.toLowerCase()),
         );
         if (names.length === 0) return null;
         return (
-          <div key={g.group} className="space-y-0.5">
+          <div key={g.group} className="space-y-1">
             <p className="px-2 text-xs text-muted-foreground">{g.group}</p>
             {names.map((n) => (
               <a
                 key={n}
                 href="#"
                 className={cn(
-                  'block rounded-md px-2 py-1.5 text-sm hover:bg-muted/50',
+                  'block rounded-md px-2 py-2 text-sm hover:bg-muted/50',
                   n === title && 'bg-primary-soft font-medium text-primary',
                 )}
               >
@@ -861,7 +786,7 @@ export function DesignMock() {
         </UnderlineNav>
       </div>
       <div className="flex items-start">
-        <UnitList title={s.title} />
+        <UnitList title={s.title} tab={k === 'pane' ? 'Panes' : 'Components'} />
         <main className="min-w-0 flex-1 p-6">
           <Layout key={`${o}${k}`} s={s} />
         </main>

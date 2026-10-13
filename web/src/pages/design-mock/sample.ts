@@ -42,6 +42,7 @@ export interface Input {
 }
 export interface Rule {
   id: string;
+  kind: 'always' | 'never' | 'limits';
   text: string;
   local?: boolean;
 }
@@ -166,22 +167,34 @@ const BUTTON: Sample = {
     },
   ],
   rules: [
-    { id: 'R-one-primary', text: 'One primary action per screen region.' },
+    {
+      id: 'R-one-primary',
+      kind: 'limits',
+      text: 'One primary action per screen region.',
+    },
     {
       id: 'R-semantic-tokens',
+      kind: 'always',
       text: 'Semantic tokens only, no raw colour values.',
     },
     {
       id: 'R-one-focus-ring',
+      kind: 'always',
       text: 'One focus ring, from the base layer, on everything.',
     },
     {
       id: 'R-no-own-margin',
+      kind: 'never',
       text: 'A component never sets its own outer margin.',
     },
-    { id: 'R-sentence-case', text: 'Labels are sentence case and verb first.' },
+    {
+      id: 'R-sentence-case',
+      kind: 'always',
+      text: 'Labels are sentence case and verb first.',
+    },
     {
       id: 'R-btn-soft-destructive',
+      kind: 'never',
       text: 'Destructive is soft ink on a soft ground, never solid red.',
       local: true,
     },
@@ -261,7 +274,7 @@ const HOMEWORK: Sample = {
   actions: [
     {
       id: 'open-set',
-      does: 'Open a set from the list',
+      does: 'Open a set',
       leads: 'Its next unfinished question',
       state: 'happy',
     },
@@ -273,7 +286,7 @@ const HOMEWORK: Sample = {
     },
     {
       id: 'wait-guide',
-      does: 'Wait for the next guide',
+      does: 'Wait for a guide',
       leads: 'It is written while the student reads',
       state: 'slow',
     },
@@ -372,22 +385,30 @@ const HOMEWORK: Sample = {
     },
   ],
   rules: [
-    { id: 'R-one-primary', text: 'One primary action per screen region.' },
+    {
+      id: 'R-one-primary',
+      kind: 'limits',
+      text: 'One primary action per screen region.',
+    },
     {
       id: 'R-semantic-tokens',
+      kind: 'always',
       text: 'Semantic tokens only, no raw colour values.',
     },
     {
       id: 'R-spinner-waiting',
+      kind: 'limits',
       text: 'Only the Spinner loops, and it means waiting.',
     },
     {
       id: 'R-one-menu',
+      kind: 'limits',
       text: 'One menu per thing; opening one closes any other.',
     },
-    { id: 'R-no-em-dash', text: 'No em dashes in any copy.' },
+    { id: 'R-no-em-dash', kind: 'never', text: 'No em dashes in any copy.' },
     {
       id: 'R-hw-never-done',
+      kind: 'never',
       text: 'Never mark done what is not done.',
       local: true,
     },
@@ -441,13 +462,15 @@ export const SAMPLES: Record<Exclude<Kind, 'view'>, Sample> = {
   pane: HOMEWORK,
 };
 
-export const UNITS: { group: string; names: string[] }[] = [
+export const UNITS: { tab: string; group: string; names: string[] }[] = [
   {
-    group: 'Components',
-    names: ['Box', 'Button', 'Dialog', 'Menu', 'Table', 'Spinner'],
+    tab: 'Components',
+    group: 'Controls',
+    names: ['Button', 'Menu', 'Spinner'],
   },
-  { group: 'Panes', names: ['Homework panel', 'Ask'] },
-  { group: 'Views', names: ['Settings', 'Error notice'] },
+  { tab: 'Components', group: 'Surfaces', names: ['Box', 'Dialog', 'Table'] },
+  { tab: 'Panes', group: 'Workspace', names: ['Homework panel', 'Ask'] },
+  { tab: 'Views', group: 'Screens', names: ['Settings', 'Error notice'] },
 ];
 
 export const TABS = [
