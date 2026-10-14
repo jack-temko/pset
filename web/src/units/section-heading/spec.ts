@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Section heading',
   group: 'Basics',
   purpose:
-    'Titles a list or a group on a screen, with an optional count and one action at the right, over a rule.',
+    'Titles a list or a group on a screen: the serif title, a Counter right after it and one quiet action at the right. No rule.',
   states: [
     {
       id: 'plain',
@@ -16,7 +16,7 @@ export default defineSpec({
     {
       id: 'count',
       name: 'With a count',
-      when: 'The list says how many it holds.',
+      when: 'The list says how many it holds, in a Counter after the title.',
     },
     {
       id: 'action',
@@ -30,8 +30,11 @@ export default defineSpec({
     },
   ],
   stress:
-    'A 60 character title in a 240px container: the title wraps and the right side stays on the first line.',
-  components: [{ unit: 'link', use: 'The "Show all" action in the examples.' }],
+    'A 60 character title in a 240px container: the title wraps; the Counter stays beside its first line and the action at the right.',
+  components: [
+    { unit: 'counter', use: 'The count after the title.' },
+    { unit: 'link', use: 'The "Show all" action in the examples.' },
+  ],
   actions: [],
   inputs: [
     {
@@ -44,13 +47,13 @@ export default defineSpec({
       name: 'count',
       type: 'ReactNode',
       default: 'none',
-      does: 'How many things follow, small and grey at the right.',
+      does: 'How many things follow, in a Counter right after the title.',
     },
     {
       name: 'action',
       type: 'ReactNode',
       default: 'none',
-      does: 'A text link, such as "Show all", at the right of the count.',
+      does: 'A text link, such as "Show all", at the right.',
     },
   ],
   priority: {
@@ -58,7 +61,9 @@ export default defineSpec({
   },
   sizes: {
     narrowest: 160,
-    gives: ['The title wraps; the count and the action stay on its first line'],
+    gives: [
+      'The title wraps; the Counter and the action stay on its first line',
+    ],
   },
   exampleWidth: 960,
   rules: {
@@ -69,10 +74,18 @@ export default defineSpec({
     {
       id: 'section-heading-d1',
       decision:
-        'The heading step on the left, a count and an action on the right in the small step, a 1px rule below, and no outer margin.',
+        'The heading step on the left, an action on the right, and no outer margin.',
       why: "Settled afterwards, not asked (the builder's): the parent decides the room around big type, so every list is the same.",
       beat: 'A heading with its own margins',
       date: '2026-10-13',
+    },
+    {
+      id: 'section-heading-d2',
+      decision:
+        "As the old Home's SectionHeader: the count is a Counter pill right after the title, 8 apart; one quiet action at the right; at least 32 high; no rule under it.",
+      why: 'Jack: "The heading is bad too. I want to be more similar to my old design."',
+      beat: 'A count at the right with a 1px rule below',
+      date: '2026-10-14',
     },
   ],
 });
