@@ -430,6 +430,113 @@ describe('Tooltip', () => {
       }
     });
 
+    describe('when its control is covered', () => {
+      function setup(forced: boolean) {
+        const raf = vi
+          .spyOn(window, 'requestAnimationFrame')
+          .mockImplementation((cb) => {
+            cb(0);
+            // Ran synchronously, so there is no frame left to cancel.
+            return 0;
+          });
+        const at = vi.fn<(x: number, y: number) => Element | null>();
+        Object.defineProperty(document, 'elementFromPoint', {
+          value: at,
+          configurable: true,
+        });
+        const onClose = vi.fn();
+        const { el } = render(
+          <Tooltip text="Why" open={forced} onClose={onClose}>
+            <button type="button">Go</button>
+          </Tooltip>,
+        );
+        const control = el.querySelector('button');
+        if (!forced) act(() => control?.focus());
+        const scroll = () => {
+          act(() => {
+            document.dispatchEvent(new Event('scroll'));
+          });
+        };
+        const cleanup = () => {
+          raf.mockRestore();
+          Reflect.deleteProperty(document, 'elementFromPoint');
+        };
+        return { at, control, scroll, onClose, cleanup };
+      }
+
+      it('closes a hover or focus tooltip on a scroll, and checks the control centre', () => {
+        const restore = stubViewport(0, 0);
+        const { at, control, scroll, onClose, cleanup } = setup(false);
+        try {
+          at.mockReturnValue(control);
+          scroll();
+          expect(tip()).toBe('Why');
+          expect(at).toHaveBeenCalledWith(140, 116);
+          at.mockReturnValue(document.body);
+          scroll();
+          expect(tip()).toBe('');
+          expect(onClose).toHaveBeenCalledTimes(1);
+        } finally {
+          cleanup();
+          restore();
+        }
+      });
+
+      it('hides a forced tooltip while covered and shows it again after', () => {
+        const restore = stubViewport(0, 0);
+        const { at, control, scroll, cleanup } = setup(true);
+        try {
+          const visibility = () =>
+            document.querySelector<HTMLElement>('[role="tooltip"]')?.style
+              .visibility;
+          at.mockReturnValue(document.body);
+          scroll();
+          expect(visibility()).toBe('hidden');
+          expect(tip()).toBe('Why');
+          at.mockReturnValue(control);
+          scroll();
+          expect(visibility()).toBe('visible');
+        } finally {
+          cleanup();
+          restore();
+        }
+      });
+
+      it('counts a control outside the window as covered', () => {
+        const restore = stubViewport(0, 0);
+        const { at, control, scroll, cleanup } = setup(false);
+        try {
+          at.mockReturnValue(control);
+          Object.defineProperty(document.documentElement, 'clientHeight', {
+            value: 50,
+            configurable: true,
+          });
+          scroll();
+          expect(tip()).toBe('');
+        } finally {
+          cleanup();
+          restore();
+        }
+      });
+
+      it('removes its listeners once it has closed', () => {
+        const restore = stubViewport(0, 0);
+        const remove = vi.spyOn(window, 'removeEventListener');
+        const { at, scroll, cleanup } = setup(false);
+        try {
+          at.mockReturnValue(document.body);
+          scroll();
+          expect(tip()).toBe('');
+          expect(remove.mock.calls.some((c) => c[0] === 'scroll')).toBe(true);
+          expect(remove.mock.calls.some((c) => c[0] === 'resize')).toBe(true);
+        } finally {
+          remove.mockRestore();
+          cleanup();
+          restore();
+        }
+      });
+    });
+
     it('does nothing for a document scroll, and closes for a nested one', () => {
       const restore = stubViewport(0, 0);
       try {

@@ -35,10 +35,18 @@ Text link:
 Tooltip (added 2026-10-13, after Jack tried the button and disliked the boxed line under a
 not-ready button):
 
-| Id         | Decision                                                                                                                         | Why                      | Beat                                                    |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------- |
-| tooltip-d1 | A tooltip sits below its control, centred, and moves to another side or shifts when there is no room, never leaving the viewport | As Primer's tooltip does | A line under the control that can be clipped or overlap |
-| tooltip-d2 | It is at most 250 wide and its text wraps                                                                                        | Primer's limit           | One unbroken line                                       |
+| Id         | Decision                                                                                                                         | Why                                                                  | Beat                                                    |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------- |
+| tooltip-d1 | A tooltip sits below its control, centred, and moves to another side or shifts when there is no room, never leaving the viewport | As Primer's tooltip does                                             | A line under the control that can be clipped or overlap |
+| tooltip-d2 | It is at most 250 wide and its text wraps                                                                                        | Primer's limit                                                       | One unbroken line                                       |
+| tooltip-d3 | A tooltip closes when its control is covered or leaves the window                                                                | It floats above everything, so it must not outlive what it points at | Staying open over a top bar                             |
+| tooltip-d4 | The tooltip is our own code: placed once in page coordinates in the browser's top layer, with no positioning library             | No lag while scrolling and no new dependency                         | `@primer/behaviors`; Floating UI                        |
+
+Scrolling log. Jack: **"The tooltip seems to lag slightly behind when scrolling"** and **"Can
+we use the tooltip library github uses? Also one more issues, when the button scrolls out of
+frame the tooltip displays over the top bar"**. How should the tooltip be positioned? Keep
+ours, add the close-when-covered fix (Recommended) / Use GitHub's positioning function /
+Use Floating UI. **Keep ours, add the close-when-covered fix (Recommended).**
 
 Button button-d4 now reads: never disabled; a button that cannot act yet is not ready: it
 takes focus and a press, and says why in a tooltip (beat: a boxed line under the button, first

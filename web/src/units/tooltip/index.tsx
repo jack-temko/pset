@@ -22,6 +22,26 @@ function focusVisible(el: Element) {
   return canTellFocusVisible ? el.matches(':focus-visible') : true;
 }
 
+/** Whether the student can see the control: its centre is inside the window
+ *  and the element drawn there is the control or inside it. The tooltip itself
+ *  has `pointer-events: none`, so it never answers. Without the API (jsdom),
+ *  the control counts as visible. */
+function controlVisible(anchor: HTMLElement | null) {
+  if (!anchor || typeof document.elementFromPoint !== 'function') return true;
+  const r = anchor.getBoundingClientRect();
+  const x = r.left + r.width / 2;
+  const y = r.top + r.height / 2;
+  if (
+    x < 0 ||
+    y < 0 ||
+    x > document.documentElement.clientWidth ||
+    y > document.documentElement.clientHeight
+  )
+    return false;
+  const hit = document.elementFromPoint(x, y);
+  return hit !== null && anchor.contains(hit);
+}
+
 /** Read on each render, so a browser without the API falls back cleanly. */
 function supportsPopover() {
   return (
@@ -57,6 +77,8 @@ export function Tooltip({
   const [hover, setHover] = useState(false);
   const [focus, setFocus] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  /** A pinned tooltip hides while its control is covered or off the window. */
+  const [covered, setCovered] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const visible =
@@ -90,26 +112,53 @@ export function Tooltip({
   });
 
   // Placement is worked out when it opens and when the window resizes, never
-  // while the page scrolls. A scroll that is not the document's (a scrolling
-  // ancestor of the control) cannot be followed, so it closes the tooltip.
+  // while the page scrolls. Two things can still end it:
+  //  - a scroll that is not the document's (a scrolling ancestor of the
+  //    control) cannot be followed, so it closes a tooltip that is not forced;
+  //  - the control being covered or out of the window (checked once a frame on
+  //    scroll and resize), since it floats above everything. That check only
+  //    decides open or closed; it never moves the tooltip.
   useEffect(() => {
     if (!visible) return;
+    const forced = Boolean(open);
     const close = () => {
       setDismissed(true);
       onClose?.();
     };
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const seen = controlVisible(anchor.current);
+      if (forced) setCovered(!seen);
+      else if (!seen) close();
+    };
+    const schedule = () => {
+      frame ||= requestAnimationFrame(check);
+    };
     const onScroll = (e: Event) => {
-      if (e.target !== document) close();
+      if (e.target !== document && !forced) close();
+      else schedule();
     };
     const esc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') close();
     };
-    window.addEventListener('scroll', onScroll, true);
-    window.addEventListener('resize', position);
+    const onResize = () => {
+      position();
+      schedule();
+    };
+    // A pinned tooltip is checked as it opens too, so one that is already
+    // covered stays hidden.
+    if (forced) schedule();
+    window.addEventListener('scroll', onScroll, {
+      capture: true,
+      passive: true,
+    });
+    window.addEventListener('resize', onResize);
     document.addEventListener('keydown', esc);
     return () => {
+      cancelAnimationFrame(frame);
       window.removeEventListener('scroll', onScroll, true);
-      window.removeEventListener('resize', position);
+      window.removeEventListener('resize', onResize);
       document.removeEventListener('keydown', esc);
     };
   });
@@ -127,7 +176,12 @@ export function Tooltip({
       role="tooltip"
       popover={hasPopover ? 'manual' : undefined}
       className="ds-small ds-fade-in pointer-events-none absolute top-0 left-0 m-0 w-max max-w-[250px] overflow-visible rounded-(--ds-radius-tag) border-0 bg-(--ds-pressed) px-2 py-1 text-(--ds-fg)"
-      style={{ background: 'var(--ds-pressed)', inset: 'auto', zIndex: 1000 }}
+      style={{
+        background: 'var(--ds-pressed)',
+        inset: 'auto',
+        zIndex: 1000,
+        visibility: covered ? 'hidden' : 'visible',
+      }}
     >
       {text}
     </div>

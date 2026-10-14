@@ -106,5 +106,21 @@ export default defineSpec({
       beat: 'One unbroken line',
       date: '2026-10-13',
     },
+    {
+      id: 'tooltip-d3',
+      decision:
+        'A tooltip closes when its control is covered or leaves the window.',
+      why: 'It floats above everything, so it must not outlive what it points at.',
+      beat: 'Staying open over a top bar',
+      date: '2026-10-13',
+    },
+    {
+      id: 'tooltip-d4',
+      decision:
+        "The tooltip is our own code: placed once in page coordinates in the browser's top layer, with no positioning library.",
+      why: 'No lag while scrolling and no new dependency.',
+      beat: '@primer/behaviors; Floating UI',
+      date: '2026-10-13',
+    },
   ],
 });

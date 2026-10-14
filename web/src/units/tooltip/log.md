@@ -12,3 +12,12 @@ The grill of 2026-10-13, word for word.
 
 Sources: https://primer.style/product/components/button/guidelines and
 https://primer.style/product/components/tooltip/guidelines .
+
+## Scrolling
+
+- Jack: **"The tooltip seems to lag slightly behind when scrolling"** and **"Can we use the
+  tooltip library github uses? Also one more issues, when the button scrolls out of frame
+  the tooltip displays over the top bar"**
+- How should the tooltip be positioned? Keep ours, add the close-when-covered fix
+  (Recommended) / Use GitHub's positioning function / Use Floating UI. **Keep ours, add
+  the close-when-covered fix (Recommended).**
