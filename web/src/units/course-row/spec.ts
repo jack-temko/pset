@@ -6,44 +6,63 @@ export default defineSpec({
   title: 'Course row',
   group: 'Lists',
   purpose:
-    'One course on one line: its name, how many materials and how many sets it holds. The row opens the course.',
+    'One course: its name, what it holds, and its active sets, usually one. The name opens the course; each set line opens its set.',
   states: [
     {
-      id: 'typical',
-      name: 'Typical',
-      when: 'A course with several materials and sets.',
+      id: 'due-soon',
+      name: 'One active set, due soon',
+      when: 'The course has one active set, due within 2 days: the attention tag.',
     },
     {
-      id: 'singular',
-      name: 'One material, one set',
-      when: 'Each count is one: the words go singular.',
+      id: 'no-date',
+      name: 'One active set, no date',
+      when: 'The course has one active set with no date.',
+    },
+    {
+      id: 'two-active',
+      name: 'Two active sets',
+      when: 'Two sets are active: their lines stack.',
+    },
+    {
+      id: 'nothing-active',
+      name: 'Nothing active',
+      when: 'The course has sets, none of them active.',
+      text: 'Nothing active',
     },
     {
       id: 'empty',
       name: 'Empty course',
       when: 'A course with nothing in it yet.',
-      text: 'No materials, No sets',
+      text: 'No materials, no sets, Nothing active',
     },
     {
       id: 'list',
-      name: 'A list of three',
-      when: 'Home lists every course: the counts line up down the list.',
+      name: 'A list of five',
+      when: 'Home lists at most five courses, then "Show all": the lines align down the list.',
     },
   ],
   stress:
-    'A 70 character course name in a 320px container: it truncates on one line.',
+    'A 70 character course name and a 70 character set name in a 480px container: both truncate on one line.',
   components: [
+    { unit: 'set-line', use: 'Each active set, opening the set.' },
+    { unit: 'link', use: 'The course name, opening the course.' },
     {
       unit: 'section-heading',
-      use: 'Titles the list of three in the examples.',
+      use: 'Titles the list of five in the examples.',
     },
   ],
   actions: [
     {
       id: 'open-course',
-      label: 'The row',
+      label: 'The course name',
       key: 'Enter',
-      does: 'Opens the course, and only the course. The course screen is not a unit yet, so it has no target.',
+      does: 'Opens the course. The course screen is not a unit yet, so it has no target.',
+    },
+    {
+      id: 'open-set',
+      label: 'A set line',
+      key: 'Enter',
+      does: 'Opens that set in the workspace. The workspace is not a unit yet, so it has no target.',
     },
   ],
   inputs: [
@@ -69,20 +88,38 @@ export default defineSpec({
       name: 'href',
       type: 'string',
       default: 'none',
-      does: 'Where the row goes.',
+      does: 'Where the course name goes.',
+    },
+    {
+      name: 'active',
+      type: 'SetLine props[]',
+      default: 'none',
+      does: 'The active sets, as set lines; none shows "Nothing active".',
+    },
+    {
+      name: 'today',
+      type: 'Date',
+      default: 'now',
+      does: 'The day "within 2 days" counts from; for the design page and tests.',
     },
   ],
   priority: {
-    first: 'The course’s name.',
-    main: 'open-course',
+    first: 'The course’s name, then its active set.',
+    main: 'open-set',
   },
   sizes: {
-    narrowest: 320,
-    gives: ['The counts take less room below 520', 'The name truncates'],
+    narrowest: 480,
+    gives: [
+      'Below 920 the set lines stack under the name',
+      'The set lines drop their time left, then their progress count',
+      'The names truncate',
+    ],
   },
   rules: {
     cite: [
       'course-first',
+      'work-first',
+      'links-go-buttons-do',
       'contrast-floors',
       'figures-follow-text',
       'sentence-case',
@@ -93,9 +130,17 @@ export default defineSpec({
     {
       id: 'course-row-d1',
       decision:
-        'A row shows the course’s name, its materials count and its sets count, and the whole row opens the course and only the course.',
-      why: 'Jack: "the row opens the course, and just the course".',
-      beat: 'The row opens the current set; unfinished sets and next due',
+        'A course row shows the course’s name (opens the course), its materials and sets counts, and its active sets, each opening its set.',
+      why: 'Usually one active set per course, so one list names each course once.',
+      beat: 'A list of sets in progress plus a separate list of courses',
+      date: '2026-10-13',
+    },
+    {
+      id: 'course-row-d2',
+      decision:
+        'Home sorts courses by their nearest active due date, then courses with no dated active set, then courses with nothing active; at most five, then "Show all".',
+      why: 'Home stays short and the most urgent course comes first.',
+      beat: 'All of them; three',
       date: '2026-10-13',
     },
   ],

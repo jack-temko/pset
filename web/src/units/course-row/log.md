@@ -11,8 +11,17 @@ The grill of 2026-10-13, word for word (the questions that concern the course ro
   the course list"**
 - A course row shows: Name, unfinished sets, next due (Recommended) / Name only / Name,
   materials, sets. **Name, materials, sets.**
+- How many rows can the list hold? Five, then a 'Show all' link (Recommended) / All of
+  them / Three. **Five, then a 'Show all' link (Recommended).**
+- Home's two lists will mostly name the same courses twice. Keep both lists? One list:
+  a course row that holds its active set (Recommended) / Keep both lists, as decided /
+  Only the 'In progress' list. **One list: a course row that holds its active set
+  (Recommended).** (Jack first said: **"Something to note about my own usage. I most
+  often only ever have one active assignment in each course."**)
 
 ## Settled afterwards (the plan, not asked)
 
-A count of none reads "No materials" or "No sets"; one reads singular. Below 520 the
-two count columns narrow to 92 and 60 so the name keeps some room at 320.
+The counts read "7 materials, 3 sets", "No materials, no sets" when empty, singular at
+one. A course with no active set shows one muted line, "Nothing active". Below 920 the
+set lines stack under the name; the name link and each set line are separate links.
+The sort and the cap of five are Home's; the examples' list shows them.

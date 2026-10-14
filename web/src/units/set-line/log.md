@@ -1,6 +1,6 @@
-# Work row: log
+# Set line: log
 
-The grill of 2026-10-13, word for word (the questions that concern the work row).
+The grill of 2026-10-13, word for word (the questions that concern the set line; it began as the work row).
 Prior art: Google Classroom's home shows up to five upcoming assignments across
 classes.
 
@@ -31,3 +31,14 @@ The attention tag reads "Due Fri" (the day), not "Due soon"; a set with no date 
 after dated ones and shows "No date"; the time left shows only when PSet knows it
 (`honest-waits`). At narrow widths the time column goes first, then the progress
 count, which is hidden by the row, not by the progress bar.
+
+## The amendment (Jack, mid-build)
+
+- Home's two lists will mostly name the same courses twice. Keep both lists? One list:
+  a course row that holds its active set (Recommended) / Keep both lists, as decided /
+  Only the 'In progress' list. **One list: a course row that holds its active set
+  (Recommended).** (Jack first said: **"Something to note about my own usage. I most
+  often only ever have one active assignment in each course."**)
+
+So the work row became this line, with no course name, and it lives inside the course
+row. The "Show all" cap of five now counts courses, not sets.

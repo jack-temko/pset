@@ -8,7 +8,8 @@ import { CourseRow } from './course-row';
 import { Link } from './link';
 import { ProgressBar } from './progress-bar';
 import { SectionHeading } from './section-heading';
-import { WorkRow, timeLeft } from './work-row';
+import { SetLine } from './set-line';
+import { timeLeft } from './set-line/dates';
 import { Tag } from './tag';
 import { Tooltip } from './tooltip';
 import { TopBar } from './top-bar';
@@ -843,14 +844,13 @@ describe('SectionHeading', () => {
   });
 });
 
-describe('WorkRow', () => {
+describe('SetLine', () => {
   const today = new Date(2026, 9, 13);
   const day = (d: number) => new Date(2026, 9, d);
-  const row = (p: Partial<Parameters<typeof WorkRow>[0]> = {}) =>
+  const line = (p: Partial<Parameters<typeof SetLine>[0]> = {}) =>
     render(
-      <WorkRow
+      <SetLine
         set="Problem set 4"
-        course="Electromagnetics"
         done={2}
         total={6}
         href="/set/4"
@@ -860,14 +860,13 @@ describe('WorkRow', () => {
     );
 
   it('is one link to the set, carrying every fact', () => {
-    const { el } = row({ minutesLeft: 70, due: day(19) });
+    const { el } = line({ minutesLeft: 70, due: day(19) });
     const a = el.querySelectorAll('a');
     expect(a).toHaveLength(1);
     expect(a[0]?.getAttribute('href')).toBe('/set/4');
-    const text = a[0]?.textContent ?? '';
+    const text = a[0]?.textContent;
     for (const part of [
       'Problem set 4',
-      'Electromagnetics',
       '2 of 6',
       'About 1 h 10 m left',
       'Due Mon 19',
@@ -876,21 +875,21 @@ describe('WorkRow', () => {
   });
 
   it('tags a due date only within 2 days', () => {
-    const dueToday = row({ due: day(13) });
-    expect(dueToday.el.querySelector('svg')).not.toBeNull();
-    expect(row({ due: day(15) }).el.querySelector('svg')).not.toBeNull();
-    expect(row({ due: day(16) }).el.querySelector('svg')).toBeNull();
-    expect(row({ due: day(16) }).el.textContent).toContain('Due Fri 16');
-    expect(row({ due: day(15) }).el.textContent).toContain('Due Thu');
-    expect(row({ due: day(15) }).el.textContent).not.toContain('Due Thu 15');
+    const tag = (d: number) => line({ due: day(d) }).el.querySelector('svg');
+    expect(tag(13)).not.toBeNull();
+    expect(tag(15)).not.toBeNull();
+    expect(tag(16)).toBeNull();
+    expect(line({ due: day(16) }).el.textContent).toContain('Due Fri 16');
+    expect(line({ due: day(15) }).el.textContent).toContain('Due Thu');
+    expect(line({ due: day(15) }).el.textContent).not.toContain('Due Thu 15');
   });
 
   it('tags an overdue set', () => {
-    expect(row({ due: day(10) }).el.querySelector('svg')).not.toBeNull();
+    expect(line({ due: day(10) }).el.querySelector('svg')).not.toBeNull();
   });
 
   it('says No date without one, and leaves the time empty when unknown', () => {
-    const { el } = row({ due: undefined });
+    const { el } = line({ due: undefined });
     expect(el.textContent).toContain('No date');
     expect(el.querySelector('[data-column="time"]')?.textContent).toBe('');
   });
@@ -901,47 +900,69 @@ describe('WorkRow', () => {
     expect(timeLeft(70)).toBe('About 1 h 10 m left');
   });
 
-  it('truncates its names and keeps the row 56 high', () => {
-    const { el } = row({ set: 'x'.repeat(70), course: 'y'.repeat(50) });
-    expect(el.querySelector('a')?.className).toContain('h-14');
-    const names = el.querySelectorAll('span.truncate');
-    expect(names.length).toBeGreaterThanOrEqual(2);
+  it('truncates its name and keeps the line 40 high', () => {
+    const { el } = line({ set: 'x'.repeat(70) });
+    expect(el.querySelector('a')?.className).toContain('h-10');
+    expect(el.querySelector('span.truncate')?.className).toContain('min-w-0');
   });
 });
 
 describe('CourseRow', () => {
-  const row = (materials: number, sets: number) =>
+  const today = new Date(2026, 9, 13);
+  const set = (n: string, href: string) => ({
+    set: n,
+    done: 1,
+    total: 4,
+    due: new Date(2026, 9, 15),
+    href,
+  });
+  const row = (
+    materials: number,
+    sets: number,
+    active: Parameters<typeof CourseRow>[0]['active'],
+  ) =>
     render(
       <CourseRow
         name="Electromagnetics"
         materials={materials}
         sets={sets}
         href="/c/1"
+        active={active}
+        today={today}
       />,
     );
 
-  it('is one link to the course with its name and both counts', () => {
-    const { el } = row(7, 3);
-    const a = el.querySelectorAll('a');
-    expect(a).toHaveLength(1);
-    expect(a[0]?.getAttribute('href')).toBe('/c/1');
-    expect(a[0]?.textContent).toBe('Electromagnetics7 materials3 sets');
+  it('opens the course from the name and each set from its own line', () => {
+    const { el } = row(7, 3, [set('Set 4', '/s/4'), set('Lab 2', '/s/2')]);
+    const links = [...el.querySelectorAll('a')].map((a) => [
+      a.textContent.slice(0, 16),
+      a.getAttribute('href'),
+    ]);
+    expect(links[0]).toEqual(['Electromagnetics', '/c/1']);
+    expect(links.map((l) => l[1])).toEqual(['/c/1', '/s/4', '/s/2']);
+    expect(el.querySelector('a a')).toBeNull();
+    expect(el.textContent).toContain('7 materials, 3 sets');
   });
 
   it('goes singular at one', () => {
-    expect(row(1, 1).el.textContent).toBe('Electromagnetics1 material1 set');
+    expect(row(1, 1, []).el.textContent).toContain('1 material, 1 set');
   });
 
-  it('says No materials and No sets when empty', () => {
-    expect(row(0, 0).el.textContent).toBe(
-      'ElectromagneticsNo materialsNo sets',
+  it('says what is missing when empty', () => {
+    const { el } = row(0, 0, []);
+    expect(el.textContent).toContain('No materials, no sets');
+    expect(el.textContent).toContain('Nothing active');
+  });
+
+  it('shows nothing-active only when no set is active', () => {
+    expect(row(2, 2, [set('Set 4', '/s/4')]).el.textContent).not.toContain(
+      'Nothing active',
     );
   });
 
-  it('truncates its name and keeps the row 44 high', () => {
-    const { el } = row(2, 2);
-    expect(el.querySelector('a')?.className).toContain('h-11');
-    expect(el.querySelector('span.truncate')?.className).toContain('min-w-0');
+  it('truncates the name', () => {
+    const { el } = row(2, 2, []);
+    expect(el.querySelector('a')?.className).toContain('truncate');
   });
 });
 

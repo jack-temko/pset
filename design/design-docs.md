@@ -105,12 +105,13 @@ black for hover and pressed, so its white label keeps 4.5:1; a transparent contr
 
 Five more follow, built for Home (`ideas/home-parts.md`), so the Components tab lists nine:
 Progress bar (a segment per problem with "2 of 6" beside it, one bar above twelve), Section
-heading (title, count and action over a 1px rule, no outer margin), Work row (a set on one
-line: name and course, progress, time left, due; within 2 days an attention tag; the row
-opens the set), Course row (name, materials and sets; the row opens the course) and Top
-bar (the wordmark, the path of links, Settings; sticky). The rows and the bar use
-container queries, so they follow the stage's width, not the window's. Home is S13 in
-`ideas/screens-grill.md`: an "In progress" list of sets, then a list of courses.
+heading (title, count and action over a 1px rule, no outer margin), Set line (one active set
+on one line: name, progress, time left, due; within 2 days an attention tag; the line opens
+the set), Course row (the course name, which opens the course, its materials and sets, and
+its active sets as set lines) and Top bar (the wordmark, the path of links, Settings;
+sticky). The lines and the bar use container queries, so they follow the stage's width, not
+the window's. Home is S13 in `ideas/screens-grill.md`: one list of courses, each holding its
+active sets.
 
 ## Follow-ups
 

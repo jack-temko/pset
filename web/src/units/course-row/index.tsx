@@ -1,38 +1,52 @@
-/** "7 materials", "1 material", "No materials". */
-export function count(n: number, one: string, many: string): string {
-  if (n === 0) return `No ${many}`;
-  return `${String(n)} ${n === 1 ? one : many}`;
-}
+import { Link } from '@/units/link';
+import { SetLine, type SetLineProps } from '@/units/set-line';
+import { count } from './count';
 
-/** One course on one line: opens the course, and only the course
- *  (course-row-d1). Narrower than 520 the two counts take less room. */
+/** One course: its name (opens the course), what it holds, and its active
+ *  sets, each opening its set (course-row-d1). Home sorts and caps the list
+ *  (course-row-d2). Below 920 the sets stack under the name. */
 export function CourseRow({
   name,
   materials,
   sets,
   href,
+  active,
+  today,
 }: {
   name: string;
   materials: number;
   sets: number;
   href: string;
+  /** The course's active sets, usually one. */
+  active: readonly Omit<SetLineProps, 'today'>[];
+  today?: Date;
 }) {
   return (
-    <a
-      href={href}
-      className="@container block h-11 min-w-0 border-b border-(--ds-border-muted) hover:bg-(--ds-hover)"
-    >
-      <span className="grid h-full grid-cols-[minmax(0,1fr)_92px_60px] items-center gap-3 px-4 @min-[520px]:grid-cols-[minmax(0,1fr)_120px_120px] @min-[520px]:gap-4">
-        <span className="ds-body min-w-0 truncate font-medium text-(--ds-fg)">
-          {name}
-        </span>
-        <span className="ds-small ds-tabular truncate text-right text-(--ds-fg-muted)">
-          {count(materials, 'material', 'materials')}
-        </span>
-        <span className="ds-small ds-tabular truncate text-right text-(--ds-fg-muted)">
-          {count(sets, 'set', 'sets')}
-        </span>
-      </span>
-    </a>
+    <div className="@container min-w-0 border-b border-(--ds-border-muted)">
+      <div className="grid min-w-0 gap-2 px-4 py-2 @min-[920px]:grid-cols-[220px_minmax(0,1fr)] @min-[920px]:gap-4">
+        <div className="min-w-0 px-0.5">
+          <Link
+            href={href}
+            title={name}
+            className="block truncate font-medium!"
+          >
+            {name}
+          </Link>
+          <p className="ds-small truncate text-(--ds-fg-muted)">
+            {count(materials, 'material', 'materials')},{' '}
+            {count(sets, 'set', 'sets').toLowerCase()}
+          </p>
+        </div>
+        <div className="min-w-0">
+          {active.length === 0 ? (
+            <p className="ds-small flex h-10 items-center px-3 text-(--ds-fg-muted)">
+              Nothing active
+            </p>
+          ) : (
+            active.map((a) => <SetLine key={a.href} {...a} today={today} />)
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
