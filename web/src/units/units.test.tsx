@@ -369,6 +369,98 @@ describe('Tooltip', () => {
     }
   });
 
+  describe('in document coordinates', () => {
+    function stubViewport(scrollX: number, scrollY: number) {
+      const rect = {
+        left: 100,
+        top: 100,
+        right: 180,
+        bottom: 132,
+        width: 80,
+        height: 32,
+      } as DOMRect;
+      const r = vi
+        .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+        .mockReturnValue(rect);
+      const w = vi
+        .spyOn(document.documentElement, 'clientWidth', 'get')
+        .mockReturnValue(1000);
+      const h = vi
+        .spyOn(document.documentElement, 'clientHeight', 'get')
+        .mockReturnValue(800);
+      Object.defineProperty(window, 'scrollX', {
+        value: scrollX,
+        configurable: true,
+      });
+      Object.defineProperty(window, 'scrollY', {
+        value: scrollY,
+        configurable: true,
+      });
+      return () => {
+        r.mockRestore();
+        w.mockRestore();
+        h.mockRestore();
+        Object.defineProperty(window, 'scrollX', {
+          value: 0,
+          configurable: true,
+        });
+        Object.defineProperty(window, 'scrollY', {
+          value: 0,
+          configurable: true,
+        });
+      };
+    }
+
+    it('places itself at the control rect plus the scroll offset, absolutely', () => {
+      const restore = stubViewport(20, 300);
+      try {
+        render(
+          <Tooltip text="Why" open>
+            <button type="button">Go</button>
+          </Tooltip>,
+        );
+        const t = document.querySelector<HTMLElement>('[role="tooltip"]');
+        // Below, centred on the control (width 0 here): 100 + 40, 132 + 4.
+        expect(t?.style.left).toBe(`${String(140 + 20)}px`);
+        expect(t?.style.top).toBe(`${String(136 + 300)}px`);
+        expect(t?.className).toContain('absolute');
+        expect(t?.className).not.toContain('fixed');
+      } finally {
+        restore();
+      }
+    });
+
+    it('does nothing for a document scroll, and closes for a nested one', () => {
+      const restore = stubViewport(0, 0);
+      try {
+        const onClose = vi.fn();
+        const { el } = render(
+          <div id="scroller">
+            <Tooltip text="Why" onClose={onClose}>
+              <button type="button">Go</button>
+            </Tooltip>
+          </div>,
+        );
+        act(() => el.querySelector('button')?.focus());
+        const t = document.querySelector<HTMLElement>('[role="tooltip"]');
+        const top = t?.style.top;
+        act(() => {
+          document.dispatchEvent(new Event('scroll'));
+        });
+        expect(tip()).toBe('Why');
+        expect(t?.style.top).toBe(top);
+        expect(onClose).not.toHaveBeenCalled();
+        act(() => {
+          el.querySelector('#scroller')?.dispatchEvent(new Event('scroll'));
+        });
+        expect(tip()).toBe('');
+        expect(onClose).toHaveBeenCalledTimes(1);
+      } finally {
+        restore();
+      }
+    });
+  });
+
   it('removes its scroll and resize listeners when it unmounts open', () => {
     const add = vi.spyOn(window, 'addEventListener');
     const remove = vi.spyOn(window, 'removeEventListener');

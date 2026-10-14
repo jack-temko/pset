@@ -53,7 +53,7 @@ https://primer.style/product/components/tooltip/guidelines .
 The tooltip unit is `web/src/units/tooltip/`: a small floating label tied to one control
 (props `text`, `children`, `open?`, `side?`), shown on hover after 50ms and on keyboard focus,
 hidden on pointer leave, blur and Escape; drawn in the top layer with the Popover API (a
-fixed element on the body without it) and placed from the control's rect: below, centred, 4
+absolute element on the body without it) and placed in document coordinates from the control's rect: below, centred, 4
 away, else the opposite side, then right, then left, shifted to stay 8 inside the viewport.
 Ground `pressed`, text `fg` small, 4 radius, 4 by 8 padding, at most 250 wide.
 

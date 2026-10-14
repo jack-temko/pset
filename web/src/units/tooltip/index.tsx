@@ -33,7 +33,7 @@ function supportsPopover() {
 /** A small floating label tied to one control. Shows on hover (after 50ms)
  *  and on keyboard focus; hides on pointer leave, blur and Escape. A caller
  *  may open it with `open`. It is drawn in the browser's top layer, so no
- *  parent clips it, and placed with fixed coordinates. */
+ *  parent clips it, and placed in document coordinates. */
 export function Tooltip({
   text,
   children,
@@ -75,8 +75,11 @@ export function Tooltip({
       },
       side,
     );
-    t.style.left = `${String(p.left)}px`;
-    t.style.top = `${String(p.top)}px`;
+    // Document coordinates: the control's viewport rect plus the scroll at the
+    // moment of placing. The box is absolute, so the page carries it with its
+    // control natively, and no code runs while the page scrolls.
+    t.style.left = `${String(p.left + window.scrollX)}px`;
+    t.style.top = `${String(p.top + window.scrollY)}px`;
   };
 
   useLayoutEffect(() => {
@@ -86,20 +89,26 @@ export function Tooltip({
     position();
   });
 
-  // Recompute while open, on scroll (any scroller) and resize.
+  // Placement is worked out when it opens and when the window resizes, never
+  // while the page scrolls. A scroll that is not the document's (a scrolling
+  // ancestor of the control) cannot be followed, so it closes the tooltip.
   useEffect(() => {
     if (!visible) return;
-    window.addEventListener('scroll', position, true);
-    window.addEventListener('resize', position);
-    const esc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setDismissed(true);
-        onClose?.();
-      }
+    const close = () => {
+      setDismissed(true);
+      onClose?.();
     };
+    const onScroll = (e: Event) => {
+      if (e.target !== document) close();
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', position);
     document.addEventListener('keydown', esc);
     return () => {
-      window.removeEventListener('scroll', position, true);
+      window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', position);
       document.removeEventListener('keydown', esc);
     };
@@ -117,7 +126,7 @@ export function Tooltip({
       ref={tip}
       role="tooltip"
       popover={hasPopover ? 'manual' : undefined}
-      className="ds-small ds-fade-in pointer-events-none fixed top-0 left-0 m-0 w-max max-w-[250px] overflow-visible rounded-(--ds-radius-tag) border-0 bg-(--ds-pressed) px-2 py-1 text-(--ds-fg)"
+      className="ds-small ds-fade-in pointer-events-none absolute top-0 left-0 m-0 w-max max-w-[250px] overflow-visible rounded-(--ds-radius-tag) border-0 bg-(--ds-pressed) px-2 py-1 text-(--ds-fg)"
       style={{ background: 'var(--ds-pressed)', inset: 'auto', zIndex: 1000 }}
     >
       {text}
