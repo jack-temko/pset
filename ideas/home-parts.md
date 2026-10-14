@@ -91,6 +91,9 @@ Log (verbatim; options in order, recommended first):
   (Recommended) / Always month and day / As built. **Weekday within 6 days, then month
   and day (Recommended).** (2026-10-14)
 
+- Course row: how tight? (2026-10-14, Jack on his phone: **"Unfortunately the course row looks absolutely horrible. More GitHub-ey And it has components that don't exist. We need to package as tightly as possible, this will be used in the window pane for sets likely too."**) "Components that don't exist" means: **Parts drawn by hand, not from units.** How tight is a course row? Two lines, GitHub issue style (Recommended) / One line / Show me both. **Two lines, GitHub issue style (Recommended).**
+- The heading (2026-10-14): Jack: **"The heading is bad too. I want to be more similar to my old design."**
+
 Assumed (mine, to flag to Jack): the attention tag reads "Due Fri" (the day), not the
 words "Due soon"; a set with no date sorts after dated ones and shows "No date"; the
 time left shows only when PSet knows it (`honest-waits`); the sizes and widths below.
@@ -195,3 +198,10 @@ Type steps moved into a cascade layer below Tailwind's utilities, so a utility s
 an optional `exampleWidth`, which the design page's stage uses to open each unit at a
 width that suits it. The top bar takes `homeHref` and draws its wordmark and path
 through Text link. A due date is a local calendar date; `parseDueDate` builds one.
+
+### Round of 2026-10-14, after Jack's phone
+
+New units: `counter`, `list` (the old Box), `list-row` (the GitHub issue row). `course-row`
+and `set-line` are compositions of `list-row`. `section-heading` follows the old Home's
+SectionHeader. Proposed, to confirm (`course-row-d3`): the course row no longer shows the
+materials and sets counts, reversing Jack's earlier "Name, materials, sets".

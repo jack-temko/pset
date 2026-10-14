@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Set line',
   group: 'Lists',
   purpose:
-    'One active set on one line: its name, how far along, the time left and when it is due. The line opens the set.',
+    'One active set as a list row, for the window pane: its name, when it is due, the count, the time left and a progress bar. The title opens the set.',
   states: [
     {
       id: 'with-time',
@@ -37,20 +37,23 @@ export default defineSpec({
     {
       id: 'no-date',
       name: 'No date',
-      when: 'A started set the course gave no date: it sorts after the dated ones.',
-      text: 'No date',
+      when: 'A started set the course gave no date: no status is shown, and it sorts after the dated ones.',
     },
   ],
   stress:
-    'A 70 character set name in a 360px container: it truncates on one line.',
+    'A 70 character set name in a 360px container: the bar is gone, the title and the meta truncate, the count stays.',
   components: [
-    { unit: 'progress-bar', use: 'The set’s progress on each line.' },
-    { unit: 'tag', use: 'The attention tag for a set due within 2 days.' },
+    {
+      unit: 'list-row',
+      use: 'The row: title, status, meta and the progress aside.',
+    },
+    { unit: 'progress-bar', use: 'The set\u2019s progress, in the aside.' },
+    { unit: 'tag', use: 'The attention and danger tags for the due status.' },
   ],
   actions: [
     {
       id: 'open-set',
-      label: 'The line',
+      label: 'The title',
       key: 'Enter',
       does: 'Opens the set in the workspace. The workspace is not a unit yet, so it has no target.',
     },
@@ -73,13 +76,13 @@ export default defineSpec({
       name: 'due',
       type: 'Date',
       default: 'none',
-      does: 'A local calendar date (see parseDueDate); without it the line says "No date".',
+      does: 'A local calendar date (see parseDueDate); without it no status is shown.',
     },
     {
       name: 'href',
       type: 'string',
       default: 'none',
-      does: 'Where the line goes.',
+      does: 'Where the title goes.',
     },
     {
       name: 'today',
@@ -93,11 +96,11 @@ export default defineSpec({
     main: 'open-set',
   },
   sizes: {
-    narrowest: 360,
+    narrowest: 320,
     gives: [
-      'The time left goes below 600',
-      'Then the progress bar shrinks itself: its segments narrow, then one continuous bar; its count always shows',
-      'The set name truncates',
+      'The progress bar goes below 440, and the count stays in the meta',
+      'Then the meta truncates, as a whole',
+      'Then the set name truncates',
     ],
   },
   exampleWidth: 720,
@@ -109,14 +112,6 @@ export default defineSpec({
       'colour-has-a-word',
       'contrast-floors',
       'figures-follow-text',
-    ],
-    local: [
-      {
-        id: 'set-line-one-line',
-        rule: 'Keep a line on one line per cell; truncate, never wrap.',
-        check: 'The stress state keeps the line 40 high.',
-        scope: 'set-line',
-      },
     ],
   },
   log: 'web/src/units/set-line/log.md',
@@ -158,6 +153,14 @@ export default defineSpec({
         'A due date is a weekday within 6 days ("Due Fri"), then month and day ("Due Oct 20"). The attention tag still applies within 2 days.',
       why: 'Jack: a weekday is clear this week and ambiguous after it.',
       beat: 'Always month and day; as built ("Due Mon 20")',
+      date: '2026-10-14',
+    },
+    {
+      id: 'set-line-d6',
+      decision:
+        'A set line is a two-line list row: title and due, then count and time left, the bar at the right. Narrow, the bar goes first.',
+      why: 'Jack: "We need to package as tightly as possible, this will be used in the window pane for sets likely too."',
+      beat: 'A one-line grid of columns',
       date: '2026-10-14',
     },
   ],

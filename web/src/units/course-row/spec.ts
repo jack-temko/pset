@@ -6,50 +6,59 @@ export default defineSpec({
   title: 'Course row',
   group: 'Lists',
   purpose:
-    'One course: its name, what it holds, and its active sets, usually one. The name opens the course; each set line opens its set.',
+    'One course as a two-line list row: its name, the nearest active set with its due, count and time left, and a progress bar.',
   states: [
     {
       id: 'due-soon',
       name: 'One active set, due soon',
-      when: 'The course has one active set, due within 2 days: the attention tag.',
+      when: 'The nearest active set is due within 2 days: the attention tag.',
+    },
+    {
+      id: 'overdue',
+      name: 'Overdue',
+      when: 'The nearest active set is past due: a red "Overdue" tag.',
     },
     {
       id: 'no-date',
       name: 'One active set, no date',
-      when: 'The course has one active set with no date.',
+      when: 'The active set has no date: no status is shown.',
     },
     {
       id: 'two-active',
       name: 'Two active sets',
-      when: 'Two sets are active: their lines stack.',
+      when: 'The row shows the nearest and a muted "+1 more" link to the course.',
     },
     {
       id: 'nothing-active',
       name: 'Nothing active',
-      when: 'The course has sets, none of them active.',
+      when: 'No set is active: the meta line reads "Nothing active".',
       text: 'Nothing active',
     },
     {
       id: 'empty',
       name: 'Empty course',
-      when: 'A course with nothing in it yet.',
-      text: 'No materials, no sets, Nothing active',
+      when: 'A course with nothing in it yet: the same "Nothing active" line.',
+      text: 'Nothing active',
     },
     {
       id: 'list',
-      name: 'A list of five',
-      when: 'Home lists at most five courses, then "Show all": the lines align down the list.',
+      name: 'Home: a list of five',
+      when: 'Home: a section heading with a Counter and "Show all", then a list of five course rows.',
     },
   ],
+  exampleWidth: 960,
   stress:
-    'A 70 character course name and a 70 character set name in a 480px container: both truncate on one line.',
+    'A 70 character course name and a 70 character set name at 320px: the bar is gone and the title and meta truncate.',
   components: [
-    { unit: 'set-line', use: 'Each active set, opening the set.' },
-    { unit: 'link', use: 'The course name, opening the course.' },
+    { unit: 'list-row', use: 'The row itself: title, status, meta and aside.' },
     {
-      unit: 'section-heading',
-      use: 'Titles the list of five in the examples.',
+      unit: 'progress-bar',
+      use: 'The nearest set\u2019s progress, in the aside.',
     },
+    { unit: 'set-line', use: 'The due status and the time-left wording.' },
+    { unit: 'link', use: 'The set and "+1 more" links in the meta.' },
+    { unit: 'list', use: 'Frames the five rows in the Home example.' },
+    { unit: 'section-heading', use: 'Titles the list in the Home example.' },
   ],
   actions: [
     {
@@ -60,9 +69,9 @@ export default defineSpec({
     },
     {
       id: 'open-set',
-      label: 'A set line',
+      label: 'The set name in the meta',
       key: 'Enter',
-      does: 'Opens that set in the workspace. The workspace is not a unit yet, so it has no target.',
+      does: 'Opens the nearest active set in the workspace. The workspace is not a unit yet, so it has no target.',
     },
   ],
   inputs: [
@@ -70,31 +79,19 @@ export default defineSpec({
       name: 'name',
       type: 'string',
       default: 'none',
-      does: 'The course’s name.',
-    },
-    {
-      name: 'materials',
-      type: 'number',
-      default: 'none',
-      does: 'How many materials it holds.',
-    },
-    {
-      name: 'sets',
-      type: 'number',
-      default: 'none',
-      does: 'How many problem sets it holds.',
+      does: 'The course\u2019s name.',
     },
     {
       name: 'href',
       type: 'string',
       default: 'none',
-      does: 'Where the course name goes.',
+      does: 'Where the course name goes; also "+1 more".',
     },
     {
       name: 'active',
-      type: 'SetLine props[]',
+      type: 'set props[]',
       default: 'none',
-      does: 'The active sets, as set lines; none shows "Nothing active".',
+      does: 'The active sets (set, done, total, minutesLeft, due, href); the nearest is shown.',
     },
     {
       name: 'today',
@@ -104,18 +101,17 @@ export default defineSpec({
     },
   ],
   priority: {
-    first: 'The course’s name, then its active set.',
+    first: 'The course\u2019s name, then its due.',
     main: 'open-set',
   },
   sizes: {
-    narrowest: 480,
+    narrowest: 320,
     gives: [
-      'Below 880 the set lines stack under the name',
-      'The set lines drop their time left, then their progress count',
-      'The names truncate',
+      'The progress bar goes below 440, and the count stays in the meta',
+      'Then the meta truncates, as a whole',
+      'Then the course name truncates',
     ],
   },
-  exampleWidth: 960,
   rules: {
     cite: [
       'course-first',
@@ -131,10 +127,11 @@ export default defineSpec({
     {
       id: 'course-row-d1',
       decision:
-        'A course row shows the course’s name (opens the course), its materials and sets counts, and its active sets, each opening its set.',
+        'A course row shows the course\u2019s name (opens the course), its materials and sets counts, and its active sets, each opening its set.',
       why: 'Usually one active set per course, so one list names each course once.',
       beat: 'A list of sets in progress plus a separate list of courses',
       date: '2026-10-13',
+      supersededBy: 'course-row-d3',
     },
     {
       id: 'course-row-d2',
@@ -143,6 +140,22 @@ export default defineSpec({
       why: 'Home stays short and the most urgent course comes first.',
       beat: 'All of them; three',
       date: '2026-10-13',
+    },
+    {
+      id: 'course-row-d3',
+      decision:
+        'Proposed, to confirm: no materials or sets counts in the row; it shows the nearest active set, its due, count, time left and bar.',
+      why: 'The orchestrator\u2019s proposal, pending Jack\u2019s OK: it reverses his earlier "Name, materials, sets", to package the row as tightly as a two-line row allows.',
+      beat: 'Name, materials, sets (Jack, 2026-10-13)',
+      date: '2026-10-14',
+    },
+    {
+      id: 'course-row-d4',
+      decision:
+        'A course row is a two-line list row, GitHub issue style, built from the list row and nothing drawn by hand.',
+      why: 'Jack: "Unfortunately the course row looks absolutely horrible. More GitHub-ey", and it had parts that were not components.',
+      beat: 'One line; the two-column row with stacked set lines',
+      date: '2026-10-14',
     },
   ],
 });

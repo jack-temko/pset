@@ -103,15 +103,18 @@ foundations, and two rules, `one-primary` and `links-go-buttons-do`. A solid gro
 black for hover and pressed, so its white label keeps 4.5:1; a transparent control takes
 `fg`.
 
-Five more follow, built for Home (`ideas/home-parts.md`), so the Components tab lists nine:
-Progress bar (a segment per problem with "2 of 6" beside it, one bar above twelve), Section
-heading (title, count and action over a 1px rule, no outer margin), Set line (one active set
-on one line: name, progress, time left, due; within 2 days an attention tag; the line opens
-the set), Course row (the course name, which opens the course, its materials and sets, and
-its active sets as set lines) and Top bar (the wordmark, the path of links, Settings;
-sticky). The lines and the bar use container queries, so they follow the stage's width, not
-the window's. The type steps sit in a cascade layer below the utilities, so a utility wins; there is a `brand` step for the wordmark. Home is S13 in `ideas/screens-grill.md`: one list of courses, each holding its
-active sets.
+Home's parts follow (`ideas/home-parts.md`). Basics gains Counter (the old design's pill after
+a title). Lists are built from two units: List (the old Box: a frame, an optional header
+band, rules between rows drawn by the list) and List row (the one row shape, GitHub issue
+style: a title and a status on line one, small meta on line two, an aside at the right).
+Course row and Set line are compositions of List row and draw nothing of their own: the
+course row shows the nearest active set (its due, count, time left and bar) and the set line
+is the same row for the window pane. Progress bar narrows itself by its own width. Section
+heading follows the old Home's SectionHeader (title, Counter, action, no rule). Top bar is
+the wordmark, the path and Settings. Rows and bars use container queries, so they follow the
+stage's width. The type steps sit in a cascade layer below the utilities, so a utility wins;
+there is a `brand` step for the wordmark. Home is S13 in `ideas/screens-grill.md`: one list of
+courses, each holding its active sets. The Components tab lists eleven units.
 
 ## Follow-ups
 

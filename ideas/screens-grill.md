@@ -183,3 +183,5 @@ Audit and prior art shown to Jack. No corrections.
 - How far-off dates are written: Weekday within 6 days, then month and day
   (Recommended) / Always month and day / As built. **Weekday within 6 days, then month
   and day (Recommended).**
+- Course row: how tight? (2026-10-14, Jack on his phone: **"Unfortunately the course row looks absolutely horrible. More GitHub-ey And it has components that don't exist. We need to package as tightly as possible, this will be used in the window pane for sets likely too."**) "Components that don't exist" means: **Parts drawn by hand, not from units.** How tight is a course row? Two lines, GitHub issue style (Recommended) / One line / Show me both. **Two lines, GitHub issue style (Recommended).**
+- The heading (2026-10-14): Jack: **"The heading is bad too. I want to be more similar to my old design."**

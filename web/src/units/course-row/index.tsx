@@ -1,54 +1,75 @@
 import { Link } from '@/units/link';
-import { SetLine, type SetLineProps } from '@/units/set-line';
-import { count } from './count';
+import { ListRow, narrowOnly } from '@/units/list-row';
+import { ProgressBar } from '@/units/progress-bar';
+import { DueStatus, type SetLineProps } from '@/units/set-line';
+import { daysUntil, timeLeft } from '@/units/set-line/dates';
 
-/** One course: its name (opens the course), what it holds, and its active
- *  sets, each opening its set (course-row-d1). Home sorts and caps the list
- *  (course-row-d2). Below 880 the sets stack under the name. */
+export type ActiveSet = Omit<SetLineProps, 'today'>;
+
+/** The nearest active set: the earliest due date, undated ones last. */
+export function nearest(
+  active: readonly ActiveSet[],
+  today: Date,
+): ActiveSet | undefined {
+  const key = (a: ActiveSet) =>
+    a.due === undefined ? Infinity : daysUntil(a.due, today);
+  return [...active].sort((a, b) => key(a) - key(b))[0];
+}
+
+/** One course as a list row: the course name (opens the course), the nearest
+ *  active set's due on line one, that set (opens it), its count and time left
+ *  on line two, and its progress bar at the right (course-row-d3, d4).
+ *  Home sorts and caps the list (course-row-d2). */
 export function CourseRow({
   name,
-  materials,
-  sets,
   href,
   active,
-  today,
+  today = new Date(),
 }: {
   name: string;
-  materials: number;
-  sets: number;
   href: string;
   /** The course's active sets, usually one. */
-  active: readonly Omit<SetLineProps, 'today'>[];
+  active: readonly ActiveSet[];
   today?: Date;
 }) {
+  const next = nearest(active, today);
+  if (next === undefined)
+    return <ListRow title={name} href={href} meta={['Nothing active']} />;
+  const time = next.minutesLeft === undefined ? '' : timeLeft(next.minutesLeft);
+  const more = active.length - 1;
   return (
-    <div className="@container min-w-0 border-b border-(--ds-border-muted)">
-      <div className="grid min-w-0 gap-2 px-4 py-2 @min-[880px]:grid-cols-[220px_minmax(0,1fr)] @min-[880px]:gap-4">
-        <div className="min-w-0 px-0.5">
-          <Link
-            href={href}
-            title={name}
-            tone="fg"
-            weight="medium"
-            className="block truncate"
-          >
-            {name}
-          </Link>
-          <p className="ds-small truncate text-(--ds-fg-muted)">
-            {count(materials, 'material', 'materials')},{' '}
-            {count(sets, 'set', 'sets').toLowerCase()}
-          </p>
-        </div>
-        <div className="min-w-0">
-          {active.length === 0 ? (
-            <p className="ds-small flex h-10 items-center px-3 text-(--ds-fg-muted)">
-              Nothing active
-            </p>
-          ) : (
-            active.map((a) => <SetLine key={a.href} {...a} today={today} />)
-          )}
-        </div>
-      </div>
-    </div>
+    <ListRow
+      title={name}
+      href={href}
+      status={<DueStatus due={next.due} today={today} />}
+      meta={[
+        <Link
+          key="set"
+          href={next.href}
+          tone="muted"
+          size="small"
+          className="[overflow-wrap:normal]"
+        >
+          {next.set}
+        </Link>,
+        narrowOnly(`${String(next.done)} of ${String(next.total)}`),
+        ...(time ? [time] : []),
+        ...(more > 0
+          ? [
+              <Link
+                key="more"
+                href={href}
+                tone="muted"
+                size="small"
+                className="[overflow-wrap:normal]"
+              >
+                +{more} more
+              </Link>,
+            ]
+          : []),
+      ]}
+      aside={<ProgressBar done={next.done} total={next.total} />}
+      asideWidth={120}
+    />
   );
 }

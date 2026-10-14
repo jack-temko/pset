@@ -19,9 +19,19 @@ The grill of 2026-10-13, word for word (the questions that concern the course ro
   (Recommended).** (Jack first said: **"Something to note about my own usage. I most
   often only ever have one active assignment in each course."**)
 
-## Settled afterwards (the plan, not asked)
+## The row is rebuilt (2026-10-14)
 
-The counts read "7 materials, 3 sets", "No materials, no sets" when empty, singular at
-one. A course with no active set shows one muted line, "Nothing active". Below 880 the
-set lines stack under the name; the name link and each set line are separate links.
-The sort and the cap of five are Home's; the examples' list shows them.
+Jack looked at the course row on his phone: **"Unfortunately the course row looks
+absolutely horrible. More GitHub-ey And it has components that don't exist. We need to
+package as tightly as possible, this will be used in the window pane for sets likely
+too."** He confirmed what "components that don't exist" means: **Parts drawn by hand,
+not from units** (the rules between rows, the hover, the counts line, "Nothing active"
+and the list's frame styled inside the course row).
+
+- How tight is a course row? Two lines, GitHub issue style (Recommended) / One line /
+  Show me both. **Two lines, GitHub issue style (Recommended).**
+
+## Proposed, to confirm (the orchestrator, not asked)
+
+The row no longer shows the materials and sets counts (they go to the course screen),
+which reverses Jack's "Name, materials, sets" above. Pending his OK.

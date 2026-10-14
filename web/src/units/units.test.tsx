@@ -4,8 +4,11 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Button, REASON_MS } from './button';
+import { Counter } from './counter';
 import { CourseRow } from './course-row';
 import { Link } from './link';
+import { List } from './list';
+import { ListRow, narrowOnly } from './list-row';
 import { ProgressBar } from './progress-bar';
 import { SectionHeading } from './section-heading';
 import { SetLine } from './set-line';
@@ -913,30 +916,139 @@ describe('ProgressBar', () => {
   });
 });
 
+describe('Counter', () => {
+  it('holds a number in a pill and never truncates it', () => {
+    const { el } = render(<Counter>1,234</Counter>);
+    const c = el.firstElementChild;
+    expect(c?.textContent).toBe('1,234');
+    expect(c?.className).toContain('rounded-full');
+    expect(c?.className).toContain('h-5');
+    expect(c?.className).toContain('whitespace-nowrap');
+    expect(c?.className).not.toContain('truncate');
+    expect(c?.className).toContain('ds-tabular');
+  });
+});
+
 describe('SectionHeading', () => {
-  it('shows the title as a heading, with no side when it has neither', () => {
-    const { el } = render(<SectionHeading>In progress</SectionHeading>);
-    expect(el.querySelector('h2')?.textContent).toBe('In progress');
-    expect(el.textContent).toBe('In progress');
-    expect(el.firstElementChild?.children).toHaveLength(1);
+  it('shows the title as a heading, with no counter or action alone', () => {
+    const { el } = render(<SectionHeading>Courses</SectionHeading>);
+    expect(el.querySelector('h2')?.textContent).toBe('Courses');
+    expect(el.textContent).toBe('Courses');
   });
 
-  it('shows a count and an action at the right, on one line', () => {
+  it('puts the Counter right after the title and the action at the right', () => {
     const { el } = render(
-      <SectionHeading count="8 sets" action={<Link href="/all">Show all</Link>}>
-        In progress
+      <SectionHeading count={8} action={<Link href="/all">Show all</Link>}>
+        Courses
       </SectionHeading>,
     );
-    const side = el.querySelector('h2')?.nextElementSibling;
-    expect(side?.textContent).toBe('8 setsShow all');
-    expect(side?.querySelector('a')?.getAttribute('href')).toBe('/all');
-    expect(side?.className).toContain('whitespace-nowrap');
-    expect(side?.className).toContain('shrink-0');
+    const title = el.querySelector('h2');
+    expect(title?.parentElement?.textContent).toBe('Courses8');
+    expect(title?.parentElement?.querySelector('.rounded-full')).not.toBeNull();
+    expect(el.querySelector('a')?.getAttribute('href')).toBe('/all');
+    expect(el.querySelector('a')?.parentElement?.className).toContain(
+      'shrink-0',
+    );
   });
 
-  it('carries no outer margin', () => {
-    const { el } = render(<SectionHeading>In progress</SectionHeading>);
-    expect(el.firstElementChild?.className).not.toMatch(/(^|\s)m[tby]?-/);
+  it('is at least 32 high, has no rule and no outer margin', () => {
+    const { el } = render(<SectionHeading count={1}>Courses</SectionHeading>);
+    const cls = el.firstElementChild?.className ?? '';
+    expect(cls).toContain('min-h-8');
+    expect(cls).not.toContain('border');
+    expect(cls).not.toMatch(/(^|\s)m[tby]?-/);
+  });
+});
+
+describe('ListRow', () => {
+  it('makes only the title a link, and plain text without an href', () => {
+    const a = render(<ListRow title="Circuits I" href="/c" meta={['x']} />);
+    expect(a.el.querySelectorAll('a')).toHaveLength(1);
+    expect(a.el.querySelector('a')?.getAttribute('href')).toBe('/c');
+    const b = render(<ListRow title="Circuits I" />);
+    expect(b.el.querySelector('a')).toBeNull();
+    expect(b.el.textContent).toBe('Circuits I');
+  });
+
+  it('joins its meta with a middle dot and keeps meta links out of the title link', () => {
+    const { el } = render(
+      <ListRow
+        title="T"
+        href="/c"
+        meta={[
+          <Link key="s" href="/s">
+            Set
+          </Link>,
+          '2 of 6',
+        ]}
+      />,
+    );
+    expect(el.querySelector('p')?.textContent).toBe('Set \u00b7 2 of 6');
+    expect(el.querySelector('a a')).toBeNull();
+    expect(el.querySelectorAll('a')).toHaveLength(2);
+  });
+
+  it('shows a status, and an aside of the width it is given, hidden when narrow', () => {
+    const { el } = render(
+      <ListRow title="T" status="Due Fri" aside="bar" asideWidth={96} />,
+    );
+    expect(el.textContent).toContain('Due Fri');
+    const aside = el.querySelector<HTMLElement>('[data-aside]');
+    expect(aside?.style.width).toBe('96px');
+    expect(aside?.className).toContain('hidden');
+    expect(aside?.className).toContain('@min-[440px]:block');
+  });
+
+  it('shows a narrow-only item only where the aside is not', () => {
+    const { el } = render(
+      <ListRow title="T" meta={['a', narrowOnly('2 of 6')]} />,
+    );
+    const spans = el.querySelectorAll('p > span');
+    expect(spans[1]?.className).toContain('@min-[440px]:hidden');
+    expect(spans[1]?.textContent).toBe(' \u00b7 2 of 6');
+  });
+
+  it('is at least 56 high and truncates its lines', () => {
+    const { el } = render(<ListRow title="T" meta={['a']} />);
+    expect(el.firstElementChild?.className).toContain('min-h-14');
+    expect(el.querySelector('p')?.className).toContain('truncate');
+  });
+});
+
+describe('List', () => {
+  it('has no header without a title, and rules between rows only', () => {
+    const { el } = render(
+      <List>
+        <ListRow title="A" />
+        <ListRow title="B" />
+      </List>,
+    );
+    expect(el.querySelector('h2')).toBeNull();
+    expect(el.querySelector('.divide-y')).not.toBeNull();
+    expect(el.textContent).toBe('AB');
+  });
+
+  it('draws a header with a title, a Counter and an action', () => {
+    const { el } = render(
+      <List title="Courses" count={8} action={<Link href="/all">All</Link>}>
+        <ListRow title="A" />
+      </List>,
+    );
+    expect(el.querySelector('h2')?.textContent).toBe('Courses');
+    expect(el.querySelector('.rounded-full')?.textContent).toBe('8');
+    expect(el.querySelector('a')?.getAttribute('href')).toBe('/all');
+  });
+
+  it('says one muted line when empty, with its own text if given', () => {
+    expect(render(<List title="T" />).el.textContent).toContain(
+      'Nothing here yet',
+    );
+    expect(render(<List empty="No courses" />).el.textContent).toBe(
+      'No courses',
+    );
+    expect(render(<List>{false}</List>).el.textContent).toBe(
+      'Nothing here yet',
+    );
   });
 });
 
@@ -955,12 +1067,12 @@ describe('SetLine', () => {
       />,
     );
 
-  it('is one link to the set, carrying every fact', () => {
+  it('opens the set from its title, carrying every fact', () => {
     const { el } = line({ minutesLeft: 70, due: day(19) });
     const a = el.querySelectorAll('a');
     expect(a).toHaveLength(1);
     expect(a[0]?.getAttribute('href')).toBe('/set/4');
-    const text = a[0]?.textContent;
+    const text = el.textContent;
     for (const part of [
       'Problem set 4',
       '2 of 6',
@@ -1012,10 +1124,18 @@ describe('SetLine', () => {
     expect(() => parseDueDate('Oct 19')).toThrow();
   });
 
-  it('says No date without one, and leaves the time empty when unknown', () => {
+  it('shows no status without a date, and no time when unknown', () => {
     const { el } = line({ due: undefined });
-    expect(el.textContent).toContain('No date');
-    expect(el.querySelector('[data-column="time"]')?.textContent).toBe('');
+    expect(el.textContent).not.toMatch(/Due|Overdue|No date/);
+    expect(el.textContent).not.toContain('left');
+  });
+
+  it('keeps the count in the meta where the bar is not drawn', () => {
+    const { el } = line({});
+    const count = [...el.querySelectorAll('p > span')].find((n) =>
+      n.textContent.includes('2 of 6'),
+    );
+    expect(count?.className).toContain('@min-[440px]:hidden');
   });
 
   it('writes the time left', () => {
@@ -1029,69 +1149,72 @@ describe('SetLine', () => {
     expect(timeLeft(0.2)).toBe('');
   });
 
-  it('truncates its name and keeps the line 40 high', () => {
+  it('is a two-line list row, at least 56 high', () => {
     const { el } = line({ set: 'x'.repeat(70) });
-    expect(el.querySelector('a')?.className).toContain('h-10');
-    expect(el.querySelector('span.truncate')?.className).toContain('min-w-0');
+    expect(el.firstElementChild?.className).toContain('min-h-14');
+    expect(el.querySelector('[data-aside]')).not.toBeNull();
   });
 });
 
 describe('CourseRow', () => {
   const today = new Date(2026, 9, 13);
-  const set = (n: string, href: string) => ({
+  const set = (n: string, href: string, d: number, extra = {}) => ({
     set: n,
     done: 1,
     total: 4,
-    due: new Date(2026, 9, 15),
+    due: new Date(2026, 9, d),
     href,
+    ...extra,
   });
-  const row = (
-    materials: number,
-    sets: number,
-    active: Parameters<typeof CourseRow>[0]['active'],
-  ) =>
+  const row = (active: Parameters<typeof CourseRow>[0]['active']) =>
     render(
-      <CourseRow
-        name="Electromagnetics"
-        materials={materials}
-        sets={sets}
-        href="/c/1"
-        active={active}
-        today={today}
-      />,
+      <CourseRow name="Circuits I" href="/c/1" active={active} today={today} />,
     );
 
-  it('opens the course from the name and each set from its own line', () => {
-    const { el } = row(7, 3, [set('Set 4', '/s/4'), set('Lab 2', '/s/2')]);
-    const links = [...el.querySelectorAll('a')].map((a) => [
-      a.textContent.slice(0, 16),
-      a.getAttribute('href'),
-    ]);
-    expect(links[0]).toEqual(['Electromagnetics', '/c/1']);
-    expect(links.map((l) => l[1])).toEqual(['/c/1', '/s/4', '/s/2']);
+  it('opens the course from the name and the set from the meta, no link inside a link', () => {
+    const { el } = row([set('Problem set 4', '/s/4', 15)]);
+    expect(
+      [...el.querySelectorAll('a')].map((a) => a.getAttribute('href')),
+    ).toEqual(['/c/1', '/s/4']);
     expect(el.querySelector('a a')).toBeNull();
-    expect(el.textContent).toContain('7 materials, 3 sets');
+    expect(el.textContent).not.toMatch(/materials|sets/);
   });
 
-  it('goes singular at one', () => {
-    expect(row(1, 1, []).el.textContent).toContain('1 material, 1 set');
-  });
-
-  it('says what is missing when empty', () => {
-    const { el } = row(0, 0, []);
-    expect(el.textContent).toContain('No materials, no sets');
-    expect(el.textContent).toContain('Nothing active');
-  });
-
-  it('shows nothing-active only when no set is active', () => {
-    expect(row(2, 2, [set('Set 4', '/s/4')]).el.textContent).not.toContain(
-      'Nothing active',
+  it('shows the nearest set, by due date, undated last', () => {
+    const { el } = row([
+      set('Later', '/s/2', 23),
+      set('Soon', '/s/1', 14),
+      { set: 'Undated', done: 0, total: 1, href: '/s/3' },
+    ]);
+    expect(el.querySelector('p')?.textContent).toContain('Soon');
+    expect(el.querySelector('p')?.textContent).not.toContain('Later');
+    const more = [...el.querySelectorAll('a')].find((a) =>
+      a.textContent.includes('+2 more'),
     );
+    expect(more?.getAttribute('href')).toBe('/c/1');
   });
 
-  it('truncates the name', () => {
-    const { el } = row(2, 2, []);
-    expect(el.querySelector('a')?.className).toContain('truncate');
+  it('writes the due as a tag within 2 days, red when overdue, plain after', () => {
+    expect(row([set('S', '/s', 14)]).el.querySelector('svg')).not.toBeNull();
+    const late = row([set('S', '/s', 9)]).el;
+    expect(late.textContent).toContain('Overdue');
+    expect(late.innerHTML).toContain('--ds-danger');
+    const plain = row([set('S', '/s', 27)]).el;
+    expect(plain.textContent).toContain('Due Oct 27');
+    expect(plain.querySelectorAll('svg')).toHaveLength(0);
+  });
+
+  it('shows the time left only when known', () => {
+    expect(
+      row([set('S', '/s', 15, { minutesLeft: 70 })]).el.textContent,
+    ).toContain('About 1 h 10 m left');
+    expect(row([set('S', '/s', 15)]).el.textContent).not.toContain('left');
+  });
+
+  it('says Nothing active when no set is active, with no bar', () => {
+    const { el } = row([]);
+    expect(el.querySelector('p')?.textContent).toBe('Nothing active');
+    expect(el.querySelector('[data-aside]')).toBeNull();
   });
 });
 
