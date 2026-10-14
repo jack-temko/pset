@@ -53,6 +53,18 @@ const BG_INSET = '#08090b';
 const ATTENTION = '#d29922';
 const DANGER = '#f85149';
 const SUCCESS = '#3fb950';
+const FG = '#f0f3f6';
+const ACCENT_SOLID = '#1f6feb';
+/** The smallest step from #da3633 that keeps white at 4.5:1 or more is none:
+ *  it already reaches 4.61:1. */
+const DANGER_SOLID = '#da3633';
+
+/** Interaction steps (A5): hover and pressed are the control's ground with
+ *  something mixed in. A solid ground takes black, since mixing `fg` into it
+ *  lightens it and its white label falls below 4.5:1; a transparent control
+ *  takes `fg` over `bg-raised`. */
+export const HOVER_SHARE = 0.08;
+export const PRESSED_SHARE = 0.14;
 
 /** `danger` at 15 percent over `bg-raised` is #382124, where `danger` reaches
  *  4.44:1. This is the smallest step that reaches 4.5: the red channel down
@@ -86,10 +98,18 @@ export const COLOURS: readonly Colour[] = [
   },
   {
     name: 'fg',
-    value: '#f0f3f6',
+    value: FG,
     use: 'text',
     on: on(
-      [...plain, 'attention-soft', 'danger-soft', 'success-soft'],
+      [
+        ...plain,
+        'attention-soft',
+        'danger-soft',
+        'success-soft',
+        'neutral-soft',
+        'hover',
+        'pressed',
+      ],
       TEXT_FLOOR,
     ),
   },
@@ -107,15 +127,75 @@ export const COLOURS: readonly Colour[] = [
   },
   {
     name: 'accent-solid',
-    value: '#1f6feb',
+    value: ACCENT_SOLID,
     use: 'the one primary button',
+    on: [],
+  },
+  {
+    name: 'accent-solid-hover',
+    value: mix('#000000', ACCENT_SOLID, HOVER_SHARE),
+    use: 'the primary button under the pointer',
+    on: [],
+  },
+  {
+    name: 'accent-solid-pressed',
+    value: mix('#000000', ACCENT_SOLID, PRESSED_SHARE),
+    use: 'the primary button while pressed',
     on: [],
   },
   {
     name: 'on-accent',
     value: '#ffffff',
     use: 'text on the primary button',
-    on: on(['accent-solid'], TEXT_FLOOR),
+    on: on(
+      ['accent-solid', 'accent-solid-hover', 'accent-solid-pressed'],
+      TEXT_FLOOR,
+    ),
+  },
+  {
+    name: 'danger-solid',
+    value: DANGER_SOLID,
+    use: 'the solid destructive button',
+    on: [],
+  },
+  {
+    name: 'danger-solid-hover',
+    value: mix('#000000', DANGER_SOLID, HOVER_SHARE),
+    use: 'the destructive button under the pointer',
+    on: [],
+  },
+  {
+    name: 'danger-solid-pressed',
+    value: mix('#000000', DANGER_SOLID, PRESSED_SHARE),
+    use: 'the destructive button while pressed',
+    on: [],
+  },
+  {
+    name: 'on-danger',
+    value: '#ffffff',
+    use: 'text on the destructive button',
+    on: on(
+      ['danger-solid', 'danger-solid-hover', 'danger-solid-pressed'],
+      TEXT_FLOOR,
+    ),
+  },
+  {
+    name: 'hover',
+    value: mix(FG, BG_RAISED, HOVER_SHARE),
+    use: 'a transparent control under the pointer: fg mixed over bg-raised, used on every plain ground',
+    on: [],
+  },
+  {
+    name: 'pressed',
+    value: mix(FG, BG_RAISED, PRESSED_SHARE),
+    use: 'a transparent control while pressed, and the tooltip ground: fg mixed over bg-raised, used on every plain ground',
+    on: [],
+  },
+  {
+    name: 'neutral-soft',
+    value: mix(FG, BG_RAISED, HOVER_SHARE),
+    use: 'the ground under a neutral tag',
+    on: [],
   },
   {
     name: 'attention',

@@ -43,6 +43,7 @@ describe('contrast', () => {
       'danger',
       'success',
       'on-accent',
+      'on-danger',
     ])
       expect(cases.some((c) => c.text === n)).toBe(true);
   });
