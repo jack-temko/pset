@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress, branch `home-parts` (base `design`).
+Built on branch `home-parts` (base `design`); awaiting Jack's try. When merged: Done.
 
 ## Information
 
