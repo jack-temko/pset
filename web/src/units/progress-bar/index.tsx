@@ -31,7 +31,10 @@ export function ProgressBar({ done, total }: { done: number; total: number }) {
           />
         </span>
       )}
-      <span className="ds-small ds-tabular shrink-0 whitespace-nowrap text-(--ds-fg-muted)">
+      <span
+        data-count
+        className="ds-small ds-tabular shrink-0 whitespace-nowrap text-(--ds-fg-muted)"
+      >
         {shown} of {total}
       </span>
     </span>

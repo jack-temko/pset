@@ -7,6 +7,7 @@ import { Button, REASON_MS } from './button';
 import { Link } from './link';
 import { ProgressBar } from './progress-bar';
 import { SectionHeading } from './section-heading';
+import { WorkRow, timeLeft } from './work-row';
 import { Tag } from './tag';
 import { Tooltip } from './tooltip';
 import { place } from './tooltip/place';
@@ -837,5 +838,71 @@ describe('SectionHeading', () => {
   it('carries no outer margin', () => {
     const { el } = render(<SectionHeading>In progress</SectionHeading>);
     expect(el.firstElementChild?.className).not.toMatch(/(^|\s)m[tby]?-/);
+  });
+});
+
+describe('WorkRow', () => {
+  const today = new Date(2026, 9, 13);
+  const day = (d: number) => new Date(2026, 9, d);
+  const row = (p: Partial<Parameters<typeof WorkRow>[0]> = {}) =>
+    render(
+      <WorkRow
+        set="Problem set 4"
+        course="Electromagnetics"
+        done={2}
+        total={6}
+        href="/set/4"
+        today={today}
+        {...p}
+      />,
+    );
+
+  it('is one link to the set, carrying every fact', () => {
+    const { el } = row({ minutesLeft: 70, due: day(19) });
+    const a = el.querySelectorAll('a');
+    expect(a).toHaveLength(1);
+    expect(a[0]?.getAttribute('href')).toBe('/set/4');
+    const text = a[0]?.textContent ?? '';
+    for (const part of [
+      'Problem set 4',
+      'Electromagnetics',
+      '2 of 6',
+      'About 1 h 10 m left',
+      'Due Mon 19',
+    ])
+      expect(text).toContain(part);
+  });
+
+  it('tags a due date only within 2 days', () => {
+    const dueToday = row({ due: day(13) });
+    expect(dueToday.el.querySelector('svg')).not.toBeNull();
+    expect(row({ due: day(15) }).el.querySelector('svg')).not.toBeNull();
+    expect(row({ due: day(16) }).el.querySelector('svg')).toBeNull();
+    expect(row({ due: day(16) }).el.textContent).toContain('Due Fri 16');
+    expect(row({ due: day(15) }).el.textContent).toContain('Due Thu');
+    expect(row({ due: day(15) }).el.textContent).not.toContain('Due Thu 15');
+  });
+
+  it('tags an overdue set', () => {
+    expect(row({ due: day(10) }).el.querySelector('svg')).not.toBeNull();
+  });
+
+  it('says No date without one, and leaves the time empty when unknown', () => {
+    const { el } = row({ due: undefined });
+    expect(el.textContent).toContain('No date');
+    expect(el.querySelector('[data-column="time"]')?.textContent).toBe('');
+  });
+
+  it('writes the time left', () => {
+    expect(timeLeft(45)).toBe('About 45 m left');
+    expect(timeLeft(60)).toBe('About 1 h left');
+    expect(timeLeft(70)).toBe('About 1 h 10 m left');
+  });
+
+  it('truncates its names and keeps the row 56 high', () => {
+    const { el } = row({ set: 'x'.repeat(70), course: 'y'.repeat(50) });
+    expect(el.querySelector('a')?.className).toContain('h-14');
+    const names = el.querySelectorAll('span.truncate');
+    expect(names.length).toBeGreaterThanOrEqual(2);
   });
 });
