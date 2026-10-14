@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Button, REASON_MS } from './button';
 import { Link } from './link';
+import { ProgressBar } from './progress-bar';
 import { Tag } from './tag';
 import { Tooltip } from './tooltip';
 import { place } from './tooltip/place';
@@ -759,5 +760,54 @@ describe('Tag', () => {
     );
     expect(el.querySelector('a, button, [tabindex]')).toBeNull();
     expect(el.textContent).toBe('Due Fri');
+  });
+});
+
+describe('ProgressBar', () => {
+  const segs = (el: HTMLElement) =>
+    [...el.querySelectorAll('[data-segment]')].map((n) =>
+      n.getAttribute('data-segment'),
+    );
+
+  it('draws a segment per problem with the count in words', () => {
+    const { el } = render(<ProgressBar done={2} total={6} />);
+    expect(segs(el)).toEqual(['done', 'done', 'todo', 'todo', 'todo', 'todo']);
+    expect(el.textContent).toBe('2 of 6');
+  });
+
+  it('keeps segments at 12 and switches to one bar above', () => {
+    const twelve = render(<ProgressBar done={5} total={12} />);
+    expect(segs(twelve.el)).toHaveLength(12);
+    expect(twelve.el.querySelector('[data-bar="continuous"]')).toBeNull();
+    const thirty = render(<ProgressBar done={15} total={30} />);
+    expect(segs(thirty.el)).toHaveLength(0);
+    const fill = thirty.el.querySelector<HTMLElement>(
+      '[data-bar="continuous"] > span',
+    );
+    expect(fill?.style.width).toBe('50%');
+    expect(thirty.el.textContent).toBe('15 of 30');
+  });
+
+  it('turns grey when every problem is done, in both shapes', () => {
+    const a = render(<ProgressBar done={3} total={3} />);
+    expect(a.el.querySelector('[data-segment]')?.className).toContain(
+      '--ds-fg-muted',
+    );
+    const b = render(<ProgressBar done={30} total={30} />);
+    expect(
+      b.el.querySelector('[data-bar="continuous"] > span')?.className,
+    ).toContain('--ds-fg-muted');
+  });
+
+  it('keeps done between 0 and total', () => {
+    const { el } = render(<ProgressBar done={9} total={4} />);
+    expect(el.textContent).toBe('4 of 4');
+  });
+
+  it('keeps its count whole while the bar shrinks', () => {
+    const { el } = render(<ProgressBar done={1} total={30} />);
+    expect(el.querySelector('[data-bar]')?.className).toContain('shrink');
+    expect(el.querySelector('[data-bar]')?.className).toContain('min-w-0');
+    expect(el.querySelector('.shrink-0')?.textContent).toBe('1 of 30');
   });
 });
