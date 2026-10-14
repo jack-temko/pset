@@ -1,48 +1,59 @@
 import { Clock } from 'lucide-react';
 import { act, createRef, type ReactNode } from 'react';
-import { createRoot } from 'react-dom/client';
-import { describe, expect, it, vi } from 'vitest';
+import { createRoot, type Root } from 'react-dom/client';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Button, REASON_MS } from './button';
 import { Link } from './link';
 import { Tag } from './tag';
+import { place, Tooltip } from './tooltip';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
+const roots: Root[] = [];
+
 function render(node: ReactNode) {
   const el = document.createElement('div');
   document.body.append(el);
+  const root = createRoot(el);
+  roots.push(root);
   act(() => {
-    createRoot(el).render(node);
+    root.render(node);
   });
-  return el;
+  return { el, root };
 }
+
+afterEach(() => {
+  act(() => {
+    for (const r of roots.splice(0)) r.unmount();
+  });
+  document.body.replaceChildren();
+});
 
 /** A pointer press: a click with a detail above 0, as a mouse or a touch makes. */
 function press(b: Element | null | undefined) {
   b?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
 }
 
-/** The visible reason line, or an empty string when it is not shown. */
-function reason(el: HTMLElement) {
-  return el.querySelector('[aria-hidden="true"][id]')?.textContent ?? '';
+/** The tooltip text, or an empty string when none is shown. It is drawn in
+ *  the top layer or, without the Popover API, in a portal on the body. */
+function tip() {
+  return document.querySelector('[role="tooltip"]')?.textContent ?? '';
 }
 
 describe('Button', () => {
   it('runs its action on a press', () => {
     const onPress = vi.fn();
-    const el = render(<Button onPress={onPress}>Go</Button>);
-    act(() => {
-      el.querySelector('button')?.click();
-    });
+    const { el } = render(<Button onPress={onPress}>Go</Button>);
+    act(() => el.querySelector('button')?.click());
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
   it('ignores a press while busy and keeps focus', () => {
     const onPress = vi.fn();
-    const el = render(
+    const { el } = render(
       <Button busy onPress={onPress}>
         Go
       </Button>,
@@ -57,7 +68,7 @@ describe('Button', () => {
   });
 
   it('busy with no icon hides the label, keeps its box and says Working', () => {
-    const el = render(<Button busy>Go</Button>);
+    const { el } = render(<Button busy>Go</Button>);
     const label = [...el.querySelectorAll<HTMLElement>('button span')].find(
       (n) => n.style.visibility === 'hidden',
     );
@@ -73,7 +84,7 @@ describe('Button', () => {
   });
 
   it('busy with an icon keeps its label visible', () => {
-    const el = render(
+    const { el } = render(
       <Button busy icon={Clock} busyLabel="Saving">
         Go
       </Button>,
@@ -86,132 +97,217 @@ describe('Button', () => {
     expect(el.querySelector('[role="status"]')?.textContent).toBe('Saving');
   });
 
-  it('is never disabled: not ready, it takes focus and shows its reason', () => {
-    const onPress = vi.fn();
-    const el = render(
-      <Button notReady="Add a file first." onPress={onPress}>
-        Go
-      </Button>,
-    );
-    const b = el.querySelector('button');
-    expect(b?.disabled).toBe(false);
-    expect(b?.getAttribute('aria-disabled')).toBe('true');
-    expect(reason(el)).toBe('');
-    act(() => b?.focus());
-    expect(document.activeElement).toBe(b);
-    expect(reason(el)).toBe('Add a file first.');
-    expect(b?.getAttribute('aria-describedby')).toBeTruthy();
-    // Focus alone is described, not announced a second time.
-    expect(el.querySelector('[role="status"]')?.textContent).toBe('');
-    act(() => b?.blur());
-    expect(reason(el)).toBe('');
-    act(() => {
-      press(b);
-    });
-    expect(reason(el)).toBe('Add a file first.');
-    expect(el.querySelector('[role="status"]')?.textContent).toBe(
-      'Add a file first.',
-    );
-    expect(onPress).not.toHaveBeenCalled();
-  });
-
-  describe('the reason goes away', () => {
-    function shownByClick(notReady = 'Add a file first.') {
-      const el = render(<Button notReady={notReady}>Go</Button>);
+  describe('not ready', () => {
+    it('is never disabled and does not act, but a press opens the tooltip', () => {
+      const onPress = vi.fn();
+      const { el } = render(
+        <Button notReady="Add a file first." onPress={onPress}>
+          Go
+        </Button>,
+      );
       const b = el.querySelector('button');
+      expect(b?.disabled).toBe(false);
+      expect(b?.getAttribute('aria-disabled')).toBe('true');
+      expect(tip()).toBe('');
       act(() => {
         press(b);
       });
-      expect(reason(el)).toBe(notReady);
-      return { el, b };
+      expect(tip()).toBe('Add a file first.');
+      expect(onPress).not.toHaveBeenCalled();
+    });
+
+    function pressed() {
+      const r = render(<Button notReady="Add a file first.">Go</Button>);
+      const b = r.el.querySelector('button');
+      act(() => {
+        press(b);
+      });
+      expect(tip()).toBe('Add a file first.');
+      return { ...r, b };
     }
 
-    it('on Escape', () => {
-      const { el, b } = shownByClick();
+    it('closes on Escape', () => {
+      const { b } = pressed();
       act(() => {
         b?.dispatchEvent(
           new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
         );
       });
-      expect(reason(el)).toBe('');
+      expect(tip()).toBe('');
     });
 
-    it('when the pointer leaves after a click-only reveal', () => {
-      const { el, b } = shownByClick();
+    it('closes when the pointer leaves the button', () => {
+      const { b } = pressed();
       act(() => {
         b?.dispatchEvent(new PointerEvent('pointerout', { bubbles: true }));
       });
-      expect(reason(el)).toBe('');
+      expect(tip()).toBe('');
     });
 
-    it('treats a pointer press that focuses the button as click-only too', () => {
-      const el = render(<Button notReady="Add a file first.">Go</Button>);
-      const b = el.querySelector('button');
+    it('closes on blur', () => {
+      const { b } = pressed();
       act(() => {
-        b?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
         b?.focus();
-        press(b);
       });
-      expect(reason(el)).toBe('Add a file first.');
       act(() => {
-        b?.dispatchEvent(new PointerEvent('pointerout', { bubbles: true }));
+        b?.blur();
       });
-      expect(reason(el)).toBe('');
+      expect(tip()).toBe('');
     });
 
-    it('keeps a focus reveal when the pointer leaves', () => {
-      const el = render(<Button notReady="Add a file first.">Go</Button>);
-      const b = el.querySelector('button');
-      act(() => b?.focus());
-      act(() => {
-        b?.dispatchEvent(new PointerEvent('pointerout', { bubbles: true }));
-      });
-      expect(reason(el)).toBe('Add a file first.');
-    });
-
-    it('after 4 seconds of a click-only reveal', () => {
+    it('closes after 4 seconds', () => {
       vi.useFakeTimers();
       try {
-        const { el } = shownByClick();
+        pressed();
         act(() => {
           vi.advanceTimersByTime(REASON_MS - 1);
         });
-        expect(reason(el)).toBe('Add a file first.');
+        expect(tip()).toBe('Add a file first.');
         act(() => {
           vi.advanceTimersByTime(1);
         });
-        expect(reason(el)).toBe('');
+        expect(tip()).toBe('');
       } finally {
         vi.useRealTimers();
       }
     });
 
-    it('when notReady changes or clears', () => {
-      const el = document.createElement('div');
-      document.body.append(el);
-      const root = createRoot(el);
-      act(() => {
-        root.render(<Button notReady="First.">Go</Button>);
-      });
+    it('closes when notReady changes or clears', () => {
+      const { el, root } = render(<Button notReady="First.">Go</Button>);
       act(() => {
         press(el.querySelector('button'));
       });
-      expect(reason(el)).toBe('First.');
+      expect(tip()).toBe('First.');
       act(() => {
         root.render(<Button notReady="Second.">Go</Button>);
       });
-      expect(reason(el)).toBe('');
+      expect(tip()).toBe('');
       act(() => {
         press(el.querySelector('button'));
       });
-      expect(reason(el)).toBe('Second.');
+      expect(tip()).toBe('Second.');
       act(() => {
         root.render(<Button>Go</Button>);
       });
+      expect(tip()).toBe('');
+    });
+
+    it('is forced open by reasonOpen', () => {
+      render(
+        <Button notReady="Add a file first." reasonOpen>
+          Go
+        </Button>,
+      );
+      expect(tip()).toBe('Add a file first.');
+    });
+  });
+});
+
+describe('Tooltip', () => {
+  it('shows on hover after 50ms and hides on pointer leave', () => {
+    vi.useFakeTimers();
+    try {
+      const { el } = render(
+        <Tooltip text="Why">
+          <button type="button">Go</button>
+        </Tooltip>,
+      );
+      const anchor = el.querySelector('button')?.parentElement;
       act(() => {
-        root.render(<Button notReady="Second.">Go</Button>);
+        anchor?.dispatchEvent(
+          new PointerEvent('pointerover', { bubbles: true }),
+        );
       });
-      expect(reason(el)).toBe('');
+      act(() => {
+        vi.advanceTimersByTime(49);
+      });
+      expect(tip()).toBe('');
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(tip()).toBe('Why');
+      act(() => {
+        anchor?.dispatchEvent(
+          new PointerEvent('pointerout', { bubbles: true }),
+        );
+      });
+      expect(tip()).toBe('');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows on focus at once and hides on blur and on Escape', () => {
+    const { el } = render(
+      <Tooltip text="Why">
+        <button type="button">Go</button>
+      </Tooltip>,
+    );
+    const b = el.querySelector('button');
+    act(() => b?.focus());
+    expect(tip()).toBe('Why');
+    act(() => b?.blur());
+    expect(tip()).toBe('');
+    act(() => b?.focus());
+    act(() => {
+      b?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+      );
+    });
+    expect(tip()).toBe('');
+  });
+
+  it('is bounded to 250 wide', () => {
+    render(
+      <Tooltip text="Why" open>
+        <button type="button">Go</button>
+      </Tooltip>,
+    );
+    const cls = document.querySelector('[role="tooltip"]')?.className ?? '';
+    expect(cls).toContain('max-w-[250px]');
+  });
+
+  describe('place', () => {
+    const view = { width: 1000, height: 800 };
+    const size = { width: 100, height: 28 };
+    const rect = (x: number, y: number, w = 80, h = 32) =>
+      ({
+        left: x,
+        top: y,
+        right: x + w,
+        bottom: y + h,
+        width: w,
+        height: h,
+      }) as DOMRect;
+
+    it('goes below, centred, 4 away', () => {
+      expect(place(rect(400, 100), size, view, 'below')).toEqual({
+        side: 'below',
+        left: 390,
+        top: 136,
+      });
+    });
+
+    it('flips above when there is no room below', () => {
+      const p = place(rect(400, 780), size, view, 'below');
+      expect(p.side).toBe('above');
+      expect(p.top).toBe(780 - 4 - 28);
+    });
+
+    it('shifts inward at the right edge, keeping 8 from the viewport', () => {
+      const p = place(rect(920, 100), size, view, 'below');
+      expect(p.side).toBe('below');
+      expect(p.left).toBe(1000 - 8 - 100);
+    });
+
+    it('shifts inward at the left edge', () => {
+      expect(place(rect(0, 100, 20), size, view, 'below').left).toBe(8);
+    });
+
+    it('takes right, then left, when neither above nor below fits', () => {
+      const tall = { width: 100, height: 800 };
+      expect(place(rect(100, 300), tall, view, 'below').side).toBe('right');
+      expect(place(rect(880, 300), tall, view, 'below').side).toBe('left');
     });
   });
 });
@@ -221,7 +317,7 @@ describe('Button', () => {
 // wide to narrow.
 describe('width bounds', () => {
   it('a button never outgrows its container and truncates its label', () => {
-    const el = render(<Button>A very long label</Button>);
+    const { el } = render(<Button>A very long label</Button>);
     const b = el.querySelector('button');
     expect(b?.className).toContain('max-w-full');
     expect(b?.className).toContain('whitespace-nowrap');
@@ -232,7 +328,7 @@ describe('width bounds', () => {
 
   it('a link wraps inside its container, even a long word', () => {
     for (const inline of [true, false]) {
-      const el = render(
+      const { el } = render(
         <Link href="/x" inline={inline}>
           Long
         </Link>,
@@ -244,7 +340,7 @@ describe('width bounds', () => {
   });
 
   it('a tag truncates inside its container', () => {
-    const el = render(<Tag>A very long tag</Tag>);
+    const { el } = render(<Tag>A very long tag</Tag>);
     const t = el.firstElementChild;
     expect(t?.className).toContain('max-w-full');
     expect(t?.className).toContain('min-w-0');
@@ -254,7 +350,7 @@ describe('width bounds', () => {
 
 describe('Link', () => {
   it('renders an anchor with its href', () => {
-    const el = render(<Link href="/course">Open</Link>);
+    const { el } = render(<Link href="/course">Open</Link>);
     expect(el.querySelector('a')?.getAttribute('href')).toBe('/course');
   });
 
@@ -263,7 +359,7 @@ describe('Link', () => {
       e.preventDefault();
     });
     const ref = createRef<HTMLAnchorElement>();
-    const el = render(
+    const { el } = render(
       <Link href="/course" onClick={onClick} ref={ref}>
         Open
       </Link>,
@@ -276,12 +372,12 @@ describe('Link', () => {
 
 describe('Tag', () => {
   it('is not focusable', () => {
-    const el = render(
+    const { el } = render(
       <Tag tone="attention" icon={Clock}>
-        due Fri
+        Due Fri
       </Tag>,
     );
     expect(el.querySelector('a, button, [tabindex]')).toBeNull();
-    expect(el.textContent).toBe('due Fri');
+    expect(el.textContent).toBe('Due Fri');
   });
 });

@@ -32,6 +32,16 @@ Sources for GitHub's way: https://primer.style/product/components/button/ and
 `packages/react/src/Button/ButtonBase.module.css` in primer/react. The label keeps its
 box with `visibility: hidden` and the spinner is drawn over it, so the size cannot change.
 
+## The reason becomes a tooltip
+
+- Jack, on trying the button: **"For the non disabled buttons, I don't love how the line
+  that comes down looks, it being in a box and all. Also how does github manage that line
+  if the button is in a spot where there is no space for it?"**
+- How should a not-ready button say why? On the page, placed by the screen
+  (Recommended) / A tooltip, as GitHub's optional one / The line under the button,
+  without the box / Pressing opens a small dialog. **A tooltip, as GitHub's optional
+  one.** See the tooltip unit. Sources: https://primer.style/product/components/button/guidelines
+
 ## Settled afterwards (the coordinator, not asked)
 
 The builder found the first plan broke the contrast floors, and these were settled:

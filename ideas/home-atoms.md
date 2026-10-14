@@ -1,4 +1,4 @@
-# The first three components: button, text link, tag
+# The first four components: button, text link, tag, tooltip
 
 ## Status
 
@@ -31,6 +31,31 @@ Text link:
 | ------- | -------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------- |
 | link-d1 | Underlined inside text; plain when standing alone, underlined on hover and focus | Colour is never the only signal; Primer's rule | Always underlined; hover only |
 | link-d2 | A link goes somewhere; a button does something                                   | So the two never blur                          | Low-priority actions as links |
+
+Tooltip (added 2026-10-13, after Jack tried the button and disliked the boxed line under a
+not-ready button):
+
+| Id         | Decision                                                                                                                         | Why                      | Beat                                                    |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------- |
+| tooltip-d1 | A tooltip sits below its control, centred, and moves to another side or shifts when there is no room, never leaving the viewport | As Primer's tooltip does | A line under the control that can be clipped or overlap |
+| tooltip-d2 | It is at most 250 wide and its text wraps                                                                                        | Primer's limit           | One unbroken line                                       |
+
+Button button-d4 now reads: never disabled; a button that cannot act yet is not ready: it
+takes focus and a press, and says why in a tooltip (beat: a boxed line under the button, first
+built). The log: Jack, **"For the non disabled buttons, I don't love how the line that comes
+down looks, it being in a box and all. Also how does github manage that line if the button is
+in a spot where there is no space for it?"**; How should a not-ready button say why? On the
+page, placed by the screen (Recommended) / A tooltip, as GitHub's optional one / The line
+under the button, without the box / Pressing opens a small dialog. **A tooltip, as GitHub's
+optional one.** Sources: https://primer.style/product/components/button/guidelines and
+https://primer.style/product/components/tooltip/guidelines .
+
+The tooltip unit is `web/src/units/tooltip/`: a small floating label tied to one control
+(props `text`, `children`, `open?`, `side?`), shown on hover after 50ms and on keyboard focus,
+hidden on pointer leave, blur and Escape; drawn in the top layer with the Popover API (a
+fixed element on the body without it) and placed from the control's rect: below, centred, 4
+away, else the opposite side, then right, then left, shifted to stay 8 inside the viewport.
+Ground `pressed`, text `fg` small, 4 radius, 4 by 8 padding, at most 250 wide.
 
 Tag:
 

@@ -1,5 +1,7 @@
 import { LoaderCircle, type LucideIcon } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+
+import { Tooltip } from '@/units/tooltip';
 
 export type ButtonVariant = 'primary' | 'default' | 'quiet' | 'danger';
 
@@ -15,18 +17,19 @@ const LOOKS: Record<ButtonVariant, string> = {
 };
 
 /** A not-ready button has no fill and no hover: muted text and its reason
- *  mark it. Its look is the default shape whatever its variant, since muted
+ *  (a tooltip) mark it. Its look is the default shape whatever its variant, since muted
  *  text does not reach its contrast on a solid ground. */
 const NOT_READY =
   'border-(--ds-border) bg-transparent text-(--ds-fg-muted) cursor-default';
 
-/** How long a reason revealed by a click alone stays (no focus to blur). */
+/** How long a reason opened by a press stays. */
 export const REASON_MS = 4000;
 
-/** Never disabled (button-d4): busy keeps its exact size, ignores presses and keeps focus, and a
- *  button that is not ready stays pressable and says why. The reason shows on
- *  focus and on a press, and goes on blur, Escape, a change of `notReady`,
- *  the pointer leaving after a click-only reveal, or after 4 seconds of one. */
+/** Never disabled (button-d4): busy keeps its exact size, ignores presses and
+ *  keeps focus, and a button that is not ready stays pressable and says why in
+ *  a tooltip. The tooltip shows on hover and focus like any other; a press
+ *  opens it, and it stays until the pointer leaves, blur, Escape, a change of
+ *  `notReady` or 4 seconds. */
 export function Button({
   variant = 'default',
   icon: Icon,
@@ -45,29 +48,20 @@ export function Button({
   busyLabel?: string;
   /** The reason it cannot act yet. Set means not ready. */
   notReady?: string;
-  /** Shows the reason without a press or focus (the design page only). */
+  /** Forces the reason's tooltip open (the design page only). */
   reasonOpen?: boolean;
   onPress?: () => void;
   type?: 'button' | 'submit';
   children: ReactNode;
 }) {
-  const ref = useRef<HTMLButtonElement>(null);
-  const reasonId = useId();
-  const pointerDown = useRef(false);
-  /** How the reason was revealed: by focus (it goes on blur) or by a click
-   *  that did not focus the button (Safari, Firefox on Mac, touch). */
-  const [shown, setShown] = useState<'focus' | 'click'>();
-  /** Set by a press: the one polite announcement. Focus is announced by
-   *  aria-describedby instead, so nothing is read twice. */
-  const [announced, setAnnounced] = useState('');
-
+  /** A press opened the reason's tooltip. */
+  const [pressed, setPressed] = useState(false);
   const hide = () => {
-    setShown(undefined);
-    setAnnounced('');
+    setPressed(false);
   };
 
   // A stale reason never outlives the state it explained: when `notReady`
-  // changes or clears, the reveal is dropped before anything is drawn.
+  // changes or clears, the press is dropped before anything is drawn.
   const [seen, setSeen] = useState(notReady);
   if (seen !== notReady) {
     setSeen(notReady);
@@ -75,122 +69,93 @@ export function Button({
   }
 
   useEffect(() => {
-    if (shown !== 'click') return;
+    if (!pressed) return;
     const t = setTimeout(hide, REASON_MS);
     return () => {
       clearTimeout(t);
     };
-  }, [shown]);
+  }, [pressed]);
 
-  const slot = Icon && (
-    <span className="flex size-4 shrink-0 items-center justify-center">
-      {busy ? (
-        <LoaderCircle
-          className="size-4 animate-spin motion-reduce:animate-none"
-          aria-hidden
-        />
-      ) : (
-        <Icon className="size-4" aria-hidden />
-      )}
-    </span>
-  );
-  const open = Boolean(notReady) && (Boolean(shown) || Boolean(reasonOpen));
   const look = notReady ? NOT_READY : LOOKS[variant];
   // Busy with no icon: the label keeps its box but is not drawn, and the
   // spinner sits over it, so the button cannot change size (button-d3).
   const covered = busy && !Icon;
 
+  const button = (
+    <button
+      type={type}
+      aria-busy={busy || undefined}
+      aria-disabled={notReady ? true : undefined}
+      style={{ fontWeight: 500 }}
+      className={`ds-body relative inline-flex h-(--ds-control) max-w-full min-w-16 items-center justify-center rounded-(--ds-radius-control) border gap-2 px-3 whitespace-nowrap ${look}`}
+      onClick={(e) => {
+        if (busy) {
+          e.preventDefault();
+          return;
+        }
+        if (notReady) {
+          e.preventDefault();
+          setPressed(true);
+          return;
+        }
+        onPress?.();
+      }}
+      onBlur={hide}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') hide();
+      }}
+      onPointerLeave={hide}
+    >
+      {Icon && (
+        <span className="flex size-4 shrink-0 items-center justify-center">
+          {busy ? (
+            <LoaderCircle
+              className="size-4 animate-spin motion-reduce:animate-none"
+              aria-hidden
+            />
+          ) : (
+            <Icon className="size-4" aria-hidden />
+          )}
+        </span>
+      )}
+      <span
+        className="min-w-0 truncate"
+        style={covered ? { visibility: 'hidden' } : undefined}
+        aria-hidden={covered || undefined}
+      >
+        {children}
+      </span>
+      {covered && (
+        <>
+          {/* The label is hidden, so the name is kept for assistive tech. */}
+          <span className="sr-only">{children}</span>
+          <span
+            aria-hidden
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            <LoaderCircle
+              className="size-4 animate-spin motion-reduce:animate-none"
+              aria-hidden
+            />
+          </span>
+        </>
+      )}
+    </button>
+  );
+
   return (
     <span className="relative inline-flex max-w-full min-w-0 align-top">
-      <button
-        ref={ref}
-        type={type}
-        aria-busy={busy || undefined}
-        aria-disabled={notReady ? true : undefined}
-        aria-describedby={open ? reasonId : undefined}
-        style={{ fontWeight: 500 }}
-        className={`ds-body relative inline-flex h-(--ds-control) max-w-full min-w-16 items-center justify-center rounded-(--ds-radius-control) border gap-2 px-3 whitespace-nowrap ${look}`}
-        onClick={(e) => {
-          pointerDown.current = false;
-          if (busy) {
-            e.preventDefault();
-            return;
-          }
-          if (notReady) {
-            e.preventDefault();
-            setAnnounced(notReady);
-            // A pointer press (mouse or touch, detail above 0) is a reveal
-            // that goes by itself, whether or not the browser focused the
-            // button; Enter or Space (detail 0) is a keyboard reveal that
-            // stays until blur.
-            setShown((cur) => (e.detail > 0 ? 'click' : (cur ?? 'focus')));
-            return;
-          }
-          onPress?.();
-        }}
-        onPointerDown={() => {
-          pointerDown.current = true;
-        }}
-        onFocus={() => {
-          // Focus that a pointer press brought is the press's, not a reveal.
-          if (notReady && !pointerDown.current) setShown('focus');
-          pointerDown.current = false;
-        }}
-        onBlur={() => {
-          pointerDown.current = false;
-          hide();
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') hide();
-        }}
-        onPointerLeave={() => {
-          if (shown === 'click') hide();
-        }}
-      >
-        {slot}
-        <span
-          className="min-w-0 truncate"
-          style={covered ? { visibility: 'hidden' } : undefined}
-          aria-hidden={covered || undefined}
-        >
-          {children}
-        </span>
-        {covered && (
-          <>
-            {/* The label is hidden, so the name is kept for assistive tech. */}
-            <span className="sr-only">{children}</span>
-            <span
-              aria-hidden
-              className="absolute inset-0 flex items-center justify-center"
-            >
-              <LoaderCircle
-                className="size-4 animate-spin motion-reduce:animate-none"
-                aria-hidden
-              />
-            </span>
-          </>
-        )}
-      </button>
+      {notReady ? (
+        <Tooltip text={notReady} open={pressed || Boolean(reasonOpen)}>
+          {button}
+        </Tooltip>
+      ) : (
+        button
+      )}
       {busy && (
         <span role="status" className="sr-only">
           {busyLabel}
         </span>
-      )}
-      {notReady && (
-        <>
-          <span role="status" className="sr-only">
-            {announced}
-          </span>
-          {open && (
-            <span
-              id={reasonId}
-              aria-hidden
-              className="ds-small pointer-events-none absolute top-full left-0 z-20 mt-1 w-max max-w-[240px] rounded-(--ds-radius-tag) border border-(--ds-border-muted) bg-(--ds-bg-raised) px-2 py-1 text-(--ds-fg-muted)"
-            >
-              {notReady}
-            </span>
-          )}
-        </>
       )}
     </span>
   );

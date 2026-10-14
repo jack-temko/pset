@@ -41,7 +41,7 @@ export default defineSpec({
     {
       id: 'not-ready',
       name: 'Not ready',
-      when: 'Cannot act yet; every variant takes the default shape. A press or focus shows why (an overflow: hidden ancestor cuts it off). Left: forced open.',
+      when: 'Cannot act yet; every variant takes the default shape. Hover, focus or a press shows why in a tooltip. Left: forced open.',
       text: 'Add a file first.',
     },
     {
@@ -51,6 +51,12 @@ export default defineSpec({
     },
   ],
   stress: 'A 60 character label in a 160px container.',
+  components: [
+    {
+      unit: 'tooltip',
+      use: 'Says why a button is not ready.',
+    },
+  ],
   actions: [
     {
       id: 'press',
@@ -62,7 +68,7 @@ export default defineSpec({
       id: 'press-not-ready',
       label: "The button's own",
       key: 'Enter or Space',
-      does: 'Shows the reason it is not ready, under the button, and does nothing else.',
+      does: 'Opens the reason in a tooltip and does nothing else.',
     },
   ],
   inputs: [
@@ -118,7 +124,7 @@ export default defineSpec({
       name: 'reasonOpen',
       type: 'boolean',
       default: 'false',
-      does: 'Shows the not-ready reason without a press or focus; for the design page only.',
+      does: 'Forces the not-ready tooltip open; for the design page only.',
     },
   ],
   priority: {
@@ -177,9 +183,9 @@ export default defineSpec({
     {
       id: 'button-d4',
       decision:
-        'Never disabled. A button that cannot act yet is "not ready": it takes focus and a press and says why.',
-      why: 'Primer: disabled buttons are unreachable by keyboard; student-decides.',
-      beat: 'Greyed and inert; hidden',
+        'Never disabled. A button that cannot act yet is not ready: it takes focus and a press, and says why in a tooltip.',
+      why: 'Primer: an inactive button with a tooltip; student-decides.',
+      beat: 'Greyed and inert; hidden; a boxed line under the button (first built)',
       date: '2026-10-13',
     },
     {

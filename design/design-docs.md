@@ -93,10 +93,11 @@ deliberately broken fixture.
 
 ## The first units
 
-Three components are the first real units, built for Home (`ideas/home-atoms.md`): Button
+Four components are the first real units, built for Home (`ideas/home-atoms.md`): Button
 (four variants, one size, never disabled: busy or not ready instead), Text link (underlined
-inside text, plain when standing alone) and Tag (one shape, two tones). The Components tab
-now appears with them. They added `danger-solid`, `on-danger`, `neutral-soft` and the
+inside text, plain when standing alone), Tag (one shape, two tones) and Tooltip (a small
+floating label in the top layer that finds room inside the viewport; a not-ready button
+says why in one). The Components tab now appears with them. They added `danger-solid`, `on-danger`, `neutral-soft` and the
 interaction steps (`hover`, `pressed`, and hover and pressed for each solid ground) to the
 foundations, and two rules, `one-primary` and `links-go-buttons-do`. A solid ground takes
 black for hover and pressed, so its white label keeps 4.5:1; a transparent control takes
