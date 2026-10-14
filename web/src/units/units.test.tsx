@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Button, REASON_MS } from './button';
+import { CourseRow } from './course-row';
 import { Link } from './link';
 import { ProgressBar } from './progress-bar';
 import { SectionHeading } from './section-heading';
@@ -904,5 +905,41 @@ describe('WorkRow', () => {
     expect(el.querySelector('a')?.className).toContain('h-14');
     const names = el.querySelectorAll('span.truncate');
     expect(names.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('CourseRow', () => {
+  const row = (materials: number, sets: number) =>
+    render(
+      <CourseRow
+        name="Electromagnetics"
+        materials={materials}
+        sets={sets}
+        href="/c/1"
+      />,
+    );
+
+  it('is one link to the course with its name and both counts', () => {
+    const { el } = row(7, 3);
+    const a = el.querySelectorAll('a');
+    expect(a).toHaveLength(1);
+    expect(a[0]?.getAttribute('href')).toBe('/c/1');
+    expect(a[0]?.textContent).toBe('Electromagnetics7 materials3 sets');
+  });
+
+  it('goes singular at one', () => {
+    expect(row(1, 1).el.textContent).toBe('Electromagnetics1 material1 set');
+  });
+
+  it('says No materials and No sets when empty', () => {
+    expect(row(0, 0).el.textContent).toBe(
+      'ElectromagneticsNo materialsNo sets',
+    );
+  });
+
+  it('truncates its name and keeps the row 44 high', () => {
+    const { el } = row(2, 2);
+    expect(el.querySelector('a')?.className).toContain('h-11');
+    expect(el.querySelector('span.truncate')?.className).toContain('min-w-0');
   });
 });
