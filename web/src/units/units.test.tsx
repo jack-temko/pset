@@ -216,6 +216,42 @@ describe('Button', () => {
   });
 });
 
+// jsdom has no layout, so these only prove the classes that bound the width
+// are present. The real proof is the stress page in a browser, dragged from
+// wide to narrow.
+describe('width bounds', () => {
+  it('a button never outgrows its container and truncates its label', () => {
+    const el = render(<Button>A very long label</Button>);
+    const b = el.querySelector('button');
+    expect(b?.className).toContain('max-w-full');
+    expect(b?.className).toContain('whitespace-nowrap');
+    expect(b?.parentElement?.className).toContain('max-w-full');
+    expect(b?.parentElement?.className).toContain('min-w-0');
+    expect(b?.querySelector('span.truncate')?.className).toContain('min-w-0');
+  });
+
+  it('a link wraps inside its container, even a long word', () => {
+    for (const inline of [true, false]) {
+      const el = render(
+        <Link href="/x" inline={inline}>
+          Long
+        </Link>,
+      );
+      const cls = el.querySelector('a')?.className ?? '';
+      expect(cls).toContain('max-w-full');
+      expect(cls).toContain('[overflow-wrap:anywhere]');
+    }
+  });
+
+  it('a tag truncates inside its container', () => {
+    const el = render(<Tag>A very long tag</Tag>);
+    const t = el.firstElementChild;
+    expect(t?.className).toContain('max-w-full');
+    expect(t?.className).toContain('min-w-0');
+    expect(t?.querySelector('span.truncate')).not.toBeNull();
+  });
+});
+
 describe('Link', () => {
   it('renders an anchor with its href', () => {
     const el = render(<Link href="/course">Open</Link>);

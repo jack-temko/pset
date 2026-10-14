@@ -15,7 +15,7 @@ export default defineExamples(spec, {
     'attention-plain': () => <Tag tone="attention">Due Fri</Tag>,
   },
   stress: () => (
-    <div className="w-[120px]">
+    <div className="w-[120px] max-w-full">
       <Tag tone="attention" icon={Clock}>
         Due Friday after the midterm review session
       </Tag>

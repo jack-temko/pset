@@ -101,7 +101,7 @@ export function Button({
   const covered = busy && !Icon;
 
   return (
-    <span className="relative inline-flex max-w-full align-top">
+    <span className="relative inline-flex max-w-full min-w-0 align-top">
       <button
         ref={ref}
         type={type}

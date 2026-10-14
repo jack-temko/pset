@@ -40,13 +40,13 @@ export default defineExamples(spec, {
       </div>
     ),
     narrow: () => (
-      <div className="w-16">
+      <div className="w-16 max-w-full">
         <Button>Open</Button>
       </div>
     ),
   },
   stress: () => (
-    <div className="w-40">
+    <div className="w-40 max-w-full">
       <Button variant="primary">{LONG}</Button>
     </div>
   ),

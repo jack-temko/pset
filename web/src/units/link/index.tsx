@@ -29,7 +29,7 @@ export function Link({
     <a
       {...rest}
       href={href}
-      className={`text-(--ds-accent) underline-offset-2 ${inline ? '' : 'ds-body'} ${underline} ${forced} ${className ?? ''}`}
+      className={`text-(--ds-accent) underline-offset-2 ${inline ? '' : 'ds-body'} max-w-full [overflow-wrap:anywhere] ${underline} ${forced} ${className ?? ''}`}
     >
       {children}
     </a>
