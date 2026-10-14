@@ -28,8 +28,13 @@ export default defineExamples(spec, {
       </div>
     ),
     'not-ready': () => (
-      <div className="pb-8">
+      <div className="flex flex-wrap items-start gap-8 pb-16">
+        {/* Forced open, to show the reason. */}
         <Button variant="primary" notReady="Add a file first." reasonOpen>
+          Continue
+        </Button>
+        {/* Press or focus it: the reason shows and then goes by itself. */}
+        <Button variant="primary" notReady="Add a file first.">
           Continue
         </Button>
       </div>

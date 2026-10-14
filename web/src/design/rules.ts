@@ -15,7 +15,7 @@ export interface Rule {
 
 /** The rulebook: the eleven principles of `ideas/vision-grill.md`, worded as
  *  what to do, then the six of the foundations (`ideas/theme-grill.md`),
- *  then two for controls. Further rules are written as each thing is designed. */
+ *  then two for controls and one for labels. Further rules are written as each thing is designed. */
 export const RULES: readonly Rule[] = [
   {
     id: 'smallest-help-first',
@@ -132,6 +132,13 @@ export const RULES: readonly Rule[] = [
     id: 'links-go-buttons-do',
     rule: 'Use a link to go somewhere and a button to do something',
     check: 'No link runs an action, and no button only navigates',
+    scope: 'all',
+  },
+  {
+    id: 'sentence-case',
+    rule: 'Write every label in sentence case: headings, buttons, tabs, tags, menu items and table headers',
+    check:
+      'No label is in all capitals, title case or all lowercase; names keep their own capitals',
     scope: 'all',
   },
 ];

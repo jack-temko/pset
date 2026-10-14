@@ -89,6 +89,7 @@ export default defineSpec({
       'colour-has-a-word',
       'contrast-floors',
       'figures-follow-text',
+      'sentence-case',
     ],
   },
   log: 'web/src/units/link/log.md',

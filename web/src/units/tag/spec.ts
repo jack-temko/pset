@@ -11,12 +11,12 @@ export default defineSpec({
     {
       id: 'neutral',
       name: 'Neutral',
-      when: 'A plain fact, such as "generated".',
+      when: 'A plain fact, such as "Generated".',
     },
     {
       id: 'attention',
       name: 'Attention with a glyph',
-      when: 'Something needs attention soon, such as "due Fri".',
+      when: 'Something needs attention soon, such as "Due Fri".',
     },
     {
       id: 'attention-plain',
@@ -54,7 +54,7 @@ export default defineSpec({
     gives: ['The text truncates with an ellipsis'],
   },
   rules: {
-    cite: ['colour-has-a-word', 'contrast-floors'],
+    cite: ['colour-has-a-word', 'contrast-floors', 'sentence-case'],
     local: [
       {
         id: 'tag-short',

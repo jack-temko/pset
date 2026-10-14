@@ -41,7 +41,7 @@ export default defineSpec({
     {
       id: 'not-ready',
       name: 'Not ready',
-      when: 'It cannot act yet; every variant takes the default shape. A press or focus shows why under it, and an overflow: hidden ancestor will cut that off.',
+      when: 'Cannot act yet; every variant takes the default shape. A press or focus shows why (an overflow: hidden ancestor cuts it off). Left: forced open.',
       text: 'Add a file first.',
     },
     {
@@ -138,6 +138,7 @@ export default defineSpec({
       'colour-has-a-word',
       'contrast-floors',
       'serif-to-read',
+      'sentence-case',
     ],
     local: [
       {

@@ -71,31 +71,41 @@ describe('the sections', () => {
     expect(el.textContent).toContain('local');
   });
 
-  it('renders the page of every rule, and a plain state for an unknown id', () => {
-    const at = (path: string) => {
-      const el = document.createElement('div');
-      act(() => {
-        createRoot(el).render(
-          <MemoryRouter initialEntries={[path]}>
-            <Routes>
-              <Route path="/design/*" element={<Design />} />
-            </Routes>
-          </MemoryRouter>,
-        );
-      });
-      return el;
-    };
-    for (const r of RULES) {
+  const at = (path: string) => {
+    const el = document.createElement('div');
+    act(() => {
+      createRoot(el).render(
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route path="/design/*" element={<Design />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+    });
+    return el;
+  };
+
+  // One test per rule, so the cost of a rule is its own and a new rule adds
+  // a test instead of lengthening one.
+  it.each(RULES.map((r) => [r.id, r] as const))(
+    'renders the page of the rule %s',
+    (_id, r) => {
       const el = at(`/design/rules/${r.id}`);
       expect(el.querySelector('h1')?.textContent).toBe(r.id);
       expect(el.textContent).toContain(r.check);
       expect(el.textContent).toContain(r.scope);
       expect(el.textContent).toContain('Cited by');
-    }
+    },
+  );
+
+  it('says which units cite a rule, or that none does', () => {
     const keep = at('/design/rules/keep-the-place');
     expect(keep.textContent).toContain('No unit cites it.');
     const cited = at('/design/rules/failure-says-what');
     expect(cited.textContent).toContain('Sample row');
+  });
+
+  it('shows a plain state for an unknown rule id', () => {
     const none = at('/design/rules/no-such-rule');
     expect(none.textContent).toContain('No rule with this id');
     expect(

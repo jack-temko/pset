@@ -65,6 +65,18 @@ The log, for each unit's `log.md` (questions, options, answers verbatim):
   Neutral only. **"one shape, but the tones got out of hand, lets start small like the
   buttons and grow if needed"**
 
+### Capitalisation
+
+Jack, 2026-10-13:
+
+- Jack: **"What about the capitalization of words in headers, buttons, and other
+  components. Sometimes the all lowercase for stuff like chips seems weird but maybe I am
+  crazy"**
+- Make sentence case a rule for every label? Yes, sentence case everywhere
+  (Recommended) / Sentence case, but tags stay lowercase / Title Case for headings and
+  buttons. **Yes, sentence case everywhere (Recommended).** It is the rule
+  `sentence-case`; the tag examples are "Generated" and "Due Fri".
+
 Settled 2026-10-13 after the builder found the first plan broke the contrast floors
 (the coordinator's choices, flagged to Jack):
 
@@ -167,7 +179,7 @@ First: `git merge --ff-only origin/design` so the branch has the screens spec.
 The Components tab lists Button, Text link and Tag. Each page shows its states live in
 the dark theme, its props, its rules and its decisions with a Full log link. A button
 is never disabled: a not-ready button can be tabbed to and says why. A busy button
-does not change width. Nineteen rules are on the Rules tab. `make check` passes.
+does not change width. Twenty rules are on the Rules tab. `make check` passes.
 
 ### Out of scope
 

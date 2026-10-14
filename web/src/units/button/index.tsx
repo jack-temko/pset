@@ -53,6 +53,7 @@ export function Button({
 }) {
   const ref = useRef<HTMLButtonElement>(null);
   const reasonId = useId();
+  const pointerDown = useRef(false);
   /** How the reason was revealed: by focus (it goes on blur) or by a click
    *  that did not focus the button (Safari, Firefox on Mac, touch). */
   const [shown, setShown] = useState<'focus' | 'click'>();
@@ -110,6 +111,7 @@ export function Button({
         style={{ fontWeight: 500 }}
         className={`ds-body relative inline-flex h-(--ds-control) max-w-full min-w-16 items-center justify-center rounded-(--ds-radius-control) border gap-2 px-3 whitespace-nowrap ${look}`}
         onClick={(e) => {
+          pointerDown.current = false;
           if (busy) {
             e.preventDefault();
             return;
@@ -117,18 +119,27 @@ export function Button({
           if (notReady) {
             e.preventDefault();
             setAnnounced(notReady);
-            // A click that left the button unfocused has no blur to hide it.
-            setShown((s) =>
-              document.activeElement === ref.current ? (s ?? 'focus') : 'click',
-            );
+            // A pointer press (mouse or touch, detail above 0) is a reveal
+            // that goes by itself, whether or not the browser focused the
+            // button; Enter or Space (detail 0) is a keyboard reveal that
+            // stays until blur.
+            setShown((cur) => (e.detail > 0 ? 'click' : (cur ?? 'focus')));
             return;
           }
           onPress?.();
         }}
-        onFocus={() => {
-          if (notReady) setShown('focus');
+        onPointerDown={() => {
+          pointerDown.current = true;
         }}
-        onBlur={hide}
+        onFocus={() => {
+          // Focus that a pointer press brought is the press's, not a reveal.
+          if (notReady && !pointerDown.current) setShown('focus');
+          pointerDown.current = false;
+        }}
+        onBlur={() => {
+          pointerDown.current = false;
+          hide();
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Escape') hide();
         }}

@@ -6,18 +6,18 @@ import spec from './spec';
 
 export default defineExamples(spec, {
   states: {
-    neutral: () => <Tag>generated</Tag>,
+    neutral: () => <Tag>Generated</Tag>,
     attention: () => (
       <Tag tone="attention" icon={Clock}>
-        due Fri
+        Due Fri
       </Tag>
     ),
-    'attention-plain': () => <Tag tone="attention">due Fri</Tag>,
+    'attention-plain': () => <Tag tone="attention">Due Fri</Tag>,
   },
   stress: () => (
     <div className="w-[120px]">
       <Tag tone="attention" icon={Clock}>
-        due Friday after the midterm review session
+        Due Friday after the midterm review session
       </Tag>
     </div>
   ),

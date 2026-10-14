@@ -57,7 +57,7 @@ never fetched from a CDN.
 
 `web/src/design/rules.ts` holds the rulebook. It starts with the eleven principles of the
 vision (`ideas/vision-grill.md`), then six for the foundations (serif to read, mono for
-copy, figures follow text, colour has a word, contrast floors, room for big type), then two for controls (one-primary, links-go-buttons-do); further rules are written when the thing they govern is
+copy, figures follow text, colour has a word, contrast floors, room for big type), then two for controls (one-primary, links-go-buttons-do) and one for labels (sentence-case); further rules are written when the thing they govern is
 designed. A rule has a permanent id, one sentence, a "how to check it" line, a scope and
 what enforces it. It has no kind: every rule is worded as what to do ("Keep a row title on
 one line"), and a rule with a number just states the number. A spec cites rules by id and
@@ -101,6 +101,16 @@ interaction steps (`hover`, `pressed`, and hover and pressed for each solid grou
 foundations, and two rules, `one-primary` and `links-go-buttons-do`. A solid ground takes
 black for hover and pressed, so its white label keeps 4.5:1; a transparent control takes
 `fg`.
+
+## Follow-ups
+
+- Jack: **"once we have enough components, the design page should be built from the same
+  components and theme and vision. Just to stay uniform across the board and reduce
+  out-of-band code."** When tabs, a side list, a table, a select, a segmented control and a
+  text input exist as units, `/design` is rebuilt from units and the `ds` tokens, and its
+  use of the old app's components and tokens is deleted.
+- The shell's own all-capital eyebrow ("COMPONENT") breaks `sentence-case` and goes when
+  the shell is rebuilt.
 
 ## Freeze and lock
 

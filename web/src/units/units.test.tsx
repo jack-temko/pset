@@ -20,6 +20,11 @@ function render(node: ReactNode) {
   return el;
 }
 
+/** A pointer press: a click with a detail above 0, as a mouse or a touch makes. */
+function press(b: Element | null | undefined) {
+  b?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+}
+
 /** The visible reason line, or an empty string when it is not shown. */
 function reason(el: HTMLElement) {
   return el.querySelector('[aria-hidden="true"][id]')?.textContent ?? '';
@@ -59,6 +64,11 @@ describe('Button', () => {
     expect(label?.textContent).toBe('Go');
     // The name stays for assistive tech, and the wait is announced politely.
     expect(el.querySelector('button .sr-only')?.textContent).toBe('Go');
+    // Only one copy of the label is exposed: the drawn one is aria-hidden.
+    const exposed = [...el.querySelectorAll('button span')].filter(
+      (n) => n.textContent === 'Go' && !n.closest('[aria-hidden="true"]'),
+    );
+    expect(exposed).toHaveLength(1);
     expect(el.querySelector('[role="status"]')?.textContent).toBe('Working');
   });
 
@@ -95,7 +105,9 @@ describe('Button', () => {
     expect(el.querySelector('[role="status"]')?.textContent).toBe('');
     act(() => b?.blur());
     expect(reason(el)).toBe('');
-    act(() => b?.click());
+    act(() => {
+      press(b);
+    });
     expect(reason(el)).toBe('Add a file first.');
     expect(el.querySelector('[role="status"]')?.textContent).toBe(
       'Add a file first.',
@@ -107,7 +119,9 @@ describe('Button', () => {
     function shownByClick(notReady = 'Add a file first.') {
       const el = render(<Button notReady={notReady}>Go</Button>);
       const b = el.querySelector('button');
-      act(() => b?.click());
+      act(() => {
+        press(b);
+      });
       expect(reason(el)).toBe(notReady);
       return { el, b };
     }
@@ -124,6 +138,21 @@ describe('Button', () => {
 
     it('when the pointer leaves after a click-only reveal', () => {
       const { el, b } = shownByClick();
+      act(() => {
+        b?.dispatchEvent(new PointerEvent('pointerout', { bubbles: true }));
+      });
+      expect(reason(el)).toBe('');
+    });
+
+    it('treats a pointer press that focuses the button as click-only too', () => {
+      const el = render(<Button notReady="Add a file first.">Go</Button>);
+      const b = el.querySelector('button');
+      act(() => {
+        b?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+        b?.focus();
+        press(b);
+      });
+      expect(reason(el)).toBe('Add a file first.');
       act(() => {
         b?.dispatchEvent(new PointerEvent('pointerout', { bubbles: true }));
       });
@@ -165,7 +194,7 @@ describe('Button', () => {
         root.render(<Button notReady="First.">Go</Button>);
       });
       act(() => {
-        el.querySelector('button')?.click();
+        press(el.querySelector('button'));
       });
       expect(reason(el)).toBe('First.');
       act(() => {
@@ -173,7 +202,7 @@ describe('Button', () => {
       });
       expect(reason(el)).toBe('');
       act(() => {
-        el.querySelector('button')?.click();
+        press(el.querySelector('button'));
       });
       expect(reason(el)).toBe('Second.');
       act(() => {
