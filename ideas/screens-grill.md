@@ -24,31 +24,32 @@ problem set sits beside its material.
 
 ### Decisions
 
-| #   | Decision                                                                                                                                             | Why                                                            | Beat                                                           |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------- |
-| S1  | Three levels: Home, course, workspace. Home's Continue and its work rows open the workspace directly; the course screen is for adding and seeing all | `work-first`; two levels on the common path, as Primer advises | Home and workspace only; Home to course to work, in order      |
-| S2  | Home is a list of courses, each showing its current work, under one Continue for the set in progress                                                 | The course stays the centre; nothing is listed twice           | Work due first, then courses; only what to do next             |
-| S3  | The course screen shows work first, then materials, with one Add that takes any file                                                                 | Its main action is the current set                             | Materials first; tabs for Work, Materials, Details             |
-| S4  | Memory, cost and study time are a quiet section at the foot of the course screen                                                                     | Out of the way, on the screen about the course                 | A menu on the course; their own side in the workspace          |
-| S5  | The workspace has two sides, both the student's: either can hold work, a material or Ask, and either can be swapped or closed                        | `student-decides`                                              | Work fixed on one side (the dock as built); three sides        |
-| S6  | Each side has tabs                                                                                                                                   | Jack's choice: flipping between two materials is fast          | One thing a side with a picker (recommended); tabs on one side |
-| S7  | On opening a set, PSet puts its material on the left at the current problem's page and the set on the right                                          | Nothing to set up                                              | Work alone until a page link; as the student left it           |
-| S8  | Remembered: the arrangement and split per course; the problem per set and the page per material                                                      | `keep-the-place`                                               | The place only; everything in the address                      |
-| S9  | Ask is a pane beside the work, usually opened from "Ask about this" with the problem attached                                                        | Asking serves the work; PSet is not a general chatbot          | A floating dialog (the courses spec); inline under the problem |
-| S10 | Work is problem sets only, for now                                                                                                                   | One kind, designed well; it is the job                         | Also exam practice; also readings                              |
-| S11 | A material has one kind, for now: a document with pages                                                                                              | Nothing to pick when adding; kinds come with a real difference | Four kinds (the courses spec); two kinds                       |
-| S12 | Build order: Home (a view), then the workspace (the pane view), then the work pane (a pane). Then the spec format is locked                          | Home proves the view format cheaply                            | The workspace first; the work pane first                       |
+| #   | Decision                                                                                                                                                      | Why                                                              | Beat                                                                   |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| S1  | Three levels: Home, course, workspace. Home's Continue and its work rows open the workspace directly; the course screen is for adding and seeing all          | `work-first`; two levels on the common path, as Primer advises   | Home and workspace only; Home to course to work, in order              |
+| S2  | Reopened by S13: Home was a list of courses, each showing its current work, under one Continue for the set in progress                                        | The course stays the centre; nothing is listed twice             | Work due first, then courses; only what to do next                     |
+| S3  | The course screen shows work first, then materials, with one Add that takes any file                                                                          | Its main action is the current set                               | Materials first; tabs for Work, Materials, Details                     |
+| S4  | Memory, cost and study time are a quiet section at the foot of the course screen                                                                              | Out of the way, on the screen about the course                   | A menu on the course; their own side in the workspace                  |
+| S5  | The workspace has two sides, both the student's: either can hold work, a material or Ask, and either can be swapped or closed                                 | `student-decides`                                                | Work fixed on one side (the dock as built); three sides                |
+| S6  | Each side has tabs                                                                                                                                            | Jack's choice: flipping between two materials is fast            | One thing a side with a picker (recommended); tabs on one side         |
+| S7  | On opening a set, PSet puts its material on the left at the current problem's page and the set on the right                                                   | Nothing to set up                                                | Work alone until a page link; as the student left it                   |
+| S8  | Remembered: the arrangement and split per course; the problem per set and the page per material                                                               | `keep-the-place`                                                 | The place only; everything in the address                              |
+| S9  | Ask is a pane beside the work, usually opened from "Ask about this" with the problem attached                                                                 | Asking serves the work; PSet is not a general chatbot            | A floating dialog (the courses spec); inline under the problem         |
+| S10 | Work is problem sets only, for now                                                                                                                            | One kind, designed well; it is the job                           | Also exam practice; also readings                                      |
+| S11 | A material has one kind, for now: a document with pages                                                                                                       | Nothing to pick when adding; kinds come with a real difference   | Four kinds (the courses spec); two kinds                               |
+| S12 | Build order: Home (a view), then the workspace (the pane view), then the work pane (a pane). Then the spec format is locked                                   | Home proves the view format cheaply                              | The workspace first; the work pane first                               |
+| S13 | Home is an "In progress" list of sets (started sets, plus any due within 2 days, by due date, five then "Show all"), then a list of courses; no Continue band | Jack, 2026-10-13: nothing urgent hides, and the work comes first | The Continue band over a course list (S2); work due first then courses |
 
 ### The artifact(s)
 
 **The screens**
 
-| Screen    | Kind | Address             | Shows, top to bottom                                                                                                                     | Main action          |
-| --------- | ---- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| Home      | view | `/`                 | greeting; Continue for the set in progress; courses, each with its current work, progress and date; Add a course; this week's study time | Continue             |
-| Course    | view | `/courses/:id`      | the course's name; its work with progress and dates; its materials; Add; memory, cost and study time                                     | open the current set |
-| Workspace | view | `/courses/:id/work` | two sides, each with tabs: work, materials, Ask                                                                                          | the open set's own   |
-| Settings  | view | `/settings`         | as today, redrawn later                                                                                                                  | none                 |
+| Screen    | Kind | Address             | Shows, top to bottom                                                                                                                | Main action          |
+| --------- | ---- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| Home      | view | `/`                 | an "In progress" list of sets (set, course, progress, time left, due), then a list of courses (name, materials, sets); Add a course | open a set           |
+| Course    | view | `/courses/:id`      | the course's name; its work with progress and dates; its materials; Add; memory, cost and study time                                | open the current set |
+| Workspace | view | `/courses/:id/work` | two sides, each with tabs: work, materials, Ask                                                                                     | the open set's own   |
+| Settings  | view | `/settings`         | as today, redrawn later                                                                                                             | none                 |
 
 **The panes** (what a side of the workspace can hold): the work pane (one problem set),
 the material pane (a document's pages), the Ask pane.
@@ -61,7 +62,7 @@ with the problem attached; the wordmark returns Home; the course's name returns 
 course.
 
 **Components Home needs** (each gets its own short grill before it is built): top bar,
-button, text link, course row, progress bar, tag, section heading, the Continue band.
+button, text link, course row, progress bar, tag, section heading, work row (the Continue band is gone, S13).
 
 ### Assumed
 
@@ -134,3 +135,36 @@ Audit and prior art shown to Jack. No corrections.
 - What counts as work in this first version? **Problem sets only (Recommended).**
 - Do materials have kinds? **One kind for now (Recommended).**
 - Which goes first? **Home, then the workspace, then the work pane (Recommended).**
+
+### Home parts (2026-10-13, `ideas/home-parts.md`)
+
+- Progress bar: how does it show how far a set is done? A segment per problem, with
+  '2 of 6' beside it (Recommended) / One continuous bar, with the count / Just the
+  count, no bar. **A segment per problem, with '2 of 6' beside it (Recommended).**
+- Course row on Home: what is clickable? The row opens the set; the course name opens
+  the course (Recommended) / The row opens the course / Nothing but two links. **"the
+  row opens the course, and just the course, but there will be a list of the few that
+  are due soon"**
+- Course row: which columns? Course, current set, progress, due (Recommended) / Add
+  the materials count / Course and due only. **"depends if its the due soon list or
+  the course list"**
+- The Continue band at the top of Home: what does it show when no set is in progress?
+  The next set due, as 'Start' (Recommended) / It disappears / Always 'Continue'.
+  **"does not exist with the list of soonly due assignments"**
+- This reverses S2. Reverse S2? Yes, reverse it (Recommended) / No, keep S2. **Yes,
+  reverse it (Recommended).**
+- Which sets appear under 'Due soon'? Up to 5 unfinished sets with a due date, nearest
+  first (Recommended) / Also sets in progress without a date / Everything unfinished,
+  no cap. **"Lets have it be an in progress instead, sorted by due date, with the chip
+  for due soon"**
+- A 'Due soon' row shows: Set, course, progress, due (Recommended) / Set, progress,
+  due / Add a time estimate. **Add a time estimate.**
+- A course row shows: Name, unfinished sets, next due (Recommended) / Name only / Name,
+  materials, sets. **Name, materials, sets.**
+- One push back: keep it to started sets? Started sets, plus any due within 2 days /
+  Keep it to started sets. **Started sets, plus any due within 2 days.**
+- How many rows can the list hold? Five, then a 'Show all' link (Recommended) / All of
+  them / Three. **Five, then a 'Show all' link (Recommended).**
+- The top bar on every screen? Wordmark, where you are, Settings (Recommended) / Add an
+  activity indicator / Wordmark and Settings only. **Wordmark, where you are, Settings
+  (Recommended).**
