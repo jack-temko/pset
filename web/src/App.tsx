@@ -1,3 +1,4 @@
+import { Agentation } from 'agentation';
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Outlet, Route, Routes } from 'react-router-dom';
 
@@ -72,6 +73,8 @@ export default function App() {
           }
         />
       </Routes>
+      {/* The agent feedback toolbar: development only, never in production. */}
+      {import.meta.env.DEV && <Agentation />}
     </BrowserRouter>
   );
 }
