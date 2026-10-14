@@ -1,8 +1,8 @@
-import { Clock } from 'lucide-react';
+import { Clock, TriangleAlert } from 'lucide-react';
 
 import { ProgressBar } from '@/units/progress-bar';
 import { Tag } from '@/units/tag';
-import { daysUntil, SOON_DAYS, timeLeft, WEEKDAY } from './dates';
+import { dueText, timeLeft } from './dates';
 
 export interface SetLineProps {
   /** The set's name. */
@@ -11,6 +11,7 @@ export interface SetLineProps {
   total: number;
   /** Shown only when PSet knows it. */
   minutesLeft?: number;
+  /** A local calendar date: build it with `parseDueDate('2026-10-19')`. */
   due?: Date;
   /** Where the line goes: the set in the workspace. */
   href: string;
@@ -19,9 +20,9 @@ export interface SetLineProps {
 }
 
 /** The grid is fixed so lines align down the page. Narrower, the time column
- *  goes first, then the progress count. */
+ *  goes first; the progress bar then shrinks itself (progress-bar-d2). */
 const GRID =
-  'grid-cols-[minmax(0,1fr)_88px_104px] @min-[440px]:grid-cols-[minmax(0,1fr)_140px_104px] @min-[600px]:grid-cols-[minmax(0,1fr)_140px_140px_104px]';
+  'grid-cols-[minmax(0,1fr)_104px_104px] @min-[440px]:grid-cols-[minmax(0,1fr)_140px_104px] @min-[600px]:grid-cols-[minmax(0,1fr)_140px_140px_104px]';
 
 /** One active set on one line: opens the set in the workspace
  *  (set-line-d3). It has no course name: the course row around it names it. */
@@ -34,8 +35,7 @@ export function SetLine({
   href,
   today = new Date(),
 }: SetLineProps) {
-  const days = due ? daysUntil(due, today) : undefined;
-  const soon = days !== undefined && days <= SOON_DAYS;
+  const when = due ? dueText(due, today) : undefined;
   return (
     <a
       href={href}
@@ -45,7 +45,7 @@ export function SetLine({
         <span className="ds-body min-w-0 truncate font-medium text-(--ds-fg)">
           {set}
         </span>
-        <span className="min-w-0 @max-[439px]:[&_[data-count]]:hidden">
+        <span className="min-w-0">
           <ProgressBar done={done} total={total} />
         </span>
         <span
@@ -55,14 +55,18 @@ export function SetLine({
           {minutesLeft === undefined ? '' : timeLeft(minutesLeft)}
         </span>
         <span className="ds-small ds-tabular flex min-w-0 justify-end text-(--ds-fg-muted)">
-          {due === undefined ? (
+          {when === undefined ? (
             'No date'
-          ) : soon ? (
+          ) : when.kind === 'overdue' ? (
+            <Tag tone="danger" icon={TriangleAlert}>
+              {when.text}
+            </Tag>
+          ) : when.kind === 'soon' ? (
             <Tag tone="attention" icon={Clock}>
-              Due {WEEKDAY.format(due)}
+              {when.text}
             </Tag>
           ) : (
-            `Due ${WEEKDAY.format(due)} ${String(due.getDate())}`
+            when.text
           )}
         </span>
       </span>

@@ -11,3 +11,11 @@ The grill of 2026-10-13, word for word. Prior art: GitHub's Primer pages for Lab
 The neutral tag's text is `fg`, not `fg-muted`: grey text must reach 7:1, and no ground
 light enough to read as a ground on `bg-raised` lets it. Its ground, `neutral-soft`, is
 `fg` at 8 percent over `bg-raised`.
+
+## Overdue (2026-10-14)
+
+- A set past its due date: how is that shown? 'Overdue' in red (Recommended) /
+  'Overdue Sat' in amber / Same as due soon. **'Overdue' in red (Recommended).**
+
+So Tag gains a `danger` tone: `danger-soft` ground, `danger` text (4.51:1 on it, held
+by the contrast test).

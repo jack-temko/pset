@@ -1,7 +1,7 @@
 # Section heading: log
 
 Not grilled on its own. It follows from the Home grill of 2026-10-13 (the "Show all"
-link after five rows, `work-row-d4`) and the foundations (`room-for-big-type`, a
+link after five courses, `course-row-d2`) and the foundations (`room-for-big-type`, a
 heading gets 64 above and 16 below from its parent).
 
 ## Settled afterwards (the plan, not asked)

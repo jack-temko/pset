@@ -9,7 +9,7 @@ a folder `web/src/units/<id>/` with:
 
 - `spec.ts`: plain data, written through `defineSpec()` (`web/src/design/spec.ts`). Fields
   in page order: `id`, `kind`, `title`, `group`, `purpose`, `states`, `stress`, `flows`,
-  `components`, `actions`, `data`, `inputs`, `priority`, `sizes`, `rules`, `decisions`.
+  `components`, `actions`, `data`, `inputs`, `priority`, `sizes`, `exampleWidth` (optional: how wide the page opens the example), `rules`, `decisions`.
 - `examples.tsx`: `defineExamples(spec, ...)`: one render per state, a `stress` render
   (the worst-case content), and a skeleton per state when the unit reads data.
 - `log.md`: for a unit that was grilled, the word-for-word log. Nothing else is a doc.
@@ -110,7 +110,7 @@ on one line: name, progress, time left, due; within 2 days an attention tag; the
 the set), Course row (the course name, which opens the course, its materials and sets, and
 its active sets as set lines) and Top bar (the wordmark, the path of links, Settings;
 sticky). The lines and the bar use container queries, so they follow the stage's width, not
-the window's. Home is S13 in `ideas/screens-grill.md`: one list of courses, each holding its
+the window's. The type steps sit in a cascade layer below the utilities, so a utility wins; there is a `brand` step for the wordmark. Home is S13 in `ideas/screens-grill.md`: one list of courses, each holding its
 active sets.
 
 ## Follow-ups

@@ -10,21 +10,21 @@ export interface PathItem {
  *  links, and Settings. Nothing moves the wordmark or Settings; a long path
  *  truncates, the middle items first (top-bar-d1). */
 export function TopBar({
+  homeHref,
   path = [],
   settingsHref,
 }: {
+  /** Where the wordmark goes: Home. A router can intercept it like any link. */
+  homeHref: string;
   path?: readonly PathItem[];
   settingsHref: string;
 }) {
   return (
-    <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b border-(--ds-border-muted) bg-(--ds-bg) px-10">
+    <header className="sticky top-0 z-10 flex h-(--ds-topbar) items-center justify-between gap-4 border-b border-(--ds-border-muted) bg-(--ds-bg) px-(--ds-gutter)">
       <nav className="flex min-w-0 items-center gap-2">
-        <a
-          href="/"
-          className="shrink-0 font-(family-name:--ds-font-serif) text-xl font-medium text-(--ds-fg) underline-offset-2 hover:underline focus-visible:underline"
-        >
+        <Link href={homeHref} tone="fg" size="brand" className="shrink-0">
           PSet
-        </a>
+        </Link>
         <ol className="flex min-w-0 items-center gap-2">
           {path.map((item, i) => {
             const last = i === path.length - 1;
@@ -46,7 +46,8 @@ export function TopBar({
                   <Link
                     href={item.href}
                     title={item.label}
-                    className="min-w-0 truncate text-(--ds-fg-muted)!"
+                    tone="muted"
+                    className="min-w-0 truncate"
                   >
                     {item.label}
                   </Link>

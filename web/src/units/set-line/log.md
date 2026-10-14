@@ -42,3 +42,17 @@ count, which is hidden by the row, not by the progress bar.
 
 So the work row became this line, with no course name, and it lives inside the course
 row. The "Show all" cap of five now counts courses, not sets.
+
+## Overdue and dates (2026-10-14)
+
+- A set past its due date: how is that shown? 'Overdue' in red (Recommended) /
+  'Overdue Sat' in amber / Same as due soon. **'Overdue' in red (Recommended).**
+- How far-off dates are written: Weekday within 6 days, then month and day
+  (Recommended) / Always month and day / As built. **Weekday within 6 days, then month
+  and day (Recommended).**
+- When a set line is narrow, what gives way? You decided the count '2 of 6' always
+  shows beside the bar. Keep the count, shrink the bar (Recommended) / Hide the count
+  when narrow / Drop the bar, keep the count. **Keep the count, shrink the bar
+  (Recommended).**
+
+A due date is a local calendar date (`parseDueDate('2026-10-19')`), never UTC.

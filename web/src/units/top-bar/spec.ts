@@ -25,7 +25,7 @@ export default defineSpec({
     },
   ],
   stress:
-    'A 70 character course and a 70 character set in a 1024px container: the path truncates and the wordmark and Settings never move.',
+    'A 70 character course, a 70 character set and a 40 character material in a 1024px container: the middle truncates first; the wordmark and Settings never move.',
   components: [
     { unit: 'link', use: 'The path items and Settings, standing alone.' },
   ],
@@ -51,6 +51,12 @@ export default defineSpec({
   ],
   inputs: [
     {
+      name: 'homeHref',
+      type: 'string',
+      default: 'none',
+      does: 'Where the wordmark goes: Home.',
+    },
+    {
       name: 'path',
       type: '{ label: string; href?: string }[]',
       default: '[]',
@@ -74,6 +80,7 @@ export default defineSpec({
       'The wordmark and Settings never move',
     ],
   },
+  exampleWidth: 'full',
   rules: {
     cite: [
       'course-first',

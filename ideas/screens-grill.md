@@ -44,18 +44,18 @@ problem set sits beside its material.
 
 **The screens**
 
-| Screen    | Kind | Address             | Shows, top to bottom                                                                                                                | Main action          |
-| --------- | ---- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| Home      | view | `/`                 | an "In progress" list of sets (set, course, progress, time left, due), then a list of courses (name, materials, sets); Add a course | open a set           |
-| Course    | view | `/courses/:id`      | the course's name; its work with progress and dates; its materials; Add; memory, cost and study time                                | open the current set |
-| Workspace | view | `/courses/:id/work` | two sides, each with tabs: work, materials, Ask                                                                                     | the open set's own   |
-| Settings  | view | `/settings`         | as today, redrawn later                                                                                                             | none                 |
+| Screen    | Kind | Address             | Shows, top to bottom                                                                                        | Main action          |
+| --------- | ---- | ------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------- |
+| Home      | view | `/`                 | one list of courses: name, materials and sets, and each active set (progress, time left, due); Add a course | open a set           |
+| Course    | view | `/courses/:id`      | the course's name; its work with progress and dates; its materials; Add; memory, cost and study time        | open the current set |
+| Workspace | view | `/courses/:id/work` | two sides, each with tabs: work, materials, Ask                                                             | the open set's own   |
+| Settings  | view | `/settings`         | as today, redrawn later                                                                                     | none                 |
 
 **The panes** (what a side of the workspace can hold): the work pane (one problem set),
 the material pane (a document's pages), the Ask pane.
 
-**How a student moves.** Home: Continue or a work row opens the workspace on that
-set; a course's name opens the course. Course: a set opens the workspace on it; a
+**How a student moves.** Home: a set line inside a course row opens the workspace on
+that set; a course's name opens the course. Course: a set opens the workspace on it; a
 material opens the workspace on it alone. Workspace: a page link in the work opens or
 turns the material on the other side; "Ask about this" opens Ask on the other side
 with the problem attached; the wordmark returns Home; the course's name returns to the
@@ -174,3 +174,12 @@ Audit and prior art shown to Jack. No corrections.
   progress' list. **One list: a course row that holds its active set (Recommended).**
   (Jack first said: **"Something to note about my own usage. I most often only ever
   have one active assignment in each course."**)
+- Home parts, 2026-10-14: When a set line is narrow, what gives way? You decided the
+  count '2 of 6' always shows beside the bar. Keep the count, shrink the bar
+  (Recommended) / Hide the count when narrow / Drop the bar, keep the count. **Keep the
+  count, shrink the bar (Recommended).**
+- A set past its due date: how is that shown? 'Overdue' in red (Recommended) / 'Overdue
+  Sat' in amber / Same as due soon. **'Overdue' in red (Recommended).**
+- How far-off dates are written: Weekday within 6 days, then month and day
+  (Recommended) / Always month and day / As built. **Weekday within 6 days, then month
+  and day (Recommended).**

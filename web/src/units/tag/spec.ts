@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Tag',
   group: 'Basics',
   purpose:
-    'Names a fact about a thing in one or two words. One shape, two tones, an optional glyph, never clickable.',
+    'Names a fact about a thing in one or two words. One shape, three tones, an optional glyph, never clickable.',
   states: [
     {
       id: 'neutral',
@@ -19,6 +19,11 @@ export default defineSpec({
       when: 'Something needs attention soon, such as "Due Fri".',
     },
     {
+      id: 'danger',
+      name: 'Danger with a glyph',
+      when: 'Work is late, such as "Overdue".',
+    },
+    {
       id: 'attention-plain',
       name: 'Attention without a glyph',
       when: 'The word alone carries the meaning.',
@@ -29,7 +34,7 @@ export default defineSpec({
   inputs: [
     {
       name: 'tone',
-      type: "'neutral' | 'attention'",
+      type: "'neutral' | 'attention' | 'danger'",
       default: 'neutral',
       does: 'Which ground and text colour.',
     },
@@ -81,6 +86,13 @@ export default defineSpec({
       why: 'Jack: "the tones got out of hand, lets start small".',
       beat: 'Five tones',
       date: '2026-10-13',
+    },
+    {
+      id: 'tag-d3',
+      decision: 'A third tone, danger, for overdue work.',
+      why: 'Jack: overdue must not look like a day this week.',
+      beat: 'Amber for overdue',
+      date: '2026-10-14',
     },
   ],
 });

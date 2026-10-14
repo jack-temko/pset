@@ -8,5 +8,5 @@ The grill of 2026-10-13, word for word (the question that concerns the top bar).
 
 ## Settled afterwards (the plan, not asked)
 
-56 high, 40 at the sides (the gutter), sticky. The wordmark is Source Serif 4 at 20, 500. A path that does not fit truncates its middle items first; each truncated item
+56 high (`--ds-topbar`), 40 at the sides (the gutter), sticky. The wordmark is the `brand` type step (Source Serif 4, 20/28, 500). A path that does not fit truncates its middle items first; each truncated item
 keeps its full label as a tooltip title.

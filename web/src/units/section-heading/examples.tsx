@@ -4,7 +4,7 @@ import { SectionHeading } from './index';
 import spec from './spec';
 
 const showAll = (
-  <Link href="#" className="ds-small">
+  <Link href="#" size="small">
     Show all
   </Link>
 );

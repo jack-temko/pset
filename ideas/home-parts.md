@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress, branch `home-parts` (base `design`).
+Built, branch `home-parts` (base `design`); awaiting Jack's try. Done when merged.
 
 ## Information
 
@@ -25,6 +25,11 @@ below go word for word into each unit's `log.md` (the ones that concern it) and 
 | set-line-d3     | set line     | The whole line opens the set in the workspace                                                                                                                                 | The work comes first                                                       | Two small links                                            |
 | course-row-d1   | course row   | A course row shows the course's name (opens the course), its materials and sets counts, and its active sets, each opening its set                                             | Usually one active set per course, so one list names each course once      | A list of sets in progress plus a separate list of courses |
 | course-row-d2   | course row   | Home sorts courses by their nearest active due date, then courses with no dated active set, then courses with nothing active; at most five, then "Show all" (was work-row-d4) | Home stays short; the most urgent course first                             | All of them; three                                         |
+| progress-bar-d2 | progress bar | When narrow, keep the count and shrink the bar: segments narrow to 4px, then one continuous bar; the bar adapts to its own width (2026-10-14)                                 | Jack: the count always shows                                               | Hide the count when narrow; drop the bar                   |
+| set-line-d4     | set line     | A set past its due date shows a red "Overdue" tag with an alert glyph (2026-10-14)                                                                                            | Jack: overdue must not look like a day this week                           | "Overdue Sat" in amber; same as due soon                   |
+| set-line-d5     | set line     | A due date is a weekday within 6 days, then month and day ("Due Oct 20"); the attention tag still applies within 2 days (2026-10-14)                                          | Jack                                                                       | Always month and day; as built                             |
+| tag-d3          | tag          | A third tone, danger, for overdue work (2026-10-14)                                                                                                                           | Jack: overdue must not look like a day this week                           | Amber for overdue                                          |
+| link-d3         | text link    | A link has a tone (accent, text colour, muted) and a weight; settled afterwards, not asked: course names in blue made the list loud (2026-10-14)                              | The orchestrator's                                                         | Every standalone link in the accent colour                 |
 | top-bar-d1      | top bar      | The wordmark (goes Home), where you are as a path of links, and Settings at the right; nothing else until a screen needs it                                                   | Enough to know where you are and go up                                     | An activity indicator; wordmark and Settings only          |
 
 S2 in `ideas/screens-grill.md` is reversed (Jack confirmed it as an explicit reversal):
@@ -75,6 +80,16 @@ Log (verbatim; options in order, recommended first):
   list. **One list: a course row that holds its active set (Recommended).**
   (Jack first said: **"Something to note about my own usage. I most often only ever
   have one active assignment in each course."**)
+
+- When a set line is narrow, what gives way? You decided the count '2 of 6' always shows
+  beside the bar. Keep the count, shrink the bar (Recommended) / Hide the count when
+  narrow / Drop the bar, keep the count. **Keep the count, shrink the bar
+  (Recommended).** (2026-10-14)
+- A set past its due date: how is that shown? 'Overdue' in red (Recommended) / 'Overdue
+  Sat' in amber / Same as due soon. **'Overdue' in red (Recommended).** (2026-10-14)
+- How far-off dates are written: Weekday within 6 days, then month and day
+  (Recommended) / Always month and day / As built. **Weekday within 6 days, then month
+  and day (Recommended).** (2026-10-14)
 
 Assumed (mine, to flag to Jack): the attention tag reads "Due Fri" (the day), not the
 words "Due soon"; a set with no date sorts after dated ones and shows "No date"; the
@@ -170,3 +185,13 @@ Home itself, the course screen, the workspace, data from the backend, an activit
 indicator.
 
 If a decision is missing or two conflict, stop and report; do not guess.
+
+### Review fixes (2026-10-14)
+
+Type steps moved into a cascade layer below Tailwind's utilities, so a utility such as
+`font-medium` wins and no `!` override remains. Text link gained `tone`, `weight` and
+`size`. Tag gained `danger`. The tokens gained `--ds-radius-segment`, `--ds-topbar` and a
+`brand` type step (Source Serif 4, 20/28, 500, the wordmark only). The spec format gained
+an optional `exampleWidth`, which the design page's stage uses to open each unit at a
+width that suits it. The top bar takes `homeHref` and draws its wordmark and path
+through Text link. A due date is a local calendar date; `parseDueDate` builds one.

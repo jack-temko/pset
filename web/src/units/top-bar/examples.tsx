@@ -7,14 +7,21 @@ const LONG_COURSE =
 const LONG_SET =
   'Problem set 4: magnetic circuits, hysteresis and transformer losses, parts A to F';
 
+const LONG_MATERIAL = 'Lecture notes, week 6: magnetic circuits';
+
 export default defineExamples(spec, {
   states: {
-    home: () => <TopBar settingsHref="#" />,
+    home: () => <TopBar homeHref="#" settingsHref="#" />,
     course: () => (
-      <TopBar path={[{ label: 'Electromagnetics' }]} settingsHref="#" />
+      <TopBar
+        homeHref="#"
+        path={[{ label: 'Electromagnetics' }]}
+        settingsHref="#"
+      />
     ),
     workspace: () => (
       <TopBar
+        homeHref="#"
         path={[
           { label: 'Electromagnetics', href: '#' },
           { label: 'Problem set 4' },
@@ -26,7 +33,12 @@ export default defineExamples(spec, {
   stress: () => (
     <div className="w-[1024px] max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">
       <TopBar
-        path={[{ label: LONG_COURSE, href: '#' }, { label: LONG_SET }]}
+        homeHref="#"
+        path={[
+          { label: LONG_COURSE, href: '#' },
+          { label: LONG_SET, href: '#' },
+          { label: LONG_MATERIAL },
+        ]}
         settingsHref="#"
       />
     </div>

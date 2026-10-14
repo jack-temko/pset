@@ -40,7 +40,7 @@ export default defineSpec({
     },
   ],
   stress:
-    'Thirty problems in a 96px container: the count stays whole and the bar shrinks.',
+    'Twelve problems in a 96px container: the segments narrow, then one continuous bar takes over; the count stays whole.',
   actions: [],
   inputs: [
     {
@@ -60,10 +60,11 @@ export default defineSpec({
     first: 'The count, "2 of 6", beside the bar.',
   },
   sizes: {
-    narrowest: 64,
+    narrowest: 80,
     gives: [
-      'The bar shrinks, segments first narrower, then the continuous bar',
-      'The count never shrinks',
+      'The segments narrow from 12px to 4px',
+      'Then one continuous bar takes over, shrinking to 16px',
+      'The count never gives way',
     ],
   },
   rules: {
@@ -72,7 +73,8 @@ export default defineSpec({
       {
         id: 'progress-has-words',
         rule: 'Show a progress bar with its value in words beside it.',
-        check: 'Every progress bar on the page has "N of M" next to it.',
+        check:
+          'Every bar has "N of M" next to it. Settled afterwards, not asked: the builder\'s.',
         scope: 'progress-bar',
       },
     ],
@@ -86,6 +88,14 @@ export default defineSpec({
       why: 'Primer: pair a progress bar with its value in text.',
       beat: 'One continuous bar; the count alone',
       date: '2026-10-13',
+    },
+    {
+      id: 'progress-bar-d2',
+      decision:
+        'When narrow, keep the count and shrink the bar: segments narrow to 4px, then one continuous bar takes over. The bar adapts to its own width.',
+      why: 'Jack: the count "2 of 6" always shows beside the bar.',
+      beat: 'Hide the count when narrow; drop the bar, keep the count',
+      date: '2026-10-14',
     },
   ],
 });

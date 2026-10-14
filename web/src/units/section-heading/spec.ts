@@ -60,6 +60,7 @@ export default defineSpec({
     narrowest: 160,
     gives: ['The title wraps; the count and the action stay on its first line'],
   },
+  exampleWidth: 960,
   rules: {
     cite: ['serif-to-read', 'room-for-big-type', 'sentence-case'],
   },
@@ -69,7 +70,7 @@ export default defineSpec({
       id: 'section-heading-d1',
       decision:
         'The heading step on the left, a count and an action on the right in the small step, a 1px rule below, and no outer margin.',
-      why: 'The parent decides the room around big type, so the heading is the same in every list.',
+      why: "Settled afterwards, not asked (the builder's): the parent decides the room around big type, so every list is the same.",
       beat: 'A heading with its own margins',
       date: '2026-10-13',
     },

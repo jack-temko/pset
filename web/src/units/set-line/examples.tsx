@@ -1,10 +1,12 @@
 import { defineExamples } from '@/design/examples';
+import { parseDueDate } from './dates';
 import { SetLine, type SetLineProps } from './index';
 import spec from './spec';
 
 /** A fixed Tuesday, so "within 2 days" reads the same on every visit. */
 const TODAY = new Date(2026, 9, 13);
-const day = (d: number) => new Date(2026, 9, d);
+const day = (d: number) =>
+  parseDueDate(`2026-10-${String(d).padStart(2, '0')}`);
 
 const line = (p: Partial<SetLineProps> = {}) => (
   <SetLine
@@ -24,6 +26,8 @@ export default defineExamples(spec, {
     'with-time': () => line(),
     'without-time': () => line({ minutesLeft: undefined }),
     'due-soon': () => line({ done: 0, minutesLeft: undefined, due: day(15) }),
+    later: () => line({ due: day(27) }),
+    overdue: () => line({ due: day(10), done: 3 }),
     'no-date': () => line({ due: undefined }),
   },
   stress: () => (

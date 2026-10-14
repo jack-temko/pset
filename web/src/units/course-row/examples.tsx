@@ -62,7 +62,7 @@ export default defineExamples(spec, {
         <SectionHeading
           count="8 courses"
           action={
-            <Link href="#" className="ds-small">
+            <Link href="#" size="small">
               Show all
             </Link>
           }

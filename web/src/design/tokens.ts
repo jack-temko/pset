@@ -271,6 +271,15 @@ export const TYPE: readonly TypeStep[] = [
     sample: 'Good evening, Jack',
   },
   {
+    id: 'brand',
+    size: 20,
+    line: 28,
+    face: 'serif',
+    weight: 500,
+    use: 'the wordmark only',
+    sample: 'PSet',
+  },
+  {
     id: 'heading',
     size: 22,
     line: 28,
@@ -334,9 +343,15 @@ export const SPACING: readonly number[] = [
   4, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64, 96,
 ];
 
-export const LAYOUT = { gutter: 40, row: 44, control: 32 } as const;
+export const LAYOUT = {
+  gutter: 40,
+  row: 44,
+  control: 32,
+  topbar: 56,
+} as const;
 
 export const RADII = [
+  { name: 'segment', px: 2 },
   { name: 'tag', px: 4 },
   { name: 'control', px: 6 },
   { name: 'panel', px: 8 },

@@ -9,7 +9,7 @@ import { Link } from './link';
 import { ProgressBar } from './progress-bar';
 import { SectionHeading } from './section-heading';
 import { SetLine } from './set-line';
-import { timeLeft } from './set-line/dates';
+import { daysUntil, dueText, parseDueDate, timeLeft } from './set-line/dates';
 import { Tag } from './tag';
 import { Tooltip } from './tooltip';
 import { TopBar } from './top-bar';
@@ -756,6 +756,64 @@ describe('Link', () => {
   });
 });
 
+describe('Tag tones', () => {
+  it('draws danger on its own soft ground', () => {
+    const { el } = render(
+      <Tag tone="danger" icon={Clock}>
+        Overdue
+      </Tag>,
+    );
+    const cls = el.firstElementChild?.className ?? '';
+    expect(cls).toContain('--ds-danger-soft');
+    expect(cls).toContain('text-(--ds-danger)');
+  });
+});
+
+describe('Link options', () => {
+  const cls = (n: ReactNode) =>
+    render(n).el.querySelector('a')?.className ?? '';
+
+  it('takes a tone, a weight and a size', () => {
+    expect(cls(<Link href="/x">A</Link>)).toContain('text-(--ds-accent)');
+    expect(
+      cls(
+        <Link href="/x" tone="fg">
+          A
+        </Link>,
+      ),
+    ).toContain('text-(--ds-fg)');
+    expect(
+      cls(
+        <Link href="/x" tone="muted">
+          A
+        </Link>,
+      ),
+    ).toContain('text-(--ds-fg-muted)');
+    expect(
+      cls(
+        <Link href="/x" weight="medium">
+          A
+        </Link>,
+      ),
+    ).toContain('font-medium');
+    expect(cls(<Link href="/x">A</Link>)).not.toContain('font-medium');
+    expect(
+      cls(
+        <Link href="/x" size="small">
+          A
+        </Link>,
+      ),
+    ).toContain('ds-small');
+    expect(
+      cls(
+        <Link href="/x" size="brand">
+          A
+        </Link>,
+      ),
+    ).toContain('ds-brand');
+  });
+});
+
 describe('Tag', () => {
   it('is not focusable', () => {
     const { el } = render(
@@ -765,6 +823,44 @@ describe('Tag', () => {
     );
     expect(el.querySelector('a, button, [tabindex]')).toBeNull();
     expect(el.textContent).toBe('Due Fri');
+  });
+});
+
+describe('ProgressBar narrowing', () => {
+  /** Runs `fn` with a ResizeObserver and a root of `width` px, the count 40. */
+  function at(width: number, total: number) {
+    const original = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    const cw = vi
+      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockReturnValue(width);
+    const ow = vi
+      .spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
+      .mockReturnValue(40);
+    try {
+      return render(<ProgressBar done={1} total={total} />).el;
+    } finally {
+      cw.mockRestore();
+      ow.mockRestore();
+      globalThis.ResizeObserver = original;
+    }
+  }
+
+  it('keeps segments while they fit at 4px each, then goes continuous', () => {
+    // Six segments need 6 * 4 + 5 * 2 = 34, plus 8 and the 40 count.
+    expect(at(82, 6).querySelectorAll('[data-segment]')).toHaveLength(6);
+    const el = at(81, 6);
+    expect(el.querySelectorAll('[data-segment]')).toHaveLength(0);
+    expect(el.querySelector('[data-bar="continuous"]')).not.toBeNull();
+    expect(el.textContent).toBe('1 of 6');
+  });
+
+  it('always shows the count', () => {
+    expect(at(60, 12).textContent).toBe('1 of 12');
   });
 });
 
@@ -812,7 +908,7 @@ describe('ProgressBar', () => {
   it('keeps its count whole while the bar shrinks', () => {
     const { el } = render(<ProgressBar done={1} total={30} />);
     expect(el.querySelector('[data-bar]')?.className).toContain('shrink');
-    expect(el.querySelector('[data-bar]')?.className).toContain('min-w-0');
+    expect(el.querySelector('[data-bar]')?.className).toContain('min-w-4');
     expect(el.querySelector('.shrink-0')?.textContent).toBe('1 of 30');
   });
 });
@@ -869,23 +965,51 @@ describe('SetLine', () => {
       'Problem set 4',
       '2 of 6',
       'About 1 h 10 m left',
-      'Due Mon 19',
+      'Due Mon',
     ])
       expect(text).toContain(part);
   });
 
-  it('tags a due date only within 2 days', () => {
+  it('tags a due date only within 2 days, and writes it by the weekday within 6', () => {
     const tag = (d: number) => line({ due: day(d) }).el.querySelector('svg');
     expect(tag(13)).not.toBeNull();
     expect(tag(15)).not.toBeNull();
     expect(tag(16)).toBeNull();
-    expect(line({ due: day(16) }).el.textContent).toContain('Due Fri 16');
     expect(line({ due: day(15) }).el.textContent).toContain('Due Thu');
-    expect(line({ due: day(15) }).el.textContent).not.toContain('Due Thu 15');
+    expect(line({ due: day(16) }).el.textContent).toContain('Due Fri');
+    expect(line({ due: day(19) }).el.textContent).toContain('Due Mon');
+    expect(line({ due: day(20) }).el.textContent).toContain('Due Oct 20');
+    expect(line({ due: day(20) }).el.querySelector('svg')).toBeNull();
   });
 
-  it('tags an overdue set', () => {
-    expect(line({ due: day(10) }).el.querySelector('svg')).not.toBeNull();
+  it('shows Overdue in the danger tone, never a day', () => {
+    for (const d of [12, 4]) {
+      const { el } = line({ due: day(d) });
+      expect(el.textContent).toContain('Overdue');
+      expect(el.textContent).not.toMatch(/Due /);
+      expect(el.querySelector('svg')).not.toBeNull();
+      expect(el.innerHTML).toContain('--ds-danger');
+    }
+  });
+
+  it('counts days across a month boundary and a late evening', () => {
+    const lateOct = new Date(2026, 9, 31, 23, 59);
+    expect(daysUntil(new Date(2026, 10, 1), lateOct)).toBe(1);
+    expect(dueText(new Date(2026, 10, 1), lateOct)).toEqual({
+      kind: 'soon',
+      text: 'Due Sun',
+    });
+    expect(dueText(new Date(2026, 10, 9), lateOct).text).toBe('Due Nov 9');
+    const late = new Date(2026, 9, 13, 23, 30);
+    expect(dueText(day(13), late).kind).toBe('soon');
+    expect(dueText(day(12), late).kind).toBe('overdue');
+  });
+
+  it('builds a due date in local time', () => {
+    const d = parseDueDate('2026-10-19');
+    expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([2026, 9, 19]);
+    expect(d.getHours()).toBe(0);
+    expect(() => parseDueDate('Oct 19')).toThrow();
   });
 
   it('says No date without one, and leaves the time empty when unknown', () => {
@@ -898,6 +1022,11 @@ describe('SetLine', () => {
     expect(timeLeft(45)).toBe('About 45 m left');
     expect(timeLeft(60)).toBe('About 1 h left');
     expect(timeLeft(70)).toBe('About 1 h 10 m left');
+    expect(timeLeft(59.7)).toBe('About 1 h left');
+    expect(timeLeft(119.7)).toBe('About 2 h left');
+    expect(timeLeft(0)).toBe('');
+    expect(timeLeft(-5)).toBe('');
+    expect(timeLeft(0.2)).toBe('');
   });
 
   it('truncates its name and keeps the line 40 high', () => {
@@ -974,7 +1103,7 @@ describe('TopBar', () => {
     ]);
 
   it('on Home has the wordmark and Settings only', () => {
-    const { el } = render(<TopBar settingsHref="/settings" />);
+    const { el } = render(<TopBar homeHref="/" settingsHref="/settings" />);
     expect(links(el)).toEqual([
       ['PSet', '/'],
       ['Settings', '/settings'],
@@ -985,6 +1114,7 @@ describe('TopBar', () => {
   it('links every path item but the last', () => {
     const { el } = render(
       <TopBar
+        homeHref="/"
         path={[
           { label: 'Electromagnetics', href: '/c/1' },
           { label: 'Problem set 4' },
@@ -1005,6 +1135,7 @@ describe('TopBar', () => {
   it('never links the last item, even when it has an href', () => {
     const { el } = render(
       <TopBar
+        homeHref="/"
         path={[{ label: 'Electromagnetics', href: '/c/1' }]}
         settingsHref="/s"
       />,
@@ -1015,6 +1146,7 @@ describe('TopBar', () => {
   it('truncates the middle items before the ends and pins the sides', () => {
     const { el } = render(
       <TopBar
+        homeHref="/"
         path={[
           { label: 'A', href: '/a' },
           { label: 'B', href: '/b' },

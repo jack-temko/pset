@@ -4,7 +4,7 @@ import { count } from './count';
 
 /** One course: its name (opens the course), what it holds, and its active
  *  sets, each opening its set (course-row-d1). Home sorts and caps the list
- *  (course-row-d2). Below 920 the sets stack under the name. */
+ *  (course-row-d2). Below 880 the sets stack under the name. */
 export function CourseRow({
   name,
   materials,
@@ -23,12 +23,14 @@ export function CourseRow({
 }) {
   return (
     <div className="@container min-w-0 border-b border-(--ds-border-muted)">
-      <div className="grid min-w-0 gap-2 px-4 py-2 @min-[920px]:grid-cols-[220px_minmax(0,1fr)] @min-[920px]:gap-4">
+      <div className="grid min-w-0 gap-2 px-4 py-2 @min-[880px]:grid-cols-[220px_minmax(0,1fr)] @min-[880px]:gap-4">
         <div className="min-w-0 px-0.5">
           <Link
             href={href}
             title={name}
-            className="block truncate font-medium!"
+            tone="fg"
+            weight="medium"
+            className="block truncate"
           >
             {name}
           </Link>

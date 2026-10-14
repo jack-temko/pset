@@ -22,6 +22,6 @@ The grill of 2026-10-13, word for word (the questions that concern the course ro
 ## Settled afterwards (the plan, not asked)
 
 The counts read "7 materials, 3 sets", "No materials, no sets" when empty, singular at
-one. A course with no active set shows one muted line, "Nothing active". Below 920 the
+one. A course with no active set shows one muted line, "Nothing active". Below 880 the
 set lines stack under the name; the name link and each set line are separate links.
 The sort and the cap of five are Home's; the examples' list shows them.

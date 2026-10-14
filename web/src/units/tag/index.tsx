@@ -1,11 +1,12 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-export type TagTone = 'neutral' | 'attention';
+export type TagTone = 'neutral' | 'attention' | 'danger';
 
 const TONES: Record<TagTone, string> = {
   neutral: 'bg-(--ds-neutral-soft) text-(--ds-fg)',
   attention: 'bg-(--ds-attention-soft) text-(--ds-attention)',
+  danger: 'bg-(--ds-danger-soft) text-(--ds-danger)',
 };
 
 /** Names a fact about a thing. Never clickable, never focusable (tag-d1). */

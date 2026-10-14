@@ -110,11 +110,12 @@ export default defineSpec({
   sizes: {
     narrowest: 480,
     gives: [
-      'Below 920 the set lines stack under the name',
+      'Below 880 the set lines stack under the name',
       'The set lines drop their time left, then their progress count',
       'The names truncate',
     ],
   },
+  exampleWidth: 960,
   rules: {
     cite: [
       'course-first',

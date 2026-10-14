@@ -24,6 +24,21 @@ export default defineSpec({
       when: 'The link sits in a line of the interface.',
     },
     {
+      id: 'tone-fg',
+      name: 'Standalone, text colour',
+      when: 'A link in a list, such as a course name, in the text colour at weight 500.',
+    },
+    {
+      id: 'tone-muted',
+      name: 'Standalone, muted',
+      when: 'A link in a path, such as the top bar, in the muted colour.',
+    },
+    {
+      id: 'small',
+      name: 'Standalone, small',
+      when: 'A link beside small text, such as "Show all".',
+    },
+    {
       id: 'hover',
       name: 'Hover',
       when: 'The pointer is over a standalone link (forced on the page).',
@@ -55,6 +70,24 @@ export default defineSpec({
       type: 'boolean',
       default: 'false',
       does: 'Underlined, and takes the size and face of the text around it.',
+    },
+    {
+      name: 'tone',
+      type: "'accent' | 'fg' | 'muted'",
+      default: 'accent',
+      does: 'The colour: the link colour, the text colour or the muted colour.',
+    },
+    {
+      name: 'weight',
+      type: "'regular' | 'medium'",
+      default: 'regular',
+      does: 'Weight 400 or 500.',
+    },
+    {
+      name: 'size',
+      type: "'body' | 'small' | 'brand'",
+      default: 'body',
+      does: "The type step of a standalone link; brand is the top bar wordmark's.",
     },
     {
       name: 'children',
@@ -108,6 +141,14 @@ export default defineSpec({
       why: 'So the two never blur.',
       beat: 'Low-priority actions as links',
       date: '2026-10-13',
+    },
+    {
+      id: 'link-d3',
+      decision:
+        "A link has a tone (accent, text colour or muted) and a weight (400 or 500), as Primer's Link has a muted option.",
+      why: "Settled afterwards, not asked (the orchestrator's): course names in blue made the list loud.",
+      beat: 'Every standalone link in the accent colour',
+      date: '2026-10-14',
     },
   ],
 });

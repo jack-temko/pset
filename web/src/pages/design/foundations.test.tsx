@@ -35,14 +35,14 @@ describe('the Foundations page', () => {
     );
   });
 
-  it('shows the seven type steps, the spacing and the radii', () => {
-    expect(TYPE).toHaveLength(7);
+  it('shows the eight type steps, the spacing and the radii', () => {
+    expect(TYPE).toHaveLength(8);
     for (const t of TYPE) {
       const row = el.querySelector(`[data-step="${t.id}"]`);
       expect(row?.textContent).toContain(t.sample);
       expect(row?.querySelector(`.ds-${t.id}`)).not.toBeNull();
     }
     expect(el.querySelectorAll('[data-space]')).toHaveLength(SPACING.length);
-    expect(el.querySelectorAll('[data-radius]')).toHaveLength(3);
+    expect(el.querySelectorAll('[data-radius]')).toHaveLength(4);
   });
 });

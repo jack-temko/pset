@@ -13,7 +13,7 @@ export default defineExamples(spec, {
   },
   stress: () => (
     <div className="w-[96px] max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">
-      <ProgressBar done={11} total={30} />
+      <ProgressBar done={5} total={12} />
     </div>
   ),
 });
