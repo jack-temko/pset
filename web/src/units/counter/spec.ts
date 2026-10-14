@@ -37,7 +37,7 @@ export default defineSpec({
     {
       id: 'counter-d1',
       decision:
-        "GitHub's Counter, as the old design had it: a pill 20 high, full radius, the small step with tabular numbers, on `neutral-soft` in `fg`.",
+        "GitHub's Counter, as the old design had it: a pill 20 high, full radius, the small step with tabular numbers, on `pressed` in `fg`.",
       why: 'Jack: the heading "is bad too. I want to be more similar to my old design."',
       beat: 'A count in small grey text',
       date: '2026-10-14',

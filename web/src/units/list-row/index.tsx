@@ -33,7 +33,7 @@ export function ListRow({
     <div className="@container min-h-14 min-w-0 hover:bg-(--ds-hover)">
       <div className="flex min-w-0 items-center gap-4 px-4 py-2">
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-h-6 min-w-0 items-center gap-3">
             <div className="min-w-0 flex-1">
               {href === undefined ? (
                 <span className="ds-body block truncate font-medium text-(--ds-fg)">
@@ -52,7 +52,7 @@ export function ListRow({
               )}
             </div>
             {status !== undefined && (
-              <div className="ds-small ds-tabular shrink-0 whitespace-nowrap text-(--ds-fg-muted)">
+              <div className="ds-small ds-tabular flex h-6 shrink-0 items-center whitespace-nowrap text-(--ds-fg-muted)">
                 {status}
               </div>
             )}

@@ -923,6 +923,7 @@ describe('Counter', () => {
     const c = el.firstElementChild;
     expect(c?.textContent).toBe('1,234');
     expect(c?.className).toContain('rounded-full');
+    expect(c?.className).toContain('--ds-pressed');
     expect(c?.className).toContain('h-5');
     expect(c?.className).toContain('whitespace-nowrap');
     expect(c?.className).not.toContain('truncate');
@@ -1007,6 +1008,12 @@ describe('ListRow', () => {
     const spans = el.querySelectorAll('p > span');
     expect(spans[1]?.className).toContain('@min-[440px]:hidden');
     expect(spans[1]?.textContent).toBe(' \u00b7 2 of 6');
+  });
+
+  it('gives line one a 24px box whatever its status', () => {
+    const { el } = render(<ListRow title="T" status="Due Fri" />);
+    expect(el.querySelector('.min-h-6')).not.toBeNull();
+    expect(el.querySelector('.h-6.items-center')?.textContent).toBe('Due Fri');
   });
 
   it('is at least 56 high and truncates its lines', () => {
