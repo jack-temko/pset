@@ -36,7 +36,7 @@ export default defineSpec({
     {
       id: 'thirty',
       name: 'Thirty problems',
-      when: 'More than twelve: one continuous bar, 72 wide.',
+      when: 'More than twelve: one continuous bar, filling the room left beside the count.',
     },
   ],
   stress:
@@ -95,6 +95,21 @@ export default defineSpec({
         'When narrow, keep the count and shrink the bar: segments narrow to 4px, then one continuous bar takes over. The bar adapts to its own width.',
       why: 'Jack: the count "2 of 6" always shows beside the bar.',
       beat: 'Hide the count when narrow; drop the bar, keep the count',
+      date: '2026-10-14',
+    },
+    {
+      id: 'progress-bar-d3',
+      decision:
+        'The continuous bar is fluid: it fills the room the count leaves, from 16 up, instead of holding a fixed width.',
+      why: 'Jack: "The progress bars need to be longer."',
+      beat: 'A fixed 72px bar with slack left in its aside',
+      date: '2026-10-14',
+    },
+    {
+      id: 'progress-bar-d4',
+      decision: 'The count is set in the body step, one step up from small.',
+      why: 'Jack: "This needs to be larger".',
+      beat: 'The count in the small step',
       date: '2026-10-14',
     },
   ],

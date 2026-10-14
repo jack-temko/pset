@@ -127,5 +127,13 @@ export default defineSpec({
       beat: 'Hide the count; shrink the aside',
       date: '2026-10-14',
     },
+    {
+      id: 'list-row-d4',
+      decision:
+        'The status sits centred on line one, against the middle of the title.',
+      why: 'Jack: "These need to be centered vertically".',
+      beat: 'A status that read as riding high on the line',
+      date: '2026-10-14',
+    },
   ],
 });

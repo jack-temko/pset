@@ -87,5 +87,21 @@ export default defineSpec({
       beat: 'A count at the right with a 1px rule below',
       date: '2026-10-14',
     },
+    {
+      id: 'section-heading-d3',
+      decision:
+        'The title and the Counter sit centred on one line: both on the middle of the heading text.',
+      why: 'Jack: "Need to be vertically aligned center".',
+      beat: 'A count that read as floating off the line',
+      date: '2026-10-14',
+    },
+    {
+      id: 'section-heading-d4',
+      decision:
+        'The action at the right sits centred on that same line, with the title and the Counter.',
+      why: 'Jack: "Make sure this is aligned too with the header and chip".',
+      beat: 'An action on its own line box',
+      date: '2026-10-14',
+    },
   ],
 });

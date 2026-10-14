@@ -5,14 +5,17 @@ export const SEGMENT_MAX = 12;
 
 /** A segment never gets narrower than this: the continuous bar takes over. */
 const SEGMENT_MIN = 4;
+// The segment gap is gap-[2px], not gap-0.5: the theme locks fractional
+// spacing out, and a fractional class compiles to nothing.
 const SEGMENT_GAP = 2;
 /** The gap between the bar and the count. */
 const BAR_GAP = 8;
 
 /** How far a set is done: a segment per problem and the count in words
  *  beside it. The count always shows. When room is short the segments
- *  narrow to 4px, then one continuous bar takes over; the bar adapts to its
- *  own width, so nothing outside reaches into it (progress-bar-d2). */
+ *  narrow to 4px, then one continuous bar takes over, filling the room
+ *  left beside the count. The bar adapts to its own width, so nothing
+ *  outside reaches into it (progress-bar-d2, d3). */
 export function ProgressBar({ done, total }: { done: number; total: number }) {
   const shown = Math.min(Math.max(done, 0), Math.max(total, 0));
   const complete = total > 0 && shown === total;
@@ -45,7 +48,7 @@ export function ProgressBar({ done, total }: { done: number; total: number }) {
       className="flex w-full max-w-full min-w-0 items-center gap-2"
     >
       {segmented ? (
-        <span className="flex min-w-0 shrink gap-0.5" data-bar="segments">
+        <span className="flex min-w-0 shrink gap-[2px]" data-bar="segments">
           {Array.from({ length: total }, (_, i) => (
             <span
               key={i}
@@ -57,7 +60,7 @@ export function ProgressBar({ done, total }: { done: number; total: number }) {
       ) : (
         <span
           data-bar="continuous"
-          className="h-1 w-[72px] min-w-4 shrink overflow-hidden rounded-(--ds-radius-segment) bg-(--ds-border)"
+          className="h-1 min-w-4 flex-1 overflow-hidden rounded-(--ds-radius-segment) bg-(--ds-border)"
         >
           <span
             className={`block h-full ${fill}`}
@@ -69,7 +72,7 @@ export function ProgressBar({ done, total }: { done: number; total: number }) {
       )}
       <span
         ref={count}
-        className="ds-small ds-tabular shrink-0 whitespace-nowrap text-(--ds-fg-muted)"
+        className="ds-body ds-tabular shrink-0 whitespace-nowrap text-(--ds-fg-muted)"
       >
         {shown} of {total}
       </span>

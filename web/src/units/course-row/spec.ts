@@ -107,7 +107,8 @@ export default defineSpec({
   sizes: {
     narrowest: 320,
     gives: [
-      'The progress bar goes below 440, and the count stays in the meta',
+      'The 160 aside goes below 440, and the count stays in the meta',
+      'In the aside, the bar fills the room the count leaves',
       'Then the meta truncates, as a whole',
       'Then the course name truncates',
     ],
@@ -155,6 +156,14 @@ export default defineSpec({
         'A course row is a two-line list row, GitHub issue style, built from the list row and nothing drawn by hand.',
       why: 'Jack: "Unfortunately the course row looks absolutely horrible. More GitHub-ey", and it had parts that were not components.',
       beat: 'One line; the two-column row with stacked set lines',
+      date: '2026-10-14',
+    },
+    {
+      id: 'course-row-d5',
+      decision:
+        'The aside is 160 wide, so the bar fills it beside the count instead of squeezing under it.',
+      why: 'Jack: "The progress bars need to be longer." The width is the orchestrator\u2019s call, pending Jack\u2019s eye.',
+      beat: 'A 120 aside, where the larger count ate the bar\u2019s room',
       date: '2026-10-14',
     },
   ],

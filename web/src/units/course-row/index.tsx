@@ -59,7 +59,7 @@ export function CourseRow({
           : []),
       ]}
       aside={<ProgressBar done={next.done} total={next.total} />}
-      asideWidth={120}
+      asideWidth={160}
     />
   );
 }

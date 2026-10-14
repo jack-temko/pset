@@ -28,7 +28,7 @@ export default defineSpec({
   ],
   priority: { first: 'The number.' },
   sizes: {
-    narrowest: 20,
+    narrowest: 24,
     gives: ['Nothing: it may overflow its container, never truncate'],
   },
   rules: { cite: ['figures-follow-text', 'contrast-floors'] },
@@ -40,6 +40,14 @@ export default defineSpec({
         "GitHub's Counter, as the old design had it: a pill 20 high, full radius, the small step with tabular numbers, on `pressed` in `fg`.",
       why: 'Jack: the heading "is bad too. I want to be more similar to my old design."',
       beat: 'A count in small grey text',
+      date: '2026-10-14',
+    },
+    {
+      id: 'counter-d2',
+      decision:
+        'A whole step of padding each side, 8, as the tag has, and centred on the title line it sits beside.',
+      why: 'Jack: "Needs more padding." and "Not vertically centered with the header and has not enough padding": what he saw was none, a locked-out fractional step.',
+      beat: 'A pill with no visible padding',
       date: '2026-10-14',
     },
   ],

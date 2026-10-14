@@ -35,3 +35,18 @@ and the list's frame styled inside the course row).
 
 The row no longer shows the materials and sets counts (they go to the course screen),
 which reverses Jack's "Name, materials, sets" above. Pending his OK.
+
+## Round of 2026-10-14, annotations
+
+Jack, on the bars in this row's aside: **"The progress bars need to be longer."**, and
+on the "0 of 6" beside one: **"This needs to be larger"**.
+
+The bar unit takes both (see the progress bar's log): its continuous shape now fills
+the room the count leaves in the aside instead of holding a fixed 72px, and its count
+is set one type step up. The segmented shape also gets its 2px gaps back, which a
+theme lockdown had silently dropped.
+
+The wider bar needed more room than a 120 aside gives once the count is larger, so the
+course row's aside is 160 and the bar fills it beside the count. The width is the
+orchestrator's call, pending Jack's eye; the list row's own default and the set line's
+aside stay 120.

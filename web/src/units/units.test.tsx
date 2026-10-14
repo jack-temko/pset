@@ -911,9 +911,14 @@ describe('ProgressBar', () => {
 
   it('keeps its count whole while the bar shrinks', () => {
     const { el } = render(<ProgressBar done={1} total={30} />);
-    expect(el.querySelector('[data-bar]')?.className).toContain('shrink');
+    expect(el.querySelector('[data-bar]')?.className).toContain('flex-1');
     expect(el.querySelector('[data-bar]')?.className).toContain('min-w-4');
     expect(el.querySelector('.shrink-0')?.textContent).toBe('1 of 30');
+  });
+
+  it('sets its count in the body step', () => {
+    const { el } = render(<ProgressBar done={1} total={6} />);
+    expect(el.querySelector('.shrink-0')?.className).toContain('ds-body');
   });
 });
 
@@ -925,6 +930,7 @@ describe('Counter', () => {
     expect(c?.className).toContain('rounded-full');
     expect(c?.className).toContain('--ds-pressed');
     expect(c?.className).toContain('h-5');
+    expect(c?.className).toContain('px-2');
     expect(c?.className).toContain('whitespace-nowrap');
     expect(c?.className).not.toContain('truncate');
     expect(c?.className).toContain('ds-tabular');
@@ -947,7 +953,15 @@ describe('SectionHeading', () => {
     const title = el.querySelector('h2');
     expect(title?.parentElement?.textContent).toBe('Courses8');
     expect(title?.parentElement?.querySelector('.rounded-full')).not.toBeNull();
+    // Count and action sit centred on the title's line: 28px boxes.
+    const countBox =
+      title?.parentElement?.querySelector('.rounded-full')?.parentElement;
+    expect(countBox?.className).toContain('h-7');
+    expect(countBox?.className).toContain('items-center');
     expect(el.querySelector('a')?.getAttribute('href')).toBe('/all');
+    const actionBox = el.querySelector('a')?.parentElement;
+    expect(actionBox?.className).toContain('h-7');
+    expect(actionBox?.className).toContain('items-center');
     expect(el.querySelector('a')?.parentElement?.className).toContain(
       'shrink-0',
     );
@@ -1186,6 +1200,13 @@ describe('CourseRow', () => {
     ).toEqual(['/c/1', '/s/4']);
     expect(el.querySelector('a a')).toBeNull();
     expect(el.textContent).not.toMatch(/materials|sets/);
+  });
+
+  it('gives its aside 160 for the bar to fill', () => {
+    const { el } = row([set('Problem set 4', '/s/4', 15)]);
+    expect(el.querySelector<HTMLElement>('[data-aside]')?.style.width).toBe(
+      '160px',
+    );
   });
 
   it('shows the nearest set, by due date, undated last', () => {
