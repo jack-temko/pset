@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Button, REASON_MS } from './button';
 import { Link } from './link';
 import { ProgressBar } from './progress-bar';
+import { SectionHeading } from './section-heading';
 import { Tag } from './tag';
 import { Tooltip } from './tooltip';
 import { place } from './tooltip/place';
@@ -809,5 +810,32 @@ describe('ProgressBar', () => {
     expect(el.querySelector('[data-bar]')?.className).toContain('shrink');
     expect(el.querySelector('[data-bar]')?.className).toContain('min-w-0');
     expect(el.querySelector('.shrink-0')?.textContent).toBe('1 of 30');
+  });
+});
+
+describe('SectionHeading', () => {
+  it('shows the title as a heading, with no side when it has neither', () => {
+    const { el } = render(<SectionHeading>In progress</SectionHeading>);
+    expect(el.querySelector('h2')?.textContent).toBe('In progress');
+    expect(el.textContent).toBe('In progress');
+    expect(el.firstElementChild?.children).toHaveLength(1);
+  });
+
+  it('shows a count and an action at the right, on one line', () => {
+    const { el } = render(
+      <SectionHeading count="8 sets" action={<Link href="/all">Show all</Link>}>
+        In progress
+      </SectionHeading>,
+    );
+    const side = el.querySelector('h2')?.nextElementSibling;
+    expect(side?.textContent).toBe('8 setsShow all');
+    expect(side?.querySelector('a')?.getAttribute('href')).toBe('/all');
+    expect(side?.className).toContain('whitespace-nowrap');
+    expect(side?.className).toContain('shrink-0');
+  });
+
+  it('carries no outer margin', () => {
+    const { el } = render(<SectionHeading>In progress</SectionHeading>);
+    expect(el.firstElementChild?.className).not.toMatch(/(^|\s)m[tby]?-/);
   });
 });
