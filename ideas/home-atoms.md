@@ -17,13 +17,13 @@ copied word for word into the unit's `log.md`.
 
 Button:
 
-| Id        | Decision                                                                                                  | Why                                                                     | Beat                                              |
-| --------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------- |
-| button-d1 | Four variants: primary, default, quiet, danger (solid red)                                                | Jack: a destructive action looks dangerous before the click             | Three variants with red text for destructive; two |
-| button-d2 | One size, 32 high                                                                                         | Every control aligns; Primer steers to its medium                       | Two sizes; three                                  |
-| button-d3 | While its action runs: a spinner inside, the label stays, the width is kept, a second press does nothing  | The button does not move; as Primer does it                             | The label changes; no busy state                  |
-| button-d4 | Never disabled. A button that cannot act yet is "not ready": it takes focus and a press and says why      | Primer: disabled buttons are unreachable by keyboard; `student-decides` | Greyed and inert; hidden                          |
-| button-d5 | One optional icon before the label. An icon-only button is a separate unit, built when a screen needs one | Home needs none                                                         | Text only; building the icon button now           |
+| Id        | Decision                                                                                                                                 | Why                                                                     | Beat                                                                  |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| button-d1 | Four variants: primary, default, quiet, danger (solid red)                                                                               | Jack: a destructive action looks dangerous before the click             | Three variants with red text for destructive; two                     |
+| button-d2 | One size, 32 high                                                                                                                        | Every control aligns; Primer steers to its medium                       | Two sizes; three                                                      |
+| button-d3 | While it runs, the button keeps its exact size and a spinner replaces its icon, or its label if it has none. A second press does nothing | Nothing moves; as GitHub's Primer does it                               | The label changes; no busy state; a spinner squeezed beside the label |
+| button-d4 | Never disabled. A button that cannot act yet is "not ready": it takes focus and a press and says why                                     | Primer: disabled buttons are unreachable by keyboard; `student-decides` | Greyed and inert; hidden                                              |
+| button-d5 | One optional icon before the label. An icon-only button is a separate unit, built when a screen needs one                                | Home needs none                                                         | Text only; building the icon button now                               |
 
 Text link:
 
@@ -49,6 +49,16 @@ The log, for each unit's `log.md` (questions, options, answers verbatim):
 - Button: can a button be disabled? **No: it stays pressable and says why
   (Recommended).**
 - Button: icons? **An optional icon before the label (Recommended).**
+- Button: a busy button with no icon cannot keep its label in place, keep its width and
+  show a spinner all at once. Which gives? The spinner replaces the label (Recommended) /
+  A thin moving line, no spinner / As built: spinner squeezed before the label / Let the
+  button grow. **"how does github do it?"**
+- Button: do it GitHub's way? Yes, GitHub's way (Recommended) / A thin moving line, no
+  spinner / As built. **Yes, GitHub's way (Recommended).** Sources:
+  https://primer.style/product/components/button/ and
+  `packages/react/src/Button/ButtonBase.module.css` in primer/react. The label keeps its
+  box with `visibility: hidden` and the spinner is drawn over it, so the size cannot
+  change.
 - Text link: when is it underlined? **Underlined inside text, plain when standing
   alone (Recommended).**
 - Tag: what forms does it take? One shape, five tones (Recommended) / Two shapes /

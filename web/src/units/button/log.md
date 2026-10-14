@@ -10,6 +10,27 @@ Link, Label, IconButton and ProgressBar, read that day.
   width kept (Recommended).**
 - Can a button be disabled? **No: it stays pressable and says why (Recommended).**
 - Icons? **An optional icon before the label (Recommended).**
+- A busy button with no icon cannot keep its label in place, keep its width and show a
+  spinner all at once. Which gives? The spinner replaces the label (Recommended) / A thin
+  moving line, no spinner / As built: spinner squeezed before the label / Let the button
+  grow. **"how does github do it?"**
+- Do it GitHub's way? Yes, GitHub's way (Recommended) / A thin moving line, no spinner /
+  As built. **Yes, GitHub's way (Recommended).**
+
+Sources: https://primer.style/product/components/button/ and
+`packages/react/src/Button/ButtonBase.module.css` in primer/react. The label keeps its
+box with `visibility: hidden` and the spinner is drawn over it, so the size cannot change.
+
+- A busy button with no icon cannot keep its label in place, keep its width and show a
+  spinner all at once. Which gives? The spinner replaces the label (Recommended) / A thin
+  moving line, no spinner / As built: spinner squeezed before the label / Let the button
+  grow. **"how does github do it?"**
+- Do it GitHub's way? Yes, GitHub's way (Recommended) / A thin moving line, no spinner /
+  As built. **Yes, GitHub's way (Recommended).**
+
+Sources for GitHub's way: https://primer.style/product/components/button/ and
+`packages/react/src/Button/ButtonBase.module.css` in primer/react. The label keeps its
+box with `visibility: hidden` and the spinner is drawn over it, so the size cannot change.
 
 ## Settled afterwards (the coordinator, not asked)
 

@@ -51,6 +51,31 @@ describe('Button', () => {
     expect(document.activeElement).toBe(b);
   });
 
+  it('busy with no icon hides the label, keeps its box and says Working', () => {
+    const el = render(<Button busy>Go</Button>);
+    const label = [...el.querySelectorAll<HTMLElement>('button span')].find(
+      (n) => n.style.visibility === 'hidden',
+    );
+    expect(label?.textContent).toBe('Go');
+    // The name stays for assistive tech, and the wait is announced politely.
+    expect(el.querySelector('button .sr-only')?.textContent).toBe('Go');
+    expect(el.querySelector('[role="status"]')?.textContent).toBe('Working');
+  });
+
+  it('busy with an icon keeps its label visible', () => {
+    const el = render(
+      <Button busy icon={Clock} busyLabel="Saving">
+        Go
+      </Button>,
+    );
+    expect(
+      [...el.querySelectorAll<HTMLElement>('button span')].some(
+        (n) => n.style.visibility === 'hidden',
+      ),
+    ).toBe(false);
+    expect(el.querySelector('[role="status"]')?.textContent).toBe('Saving');
+  });
+
   it('is never disabled: not ready, it takes focus and shows its reason', () => {
     const onPress = vi.fn();
     const el = render(

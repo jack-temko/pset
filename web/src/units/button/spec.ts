@@ -36,7 +36,7 @@ export default defineSpec({
     {
       id: 'busy',
       name: 'Busy',
-      when: 'Its action is running. A spinner takes the icon place; presses do nothing.',
+      when: 'Its action is running. The spinner replaces the icon, or the label if there is no icon; the size holds.',
     },
     {
       id: 'not-ready',
@@ -82,7 +82,13 @@ export default defineSpec({
       name: 'busy',
       type: 'boolean',
       default: 'false',
-      does: 'Shows a spinner, keeps the width and ignores presses.',
+      does: 'Shows a spinner, keeps its exact size and ignores presses.',
+    },
+    {
+      name: 'busyLabel',
+      type: 'string',
+      default: 'Working',
+      does: 'What assistive tech hears while it is busy.',
     },
     {
       name: 'notReady',
@@ -162,9 +168,9 @@ export default defineSpec({
     {
       id: 'button-d3',
       decision:
-        'While its action runs: a spinner inside, the label stays, the width is kept, a second press does nothing.',
-      why: 'The button does not move; as Primer does it.',
-      beat: 'The label changes; no busy state',
+        'While it runs, the button keeps its exact size and a spinner replaces its icon, or its label if it has none. A second press does nothing.',
+      why: "Nothing moves; as GitHub's Primer does it.",
+      beat: 'The label changes; no busy state; a spinner squeezed beside the label',
       date: '2026-10-13',
     },
     {
