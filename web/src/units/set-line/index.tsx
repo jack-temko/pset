@@ -1,6 +1,7 @@
 import { Clock, TriangleAlert } from 'lucide-react';
 
-import { ListRow, narrowOnly } from '@/units/list-row';
+import { ListRow } from '@/units/list-row';
+import { narrowOnly } from '@/units/list-row/meta';
 import { ProgressBar } from '@/units/progress-bar';
 import { Tag } from '@/units/tag';
 import { dueText, timeLeft } from './dates';
@@ -50,7 +51,7 @@ export function DueStatus({
 
 /** The meta of a set: the time left when PSet knows it, and the count where
  *  the progress bar is not drawn. */
-export function setMeta({
+function setMeta({
   done,
   total,
   minutesLeft,

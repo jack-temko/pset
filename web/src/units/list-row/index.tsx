@@ -1,25 +1,10 @@
 import { Fragment, type ReactNode } from 'react';
 
 import { Link } from '@/units/link';
+import { isNarrowOnly, type NarrowOnly } from './meta';
 
 /** The aside shows from this width of the row; narrower, it goes first. */
 const ASIDE_MIN = '@min-[440px]';
-
-const NARROW = Symbol('narrow-only');
-interface NarrowOnly {
-  [NARROW]: true;
-  node: ReactNode;
-}
-
-/** A meta item that shows only where the aside does not, such as a count
- *  the aside's own bar repeats (list-row-d3). */
-export function narrowOnly(node: ReactNode): NarrowOnly {
-  return { [NARROW]: true, node };
-}
-
-function isNarrowOnly(x: unknown): x is NarrowOnly {
-  return typeof x === 'object' && x !== null && NARROW in x;
-}
 
 /** The one row shape: a title and a status on line one, small meta on line
  *  two, an optional aside at the right (list-row-d1). Only the title is a

@@ -1,20 +1,10 @@
 import { Link } from '@/units/link';
-import { ListRow, narrowOnly } from '@/units/list-row';
+import { ListRow } from '@/units/list-row';
+import { narrowOnly } from '@/units/list-row/meta';
 import { ProgressBar } from '@/units/progress-bar';
-import { DueStatus, type SetLineProps } from '@/units/set-line';
-import { daysUntil, timeLeft } from '@/units/set-line/dates';
-
-export type ActiveSet = Omit<SetLineProps, 'today'>;
-
-/** The nearest active set: the earliest due date, undated ones last. */
-export function nearest(
-  active: readonly ActiveSet[],
-  today: Date,
-): ActiveSet | undefined {
-  const key = (a: ActiveSet) =>
-    a.due === undefined ? Infinity : daysUntil(a.due, today);
-  return [...active].sort((a, b) => key(a) - key(b))[0];
-}
+import { DueStatus } from '@/units/set-line';
+import { timeLeft } from '@/units/set-line/dates';
+import { nearest, type ActiveSet } from './nearest';
 
 /** One course as a list row: the course name (opens the course), the nearest
  *  active set's due on line one, that set (opens it), its count and time left
