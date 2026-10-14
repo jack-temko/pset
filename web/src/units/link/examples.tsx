@@ -38,7 +38,7 @@ export default defineExamples(spec, {
     ),
   },
   stress: () => (
-    <div className="w-[200px] max-w-full">
+    <div className="w-[200px] max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">
       <Link href="#">{LONG}</Link>
     </div>
   ),

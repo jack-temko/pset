@@ -22,9 +22,13 @@ function focusVisible(el: Element) {
   return canTellFocusVisible ? el.matches(':focus-visible') : true;
 }
 
-const hasPopover =
-  typeof HTMLElement !== 'undefined' &&
-  typeof HTMLElement.prototype.showPopover === 'function';
+/** Read on each render, so a browser without the API falls back cleanly. */
+function supportsPopover() {
+  return (
+    typeof HTMLElement !== 'undefined' &&
+    typeof HTMLElement.prototype.showPopover === 'function'
+  );
+}
 
 /** A small floating label tied to one control. Shows on hover (after 50ms)
  *  and on keyboard focus; hides on pointer leave, blur and Escape. A caller
@@ -35,15 +39,19 @@ export function Tooltip({
   children,
   open,
   side = 'below',
+  onClose,
 }: {
-  /** One short line. */
-  text: string;
+  /** One short line. With none, the tooltip draws nothing. */
+  text: string | undefined;
   /** The one control it belongs to. */
   children: ReactNode;
   /** Opens it from outside: the design page, or a press. */
   open?: boolean;
   side?: TooltipSide;
+  /** Fired when the tooltip itself closes it: Escape, pointer leave, blur. */
+  onClose?: () => void;
 }) {
+  const hasPopover = supportsPopover();
   const anchor = useRef<HTMLSpanElement>(null);
   const tip = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState(false);
@@ -51,7 +59,8 @@ export function Tooltip({
   const [dismissed, setDismissed] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const visible = Boolean(open) || ((hover || focus) && !dismissed);
+  const visible =
+    Boolean(text) && (Boolean(open) || ((hover || focus) && !dismissed));
 
   const position = () => {
     const a = anchor.current;
@@ -83,7 +92,10 @@ export function Tooltip({
     window.addEventListener('scroll', position, true);
     window.addEventListener('resize', position);
     const esc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setDismissed(true);
+      if (e.key === 'Escape') {
+        setDismissed(true);
+        onClose?.();
+      }
     };
     document.addEventListener('keydown', esc);
     return () => {
@@ -127,6 +139,7 @@ export function Tooltip({
         onPointerLeave={() => {
           clearTimeout(timer.current);
           setHover(false);
+          onClose?.();
         }}
         onFocus={(e) => {
           if (focusVisible(e.target)) {
@@ -136,9 +149,13 @@ export function Tooltip({
         }}
         onBlur={() => {
           setFocus(false);
+          onClose?.();
         }}
         onKeyDown={(e) => {
-          if (e.key === 'Escape') setDismissed(true);
+          if (e.key === 'Escape') {
+            setDismissed(true);
+            onClose?.();
+          }
         }}
       >
         {children}

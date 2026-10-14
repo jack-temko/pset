@@ -15,7 +15,7 @@ export default defineExamples(spec, {
     'attention-plain': () => <Tag tone="attention">Due Fri</Tag>,
   },
   stress: () => (
-    <div className="w-[120px] max-w-full">
+    <div className="w-[120px] max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">
       <Tag tone="attention" icon={Clock}>
         Due Friday after the midterm review session
       </Tag>

@@ -188,7 +188,7 @@ export const COLOURS: readonly Colour[] = [
   {
     name: 'pressed',
     value: mix(FG, BG_RAISED, PRESSED_SHARE),
-    use: 'a transparent control while pressed: fg mixed over bg-raised, used on every plain ground',
+    use: 'a transparent control while pressed, and the tooltip ground: fg mixed over bg-raised, used on every plain ground',
     on: [],
   },
   {

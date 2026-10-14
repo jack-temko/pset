@@ -100,11 +100,6 @@ export function Button({
         }
         onPress?.();
       }}
-      onBlur={hide}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') hide();
-      }}
-      onPointerLeave={hide}
     >
       {Icon && (
         <span className="flex size-4 shrink-0 items-center justify-center">
@@ -145,13 +140,14 @@ export function Button({
 
   return (
     <span className="relative inline-flex max-w-full min-w-0 align-top">
-      {notReady ? (
-        <Tooltip text={notReady} open={pressed || Boolean(reasonOpen)}>
-          {button}
-        </Tooltip>
-      ) : (
-        button
-      )}
+      {/* Always here, so the button is not remounted when notReady toggles. */}
+      <Tooltip
+        text={notReady}
+        open={pressed || Boolean(reasonOpen)}
+        onClose={hide}
+      >
+        {button}
+      </Tooltip>
       {busy && (
         <span role="status" className="sr-only">
           {busyLabel}

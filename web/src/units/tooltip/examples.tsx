@@ -50,8 +50,8 @@ export default defineExamples(spec, {
     ),
   },
   stress: () => (
-    <div className="flex justify-end pt-24">
-      <div className="w-[120px] max-w-full">
+    <div className="flex h-24 items-end justify-end">
+      <div className="w-[120px] max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">
         <Tooltip text={LONG} open>
           <Trigger>Continue to the next problem set</Trigger>
         </Tooltip>

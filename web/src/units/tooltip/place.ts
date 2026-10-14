@@ -47,15 +47,10 @@ export function place(
   const p = at(chosen);
   const clamp = (v: number, size: number, room: number) =>
     Math.max(MARGIN, Math.min(v, room - MARGIN - size));
+  // Whatever fits or not, the box stays inside the viewport on both axes.
   return {
     side: chosen,
-    left:
-      chosen === 'below' || chosen === 'above'
-        ? clamp(p.left, size.width, view.width)
-        : p.left,
-    top:
-      chosen === 'right' || chosen === 'left'
-        ? clamp(p.top, size.height, view.height)
-        : p.top,
+    left: clamp(p.left, size.width, view.width),
+    top: clamp(p.top, size.height, view.height),
   };
 }

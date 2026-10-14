@@ -7,7 +7,7 @@ Built, awaiting approval (branch `home-atoms`, base `design`).
 ## Information
 
 **Why.** Home is the first view to be built (S12 in `ideas/screens-grill.md`). These
-are its three smallest parts, and the first real units in the new format, drawn with
+are its four smallest parts, and the first real units in the new format, drawn with
 the new foundations.
 
 **Decisions.** Jack's, from a short grill on 2026-10-13 (prior art: GitHub's Primer
@@ -178,7 +178,7 @@ First: `git merge --ff-only origin/design` so the branch has the screens spec.
   (`fg-muted` on `neutral-soft`, `on-danger` on `danger-solid`, and so on).
 - `web/src/design/checks.test.ts` or the registry test: only if the count of units or
   rules is asserted.
-- `design/design-docs.md`: one short section, "The first units", naming the three and
+- `design/design-docs.md`: one short section, "The first units", naming the four and
   that the Components tab now appears.
 - `ideas/README.md`: this file's row. This file's Status when done.
 
@@ -191,7 +191,7 @@ First: `git merge --ff-only origin/design` so the branch has the screens spec.
 
 ### Tests
 
-- `make check`, which runs the spec checks on the three real units (every state has a
+- `make check`, which runs the spec checks on the four real units (every state has a
   render, a stress render, cited rules exist, limits) and the contrast test.
 - A small behaviour test per unit: button ignores a press while busy and shows its
   reason when not ready; link renders an anchor with its href; tag is not focusable.

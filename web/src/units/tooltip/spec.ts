@@ -79,7 +79,7 @@ export default defineSpec({
     gives: ['The text wraps'],
   },
   rules: {
-    cite: ['sentence-case', 'contrast-floors', 'serif-to-read'],
+    cite: ['sentence-case', 'contrast-floors'],
     local: [
       {
         id: 'tooltip-one-line',

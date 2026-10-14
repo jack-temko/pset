@@ -1,5 +1,5 @@
 import { Clock } from 'lucide-react';
-import { act, createRef, type ReactNode } from 'react';
+import { act, createRef, StrictMode, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -193,6 +193,38 @@ describe('Button', () => {
       expect(tip()).toBe('');
     });
 
+    it('keeps the same button node and its focus when notReady toggles', () => {
+      const { el, root } = render(<Button>Go</Button>);
+      const b = el.querySelector('button');
+      act(() => b?.focus());
+      expect(document.activeElement).toBe(b);
+      act(() => {
+        root.render(<Button notReady="Add a file first.">Go</Button>);
+      });
+      expect(el.querySelector('button')).toBe(b);
+      expect(document.activeElement).toBe(b);
+      act(() => {
+        root.render(<Button>Go</Button>);
+      });
+      expect(el.querySelector('button')).toBe(b);
+      expect(document.activeElement).toBe(b);
+    });
+
+    it('closes on Escape after a press that did not focus the button', () => {
+      const { el } = render(<Button notReady="Add a file first.">Go</Button>);
+      act(() => {
+        press(el.querySelector('button'));
+      });
+      expect(document.activeElement).not.toBe(el.querySelector('button'));
+      expect(tip()).toBe('Add a file first.');
+      act(() => {
+        document.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+        );
+      });
+      expect(tip()).toBe('');
+    });
+
     it('is forced open by reasonOpen', () => {
       render(
         <Button notReady="Add a file first." reasonOpen>
@@ -268,6 +300,135 @@ describe('Tooltip', () => {
     expect(cls).toContain('max-w-[250px]');
   });
 
+  it('calls onClose for its own Escape, pointer leave and blur', () => {
+    const onClose = vi.fn();
+    const { el } = render(
+      <Tooltip text="Why" onClose={onClose}>
+        <button type="button">Go</button>
+      </Tooltip>,
+    );
+    const b = el.querySelector('button');
+    const anchor = b?.parentElement;
+    act(() => b?.focus());
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    act(() => {
+      anchor?.dispatchEvent(new PointerEvent('pointerout', { bubbles: true }));
+    });
+    expect(onClose).toHaveBeenCalledTimes(2);
+    act(() => b?.blur());
+    expect(onClose).toHaveBeenCalledTimes(3);
+  });
+
+  it('draws nothing without text', () => {
+    render(
+      <Tooltip text={undefined} open>
+        <button type="button">Go</button>
+      </Tooltip>,
+    );
+    expect(document.querySelector('[role="tooltip"]')).toBeNull();
+  });
+
+  it('takes the popover path and shows once, even under StrictMode', () => {
+    const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
+    const open = new WeakSet<Element>();
+    const show = vi.fn(function (this: Element) {
+      open.add(this);
+    });
+    const hide = vi.fn();
+    // oxlint-disable-next-line typescript/unbound-method -- called back with its own `this` below
+    const realMatches = Element.prototype.matches;
+    proto.showPopover = show;
+    proto.hidePopover = hide;
+    const matches = vi
+      .spyOn(Element.prototype, 'matches')
+      .mockImplementation(function (this: Element, q: string) {
+        return q === ':popover-open'
+          ? open.has(this)
+          : realMatches.call(this, q);
+      });
+    try {
+      render(
+        <StrictMode>
+          <Tooltip text="Why" open>
+            <button type="button">Go</button>
+          </Tooltip>
+        </StrictMode>,
+      );
+      const t = document.querySelector('[role="tooltip"]');
+      expect(t?.getAttribute('popover')).toBe('manual');
+      // Drawn where it is rendered, not in a portal on the body.
+      expect(t?.parentElement?.tagName).not.toBe('BODY');
+      expect(show).toHaveBeenCalledTimes(1);
+    } finally {
+      matches.mockRestore();
+      delete proto.showPopover;
+      delete proto.hidePopover;
+    }
+  });
+
+  it('removes its scroll and resize listeners when it unmounts open', () => {
+    const add = vi.spyOn(window, 'addEventListener');
+    const remove = vi.spyOn(window, 'removeEventListener');
+    try {
+      const { root } = render(
+        <Tooltip text="Why" open>
+          <button type="button">Go</button>
+        </Tooltip>,
+      );
+      for (const type of ['scroll', 'resize']) {
+        const added = add.mock.calls.filter((c) => c[0] === type);
+        expect(added.length, type).toBeGreaterThan(0);
+      }
+      act(() => {
+        root.unmount();
+      });
+      roots.splice(roots.indexOf(root), 1);
+      for (const type of ['scroll', 'resize']) {
+        const added = add.mock.calls.filter((c) => c[0] === type);
+        const removed = remove.mock.calls.filter((c) => c[0] === type);
+        for (const [, fn] of added)
+          expect(
+            removed.some(([, f]) => f === fn),
+            type,
+          ).toBe(true);
+      }
+    } finally {
+      add.mockRestore();
+      remove.mockRestore();
+    }
+  });
+
+  it('fires nothing when it unmounts during the hover delay', () => {
+    vi.useFakeTimers();
+    try {
+      const { el, root } = render(
+        <Tooltip text="Why">
+          <button type="button">Go</button>
+        </Tooltip>,
+      );
+      act(() => {
+        el.querySelector('button')?.parentElement?.dispatchEvent(
+          new PointerEvent('pointerover', { bubbles: true }),
+        );
+      });
+      expect(vi.getTimerCount()).toBe(1);
+      act(() => {
+        root.unmount();
+      });
+      roots.splice(roots.indexOf(root), 1);
+      expect(vi.getTimerCount()).toBe(0);
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+      expect(tip()).toBe('');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   describe('place', () => {
     const view = { width: 1000, height: 800 };
     const size = { width: 100, height: 28 };
@@ -303,6 +464,25 @@ describe('Tooltip', () => {
 
     it('shifts inward at the left edge', () => {
       expect(place(rect(0, 100, 20), size, view, 'below').left).toBe(8);
+    });
+
+    it('clamps top into the viewport when no side fits', () => {
+      const tall = { width: 100, height: 800 };
+      const p = place(
+        rect(450, 300),
+        tall,
+        { width: 300, height: 800 },
+        'below',
+      );
+      expect(p.top).toBeGreaterThanOrEqual(8);
+      expect(p.top + 800).toBeLessThanOrEqual(800 + 800);
+      const small = place(
+        rect(100, 10),
+        { width: 100, height: 900 },
+        view,
+        'below',
+      );
+      expect(small.top).toBe(8);
     });
 
     it('takes right, then left, when neither above nor below fits', () => {

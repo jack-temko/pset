@@ -40,13 +40,13 @@ export default defineExamples(spec, {
       </div>
     ),
     narrow: () => (
-      <div className="w-16 max-w-full">
+      <div className="w-16 max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">
         <Button>Open</Button>
       </div>
     ),
   },
   stress: () => (
-    <div className="w-40 max-w-full">
+    <div className="w-40 max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">
       <Button variant="primary">{LONG}</Button>
     </div>
   ),
