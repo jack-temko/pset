@@ -6,7 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Button, REASON_MS } from './button';
 import { Link } from './link';
 import { Tag } from './tag';
-import { place, Tooltip } from './tooltip';
+import { Tooltip } from './tooltip';
+import { place } from './tooltip/place';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
