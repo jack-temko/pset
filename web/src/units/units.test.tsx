@@ -11,6 +11,7 @@ import { SectionHeading } from './section-heading';
 import { WorkRow, timeLeft } from './work-row';
 import { Tag } from './tag';
 import { Tooltip } from './tooltip';
+import { TopBar } from './top-bar';
 import { place } from './tooltip/place';
 
 (
@@ -941,5 +942,72 @@ describe('CourseRow', () => {
     const { el } = row(2, 2);
     expect(el.querySelector('a')?.className).toContain('h-11');
     expect(el.querySelector('span.truncate')?.className).toContain('min-w-0');
+  });
+});
+
+describe('TopBar', () => {
+  const links = (el: HTMLElement) =>
+    [...el.querySelectorAll('a')].map((a) => [
+      a.textContent,
+      a.getAttribute('href'),
+    ]);
+
+  it('on Home has the wordmark and Settings only', () => {
+    const { el } = render(<TopBar settingsHref="/settings" />);
+    expect(links(el)).toEqual([
+      ['PSet', '/'],
+      ['Settings', '/settings'],
+    ]);
+    expect(el.querySelector('ol')?.children).toHaveLength(0);
+  });
+
+  it('links every path item but the last', () => {
+    const { el } = render(
+      <TopBar
+        path={[
+          { label: 'Electromagnetics', href: '/c/1' },
+          { label: 'Problem set 4' },
+        ]}
+        settingsHref="/settings"
+      />,
+    );
+    expect(links(el)).toEqual([
+      ['PSet', '/'],
+      ['Electromagnetics', '/c/1'],
+      ['Settings', '/settings'],
+    ]);
+    expect(el.querySelector('ol')?.textContent).toBe(
+      '/Electromagnetics/Problem set 4',
+    );
+  });
+
+  it('never links the last item, even when it has an href', () => {
+    const { el } = render(
+      <TopBar
+        path={[{ label: 'Electromagnetics', href: '/c/1' }]}
+        settingsHref="/s"
+      />,
+    );
+    expect(links(el).map((l) => l[0])).toEqual(['PSet', 'Settings']);
+  });
+
+  it('truncates the middle items before the ends and pins the sides', () => {
+    const { el } = render(
+      <TopBar
+        path={[
+          { label: 'A', href: '/a' },
+          { label: 'B', href: '/b' },
+          { label: 'C' },
+        ]}
+        settingsHref="/s"
+      />,
+    );
+    const items = [...el.querySelectorAll('li')].map((li) => li.className);
+    expect(items[1]).toContain('shrink-[4]');
+    expect(items[0]).not.toContain('shrink-[4]');
+    expect(items[2]).not.toContain('shrink-[4]');
+    expect(el.querySelector('a')?.className).toContain('shrink-0');
+    expect(el.querySelector('header > a')?.className).toContain('shrink-0');
+    expect(el.querySelector('header')?.className).toContain('sticky');
   });
 });
