@@ -36,7 +36,11 @@ type Jump = (pdf: number) => void;
 // ---------------------------------------------------------------- runs
 
 /** Runs, inline: text with its marks, math, citation chips. */
-export function Runs({ runs, onJump }: { runs: Run[]; onJump?: Jump }) {
+export function Runs({ runs: stored, onJump }: { runs: Run[]; onJump?: Jump }) {
+  // A block stored with null for its text (it came off the wire as
+  // JSON null) draws as nothing instead of crashing the whole page.
+  // oxlint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the wire type says Run[], the stored JSON can say null
+  let runs = stored ?? [];
   // Punctuation right after inline math stays with it: a line may not
   // begin with the comma that follows a formula.
   const out: ReactNode[] = [];
