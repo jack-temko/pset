@@ -412,6 +412,23 @@ func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	r.Boxes = []Box{}
 	decodeColumn("boxes", boxes, &r.Boxes)
 	r.Notes = decodeRunLists(notes)
+	// A column stored as JSON null decodes to a nil slice, which the page
+	// would read as null and crash on: every list leaves here non-nil.
+	if r.Hint == nil {
+		r.Hint = []doc.Block{}
+	}
+	if r.Walkthrough == nil {
+		r.Walkthrough = []doc.Block{}
+	}
+	if r.Revealed == nil {
+		r.Revealed = []string{}
+	}
+	if r.Boxes == nil {
+		r.Boxes = []Box{}
+	}
+	r.Reading = nonNilLists(r.Reading)
+	r.ReadingDoubts = nonNilLists(r.ReadingDoubts)
+	r.Notes = nonNilLists(r.Notes)
 	r.Done = doneAt != ""
 	// When it failed only means something while it is failed.
 	if r.State != StateFailed {
@@ -545,6 +562,19 @@ func decodeRuns(s string) []doc.Run {
 		return []doc.Run{}
 	}
 	return runsOf(s)
+}
+
+// nonNilLists replaces a nil list, and a nil line inside one, with an empty one.
+func nonNilLists(lists [][]doc.Run) [][]doc.Run {
+	if lists == nil {
+		return [][]doc.Run{}
+	}
+	for i, l := range lists {
+		if l == nil {
+			lists[i] = []doc.Run{}
+		}
+	}
+	return lists
 }
 
 func decodeRunLists(s string) [][]doc.Run {
