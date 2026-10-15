@@ -23,3 +23,21 @@ off was elsewhere on the page: the counter pill beside the section heading drew 
 no padding and hung off the line (see the counter's and section heading's logs). The
 status's centring is now the typed decision, not an accident: centred on line one,
 against the middle of the title.
+
+## Round of 2026-10-15, annotations
+
+Jack again, on the same due tags: **"These need to be centered vertically in the row
+please. Take a look at GitHub and how they do badges like that in rows."**
+
+Re-measured first. On the title's line they already centred (title text centre 359.5,
+tag 360, plain due text 421 against its title's 421): the fix above had landed. What
+did not centred was the row: the tag sat at line-one height, its centre 360 against
+its row's centre 425.5, while the progress column at the same right edge centred in
+the row. GitHub's issue rows were measured for the pattern: their labels ride centred
+on the title's line, but the badge-like column at a row's right edge (avatar and
+comment count) centres in the whole row (badge centre 514 against row centre 514.5).
+Primer's Label page carries no inline-alignment guidance (checked 2026-10-14); the
+pattern is GitHub's own issue rows.
+
+So the status left line one and became a child of the row itself, beside the aside,
+centred vertically in the row like it. Line one is the title alone.

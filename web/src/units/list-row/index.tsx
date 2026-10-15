@@ -6,9 +6,10 @@ import { isNarrowOnly, type NarrowOnly } from './meta';
 /** The aside shows from this width of the row; narrower, it goes first. */
 const ASIDE_MIN = '@min-[440px]';
 
-/** The one row shape: a title and a status on line one, small meta on line
- *  two, an optional aside at the right (list-row-d1). Only the title is a
- *  link, so a meta link never sits inside another. */
+/** The one row shape: a title on line one, small meta on line two, the
+ *  status and an optional aside at the right, each centred vertically in
+ *  the row (list-row-d1, d5). Only the title is a link, so a meta link
+ *  never sits inside another. */
 export function ListRow({
   title,
   href,
@@ -20,20 +21,21 @@ export function ListRow({
   title: string;
   /** Makes the title a link. */
   href?: string;
-  /** A Tag or a short muted text, at the far right of line one. */
+  /** A Tag or a short muted text, at the right of the row, centred in it. */
   status?: ReactNode;
   /** Short items joined by " · ", truncating as a whole. */
   meta?: readonly (ReactNode | NarrowOnly)[];
   /** At the right, spanning both lines, such as a progress bar. */
   aside?: ReactNode;
-  /** The aside's width in px, so asides align down a list. */
-  asideWidth?: number;
+  /** The aside's width: a number is px, a string any CSS width, so asides
+   *  align down a list. */
+  asideWidth?: number | string;
 }) {
   return (
     <div className="@container min-h-14 min-w-0 hover:bg-(--ds-hover)">
       <div className="flex min-w-0 items-center gap-4 px-4 py-2">
         <div className="min-w-0 flex-1">
-          <div className="flex min-h-6 min-w-0 items-center gap-3">
+          <div className="flex min-h-6 min-w-0 items-center">
             <div className="min-w-0 flex-1">
               {href === undefined ? (
                 <span className="ds-body block truncate font-medium text-(--ds-fg)">
@@ -51,11 +53,6 @@ export function ListRow({
                 </Link>
               )}
             </div>
-            {status !== undefined && (
-              <div className="ds-small ds-tabular flex h-6 shrink-0 items-center whitespace-nowrap text-(--ds-fg-muted)">
-                {status}
-              </div>
-            )}
           </div>
           {meta.length > 0 && (
             <p className="ds-small ds-tabular truncate text-(--ds-fg-muted)">
@@ -74,6 +71,11 @@ export function ListRow({
             </p>
           )}
         </div>
+        {status !== undefined && (
+          <div className="ds-small ds-tabular flex h-6 shrink-0 items-center whitespace-nowrap text-(--ds-fg-muted)">
+            {status}
+          </div>
+        )}
         {aside !== undefined && (
           <div
             data-aside

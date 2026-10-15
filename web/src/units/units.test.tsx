@@ -989,10 +989,18 @@ describe('ListRow', () => {
     expect(spans[1]?.textContent).toBe(' \u00b7 2 of 6');
   });
 
-  it('gives line one a 24px box whatever its status', () => {
-    const { el } = render(<ListRow title="T" status="Due Fri" />);
+  it('sits the status at the right of the row, out of line one', () => {
+    const { el } = render(
+      <ListRow title="T" status="Due Fri" aside="bar" asideWidth={96} />,
+    );
+    const status = el.querySelector('.h-6.items-center');
+    expect(status?.textContent).toBe('Due Fri');
+    // A child of the row itself, beside the aside, and never in the title's line.
+    expect(status?.parentElement).toBe(
+      el.querySelector('[data-aside]')?.parentElement,
+    );
+    expect(status?.closest('.min-h-6')).toBeNull();
     expect(el.querySelector('.min-h-6')).not.toBeNull();
-    expect(el.querySelector('.h-6.items-center')?.textContent).toBe('Due Fri');
   });
 
   it('is at least 56 high and truncates its lines', () => {
@@ -1167,10 +1175,10 @@ describe('CourseRow', () => {
     expect(el.textContent).not.toMatch(/materials|sets/);
   });
 
-  it('gives its aside 160 for the bar to fill', () => {
+  it('gives its aside a fifth of the row, floored at 160', () => {
     const { el } = row([set('Problem set 4', '/s/4', 15)]);
     expect(el.querySelector<HTMLElement>('[data-aside]')?.style.width).toBe(
-      '160px',
+      'clamp(160px, 20cqw, 320px)',
     );
   });
 

@@ -6,13 +6,13 @@ export default defineSpec({
   title: 'List row',
   group: 'Lists',
   purpose:
-    'The one row shape, GitHub issue style: a title and a status on line one, small meta on line two, an optional aside at the right.',
+    'The one row shape, GitHub issue style: a title on line one, small meta on line two, the status and an optional aside at the right, centred vertically in the row.',
   states: [
     { id: 'plain', name: 'Plain', when: 'A title and meta, the title a link.' },
     {
       id: 'status',
       name: 'With a status tag',
-      when: 'A Tag at the far right of line one.',
+      when: 'A Tag at the right of the row, centred vertically in it.',
     },
     {
       id: 'aside',
@@ -63,7 +63,7 @@ export default defineSpec({
       name: 'status',
       type: 'ReactNode',
       default: 'none',
-      does: 'A Tag or short muted text at the far right of line one.',
+      does: 'A Tag or short muted text at the right of the row, centred vertically in it.',
     },
     {
       name: 'meta',
@@ -79,9 +79,9 @@ export default defineSpec({
     },
     {
       name: 'asideWidth',
-      type: 'number',
+      type: 'number | string',
       default: '120',
-      does: 'The aside\u2019s width in px, so asides align down a list.',
+      does: 'The aside\u2019s width: a number is px, a string any CSS width, so asides align down a list.',
     },
   ],
   priority: { first: 'The title.', main: 'open' },
@@ -134,6 +134,15 @@ export default defineSpec({
       why: 'Jack: "These need to be centered vertically".',
       beat: 'A status that read as riding high on the line',
       date: '2026-10-14',
+      supersededBy: 'list-row-d5',
+    },
+    {
+      id: 'list-row-d5',
+      decision:
+        'The status sits at the right of the row, centred vertically in it, on a level with the aside.',
+      why: 'Jack: "These need to be centered vertically in the row please. Take a look at GitHub and how they do badges like that in rows."',
+      beat: 'On line one, centred against the title (list-row-d4)',
+      date: '2026-10-15',
     },
   ],
 });

@@ -107,8 +107,8 @@ export default defineSpec({
   sizes: {
     narrowest: 320,
     gives: [
-      'The 160 aside goes below 440, and the count stays in the meta',
-      'In the aside, the bar fills the room the count leaves',
+      'The aside goes below 440, and the count stays in the meta',
+      'Above that, the aside is a fifth of the row (160 to 320), and the bar fills the room the count leaves',
       'Then the meta truncates, as a whole',
       'Then the course name truncates',
     ],
@@ -165,6 +165,15 @@ export default defineSpec({
       why: 'Jack: "The progress bars need to be longer." The width is the orchestrator\u2019s call, pending Jack\u2019s eye.',
       beat: 'A 120 aside, where the larger count ate the bar\u2019s room',
       date: '2026-10-14',
+      supersededBy: 'course-row-d6',
+    },
+    {
+      id: 'course-row-d6',
+      decision:
+        'The aside is a fifth of the row: 20cqw of the row container, floored at 160 and capped at 320, so the bar grows on wide rows.',
+      why: 'Jack: "Todays bars are still to short in the horizontal direction. Especially when on a large screen."',
+      beat: 'A fixed 160 aside (course-row-d5)',
+      date: '2026-10-15',
     },
   ],
 });

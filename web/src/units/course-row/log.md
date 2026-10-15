@@ -50,3 +50,19 @@ The wider bar needed more room than a 120 aside gives once the count is larger, 
 course row's aside is 160 and the bar fills it beside the count. The width is the
 orchestrator's call, pending Jack's eye; the list row's own default and the set line's
 aside stay 120.
+
+## Round of 2026-10-15, annotations
+
+Jack: **"Todays bars are still to short in the horizontal direction. Especially when on
+a large screen."**
+
+The aside is no longer a fixed 160: it is a fifth of the row, `clamp(160px, 20cqw,
+320px)` through the list row's aside width, so a wide row carries a wide bar and the
+count keeps its 160 of room at the floor. The set line's 120 aside stays as it is: its
+page did not overflow, and its pane is narrow anyway. The due tag also moved level with
+the bar, centred in the row (see the list row's log).
+
+## The fork in the bar (2026-10-14)
+
+The bar is one continuous bar everywhere now, no segments and no switch above 12 (see
+the progress bar's log). Segmented bars return with the work pane, wider than this.
