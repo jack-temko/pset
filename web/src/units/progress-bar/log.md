@@ -35,3 +35,13 @@ solid stripe; the gap is back, as an explicit 2px. And the continuous bar held a
 count leaves, from 16 up, so a longer bar is exactly as long as its aside allows. The
 count goes up one type step, from small to body, in the bar itself, so the course row
 and the set line both get it.
+
+## The fork in the bar (2026-10-14)
+
+Jack picked between the two shapes: **"Lets go with continuous bars everywhere. I will add
+back segmented progress bars when the homework pane lands. They need to be wider."**
+
+So the segment rendering and the switch above 12 problems are gone: one continuous bar
+everywhere, fluid from its 16px floor. Plainly: segmented bars return with the work pane,
+and they must be wider than the dash design (his words above carry that). Until then,
+every bar is continuous.

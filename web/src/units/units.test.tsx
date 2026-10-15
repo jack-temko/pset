@@ -830,89 +830,54 @@ describe('Tag', () => {
   });
 });
 
-describe('ProgressBar narrowing', () => {
-  /** Runs `fn` with a ResizeObserver and a root of `width` px, the count 40. */
-  function at(width: number, total: number) {
-    const original = globalThis.ResizeObserver;
-    globalThis.ResizeObserver = class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    };
-    const cw = vi
-      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
-      .mockReturnValue(width);
-    const ow = vi
-      .spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
-      .mockReturnValue(40);
-    try {
-      return render(<ProgressBar done={1} total={total} />).el;
-    } finally {
-      cw.mockRestore();
-      ow.mockRestore();
-      globalThis.ResizeObserver = original;
-    }
-  }
-
-  it('keeps segments while they fit at 4px each, then goes continuous', () => {
-    // Six segments need 6 * 4 + 5 * 2 = 34, plus 8 and the 40 count.
-    expect(at(82, 6).querySelectorAll('[data-segment]')).toHaveLength(6);
-    const el = at(81, 6);
-    expect(el.querySelectorAll('[data-segment]')).toHaveLength(0);
-    expect(el.querySelector('[data-bar="continuous"]')).not.toBeNull();
-    expect(el.textContent).toBe('1 of 6');
-  });
-
-  it('always shows the count', () => {
-    expect(at(60, 12).textContent).toBe('1 of 12');
-  });
-});
-
 describe('ProgressBar', () => {
-  const segs = (el: HTMLElement) =>
-    [...el.querySelectorAll('[data-segment]')].map((n) =>
-      n.getAttribute('data-segment'),
-    );
+  const bar = (el: HTMLElement) =>
+    el.querySelector<HTMLElement>('[data-bar="continuous"]');
+  const fill = (el: HTMLElement) =>
+    el.querySelector<HTMLElement>('[data-bar="continuous"] > span');
 
-  it('draws a segment per problem with the count in words', () => {
+  it('draws one continuous bar with the count in words', () => {
     const { el } = render(<ProgressBar done={2} total={6} />);
-    expect(segs(el)).toEqual(['done', 'done', 'todo', 'todo', 'todo', 'todo']);
+    expect(el.querySelectorAll('[data-bar]')).toHaveLength(1);
+    expect(el.querySelector('[data-segment]')).toBeNull();
     expect(el.textContent).toBe('2 of 6');
   });
 
-  it('keeps segments at 12 and switches to one bar above', () => {
-    const twelve = render(<ProgressBar done={5} total={12} />);
-    expect(segs(twelve.el)).toHaveLength(12);
-    expect(twelve.el.querySelector('[data-bar="continuous"]')).toBeNull();
-    const thirty = render(<ProgressBar done={15} total={30} />);
-    expect(segs(thirty.el)).toHaveLength(0);
-    const fill = thirty.el.querySelector<HTMLElement>(
-      '[data-bar="continuous"] > span',
-    );
-    expect(fill?.style.width).toBe('50%');
-    expect(thirty.el.textContent).toBe('15 of 30');
+  it('fills the bar to the done share', () => {
+    expect(
+      fill(render(<ProgressBar done={15} total={30} />).el)?.style.width,
+    ).toBe('50%');
+    expect(
+      fill(render(<ProgressBar done={1} total={4} />).el)?.style.width,
+    ).toBe('25%');
+    expect(
+      fill(render(<ProgressBar done={0} total={4} />).el)?.style.width,
+    ).toBe('0%');
   });
 
-  it('turns grey when every problem is done, in both shapes', () => {
-    const a = render(<ProgressBar done={3} total={3} />);
-    expect(a.el.querySelector('[data-segment]')?.className).toContain(
-      '--ds-fg-muted',
-    );
-    const b = render(<ProgressBar done={30} total={30} />);
+  it('draws the done share in accent, grey only when every problem is done', () => {
     expect(
-      b.el.querySelector('[data-bar="continuous"] > span')?.className,
+      fill(render(<ProgressBar done={2} total={6} />).el)?.className,
+    ).toContain('--ds-accent');
+    expect(
+      fill(render(<ProgressBar done={6} total={6} />).el)?.className,
     ).toContain('--ds-fg-muted');
   });
 
   it('keeps done between 0 and total', () => {
     const { el } = render(<ProgressBar done={9} total={4} />);
     expect(el.textContent).toBe('4 of 4');
+    expect(fill(el)?.style.width).toBe('100%');
   });
 
-  it('keeps its count whole while the bar shrinks', () => {
-    const { el } = render(<ProgressBar done={1} total={30} />);
-    expect(el.querySelector('[data-bar]')?.className).toContain('flex-1');
-    expect(el.querySelector('[data-bar]')?.className).toContain('min-w-4');
+  it('keeps its count whole while the bar shrinks under a tiny container', () => {
+    const { el } = render(
+      <div className="w-[96px]">
+        <ProgressBar done={1} total={30} />
+      </div>,
+    );
+    expect(bar(el)?.className).toContain('flex-1');
+    expect(bar(el)?.className).toContain('min-w-4');
     expect(el.querySelector('.shrink-0')?.textContent).toBe('1 of 30');
   });
 

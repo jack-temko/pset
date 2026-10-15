@@ -85,6 +85,8 @@ button, text link, course row, progress bar, tag, section heading, set line (the
   goes live.
 - Exam practice and material kinds (S10, S11), when a real need shows.
 - What Settings becomes.
+- Segmented progress bars return with the work pane, wider than the dash design
+  (Jack, 2026-10-14).
 
 ## Reversals
 

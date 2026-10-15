@@ -6,41 +6,41 @@ export default defineSpec({
   title: 'Progress bar',
   group: 'Basics',
   purpose:
-    'How far a set is done: a segment per problem, with the count in words beside it. Past twelve problems, one bar.',
+    'How far a set is done: one continuous bar, the done share in blue, with the count in words beside it.',
   states: [
     {
       id: 'none-done',
       name: 'None done',
-      when: 'A set not started: every segment is empty.',
+      when: 'A set not started: the bar is empty.',
     },
     {
       id: 'some-done',
       name: 'Some done',
-      when: 'A set in progress: the done segments are blue.',
+      when: 'A set in progress: the done share of the bar is blue.',
     },
     {
       id: 'all-done',
       name: 'All done',
-      when: 'Every problem is done: every segment turns grey.',
+      when: 'Every problem is done: the fill turns grey.',
     },
     {
       id: 'one-problem',
       name: 'One problem',
-      when: 'A set of one problem: a single segment.',
+      when: 'A set of one problem: the bar fills as it is done.',
     },
     {
       id: 'twelve',
       name: 'Twelve problems',
-      when: 'The most that is still drawn as segments.',
+      when: 'A plain continuous example: the same one bar at any total.',
     },
     {
       id: 'thirty',
       name: 'Thirty problems',
-      when: 'More than twelve: one continuous bar, filling the room left beside the count.',
+      when: 'A smaller share of the same one bar, filling the room the count leaves.',
     },
   ],
   stress:
-    'Twelve problems in a 96px container: the segments narrow, then one continuous bar takes over; the count stays whole.',
+    'Twelve problems in a 96px container: the bar shrinks to its 16px floor; the count stays whole.',
   actions: [],
   inputs: [
     {
@@ -61,11 +61,7 @@ export default defineSpec({
   },
   sizes: {
     narrowest: 80,
-    gives: [
-      'The segments narrow from 12px to 4px',
-      'Then one continuous bar takes over, shrinking to 16px',
-      'The count never gives way',
-    ],
+    gives: ['The bar shrinks to its 16px floor', 'The count never gives way'],
   },
   rules: {
     cite: ['colour-has-a-word', 'contrast-floors', 'figures-follow-text'],
@@ -88,6 +84,7 @@ export default defineSpec({
       why: 'Primer: pair a progress bar with its value in text.',
       beat: 'One continuous bar; the count alone',
       date: '2026-10-13',
+      supersededBy: 'progress-bar-d5',
     },
     {
       id: 'progress-bar-d2',
@@ -110,6 +107,14 @@ export default defineSpec({
       decision: 'The count is set in the body step, one step up from small.',
       why: 'Jack: "This needs to be larger".',
       beat: 'The count in the small step',
+      date: '2026-10-14',
+    },
+    {
+      id: 'progress-bar-d5',
+      decision:
+        'One continuous bar everywhere: the done share in blue, the rest in border, the count in words beside it.',
+      why: 'Jack: "Lets go with continuous bars everywhere. I will add back segmented progress bars when the homework pane lands. They need to be wider."',
+      beat: 'A segment per problem (progress-bar-d1, Jack 2026-10-13)',
       date: '2026-10-14',
     },
   ],
