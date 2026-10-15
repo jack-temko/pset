@@ -74,7 +74,7 @@ export default function App() {
         />
       </Routes>
       {/* The agent feedback toolbar: development only, never in production. */}
-      {import.meta.env.DEV && <Agentation />}
+      {import.meta.env.DEV && <Agentation endpoint="http://localhost:4747" />}
     </BrowserRouter>
   );
 }
