@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "A short paragraph of prose with inline marks: \\(math\\), [p. N], **bold**, *italic*, `code`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "text"],
+  "properties": {
+    "type": {
+      "const": "para"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 3000
+    }
+  }
+}
