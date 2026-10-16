@@ -257,3 +257,6 @@ Built as a first version for Jack to react to: new unit `assignment-row`, a lean
 Jack, on the lean course row looking empty ("What, if anything, goes on the right of a course row?" Time this week (Recommended) / Next due date / Last opened / Leave it lean): **"can we make it two lines? the lower line should be the material count + last opened, time this week is aside"**
 Then: **"sets to do can move down too"**
 Course row is two lines again (`course-row-d12`, superseding `course-row-d11`): the name; sets to do, materials and last opened; time this week as the aside. The list row's `single` mode is removed.
+Jack, on the course row: **"drop the "open yesterday" line, change the icons to text, e.g. 3 sets * 5 materials"**, then the question "In '3 sets · 5 materials', is 3 the sets still to do, or all the course's sets?" Still to do, worded '3 to do' (Recommended) / Still to do, worded '3 sets' / All the course's sets. **Still to do, worded '3 to do' (Recommended).**
+Course-row-d12 is reworded: the name; "3 to do · 5 materials" in words; time this week as the aside. No icons, no last opened; `MetaStat` is removed from the list row (`list-row-d9`).
+Jack, a last wording change: **"add "sets" so its "sets to do""** Line two reads "3 sets to do · 5 materials".

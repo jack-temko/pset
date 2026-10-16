@@ -82,28 +82,24 @@ const COURSES = [
     name: 'Circuits I',
     todo: 2,
     materials: 7,
-    openedAt: ago(26),
     weekMinutes: 190,
   },
   {
     name: 'Signals and systems',
     todo: 5,
     materials: 12,
-    openedAt: ago(2),
     weekMinutes: 45,
   },
   {
     name: 'Thermodynamics',
     todo: 10,
     materials: 31,
-    openedAt: ago(24 * 12),
     weekMinutes: 0,
   },
   {
     name: 'Differential equations',
     todo: 1,
     materials: 1,
-    openedAt: ago(72),
     weekMinutes: 130,
   },
   { name: 'Linear algebra', todo: 0, materials: 0, weekMinutes: 0 },
@@ -140,7 +136,7 @@ export function HomeLists() {
         <div className="mt-3">
           <List>
             {COURSES.map((c) => (
-              <CourseRow key={c.name} {...c} href="#" today={TODAY} />
+              <CourseRow key={c.name} {...c} href="#" />
             ))}
           </List>
         </div>

@@ -1,13 +1,10 @@
-import { Fragment, isValidElement, type ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 
 import { Link } from '@/units/link';
-import { MetaStat } from './stat';
 import { isNarrowOnly, type NarrowOnly } from './meta';
 
 /** The aside shows from this width of the row; narrower, it goes first. */
 const ASIDE_MIN = '@min-[440px]';
-
-const isStat = (x: unknown) => isValidElement(x) && x.type === MetaStat;
 
 /** The one row shape: a title on line one, small meta on line two, the
  *  status and an optional aside at the right, each centred vertically in
@@ -30,8 +27,7 @@ export function ListRow({
   label?: ReactNode;
   /** A Tag or a short muted text, at the right of the row, centred in it. */
   status?: ReactNode;
-  /** Short items joined by " · ", truncating as a whole; a `MetaStat` is
-   *  a muted icon and number. */
+  /** Short items joined by " · ", truncating as a whole. */
   meta?: readonly (ReactNode | NarrowOnly)[];
   /** At the right, spanning both lines, such as a progress bar. */
   aside?: ReactNode;
@@ -66,19 +62,12 @@ export function ListRow({
           <p className="ds-small ds-tabular min-h-5 truncate text-(--ds-fg-muted)">
             {meta.map((item, i) => {
               const narrow = isNarrowOnly(item);
-              // A stat, and what follows one, is set apart by a gap, not a dot.
-              const stat = isStat(item);
-              const gap = i > 0 && (stat || isStat(meta[i - 1]));
               return (
                 <span
                   key={i}
-                  className={
-                    [narrow ? `${ASIDE_MIN}:hidden` : '', gap ? 'ml-3' : '']
-                      .filter(Boolean)
-                      .join(' ') || undefined
-                  }
+                  className={narrow ? `${ASIDE_MIN}:hidden` : undefined}
                 >
-                  {i > 0 && !gap && <Fragment> · </Fragment>}
+                  {i > 0 && <Fragment> · </Fragment>}
                   {narrow ? item.node : item}
                 </span>
               );

@@ -18,7 +18,6 @@ import { SectionHeading } from './section-heading';
 import { SetLine } from './set-line';
 import { daysUntil, dueText, parseDueDate, timeLeft } from './set-line/dates';
 import { Tag } from './tag';
-import { MetaStat } from './list-row/stat';
 import { Tooltip } from './tooltip';
 import { TopBar } from './top-bar';
 import { place } from './tooltip/place';
@@ -1008,22 +1007,6 @@ describe('ListRow', () => {
     expect(el.querySelector('a')?.className).toContain('w-fit');
   });
 
-  it('draws a MetaStat as a muted icon and number inside the meta line', () => {
-    const { el } = render(
-      <ListRow
-        title="T"
-        meta={[
-          'Set',
-          <MetaStat key="s" icon={Clock} value={3} label="3 sets" />,
-        ]}
-      />,
-    );
-    const p = el.querySelector('p');
-    expect(p?.textContent).toBe('Set3');
-    expect(p?.querySelector('span:last-child')?.className).toContain('ml-3');
-    expect(p?.querySelector('svg')?.getAttribute('class')).toContain('size-3');
-  });
-
   it('shows a narrow-only item only where the aside is not', () => {
     const { el } = render(
       <ListRow title="T" meta={['a', narrowOnly('2 of 6')]} />,
@@ -1202,8 +1185,6 @@ describe('SetLine', () => {
 });
 
 describe('CourseRow', () => {
-  const today = new Date(2026, 9, 13, 12);
-  const ago = (h: number) => new Date(today.getTime() - h * 3_600_000);
   const row = (p: Partial<Parameters<typeof CourseRow>[0]> = {}) =>
     render(
       <CourseRow
@@ -1211,24 +1192,29 @@ describe('CourseRow', () => {
         href="/c/1"
         todo={3}
         materials={7}
-        openedAt={ago(26)}
         weekMinutes={130}
-        today={today}
         {...p}
       />,
     ).el;
 
-  it('has the name alone on line one, and the stats and opened on line two', () => {
+  it('has the name alone on line one, and the counts in words on line two', () => {
     const el = row();
     const a = el.querySelectorAll('a');
     expect(a).toHaveLength(1);
     expect(a[0]?.getAttribute('href')).toBe('/c/1');
     expect(el.querySelector('.min-h-6')?.textContent).toBe('Circuits I');
     const p = el.querySelector('p');
-    expect(p?.textContent).toBe('37Opened yesterday');
-    expect(p?.querySelectorAll('svg')).toHaveLength(2);
-    expect(p?.textContent).not.toContain('\u00b7');
+    expect(p?.textContent).toBe('3 sets to do \u00b7 7 materials');
+    expect(p?.querySelector('svg')).toBeNull();
+    expect(el.textContent).not.toContain('Opened');
     expect(el.firstElementChild?.className).toContain('min-h-14');
+  });
+
+  it('writes the singular at 1 and zero as 0', () => {
+    const meta = (todo: number, materials: number) =>
+      row({ todo, materials }).querySelector('p')?.textContent;
+    expect(meta(1, 1)).toBe('1 set to do \u00b7 1 material');
+    expect(meta(0, 0)).toBe('0 sets to do \u00b7 0 materials');
   });
 
   it('shows the time this week in the aside, rounded, 0 m for none', () => {
@@ -1243,17 +1229,10 @@ describe('CourseRow', () => {
     );
   });
 
-  it('shows no sets, badge, bar or date, and nothing opened when never', () => {
-    const el = row({ openedAt: undefined });
-    expect(el.querySelector('p')?.textContent).toBe('37');
+  it('shows no sets, badge, bar or date', () => {
+    const el = row();
     expect(el.querySelector('[data-bar]')).toBeNull();
     expect(el.textContent).not.toMatch(/Due|Overdue/);
-  });
-
-  it('shows zero as 0', () => {
-    expect(
-      row({ todo: 0, materials: 0 }).querySelector('p')?.textContent,
-    ).toMatch(/^00/);
   });
 });
 

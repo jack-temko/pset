@@ -92,3 +92,9 @@ Jack, on the lean course row looking empty ("What, if anything, goes on the righ
 Then: **"sets to do can move down too"**
 
 The course row is two lines again, so `single` has no user and is removed. A stat, and the text after one, are set apart by the 12px gap, not a dot.
+
+## `MetaStat` goes (2026-10-16)
+
+Jack, on the course row: **"drop the "open yesterday" line, change the icons to text, e.g. 3 sets * 5 materials"**, then the question "In '3 sets · 5 materials', is 3 the sets still to do, or all the course's sets?" Still to do, worded '3 to do' (Recommended) / Still to do, worded '3 sets' / All the course's sets. **Still to do, worded '3 to do' (Recommended).**
+
+The course row was the only user of `MetaStat`, so it is removed, with its separator rule: a meta item is plain text again, joined by " · " (list-row-d9).

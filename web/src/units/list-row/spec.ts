@@ -20,11 +20,6 @@ export default defineSpec({
       when: 'A Tag right after the title on line one, like a GitHub label; the title truncates first.',
     },
     {
-      id: 'stats',
-      name: 'With a stat in the meta',
-      when: 'A muted icon and number as the last meta item, such as "3 sets"; it truncates first.',
-    },
-    {
       id: 'aside',
       name: 'With an aside',
       when: 'A progress bar at the right, spanning both lines.',
@@ -47,7 +42,6 @@ export default defineSpec({
     { unit: 'link', use: 'The title, and any meta links.' },
     { unit: 'tag', use: 'The status, in the examples.' },
     { unit: 'progress-bar', use: 'The aside, in the examples.' },
-    { unit: 'tooltip', use: 'A meta stat\u2019s label.' },
   ],
   actions: [
     {
@@ -184,6 +178,15 @@ export default defineSpec({
         'A count is a muted 12px icon and number in the meta (MetaStat), its words in a tooltip, after a 12px gap, not a dot.',
       why: 'Jack: "Can we display this with some muted icons and digits somewhere? Kinda how github does the line diffs"',
       beat: 'Counts in words; a separate stats slot after the title',
+      date: '2026-10-16',
+      supersededBy: 'list-row-d9',
+    },
+    {
+      id: 'list-row-d9',
+      decision:
+        'Counts in the meta are plain words, joined by " \u00b7 " like the rest; there are no icon stats.',
+      why: 'Jack: "change the icons to text, e.g. 3 sets * 5 materials"; nothing else used them.',
+      beat: 'A muted icon and number in the meta (list-row-d8)',
       date: '2026-10-16',
     },
   ],

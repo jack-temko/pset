@@ -6,27 +6,22 @@ export default defineSpec({
   title: 'Course row',
   group: 'Lists',
   purpose:
-    'One course as a two-line list row: its name; its sets to do, materials and last opened; and the time this week as its aside. Assignments are their own list.',
+    'One course as a two-line list row: its name; its sets to do and materials in words; and the time this week as its aside. Assignments are their own list.',
   states: [
     {
       id: 'to-do',
       name: 'Sets to do',
-      when: 'A course with sets still to do: the count on line two, with its materials and when it was opened.',
+      when: 'A course with sets still to do: "3 sets to do · 7 materials" on line two.',
     },
     {
       id: 'one',
       name: 'One of each',
-      when: 'One set to do and one material: the tooltips read "1 set to do" and "1 material", singular.',
+      when: 'One set to do and one material: line two reads "1 set to do · 1 material", singular.',
     },
     {
       id: 'none',
       name: 'None to do',
-      when: 'Every set is done, or there are none: the counts show 0, and 0 m this week.',
-    },
-    {
-      id: 'never-opened',
-      name: 'Never opened',
-      when: 'The student has not opened the course: line two has no "Opened" text.',
+      when: 'Every set is done, or there are none: line two reads "0 sets to do · 0 materials", and the aside 0 m this week.',
     },
     {
       id: 'list',
@@ -40,7 +35,7 @@ export default defineSpec({
   components: [
     {
       unit: 'list-row',
-      use: 'The row itself: title, meta stats and the aside.',
+      use: 'The row itself: title, meta and the aside.',
     },
     {
       unit: 'set-line',
@@ -76,31 +71,19 @@ export default defineSpec({
       name: 'todo',
       type: 'number',
       default: 'none',
-      does: 'Sets still to do: a muted icon and number on line two, zero as 0.',
+      does: 'Sets still to do, in words on line two: "3 sets to do", zero as "0 sets to do".',
     },
     {
       name: 'materials',
       type: 'number',
       default: 'none',
-      does: 'Materials in the course: a muted icon and number on line two, zero as 0.',
-    },
-    {
-      name: 'openedAt',
-      type: 'Date',
-      default: 'none',
-      does: 'When the student last opened it, as "Opened yesterday"; nothing when never.',
+      does: 'Materials in the course, in words on line two: "5 materials", "1 material".',
     },
     {
       name: 'weekMinutes',
       type: 'number',
       default: 'none',
       does: 'Minutes spent this week: "2 h 10 m this week" in the aside, "0 m this week" for none.',
-    },
-    {
-      name: 'today',
-      type: 'Date',
-      default: 'now',
-      does: 'The moment "Opened 2 h ago" counts from; for the design page and tests.',
     },
   ],
   priority: {
@@ -225,9 +208,9 @@ export default defineSpec({
     {
       id: 'course-row-d12',
       decision:
-        'A course row has two lines: the name; sets to do, materials count and last opened; with the time this week as its aside.',
-      why: 'Jack: the one-line row looked empty.',
-      beat: 'One line with the to-do count only (course-row-d11)',
+        'A course row has two lines: its name; sets to do and materials count in words; time this week as its aside.',
+      why: 'Jack: words instead of icons, no last opened.',
+      beat: 'Icon counts and last opened',
       date: '2026-10-16',
     },
   ],

@@ -111,3 +111,13 @@ Jack, on the lean course row looking empty ("What, if anything, goes on the righ
 Then: **"sets to do can move down too"**
 
 So the course row is a two-line list row again, 56 high like the assignment rows. Line one is the name alone. Line two is the sets-to-do count (`ListChecks`), the materials count (`FileText`), each 12px apart, then after the same gap "Opened yesterday" (the assignment row's `openedAgo` wording, and "Opened Oct 3" beyond a week; nothing when never opened). The aside is "2 h 10 m this week", muted and right-aligned in the same width as the assignment rows' aside. The one-line `single` mode is removed from the list row, as nothing uses it.
+
+## Words instead of icons, no last opened (2026-10-16)
+
+Jack, on the course row: **"drop the "open yesterday" line, change the icons to text, e.g. 3 sets * 5 materials"**, then the question "In '3 sets · 5 materials', is 3 the sets still to do, or all the course's sets?" Still to do, worded '3 to do' (Recommended) / Still to do, worded '3 sets' / All the course's sets. **Still to do, worded '3 to do' (Recommended).**
+
+So line one is the name alone, line two is plain muted text, "3 to do · 5 materials" ("1 material", "0 to do", "0 materials"), joined by " · ", and the aside is the time this week. There are no icons and no tooltips; `openedAt` and the opened wording are gone from the course row (the assignment row keeps its own).
+
+Jack, a last wording change: **"add "sets" so its "sets to do""**
+
+Line two reads "3 sets to do · 5 materials" ("1 set to do", "0 sets to do").
