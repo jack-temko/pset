@@ -30,14 +30,16 @@ const MONTH_DAY = new Intl.DateTimeFormat('en-US', {
 
 export type DueKind = 'overdue' | 'soon' | 'plain';
 
-/** How a due date reads: "Overdue" when past, "Due Fri" within 6 days, else
- *  "Due Oct 20". Within 2 days it is a `soon` tag. */
+/** How a due date reads, always as a date: "Due Fri" within 6 days, else
+ *  "Due Oct 20" (also when past). `kind` says whether a badge goes beside
+ *  the name: `soon` within 2 days, `overdue` when past (set-line-d7). */
 export function dueText(
   due: Date,
   today: Date,
 ): { kind: DueKind; text: string } {
   const days = daysUntil(due, today);
-  if (days < 0) return { kind: 'overdue', text: 'Overdue' };
+  if (days < 0)
+    return { kind: 'overdue', text: `Due ${MONTH_DAY.format(due)}` };
   if (days <= WEEKDAY_DAYS) {
     return {
       kind: days <= SOON_DAYS ? 'soon' : 'plain',

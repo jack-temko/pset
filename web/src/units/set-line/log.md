@@ -56,3 +56,9 @@ row. The "Show all" cap of five now counts courses, not sets.
   (Recommended).**
 
 A due date is a local calendar date (`parseDueDate('2026-10-19')`), never UTC.
+
+## The badge in place of the date (2026-10-16)
+
+Jack on the course list, annotating with Agentation (2026-10-16): **"These look weird because it replaces the original text. Can we try to always have the due date, but have badges for overdue and due soon? Where is a good place to put them?"** Then: **"With the date always shown, where does the 'Due soon' or 'Overdue' badge go?"** Options: After the course name, like a GitHub label (Recommended) / Just before the date, on the right / In the grey line, after the set name. Answer: **After the course name, like a GitHub label (Recommended).**
+
+So the right-hand status is always the plain date ("Due Thu", "Due Oct 23"), and a "Due soon" (attention, clock glyph) or "Overdue" (danger, alert glyph) badge sits after the set name, as a label. A past date reads "Due Oct 12", a month and day, since a weekday is ambiguous once past.

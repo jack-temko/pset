@@ -1,9 +1,7 @@
-import { Clock, TriangleAlert } from 'lucide-react';
-
 import { ListRow } from '@/units/list-row';
 import { narrowOnly } from '@/units/list-row/meta';
 import { ProgressBar } from '@/units/progress-bar';
-import { Tag } from '@/units/tag';
+import { dueBadge } from './badge';
 import { dueText, timeLeft } from './dates';
 
 const ASIDE = 120;
@@ -23,8 +21,8 @@ export interface SetLineProps {
   today?: Date;
 }
 
-/** The due date of a set: an attention tag within 2 days, a red "Overdue"
- *  when past, otherwise plain text, and nothing without a date. */
+/** The due date of a set, always plain: "Due Thu", "Due Oct 23", and nothing
+ *  without a date (set-line-d7). */
 export function DueStatus({
   due,
   today = new Date(),
@@ -33,20 +31,7 @@ export function DueStatus({
   today?: Date;
 }) {
   if (due === undefined) return null;
-  const when = dueText(due, today);
-  if (when.kind === 'overdue')
-    return (
-      <Tag tone="danger" icon={TriangleAlert}>
-        {when.text}
-      </Tag>
-    );
-  if (when.kind === 'soon')
-    return (
-      <Tag tone="attention" icon={Clock}>
-        {when.text}
-      </Tag>
-    );
-  return <>{when.text}</>;
+  return <>{dueText(due, today).text}</>;
 }
 
 /** The meta of a set: the time left when PSet knows it, and the count where
@@ -79,6 +64,7 @@ export function SetLine({
     <ListRow
       title={set}
       href={href}
+      label={dueBadge(due, today)}
       status={<DueStatus due={due} today={today} />}
       meta={setMeta({ done, total, minutesLeft })}
       aside={<ProgressBar done={done} total={total} />}

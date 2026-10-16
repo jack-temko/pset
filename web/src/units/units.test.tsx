@@ -761,14 +761,15 @@ describe('Link', () => {
 });
 
 describe('Tag tones', () => {
-  it('draws danger on its own soft ground', () => {
+  it('draws danger as an outlined pill', () => {
     const { el } = render(
       <Tag tone="danger" icon={Clock}>
         Overdue
       </Tag>,
     );
     const cls = el.firstElementChild?.className ?? '';
-    expect(cls).toContain('--ds-danger-soft');
+    expect(cls).toContain('border-(--ds-danger)');
+    expect(cls).toContain('rounded-full');
     expect(cls).toContain('text-(--ds-danger)');
   });
 });
@@ -831,6 +832,20 @@ describe('Tag', () => {
 });
 
 describe('ProgressBar', () => {
+  it('sizes the count to "99 of 99", so the bar is the same on every row', () => {
+    const count = (d: number, t: number) =>
+      render(<ProgressBar done={d} total={t} />).el.querySelector(
+        '[data-bar] + span',
+      );
+    for (const [d, t] of [
+      [2, 6],
+      [12, 30],
+    ] as const) {
+      expect(count(d, t)?.className).toContain("before:content-['99_of_99']");
+      expect(count(d, t)?.className).toContain('items-end');
+    }
+  });
+
   const bar = (el: HTMLElement) =>
     el.querySelector<HTMLElement>('[data-bar="continuous"]');
   const fill = (el: HTMLElement) =>
@@ -980,6 +995,15 @@ describe('ListRow', () => {
     expect(aside?.className).toContain('@min-[440px]:block');
   });
 
+  it('puts a label after the title, and gives the row no hover ground', () => {
+    const { el } = render(<ListRow title="T" href="/t" label="Soon" />);
+    const line = el.querySelector('.min-h-6');
+    expect(line?.textContent).toBe('TSoon');
+    expect(line?.className).toContain('gap-2');
+    expect(el.innerHTML).not.toContain('hover:bg');
+    expect(el.querySelector('a')?.className).toContain('w-fit');
+  });
+
   it('shows a narrow-only item only where the aside is not', () => {
     const { el } = render(
       <ListRow title="T" meta={['a', narrowOnly('2 of 6')]} />,
@@ -1077,11 +1101,16 @@ describe('SetLine', () => {
       expect(text).toContain(part);
   });
 
-  it('tags a due date only within 2 days, and writes it by the weekday within 6', () => {
+  it('badges a due date only within 2 days, and writes it by the weekday within 6', () => {
     const tag = (d: number) => line({ due: day(d) }).el.querySelector('svg');
     expect(tag(13)).not.toBeNull();
     expect(tag(15)).not.toBeNull();
     expect(tag(16)).toBeNull();
+    // The badge sits beside the date, never in its place.
+    const soon = line({ due: day(15) }).el.textContent;
+    expect(soon).toContain('Due soon');
+    expect(soon).toContain('Due Thu');
+    expect(line({ due: day(16) }).el.textContent).not.toContain('Due soon');
     expect(line({ due: day(15) }).el.textContent).toContain('Due Thu');
     expect(line({ due: day(16) }).el.textContent).toContain('Due Fri');
     expect(line({ due: day(19) }).el.textContent).toContain('Due Mon');
@@ -1089,11 +1118,11 @@ describe('SetLine', () => {
     expect(line({ due: day(20) }).el.querySelector('svg')).toBeNull();
   });
 
-  it('shows Overdue in the danger tone, never a day', () => {
+  it('shows Overdue in the danger tone, beside the date', () => {
     for (const d of [12, 4]) {
       const { el } = line({ due: day(d) });
       expect(el.textContent).toContain('Overdue');
-      expect(el.textContent).not.toMatch(/Due /);
+      expect(el.textContent).toContain(`Due Oct ${String(d)}`);
       expect(el.querySelector('svg')).not.toBeNull();
       expect(el.innerHTML).toContain('--ds-danger');
     }
@@ -1122,6 +1151,7 @@ describe('SetLine', () => {
   it('shows no status without a date, and no time when unknown', () => {
     const { el } = line({ due: undefined });
     expect(el.textContent).not.toMatch(/Due|Overdue|No date/);
+    expect(el.querySelector('svg')).toBeNull();
     expect(el.textContent).not.toContain('left');
   });
 
@@ -1196,10 +1226,14 @@ describe('CourseRow', () => {
     expect(more?.getAttribute('href')).toBe('/c/1');
   });
 
-  it('writes the due as a tag within 2 days, red when overdue, plain after', () => {
-    expect(row([set('S', '/s', 14)]).el.querySelector('svg')).not.toBeNull();
+  it('always writes the date, with a badge within 2 days and a red one when overdue', () => {
+    const soon = row([set('S', '/s', 14)]).el;
+    expect(soon.querySelector('svg')).not.toBeNull();
+    expect(soon.textContent).toContain('Due soon');
+    expect(soon.textContent).toContain('Due Wed');
     const late = row([set('S', '/s', 9)]).el;
     expect(late.textContent).toContain('Overdue');
+    expect(late.textContent).toContain('Due Oct 9');
     expect(late.innerHTML).toContain('--ds-danger');
     const plain = row([set('S', '/s', 27)]).el;
     expect(plain.textContent).toContain('Due Oct 27');

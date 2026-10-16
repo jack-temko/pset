@@ -41,3 +41,15 @@ pattern is GitHub's own issue rows.
 
 So the status left line one and became a child of the row itself, beside the aside,
 centred vertically in the row like it. Line one is the title alone.
+
+## The badge in place of the date (2026-10-16)
+
+Jack on the course list, annotating with Agentation (2026-10-16): **"These look weird because it replaces the original text. Can we try to always have the due date, but have badges for overdue and due soon? Where is a good place to put them?"** Then: **"With the date always shown, where does the 'Due soon' or 'Overdue' badge go?"** Options: After the course name, like a GitHub label (Recommended) / Just before the date, on the right / In the grey line, after the set name. Answer: **After the course name, like a GitHub label (Recommended).**
+
+The list row gains a `label` slot right after the title on line one, 8 apart, centred on the title; the title truncates first. The status is whatever the caller gives.
+
+## The hover target (2026-10-16)
+
+Jack, same pass, on the course name "Linear algebra" and the "Nothing active" line: **"The hover target for these links should not expand across the entire row, just cover the text."**
+
+The row had a hover wash over its whole width, so the course name looked clickable everywhere. Only its links are clickable now, so the row takes no hover ground, and a title link is as wide as its text (`w-fit`), never a full-width block. The row would keep a wash only if the whole row were one link; it never is.

@@ -13,6 +13,7 @@ const ASIDE_MIN = '@min-[440px]';
 export function ListRow({
   title,
   href,
+  label,
   status,
   meta = [],
   aside,
@@ -21,6 +22,9 @@ export function ListRow({
   title: string;
   /** Makes the title a link. */
   href?: string;
+  /** A Tag right after the title on line one, like a GitHub label. The title
+   *  truncates first. */
+  label?: ReactNode;
   /** A Tag or a short muted text, at the right of the row, centred in it. */
   status?: ReactNode;
   /** Short items joined by " · ", truncating as a whole. */
@@ -32,11 +36,11 @@ export function ListRow({
   asideWidth?: number | string;
 }) {
   return (
-    <div className="@container min-h-14 min-w-0 hover:bg-(--ds-hover)">
+    <div className="@container min-h-14 min-w-0">
       <div className="flex min-w-0 items-center gap-4 px-4 py-2">
         <div className="min-w-0 flex-1">
-          <div className="flex min-h-6 min-w-0 items-center">
-            <div className="min-w-0 flex-1">
+          <div className="flex min-h-6 min-w-0 items-center gap-2">
+            <div className="min-w-0">
               {href === undefined ? (
                 <span className="ds-body block truncate font-medium text-(--ds-fg)">
                   {title}
@@ -47,12 +51,13 @@ export function ListRow({
                   title={title}
                   tone="fg"
                   weight="medium"
-                  className="block truncate"
+                  className="block w-fit max-w-full truncate"
                 >
                   {title}
                 </Link>
               )}
             </div>
+            {label !== undefined && <div className="shrink-0">{label}</div>}
           </div>
           {meta.length > 0 && (
             <p className="ds-small ds-tabular truncate text-(--ds-fg-muted)">

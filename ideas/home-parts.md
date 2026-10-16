@@ -205,3 +205,30 @@ New units: `counter`, `list` (the old Box), `list-row` (the GitHub issue row). `
 and `set-line` are compositions of `list-row`. `section-heading` follows the old Home's
 SectionHeader. Proposed, to confirm (`course-row-d3`): the course row no longer shows the
 materials and sets counts, reversing Jack's earlier "Name, materials, sets".
+
+### Round of 2026-10-16, Jack on the course list (Agentation)
+
+Three fixes, from `/design/component/course-row?state=list`.
+
+- **The due date is always shown, badges are labels.** Jack: "These look weird because
+  it replaces the original text. Can we try to always have the due date, but have badges
+  for overdue and due soon? Where is a good place to put them?" Then: "With the date
+  always shown, where does the 'Due soon' or 'Overdue' badge go?" Options: After the
+  course name, like a GitHub label (Recommended) / Just before the date, on the right /
+  In the grey line, after the set name. **After the course name, like a GitHub label
+  (Recommended).** So `list-row` gains a `label` slot after the title, the status is
+  always the plain date, and `set-line` and `course-row` pass the badge ("Due soon" with
+  the clock within 2 days, "Overdue" with the alert glyph when past) as the label. New
+  decisions `set-line-d7` and `course-row-d7`, `list-row-d6`, superseding the badge in
+  place of the date (`set-line-d2`, `d4`).
+- **A fixed bar position.** Jack: "Can we make sure that the progress bar and this text
+  are in the same location for every row/ The length of the numbers affects the offset of
+  the bar." The count sits in a box as wide as "99 of 99", right-aligned
+  (`progress-bar-d6`).
+- **The hover target.** Jack, on the course name "Linear algebra" and the "Nothing
+  active" line: "The hover target for these links should not expand across the entire
+  row, just cover the text." The row takes no hover ground and a title link is as wide as
+  its text (`list-row-d7`, superseding the whole-row wash in `list-row-d1`).
+- **GitHub-style badges.** Jack: "Can we make them look more like GitHubs badges?" The
+  Tag is restyled in every tone as an outlined pill (`tag-d4`, superseding `tag-d1`), with
+  a new `label` type step (12/18, 500, tags only).

@@ -3,6 +3,7 @@ import { ListRow } from '@/units/list-row';
 import { narrowOnly } from '@/units/list-row/meta';
 import { ProgressBar } from '@/units/progress-bar';
 import { DueStatus } from '@/units/set-line';
+import { dueBadge } from '@/units/set-line/badge';
 import { timeLeft } from '@/units/set-line/dates';
 import { nearest, type ActiveSet } from './nearest';
 
@@ -36,6 +37,7 @@ export function CourseRow({
     <ListRow
       title={name}
       href={href}
+      label={dueBadge(next.due, today)}
       status={<DueStatus due={next.due} today={today} />}
       meta={[
         <Link

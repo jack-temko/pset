@@ -117,5 +117,13 @@ export default defineSpec({
       beat: 'A segment per problem (progress-bar-d1, Jack 2026-10-13)',
       date: '2026-10-14',
     },
+    {
+      id: 'progress-bar-d6',
+      decision:
+        'The count sits in a box as wide as "99 of 99" in its own type step, right-aligned, so the bar is the same length on every row.',
+      why: 'Jack: "Can we make sure that the progress bar and this text are in the same location for every row/ The length of the numbers affects the offset of the bar."',
+      beat: 'A count as wide as its numbers',
+      date: '2026-10-16',
+    },
   ],
 });

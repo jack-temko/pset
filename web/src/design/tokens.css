@@ -68,6 +68,10 @@
   --ds-small-line: 20px;
   --ds-small-weight: 400;
   --ds-small-font: var(--ds-font-sans);
+  --ds-label-size: 12px;
+  --ds-label-line: 18px;
+  --ds-label-weight: 500;
+  --ds-label-font: var(--ds-font-sans);
   --ds-code-size: 14px;
   --ds-code-line: 20px;
   --ds-code-weight: 400;
@@ -89,7 +93,7 @@
   --ds-control: 32px;
   --ds-topbar: 56px;
   --ds-radius-segment: 2px;
-  --ds-radius-tag: 4px;
+  --ds-radius-tag: 10px;
   --ds-radius-control: 6px;
   --ds-radius-panel: 8px;
   --ds-border-width: 1px;
@@ -163,6 +167,13 @@
     font-size: var(--ds-small-size);
     line-height: var(--ds-small-line);
     font-weight: var(--ds-small-weight);
+  }
+
+  .ds .ds-label {
+    font-family: var(--ds-label-font);
+    font-size: var(--ds-label-size);
+    line-height: var(--ds-label-line);
+    font-weight: var(--ds-label-weight);
   }
 
   .ds .ds-code {

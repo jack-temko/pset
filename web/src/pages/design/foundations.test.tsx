@@ -35,8 +35,8 @@ describe('the Foundations page', () => {
     );
   });
 
-  it('shows the eight type steps, the spacing and the radii', () => {
-    expect(TYPE).toHaveLength(8);
+  it('shows the nine type steps, the spacing and the radii', () => {
+    expect(TYPE).toHaveLength(9);
     for (const t of TYPE) {
       const row = el.querySelector(`[data-step="${t.id}"]`);
       expect(row?.textContent).toContain(t.sample);

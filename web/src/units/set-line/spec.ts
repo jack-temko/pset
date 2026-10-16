@@ -21,23 +21,23 @@ export default defineSpec({
     {
       id: 'due-soon',
       name: 'Due soon, not started',
-      when: 'A set due within 2 days: the attention tag carries the day, even at 0 of 6.',
+      when: 'A set due within 2 days: an attention "Due soon" badge after the name, and the date at the right, even at 0 of 6.',
     },
     {
       id: 'later',
       name: 'Due later',
-      when: 'A set due more than 6 days away: month and day, plain.',
+      when: 'A set due more than 6 days away: month and day, plain, with no badge.',
     },
     {
       id: 'overdue',
       name: 'Overdue',
-      when: 'A set past its due date: a red "Overdue" tag.',
+      when: 'A set past its due date: a red "Overdue" badge after the name, and the date at the right.',
       text: 'Overdue',
     },
     {
       id: 'no-date',
       name: 'No date',
-      when: 'A started set the course gave no date: no status is shown, and it sorts after the dated ones.',
+      when: 'A started set the course gave no date: no badge and no date are shown, and it sorts after the dated ones.',
     },
   ],
   stress:
@@ -48,7 +48,10 @@ export default defineSpec({
       use: 'The row: title, status, meta and the progress aside.',
     },
     { unit: 'progress-bar', use: 'The set\u2019s progress, in the aside.' },
-    { unit: 'tag', use: 'The attention and danger tags for the due status.' },
+    {
+      unit: 'tag',
+      use: 'The "Due soon" and "Overdue" badges, in the label slot.',
+    },
   ],
   actions: [
     {
@@ -127,10 +130,11 @@ export default defineSpec({
     {
       id: 'set-line-d2',
       decision:
-        'A line shows the set, its progress, the time left when known, and when it is due; a set due within 2 days carries an attention tag. No course name.',
+        'A line shows the set, its progress, the time left when known, and when it is due; a set due within 2 days carries an attention badge. No course name.',
       why: 'Everything needed to pick tonight’s work; the course row around it names the course.',
       beat: 'Without the time; with the course name',
       date: '2026-10-13',
+      supersededBy: 'set-line-d7',
     },
     {
       id: 'set-line-d3',
@@ -146,11 +150,12 @@ export default defineSpec({
       why: 'Jack: overdue must not look like a day this week.',
       beat: '"Overdue Sat" in amber; the same as due soon',
       date: '2026-10-14',
+      supersededBy: 'set-line-d7',
     },
     {
       id: 'set-line-d5',
       decision:
-        'A due date is a weekday within 6 days ("Due Fri"), then month and day ("Due Oct 20"). The attention tag still applies within 2 days.',
+        'A due date is a weekday within 6 days ("Due Fri"), then month and day ("Due Oct 20"). The "Due soon" badge still applies within 2 days.',
       why: 'Jack: a weekday is clear this week and ambiguous after it.',
       beat: 'Always month and day; as built ("Due Mon 20")',
       date: '2026-10-14',
@@ -162,6 +167,14 @@ export default defineSpec({
       why: 'Jack: "We need to package as tightly as possible, this will be used in the window pane for sets likely too."',
       beat: 'A one-line grid of columns',
       date: '2026-10-14',
+    },
+    {
+      id: 'set-line-d7',
+      decision:
+        'The due date always shows at the right as plain text; a "Due soon" or "Overdue" badge sits after the set name as a label.',
+      why: 'Jack: "These look weird because it replaces the original text. Can we try to always have the due date, but have badges?"',
+      beat: 'The badge in place of the date (set-line-d2, d4)',
+      date: '2026-10-16',
     },
   ],
 });

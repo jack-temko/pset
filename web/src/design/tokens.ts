@@ -321,8 +321,17 @@ export const TYPE: readonly TypeStep[] = [
     line: 20,
     face: 'sans',
     weight: 400,
-    use: 'secondary lines, tags',
+    use: 'secondary lines',
     sample: '6 questions, 2 done',
+  },
+  {
+    id: 'label',
+    size: 12,
+    line: 18,
+    face: 'sans',
+    weight: 500,
+    use: 'tags only',
+    sample: 'Due soon',
   },
   {
     id: 'code',
@@ -352,7 +361,7 @@ export const LAYOUT = {
 
 export const RADII = [
   { name: 'segment', px: 2 },
-  { name: 'tag', px: 4 },
+  { name: 'tag', px: 10 },
   { name: 'control', px: 6 },
   { name: 'panel', px: 8 },
 ] as const;

@@ -21,6 +21,15 @@ export default defineExamples(spec, {
         meta={['Problem set 4', '2 of 6']}
       />
     ),
+    label: () => (
+      <ListRow
+        title="Circuits I"
+        href="#"
+        label={<Tag tone="attention">Due soon</Tag>}
+        status="Due Thu"
+        meta={['Problem set 4', '2 of 6']}
+      />
+    ),
     aside: () => (
       <ListRow
         title="Circuits I"

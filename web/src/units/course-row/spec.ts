@@ -11,17 +11,17 @@ export default defineSpec({
     {
       id: 'due-soon',
       name: 'One active set, due soon',
-      when: 'The nearest active set is due within 2 days: the attention tag.',
+      when: 'The nearest active set is due within 2 days: an attention "Due soon" badge after the course name, and the date at the right.',
     },
     {
       id: 'overdue',
       name: 'Overdue',
-      when: 'The nearest active set is past due: a red "Overdue" tag.',
+      when: 'The nearest active set is past due: a red "Overdue" badge after the course name, and the date at the right.',
     },
     {
       id: 'no-date',
       name: 'One active set, no date',
-      when: 'The active set has no date: no status is shown.',
+      when: 'The active set has no date: no badge and no date are shown.',
     },
     {
       id: 'two-active',
@@ -55,7 +55,10 @@ export default defineSpec({
       unit: 'progress-bar',
       use: 'The nearest set\u2019s progress, in the aside.',
     },
-    { unit: 'set-line', use: 'The due status and the time-left wording.' },
+    {
+      unit: 'set-line',
+      use: 'The due date, its badge and the time-left wording.',
+    },
     { unit: 'link', use: 'The set and "+1 more" links in the meta.' },
     { unit: 'list', use: 'Frames the five rows in the Home example.' },
     { unit: 'section-heading', use: 'Titles the list in the Home example.' },
@@ -174,6 +177,14 @@ export default defineSpec({
       why: 'Jack: "Todays bars are still to short in the horizontal direction. Especially when on a large screen."',
       beat: 'A fixed 160 aside (course-row-d5)',
       date: '2026-10-15',
+    },
+    {
+      id: 'course-row-d7',
+      decision:
+        'The nearest set\u2019s due date is always shown at the right; a "Due soon" or "Overdue" badge sits after the course name, as set-line-d7 says.',
+      why: 'Jack: "These look weird because it replaces the original text." He chose a badge after the course name, like a GitHub label.',
+      beat: 'The badge in place of the date',
+      date: '2026-10-16',
     },
   ],
 });

@@ -66,3 +66,9 @@ the bar, centred in the row (see the list row's log).
 
 The bar is one continuous bar everywhere now, no segments and no switch above 12 (see
 the progress bar's log). Segmented bars return with the work pane, wider than this.
+
+## The badge in place of the date (2026-10-16)
+
+Jack on the course list, annotating with Agentation (2026-10-16): **"These look weird because it replaces the original text. Can we try to always have the due date, but have badges for overdue and due soon? Where is a good place to put them?"** Then: **"With the date always shown, where does the 'Due soon' or 'Overdue' badge go?"** Options: After the course name, like a GitHub label (Recommended) / Just before the date, on the right / In the grey line, after the set name. Answer: **After the course name, like a GitHub label (Recommended).**
+
+The course row passes the set line’s badge to the list row’s label slot, after the course name; its status is the plain date.

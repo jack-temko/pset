@@ -11,8 +11,13 @@ export default defineSpec({
     { id: 'plain', name: 'Plain', when: 'A title and meta, the title a link.' },
     {
       id: 'status',
-      name: 'With a status tag',
-      when: 'A Tag at the right of the row, centred vertically in it.',
+      name: 'With a status',
+      when: 'A Tag or short muted text at the right of the row, centred vertically in it.',
+    },
+    {
+      id: 'label',
+      name: 'With a label',
+      when: 'A Tag right after the title on line one, like a GitHub label; the title truncates first.',
     },
     {
       id: 'aside',
@@ -58,6 +63,12 @@ export default defineSpec({
       type: 'string',
       default: 'none',
       does: 'Makes the title a link.',
+    },
+    {
+      name: 'label',
+      type: 'ReactNode',
+      default: 'none',
+      does: 'A Tag right after the title on line one, 8 apart, centred on the title.',
     },
     {
       name: 'status',
@@ -106,10 +117,11 @@ export default defineSpec({
     {
       id: 'list-row-d1',
       decision:
-        'One row shape for everything: two lines, at least 56 high, 16 sides, 8 above and below. Hover washes the whole row; only the title is a link.',
+        'One row shape for everything: two lines, at least 56 high, 16 sides, 8 above and below. Only the title is a link.',
       why: 'Jack: "More GitHub-ey ... We need to package as tightly as possible."',
       beat: 'A row per kind of thing, with its own columns',
       date: '2026-10-14',
+      supersededBy: 'list-row-d7',
     },
     {
       id: 'list-row-d2',
@@ -143,6 +155,22 @@ export default defineSpec({
       why: 'Jack: "These need to be centered vertically in the row please. Take a look at GitHub and how they do badges like that in rows."',
       beat: 'On line one, centred against the title (list-row-d4)',
       date: '2026-10-15',
+    },
+    {
+      id: 'list-row-d6',
+      decision:
+        'A label slot sits right after the title on line one, 8 apart and centred on the title; the title truncates first.',
+      why: 'Jack: "Can we try to always have the due date, but have badges for overdue and due soon?" and chose a label after the course name, like GitHub.',
+      beat: 'Just before the date, on the right; in the grey line',
+      date: '2026-10-16',
+    },
+    {
+      id: 'list-row-d7',
+      decision:
+        'The row takes no hover ground, and a title link is only as wide as its text, never a full-width block.',
+      why: 'Jack: "The hover target for these links should not expand across the entire row, just cover the text."',
+      beat: 'A hover wash over the whole row (list-row-d1)',
+      date: '2026-10-16',
     },
   ],
 });

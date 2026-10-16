@@ -45,3 +45,9 @@ So the segment rendering and the switch above 12 problems are gone: one continuo
 everywhere, fluid from its 16px floor. Plainly: segmented bars return with the work pane,
 and they must be wider than the dash design (his words above carry that). Until then,
 every bar is continuous.
+
+## A fixed place for the bar (2026-10-16)
+
+Jack, same pass: **"Can we make sure that the progress bar and this text are in the same location for every row/ The length of the numbers affects the offset of the bar."**
+
+The count now sits in a box as wide as "99 of 99" in its own type step (tabular numbers), right-aligned, so the bar’s left and right edges are the same on every row of a list whatever the numbers.
