@@ -232,3 +232,7 @@ Three fixes, from `/design/component/course-row?state=list`.
 - **GitHub-style badges.** Jack: "Can we make them look more like GitHubs badges?" The
   Tag is restyled in every tone as an outlined pill (`tag-d4`, superseding `tag-d1`), with
   a new `label` type step (12/18, 500, tags only).
+- **Materials and sets as stats.** Jack, on "The course row no longer shows '7 materials, 3 sets' (they would move to the course screen). Is that OK?" Options: Yes, drop them from the row (Recommended) / Keep them in the grey line. His answer: **"Can we display this with some muted icons and digits somewhere? Kinda how github does the line diffs"** The list row gains a `stats` slot and the course row
+  passes materials (`FileText`) and sets (`ListChecks`) (`list-row-d8`, `course-row-d8`,
+  superseding `course-row-d3`).
+  Jack, on where they go: **"have them be to the right of the course name"**: the stats sit on line one, after the course name and before the label.

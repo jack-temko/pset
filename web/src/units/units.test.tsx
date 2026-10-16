@@ -1004,6 +1004,26 @@ describe('ListRow', () => {
     expect(el.querySelector('a')?.className).toContain('w-fit');
   });
 
+  it('draws stats as muted icons with numbers on line one, hidden below 440', () => {
+    const { el } = render(
+      <ListRow
+        title="T"
+        status="Due Fri"
+        stats={[
+          { icon: Clock, value: 7, label: '7 materials' },
+          { icon: Clock, value: 0, label: '0 sets' },
+        ]}
+      />,
+    );
+    const stats = el.querySelector('[data-stats]');
+    expect(stats?.textContent).toBe('70');
+    expect(stats?.querySelectorAll('svg')).toHaveLength(2);
+    expect(stats?.className).toContain('hidden');
+    expect(stats?.className).toContain('@min-[440px]:flex');
+    // On line one, after the title and before the label.
+    expect(stats?.closest('.min-h-6')).not.toBeNull();
+  });
+
   it('shows a narrow-only item only where the aside is not', () => {
     const { el } = render(
       <ListRow title="T" meta={['a', narrowOnly('2 of 6')]} />,
@@ -1238,6 +1258,23 @@ describe('CourseRow', () => {
     const plain = row([set('S', '/s', 27)]).el;
     expect(plain.textContent).toContain('Due Oct 27');
     expect(plain.querySelectorAll('svg')).toHaveLength(0);
+  });
+
+  it('shows materials and sets as stats, zero as 0, singular at 1', () => {
+    const stats = (m: number, n: number, active = [set('S', '/s', 15)]) =>
+      render(
+        <CourseRow
+          name="C"
+          href="/c"
+          active={active}
+          materials={m}
+          sets={n}
+          today={today}
+        />,
+      ).el.querySelector('[data-stats]');
+    expect(stats(7, 3)?.textContent).toBe('73');
+    expect(stats(0, 0)?.textContent).toBe('00');
+    expect(stats(1, 1, [])?.textContent).toBe('11');
   });
 
   it('shows the time left only when known', () => {

@@ -53,3 +53,13 @@ The list row gains a `label` slot right after the title on line one, 8 apart, ce
 Jack, same pass, on the course name "Linear algebra" and the "Nothing active" line: **"The hover target for these links should not expand across the entire row, just cover the text."**
 
 The row had a hover wash over its whole width, so the course name looked clickable everywhere. Only its links are clickable now, so the row takes no hover ground, and a title link is as wide as its text (`w-fit`), never a full-width block. The row would keep a wash only if the whole row were one link; it never is.
+
+## Stats (2026-10-16)
+
+Jack, on "The course row no longer shows '7 materials, 3 sets' (they would move to the course screen). Is that OK?" Options: Yes, drop them from the row (Recommended) / Keep them in the grey line. His answer: **"Can we display this with some muted icons and digits somewhere? Kinda how github does the line diffs"**
+
+First built as a `stats` slot: `{icon, value, label}` items at the right end of line two, right-aligned under the status, like GitHub's counts and line diffs. Each is a 12px lucide glyph then the number, 4 apart, 12 between stats, in the small step with tabular numbers and `fg-muted`, in a tooltip with its label. They sit in a fixed 96 wide column, so they align down a list, and go below 440 before the meta truncates. With stats, the status takes line one of that column, level with the title, instead of centring in the row.
+
+Jack, on where they go: **"have them be to the right of the course name"**
+
+The stats moved to line one, right after the title and before the label, 8 apart each. They go below 440, before the label does; the title still truncates first. They no longer share a column, since each follows its own title. The status is centred in the row again.

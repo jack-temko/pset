@@ -43,7 +43,7 @@ export default defineSpec({
     {
       id: 'list',
       name: 'Home: a list of five',
-      when: 'Home: a section heading with a Counter and "Show all", then a list of five course rows.',
+      when: 'Every row shows its materials and sets stats. Home: a section heading with a Counter and "Show all", then a list of five course rows.',
     },
   ],
   exampleWidth: 960,
@@ -89,6 +89,12 @@ export default defineSpec({
       type: 'string',
       default: 'none',
       does: 'Where the course name goes; also "+1 more".',
+    },
+    {
+      name: 'materials, sets',
+      type: 'number',
+      default: 'none',
+      does: 'How many materials and sets the course holds; shown as two muted icon stats, zero as 0. Without them no stats show.',
     },
     {
       name: 'active',
@@ -148,10 +154,11 @@ export default defineSpec({
     {
       id: 'course-row-d3',
       decision:
-        'Proposed, to confirm: no materials or sets counts in the row; it shows the nearest active set, its due, count, time left and bar.',
-      why: 'The orchestrator\u2019s proposal, pending Jack\u2019s OK: it reverses his earlier "Name, materials, sets", to package the row as tightly as a two-line row allows.',
+        'No materials or sets counts in the row; it shows the nearest active set, its due, count, time left and bar.',
+      why: 'The orchestrator\u2019s proposal to package the row tightly; Jack then asked for the counts back as icon stats.',
       beat: 'Name, materials, sets (Jack, 2026-10-13)',
       date: '2026-10-14',
+      supersededBy: 'course-row-d8',
     },
     {
       id: 'course-row-d4',
@@ -184,6 +191,14 @@ export default defineSpec({
         'The nearest set\u2019s due date is always shown at the right; a "Due soon" or "Overdue" badge sits after the course name, as set-line-d7 says.',
       why: 'Jack: "These look weird because it replaces the original text." He chose a badge after the course name, like a GitHub label.',
       beat: 'The badge in place of the date',
+      date: '2026-10-16',
+    },
+    {
+      id: 'course-row-d8',
+      decision:
+        'The materials and sets counts show as muted icon stats at the right of the course name.',
+      why: 'Jack: "Can we display this with some muted icons and digits somewhere? Kinda how github does the line diffs"',
+      beat: 'Dropping them from the row; "materials, sets" in words',
       date: '2026-10-16',
     },
   ],

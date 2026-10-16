@@ -1,3 +1,5 @@
+import { FileText, ListChecks } from 'lucide-react';
+
 import { Link } from '@/units/link';
 import { ListRow } from '@/units/list-row';
 import { narrowOnly } from '@/units/list-row/meta';
@@ -12,6 +14,9 @@ import { nearest, type ActiveSet } from './nearest';
  *  320 (course-row-d6). */
 const ASIDE_WIDTH = 'clamp(160px, 20cqw, 320px)';
 
+const count = (n: number, noun: string) =>
+  `${String(n)} ${noun}${n === 1 ? '' : 's'}`;
+
 /** One course as a list row: the course name (opens the course) on line
  *  one, the nearest active set and its count and time left on line two,
  *  and that set's due and progress bar at the right, centred in the row
@@ -20,17 +25,40 @@ export function CourseRow({
   name,
   href,
   active,
+  materials,
+  sets,
   today = new Date(),
 }: {
   name: string;
   href: string;
   /** The course's active sets, usually one. */
   active: readonly ActiveSet[];
+  /** How many materials and sets the course holds: muted icon stats. */
+  materials?: number;
+  sets?: number;
   today?: Date;
 }) {
   const next = nearest(active, today);
+  const stats =
+    materials === undefined || sets === undefined
+      ? undefined
+      : [
+          {
+            icon: FileText,
+            value: materials,
+            label: count(materials, 'material'),
+          },
+          { icon: ListChecks, value: sets, label: count(sets, 'set') },
+        ];
   if (next === undefined)
-    return <ListRow title={name} href={href} meta={['Nothing active']} />;
+    return (
+      <ListRow
+        title={name}
+        href={href}
+        stats={stats}
+        meta={['Nothing active']}
+      />
+    );
   const time = next.minutesLeft === undefined ? '' : timeLeft(next.minutesLeft);
   const more = active.length - 1;
   return (
@@ -39,6 +67,7 @@ export function CourseRow({
       href={href}
       label={dueBadge(next.due, today)}
       status={<DueStatus due={next.due} today={today} />}
+      stats={stats}
       meta={[
         <Link
           key="set"

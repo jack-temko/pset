@@ -20,6 +20,11 @@ export default defineSpec({
       when: 'A Tag right after the title on line one, like a GitHub label; the title truncates first.',
     },
     {
+      id: 'stats',
+      name: 'With stats',
+      when: 'Muted icon counts right after the title on line one, before the label; they go below 440.',
+    },
+    {
       id: 'aside',
       name: 'With an aside',
       when: 'A progress bar at the right, spanning both lines.',
@@ -42,6 +47,7 @@ export default defineSpec({
     { unit: 'link', use: 'The title, and any meta links.' },
     { unit: 'tag', use: 'The status, in the examples.' },
     { unit: 'progress-bar', use: 'The aside, in the examples.' },
+    { unit: 'tooltip', use: 'Each stat\u2019s label.' },
   ],
   actions: [
     {
@@ -75,6 +81,12 @@ export default defineSpec({
       type: 'ReactNode',
       default: 'none',
       does: 'A Tag or short muted text at the right of the row, centred vertically in it.',
+    },
+    {
+      name: 'stats',
+      type: '{ icon, value, label }[]',
+      default: 'none',
+      does: 'Muted counts right after the title: a 12px glyph and a number, the label in a tooltip.',
     },
     {
       name: 'meta',
@@ -170,6 +182,14 @@ export default defineSpec({
         'The row takes no hover ground, and a title link is only as wide as its text, never a full-width block.',
       why: 'Jack: "The hover target for these links should not expand across the entire row, just cover the text."',
       beat: 'A hover wash over the whole row (list-row-d1)',
+      date: '2026-10-16',
+    },
+    {
+      id: 'list-row-d8',
+      decision:
+        'Stats are muted 12px icons with numbers right after the title, before the label; below 440 they go before the label does.',
+      why: 'Jack: "Can we display this with some muted icons and digits somewhere? Kinda how github does the line diffs"',
+      beat: 'Counts in words in the meta line',
       date: '2026-10-16',
     },
   ],

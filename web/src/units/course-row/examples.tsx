@@ -26,6 +26,8 @@ const course = (
     name="Circuits I"
     href="#"
     active={[circuits]}
+    materials={7}
+    sets={3}
     today={TODAY}
     {...p}
   />
@@ -73,6 +75,8 @@ export default defineExamples(spec, {
             {course()}
             {course({
               name: 'Signals and systems',
+              materials: 12,
+              sets: 5,
               active: [
                 {
                   set: 'Homework 7',
@@ -86,6 +90,8 @@ export default defineExamples(spec, {
             })}
             {course({
               name: 'Thermodynamics',
+              materials: 31,
+              sets: 10,
               active: [
                 {
                   set: 'Problem set 3',
@@ -99,9 +105,16 @@ export default defineExamples(spec, {
             })}
             {course({
               name: 'Differential equations',
+              materials: 1,
+              sets: 1,
               active: [{ set: 'Homework 2', done: 1, total: 3, href: '#' }],
             })}
-            {course({ name: 'Linear algebra', active: [] })}
+            {course({
+              name: 'Linear algebra',
+              materials: 0,
+              sets: 0,
+              active: [],
+            })}
           </List>
         </div>
       </div>

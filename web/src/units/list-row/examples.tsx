@@ -1,3 +1,5 @@
+import { FileText, ListChecks } from 'lucide-react';
+
 import { defineExamples } from '@/design/examples';
 import { Link } from '@/units/link';
 import { ProgressBar } from '@/units/progress-bar';
@@ -28,6 +30,18 @@ export default defineExamples(spec, {
         label={<Tag tone="attention">Due soon</Tag>}
         status="Due Thu"
         meta={['Problem set 4', '2 of 6']}
+      />
+    ),
+    stats: () => (
+      <ListRow
+        title="Circuits I"
+        href="#"
+        status="Due Thu"
+        stats={[
+          { icon: FileText, value: 7, label: '7 materials' },
+          { icon: ListChecks, value: 3, label: '3 sets' },
+        ]}
+        meta={['Problem set 4']}
       />
     ),
     aside: () => (

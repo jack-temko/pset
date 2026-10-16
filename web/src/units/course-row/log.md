@@ -72,3 +72,13 @@ the progress bar's log). Segmented bars return with the work pane, wider than th
 Jack on the course list, annotating with Agentation (2026-10-16): **"These look weird because it replaces the original text. Can we try to always have the due date, but have badges for overdue and due soon? Where is a good place to put them?"** Then: **"With the date always shown, where does the 'Due soon' or 'Overdue' badge go?"** Options: After the course name, like a GitHub label (Recommended) / Just before the date, on the right / In the grey line, after the set name. Answer: **After the course name, like a GitHub label (Recommended).**
 
 The course row passes the set line’s badge to the list row’s label slot, after the course name; its status is the plain date.
+
+## Materials and sets as icon stats (2026-10-16)
+
+Jack, on "The course row no longer shows '7 materials, 3 sets' (they would move to the course screen). Is that OK?" Options: Yes, drop them from the row (Recommended) / Keep them in the grey line. His answer: **"Can we display this with some muted icons and digits somewhere? Kinda how github does the line diffs"**
+
+First built as two muted stats at the end of line two: materials with `FileText`, sets with `ListChecks` (lucide's closest to a document and a checklist), each a 12px glyph and a number, its label ("7 materials", "3 sets", singular at 1) in a tooltip. Zero shows "0". A course with nothing active reserves the aside's width too, so the stats line up down the list.
+
+Jack, on where they go: **"have them be to the right of the course name"**
+
+So the stats sit on line one: the course name, then the stats, then the "Due soon" or "Overdue" label. The earlier placement at the end of line two, and the aside-width spacer it needed on a course with nothing active, are gone.
