@@ -5,6 +5,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Button, REASON_MS } from './button';
 import { Counter } from './counter';
+import { AssignmentRow } from './assignment-row';
+import { ASSIGNMENT_CAP, listAssignments } from './assignment-row/listed';
+import { openedAgo } from './assignment-row/opened';
 import { CourseRow } from './course-row';
 import { Link } from './link';
 import { List } from './list';
@@ -1199,93 +1202,130 @@ describe('SetLine', () => {
 });
 
 describe('CourseRow', () => {
-  const today = new Date(2026, 9, 13);
-  const set = (n: string, href: string, d: number, extra = {}) => ({
-    set: n,
-    done: 1,
-    total: 4,
-    due: new Date(2026, 9, d),
-    href,
-    ...extra,
-  });
-  const row = (active: Parameters<typeof CourseRow>[0]['active']) =>
-    render(
-      <CourseRow name="Circuits I" href="/c/1" active={active} today={today} />,
-    );
+  const row = (todo: number) =>
+    render(<CourseRow name="Circuits I" href="/c/1" todo={todo} />).el;
 
-  it('opens the course from the name and the set from the meta, no link inside a link', () => {
-    const { el } = row([set('Problem set 4', '/s/4', 15)]);
-    expect(
-      [...el.querySelectorAll('a')].map((a) => a.getAttribute('href')),
-    ).toEqual(['/c/1', '/s/4']);
-    expect(el.querySelector('a a')).toBeNull();
-    expect(el.textContent).not.toMatch(/materials|sets/);
+  it('is one 44 high line: the name, then the sets still to do', () => {
+    const el = row(3);
+    const a = el.querySelectorAll('a');
+    expect(a).toHaveLength(1);
+    expect(a[0]?.getAttribute('href')).toBe('/c/1');
+    expect(el.querySelector('p')).toBeNull();
+    expect(el.firstElementChild?.className).toContain('min-h-11');
+    const meta = el.querySelector('[data-single-meta]');
+    expect(meta?.textContent).toBe('3');
+    expect(meta?.querySelector('svg')).not.toBeNull();
   });
 
-  it('gives its aside a fifth of the row, floored at 160', () => {
-    const { el } = row([set('Problem set 4', '/s/4', 15)]);
-    expect(el.querySelector<HTMLElement>('[data-aside]')?.style.width).toBe(
-      'clamp(160px, 20cqw, 320px)',
-    );
-  });
-
-  it('shows the nearest set, by due date, undated last', () => {
-    const { el } = row([
-      set('Later', '/s/2', 23),
-      set('Soon', '/s/1', 14),
-      { set: 'Undated', done: 0, total: 1, href: '/s/3' },
-    ]);
-    expect(el.querySelector('p')?.textContent).toContain('Soon');
-    expect(el.querySelector('p')?.textContent).not.toContain('Later');
-    const more = [...el.querySelectorAll('a')].find((a) =>
-      a.textContent.includes('+2 more'),
-    );
-    expect(more?.getAttribute('href')).toBe('/c/1');
-  });
-
-  it('always writes the date, with a badge within 2 days and a red one when overdue', () => {
-    const soon = row([set('S', '/s', 14)]).el;
-    expect(soon.querySelector('svg')).not.toBeNull();
-    expect(soon.textContent).toContain('Due soon');
-    expect(soon.textContent).toContain('Due Wed');
-    const late = row([set('S', '/s', 9)]).el;
-    expect(late.textContent).toContain('Overdue');
-    expect(late.textContent).toContain('Due Oct 9');
-    expect(late.innerHTML).toContain('--ds-danger');
-    const plain = row([set('S', '/s', 27)]).el;
-    expect(plain.textContent).toContain('Due Oct 27');
-    expect(plain.querySelectorAll('svg')).toHaveLength(0);
-  });
-
-  it('shows the set count last on the set line, zero as 0', () => {
-    const meta = (
-      n: number,
-      active = [set('S', '/s', 15, { minutesLeft: 45 })],
-    ) =>
-      render(
-        <CourseRow name="C" href="/c" active={active} sets={n} today={today} />,
-      ).el.querySelector('p')?.textContent;
-    expect(meta(3)).toBe('S \u00b7 1 of 4 \u00b7 About 45 m left3');
-    expect(meta(0)).toMatch(/left0$/);
-    expect(meta(6, [])).toBe('6');
-    expect(
-      render(<CourseRow name="C" href="/c" active={[]} today={today} />).el
-        .textContent,
-    ).not.toMatch(/\d$/);
-  });
-
-  it('shows the time left only when known', () => {
-    expect(
-      row([set('S', '/s', 15, { minutesLeft: 70 })]).el.textContent,
-    ).toContain('About 1 h 10 m left');
-    expect(row([set('S', '/s', 15)]).el.textContent).not.toContain('left');
-  });
-
-  it('shows no words when no set is active, no bar, and keeps the height', () => {
-    const { el } = row([]);
-    expect(el.querySelector('p')?.textContent).toBe('');
-    expect(el.querySelector('p')?.className).toContain('min-h-5');
+  it('shows no sets, badge, bar or date', () => {
+    const el = row(3);
+    expect(el.textContent).toBe('Circuits I3');
     expect(el.querySelector('[data-aside]')).toBeNull();
+    expect(el.querySelector('[data-bar]')).toBeNull();
+  });
+
+  it('shows zero as 0', () => {
+    expect(row(0).querySelector('[data-single-meta]')?.textContent).toBe('0');
+  });
+});
+
+describe('AssignmentRow', () => {
+  const today = new Date(2026, 9, 13, 12);
+  const ago = (h: number) => new Date(today.getTime() - h * 3_600_000);
+  const row = (p: Partial<Parameters<typeof AssignmentRow>[0]> = {}) =>
+    render(
+      <AssignmentRow
+        set="Problem set 4"
+        href="/s/4"
+        course="Circuits I"
+        courseHref="/c/1"
+        done={2}
+        total={6}
+        minutesLeft={70}
+        due={new Date(2026, 9, 18)}
+        reason="due"
+        today={today}
+        {...p}
+      />,
+    ).el;
+
+  it('opens the set from its name and the course from the meta', () => {
+    const el = row();
+    const a = [...el.querySelectorAll('a')];
+    expect(a.map((x) => x.getAttribute('href'))).toEqual(['/s/4', '/c/1']);
+    expect(el.querySelector('p')?.textContent).toBe(
+      'Circuits I \u00b7 2 of 6 \u00b7 About 1 h 10 m left',
+    );
+    expect(el.querySelector('[data-bar]')).not.toBeNull();
+  });
+
+  it('shows the badge and the date together', () => {
+    const soon = row({ due: new Date(2026, 9, 15) });
+    expect(soon.textContent).toContain('Due soon');
+    expect(soon.textContent).toContain('Due Thu');
+    const late = row({ due: new Date(2026, 9, 10) });
+    expect(late.textContent).toContain('Overdue');
+    expect(late.textContent).toContain('Due Oct 10');
+    const later = row();
+    expect(later.textContent).toContain('Due Sun');
+    expect(later.querySelector('svg')).toBeNull();
+  });
+
+  it('says when it was opened only for an opened one', () => {
+    expect(row({ reason: 'due', openedAt: ago(2) }).textContent).not.toContain(
+      'Opened',
+    );
+    const el = row({ reason: 'opened', openedAt: ago(2), due: undefined });
+    expect(el.querySelector('p')?.textContent).toContain('Opened 2 h ago');
+    expect(el.textContent).not.toMatch(/Due/);
+    expect(openedAgo(ago(0.01), today)).toBe('Opened just now');
+    expect(openedAgo(ago(0.5), today)).toBe('Opened 30 m ago');
+    expect(openedAgo(ago(72), today)).toBe('Opened 3 d ago');
+  });
+
+  it('leaves the time out when unknown', () => {
+    expect(row({ minutesLeft: undefined }).textContent).not.toContain('left');
+  });
+});
+
+describe('listAssignments', () => {
+  const today = new Date(2026, 9, 13, 12);
+  const ago = (d: number) => new Date(today.getTime() - d * 86_400_000);
+  const due = (d: number) => new Date(2026, 9, d);
+  const s = (n: string, p: { due?: Date; openedAt?: Date } = {}) => ({
+    n,
+    ...p,
+  });
+
+  it('lists sets due within 7 days or opened in the last 7, due ones first', () => {
+    const { shown, more } = listAssignments(
+      [
+        s('opened', { openedAt: ago(1) }),
+        s('late', { due: due(20) }),
+        s('far', { due: due(21), openedAt: ago(8) }),
+        s('past', { due: due(9) }),
+        s('soon', { due: due(14) }),
+        s('older', { openedAt: ago(5) }),
+      ],
+      today,
+    );
+    expect(shown.map((x) => `${x.n}:${x.reason}`)).toEqual([
+      'past:due',
+      'soon:due',
+      'late:due',
+      'opened:opened',
+      'older:opened',
+    ]);
+    expect(more).toBe(0);
+  });
+
+  it('caps at five and counts the rest', () => {
+    const sets = Array.from({ length: 8 }, (_, i) =>
+      s(String(i), { due: due(14 + (i % 4)) }),
+    );
+    const { shown, more } = listAssignments(sets, today);
+    expect(shown).toHaveLength(ASSIGNMENT_CAP);
+    expect(more).toBe(3);
   });
 });
 

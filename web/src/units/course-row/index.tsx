@@ -1,94 +1,34 @@
 import { ListChecks } from 'lucide-react';
 
-import { Link } from '@/units/link';
 import { ListRow } from '@/units/list-row';
-import { narrowOnly } from '@/units/list-row/meta';
 import { MetaStat } from '@/units/list-row/stat';
-import { ProgressBar } from '@/units/progress-bar';
-import { DueStatus } from '@/units/set-line';
-import { dueBadge } from '@/units/set-line/badge';
-import { timeLeft } from '@/units/set-line/dates';
-import { nearest, type ActiveSet } from './nearest';
 
-/** The aside is a fifth of the row, so the bar grows on wide rows: 20cqw of
- *  the row container, floored at 160 so the count keeps its room, capped at
- *  320 (course-row-d6). */
-const ASIDE_WIDTH = 'clamp(160px, 20cqw, 320px)';
-
-const count = (n: number, noun: string) =>
-  `${String(n)} ${noun}${n === 1 ? '' : 's'}`;
-
-/** One course as a list row: the course name (opens the course) on line
- *  one, the nearest active set and its count and time left on line two,
- *  and that set's due and progress bar at the right, centred in the row
- *  (course-row-d3, d4). Home sorts and caps the list (course-row-d2). */
+/** One course as a lean one-line list row: its name (opens the course), then
+ *  after a 12px gap the number of sets still to do as a muted icon and
+ *  number (course-row-d11). The assignments are in their own list. */
 export function CourseRow({
   name,
   href,
-  active,
-  sets,
-  today = new Date(),
+  todo,
 }: {
   name: string;
   href: string;
-  /** The course's active sets, usually one. */
-  active: readonly ActiveSet[];
-  /** How many sets the course holds: a muted icon and number, last on the
-   *  set line. */
-  sets?: number;
-  today?: Date;
+  /** Sets still to do; zero shows as 0. */
+  todo: number;
 }) {
-  const next = nearest(active, today);
-  const setCount =
-    sets === undefined
-      ? []
-      : [
-          <MetaStat
-            key="sets"
-            icon={ListChecks}
-            value={sets}
-            label={count(sets, 'set')}
-          />,
-        ];
-  if (next === undefined)
-    return <ListRow title={name} href={href} meta={setCount} />;
-  const time = next.minutesLeft === undefined ? '' : timeLeft(next.minutesLeft);
-  const more = active.length - 1;
   return (
     <ListRow
+      single
       title={name}
       href={href}
-      label={dueBadge(next.due, today)}
-      status={<DueStatus due={next.due} today={today} />}
       meta={[
-        <Link
-          key="set"
-          href={next.href}
-          tone="muted"
-          size="small"
-          className="[overflow-wrap:normal]"
-        >
-          {next.set}
-        </Link>,
-        narrowOnly(`${String(next.done)} of ${String(next.total)}`),
-        ...(time ? [time] : []),
-        ...(more > 0
-          ? [
-              <Link
-                key="more"
-                href={href}
-                tone="muted"
-                size="small"
-                className="[overflow-wrap:normal]"
-              >
-                +{more} more
-              </Link>,
-            ]
-          : []),
-        ...setCount,
+        <MetaStat
+          key="todo"
+          icon={ListChecks}
+          value={todo}
+          label={`${String(todo)} set${todo === 1 ? '' : 's'} to do`}
+        />,
       ]}
-      aside={<ProgressBar done={next.done} total={next.total} />}
-      asideWidth={ASIDE_WIDTH}
     />
   );
 }

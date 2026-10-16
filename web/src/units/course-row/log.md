@@ -90,3 +90,16 @@ So there is no materials count in the row. The sets count (`ListChecks`) is the 
 Jack, next: **"Don't show "No active set" or whatever if there is none, just empty. And drop the dot it looks weird with the icon"**
 
 So a course with nothing active has no words: its line two holds only the sets count, or nothing, and the row keeps its height (the list row always draws line two, at least 20 high). The state is renamed `no-active`. A stat is set apart by a 12px gap, not a " · ".
+
+## Two lists: the course row goes lean (2026-10-16)
+
+Jack, reshaping Home (2026-10-16): **"I want to separate them, sorry for making this hard on you. I want two lists on my home screen, plus some info on top (e.g. github style heatmap for work, stat tile, big greeting, this will be done later). The two lists are for assignments and courses. The assignment list will display recently opened, and due soon. With a limit and gate to show more. Due soon at the top. The courses list with just show courses. First from a students perspective, what should be show on each of these two types of list items? Then we will design them."**
+
+Then four answers:
+
+- "This reverses S13 (written 2026-10-14: Home is one list of courses, each holding its active set). New Home: info on top (later), then an assignments list, then a courses list. Reverse S13?" Yes, reverse it (Recommended) / No, keep one list. **Yes, reverse it (Recommended).**
+- "Which extras does an assignment item show, beyond name, course, due, progress and time left? Pick any." Last opened / Next problem / Neither. **Last opened.**
+- "What does a course item show besides its name?" Sets still to do, as a muted count (Recommended) / Name only / Sets and materials counts. **Sets still to do, as a muted count (Recommended).**
+- "Which assignments are in the list, and how many before 'Show all'?" Due within 7 days or opened in the last 7, cap 5 (Recommended) / Every unfinished set, cap 5 / Due within 7 days or opened in the last 7, cap 3. **Due within 7 days or opened in the last 7, cap 5 (Recommended).**
+
+So the course row is one 44 high line: the name, then a muted `ListChecks` count of sets still to do ("3 sets to do", singular at 1, 0 shown). The nearest active set, its due, count, time left, bar, badge and "+N more" move to the assignment row; `nearest.ts` and the sort by nearest due are gone. Decision course-row-d11 supersedes the active-set decisions, the sort and the stats.

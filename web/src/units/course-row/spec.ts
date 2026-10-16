@@ -6,60 +6,41 @@ export default defineSpec({
   title: 'Course row',
   group: 'Lists',
   purpose:
-    'One course as a two-line list row: its name, the nearest active set with its due, count and time left, and a progress bar.',
+    'One course as a lean one-line list row: its name, and a muted count of the sets still to do. It names no set and draws no bar or date: the assignments are their own list.',
   states: [
     {
-      id: 'due-soon',
-      name: 'One active set, due soon',
-      when: 'The nearest active set is due within 2 days: an attention "Due soon" badge after the course name, and the date at the right.',
+      id: 'to-do',
+      name: 'Sets to do',
+      when: 'A course with sets still to do: the count after its name.',
     },
     {
-      id: 'overdue',
-      name: 'Overdue',
-      when: 'The nearest active set is past due: a red "Overdue" badge after the course name, and the date at the right.',
+      id: 'one',
+      name: 'One set to do',
+      when: 'The tooltip reads "1 set to do", singular.',
     },
     {
-      id: 'no-date',
-      name: 'One active set, no date',
-      when: 'The active set has no date: no badge and no date are shown.',
-    },
-    {
-      id: 'two-active',
-      name: 'Two active sets',
-      when: 'The row shows the nearest and a muted "+1 more" link to the course.',
-    },
-    {
-      id: 'no-active',
-      name: 'No active set',
-      when: 'No set is active: line two holds only the sets count, or nothing; the row keeps its height.',
-    },
-    {
-      id: 'empty',
-      name: 'Empty course',
-      when: 'A course with nothing in it yet: the same line as no active set.',
+      id: 'none',
+      name: 'None to do',
+      when: 'Every set is done, or there are none: the count shows 0.',
     },
     {
       id: 'list',
-      name: 'Home: a list of five',
-      when: 'Every row shows its set count. Home: a section heading with a Counter and "Show all", then a list of five course rows.',
+      name: 'Home: assignments and courses',
+      when: 'Home: an Assignments list of five rows, 40 below it a Courses list of five lean rows, each list under a section heading with a Counter and "Show all".',
     },
   ],
   exampleWidth: 960,
   stress:
-    'A 70 character course name and a 70 character set name at 320px: the bar is gone and the title and meta truncate.',
+    'A 70 character course name at 320px: the name truncates and the count stays beside it.',
   components: [
-    { unit: 'list-row', use: 'The row itself: title, status, meta and aside.' },
     {
-      unit: 'progress-bar',
-      use: 'The nearest set\u2019s progress, in the aside.',
+      unit: 'list-row',
+      use: 'The row itself, in its one-line mode, with a meta stat.',
     },
     {
-      unit: 'set-line',
-      use: 'The due date, its badge and the time-left wording.',
+      unit: 'assignment-row',
+      use: 'The Assignments list above it in the Home example.',
     },
-    { unit: 'link', use: 'The set and "+1 more" links in the meta.' },
-    { unit: 'list', use: 'Frames the five rows in the Home example.' },
-    { unit: 'section-heading', use: 'Titles the list in the Home example.' },
   ],
   actions: [
     {
@@ -67,12 +48,6 @@ export default defineSpec({
       label: 'The course name',
       key: 'Enter',
       does: 'Opens the course. The course screen is not a unit yet, so it has no target.',
-    },
-    {
-      id: 'open-set',
-      label: 'The set name in the meta',
-      key: 'Enter',
-      does: 'Opens the nearest active set in the workspace. The workspace is not a unit yet, so it has no target.',
     },
   ],
   inputs: [
@@ -86,44 +61,26 @@ export default defineSpec({
       name: 'href',
       type: 'string',
       default: 'none',
-      does: 'Where the course name goes; also "+1 more".',
+      does: 'Where the course name goes.',
     },
     {
-      name: 'sets',
+      name: 'todo',
       type: 'number',
       default: 'none',
-      does: 'How many sets the course holds: a muted icon and number, last on the set line, zero as 0. Without it none shows.',
-    },
-    {
-      name: 'active',
-      type: 'set props[]',
-      default: 'none',
-      does: 'The active sets (set, done, total, minutesLeft, due, href); the nearest is shown.',
-    },
-    {
-      name: 'today',
-      type: 'Date',
-      default: 'now',
-      does: 'The day "within 2 days" counts from; for the design page and tests.',
+      does: 'Sets still to do: a muted icon and number after the name, zero as 0.',
     },
   ],
   priority: {
-    first: 'The course\u2019s name, then its due.',
-    main: 'open-set',
+    first: 'The course\u2019s name.',
+    main: 'open-course',
   },
   sizes: {
-    narrowest: 320,
-    gives: [
-      'The aside goes below 440, and the count stays in the meta',
-      'Above that, the aside is a fifth of the row (160 to 320), and the bar fills the room the count leaves',
-      'Then the meta truncates, as a whole',
-      'Then the course name truncates',
-    ],
+    narrowest: 280,
+    gives: ['The course name truncates, and the count stays'],
   },
   rules: {
     cite: [
       'course-first',
-      'work-first',
       'links-go-buttons-do',
       'contrast-floors',
       'figures-follow-text',
@@ -148,6 +105,7 @@ export default defineSpec({
       why: 'Home stays short and the most urgent course comes first.',
       beat: 'All of them; three',
       date: '2026-10-13',
+      supersededBy: 'course-row-d11',
     },
     {
       id: 'course-row-d3',
@@ -207,6 +165,7 @@ export default defineSpec({
       why: 'Jack: drop the material count, keep the set count on the set line.',
       beat: 'Both counts after the course name (course-row-d8)',
       date: '2026-10-16',
+      supersededBy: 'course-row-d11',
     },
     {
       id: 'course-row-d10',
@@ -214,6 +173,15 @@ export default defineSpec({
         'A course with nothing active shows no words; the sets count stands alone, after a gap, not a dot.',
       why: 'Jack: just empty; the dot looks weird with the icon.',
       beat: '"Nothing active" and a dot before the count',
+      date: '2026-10-16',
+      supersededBy: 'course-row-d11',
+    },
+    {
+      id: 'course-row-d11',
+      decision:
+        'A course row is one 44 high line: the name, then a muted ListChecks count of sets still to do. No sets, badge, bar or date.',
+      why: 'Jack: separate assignments and courses (S14); a course shows "Sets still to do, as a muted count".',
+      beat: 'The nearest active set in the row; sort by due; two counts (d2 to d10)',
       date: '2026-10-16',
     },
   ],

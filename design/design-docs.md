@@ -107,14 +107,15 @@ Home's parts follow (`ideas/home-parts.md`). Basics gains Counter (the old desig
 a title). Lists are built from two units: List (the old Box: a frame, an optional header
 band, rules between rows drawn by the list) and List row (the one row shape, GitHub issue
 style: a title and a status on line one, small meta on line two, an aside at the right).
-Course row and Set line are compositions of List row and draw nothing of their own: the
-course row shows the nearest active set (its due, count, time left and bar) and the set line
-is the same row for the window pane. Progress bar narrows itself by its own width. Section
+Course row, Assignment row and Set line are compositions of List row and draw nothing of
+their own: the assignment row shows a set (its due label, course, time left, last opened and
+bar), the course row is one lean line (its name and a muted count of sets still to do), and
+the set line is the assignment's row for the window pane. Progress bar narrows itself by its own width. Section
 heading follows the old Home's SectionHeader (title, Counter, action, no rule). Top bar is
 the wordmark, the path and Settings. Rows and bars use container queries, so they follow the
 stage's width. The type steps sit in a cascade layer below the utilities, so a utility wins;
-there is a `brand` step for the wordmark. Home is S13 in `ideas/screens-grill.md`: one list of
-courses, each holding its active sets. The Components tab lists eleven units.
+there is a `brand` step for the wordmark. Home is S14 in `ideas/screens-grill.md`: an Assignments list, then a Courses list. The
+Components tab lists thirteen units.
 
 ## Follow-ups
 
