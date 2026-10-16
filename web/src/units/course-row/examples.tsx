@@ -55,7 +55,7 @@ export default defineExamples(spec, {
           },
         ],
       }),
-    'nothing-active': () => course({ active: [] }),
+    'no-active': () => course({ active: [] }),
     empty: () => course({ name: 'Thermodynamics', active: [] }),
     list: () => (
       <div>

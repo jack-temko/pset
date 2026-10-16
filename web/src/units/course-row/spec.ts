@@ -29,16 +29,14 @@ export default defineSpec({
       when: 'The row shows the nearest and a muted "+1 more" link to the course.',
     },
     {
-      id: 'nothing-active',
-      name: 'Nothing active',
-      when: 'No set is active: the meta line reads "Nothing active".',
-      text: 'Nothing active',
+      id: 'no-active',
+      name: 'No active set',
+      when: 'No set is active: line two holds only the sets count, or nothing; the row keeps its height.',
     },
     {
       id: 'empty',
       name: 'Empty course',
-      when: 'A course with nothing in it yet: the same "Nothing active" line.',
-      text: 'Nothing active',
+      when: 'A course with nothing in it yet: the same line as no active set.',
     },
     {
       id: 'list',
@@ -208,6 +206,14 @@ export default defineSpec({
         'The sets count shows last on the set line as a muted icon and number; no materials count.',
       why: 'Jack: drop the material count, keep the set count on the set line.',
       beat: 'Both counts after the course name (course-row-d8)',
+      date: '2026-10-16',
+    },
+    {
+      id: 'course-row-d10',
+      decision:
+        'A course with nothing active shows no words; the sets count stands alone, after a gap, not a dot.',
+      why: 'Jack: just empty; the dot looks weird with the icon.',
+      beat: '"Nothing active" and a dot before the count',
       date: '2026-10-16',
     },
   ],

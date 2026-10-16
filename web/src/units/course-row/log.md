@@ -86,3 +86,7 @@ So the stats sit on line one: the course name, then the stats, then the "Due soo
 Jack, on which counts and where: **"drop the material count, leave the set count, move it to be on the set line, after everthing, separated by the dot"**
 
 So there is no materials count in the row. The sets count (`ListChecks`) is the last item of line two, after the set, the time left and "+N more", joined by " · ", as a muted icon and number with its "3 sets" tooltip (singular at 1; zero shows 0). On a "Nothing active" row it follows that line. Line one is the course name and its label again.
+
+Jack, next: **"Don't show "No active set" or whatever if there is none, just empty. And drop the dot it looks weird with the icon"**
+
+So a course with nothing active has no words: its line two holds only the sets count, or nothing, and the row keeps its height (the list row always draws line two, at least 20 high). The state is renamed `no-active`. A stat is set apart by a 12px gap, not a " · ".

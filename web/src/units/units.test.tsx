@@ -1016,7 +1016,8 @@ describe('ListRow', () => {
       />,
     );
     const p = el.querySelector('p');
-    expect(p?.textContent).toBe('Set \u00b7 3');
+    expect(p?.textContent).toBe('Set3');
+    expect(p?.querySelector('span:last-child')?.className).toContain('ml-3');
     expect(p?.querySelector('svg')?.getAttribute('class')).toContain('size-3');
   });
 
@@ -1264,9 +1265,9 @@ describe('CourseRow', () => {
       render(
         <CourseRow name="C" href="/c" active={active} sets={n} today={today} />,
       ).el.querySelector('p')?.textContent;
-    expect(meta(3)).toBe('S \u00b7 1 of 4 \u00b7 About 45 m left \u00b7 3');
-    expect(meta(0)).toMatch(/ \u00b7 0$/);
-    expect(meta(6, [])).toBe('Nothing active \u00b7 6');
+    expect(meta(3)).toBe('S \u00b7 1 of 4 \u00b7 About 45 m left3');
+    expect(meta(0)).toMatch(/left0$/);
+    expect(meta(6, [])).toBe('6');
     expect(
       render(<CourseRow name="C" href="/c" active={[]} today={today} />).el
         .textContent,
@@ -1280,9 +1281,10 @@ describe('CourseRow', () => {
     expect(row([set('S', '/s', 15)]).el.textContent).not.toContain('left');
   });
 
-  it('says Nothing active when no set is active, with no bar', () => {
+  it('shows no words when no set is active, no bar, and keeps the height', () => {
     const { el } = row([]);
-    expect(el.querySelector('p')?.textContent).toBe('Nothing active');
+    expect(el.querySelector('p')?.textContent).toBe('');
+    expect(el.querySelector('p')?.className).toContain('min-h-5');
     expect(el.querySelector('[data-aside]')).toBeNull();
   });
 });

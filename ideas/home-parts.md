@@ -239,3 +239,5 @@ Three fixes, from `/design/component/course-row?state=list`.
   Jack, on which counts and where: **"drop the material count, leave the set count, move it to be on the set line, after everthing, separated by the dot"**: no materials count; the sets count is the last item of the set line, as a
   `MetaStat` in the list row's meta (`course-row-d9`, superseding `course-row-d8`; the
   `stats` slot is gone).
+  Jack, next: **"Don't show "No active set" or whatever if there is none, just empty. And drop the dot it looks weird with the icon"**: a course with nothing active shows no words, and a stat follows after a gap, not
+  a dot (`course-row-d10`).

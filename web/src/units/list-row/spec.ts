@@ -181,7 +181,7 @@ export default defineSpec({
     {
       id: 'list-row-d8',
       decision:
-        'A count is a muted 12px icon and number inside the meta line (MetaStat), its words in a tooltip; the meta carries it, so there is no separate stats slot.',
+        'A count is a muted 12px icon and number in the meta (MetaStat), its words in a tooltip, after a 12px gap, not a dot.',
       why: 'Jack: "Can we display this with some muted icons and digits somewhere? Kinda how github does the line diffs"',
       beat: 'Counts in words; a separate stats slot after the title',
       date: '2026-10-16',

@@ -1,6 +1,7 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, isValidElement, type ReactNode } from 'react';
 
 import { Link } from '@/units/link';
+import { MetaStat } from './stat';
 import { isNarrowOnly, type NarrowOnly } from './meta';
 
 /** The aside shows from this width of the row; narrower, it goes first. */
@@ -60,22 +61,30 @@ export function ListRow({
             </div>
             {label !== undefined && <div className="shrink-0">{label}</div>}
           </div>
-          {meta.length > 0 && (
-            <p className="ds-small ds-tabular truncate text-(--ds-fg-muted)">
-              {meta.map((item, i) => {
-                const narrow = isNarrowOnly(item);
-                return (
-                  <span
-                    key={i}
-                    className={narrow ? `${ASIDE_MIN}:hidden` : undefined}
-                  >
-                    {i > 0 && <Fragment> · </Fragment>}
-                    {narrow ? item.node : item}
-                  </span>
-                );
-              })}
-            </p>
-          )}
+          <p className="ds-small ds-tabular min-h-5 truncate text-(--ds-fg-muted)">
+            {meta.map((item, i) => {
+              const narrow = isNarrowOnly(item);
+              // A stat follows what precedes it after a gap, not a dot.
+              const stat =
+                !narrow && isValidElement(item) && item.type === MetaStat;
+              return (
+                <span
+                  key={i}
+                  className={
+                    [
+                      narrow ? `${ASIDE_MIN}:hidden` : '',
+                      stat && i > 0 ? 'ml-3' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ') || undefined
+                  }
+                >
+                  {i > 0 && !stat && <Fragment> · </Fragment>}
+                  {narrow ? item.node : item}
+                </span>
+              );
+            })}
+          </p>
         </div>
         {status !== undefined && (
           <div className="ds-small ds-tabular flex h-6 shrink-0 items-center whitespace-nowrap text-(--ds-fg-muted)">

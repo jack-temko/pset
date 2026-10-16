@@ -51,13 +51,7 @@ export function CourseRow({
           />,
         ];
   if (next === undefined)
-    return (
-      <ListRow
-        title={name}
-        href={href}
-        meta={['Nothing active', ...setCount]}
-      />
-    );
+    return <ListRow title={name} href={href} meta={setCount} />;
   const time = next.minutesLeft === undefined ? '' : timeLeft(next.minutesLeft);
   const more = active.length - 1;
   return (

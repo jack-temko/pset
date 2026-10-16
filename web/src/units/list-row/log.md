@@ -67,3 +67,7 @@ The stats moved to line one, right after the title and before the label, 8 apart
 Jack, on which counts and where: **"drop the material count, leave the set count, move it to be on the set line, after everthing, separated by the dot"**
 
 The separate `stats` slot is removed, since nothing else uses it: a count is now a meta item, `MetaStat` (`list-row/stat.tsx`: a 12px icon and number with its words in a tooltip). The meta line still truncates as a whole, so the count, being last, goes first when it narrows.
+
+Jack, next: **"Don't show "No active set" or whatever if there is none, just empty. And drop the dot it looks weird with the icon"**
+
+In the meta, a `MetaStat` follows what precedes it after a 12px gap, never a dot; text items keep their dots. Line two is always drawn, at least 20 high, so a row with no meta keeps the height of the others.
