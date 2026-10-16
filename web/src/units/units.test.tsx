@@ -15,6 +15,7 @@ import { SectionHeading } from './section-heading';
 import { SetLine } from './set-line';
 import { daysUntil, dueText, parseDueDate, timeLeft } from './set-line/dates';
 import { Tag } from './tag';
+import { MetaStat } from './list-row/stat';
 import { Tooltip } from './tooltip';
 import { TopBar } from './top-bar';
 import { place } from './tooltip/place';
@@ -1004,24 +1005,19 @@ describe('ListRow', () => {
     expect(el.querySelector('a')?.className).toContain('w-fit');
   });
 
-  it('draws stats as muted icons with numbers on line one, hidden below 440', () => {
+  it('draws a MetaStat as a muted icon and number inside the meta line', () => {
     const { el } = render(
       <ListRow
         title="T"
-        status="Due Fri"
-        stats={[
-          { icon: Clock, value: 7, label: '7 materials' },
-          { icon: Clock, value: 0, label: '0 sets' },
+        meta={[
+          'Set',
+          <MetaStat key="s" icon={Clock} value={3} label="3 sets" />,
         ]}
       />,
     );
-    const stats = el.querySelector('[data-stats]');
-    expect(stats?.textContent).toBe('70');
-    expect(stats?.querySelectorAll('svg')).toHaveLength(2);
-    expect(stats?.className).toContain('hidden');
-    expect(stats?.className).toContain('@min-[440px]:flex');
-    // On line one, after the title and before the label.
-    expect(stats?.closest('.min-h-6')).not.toBeNull();
+    const p = el.querySelector('p');
+    expect(p?.textContent).toBe('Set \u00b7 3');
+    expect(p?.querySelector('svg')?.getAttribute('class')).toContain('size-3');
   });
 
   it('shows a narrow-only item only where the aside is not', () => {
@@ -1260,21 +1256,21 @@ describe('CourseRow', () => {
     expect(plain.querySelectorAll('svg')).toHaveLength(0);
   });
 
-  it('shows materials and sets as stats, zero as 0, singular at 1', () => {
-    const stats = (m: number, n: number, active = [set('S', '/s', 15)]) =>
+  it('shows the set count last on the set line, zero as 0', () => {
+    const meta = (
+      n: number,
+      active = [set('S', '/s', 15, { minutesLeft: 45 })],
+    ) =>
       render(
-        <CourseRow
-          name="C"
-          href="/c"
-          active={active}
-          materials={m}
-          sets={n}
-          today={today}
-        />,
-      ).el.querySelector('[data-stats]');
-    expect(stats(7, 3)?.textContent).toBe('73');
-    expect(stats(0, 0)?.textContent).toBe('00');
-    expect(stats(1, 1, [])?.textContent).toBe('11');
+        <CourseRow name="C" href="/c" active={active} sets={n} today={today} />,
+      ).el.querySelector('p')?.textContent;
+    expect(meta(3)).toBe('S \u00b7 1 of 4 \u00b7 About 45 m left \u00b7 3');
+    expect(meta(0)).toMatch(/ \u00b7 0$/);
+    expect(meta(6, [])).toBe('Nothing active \u00b7 6');
+    expect(
+      render(<CourseRow name="C" href="/c" active={[]} today={today} />).el
+        .textContent,
+    ).not.toMatch(/\d$/);
   });
 
   it('shows the time left only when known', () => {

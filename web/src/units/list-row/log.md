@@ -63,3 +63,7 @@ First built as a `stats` slot: `{icon, value, label}` items at the right end of 
 Jack, on where they go: **"have them be to the right of the course name"**
 
 The stats moved to line one, right after the title and before the label, 8 apart each. They go below 440, before the label does; the title still truncates first. They no longer share a column, since each follows its own title. The status is centred in the row again.
+
+Jack, on which counts and where: **"drop the material count, leave the set count, move it to be on the set line, after everthing, separated by the dot"**
+
+The separate `stats` slot is removed, since nothing else uses it: a count is now a meta item, `MetaStat` (`list-row/stat.tsx`: a 12px icon and number with its words in a tooltip). The meta line still truncates as a whole, so the count, being last, goes first when it narrows.

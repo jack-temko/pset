@@ -1,10 +1,11 @@
-import { FileText, ListChecks } from 'lucide-react';
+import { ListChecks } from 'lucide-react';
 
 import { defineExamples } from '@/design/examples';
 import { Link } from '@/units/link';
 import { ProgressBar } from '@/units/progress-bar';
 import { Tag } from '@/units/tag';
 import { ListRow } from './index';
+import { MetaStat } from './stat';
 import spec from './spec';
 
 const LONG =
@@ -37,11 +38,11 @@ export default defineExamples(spec, {
         title="Circuits I"
         href="#"
         status="Due Thu"
-        stats={[
-          { icon: FileText, value: 7, label: '7 materials' },
-          { icon: ListChecks, value: 3, label: '3 sets' },
+        meta={[
+          'Problem set 4',
+          'About 45 m left',
+          <MetaStat key="s" icon={ListChecks} value={3} label="3 sets" />,
         ]}
-        meta={['Problem set 4']}
       />
     ),
     aside: () => (

@@ -21,8 +21,8 @@ export default defineSpec({
     },
     {
       id: 'stats',
-      name: 'With stats',
-      when: 'Muted icon counts right after the title on line one, before the label; they go below 440.',
+      name: 'With a stat in the meta',
+      when: 'A muted icon and number as the last meta item, such as "3 sets"; it truncates first.',
     },
     {
       id: 'aside',
@@ -47,7 +47,7 @@ export default defineSpec({
     { unit: 'link', use: 'The title, and any meta links.' },
     { unit: 'tag', use: 'The status, in the examples.' },
     { unit: 'progress-bar', use: 'The aside, in the examples.' },
-    { unit: 'tooltip', use: 'Each stat\u2019s label.' },
+    { unit: 'tooltip', use: 'A meta stat\u2019s label.' },
   ],
   actions: [
     {
@@ -81,12 +81,6 @@ export default defineSpec({
       type: 'ReactNode',
       default: 'none',
       does: 'A Tag or short muted text at the right of the row, centred vertically in it.',
-    },
-    {
-      name: 'stats',
-      type: '{ icon, value, label }[]',
-      default: 'none',
-      does: 'Muted counts right after the title: a 12px glyph and a number, the label in a tooltip.',
     },
     {
       name: 'meta',
@@ -187,9 +181,9 @@ export default defineSpec({
     {
       id: 'list-row-d8',
       decision:
-        'Stats are muted 12px icons with numbers right after the title, before the label; below 440 they go before the label does.',
+        'A count is a muted 12px icon and number inside the meta line (MetaStat), its words in a tooltip; the meta carries it, so there is no separate stats slot.',
       why: 'Jack: "Can we display this with some muted icons and digits somewhere? Kinda how github does the line diffs"',
-      beat: 'Counts in words in the meta line',
+      beat: 'Counts in words; a separate stats slot after the title',
       date: '2026-10-16',
     },
   ],

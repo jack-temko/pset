@@ -1,8 +1,9 @@
-import { FileText, ListChecks } from 'lucide-react';
+import { ListChecks } from 'lucide-react';
 
 import { Link } from '@/units/link';
 import { ListRow } from '@/units/list-row';
 import { narrowOnly } from '@/units/list-row/meta';
+import { MetaStat } from '@/units/list-row/stat';
 import { ProgressBar } from '@/units/progress-bar';
 import { DueStatus } from '@/units/set-line';
 import { dueBadge } from '@/units/set-line/badge';
@@ -25,7 +26,6 @@ export function CourseRow({
   name,
   href,
   active,
-  materials,
   sets,
   today = new Date(),
 }: {
@@ -33,30 +33,29 @@ export function CourseRow({
   href: string;
   /** The course's active sets, usually one. */
   active: readonly ActiveSet[];
-  /** How many materials and sets the course holds: muted icon stats. */
-  materials?: number;
+  /** How many sets the course holds: a muted icon and number, last on the
+   *  set line. */
   sets?: number;
   today?: Date;
 }) {
   const next = nearest(active, today);
-  const stats =
-    materials === undefined || sets === undefined
-      ? undefined
+  const setCount =
+    sets === undefined
+      ? []
       : [
-          {
-            icon: FileText,
-            value: materials,
-            label: count(materials, 'material'),
-          },
-          { icon: ListChecks, value: sets, label: count(sets, 'set') },
+          <MetaStat
+            key="sets"
+            icon={ListChecks}
+            value={sets}
+            label={count(sets, 'set')}
+          />,
         ];
   if (next === undefined)
     return (
       <ListRow
         title={name}
         href={href}
-        stats={stats}
-        meta={['Nothing active']}
+        meta={['Nothing active', ...setCount]}
       />
     );
   const time = next.minutesLeft === undefined ? '' : timeLeft(next.minutesLeft);
@@ -67,7 +66,6 @@ export function CourseRow({
       href={href}
       label={dueBadge(next.due, today)}
       status={<DueStatus due={next.due} today={today} />}
-      stats={stats}
       meta={[
         <Link
           key="set"
@@ -93,6 +91,7 @@ export function CourseRow({
               </Link>,
             ]
           : []),
+        ...setCount,
       ]}
       aside={<ProgressBar done={next.done} total={next.total} />}
       asideWidth={ASIDE_WIDTH}

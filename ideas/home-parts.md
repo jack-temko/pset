@@ -236,3 +236,6 @@ Three fixes, from `/design/component/course-row?state=list`.
   passes materials (`FileText`) and sets (`ListChecks`) (`list-row-d8`, `course-row-d8`,
   superseding `course-row-d3`).
   Jack, on where they go: **"have them be to the right of the course name"**: the stats sit on line one, after the course name and before the label.
+  Jack, on which counts and where: **"drop the material count, leave the set count, move it to be on the set line, after everthing, separated by the dot"**: no materials count; the sets count is the last item of the set line, as a
+  `MetaStat` in the list row's meta (`course-row-d9`, superseding `course-row-d8`; the
+  `stats` slot is gone).

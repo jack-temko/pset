@@ -82,3 +82,7 @@ First built as two muted stats at the end of line two: materials with `FileText`
 Jack, on where they go: **"have them be to the right of the course name"**
 
 So the stats sit on line one: the course name, then the stats, then the "Due soon" or "Overdue" label. The earlier placement at the end of line two, and the aside-width spacer it needed on a course with nothing active, are gone.
+
+Jack, on which counts and where: **"drop the material count, leave the set count, move it to be on the set line, after everthing, separated by the dot"**
+
+So there is no materials count in the row. The sets count (`ListChecks`) is the last item of line two, after the set, the time left and "+N more", joined by " · ", as a muted icon and number with its "3 sets" tooltip (singular at 1; zero shows 0). On a "Nothing active" row it follows that line. Line one is the course name and its label again.

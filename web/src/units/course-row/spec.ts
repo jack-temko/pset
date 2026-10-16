@@ -43,7 +43,7 @@ export default defineSpec({
     {
       id: 'list',
       name: 'Home: a list of five',
-      when: 'Every row shows its materials and sets stats. Home: a section heading with a Counter and "Show all", then a list of five course rows.',
+      when: 'Every row shows its set count. Home: a section heading with a Counter and "Show all", then a list of five course rows.',
     },
   ],
   exampleWidth: 960,
@@ -91,10 +91,10 @@ export default defineSpec({
       does: 'Where the course name goes; also "+1 more".',
     },
     {
-      name: 'materials, sets',
+      name: 'sets',
       type: 'number',
       default: 'none',
-      does: 'How many materials and sets the course holds; shown as two muted icon stats, zero as 0. Without them no stats show.',
+      does: 'How many sets the course holds: a muted icon and number, last on the set line, zero as 0. Without it none shows.',
     },
     {
       name: 'active',
@@ -199,6 +199,15 @@ export default defineSpec({
         'The materials and sets counts show as muted icon stats at the right of the course name.',
       why: 'Jack: "Can we display this with some muted icons and digits somewhere? Kinda how github does the line diffs"',
       beat: 'Dropping them from the row; "materials, sets" in words',
+      date: '2026-10-16',
+      supersededBy: 'course-row-d9',
+    },
+    {
+      id: 'course-row-d9',
+      decision:
+        'The sets count shows last on the set line as a muted icon and number; no materials count.',
+      why: 'Jack: drop the material count, keep the set count on the set line.',
+      beat: 'Both counts after the course name (course-row-d8)',
       date: '2026-10-16',
     },
   ],
