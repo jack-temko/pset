@@ -34,7 +34,7 @@ export default defineExamples(spec, {
     later: () => row(),
     opened: () =>
       row({
-        set: 'Lab report 2',
+        set: 'Problem set 6',
         course: 'Linear algebra',
         due: undefined,
         minutesLeft: undefined,
