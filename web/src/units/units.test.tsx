@@ -4,9 +4,22 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Button, REASON_MS } from './button';
+import { Counter } from './counter';
+import { AssignmentRow } from './assignment-row';
+import { ASSIGNMENT_CAP, listAssignments } from './assignment-row/listed';
+import { openedAgo } from './assignment-row/opened';
+import { CourseRow } from './course-row';
 import { Link } from './link';
+import { List } from './list';
+import { ListRow } from './list-row';
+import { narrowOnly } from './list-row/meta';
+import { ProgressBar } from './progress-bar';
+import { SectionHeading } from './section-heading';
+import { SetLine } from './set-line';
+import { daysUntil, dueText, parseDueDate, timeLeft } from './set-line/dates';
 import { Tag } from './tag';
 import { Tooltip } from './tooltip';
+import { TopBar } from './top-bar';
 import { place } from './tooltip/place';
 
 (
@@ -750,6 +763,65 @@ describe('Link', () => {
   });
 });
 
+describe('Tag tones', () => {
+  it('draws danger as an outlined pill', () => {
+    const { el } = render(
+      <Tag tone="danger" icon={Clock}>
+        Overdue
+      </Tag>,
+    );
+    const cls = el.firstElementChild?.className ?? '';
+    expect(cls).toContain('border-(--ds-danger)');
+    expect(cls).toContain('rounded-full');
+    expect(cls).toContain('text-(--ds-danger)');
+  });
+});
+
+describe('Link options', () => {
+  const cls = (n: ReactNode) =>
+    render(n).el.querySelector('a')?.className ?? '';
+
+  it('takes a tone, a weight and a size', () => {
+    expect(cls(<Link href="/x">A</Link>)).toContain('text-(--ds-accent)');
+    expect(
+      cls(
+        <Link href="/x" tone="fg">
+          A
+        </Link>,
+      ),
+    ).toContain('text-(--ds-fg)');
+    expect(
+      cls(
+        <Link href="/x" tone="muted">
+          A
+        </Link>,
+      ),
+    ).toContain('text-(--ds-fg-muted)');
+    expect(
+      cls(
+        <Link href="/x" weight="medium">
+          A
+        </Link>,
+      ),
+    ).toContain('font-medium');
+    expect(cls(<Link href="/x">A</Link>)).not.toContain('font-medium');
+    expect(
+      cls(
+        <Link href="/x" size="small">
+          A
+        </Link>,
+      ),
+    ).toContain('ds-small');
+    expect(
+      cls(
+        <Link href="/x" size="brand">
+          A
+        </Link>,
+      ),
+    ).toContain('ds-brand');
+  });
+});
+
 describe('Tag', () => {
   it('is not focusable', () => {
     const { el } = render(
@@ -759,5 +831,579 @@ describe('Tag', () => {
     );
     expect(el.querySelector('a, button, [tabindex]')).toBeNull();
     expect(el.textContent).toBe('Due Fri');
+  });
+});
+
+describe('ProgressBar', () => {
+  it('sizes the count to "99 of 99", so the bar is the same on every row', () => {
+    const count = (d: number, t: number) =>
+      render(<ProgressBar done={d} total={t} />).el.querySelector(
+        '[data-bar] + span',
+      );
+    for (const [d, t] of [
+      [2, 6],
+      [12, 30],
+    ] as const) {
+      expect(count(d, t)?.className).toContain("before:content-['99_of_99']");
+      expect(count(d, t)?.className).toContain('items-end');
+    }
+  });
+
+  const bar = (el: HTMLElement) =>
+    el.querySelector<HTMLElement>('[data-bar="continuous"]');
+  const fill = (el: HTMLElement) =>
+    el.querySelector<HTMLElement>('[data-bar="continuous"] > span');
+
+  it('draws one continuous bar with the count in words', () => {
+    const { el } = render(<ProgressBar done={2} total={6} />);
+    expect(el.querySelectorAll('[data-bar]')).toHaveLength(1);
+    expect(el.querySelector('[data-segment]')).toBeNull();
+    expect(el.textContent).toBe('2 of 6');
+  });
+
+  it('fills the bar to the done share', () => {
+    expect(
+      fill(render(<ProgressBar done={15} total={30} />).el)?.style.width,
+    ).toBe('50%');
+    expect(
+      fill(render(<ProgressBar done={1} total={4} />).el)?.style.width,
+    ).toBe('25%');
+    expect(
+      fill(render(<ProgressBar done={0} total={4} />).el)?.style.width,
+    ).toBe('0%');
+  });
+
+  it('draws the done share in accent, grey only when every problem is done', () => {
+    expect(
+      fill(render(<ProgressBar done={2} total={6} />).el)?.className,
+    ).toContain('--ds-accent');
+    expect(
+      fill(render(<ProgressBar done={6} total={6} />).el)?.className,
+    ).toContain('--ds-fg-muted');
+  });
+
+  it('keeps done between 0 and total', () => {
+    const { el } = render(<ProgressBar done={9} total={4} />);
+    expect(el.textContent).toBe('4 of 4');
+    expect(fill(el)?.style.width).toBe('100%');
+  });
+
+  it('keeps its count whole while the bar shrinks under a tiny container', () => {
+    const { el } = render(
+      <div className="w-[96px]">
+        <ProgressBar done={1} total={30} />
+      </div>,
+    );
+    expect(bar(el)?.className).toContain('flex-1');
+    expect(bar(el)?.className).toContain('min-w-4');
+    expect(el.querySelector('.shrink-0')?.textContent).toBe('1 of 30');
+  });
+
+  it('sets its count in the body step', () => {
+    const { el } = render(<ProgressBar done={1} total={6} />);
+    expect(el.querySelector('.shrink-0')?.className).toContain('ds-body');
+  });
+});
+
+describe('Counter', () => {
+  it('holds a number in a pill and never truncates it', () => {
+    const { el } = render(<Counter>1,234</Counter>);
+    const c = el.firstElementChild;
+    expect(c?.textContent).toBe('1,234');
+    expect(c?.className).toContain('rounded-full');
+    expect(c?.className).toContain('--ds-pressed');
+    expect(c?.className).toContain('h-5');
+    expect(c?.className).toContain('px-2');
+    expect(c?.className).toContain('whitespace-nowrap');
+    expect(c?.className).not.toContain('truncate');
+    expect(c?.className).toContain('ds-tabular');
+  });
+});
+
+describe('SectionHeading', () => {
+  it('shows the title as a heading, with no counter or action alone', () => {
+    const { el } = render(<SectionHeading>Courses</SectionHeading>);
+    expect(el.querySelector('h2')?.textContent).toBe('Courses');
+    expect(el.textContent).toBe('Courses');
+  });
+
+  it('puts the Counter right after the title and the action at the right', () => {
+    const { el } = render(
+      <SectionHeading count={8} action={<Link href="/all">Show all</Link>}>
+        Courses
+      </SectionHeading>,
+    );
+    const title = el.querySelector('h2');
+    expect(title?.parentElement?.textContent).toBe('Courses8');
+    expect(title?.parentElement?.querySelector('.rounded-full')).not.toBeNull();
+    // Count and action sit centred on the title's line: 28px boxes.
+    const countBox =
+      title?.parentElement?.querySelector('.rounded-full')?.parentElement;
+    expect(countBox?.className).toContain('h-7');
+    expect(countBox?.className).toContain('items-center');
+    expect(el.querySelector('a')?.getAttribute('href')).toBe('/all');
+    const actionBox = el.querySelector('a')?.parentElement;
+    expect(actionBox?.className).toContain('h-7');
+    expect(actionBox?.className).toContain('items-center');
+    expect(el.querySelector('a')?.parentElement?.className).toContain(
+      'shrink-0',
+    );
+  });
+
+  it('is at least 32 high, has no rule and no outer margin', () => {
+    const { el } = render(<SectionHeading count={1}>Courses</SectionHeading>);
+    const cls = el.firstElementChild?.className ?? '';
+    expect(cls).toContain('min-h-8');
+    expect(cls).not.toContain('border');
+    expect(cls).not.toMatch(/(^|\s)m[tby]?-/);
+  });
+});
+
+describe('ListRow', () => {
+  it('makes only the title a link, and plain text without an href', () => {
+    const a = render(<ListRow title="Circuits I" href="/c" meta={['x']} />);
+    expect(a.el.querySelectorAll('a')).toHaveLength(1);
+    expect(a.el.querySelector('a')?.getAttribute('href')).toBe('/c');
+    const b = render(<ListRow title="Circuits I" />);
+    expect(b.el.querySelector('a')).toBeNull();
+    expect(b.el.textContent).toBe('Circuits I');
+  });
+
+  it('joins its meta with a middle dot and keeps meta links out of the title link', () => {
+    const { el } = render(
+      <ListRow
+        title="T"
+        href="/c"
+        meta={[
+          <Link key="s" href="/s">
+            Set
+          </Link>,
+          '2 of 6',
+        ]}
+      />,
+    );
+    expect(el.querySelector('p')?.textContent).toBe('Set \u00b7 2 of 6');
+    expect(el.querySelector('a a')).toBeNull();
+    expect(el.querySelectorAll('a')).toHaveLength(2);
+  });
+
+  it('shows a status, and an aside of the width it is given, hidden when narrow', () => {
+    const { el } = render(
+      <ListRow title="T" status="Due Fri" aside="bar" asideWidth={96} />,
+    );
+    expect(el.textContent).toContain('Due Fri');
+    const aside = el.querySelector<HTMLElement>('[data-aside]');
+    expect(aside?.style.width).toBe('96px');
+    expect(aside?.className).toContain('hidden');
+    expect(aside?.className).toContain('@min-[440px]:block');
+  });
+
+  it('puts a label after the title, and gives the row no hover ground', () => {
+    const { el } = render(<ListRow title="T" href="/t" label="Soon" />);
+    const line = el.querySelector('.min-h-6');
+    expect(line?.textContent).toBe('TSoon');
+    expect(line?.className).toContain('gap-2');
+    expect(el.innerHTML).not.toContain('hover:bg');
+    expect(el.querySelector('a')?.className).toContain('w-fit');
+  });
+
+  it('shows a narrow-only item only where the aside is not', () => {
+    const { el } = render(
+      <ListRow title="T" meta={['a', narrowOnly('2 of 6')]} />,
+    );
+    const spans = el.querySelectorAll('p > span');
+    expect(spans[1]?.className).toContain('@min-[440px]:hidden');
+    expect(spans[1]?.textContent).toBe(' \u00b7 2 of 6');
+  });
+
+  it('sits the status at the right of the row, out of line one', () => {
+    const { el } = render(
+      <ListRow title="T" status="Due Fri" aside="bar" asideWidth={96} />,
+    );
+    const status = el.querySelector('.h-6.items-center');
+    expect(status?.textContent).toBe('Due Fri');
+    // A child of the row itself, beside the aside, and never in the title's line.
+    expect(status?.parentElement).toBe(
+      el.querySelector('[data-aside]')?.parentElement,
+    );
+    expect(status?.closest('.min-h-6')).toBeNull();
+    expect(el.querySelector('.min-h-6')).not.toBeNull();
+  });
+
+  it('is at least 56 high and truncates its lines', () => {
+    const { el } = render(<ListRow title="T" meta={['a']} />);
+    expect(el.firstElementChild?.className).toContain('min-h-14');
+    expect(el.querySelector('p')?.className).toContain('truncate');
+  });
+});
+
+describe('List', () => {
+  it('has no header without a title, and rules between rows only', () => {
+    const { el } = render(
+      <List>
+        <ListRow title="A" />
+        <ListRow title="B" />
+      </List>,
+    );
+    expect(el.querySelector('h2')).toBeNull();
+    expect(el.querySelector('.divide-y')).not.toBeNull();
+    expect(el.textContent).toBe('AB');
+  });
+
+  it('draws a header with a title, a Counter and an action', () => {
+    const { el } = render(
+      <List title="Courses" count={8} action={<Link href="/all">All</Link>}>
+        <ListRow title="A" />
+      </List>,
+    );
+    expect(el.querySelector('h2')?.textContent).toBe('Courses');
+    expect(el.querySelector('.rounded-full')?.textContent).toBe('8');
+    expect(el.querySelector('a')?.getAttribute('href')).toBe('/all');
+  });
+
+  it('says one muted line when empty, with its own text if given', () => {
+    expect(render(<List title="T" />).el.textContent).toContain(
+      'Nothing here yet',
+    );
+    expect(render(<List empty="No courses" />).el.textContent).toBe(
+      'No courses',
+    );
+    expect(render(<List>{false}</List>).el.textContent).toBe(
+      'Nothing here yet',
+    );
+  });
+});
+
+describe('SetLine', () => {
+  const today = new Date(2026, 9, 13);
+  const day = (d: number) => new Date(2026, 9, d);
+  const line = (p: Partial<Parameters<typeof SetLine>[0]> = {}) =>
+    render(
+      <SetLine
+        set="Problem set 4"
+        done={2}
+        total={6}
+        href="/set/4"
+        today={today}
+        {...p}
+      />,
+    );
+
+  it('opens the set from its title, carrying every fact', () => {
+    const { el } = line({ minutesLeft: 70, due: day(19) });
+    const a = el.querySelectorAll('a');
+    expect(a).toHaveLength(1);
+    expect(a[0]?.getAttribute('href')).toBe('/set/4');
+    const text = el.textContent;
+    for (const part of [
+      'Problem set 4',
+      '2 of 6',
+      'About 1 h 10 m left',
+      'Due Mon',
+    ])
+      expect(text).toContain(part);
+  });
+
+  it('badges a due date only within 2 days, and writes it by the weekday within 6', () => {
+    const tag = (d: number) => line({ due: day(d) }).el.querySelector('svg');
+    expect(tag(13)).not.toBeNull();
+    expect(tag(15)).not.toBeNull();
+    expect(tag(16)).toBeNull();
+    // The badge sits beside the date, never in its place.
+    const soon = line({ due: day(15) }).el.textContent;
+    expect(soon).toContain('Due soon');
+    expect(soon).toContain('Due Thu');
+    expect(line({ due: day(16) }).el.textContent).not.toContain('Due soon');
+    expect(line({ due: day(15) }).el.textContent).toContain('Due Thu');
+    expect(line({ due: day(16) }).el.textContent).toContain('Due Fri');
+    expect(line({ due: day(19) }).el.textContent).toContain('Due Mon');
+    expect(line({ due: day(20) }).el.textContent).toContain('Due Oct 20');
+    expect(line({ due: day(20) }).el.querySelector('svg')).toBeNull();
+  });
+
+  it('shows Overdue in the danger tone, beside the date', () => {
+    for (const d of [12, 4]) {
+      const { el } = line({ due: day(d) });
+      expect(el.textContent).toContain('Overdue');
+      expect(el.textContent).toContain(`Due Oct ${String(d)}`);
+      expect(el.querySelector('svg')).not.toBeNull();
+      expect(el.innerHTML).toContain('--ds-danger');
+    }
+  });
+
+  it('counts days across a month boundary and a late evening', () => {
+    const lateOct = new Date(2026, 9, 31, 23, 59);
+    expect(daysUntil(new Date(2026, 10, 1), lateOct)).toBe(1);
+    expect(dueText(new Date(2026, 10, 1), lateOct)).toEqual({
+      kind: 'soon',
+      text: 'Due Sun',
+    });
+    expect(dueText(new Date(2026, 10, 9), lateOct).text).toBe('Due Nov 9');
+    const late = new Date(2026, 9, 13, 23, 30);
+    expect(dueText(day(13), late).kind).toBe('soon');
+    expect(dueText(day(12), late).kind).toBe('overdue');
+  });
+
+  it('builds a due date in local time', () => {
+    const d = parseDueDate('2026-10-19');
+    expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([2026, 9, 19]);
+    expect(d.getHours()).toBe(0);
+    expect(() => parseDueDate('Oct 19')).toThrow();
+  });
+
+  it('shows no status without a date, and no time when unknown', () => {
+    const { el } = line({ due: undefined });
+    expect(el.textContent).not.toMatch(/Due|Overdue|No date/);
+    expect(el.querySelector('svg')).toBeNull();
+    expect(el.textContent).not.toContain('left');
+  });
+
+  it('keeps the count in the meta where the bar is not drawn', () => {
+    const { el } = line({});
+    const count = [...el.querySelectorAll('p > span')].find((n) =>
+      n.textContent.includes('2 of 6'),
+    );
+    expect(count?.className).toContain('@min-[440px]:hidden');
+  });
+
+  it('writes the time left', () => {
+    expect(timeLeft(45)).toBe('About 45 m left');
+    expect(timeLeft(60)).toBe('About 1 h left');
+    expect(timeLeft(70)).toBe('About 1 h 10 m left');
+    expect(timeLeft(59.7)).toBe('About 1 h left');
+    expect(timeLeft(119.7)).toBe('About 2 h left');
+    expect(timeLeft(0)).toBe('');
+    expect(timeLeft(-5)).toBe('');
+    expect(timeLeft(0.2)).toBe('');
+  });
+
+  it('is a two-line list row, at least 56 high', () => {
+    const { el } = line({ set: 'x'.repeat(70) });
+    expect(el.firstElementChild?.className).toContain('min-h-14');
+    expect(el.querySelector('[data-aside]')).not.toBeNull();
+  });
+});
+
+describe('CourseRow', () => {
+  const row = (p: Partial<Parameters<typeof CourseRow>[0]> = {}) =>
+    render(
+      <CourseRow
+        name="Circuits I"
+        href="/c/1"
+        todo={3}
+        materials={7}
+        weekMinutes={130}
+        {...p}
+      />,
+    ).el;
+
+  it('has the name alone on line one, and the counts in words on line two', () => {
+    const el = row();
+    const a = el.querySelectorAll('a');
+    expect(a).toHaveLength(1);
+    expect(a[0]?.getAttribute('href')).toBe('/c/1');
+    expect(el.querySelector('.min-h-6')?.textContent).toBe('Circuits I');
+    const p = el.querySelector('p');
+    expect(p?.textContent).toBe('3 sets to do \u00b7 7 materials');
+    expect(p?.querySelector('svg')).toBeNull();
+    expect(el.textContent).not.toContain('Opened');
+    expect(el.firstElementChild?.className).toContain('min-h-14');
+  });
+
+  it('writes the singular at 1 and zero as 0', () => {
+    const meta = (todo: number, materials: number) =>
+      row({ todo, materials }).querySelector('p')?.textContent;
+    expect(meta(1, 1)).toBe('1 set to do \u00b7 1 material');
+    expect(meta(0, 0)).toBe('0 sets to do \u00b7 0 materials');
+  });
+
+  it('shows the time this week in the aside, rounded, 0 m for none', () => {
+    const aside = (m: number) =>
+      row({ weekMinutes: m }).querySelector('[data-aside]')?.textContent;
+    expect(aside(130)).toBe('2 h 10 m this week');
+    expect(aside(45)).toBe('45 m this week');
+    expect(aside(59.7)).toBe('1 h this week');
+    expect(aside(0)).toBe('0 m this week');
+    expect(row().querySelector<HTMLElement>('[data-aside]')?.style.width).toBe(
+      'clamp(160px, 20cqw, 320px)',
+    );
+  });
+
+  it('shows no sets, badge, bar or date', () => {
+    const el = row();
+    expect(el.querySelector('[data-bar]')).toBeNull();
+    expect(el.textContent).not.toMatch(/Due|Overdue/);
+  });
+});
+
+describe('AssignmentRow', () => {
+  const today = new Date(2026, 9, 13, 12);
+  const ago = (h: number) => new Date(today.getTime() - h * 3_600_000);
+  const row = (p: Partial<Parameters<typeof AssignmentRow>[0]> = {}) =>
+    render(
+      <AssignmentRow
+        set="Problem set 4"
+        href="/s/4"
+        course="Circuits I"
+        courseHref="/c/1"
+        done={2}
+        total={6}
+        minutesLeft={70}
+        due={new Date(2026, 9, 18)}
+        reason="due"
+        today={today}
+        {...p}
+      />,
+    ).el;
+
+  it('opens the set from its name and the course from the meta', () => {
+    const el = row();
+    const a = [...el.querySelectorAll('a')];
+    expect(a.map((x) => x.getAttribute('href'))).toEqual(['/s/4', '/c/1']);
+    expect(el.querySelector('p')?.textContent).toBe(
+      'Circuits I \u00b7 2 of 6 \u00b7 About 1 h 10 m left',
+    );
+    expect(el.querySelector('[data-bar]')).not.toBeNull();
+  });
+
+  it('shows the badge and the date together', () => {
+    const soon = row({ due: new Date(2026, 9, 15) });
+    expect(soon.textContent).toContain('Due soon');
+    expect(soon.textContent).toContain('Due Thu');
+    const late = row({ due: new Date(2026, 9, 10) });
+    expect(late.textContent).toContain('Overdue');
+    expect(late.textContent).toContain('Due Oct 10');
+    const later = row();
+    expect(later.textContent).toContain('Due Sun');
+    expect(later.querySelector('svg')).toBeNull();
+  });
+
+  it('says when it was opened only for an opened one', () => {
+    expect(row({ reason: 'due', openedAt: ago(2) }).textContent).not.toContain(
+      'Opened',
+    );
+    const el = row({ reason: 'opened', openedAt: ago(2), due: undefined });
+    expect(el.querySelector('p')?.textContent).toContain('Opened 2 h ago');
+    expect(el.textContent).not.toMatch(/Due/);
+    expect(openedAgo(ago(0.01), today)).toBe('Opened just now');
+    expect(openedAgo(ago(0.5), today)).toBe('Opened 30 m ago');
+    expect(openedAgo(ago(72), today)).toBe('Opened 3 d ago');
+    expect(openedAgo(ago(30), today)).toBe('Opened yesterday');
+    expect(openedAgo(ago(24 * 10), today)).toBe('Opened Oct 3');
+  });
+
+  it('leaves the time out when unknown', () => {
+    expect(row({ minutesLeft: undefined }).textContent).not.toContain('left');
+  });
+});
+
+describe('listAssignments', () => {
+  const today = new Date(2026, 9, 13, 12);
+  const ago = (d: number) => new Date(today.getTime() - d * 86_400_000);
+  const due = (d: number) => new Date(2026, 9, d);
+  const s = (n: string, p: { due?: Date; openedAt?: Date } = {}) => ({
+    n,
+    ...p,
+  });
+
+  it('lists sets due within 7 days or opened in the last 7, due ones first', () => {
+    const { shown, more } = listAssignments(
+      [
+        s('opened', { openedAt: ago(1) }),
+        s('late', { due: due(20) }),
+        s('far', { due: due(21), openedAt: ago(8) }),
+        s('past', { due: due(9) }),
+        s('soon', { due: due(14) }),
+        s('older', { openedAt: ago(5) }),
+      ],
+      today,
+    );
+    expect(shown.map((x) => `${x.n}:${x.reason}`)).toEqual([
+      'past:due',
+      'soon:due',
+      'late:due',
+      'opened:opened',
+      'older:opened',
+    ]);
+    expect(more).toBe(0);
+  });
+
+  it('caps at five and counts the rest', () => {
+    const sets = Array.from({ length: 8 }, (_, i) =>
+      s(String(i), { due: due(14 + (i % 4)) }),
+    );
+    const { shown, more } = listAssignments(sets, today);
+    expect(shown).toHaveLength(ASSIGNMENT_CAP);
+    expect(more).toBe(3);
+  });
+});
+
+describe('TopBar', () => {
+  const links = (el: HTMLElement) =>
+    [...el.querySelectorAll('a')].map((a) => [
+      a.textContent,
+      a.getAttribute('href'),
+    ]);
+
+  it('on Home has the wordmark and Settings only', () => {
+    const { el } = render(<TopBar homeHref="/" settingsHref="/settings" />);
+    expect(links(el)).toEqual([
+      ['PSet', '/'],
+      ['Settings', '/settings'],
+    ]);
+    expect(el.querySelector('ol')?.children).toHaveLength(0);
+  });
+
+  it('links every path item but the last', () => {
+    const { el } = render(
+      <TopBar
+        homeHref="/"
+        path={[
+          { label: 'Electromagnetics', href: '/c/1' },
+          { label: 'Problem set 4' },
+        ]}
+        settingsHref="/settings"
+      />,
+    );
+    expect(links(el)).toEqual([
+      ['PSet', '/'],
+      ['Electromagnetics', '/c/1'],
+      ['Settings', '/settings'],
+    ]);
+    expect(el.querySelector('ol')?.textContent).toBe(
+      '/Electromagnetics/Problem set 4',
+    );
+  });
+
+  it('never links the last item, even when it has an href', () => {
+    const { el } = render(
+      <TopBar
+        homeHref="/"
+        path={[{ label: 'Electromagnetics', href: '/c/1' }]}
+        settingsHref="/s"
+      />,
+    );
+    expect(links(el).map((l) => l[0])).toEqual(['PSet', 'Settings']);
+  });
+
+  it('truncates the middle items before the ends and pins the sides', () => {
+    const { el } = render(
+      <TopBar
+        homeHref="/"
+        path={[
+          { label: 'A', href: '/a' },
+          { label: 'B', href: '/b' },
+          { label: 'C' },
+        ]}
+        settingsHref="/s"
+      />,
+    );
+    const items = [...el.querySelectorAll('li')].map((li) => li.className);
+    expect(items[1]).toContain('shrink-[4]');
+    expect(items[0]).not.toContain('shrink-[4]');
+    expect(items[2]).not.toContain('shrink-[4]');
+    expect(el.querySelector('a')?.className).toContain('shrink-0');
+    expect(el.querySelector('header > a')?.className).toContain('shrink-0');
+    expect(el.querySelector('header')?.className).toContain('sticky');
   });
 });

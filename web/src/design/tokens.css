@@ -5,6 +5,9 @@
 @import '@fontsource-variable/ibm-plex-sans/wght.css';
 @import '@fontsource/ibm-plex-mono/400.css';
 
+/* The same order as Tailwind's, so it holds whichever file loads first. */
+@layer theme, base, components, utilities;
+
 .ds {
   color-scheme: dark;
   --ds-font-serif: 'Source Serif 4 Variable', serif;
@@ -41,6 +44,10 @@
   --ds-display-line: 48px;
   --ds-display-weight: 500;
   --ds-display-font: var(--ds-font-serif);
+  --ds-brand-size: 20px;
+  --ds-brand-line: 28px;
+  --ds-brand-weight: 500;
+  --ds-brand-font: var(--ds-font-serif);
   --ds-heading-size: 22px;
   --ds-heading-line: 28px;
   --ds-heading-weight: 500;
@@ -61,6 +68,10 @@
   --ds-small-line: 20px;
   --ds-small-weight: 400;
   --ds-small-font: var(--ds-font-sans);
+  --ds-label-size: 12px;
+  --ds-label-line: 18px;
+  --ds-label-weight: 500;
+  --ds-label-font: var(--ds-font-sans);
   --ds-code-size: 14px;
   --ds-code-line: 20px;
   --ds-code-weight: 400;
@@ -80,7 +91,9 @@
   --ds-gutter: 40px;
   --ds-row: 44px;
   --ds-control: 32px;
-  --ds-radius-tag: 4px;
+  --ds-topbar: 56px;
+  --ds-radius-segment: 2px;
+  --ds-radius-tag: 10px;
   --ds-radius-control: 6px;
   --ds-radius-panel: 8px;
   --ds-border-width: 1px;
@@ -104,54 +117,71 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* One class per type step: font, size, line and weight together. */
-.ds .ds-display {
-  font-family: var(--ds-display-font);
-  font-size: var(--ds-display-size);
-  line-height: var(--ds-display-line);
-  font-weight: var(--ds-display-weight);
-}
+/* One class per type step: font, size, line and weight together. They sit in
+   a layer below Tailwind's utilities, so a utility such as font-medium wins. */
+@layer components {
+  .ds .ds-display {
+    font-family: var(--ds-display-font);
+    font-size: var(--ds-display-size);
+    line-height: var(--ds-display-line);
+    font-weight: var(--ds-display-weight);
+  }
 
-.ds .ds-heading {
-  font-family: var(--ds-heading-font);
-  font-size: var(--ds-heading-size);
-  line-height: var(--ds-heading-line);
-  font-weight: var(--ds-heading-weight);
-}
+  .ds .ds-brand {
+    font-family: var(--ds-brand-font);
+    font-size: var(--ds-brand-size);
+    line-height: var(--ds-brand-line);
+    font-weight: var(--ds-brand-weight);
+  }
 
-.ds .ds-reading-l {
-  font-family: var(--ds-reading-l-font);
-  font-size: var(--ds-reading-l-size);
-  line-height: var(--ds-reading-l-line);
-  font-weight: var(--ds-reading-l-weight);
-}
+  .ds .ds-heading {
+    font-family: var(--ds-heading-font);
+    font-size: var(--ds-heading-size);
+    line-height: var(--ds-heading-line);
+    font-weight: var(--ds-heading-weight);
+  }
 
-.ds .ds-reading {
-  font-family: var(--ds-reading-font);
-  font-size: var(--ds-reading-size);
-  line-height: var(--ds-reading-line);
-  font-weight: var(--ds-reading-weight);
-}
+  .ds .ds-reading-l {
+    font-family: var(--ds-reading-l-font);
+    font-size: var(--ds-reading-l-size);
+    line-height: var(--ds-reading-l-line);
+    font-weight: var(--ds-reading-l-weight);
+  }
 
-.ds .ds-body {
-  font-family: var(--ds-body-font);
-  font-size: var(--ds-body-size);
-  line-height: var(--ds-body-line);
-  font-weight: var(--ds-body-weight);
-}
+  .ds .ds-reading {
+    font-family: var(--ds-reading-font);
+    font-size: var(--ds-reading-size);
+    line-height: var(--ds-reading-line);
+    font-weight: var(--ds-reading-weight);
+  }
 
-.ds .ds-small {
-  font-family: var(--ds-small-font);
-  font-size: var(--ds-small-size);
-  line-height: var(--ds-small-line);
-  font-weight: var(--ds-small-weight);
-}
+  .ds .ds-body {
+    font-family: var(--ds-body-font);
+    font-size: var(--ds-body-size);
+    line-height: var(--ds-body-line);
+    font-weight: var(--ds-body-weight);
+  }
 
-.ds .ds-code {
-  font-family: var(--ds-code-font);
-  font-size: var(--ds-code-size);
-  line-height: var(--ds-code-line);
-  font-weight: var(--ds-code-weight);
+  .ds .ds-small {
+    font-family: var(--ds-small-font);
+    font-size: var(--ds-small-size);
+    line-height: var(--ds-small-line);
+    font-weight: var(--ds-small-weight);
+  }
+
+  .ds .ds-label {
+    font-family: var(--ds-label-font);
+    font-size: var(--ds-label-size);
+    line-height: var(--ds-label-line);
+    font-weight: var(--ds-label-weight);
+  }
+
+  .ds .ds-code {
+    font-family: var(--ds-code-font);
+    font-size: var(--ds-code-size);
+    line-height: var(--ds-code-line);
+    font-weight: var(--ds-code-weight);
+  }
 }
 
 /* Reading text runs at most 66 characters wide. */

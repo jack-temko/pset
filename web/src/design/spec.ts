@@ -114,6 +114,9 @@ export interface Spec<
     local?: readonly LocalRule[];
   };
   decisions: readonly Decision[];
+  /** How wide the design page opens the example, in px or 'full'. Without
+   *  it, a component opens at 480, a pane at 440 and a view across the page. */
+  exampleWidth?: number | 'full';
   /** The word-for-word grill log, as a path from the repo root. */
   log?: string;
 }

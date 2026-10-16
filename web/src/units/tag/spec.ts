@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Tag',
   group: 'Basics',
   purpose:
-    'Names a fact about a thing in one or two words. One shape, two tones, an optional glyph, never clickable.',
+    'Names a fact about a thing in one or two words. One shape, three tones, an optional glyph, never clickable.',
   states: [
     {
       id: 'neutral',
@@ -16,7 +16,12 @@ export default defineSpec({
     {
       id: 'attention',
       name: 'Attention with a glyph',
-      when: 'Something needs attention soon, such as "Due Fri".',
+      when: 'Something needs attention soon, such as "Due soon".',
+    },
+    {
+      id: 'danger',
+      name: 'Danger with a glyph',
+      when: 'Work is late, such as "Overdue".',
     },
     {
       id: 'attention-plain',
@@ -29,9 +34,9 @@ export default defineSpec({
   inputs: [
     {
       name: 'tone',
-      type: "'neutral' | 'attention'",
+      type: "'neutral' | 'attention' | 'danger'",
       default: 'neutral',
-      does: 'Which ground and text colour.',
+      does: 'Which border and text colour.',
     },
     {
       name: 'icon',
@@ -73,6 +78,7 @@ export default defineSpec({
       why: 'A tag is always recognisable as a tag.',
       beat: 'Outlined and soft shapes; neutral only',
       date: '2026-10-13',
+      supersededBy: 'tag-d4',
     },
     {
       id: 'tag-d2',
@@ -81,6 +87,21 @@ export default defineSpec({
       why: 'Jack: "the tones got out of hand, lets start small".',
       beat: 'Five tones',
       date: '2026-10-13',
+    },
+    {
+      id: 'tag-d3',
+      decision: 'A third tone, danger, for overdue work.',
+      why: 'Jack: overdue must not look like a day this week.',
+      beat: 'Amber for overdue',
+      date: '2026-10-14',
+    },
+    {
+      id: 'tag-d4',
+      decision:
+        'A tag is a GitHub-style label: an outlined pill in its tone\u2019s colour, 12px.',
+      why: 'Jack: "Can we make them look more like GitHubs badges?"',
+      beat: 'A soft filled ground at 14px (tag-d1)',
+      date: '2026-10-16',
     },
   ],
 });

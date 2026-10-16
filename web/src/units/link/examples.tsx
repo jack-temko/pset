@@ -26,6 +26,21 @@ export default defineExamples(spec, {
         of your textbook.
       </p>
     ),
+    'tone-fg': () => (
+      <Link href="#" tone="fg" weight="medium">
+        Electromagnetics
+      </Link>
+    ),
+    'tone-muted': () => (
+      <Link href="#" tone="muted">
+        Electromagnetics
+      </Link>
+    ),
+    small: () => (
+      <Link href="#" size="small">
+        Show all
+      </Link>
+    ),
     hover: () => (
       <Link href="#" forceState="hover">
         Open the course

@@ -38,7 +38,7 @@ export function parseStage(q: URLSearchParams, spec: AnySpec): StageState {
         ? 'full'
         : w !== null && Number.isFinite(px) && px >= 1
           ? Math.round(px)
-          : DEFAULT_WIDTH[spec.kind],
+          : (spec.exampleWidth ?? DEFAULT_WIDTH[spec.kind]),
   };
 }
 

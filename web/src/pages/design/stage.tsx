@@ -122,7 +122,7 @@ function Toolbar({
 /** The width the Default option goes back to: a view has none of its own,
  *  so it gets a common desktop column. */
 function defaultPx(spec: AnySpec) {
-  const d = DEFAULT_WIDTH[spec.kind];
+  const d = spec.exampleWidth ?? DEFAULT_WIDTH[spec.kind];
   return d === 'full' ? 880 : d;
 }
 

@@ -9,7 +9,7 @@ a folder `web/src/units/<id>/` with:
 
 - `spec.ts`: plain data, written through `defineSpec()` (`web/src/design/spec.ts`). Fields
   in page order: `id`, `kind`, `title`, `group`, `purpose`, `states`, `stress`, `flows`,
-  `components`, `actions`, `data`, `inputs`, `priority`, `sizes`, `rules`, `decisions`.
+  `components`, `actions`, `data`, `inputs`, `priority`, `sizes`, `exampleWidth` (optional: how wide the page opens the example), `rules`, `decisions`.
 - `examples.tsx`: `defineExamples(spec, ...)`: one render per state, a `stress` render
   (the worst-case content), and a skeleton per state when the unit reads data.
 - `log.md`: for a unit that was grilled, the word-for-word log. Nothing else is a doc.
@@ -102,6 +102,20 @@ interaction steps (`hover`, `pressed`, and hover and pressed for each solid grou
 foundations, and two rules, `one-primary` and `links-go-buttons-do`. A solid ground takes
 black for hover and pressed, so its white label keeps 4.5:1; a transparent control takes
 `fg`.
+
+Home's parts follow (`ideas/home-parts.md`). Basics gains Counter (the old design's pill after
+a title). Lists are built from two units: List (the old Box: a frame, an optional header
+band, rules between rows drawn by the list) and List row (the one row shape, GitHub issue
+style: a title and a status on line one, small meta on line two, an aside at the right).
+Course row, Assignment row and Set line are compositions of List row and draw nothing of
+their own: the assignment row shows a set (its due label, course, time left, last opened and
+bar), the course row is one lean line (its name and a muted count of sets still to do), and
+the set line is the assignment's row for the window pane. Progress bar narrows itself by its own width. Section
+heading follows the old Home's SectionHeader (title, Counter, action, no rule). Top bar is
+the wordmark, the path and Settings. Rows and bars use container queries, so they follow the
+stage's width. The type steps sit in a cascade layer below the utilities, so a utility wins;
+there is a `brand` step for the wordmark. Home is S14 in `ideas/screens-grill.md`: an Assignments list, then a Courses list. The
+Components tab lists thirteen units.
 
 ## Follow-ups
 

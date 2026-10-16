@@ -1,0 +1,65 @@
+import { Link } from '@/units/link';
+
+export interface PathItem {
+  label: string;
+  /** The last item is where you are and has none. */
+  href?: string;
+}
+
+/** The top of every screen: the wordmark (Home), where you are as a path of
+ *  links, and Settings. Nothing moves the wordmark or Settings; a long path
+ *  truncates, the middle items first (top-bar-d1). */
+export function TopBar({
+  homeHref,
+  path = [],
+  settingsHref,
+}: {
+  /** Where the wordmark goes: Home. A router can intercept it like any link. */
+  homeHref: string;
+  path?: readonly PathItem[];
+  settingsHref: string;
+}) {
+  return (
+    <header className="sticky top-0 z-10 flex h-(--ds-topbar) items-center justify-between gap-4 border-b border-(--ds-border-muted) bg-(--ds-bg) px-(--ds-gutter)">
+      <nav className="flex min-w-0 items-center gap-2">
+        <Link href={homeHref} tone="fg" size="brand" className="shrink-0">
+          PSet
+        </Link>
+        <ol className="flex min-w-0 items-center gap-2">
+          {path.map((item, i) => {
+            const last = i === path.length - 1;
+            const middle = i > 0 && !last;
+            return (
+              <li
+                key={`${String(i)}-${item.label}`}
+                className={`flex min-w-0 items-center gap-2 ${middle ? 'shrink-[4]' : 'shrink'}`}
+              >
+                <span className="text-(--ds-fg-muted)">/</span>
+                {last || item.href === undefined ? (
+                  <span
+                    title={item.label}
+                    className="ds-body min-w-0 truncate text-(--ds-fg)"
+                  >
+                    {item.label}
+                  </span>
+                ) : (
+                  <Link
+                    href={item.href}
+                    title={item.label}
+                    tone="muted"
+                    className="min-w-0 truncate"
+                  >
+                    {item.label}
+                  </Link>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
+      <Link href={settingsHref} className="shrink-0">
+        Settings
+      </Link>
+    </header>
+  );
+}

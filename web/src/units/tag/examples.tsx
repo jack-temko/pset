@@ -1,4 +1,4 @@
-import { Clock } from 'lucide-react';
+import { Clock, TriangleAlert } from 'lucide-react';
 
 import { defineExamples } from '@/design/examples';
 import { Tag } from './index';
@@ -10,6 +10,11 @@ export default defineExamples(spec, {
     attention: () => (
       <Tag tone="attention" icon={Clock}>
         Due Fri
+      </Tag>
+    ),
+    danger: () => (
+      <Tag tone="danger" icon={TriangleAlert}>
+        Overdue
       </Tag>
     ),
     'attention-plain': () => <Tag tone="attention">Due Fri</Tag>,

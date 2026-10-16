@@ -1,0 +1,64 @@
+# Set line: log
+
+The grill of 2026-10-13, word for word (the questions that concern the set line; it began as the work row).
+Prior art: Google Classroom's home shows up to five upcoming assignments across
+classes.
+
+- Course row on Home: what is clickable? The row opens the set; the course name opens
+  the course (Recommended) / The row opens the course / Nothing but two links. **"the
+  row opens the course, and just the course, but there will be a list of the few that
+  are due soon"**
+- Course row: which columns? Course, current set, progress, due (Recommended) / Add
+  the materials count / Course and due only. **"depends if its the due soon list or
+  the course list"**
+- The Continue band at the top of Home: what does it show when no set is in progress?
+  The next set due, as 'Start' (Recommended) / It disappears / Always 'Continue'.
+  **"does not exist with the list of soonly due assignments"**
+- Which sets appear under 'Due soon'? Up to 5 unfinished sets with a due date, nearest
+  first (Recommended) / Also sets in progress without a date / Everything unfinished,
+  no cap. **"Lets have it be an in progress instead, sorted by due date, with the chip
+  for due soon"**
+- A 'Due soon' row shows: Set, course, progress, due (Recommended) / Set, progress,
+  due / Add a time estimate. **Add a time estimate.**
+- One push back: keep it to started sets? Started sets, plus any due within 2 days /
+  Keep it to started sets. **Started sets, plus any due within 2 days.**
+- How many rows can the list hold? Five, then a 'Show all' link (Recommended) / All of
+  them / Three. **Five, then a 'Show all' link (Recommended).**
+
+## Settled afterwards (the plan, not asked)
+
+The attention tag reads "Due Fri" (the day), not "Due soon"; a set with no date sorts
+after dated ones and shows "No date"; the time left shows only when PSet knows it
+(`honest-waits`). At narrow widths the time column goes first, then the progress
+count, which is hidden by the row, not by the progress bar.
+
+## The amendment (Jack, mid-build)
+
+- Home's two lists will mostly name the same courses twice. Keep both lists? One list:
+  a course row that holds its active set (Recommended) / Keep both lists, as decided /
+  Only the 'In progress' list. **One list: a course row that holds its active set
+  (Recommended).** (Jack first said: **"Something to note about my own usage. I most
+  often only ever have one active assignment in each course."**)
+
+So the work row became this line, with no course name, and it lives inside the course
+row. The "Show all" cap of five now counts courses, not sets.
+
+## Overdue and dates (2026-10-14)
+
+- A set past its due date: how is that shown? 'Overdue' in red (Recommended) /
+  'Overdue Sat' in amber / Same as due soon. **'Overdue' in red (Recommended).**
+- How far-off dates are written: Weekday within 6 days, then month and day
+  (Recommended) / Always month and day / As built. **Weekday within 6 days, then month
+  and day (Recommended).**
+- When a set line is narrow, what gives way? You decided the count '2 of 6' always
+  shows beside the bar. Keep the count, shrink the bar (Recommended) / Hide the count
+  when narrow / Drop the bar, keep the count. **Keep the count, shrink the bar
+  (Recommended).**
+
+A due date is a local calendar date (`parseDueDate('2026-10-19')`), never UTC.
+
+## The badge in place of the date (2026-10-16)
+
+Jack on the course list, annotating with Agentation (2026-10-16): **"These look weird because it replaces the original text. Can we try to always have the due date, but have badges for overdue and due soon? Where is a good place to put them?"** Then: **"With the date always shown, where does the 'Due soon' or 'Overdue' badge go?"** Options: After the course name, like a GitHub label (Recommended) / Just before the date, on the right / In the grey line, after the set name. Answer: **After the course name, like a GitHub label (Recommended).**
+
+So the right-hand status is always the plain date ("Due Thu", "Due Oct 23"), and a "Due soon" (attention, clock glyph) or "Overdue" (danger, alert glyph) badge sits after the set name, as a label. A past date reads "Due Oct 12", a month and day, since a weekday is ambiguous once past.
