@@ -84,3 +84,11 @@ Then four answers:
 - "Which assignments are in the list, and how many before 'Show all'?" Due within 7 days or opened in the last 7, cap 5 (Recommended) / Every unfinished set, cap 5 / Due within 7 days or opened in the last 7, cap 3. **Due within 7 days or opened in the last 7, cap 5 (Recommended).**
 
 The lean course row needs one line, 44 high, so the list row gains `single`: no line two, and the meta items (a `MetaStat`) follow the title and label after a 12px gap.
+
+## The one-line mode goes (2026-10-16)
+
+Jack, on the lean course row looking empty ("What, if anything, goes on the right of a course row?" Time this week (Recommended) / Next due date / Last opened / Leave it lean): **"can we make it two lines? the lower line should be the material count + last opened, time this week is aside"**
+
+Then: **"sets to do can move down too"**
+
+The course row is two lines again, so `single` has no user and is removed. A stat, and the text after one, are set apart by the 12px gap, not a dot.

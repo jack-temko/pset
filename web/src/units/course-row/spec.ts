@@ -6,36 +6,45 @@ export default defineSpec({
   title: 'Course row',
   group: 'Lists',
   purpose:
-    'One course as a lean one-line list row: its name, and a muted count of the sets still to do. It names no set and draws no bar or date: the assignments are their own list.',
+    'One course as a two-line list row: its name; its sets to do, materials and last opened; and the time this week as its aside. Assignments are their own list.',
   states: [
     {
       id: 'to-do',
       name: 'Sets to do',
-      when: 'A course with sets still to do: the count after its name.',
+      when: 'A course with sets still to do: the count on line two, with its materials and when it was opened.',
     },
     {
       id: 'one',
-      name: 'One set to do',
-      when: 'The tooltip reads "1 set to do", singular.',
+      name: 'One of each',
+      when: 'One set to do and one material: the tooltips read "1 set to do" and "1 material", singular.',
     },
     {
       id: 'none',
       name: 'None to do',
-      when: 'Every set is done, or there are none: the count shows 0.',
+      when: 'Every set is done, or there are none: the counts show 0, and 0 m this week.',
+    },
+    {
+      id: 'never-opened',
+      name: 'Never opened',
+      when: 'The student has not opened the course: line two has no "Opened" text.',
     },
     {
       id: 'list',
       name: 'Home: assignments and courses',
-      when: 'Home: an Assignments list of five rows, 40 below it a Courses list of five lean rows, each list under a section heading with a Counter and "Show all".',
+      when: 'Home: an Assignments list of five rows, 40 below it a Courses list of five rows, each list under a section heading with a Counter and "Show all".',
     },
   ],
   exampleWidth: 960,
   stress:
-    'A 70 character course name at 320px: the name truncates and the count stays beside it.',
+    'A 70 character course name at 320px: the aside is gone, the name truncates and line two truncates.',
   components: [
     {
       unit: 'list-row',
-      use: 'The row itself, in its one-line mode, with a meta stat.',
+      use: 'The row itself: title, meta stats and the aside.',
+    },
+    {
+      unit: 'set-line',
+      use: 'The minutes wording, "2 h 10 m".',
     },
     {
       unit: 'assignment-row',
@@ -67,7 +76,31 @@ export default defineSpec({
       name: 'todo',
       type: 'number',
       default: 'none',
-      does: 'Sets still to do: a muted icon and number after the name, zero as 0.',
+      does: 'Sets still to do: a muted icon and number on line two, zero as 0.',
+    },
+    {
+      name: 'materials',
+      type: 'number',
+      default: 'none',
+      does: 'Materials in the course: a muted icon and number on line two, zero as 0.',
+    },
+    {
+      name: 'openedAt',
+      type: 'Date',
+      default: 'none',
+      does: 'When the student last opened it, as "Opened yesterday"; nothing when never.',
+    },
+    {
+      name: 'weekMinutes',
+      type: 'number',
+      default: 'none',
+      does: 'Minutes spent this week: "2 h 10 m this week" in the aside, "0 m this week" for none.',
+    },
+    {
+      name: 'today',
+      type: 'Date',
+      default: 'now',
+      does: 'The moment "Opened 2 h ago" counts from; for the design page and tests.',
     },
   ],
   priority: {
@@ -76,7 +109,11 @@ export default defineSpec({
   },
   sizes: {
     narrowest: 280,
-    gives: ['The course name truncates, and the count stays'],
+    gives: [
+      'The time this week goes below 440',
+      'Then line two truncates, as a whole',
+      'Then the course name truncates',
+    ],
   },
   rules: {
     cite: [
@@ -182,6 +219,15 @@ export default defineSpec({
         'A course row is one 44 high line: the name, then a muted ListChecks count of sets still to do. No sets, badge, bar or date.',
       why: 'Jack: separate assignments and courses (S14); a course shows "Sets still to do, as a muted count".',
       beat: 'The nearest active set in the row; sort by due; two counts (d2 to d10)',
+      date: '2026-10-16',
+      supersededBy: 'course-row-d12',
+    },
+    {
+      id: 'course-row-d12',
+      decision:
+        'A course row has two lines: the name; sets to do, materials count and last opened; with the time this week as its aside.',
+      why: 'Jack: the one-line row looked empty.',
+      beat: 'One line with the to-do count only (course-row-d11)',
       date: '2026-10-16',
     },
   ],

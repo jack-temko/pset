@@ -49,13 +49,18 @@ export function dueText(
   return { kind: 'plain', text: `Due ${MONTH_DAY.format(due)}` };
 }
 
-/** "About 1 h 10 m left", or nothing for a time of zero or less. The total
- *  is rounded before it is split, so it never reads "1 h 60 m". */
-export function timeLeft(minutes: number): string {
-  const total = Math.round(minutes);
-  if (!(total > 0)) return '';
+/** "1 h 10 m", "45 m", "0 m": minutes as the student reads them. The total is
+ *  rounded before it is split, so it never reads "1 h 60 m". */
+export function minutesText(minutes: number): string {
+  const total = Math.max(0, Math.round(minutes));
   const h = Math.floor(total / 60);
   const m = total % 60;
-  const parts = [h > 0 ? `${String(h)} h` : '', m > 0 ? `${String(m)} m` : ''];
-  return `About ${parts.filter(Boolean).join(' ')} left`;
+  if (h === 0) return `${String(m)} m`;
+  return m === 0 ? `${String(h)} h` : `${String(h)} h ${String(m)} m`;
+}
+
+/** "About 1 h 10 m left", or nothing for a time of zero or less. */
+export function timeLeft(minutes: number): string {
+  if (!(Math.round(minutes) > 0)) return '';
+  return `About ${minutesText(minutes)} left`;
 }

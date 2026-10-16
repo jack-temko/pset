@@ -77,6 +77,38 @@ const SETS = [
   },
 ];
 
+const COURSES = [
+  {
+    name: 'Circuits I',
+    todo: 2,
+    materials: 7,
+    openedAt: ago(26),
+    weekMinutes: 190,
+  },
+  {
+    name: 'Signals and systems',
+    todo: 5,
+    materials: 12,
+    openedAt: ago(2),
+    weekMinutes: 45,
+  },
+  {
+    name: 'Thermodynamics',
+    todo: 10,
+    materials: 31,
+    openedAt: ago(24 * 12),
+    weekMinutes: 0,
+  },
+  {
+    name: 'Differential equations',
+    todo: 1,
+    materials: 1,
+    openedAt: ago(72),
+    weekMinutes: 130,
+  },
+  { name: 'Linear algebra', todo: 0, materials: 0, weekMinutes: 0 },
+];
+
 /** Home as the design page shows it: Assignments, then Courses, 40 apart
  *  (the info area above them comes later). */
 export function HomeLists() {
@@ -107,11 +139,9 @@ export function HomeLists() {
         </SectionHeading>
         <div className="mt-3">
           <List>
-            <CourseRow name="Circuits I" href="#" todo={2} />
-            <CourseRow name="Signals and systems" href="#" todo={5} />
-            <CourseRow name="Thermodynamics" href="#" todo={10} />
-            <CourseRow name="Differential equations" href="#" todo={1} />
-            <CourseRow name="Linear algebra" href="#" todo={0} />
+            {COURSES.map((c) => (
+              <CourseRow key={c.name} {...c} href="#" today={TODAY} />
+            ))}
           </List>
         </div>
       </div>

@@ -1202,30 +1202,58 @@ describe('SetLine', () => {
 });
 
 describe('CourseRow', () => {
-  const row = (todo: number) =>
-    render(<CourseRow name="Circuits I" href="/c/1" todo={todo} />).el;
+  const today = new Date(2026, 9, 13, 12);
+  const ago = (h: number) => new Date(today.getTime() - h * 3_600_000);
+  const row = (p: Partial<Parameters<typeof CourseRow>[0]> = {}) =>
+    render(
+      <CourseRow
+        name="Circuits I"
+        href="/c/1"
+        todo={3}
+        materials={7}
+        openedAt={ago(26)}
+        weekMinutes={130}
+        today={today}
+        {...p}
+      />,
+    ).el;
 
-  it('is one 44 high line: the name, then the sets still to do', () => {
-    const el = row(3);
+  it('has the name alone on line one, and the stats and opened on line two', () => {
+    const el = row();
     const a = el.querySelectorAll('a');
     expect(a).toHaveLength(1);
     expect(a[0]?.getAttribute('href')).toBe('/c/1');
-    expect(el.querySelector('p')).toBeNull();
-    expect(el.firstElementChild?.className).toContain('min-h-11');
-    const meta = el.querySelector('[data-single-meta]');
-    expect(meta?.textContent).toBe('3');
-    expect(meta?.querySelector('svg')).not.toBeNull();
+    expect(el.querySelector('.min-h-6')?.textContent).toBe('Circuits I');
+    const p = el.querySelector('p');
+    expect(p?.textContent).toBe('37Opened yesterday');
+    expect(p?.querySelectorAll('svg')).toHaveLength(2);
+    expect(p?.textContent).not.toContain('\u00b7');
+    expect(el.firstElementChild?.className).toContain('min-h-14');
   });
 
-  it('shows no sets, badge, bar or date', () => {
-    const el = row(3);
-    expect(el.textContent).toBe('Circuits I3');
-    expect(el.querySelector('[data-aside]')).toBeNull();
+  it('shows the time this week in the aside, rounded, 0 m for none', () => {
+    const aside = (m: number) =>
+      row({ weekMinutes: m }).querySelector('[data-aside]')?.textContent;
+    expect(aside(130)).toBe('2 h 10 m this week');
+    expect(aside(45)).toBe('45 m this week');
+    expect(aside(59.7)).toBe('1 h this week');
+    expect(aside(0)).toBe('0 m this week');
+    expect(row().querySelector<HTMLElement>('[data-aside]')?.style.width).toBe(
+      'clamp(160px, 20cqw, 320px)',
+    );
+  });
+
+  it('shows no sets, badge, bar or date, and nothing opened when never', () => {
+    const el = row({ openedAt: undefined });
+    expect(el.querySelector('p')?.textContent).toBe('37');
     expect(el.querySelector('[data-bar]')).toBeNull();
+    expect(el.textContent).not.toMatch(/Due|Overdue/);
   });
 
   it('shows zero as 0', () => {
-    expect(row(0).querySelector('[data-single-meta]')?.textContent).toBe('0');
+    expect(
+      row({ todo: 0, materials: 0 }).querySelector('p')?.textContent,
+    ).toMatch(/^00/);
   });
 });
 
@@ -1281,6 +1309,8 @@ describe('AssignmentRow', () => {
     expect(openedAgo(ago(0.01), today)).toBe('Opened just now');
     expect(openedAgo(ago(0.5), today)).toBe('Opened 30 m ago');
     expect(openedAgo(ago(72), today)).toBe('Opened 3 d ago');
+    expect(openedAgo(ago(30), today)).toBe('Opened yesterday');
+    expect(openedAgo(ago(24 * 10), today)).toBe('Opened Oct 3');
   });
 
   it('leaves the time out when unknown', () => {

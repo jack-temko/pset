@@ -103,3 +103,11 @@ Then four answers:
 - "Which assignments are in the list, and how many before 'Show all'?" Due within 7 days or opened in the last 7, cap 5 (Recommended) / Every unfinished set, cap 5 / Due within 7 days or opened in the last 7, cap 3. **Due within 7 days or opened in the last 7, cap 5 (Recommended).**
 
 So the course row is one 44 high line: the name, then a muted `ListChecks` count of sets still to do ("3 sets to do", singular at 1, 0 shown). The nearest active set, its due, count, time left, bar, badge and "+N more" move to the assignment row; `nearest.ts` and the sort by nearest due are gone. Decision course-row-d11 supersedes the active-set decisions, the sort and the stats.
+
+## Two lines again (2026-10-16)
+
+Jack, on the lean course row looking empty ("What, if anything, goes on the right of a course row?" Time this week (Recommended) / Next due date / Last opened / Leave it lean): **"can we make it two lines? the lower line should be the material count + last opened, time this week is aside"**
+
+Then: **"sets to do can move down too"**
+
+So the course row is a two-line list row again, 56 high like the assignment rows. Line one is the name alone. Line two is the sets-to-do count (`ListChecks`), the materials count (`FileText`), each 12px apart, then after the same gap "Opened yesterday" (the assignment row's `openedAgo` wording, and "Opened Oct 3" beyond a week; nothing when never opened). The aside is "2 h 10 m this week", muted and right-aligned in the same width as the assignment rows' aside. The one-line `single` mode is removed from the list row, as nothing uses it.

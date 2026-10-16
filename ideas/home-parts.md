@@ -254,3 +254,6 @@ Then four answers:
 - "Which assignments are in the list, and how many before 'Show all'?" Due within 7 days or opened in the last 7, cap 5 (Recommended) / Every unfinished set, cap 5 / Due within 7 days or opened in the last 7, cap 3. **Due within 7 days or opened in the last 7, cap 5 (Recommended).**
 
 Built as a first version for Jack to react to: new unit `assignment-row`, a lean one-line `course-row` (a `single` mode on `list-row`), `S14` in `ideas/screens-grill.md`, and a Home example on both pages.
+Jack, on the lean course row looking empty ("What, if anything, goes on the right of a course row?" Time this week (Recommended) / Next due date / Last opened / Leave it lean): **"can we make it two lines? the lower line should be the material count + last opened, time this week is aside"**
+Then: **"sets to do can move down too"**
+Course row is two lines again (`course-row-d12`, superseding `course-row-d11`): the name; sets to do, materials and last opened; time this week as the aside. The list row's `single` mode is removed.
