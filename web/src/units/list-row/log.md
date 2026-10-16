@@ -71,3 +71,16 @@ The separate `stats` slot is removed, since nothing else uses it: a count is now
 Jack, next: **"Don't show "No active set" or whatever if there is none, just empty. And drop the dot it looks weird with the icon"**
 
 In the meta, a `MetaStat` follows what precedes it after a 12px gap, never a dot; text items keep their dots. Line two is always drawn, at least 20 high, so a row with no meta keeps the height of the others.
+
+## A one-line mode (2026-10-16)
+
+Jack, reshaping Home (2026-10-16): **"I want to separate them, sorry for making this hard on you. I want two lists on my home screen, plus some info on top (e.g. github style heatmap for work, stat tile, big greeting, this will be done later). The two lists are for assignments and courses. The assignment list will display recently opened, and due soon. With a limit and gate to show more. Due soon at the top. The courses list with just show courses. First from a students perspective, what should be show on each of these two types of list items? Then we will design them."**
+
+Then four answers:
+
+- "This reverses S13 (written 2026-10-14: Home is one list of courses, each holding its active set). New Home: info on top (later), then an assignments list, then a courses list. Reverse S13?" Yes, reverse it (Recommended) / No, keep one list. **Yes, reverse it (Recommended).**
+- "Which extras does an assignment item show, beyond name, course, due, progress and time left? Pick any." Last opened / Next problem / Neither. **Last opened.**
+- "What does a course item show besides its name?" Sets still to do, as a muted count (Recommended) / Name only / Sets and materials counts. **Sets still to do, as a muted count (Recommended).**
+- "Which assignments are in the list, and how many before 'Show all'?" Due within 7 days or opened in the last 7, cap 5 (Recommended) / Every unfinished set, cap 5 / Due within 7 days or opened in the last 7, cap 3. **Due within 7 days or opened in the last 7, cap 5 (Recommended).**
+
+The lean course row needs one line, 44 high, so the list row gains `single`: no line two, and the meta items (a `MetaStat`) follow the title and label after a 12px gap.
