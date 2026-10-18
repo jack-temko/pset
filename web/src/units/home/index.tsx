@@ -37,7 +37,7 @@ function Arranged({
 }) {
   if (layout === 'beside')
     return (
-      <div className="grid items-start gap-6 @min-[760px]:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="grid items-start gap-6 @min-[760px]:grid-cols-[220px_minmax(0,max-content)]">
         <div className="grid gap-3">{tiles}</div>
         {children}
       </div>

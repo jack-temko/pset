@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { dueText } from '@/units/set-line/dates';
 import { dueLine, nextDue } from './due';
 
 const today = new Date(2026, 9, 13); // Tuesday
@@ -19,7 +20,7 @@ describe('what is due next', () => {
       { set: 'Problem set 4', due: d(15), done: 0, total: 6 },
       { set: 'Problem set 2', due: d(12), done: 1, total: 8 },
     ];
-    expect(dueLine(sets, today)).toBe('Problem set 2 was due Mon.');
+    expect(dueLine(sets, today)).toBe('Problem set 2 was due Oct 12.');
   });
 
   it('skips a finished set and one without a date', () => {
@@ -38,5 +39,13 @@ describe('what is due next', () => {
     expect(
       dueLine([{ set: 'Later', due: d(20), done: 0, total: 2 }], today),
     ).toBe('Later is due Oct 20.');
+  });
+
+  it('words a date as the set row does', () => {
+    for (const n of [2, 9, 12, 15, 19, 20]) {
+      const set = { set: 'S', due: d(n), done: 0, total: 1 };
+      const row = dueText(d(n), today).text.replace('Due ', 'due ');
+      expect(dueLine([set], today)).toBe(`S ${n < 13 ? 'was' : 'is'} ${row}.`);
+    }
   });
 });

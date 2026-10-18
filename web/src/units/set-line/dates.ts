@@ -49,15 +49,15 @@ export function dueText(
   return { kind: 'plain', text: `Due ${MONTH_DAY.format(due)}` };
 }
 
-/** The date inside a sentence: "due Thu" within 6 days either way, else
- *  "due Oct 20". `overdue` says the day has passed, so the sentence says
- *  "was due" (home-info-grill D5). */
+/** The date inside a sentence, worded as `dueText` words it: "due Thu" within
+ *  6 days ahead, else "due Oct 20", and always the date once past. `overdue`
+ *  says the day has passed, so the sentence says "was due" (home-info-grill D5). */
 export function dueClause(
   due: Date,
   today: Date,
 ): { overdue: boolean; text: string } {
   const days = daysUntil(due, today);
-  const near = Math.abs(days) <= WEEKDAY_DAYS;
+  const near = days >= 0 && days <= WEEKDAY_DAYS;
   return {
     overdue: days < 0,
     text: `due ${(near ? WEEKDAY : MONTH_DAY).format(due)}`,
