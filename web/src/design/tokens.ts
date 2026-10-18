@@ -54,6 +54,7 @@ const ATTENTION = '#d29922';
 const DANGER = '#f85149';
 const SUCCESS = '#3fb950';
 const FG = '#f0f3f6';
+const ACCENT = '#4493f8';
 const ACCENT_SOLID = '#1f6feb';
 /** The smallest step from #da3633 that keeps white at 4.5:1 or more is none:
  *  it already reaches 4.61:1. */
@@ -121,7 +122,7 @@ export const COLOURS: readonly Colour[] = [
   },
   {
     name: 'accent',
-    value: '#4493f8',
+    value: ACCENT,
     use: 'links, progress, focus',
     on: on(plain, TEXT_FLOOR),
   },
@@ -231,6 +232,36 @@ export const COLOURS: readonly Colour[] = [
     name: 'success-soft',
     value: mix(SUCCESS, BG_RAISED, SOFT_SHARE),
     use: 'the ground under success',
+    on: [],
+  },
+  {
+    name: 'heat-0',
+    value: mix(FG, BG, HOVER_SHARE),
+    use: 'a heatmap day with no time studied: fg mixed over bg',
+    on: [],
+  },
+  {
+    name: 'heat-1',
+    value: mix(ACCENT, BG, 0.3),
+    use: 'a heatmap day under 30 minutes: accent over bg',
+    on: [],
+  },
+  {
+    name: 'heat-2',
+    value: mix(ACCENT, BG, 0.55),
+    use: 'a heatmap day under 1 hour: accent over bg',
+    on: [],
+  },
+  {
+    name: 'heat-3',
+    value: mix(ACCENT, BG, 0.78),
+    use: 'a heatmap day under 2 hours: accent over bg',
+    on: [],
+  },
+  {
+    name: 'heat-4',
+    value: ACCENT,
+    use: 'a heatmap day of 2 hours or more: accent itself',
     on: [],
   },
   { name: 'page', value: '#e4e7ea', use: 'the textbook sheet', on: [] },

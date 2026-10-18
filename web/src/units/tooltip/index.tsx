@@ -61,7 +61,8 @@ export function Tooltip({
   side = 'below',
   onClose,
 }: {
-  /** One short line. With none, the tooltip draws nothing. */
+  /** One short line; a data point may run a few short lines, split by a
+   *  newline (tooltip-d5). With none, the tooltip draws nothing. */
   text: string | undefined;
   /** The one control it belongs to. */
   children: ReactNode;
@@ -175,7 +176,7 @@ export function Tooltip({
       ref={tip}
       role="tooltip"
       popover={hasPopover ? 'manual' : undefined}
-      className="ds-small ds-fade-in pointer-events-none absolute top-0 left-0 m-0 w-max max-w-[250px] overflow-visible rounded-(--ds-radius-tag) border-0 bg-(--ds-pressed) px-2 py-1 text-(--ds-fg)"
+      className="ds-small ds-fade-in pointer-events-none whitespace-pre-line absolute top-0 left-0 m-0 w-max max-w-[250px] overflow-visible rounded-(--ds-radius-tag) border-0 bg-(--ds-pressed) px-2 py-1 text-(--ds-fg)"
       style={{
         background: 'var(--ds-pressed)',
         inset: 'auto',

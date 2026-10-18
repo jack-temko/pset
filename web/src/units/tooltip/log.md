@@ -21,3 +21,7 @@ https://primer.style/product/components/tooltip/guidelines .
 - How should the tooltip be positioned? Keep ours, add the close-when-covered fix
   (Recommended) / Use GitHub's positioning function / Use Floating UI. **Keep ours, add
   the close-when-covered fix (Recommended).**
+
+## Several lines (2026-10-16)
+
+- Jack, on the Home heatmap hover (`ideas/home-info-grill.md` D7): **"courses by time in them. no split"**. A day's tooltip is therefore its date, its total and one line per course, so the tooltip may now run a few short lines for one data point (tooltip-d5).

@@ -49,6 +49,21 @@ export function dueText(
   return { kind: 'plain', text: `Due ${MONTH_DAY.format(due)}` };
 }
 
+/** The date inside a sentence: "due Thu" within 6 days either way, else
+ *  "due Oct 20". `overdue` says the day has passed, so the sentence says
+ *  "was due" (home-info-grill D5). */
+export function dueClause(
+  due: Date,
+  today: Date,
+): { overdue: boolean; text: string } {
+  const days = daysUntil(due, today);
+  const near = Math.abs(days) <= WEEKDAY_DAYS;
+  return {
+    overdue: days < 0,
+    text: `due ${(near ? WEEKDAY : MONTH_DAY).format(due)}`,
+  };
+}
+
 /** "1 h 10 m", "45 m", "0 m": minutes as the student reads them. The total is
  *  rounded before it is split, so it never reads "1 h 60 m". */
 export function minutesText(minutes: number): string {
