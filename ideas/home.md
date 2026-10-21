@@ -95,3 +95,15 @@ Jack: **"I really want this home screen stats to look really cool. I like the he
 - Phone width: every option stacks, nothing scrolls sideways.
 - Decisions home-d5 (6 months, Jack's words) and home-d6 (the four options replace
   the tiles and layout A/B) with the quote in `log.md`.
+
+## Where round 2 ended (2026-10-21)
+
+Jack chose the week option and then its sparklines version ("Lets go with spark
+lines, drop the other one, and anything else not used anymore."); the panel,
+courses and sparklines options, the tiles and layout A/B and the year span are
+gone. Home's info area is one outlined box (no fill): the heatmap (month and
+Mon/Wed/Fri labels, no ragged end, no outline of its own) beside this week's seven
+bars (two-letter labels, today in full colour, no underline), questions done and
+questions left, each with a 14-day sparkline. Changes compare with last week up to
+the same weekday, in the muted colour. Decisions home-d5 to home-d12, heatmap-d8
+and d9, bar-chart-d1. Jack: **"Looks absolutely great, what's next?"**
