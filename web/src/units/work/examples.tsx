@@ -62,6 +62,9 @@ export default defineExamples(spec, {
     'nav-numbers': () => (
       <Recorded set={sample.inProgress()} startAt="p4" nav="numbers" />
     ),
+    'nav-titled-numbers': () => (
+      <Recorded set={sample.inProgress()} startAt="p4" nav="titled-numbers" />
+    ),
     'nav-picker': () => (
       <Recorded set={sample.inProgress()} startAt="p4" nav="picker" />
     ),
@@ -71,7 +74,14 @@ export default defineExamples(spec, {
   },
   stress: () => (
     <div className="space-y-10">
-      {[undefined, 'segments', 'numbers', 'picker', 'list'].map((nav) => (
+      {[
+        undefined,
+        'segments',
+        'numbers',
+        'titled-numbers',
+        'picker',
+        'list',
+      ].map((nav) => (
         <Recorded
           key={nav ?? 'boxes'}
           set={sample.stress()}
@@ -89,6 +99,7 @@ export default defineExamples(spec, {
     'turned-in': () => <WorkSkeleton />,
     'nav-segments': () => <WorkSkeleton nav="segments" />,
     'nav-numbers': () => <WorkSkeleton nav="numbers" />,
+    'nav-titled-numbers': () => <WorkSkeleton nav="titled-numbers" />,
     'nav-picker': () => <WorkSkeleton nav="picker" />,
     'nav-list': () => <WorkSkeleton nav="list" />,
   },

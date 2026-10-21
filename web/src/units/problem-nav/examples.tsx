@@ -40,12 +40,15 @@ export default defineExamples(spec, {
   states: {
     segments: () => show('segments'),
     numbers: () => show('numbers'),
+    'titled-numbers': () => show('titled-numbers'),
     picker: () => show('picker'),
     list: () => show('list'),
   },
   stress: () => (
     <div className="space-y-6">
-      {(['segments', 'numbers', 'picker', 'list'] as const).map((v) => (
+      {(
+        ['segments', 'numbers', 'titled-numbers', 'picker', 'list'] as const
+      ).map((v) => (
         <ProblemNav key={v} view={v} items={long()} current="s3" />
       ))}
     </div>

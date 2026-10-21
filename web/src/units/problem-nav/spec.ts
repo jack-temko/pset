@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Problem navigator',
   group: 'Work',
   purpose:
-    'Four ways to move through a set without boxes of numbers, each naming a problem by its number and short title: segments, plain numbers, a picker and a titled list.',
+    'Five ways to move through a set without boxes of numbers, each naming a problem by its number and short title: segments, plain numbers, titled numbers, a picker and a titled list.',
   states: [
     {
       id: 'segments',
@@ -28,6 +28,11 @@ export default defineSpec({
       name: 'D. Titled list',
       when: 'A compact vertical list about 200 wide: number, title and a check, the current row highlighted. The pane puts it left of the problem.',
     },
+    {
+      id: 'titled-numbers',
+      name: 'E. Titled numbers',
+      when: 'B\u2019s row with each number followed by its title; too many and the titles truncate, then the row scrolls with an edge fade.',
+    },
   ],
   exampleWidth: 640,
   stress:
@@ -43,9 +48,9 @@ export default defineSpec({
   inputs: [
     {
       name: 'view',
-      type: "'segments' | 'numbers' | 'picker' | 'list'",
+      type: "'segments' | 'numbers' | 'titled-numbers' | 'picker' | 'list'",
       default: 'none',
-      does: 'Which of the four to draw.',
+      does: 'Which of the five to draw.',
     },
     {
       name: 'items',
@@ -69,6 +74,7 @@ export default defineSpec({
     gives: [
       'The segments get thinner',
       'The numbers wrap to more rows',
+      'Titled numbers shrink their titles to 80 wide, then scroll sideways',
       'Titles truncate, in the list and the picker',
     ],
   },
@@ -89,7 +95,7 @@ export default defineSpec({
     {
       id: 'problem-nav-d1',
       decision:
-        'Four navigators to compare, A to D, each replacing the boxes of numbers. The boxes stay the default until Jack picks one.',
+        'Five navigators to compare, A to E, each replacing the boxes of numbers. The boxes stay the default until Jack picks one.',
       why: 'Jack: "Not a fan of the boxes with the numbers for questions. Can you give me some other options?" Word for word in the log.',
       beat: 'Boxes of numbers (problem-strip-d1)',
       date: '2026-10-21',

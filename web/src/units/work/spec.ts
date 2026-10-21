@@ -68,6 +68,12 @@ export default defineSpec({
       when: 'The in-progress set with a list of titled problems at the left, the problem to its right, in place of the boxes of numbers.',
       skeleton: SKELETON,
     },
+    {
+      id: 'nav-titled-numbers',
+      name: 'E. Titled numbers',
+      when: 'The in-progress set with the numbers of B, each followed by its title; the row scrolls sideways when too long.',
+      skeleton: SKELETON,
+    },
   ],
   exampleWidth: 640,
   stress:
@@ -100,7 +106,7 @@ export default defineSpec({
       use: 'The set line: name, due, time left and progress.',
     },
     { unit: 'problem', use: 'The problem being worked.' },
-    { unit: 'problem-nav', use: 'The four navigators to compare, A to D.' },
+    { unit: 'problem-nav', use: 'The five navigators to compare, A to E.' },
     { unit: 'problem-strip', use: 'The strip of numbered chips.' },
     { unit: 'progress-bar', use: 'How many are done, in the set line.' },
     {

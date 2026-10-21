@@ -1,4 +1,5 @@
 import { Check, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ActionMenu } from '@/units/action-menu';
 import { Tooltip } from '@/units/tooltip';
@@ -117,6 +118,98 @@ function Numbers({ items, current, onJump }: Omit<ProblemNavProps, 'view'>) {
   );
 }
 
+/** The numbers of B, each with its title. Items shrink, their titles
+ *  truncating, down to a minimum width; then the row scrolls sideways with a
+ *  fade at an edge that has more, and the current item is kept in view. */
+function TitledNumbers({
+  items,
+  current,
+  onJump,
+}: Omit<ProblemNavProps, 'view'>) {
+  const row = useRef<HTMLUListElement>(null);
+  const [edge, setEdge] = useState({ left: false, right: false });
+  const measure = () => {
+    const el = row.current;
+    if (!el) return;
+    setEdge({
+      left: el.scrollLeft > 1,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
+    });
+  };
+  useEffect(() => {
+    const el = row.current;
+    const here = el?.querySelector<HTMLElement>('[aria-current="step"]');
+    if (el && here) {
+      const li = here.closest('li');
+      if (li) {
+        const pad = 32;
+        if (li.offsetLeft - pad < el.scrollLeft)
+          el.scrollLeft = li.offsetLeft - pad;
+        else if (
+          li.offsetLeft + li.offsetWidth + pad >
+          el.scrollLeft + el.clientWidth
+        )
+          el.scrollLeft = li.offsetLeft + li.offsetWidth + pad - el.clientWidth;
+      }
+    }
+    measure();
+    if (!el) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+    };
+  }, [current, items.length]);
+  const fade = `linear-gradient(to right, ${edge.left ? 'transparent' : 'black'}, black 32px, black calc(100% - 32px), ${edge.right ? 'transparent' : 'black'})`;
+  return (
+    <ul
+      ref={row}
+      onScroll={measure}
+      style={{ maskImage: fade, WebkitMaskImage: fade, scrollbarWidth: 'none' }}
+      className="flex min-w-0 overflow-x-auto"
+    >
+      {items.map((it, i) => {
+        const here = it.id === current;
+        const color =
+          it.state === 'failed'
+            ? 'text-(--ds-danger)'
+            : here
+              ? 'text-(--ds-fg)'
+              : it.state === 'done'
+                ? 'text-(--ds-fg-muted)'
+                : 'text-(--ds-fg)';
+        return (
+          <li
+            key={it.id}
+            className="flex max-w-60 min-w-20 shrink-0 grow-0 basis-auto [&>span]:w-full"
+            style={{ flexShrink: 1 }}
+          >
+            <Tooltip text={`${named(i, it)}${WORD[it.state]}`}>
+              <button
+                type="button"
+                aria-current={here ? 'step' : undefined}
+                aria-label={`Problem ${named(i, it)}${WORD[it.state]}`}
+                onClick={() => {
+                  onJump?.(it.id);
+                }}
+                className={`ds-small flex h-(--ds-control) w-full min-w-0 items-center gap-2 border-b-2 px-2 text-left hover:bg-(--ds-hover) ${color} ${here ? 'border-(--ds-accent) font-medium' : 'border-transparent'} ${it.state === 'finding' ? 'italic' : ''}`}
+              >
+                <span className="ds-tabular shrink-0 text-(--ds-fg-muted)">
+                  {i + 1}
+                </span>
+                <span className="min-w-0 truncate">{it.title}</span>
+                {it.state === 'done' && (
+                  <Check className="size-3 shrink-0" aria-hidden />
+                )}
+              </button>
+            </Tooltip>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 const arrow =
   'inline-flex h-(--ds-control) w-(--ds-control) shrink-0 items-center justify-center rounded-(--ds-radius-control) border border-(--ds-border) text-(--ds-fg) hover:bg-(--ds-hover) active:bg-(--ds-pressed)';
 
@@ -221,6 +314,7 @@ function TitledList({ items, current, onJump }: Omit<ProblemNavProps, 'view'>) {
 export function ProblemNav({ view, ...rest }: ProblemNavProps) {
   if (view === 'segments') return <Segments {...rest} />;
   if (view === 'numbers') return <Numbers {...rest} />;
+  if (view === 'titled-numbers') return <TitledNumbers {...rest} />;
   if (view === 'picker') return <Picker {...rest} />;
   return <TitledList {...rest} />;
 }
@@ -254,6 +348,14 @@ export function ProblemNavSkeleton({
         <div className="flex h-5 items-center">
           <Bar className="h-4 w-56" />
         </div>
+      </div>
+    );
+  if (view === 'titled-numbers')
+    return (
+      <div aria-hidden className="flex h-(--ds-control) items-center gap-1">
+        {each.map((i) => (
+          <Bar key={i} className="mx-2 h-4 w-24" />
+        ))}
       </div>
     );
   if (view === 'numbers')
