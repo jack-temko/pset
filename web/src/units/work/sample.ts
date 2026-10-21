@@ -68,6 +68,11 @@ export function stress(): WorkSet {
       ? {
           ...p,
           ...WITH_PARTS,
+          note: [
+            {
+              t: 'Do (c) and (d) only, and show your work for (d). If the figure is unclear, use the one from lecture 9 instead and say so. Late work loses 10% a day.',
+            },
+          ],
           statement: [
             ...p.statement,
             { t: ' ' },

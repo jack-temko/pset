@@ -17,13 +17,11 @@ import { Tag } from '@/units/tag';
 import { sessionMemory, type Memory } from './memory';
 import {
   doneCount,
+  UNDO_MS,
   nextUnfinished,
   type SetMenuItem,
   type WorkSet,
 } from './sets';
-
-/** How long "Removed 4.62 · Undo" stays (P8). */
-export const UNDO_MS = 6000;
 
 const SET_MENU: readonly MenuItem<SetMenuItem>[] = [
   { id: 'add', label: 'Add problems' },
@@ -47,6 +45,8 @@ export interface WorkProps {
   startFinish?: boolean;
   /** Where the place is kept. */
   memory?: Memory;
+  /** The day "Due soon" counts from (the design page and tests). */
+  today?: Date;
   /** The page link: turn the material to this page and outline the problem's
    *  box (P11). */
   onOpenPage?: (page: number, problemId: string) => void;
@@ -67,6 +67,7 @@ export function Work({
   startAt,
   startFinish = false,
   memory = sessionMemory,
+  today,
   onOpenPage,
   onAsk,
   onBackToCourse,
@@ -195,11 +196,11 @@ export function Work({
           <List>
             <ListRow
               title={set.name}
-              label={dueBadge(set.due)}
-              status={<DueStatus due={set.due} />}
+              label={dueBadge(set.due, today)}
+              status={<DueStatus due={set.due} today={today} />}
               meta={[
-                narrowOnly(`${String(done)} of ${String(problems.length)}`),
                 ...(minutes ? [minutes] : []),
+                narrowOnly(`${String(done)} of ${String(problems.length)}`),
               ]}
               aside={<ProgressBar done={done} total={problems.length} />}
               asideWidth={140}
@@ -215,7 +216,7 @@ export function Work({
         </span>
       </div>
 
-      {turnedIn && (
+      {turnedIn && !(finish && all) && (
         <div className="ds-body flex min-w-0 flex-wrap items-center gap-3 rounded-(--ds-radius-control) border border-(--ds-border) px-4 py-2">
           <Tag>Turned in</Tag>
           <span className="min-w-0 flex-1 text-(--ds-fg-muted)">

@@ -44,3 +44,6 @@ export function nextUnfinished(
   }
   return undefined;
 }
+
+/** How long "Removed 4.62 · Undo" stays (P8). */
+export const UNDO_MS = 6000;

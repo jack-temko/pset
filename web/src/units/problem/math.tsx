@@ -59,8 +59,3 @@ export function Runs({ runs }: { runs: readonly Run[] }) {
     </>
   );
 }
-
-/** Runs as bare text, for a tooltip: math as its TeX. */
-export function runsText(runs: readonly Run[]): string {
-  return runs.map((r) => r.t ?? r.m ?? '').join('');
-}

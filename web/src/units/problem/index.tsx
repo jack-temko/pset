@@ -8,7 +8,8 @@ import { useEffect, useState } from 'react';
 
 import { ActionMenu, type MenuItem } from '@/units/action-menu';
 import { Button } from '@/units/button';
-import { HelpRow, waitText } from '@/units/help-row';
+import { HelpRow } from '@/units/help-row';
+import { waitText } from '@/units/help-row/wait';
 import { Link } from '@/units/link';
 import { Tag } from '@/units/tag';
 import { Runs } from './math';

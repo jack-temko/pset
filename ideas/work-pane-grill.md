@@ -7,24 +7,24 @@ Friction to answer: usability findings (`pset-haiku-usability/.dev/lab/findings.
 
 ## Decisions
 
-| #   | Decision | Why | Beat |
-| --- | --- | --- | --- |
-| P1  | One problem at a time; above it a strip of numbered chips (done filled, current outlined) jumps anywhere in one click | Jack's pick: focus with the whole set in view | One scrolling list; today's counter menu |
-| P2  | Each problem has its own "Mark done"; Next only moves on | Finding #4: Next marked problems done without saying so | Next marks and says so; done on opening the answer |
-| P3  | Three help steps, each opened on purpose: hint, walkthrough, answer | Take only as much help as you need | Hint then full solution; one step-by-step reveal |
-| P4  | Visible on a problem: Mark done, Next, the help steps, Ask about this, and the page link. Everything else (edit, move, notes, remove, fix) in one menu | Today shows 14 controls (F9/F10) | Also keep notes and "wrong problem" visible |
-| P5  | The header is the set line (name, due, "3 of 8", time left, as on Home), then the strip | One compact line; the tab already names the set | Strip only; a big title |
-| P6  | Ask about this opens Ask with "About 4.62" as a removable chip over the input; hover quotes the problem | Finding #14: the attachment was invisible | The problem quoted in full in the thread |
-| P7  | Parts a note skips ("(c) and (d) only") show dimmed with "Skipped" and get no help | Finding #13 | Hide them; the note only |
-| P8  | Remove is immediate, with "Removed 4.62 · Undo" for a few seconds; no confirm | Finding #7 | Confirm and no undo |
-| P9  | Turn in warns on an unfinished set ("3 of 8 aren't done. Turn in anyway?"); once turned in, "Take back" sits where Turn in was | Finding #8 | Only when all done; no Turn in |
-| P10 | A problem shows as soon as it is found; each help step that is still being written says so and when ("Writing the walkthrough · about 20 s") | F5: waiting gave no place or time | One waiting line for everything |
-| P11 | The page link turns the material to the page and outlines the problem briefly, from the box it was found in | Show in book landed on the page only | Page only |
-| P12 | Marking the last problem done shows a short finish card: "All 8 done · 2 h 10 m", Turn in, Back to the course | A moment of closure, one place to hand in | Nothing special |
-| P13 | Help steps are closed rows under the problem; any can be open at once | Today's model works | Tabs, one open at a time |
-| P14 | Beside a problem's number: its label and page link ("3.1 #7 · p. 112"), nothing else | Time and difficulty stay out of the way | Time spent; difficulty |
-| P15 | The professor's notes sit above the problem as a quiet bordered note | Read before the problem | Below the problem |
-| P16 | A second failure says so ("Still couldn't find 4.62 (2nd try)"), what was tried, and leads with the next fix (box it, paste the text); Try again moves down | F6 | The same message each time |
+| #   | Decision                                                                                                                                                    | Why                                                     | Beat                                               |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------- |
+| P1  | One problem at a time; above it a strip of numbered chips (done filled, current outlined) jumps anywhere in one click                                       | Jack's pick: focus with the whole set in view           | One scrolling list; today's counter menu           |
+| P2  | Each problem has its own "Mark done"; Next only moves on                                                                                                    | Finding #4: Next marked problems done without saying so | Next marks and says so; done on opening the answer |
+| P3  | Three help steps, each opened on purpose: hint, walkthrough, answer                                                                                         | Take only as much help as you need                      | Hint then full solution; one step-by-step reveal   |
+| P4  | Visible on a problem: Mark done, Next, the help steps, Ask about this, and the page link. Everything else (edit, move, notes, remove, fix) in one menu      | Today shows 14 controls (F9/F10)                        | Also keep notes and "wrong problem" visible        |
+| P5  | The header is the set line (name, due, "3 of 8", time left, as on Home), then the strip                                                                     | One compact line; the tab already names the set         | Strip only; a big title                            |
+| P6  | Ask about this opens Ask with "About 4.62" as a removable chip over the input; hover quotes the problem                                                     | Finding #14: the attachment was invisible               | The problem quoted in full in the thread           |
+| P7  | Parts a note skips ("(c) and (d) only") show dimmed with "Skipped" and get no help                                                                          | Finding #13                                             | Hide them; the note only                           |
+| P8  | Remove is immediate, with "Removed 4.62 · Undo" for a few seconds; no confirm                                                                               | Finding #7                                              | Confirm and no undo                                |
+| P9  | Turn in warns on an unfinished set ("3 of 8 aren't done. Turn in anyway?"); once turned in, "Take back" sits where Turn in was                              | Finding #8                                              | Only when all done; no Turn in                     |
+| P10 | A problem shows as soon as it is found; each help step that is still being written says so and when ("Writing the walkthrough · about 20 s")                | F5: waiting gave no place or time                       | One waiting line for everything                    |
+| P11 | The page link turns the material to the page and outlines the problem briefly, from the box it was found in                                                 | Show in book landed on the page only                    | Page only                                          |
+| P12 | Marking the last problem done shows a short finish card: "All 8 done · 2 h 10 m", Turn in, Back to the course                                               | A moment of closure, one place to hand in               | Nothing special                                    |
+| P13 | Help steps are closed rows under the problem; any can be open at once                                                                                       | Today's model works                                     | Tabs, one open at a time                           |
+| P14 | Beside a problem's number: its label and page link ("3.1 #7 · p. 112"), nothing else                                                                        | Time and difficulty stay out of the way                 | Time spent; difficulty                             |
+| P15 | The professor's notes sit above the problem as a quiet bordered note                                                                                        | Read before the problem                                 | Below the problem                                  |
+| P16 | A second failure says so ("Still couldn't find 4.62 (2nd try)"), what was tried, and leads with the next fix (box it, paste the text); Try again moves down | F6                                                      | The same message each time                         |
 
 ### Assumed
 

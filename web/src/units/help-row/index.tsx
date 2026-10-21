@@ -1,13 +1,7 @@
 import { ChevronRight, LoaderCircle } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-/** "about 20 s": the wait as the student reads it. */
-export function waitText(seconds: number): string {
-  const s = Math.max(1, Math.round(seconds));
-  if (s < 60) return `about ${String(s)} s`;
-  const m = Math.round(s / 60);
-  return `about ${String(m)} min`;
-}
+import { waitText } from './wait';
 
 /** One step of help as a closed row that opens in place (P13). Any number of
  *  rows can be open at once. While the step is still being written the row

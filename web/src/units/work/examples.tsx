@@ -17,6 +17,7 @@ function Recorded(props: WorkProps) {
     <div className="space-y-4">
       <Work
         memory={pageMemory()}
+        today={sample.TODAY}
         onOpenPage={(page, id) => {
           say(`Open page ${String(page)} with the box of ${id}`);
         }}

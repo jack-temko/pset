@@ -216,7 +216,6 @@ export default defineSpec({
       'student-decides',
       'work-first',
       'material-is-main',
-      'keep-the-place',
       'honest-waits',
       'failure-says-what',
       'one-primary',
