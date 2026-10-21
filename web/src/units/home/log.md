@@ -13,3 +13,5 @@ Batch 3: layout **A/B two layouts (Recommended)**.
 Jack, reshaping Home (2026-10-16, `web/src/units/assignment-row/log.md`): **"I want two lists on my home screen, plus some info on top (e.g. github style heatmap for work, stat tile, big greeting, this will be done later)."**
 
 Jack, 2026-10-16, on the plan: **"Build it."**
+
+Jack, 2026-10-21: **"Can we pick a resonable max width for this screen? I want the content to be centered, and not take up the whole screen. Then let me see them again."** Content capped at 1012 (GitHub's page width), centred (home-d4).

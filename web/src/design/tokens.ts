@@ -388,6 +388,7 @@ export const LAYOUT = {
   row: 44,
   control: 32,
   topbar: 56,
+  'page-width': 1012,
 } as const;
 
 export const RADII = [

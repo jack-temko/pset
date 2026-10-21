@@ -218,5 +218,13 @@ export default defineSpec({
       beat: 'Scrolling the heatmap sideways',
       date: '2026-10-16',
     },
+    {
+      id: 'home-d4',
+      decision:
+        "Home's content is at most 1012 wide (the page-width token), centred; the top bar stays full width.",
+      why: 'Jack: "Can we pick a resonable max width for this screen? I want the content to be centered, and not take up the whole screen." 1012 is GitHub\'s page width.',
+      beat: 'Content across the whole window',
+      date: '2026-10-21',
+    },
   ],
 });

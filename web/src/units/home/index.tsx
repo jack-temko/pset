@@ -111,20 +111,22 @@ export function Home({
     <div className="@container">
       <TopBar homeHref={homeHref} settingsHref={settingsHref} />
       <div className="px-(--ds-gutter) pb-16">
-        <div className="ds-room-display">
-          <Greeting
-            name={name}
-            hour={now.getHours()}
-            pick={pick ?? held}
-            sets={sets}
-            today={now}
-          />
-        </div>
-        <Arranged layout={layout} tiles={tileList}>
-          {heatmap}
-        </Arranged>
-        <div className="mt-16">
-          <HomeLists />
+        <div className="@container mx-auto max-w-(--ds-page-width)">
+          <div className="ds-room-display">
+            <Greeting
+              name={name}
+              hour={now.getHours()}
+              pick={pick ?? held}
+              sets={sets}
+              today={now}
+            />
+          </div>
+          <Arranged layout={layout} tiles={tileList}>
+            {heatmap}
+          </Arranged>
+          <div className="mt-16">
+            <HomeLists />
+          </div>
         </div>
       </div>
     </div>
@@ -163,23 +165,25 @@ export function HomeSkeleton({
     <div className="@container">
       <TopBar homeHref={homeHref} settingsHref={settingsHref} />
       <div className="px-(--ds-gutter) pb-16">
-        <div className="ds-room-display">
-          <GreetingSkeleton />
-        </div>
-        <Arranged layout={layout} tiles={tileList}>
-          <HeatmapSkeleton />
-        </Arranged>
-        <div className="mt-16 space-y-10">
-          {[0, 1].map((i) => (
-            <div key={i}>
-              <div className="flex min-h-8 items-center">
-                <Bar className="h-5 w-40" />
+        <div className="@container mx-auto max-w-(--ds-page-width)">
+          <div className="ds-room-display">
+            <GreetingSkeleton />
+          </div>
+          <Arranged layout={layout} tiles={tileList}>
+            <HeatmapSkeleton />
+          </Arranged>
+          <div className="mt-16 space-y-10">
+            {[0, 1].map((i) => (
+              <div key={i}>
+                <div className="flex min-h-8 items-center">
+                  <Bar className="h-5 w-40" />
+                </div>
+                <div className="mt-3 h-[282px]">
+                  <Bar className="h-full w-full" />
+                </div>
               </div>
-              <div className="mt-3 h-[282px]">
-                <Bar className="h-full w-full" />
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>
