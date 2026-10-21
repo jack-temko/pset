@@ -17,3 +17,5 @@ Jack, 2026-10-16, on the plan: **"Build it."**
 Jack, 2026-10-21 (`ideas/home.md`, round 2): **"I really want this home screen stats to look really cool. I like the heatmap for sure. Can you come up with some other options for this? I want some that look good and don't leave any large empty gaps. Lets go with the 6 months."** The heatmap gains month and weekday names and a grown mode (heatmap-d8).
 
 Jack, 2026-10-21, on the heatmap's shape: **"Make sure when designing it the heat map has no empty space around it. Design it in a way its a perfect square."** Then: **"Sorry, no separate outline around the heatmap"**. Then, on Home: **"heatmap in box too please"** (home-d9).
+
+Jack, 2026-10-21: **"can you make the "studied in the last 6 months" grey, but numbers white, like the stat tile to the right of it"** (heatmap-d10).

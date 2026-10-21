@@ -183,5 +183,13 @@ export default defineSpec({
       beat: 'A box round the heatmap; a last column that stops at today',
       date: '2026-10-21',
     },
+    {
+      id: 'heatmap-d10',
+      decision:
+        "The heading's total is in the text colour and the words after it muted, as the stats beside it are.",
+      why: 'Jack: "can you make the "studied in the last 6 months" grey, but numbers white, like the stat tile to the right of it".',
+      beat: 'The whole heading in the text colour',
+      date: '2026-10-21',
+    },
   ],
 });

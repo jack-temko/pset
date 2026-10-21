@@ -112,9 +112,16 @@ export function Heatmap({
       style={grow ? undefined : { width: boxWidth(weeks), maxWidth: '100%' }}
     >
       <p className="ds-body ds-tabular text-(--ds-fg)">
-        {total > 0
-          ? `${totalText(total)} studied in the last ${spanName(shown)}`
-          : 'No time studied yet'}
+        {total > 0 ? (
+          <>
+            {totalText(total)}{' '}
+            <span className="text-(--ds-fg-muted)">
+              studied in the last {spanName(shown)}
+            </span>
+          </>
+        ) : (
+          <span className="text-(--ds-fg-muted)">No time studied yet</span>
+        )}
       </p>
       <div className={BOX}>
         <div ref={box} className="min-w-0">
