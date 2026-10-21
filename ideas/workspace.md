@@ -45,13 +45,15 @@ On `/design`, as units with typed `spec.ts`, `examples.tsx` and `log.md`, like
      showing, its tab on the side opposite the work; if none, opens one there (W14).
    - "Ask about this" opens Ask as a tab on the side not holding the work, the
      problem attached (W5).
-   - No keyboard shortcuts (W12); no narrow layout: below about 2 x 360 plus the
-     divider, the view says it needs a wider window (W8).
-   States for the design page: opening a set; two materials and a set; one side
-   folded; the same book twice; Ask open; many tabs (overflow); loading (each side's
-   skeleton); stress (long course, set and material names).
-   A flow on the design page, like Home's: open a set, follow a page link, ask
-   about a problem, close the material side, open it beside again.
+   - No keyboard shortcuts (W12). No code for narrow windows (W8, Jack: "remember,
+     we do NOT support mobile or small screens. We do NOT need to include any code
+     or styling related to that."): no notice, no breakpoints, no small-width states;
+     360px stays only as the divider's drag stop.
+     States for the design page: opening a set; two materials and a set; one side
+     folded; the same book twice; Ask open; many tabs (overflow); loading (each side's
+     skeleton); stress (long course, set and material names).
+     A flow on the design page, like Home's: open a set, follow a page link, ask
+     about a problem, close the material side, open it beside again.
 
 Earlier docs to update: in `ideas/screens-grill.md`, mark A2 replaced by W6 and A3
 replaced by W8, and note S6, S7, S9 reaffirmed by W2, W9, W5.
