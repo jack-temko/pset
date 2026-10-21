@@ -11,7 +11,11 @@ export function startDrag(id: string, e: React.DragEvent) {
   e.dataTransfer.setData(TAB_MIME, id);
   e.dataTransfer.effectAllowed = 'move';
   current = id;
-  window.dispatchEvent(new Event(EVENT));
+  // Changing the page inside dragstart can cancel the drag, so listeners hear
+  // of it a tick later.
+  setTimeout(() => {
+    window.dispatchEvent(new Event(EVENT));
+  }, 0);
 }
 
 export function endDrag() {
