@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Heatmap',
   group: 'Home',
   purpose:
-    'Time studied per day as a grid of squares, weeks from Monday in columns, today in the last one, with a total as its one heading line.',
+    'Time studied per day as a grid of squares, weeks from Monday in columns, today in the last one, month names above and Mon, Wed, Fri beside, with a total as its one heading line.',
   states: [
     {
       id: 'six-months',
@@ -15,10 +15,11 @@ export default defineSpec({
       skeleton: 'The heading line as a bar and a block the height of the grid.',
     },
     {
-      id: 'year',
-      name: 'A year',
-      when: 'The span is 53 weeks and the container fits them: "N h studied in the last year".',
-      skeleton: 'The heading line as a bar and a block the height of the grid.',
+      id: 'grown',
+      name: 'Grown to its container',
+      when: 'The grow prop: the squares size up to 32 and the gaps widen so the grid reaches the container\u2019s right edge.',
+      skeleton:
+        'The heading line as a bar and a block as tall as the grown labels and grid.',
     },
     {
       id: 'narrow',
@@ -79,6 +80,12 @@ export default defineSpec({
       type: 'number',
       default: '26',
       does: 'The most weeks to show: 26 for about 6 months, 53 for a year.',
+    },
+    {
+      name: 'grow',
+      type: 'boolean',
+      default: 'false',
+      does: 'Fill the container: the squares up to 32 and the gaps wider, the same weeks.',
     },
     {
       name: 'openDay',
@@ -159,6 +166,22 @@ export default defineSpec({
       why: 'Jack: "courses by time in them. no split" (D7).',
       beat: 'Time and kind split; time only',
       date: '2026-10-16',
+    },
+    {
+      id: 'heatmap-d8',
+      decision:
+        'Month names sit above the grid and Mon, Wed, Fri beside it. Home grows the heatmap to fill its column: squares up to 32, gaps widening to the edge.',
+      why: 'Jack, 2026-10-21: "I want some that look good and don\'t leave any large empty gaps" (home round 2). Labels are the plan\'s.',
+      beat: 'Fixed 14px squares that leave the column part empty',
+      date: '2026-10-21',
+    },
+    {
+      id: 'heatmap-d9',
+      decision:
+        'No outline of its own, no ragged end: the rest of this week shows as faint empty squares, never counted, no tooltip, so every column is full.',
+      why: 'Jack: "Make sure when designing it the heat map has no empty space around it." then "Sorry, no separate outline around the heatmap".',
+      beat: 'A box round the heatmap; a last column that stops at today',
+      date: '2026-10-21',
     },
   ],
 });

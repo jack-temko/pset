@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { addDays, dayKey, mondayOf, shade, studyDay } from './day';
 import { Heatmap } from './index';
-import { spanName, weeksThatFit } from './layout';
+import { gridFor, monthColumns, spanName, weeksThatFit } from './layout';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -56,6 +56,26 @@ describe('weeks and shades', () => {
   });
 });
 
+describe('the grown grid', () => {
+  it('stretches the gap to reach the edge, the square capped at 32', () => {
+    const g = gridFor(32 + 938, 26, true);
+    expect(g.size).toBe(32);
+    expect(26 * g.size + 25 * g.gap).toBeCloseTo(938);
+  });
+
+  it('keeps the natural square and gap when not grown', () => {
+    expect(gridFor(600, 26, false)).toEqual({ weeks: 26, size: 14, gap: 3 });
+  });
+
+  it('names a month where it begins, and leaves out a crowded one', () => {
+    const mondays = [28, 5, 12].map((d, i) =>
+      i === 0 ? new Date(2026, 8, d) : new Date(2026, 9, d),
+    );
+    // Sep 28 is crowded by Oct 5 and Oct 5 is not last: only Oct shows.
+    expect(monthColumns(mondays)).toEqual([{ col: 1, name: 'Oct' }]);
+  });
+});
+
 describe('how many weeks fit', () => {
   it('shows the whole span until the width is known or short', () => {
     expect(weeksThatFit(0, 26)).toBe(26);
@@ -91,8 +111,8 @@ describe('Heatmap', () => {
     expect(el.querySelector('p')?.textContent).toBe(
       '4 h studied in the last 2 weeks',
     );
-    // Two weeks from Monday, today a Tuesday: 7 + 2 squares.
-    expect(el.querySelectorAll('.grid > span')).toHaveLength(9);
+    // Two weeks from Monday, today a Tuesday: 7 + 2 squares and 5 empty ones to the end of the week.
+    expect(el.querySelectorAll('.grid-flow-col > span')).toHaveLength(14);
   });
 
   it('says so when nothing is studied', () => {

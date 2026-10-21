@@ -26,9 +26,11 @@ function seeded(seed: number) {
 /** A year (371 days) of study ending on `SAMPLE_TODAY`, for a student with
  *  five courses: gaps, lighter weekends, mostly under an hour and now and then
  *  a 3 h day. A late night is already counted on the day before, as the 4am
- *  rule does. The last week is made busy enough to read as "this week". */
+ *  rule does, with the questions done and the sets finished each day. */
 export function sampleStudy(): StudyDay[] {
   const rand = seeded(2026);
+  // Apart from `rand`, so the days and their minutes stay as they were.
+  const extra = seeded(7);
   const out: StudyDay[] = [];
   for (let back = 370; back >= 0; back--) {
     const date = addDays(SAMPLE_TODAY, -back);
@@ -44,7 +46,13 @@ export function sampleStudy(): StudyDay[] {
       course: SAMPLE_COURSES[(start + i) % SAMPLE_COURSES.length],
       minutes: Math.max(5, Math.round(minutes / picks / 5) * 5),
     }));
-    out.push({ date: dayKey(date), courses });
+    const total = courses.reduce((n, c) => n + c.minutes, 0);
+    out.push({
+      date: dayKey(date),
+      courses,
+      questions: Math.max(1, Math.round((total / 6) * (0.6 + extra() * 0.8))),
+      sets: extra() < 0.1 ? 1 : 0,
+    });
   }
   return out;
 }

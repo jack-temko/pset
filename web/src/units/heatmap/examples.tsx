@@ -39,7 +39,11 @@ const skeleton = () => <HeatmapSkeleton />;
 export default defineExamples(spec, {
   states: {
     'six-months': () => <Heatmap days={DAYS} today={SAMPLE_TODAY} weeks={26} />,
-    year: () => <Heatmap days={DAYS} today={SAMPLE_TODAY} weeks={53} />,
+    grown: () => (
+      <div className="w-[880px] max-w-full">
+        <Heatmap days={DAYS} today={SAMPLE_TODAY} weeks={26} grow />
+      </div>
+    ),
     narrow: () => (
       <In px={264}>
         <Heatmap days={DAYS} today={SAMPLE_TODAY} weeks={26} />
@@ -79,7 +83,11 @@ export default defineExamples(spec, {
   ),
   skeletons: {
     'six-months': skeleton,
-    year: skeleton,
+    grown: () => (
+      <div className="w-[880px] max-w-full">
+        <HeatmapSkeleton grow />
+      </div>
+    ),
     narrow: () => <In px={264}>{skeleton()}</In>,
     hover: skeleton,
     empty: skeleton,
