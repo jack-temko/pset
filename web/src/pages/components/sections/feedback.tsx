@@ -933,6 +933,9 @@ function LoadedDemo() {
         </div>
         <SimBox key={sim.n} id={sim.n} latency={latency} />
       </Shelf>
+      <Shelf label="placeholder: sample data drawn as a skeleton (uses the latency above)">
+        <PlaceholderBox key={sim.n} id={sim.n} latency={latency} />
+      </Shelf>
       <Shelf label="three sections, out of order">
         <Button
           onClick={() => {
@@ -979,6 +982,47 @@ function LoadedDemo() {
         )}
       </Shelf>
     </>
+  );
+}
+
+const SAMPLE_ROWS = [
+  { id: 'a', title: 'Use SI units', meta: 'You · Jan 3' },
+  { id: 'b', title: 'Show the algebra', meta: 'Tutor · Jan 5' },
+];
+
+/** The same wait with no hand-written skeleton: `placeholder` is sample data
+ *  and the real render function draws it as a bone. */
+function PlaceholderBox({ id, latency }: { id: number; latency: number }) {
+  const query = useQuery({
+    queryKey: ['loaded-placeholder', id],
+    queryFn: async () => {
+      await sleep(latency);
+      return [
+        { id: 'x', title: 'Prefer metric', meta: 'You · Feb 9' },
+        { id: 'y', title: 'Name the theorem used', meta: 'Tutor · Feb 11' },
+      ];
+    },
+  });
+  return (
+    <Loaded
+      className="w-panel divide-y divide-border-muted"
+      query={query}
+      placeholder={SAMPLE_ROWS}
+    >
+      {(rows) =>
+        rows.map((r) => (
+          <div key={r.id} className="flex items-start gap-2 py-3">
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-sm">{r.title}</p>
+              <p className="text-xs text-muted-foreground">{r.meta}</p>
+            </div>
+            <Button size="sm" variant="outline">
+              Edit
+            </Button>
+          </div>
+        ))
+      }
+    </Loaded>
   );
 }
 

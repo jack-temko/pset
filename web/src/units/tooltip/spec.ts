@@ -50,7 +50,7 @@ export default defineSpec({
       name: 'text',
       type: 'string',
       default: 'none',
-      does: 'One short line.',
+      does: 'One short line; a data point may run a few, split by a newline.',
     },
     {
       name: 'children',
@@ -83,8 +83,9 @@ export default defineSpec({
     local: [
       {
         id: 'tooltip-one-line',
-        rule: 'Write a tooltip as one short line; put anything the student must read on the page.',
-        check: 'Read every tooltip: none is more than a short line.',
+        rule: 'Write a tooltip as one short line, or a few for one data point; put anything the student must read on the page.',
+        check:
+          'Read every tooltip: one short line, or a few lines about one data point.',
         scope: 'tooltip',
       },
     ],
@@ -121,6 +122,14 @@ export default defineSpec({
       why: 'No lag while scrolling and no new dependency.',
       beat: '@primer/behaviors; Floating UI',
       date: '2026-10-13',
+    },
+    {
+      id: 'tooltip-d5',
+      decision:
+        'A newline in the text starts a new line, so a data point such as a heatmap day can list its day, total and courses.',
+      why: 'Jack, on the heatmap hover: "courses by time in them. no split" (home-info-grill D7).',
+      beat: 'One line that joins them with commas',
+      date: '2026-10-16',
     },
   ],
 });

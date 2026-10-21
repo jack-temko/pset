@@ -91,6 +91,8 @@ export function Loaded<T, K extends Views = Views>({
   query,
   queries,
   skeleton: single,
+  placeholder,
+  placeholders,
   view,
   variant,
   skeletons,
@@ -126,6 +128,8 @@ export function Loaded<T, K extends Views = Views>({
   | {
       /** The box's one skeleton, for a view with a single shape. */
       skeleton: ReactNode;
+      placeholder?: undefined;
+      placeholders?: undefined;
       view?: undefined;
       variant?: undefined;
       skeletons?: undefined;
@@ -134,6 +138,23 @@ export function Loaded<T, K extends Views = Views>({
     }
   | {
       skeleton?: undefined;
+      /** Sample data of the right shape: while loading, `children` draws it
+       *  as a bone (`data-bone`): text, images, icons, inputs and buttons
+       *  become shimmering blocks at their real size, so the skeleton is the
+       *  content and cannot drift from it. `data-bone-skip` leaves an
+       *  element as it is. */
+      placeholder: T;
+      placeholders?: undefined;
+      view?: undefined;
+      variant?: undefined;
+      skeletons?: undefined;
+      neutral?: undefined;
+      variantOf?: undefined;
+    }
+  | {
+      skeleton?: undefined;
+      placeholder?: undefined;
+      placeholders?: undefined;
       /** The view, by its key in `web/src/variants.ts`; stamped as
        *  `data-view` beside `data-variant`, so a check finds the box. */
       view: K;
@@ -151,10 +172,29 @@ export function Loaded<T, K extends Views = Views>({
        *  variant that changes just after the reveal, warns. */
       variantOf: (data: T) => Variant<K>;
     }
+  | {
+      skeleton?: undefined;
+      placeholder?: undefined;
+      /** One sample per variant, drawn as a bone like `placeholder`. */
+      placeholders: Record<Variant<K>, T>;
+      view: K;
+      variant: Variant<K> | undefined;
+      /** With no variant known: the sample for the chrome every variant
+       *  shares and a quiet body. */
+      neutral: T;
+      skeletons?: undefined;
+      variantOf: (data: T) => Variant<K>;
+    }
 )) {
+  const sample: T | undefined = placeholders
+    ? variant === undefined
+      ? (neutral as T)
+      : placeholders[variant]
+    : placeholder;
+  const bone = sample !== undefined;
   const skeleton = skeletons
     ? variant === undefined
-      ? neutral
+      ? (neutral as ReactNode)
       : skeletons[variant]
     : single;
   const all = queries ? [query, ...queries] : [query];
@@ -237,6 +277,13 @@ export function Loaded<T, K extends Views = Views>({
     [busy, children, query.data],
   );
 
+  // A placeholder is drawn by the same render function as the data, only
+  // while the box is waiting.
+  const boneContent = useMemo(
+    () => (bone && (busy || swapping) ? children(sample as T) : null),
+    [bone, busy, swapping, children, sample],
+  );
+
   const contentVariant =
     !busy && !failed ? variantOf?.(query.data as T) : undefined;
   const warning = useVariantCheck(busy, variant, contentVariant);
@@ -269,6 +316,7 @@ export function Loaded<T, K extends Views = Views>({
           inert
           data-view={view}
           data-variant={variant}
+          data-bone={bone ? '' : undefined}
           style={
             swapping
               ? ({ '--fade-from': fadeFrom } as CSSProperties)
@@ -285,7 +333,7 @@ export function Loaded<T, K extends Views = Views>({
               : 'fade-out pointer-events-none',
           )}
         >
-          {skeleton}
+          {bone ? boneContent : skeleton}
         </div>
       )}
       <div

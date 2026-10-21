@@ -41,6 +41,19 @@ within half a second of appearing, warns on screen and in the console; `make jum
 jump guard, part 3) finds a box by `data-view` and `data-variant` and fails the same. The variant is chosen in render (a lazy `useState` initial, a derived value), never
 in an effect. Lists seed their details (`useListedSet`) so a click knows its variant.
 
+**Placeholder (auto skeleton).** Instead of a hand-written `skeleton`, pass `placeholder`: sample
+data of the type `children` takes (`variants`: `placeholders` per variant and a `neutral` sample, in
+place of `skeletons` and `neutral`). While waiting, Loaded draws `children(placeholder)` in the
+skeleton layer, marked `data-bone` (also inert, `aria-hidden`, not selectable). CSS (`index.css`)
+makes every glyph transparent and gives text leaves, images, svg, inputs and buttons the Skeleton's
+shimmer block, keeping borders, padding and shadows, so the skeleton is the content and cannot be
+the wrong size. Grace, fade, error line, reveal train and `aria-busy` are as for `skeleton`.
+Limits: a block is the element's whole box, so a short text in a wide element is a wide block;
+elements that are only a background (a progress bar) stay as drawn; `data-bone-skip` leaves an
+element and its children alone. The sample sets the count of rows (`useLastCount`) and the length
+of the text, so it should be typical, not empty. Use it when the content is a function of data; keep
+`skeleton` when the shape comes from something else (a remembered table shape).
+
 **`fill`** makes the box as tall as its parent (`boxClassName` places it in a flex or grid parent), for a pane that bottom-aligns its content (the
 Ask tab, the empty Homework list).
 

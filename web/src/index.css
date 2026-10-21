@@ -506,6 +506,58 @@
   }
 }
 
+/* A bone: content drawn from sample data (Loaded's `placeholder`) while it
+   waits. Every glyph goes transparent and the elements that carry content
+   take the skeleton's shimmer block, so nothing changes size: borders,
+   padding and shadows stay, only the ink goes. `data-bone-skip` leaves an
+   element (and what is inside it) as it is. Unlayered, so it wins over the
+   utilities the content sets. */
+[data-bone] {
+  pointer-events: none;
+  user-select: none;
+}
+[data-bone] *:not([data-bone-skip], [data-bone-skip] *) {
+  color: transparent;
+  text-shadow: none;
+  caret-color: transparent;
+}
+/* Text leaves (an element with text and no element inside), and the things
+   that are a block by nature. */
+[data-bone]
+  :is(
+    :not(:has(*)):not(:empty),
+    img,
+    svg,
+    video,
+    canvas,
+    input,
+    textarea,
+    select,
+    button
+  ):not([data-bone-skip], [data-bone-skip] *) {
+  @apply skeleton;
+}
+[data-bone]
+  :not(:has(*)):not(:empty):not(
+    button,
+    input,
+    textarea,
+    select,
+    [data-bone-skip],
+    [data-bone-skip] *
+  ) {
+  border-radius: var(--radius-sm);
+}
+/* A button's icon sits on the button's own block. */
+[data-bone] button svg:not([data-bone-skip], [data-bone-skip] *),
+[data-bone] button img:not([data-bone-skip], [data-bone-skip] *) {
+  background: none;
+  animation: none;
+}
+[data-bone] :is(input, textarea)::placeholder {
+  color: transparent;
+}
+
 /* A guide's prose is read, not skimmed: inline math a touch larger than the
    18px text around it, but under KaTeX's own 1.21em, which is tall enough to
    push a line of the 30px leading apart. Not global: Ask answers keep KaTeX's
