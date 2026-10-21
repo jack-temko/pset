@@ -280,7 +280,7 @@ export function Workspace({
               e.preventDefault();
               apply((s) => m.move(s, dragged, folded, undefined));
             }}
-            className={`ds-small absolute inset-y-0 z-20 flex w-20 items-center justify-center border-2 border-dashed border-(--ds-accent) bg-(--ds-bg) text-center text-(--ds-fg-muted) ${folded === 0 ? 'left-0' : 'right-0'}`}
+            className={`ds-small absolute inset-y-0 z-20 flex w-1/2 items-center justify-center border-2 border-dashed border-(--ds-accent) bg-(--ds-bg) text-center text-(--ds-fg-muted) ${folded === 0 ? 'left-0' : 'right-0'}`}
           >
             Open beside
           </div>

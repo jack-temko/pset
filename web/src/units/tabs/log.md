@@ -13,3 +13,5 @@ Batch 4: overflow **Shrink, then scroll (Recommended)**.
 Assumed, not asked: a tab's menu is Move to other side, Swap sides, Close, Close others.
 
 Jack, 2026-10-21: **"build it"**.
+
+Jack, 2026-10-21 (W17), on the built tabs: **"On the workspace, the two icon buttons on each tab dissapear when not selected or not hovered, and leaves a weird gap. How does vscode do it? Either make them always show dimly or something, or find a different way."** Each tab now has one icon, the close x, always shown (dim, full muted on hover, text colour when open); the menu opens on right click.

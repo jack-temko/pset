@@ -133,7 +133,7 @@ export default defineSpec({
     {
       id: 'move-tab',
       label: 'Drag a tab, or "Move to other side"',
-      does: 'The tab moves to the other side and opens there; dropped on a folded side’s edge, it brings that side back.',
+      does: 'The tab moves to the other side and opens there; dropped on either half of the window it goes to that side; a folded side’s half brings it back.',
     },
     {
       id: 'swap-sides',
@@ -225,7 +225,7 @@ export default defineSpec({
     {
       id: 'workspace-d3',
       decision:
-        'When a side’s last tab closes it folds away and the other takes the full width. "Open beside" brings a side back; so does dropping a tab on its edge.',
+        'A side whose last tab closes folds away; the other takes the full width. "Open beside" brings it back, and so does a tab dropped on its half.',
       why: 'Jack’s pick, W4: no empty boxes. Confirms A1.',
       beat: 'An empty side listing what to open',
       date: '2026-10-21',

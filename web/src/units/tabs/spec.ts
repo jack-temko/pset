@@ -6,17 +6,17 @@ export default defineSpec({
   title: 'Tabs',
   group: 'Navigation',
   purpose:
-    'A side’s row of GitHub underline tabs: text, an accent line under the open one, a close x, a + that opens things, and drag to reorder or move to the other side.',
+    'A side’s row of GitHub underline tabs: text, an accent line under the open one, a close x on every tab, a + that opens things, and drag to reorder or move to the other side.',
   states: [
     {
       id: 'rest',
       name: 'Three tabs',
-      when: 'A set, a material with its page and Ask; the first is open, with its accent underline, chevron and close x.',
+      when: 'A set, a material with its page and Ask; the first is open, with its accent underline and a full-colour close x; the others’ x is dim.',
     },
     {
       id: 'hover',
       name: 'A tab hovered',
-      when: 'The pointer is over a closed tab: its chevron and close x appear and the text darkens.',
+      when: 'The pointer is over a closed tab: its close x goes from dim to full muted and the text darkens.',
     },
     {
       id: 'add-menu',
@@ -26,7 +26,7 @@ export default defineSpec({
     {
       id: 'tab-menu',
       name: 'A tab’s menu open',
-      when: 'A tab’s chevron or a right click: Move to other side, Swap sides, Close, Close others.',
+      when: 'A right click on a tab: Move to other side, Swap sides, Close, Close others.',
     },
     {
       id: 'overflow',
@@ -61,7 +61,7 @@ export default defineSpec({
     },
     {
       id: 'tab-menu',
-      label: 'The chevron, or a right click',
+      label: 'A right click on a tab',
       does: 'Opens the tab’s menu: Move to other side, Swap sides, Close, Close others.',
     },
     {
@@ -108,7 +108,7 @@ export default defineSpec({
     {
       id: 'tabs-d1',
       decision:
-        'Each side’s tabs are GitHub underline tabs: text, an accent underline on the open one, a close x on hover, a + at the end.',
+        'Each side’s tabs are GitHub underline tabs: text, an accent underline on the open one, a close x always shown, a + at the end.',
       why: 'Jack’s pick, W2 (workspace-grill): matches the GitHub look. Reaffirms S6.',
       beat: 'Boxed editor tabs; a picker instead of tabs',
       date: '2026-10-21',
@@ -127,6 +127,14 @@ export default defineSpec({
         'Too many tabs shrink to a minimum, then the row scrolls sideways with a fade at the edge; there is no "more" menu.',
       why: 'Jack’s pick, W13.',
       beat: 'A "more" menu',
+      date: '2026-10-21',
+    },
+    {
+      id: 'tabs-d5',
+      decision:
+        'Each tab has one icon, its close x, always shown: dim when inactive, muted on hover, text colour when open. The tab menu opens on right click.',
+      why: 'Jack: "leaves a weird gap. How does vscode do it? Either make them always show dimly or something" (W17; the full words are in the log).',
+      beat: 'Icons that appear on hover; a reserved empty slot as in VS Code',
       date: '2026-10-21',
     },
     {

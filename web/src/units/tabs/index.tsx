@@ -1,4 +1,4 @@
-import { ChevronDown, Plus, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import {
   useEffect,
   useLayoutEffect,
@@ -237,31 +237,13 @@ export function Tabs({
               </span>
               <button
                 type="button"
-                aria-label={`Tab menu for ${t.label}`}
-                tabIndex={-1}
-                data-menu-trigger
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const r = e.currentTarget.getBoundingClientRect();
-                  setMenu((m) =>
-                    m?.tab === t.id && m.kind === 'tab'
-                      ? undefined
-                      : { kind: 'tab', tab: t.id, x: r.left, y: r.bottom + 4 },
-                  );
-                }}
-                className={`flex size-5 shrink-0 items-center justify-center rounded-(--ds-radius-control) text-(--ds-fg-muted) hover:bg-(--ds-hover) ${active || forceHover === t.id ? '' : 'opacity-0 group-hover/tab:opacity-100'}`}
-              >
-                <ChevronDown size={14} aria-hidden />
-              </button>
-              <button
-                type="button"
                 aria-label={`Close ${t.label}`}
                 tabIndex={-1}
                 onClick={(e) => {
                   e.stopPropagation();
                   onClose(t.id);
                 }}
-                className={`flex size-5 shrink-0 items-center justify-center rounded-(--ds-radius-control) text-(--ds-fg-muted) hover:bg-(--ds-hover) ${active || forceHover === t.id ? '' : 'opacity-0 group-hover/tab:opacity-100'}`}
+                className={`flex size-5 shrink-0 items-center justify-center rounded-(--ds-radius-control) hover:bg-(--ds-hover) ${active ? 'text-(--ds-fg)' : forceHover === t.id ? 'text-(--ds-fg-muted)' : 'text-(--ds-fg-muted) opacity-50 group-hover/tab:opacity-100'}`}
               >
                 <X size={14} aria-hidden />
               </button>
