@@ -125,7 +125,9 @@ function Heading({
 }) {
   return (
     <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
-      <h2 className="ds-heading min-w-0 text-(--ds-fg)">Problem {index}</h2>
+      <h2 className="ds-heading min-w-0 text-(--ds-fg) [overflow-wrap:anywhere]">
+        Problem {index} · {problem.title}
+      </h2>
       <p className="ds-small ds-tabular min-w-0 text-(--ds-fg-muted) [overflow-wrap:anywhere]">
         {problem.label} ·{' '}
         <Link

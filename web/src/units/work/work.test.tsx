@@ -47,9 +47,9 @@ describe('nextUnfinished', () => {
 describe('Work', () => {
   it('opens on the first problem to do, and Next marks nothing', () => {
     const { el } = render(<Work set={inProgress()} memory={pageMemory()} />);
-    expect(el.querySelector('h2')?.textContent).toBe('Problem 4');
+    expect(el.querySelector('h2')?.textContent).toContain('Problem 4 ·');
     press(button(el, 'Next'));
-    expect(el.querySelector('h2')?.textContent).toBe('Problem 5');
+    expect(el.querySelector('h2')?.textContent).toContain('Problem 5 ·');
     expect(el.textContent).toContain('3 of 8');
   });
 
@@ -61,7 +61,7 @@ describe('Work', () => {
       first.root.unmount();
     });
     const { el } = render(<Work set={inProgress()} memory={memory} />);
-    expect(el.querySelector('h2')?.textContent).toBe('Problem 5');
+    expect(el.querySelector('h2')?.textContent).toContain('Problem 5 ·');
   });
 
   it('shows the finish card when the last problem is marked done', () => {

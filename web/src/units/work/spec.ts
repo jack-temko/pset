@@ -44,6 +44,30 @@ export default defineSpec({
       when: 'The set is handed in: a "Turned in" banner with Take back, and the finish card with Take back where Turn in was.',
       skeleton: SKELETON,
     },
+    {
+      id: 'nav-segments',
+      name: 'A. Segments',
+      when: 'The in-progress set with a thin bar of segments with "Problem 4 of 8 · RC step response" under it, in place of the boxes of numbers.',
+      skeleton: SKELETON,
+    },
+    {
+      id: 'nav-numbers',
+      name: 'B. Plain numbers',
+      when: 'The in-progress set with the numbers as text with an accent underline, no boxes, in place of the boxes of numbers.',
+      skeleton: SKELETON,
+    },
+    {
+      id: 'nav-picker',
+      name: 'C. Titled picker',
+      when: 'The in-progress set with one line "4 · RC step response" that opens every problem, with arrows, in place of the boxes of numbers.',
+      skeleton: SKELETON,
+    },
+    {
+      id: 'nav-list',
+      name: 'D. Titled list',
+      when: 'The in-progress set with a list of titled problems at the left, the problem to its right, in place of the boxes of numbers.',
+      skeleton: SKELETON,
+    },
   ],
   exampleWidth: 640,
   stress:
@@ -76,6 +100,7 @@ export default defineSpec({
       use: 'The set line: name, due, time left and progress.',
     },
     { unit: 'problem', use: 'The problem being worked.' },
+    { unit: 'problem-nav', use: 'The four navigators to compare, A to D.' },
     { unit: 'problem-strip', use: 'The strip of numbered chips.' },
     { unit: 'progress-bar', use: 'How many are done, in the set line.' },
     {

@@ -112,6 +112,17 @@ const STATEMENTS: Run[][] = [
   ],
 ];
 
+const TITLES = [
+  'Resistor power',
+  'Equivalent resistance',
+  'RC step response',
+  'Node currents',
+  'Energy in a capacitor',
+  'Parallel branches',
+  'Capacitor at steady state',
+  'Discharge time',
+];
+
 const LABELS = ['4.58', '4.59', '4.60', '4.61', '4.62', '4.63', '4.64', '4.65'];
 const PAGES = [110, 110, 111, 111, 112, 112, 113, 114];
 
@@ -122,6 +133,7 @@ export function problemAt(
   const base: ProblemData = {
     id: `p${String(i + 1)}`,
     label: LABELS[i % LABELS.length],
+    title: TITLES[i % TITLES.length],
     page: PAGES[i % PAGES.length],
     statement: STATEMENTS[i % STATEMENTS.length],
     figures: i === 2 ? [CIRCUIT_FIGURE] : i === 1 ? [SECOND_FIGURE] : [],
@@ -135,6 +147,7 @@ export function problemAt(
 
 /** A problem with a note and four parts, (a) and (b) skipped (P7, P15). */
 export const WITH_PARTS: Partial<ProblemData> = {
+  title: 'RC step in parts',
   note: [t('Do (c) and (d) only. Show your work for (d).')],
   statement: [
     t('A series RC circuit is driven by a '),

@@ -51,6 +51,8 @@ export interface ProblemData {
   id: string;
   /** "3.1 #7": the book's own label (P14). */
   label: string;
+  /** A short generated title, 2 to 4 words: "RC step response". */
+  title: string;
   /** The page it is on, in the book. */
   page: number;
   /** The professor's note, shown above the problem (P15). */

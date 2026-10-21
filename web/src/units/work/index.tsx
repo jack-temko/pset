@@ -7,7 +7,13 @@ import { List } from '@/units/list';
 import { ListRow } from '@/units/list-row';
 import { narrowOnly } from '@/units/list-row/meta';
 import { Problem, ProblemSkeleton, type Fix } from '@/units/problem';
-import type { ProblemMenuItem } from '@/units/problem/types';
+import type { ProblemData, ProblemMenuItem } from '@/units/problem/types';
+import {
+  ProblemNav,
+  ProblemNavSkeleton,
+  type NavState,
+} from '@/units/problem-nav';
+import { beside, type NavView } from '@/units/problem-nav/layout';
 import { ProblemStrip, ProblemStripSkeleton } from '@/units/problem-strip';
 import { ProgressBar } from '@/units/progress-bar';
 import { DueStatus } from '@/units/set-line';
@@ -45,6 +51,8 @@ export interface WorkProps {
   startFinish?: boolean;
   /** Where the place is kept. */
   memory?: Memory;
+  /** How to move through the set. Without it, the boxes of numbers. */
+  nav?: NavView;
   /** The day "Due soon" counts from (the design page and tests). */
   today?: Date;
   /** The page link: turn the material to this page and outline the problem's
@@ -68,6 +76,7 @@ export function Work({
   startFinish = false,
   memory = sessionMemory,
   today,
+  nav,
   onOpenPage,
   onAsk,
   onBackToCourse,
@@ -186,11 +195,28 @@ export function Work({
     } else onSetMenu?.(item);
   };
 
+  const stateOf = (p: ProblemData): NavState =>
+    p.found.status === 'failed'
+      ? 'failed'
+      : p.found.status === 'finding'
+        ? 'finding'
+        : p.done
+          ? 'done'
+          : 'todo';
+  const navItems = problems.map((p) => ({
+    id: p.id,
+    label: p.label,
+    title: p.title,
+    state: stateOf(p),
+  }));
+
   const minutes =
     set.minutesLeft === undefined ? '' : timeLeft(set.minutesLeft);
 
   return (
-    <div className="@container mx-auto flex min-w-0 max-w-[760px] flex-col gap-4 py-6">
+    <div
+      className={`@container mx-auto flex min-w-0 flex-col gap-4 py-6 ${nav !== undefined && beside(nav) ? 'max-w-[1000px]' : 'max-w-[760px]'}`}
+    >
       <List>
         <div className="flex min-w-0 items-center pr-3">
           <div className="min-w-0 flex-1">
@@ -246,63 +272,86 @@ export function Work({
         </div>
       )}
 
-      <ProblemStrip
-        chips={problems.map((p) => ({
-          id: p.id,
-          label: p.label,
-          state:
-            p.found.status === 'failed'
-              ? 'failed'
-              : p.found.status === 'finding'
-                ? 'finding'
-                : p.done
-                  ? 'done'
-                  : 'todo',
-        }))}
-        current={finish ? undefined : current}
-        onJump={go}
-      />
-
-      {problems.length === 0 ? (
-        <p className="ds-body text-(--ds-fg-muted)">
-          No problems in this set. Add problems from the set menu.
-        </p>
-      ) : finish && all ? (
-        <FinishCard
-          count={problems.length}
-          minutes={set.minutesSpent}
-          turnedIn={turnedIn}
-          onTurnIn={wantTurnIn}
-          onTakeBack={takeBack}
-          onBack={onBackToCourse}
+      {nav === undefined && (
+        <ProblemStrip
+          chips={problems.map((p) => ({
+            id: p.id,
+            label: p.label,
+            state: stateOf(p),
+          }))}
+          current={finish ? undefined : current}
+          onJump={go}
         />
-      ) : (
-        here && (
-          <Problem
-            key={here.id}
-            problem={here}
-            index={index + 1}
-            nextNotReady={lone ? 'This is the only one left to do' : undefined}
-            onDone={(v) => {
-              mark(here.id, v);
-            }}
-            onAsk={() => {
-              onAsk?.(here.id);
-            }}
-            onOpenPage={() => {
-              onOpenPage?.(here.page, here.id);
-            }}
-            onNext={next}
-            onMenu={(item) => {
-              if (item === 'remove') remove(here.id);
-              onProblemMenu?.(item, here.id);
-            }}
-            onFix={(fix) => {
-              onFix?.(fix, here.id);
-            }}
-          />
-        )
       )}
+      {nav !== undefined && !beside(nav) && (
+        <ProblemNav
+          view={nav}
+          items={navItems}
+          current={finish ? undefined : current}
+          onJump={go}
+        />
+      )}
+
+      <div
+        className={
+          nav !== undefined && beside(nav)
+            ? 'flex min-w-0 items-start gap-6'
+            : 'min-w-0'
+        }
+      >
+        {nav !== undefined && beside(nav) && (
+          <ProblemNav
+            view={nav}
+            items={navItems}
+            current={finish ? undefined : current}
+            onJump={go}
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          {problems.length === 0 ? (
+            <p className="ds-body text-(--ds-fg-muted)">
+              No problems in this set. Add problems from the set menu.
+            </p>
+          ) : finish && all ? (
+            <FinishCard
+              count={problems.length}
+              minutes={set.minutesSpent}
+              turnedIn={turnedIn}
+              onTurnIn={wantTurnIn}
+              onTakeBack={takeBack}
+              onBack={onBackToCourse}
+            />
+          ) : (
+            here && (
+              <Problem
+                key={here.id}
+                problem={here}
+                index={index + 1}
+                nextNotReady={
+                  lone ? 'This is the only one left to do' : undefined
+                }
+                onDone={(v) => {
+                  mark(here.id, v);
+                }}
+                onAsk={() => {
+                  onAsk?.(here.id);
+                }}
+                onOpenPage={() => {
+                  onOpenPage?.(here.page, here.id);
+                }}
+                onNext={next}
+                onMenu={(item) => {
+                  if (item === 'remove') remove(here.id);
+                  onProblemMenu?.(item, here.id);
+                }}
+                onFix={(fix) => {
+                  onFix?.(fix, here.id);
+                }}
+              />
+            )
+          )}
+        </div>
+      </div>
 
       <div className="sticky bottom-4 h-0">
         {notice && (
@@ -321,15 +370,33 @@ export function Work({
 
 /** The pane while the set loads: the set line, a strip of eight chips and a
  *  problem, in the heights of the real thing. */
-export function WorkSkeleton({ chips = 8 }: { chips?: number }) {
+export function WorkSkeleton({
+  chips = 8,
+  nav,
+}: {
+  chips?: number;
+  nav?: NavView;
+}) {
   return (
     <div
       aria-hidden
-      className="@container mx-auto flex min-w-0 max-w-[760px] flex-col gap-4 py-6"
+      className={`@container mx-auto flex min-w-0 flex-col gap-4 py-6 ${nav !== undefined && beside(nav) ? 'max-w-[1000px]' : 'max-w-[760px]'}`}
     >
       <div className="h-[58px] min-w-0 animate-pulse rounded-(--ds-radius-control) border border-(--ds-border-muted) motion-reduce:animate-none" />
-      <ProblemStripSkeleton count={chips} />
-      <ProblemSkeleton />
+      {nav === undefined && <ProblemStripSkeleton count={chips} />}
+      {nav !== undefined && !beside(nav) && (
+        <ProblemNavSkeleton view={nav} count={chips} />
+      )}
+      {nav !== undefined && beside(nav) ? (
+        <div className="flex min-w-0 items-start gap-6">
+          <ProblemNavSkeleton view={nav} count={chips} />
+          <div className="min-w-0 flex-1">
+            <ProblemSkeleton />
+          </div>
+        </div>
+      ) : (
+        <ProblemSkeleton />
+      )}
     </div>
   );
 }

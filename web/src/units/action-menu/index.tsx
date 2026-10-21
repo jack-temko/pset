@@ -1,10 +1,11 @@
-import { Ellipsis } from 'lucide-react';
+import { Check, Ellipsis } from 'lucide-react';
 import {
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent,
+  type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -14,6 +15,10 @@ export interface MenuItem<Id extends string = string> {
   label: string;
   /** Marks an item that takes something away. */
   danger?: boolean;
+  /** A check after the label, such as a problem that is done. */
+  checked?: boolean;
+  /** Marks the item the student is on. */
+  current?: boolean;
 }
 
 const canPopover = () =>
@@ -29,6 +34,7 @@ export function ActionMenu<Id extends string>({
   items,
   onSelect,
   forceOpen,
+  trigger,
 }: {
   /** The button's name: "More for this problem". */
   label: string;
@@ -36,6 +42,9 @@ export function ActionMenu<Id extends string>({
   onSelect?: (id: Id) => void;
   /** Opens it from outside (the design page only). */
   forceOpen?: boolean;
+  /** What the button shows instead of "⋯": a name and a chevron. The card
+   *  then lines up with the button's left edge. */
+  trigger?: ReactNode;
 }) {
   const [shown, setShown] = useState(false);
   const open = shown || Boolean(forceOpen);
@@ -55,7 +64,8 @@ export function ActionMenu<Id extends string>({
     if (hasPopover && !p.matches(':popover-open')) p.showPopover();
     const r = b.getBoundingClientRect();
     p.style.top = `${String(r.bottom + 4 + window.scrollY)}px`;
-    p.style.left = `${String(r.right - p.offsetWidth + window.scrollX)}px`;
+    const left = trigger ? r.left : r.right - p.offsetWidth;
+    p.style.left = `${String(left + window.scrollX)}px`;
   });
 
   useEffect(() => {
@@ -107,7 +117,7 @@ export function ActionMenu<Id extends string>({
       aria-label={label}
       popover={hasPopover ? 'manual' : undefined}
       onKeyDown={move}
-      className="ds-body absolute top-0 left-0 m-0 w-max min-w-44 overflow-hidden rounded-(--ds-radius-control) border border-(--ds-border) bg-(--ds-bg-raised) p-1 text-(--ds-fg)"
+      className="ds-body absolute top-0 left-0 m-0 w-max min-w-44 max-w-[420px] overflow-hidden rounded-(--ds-radius-control) border border-(--ds-border) bg-(--ds-bg-raised) p-1 text-(--ds-fg)"
       style={{ inset: 'auto', zIndex: 1000 }}
     >
       {items.map((it) => (
@@ -115,14 +125,23 @@ export function ActionMenu<Id extends string>({
           key={it.id}
           type="button"
           role="menuitem"
+          aria-current={it.current ? 'true' : undefined}
           onClick={() => {
             setShown(false);
             button.current?.focus();
             onSelect?.(it.id);
           }}
-          className={`flex min-h-(--ds-control) w-full items-center rounded-(--ds-radius-segment) px-3 text-left hover:bg-(--ds-hover) active:bg-(--ds-pressed) ${it.danger ? 'text-(--ds-danger)' : ''}`}
+          className={`flex min-h-(--ds-control) w-full items-center rounded-(--ds-radius-segment) px-3 text-left hover:bg-(--ds-hover) active:bg-(--ds-pressed) ${it.danger ? 'text-(--ds-danger)' : ''} ${it.current ? 'bg-(--ds-hover) font-medium' : ''}`}
         >
-          {it.label}
+          <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+            {it.label}
+          </span>
+          {it.checked && (
+            <Check
+              className="ml-3 size-4 shrink-0 text-(--ds-fg-muted)"
+              aria-hidden
+            />
+          )}
         </button>
       ))}
     </div>
@@ -139,9 +158,9 @@ export function ActionMenu<Id extends string>({
         onClick={() => {
           setShown((s) => !s);
         }}
-        className="inline-flex h-(--ds-control) w-(--ds-control) shrink-0 items-center justify-center rounded-(--ds-radius-control) border border-(--ds-border) text-(--ds-fg) hover:bg-(--ds-hover) active:bg-(--ds-pressed)"
+        className={`inline-flex h-(--ds-control) shrink-0 items-center justify-center rounded-(--ds-radius-control) border border-(--ds-border) text-(--ds-fg) hover:bg-(--ds-hover) active:bg-(--ds-pressed) ${trigger ? 'min-w-0 max-w-full gap-2 px-3' : 'w-(--ds-control)'}`}
       >
-        <Ellipsis className="size-4" aria-hidden />
+        {trigger ?? <Ellipsis className="size-4" aria-hidden />}
       </button>
       {hasPopover || !card
         ? card

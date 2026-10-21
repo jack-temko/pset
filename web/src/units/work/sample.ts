@@ -61,6 +61,8 @@ export function stress(): WorkSet {
   const long = (i: number): ProblemData => {
     const p = problemAt(i % 8, {
       id: `s${String(i + 1)}`,
+      title:
+        'Hysteresis loss in a laminated transformer core with a gapped limb',
       label: `Chapter 12 review, section 12.${String(i + 1)}, exercise ${String(i + 1)}b`,
       done: i % 3 === 0,
     });
@@ -68,6 +70,7 @@ export function stress(): WorkSet {
       ? {
           ...p,
           ...WITH_PARTS,
+          title: p.title,
           note: [
             {
               t: 'Do (c) and (d) only, and show your work for (d). If the figure is unclear, use the one from lecture 9 instead and say so. Late work loses 10% a day.',
