@@ -12,7 +12,7 @@ export interface Change {
 const sum = (xs: readonly number[]) => xs.reduce((n, x) => n + x, 0);
 const minutesOf = (d: StudyDay) => sum(d.courses.map((c) => c.minutes));
 
-/** One figure this week and the week before. */
+/** One figure this week and last week up to the same weekday. */
 export interface Pair {
   week: number;
   last: number;
@@ -24,7 +24,7 @@ export interface HomeStats {
   /** Monday to Sunday of this week. */
   days: { date: Date; minutes: number; today: boolean; future: boolean }[];
   /** The last 14 days, oldest first. */
-  spark: { questions: number[]; sets: number[] };
+  spark: { questions: number[]; left: number[] };
 }
 
 /** Every figure Home's stats show, worked out from the study days: weeks run
@@ -44,10 +44,11 @@ export function homeStats(study: readonly StudyDay[], today: Date): HomeStats {
   const end = addDays(today, 1);
   const pair = (f: (d: StudyDay) => number): Pair => ({
     week: over(monday, end, f),
-    last: over(addDays(monday, -7), monday, f),
+    // Like with like: last week up to the same weekday (the days hold no
+    // hours, so today counts whole).
+    last: over(addDays(monday, -7), addDays(end, -7), f),
   });
   const questions = (d: StudyDay) => d.questions ?? 0;
-  const sets = (d: StudyDay) => d.sets ?? 0;
 
   const first = (n: number) => addDays(today, -(n - 1));
   const lastDays = (f: (d: StudyDay) => number) =>
@@ -71,7 +72,7 @@ export function homeStats(study: readonly StudyDay[], today: Date): HomeStats {
     }),
     spark: {
       questions: lastDays(questions),
-      sets: lastDays(sets),
+      left: lastDays((d) => d.left ?? 0),
     },
   };
 }

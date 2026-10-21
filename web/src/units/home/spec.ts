@@ -84,7 +84,7 @@ export default defineSpec({
   data: [
     {
       reads:
-        'The name, the sets (with questions done and total), and per day: minutes by course, questions done, sets finished',
+        'The name, the sets (with questions done and total), and per day: minutes by course, questions done, questions left',
       call: 'None yet: sample data (the server has no per-day endpoint)',
       waiting:
         'Skeletons for the greeting, the stats and the heatmap, and a block for each list.',
@@ -102,7 +102,7 @@ export default defineSpec({
       name: 'sets, study',
       type: 'GreetingSet[], StudyDay[]',
       default: 'none',
-      does: 'The sets for the muted line and what is left, and per-day study with questions and sets finished.',
+      does: 'The sets for the muted line and what is left, and per-day study with questions done and questions left.',
     },
     {
       name: 'homeHref, settingsHref',
@@ -187,7 +187,7 @@ export default defineSpec({
     {
       id: 'home-d7',
       decision:
-        'Show time this week (bars, heading), questions done with last week, and what is left in sets due within 7 days. No month total, active days or course.',
+        'Show time this week (bars, heading), questions done with last week by now, and what is left in sets due within 7 days. No month total, active days or course.',
       why: 'Jack, 2026-10-21: "the most important ones to display and most useful." What is left is what a student can act on tonight.',
       beat: 'Most time this week, time this month, active days, sets finished',
       date: '2026-10-21',
@@ -214,6 +214,22 @@ export default defineSpec({
         'Home has one info layout: this week with a sparkline beside each figure. State A, the meters, and everything only it used are gone.',
       why: 'Jack: "Lets go with spark lines, drop the other one, and anything else not used anymore."',
       beat: 'A, with meters; the tiles, layout and span picks',
+      date: '2026-10-21',
+    },
+    {
+      id: 'home-d11',
+      decision:
+        'Changes compare like with like: this week so far against last week up to the same weekday (by this time last week). Hidden when it is 0.',
+      why: 'Coordinator, 2026-10-21: a Tuesday against a whole week would read "down" every Monday to Thursday. The days hold no hours, so today counts whole.',
+      beat: 'This week so far against all of last week',
+      date: '2026-10-21',
+    },
+    {
+      id: 'home-d12',
+      decision:
+        'A change is muted text: an arrow and a percent in the muted colour, never the yellow or red. The "Questions left" sparkline is questions left per day over 14 days.',
+      why: 'Coordinator, 2026-10-21: being behind on a Tuesday is not a warning; sets finished per day read as a flat line beside the figure and said nothing.',
+      beat: 'Green and amber changes; sets finished per day',
       date: '2026-10-21',
     },
   ],

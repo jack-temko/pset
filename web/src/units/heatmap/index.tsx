@@ -24,6 +24,8 @@ export interface StudyDay {
   questions?: number;
   /** Sets finished that day, when the screen has them. */
   sets?: number;
+  /** Questions still to do in sets due within a week, as of that day. */
+  left?: number;
 }
 
 const DAY_FORMAT = new Intl.DateTimeFormat('en-US', {
@@ -210,7 +212,10 @@ export function HeatmapSkeleton({
       className="flex min-w-0 flex-col"
       style={grow ? undefined : { width: boxWidth(weeks), maxWidth: '100%' }}
     >
-      <p className="ds-body flex h-(--ds-body-line) items-center">
+      <p
+        className="ds-body flex items-center"
+        style={{ height: width > 0 && width < 340 ? 44 : 22 }}
+      >
         <Bar className="h-4 w-2/5 max-w-60" />
       </p>
       <div className={BOX}>

@@ -26,16 +26,32 @@ function seeded(seed: number) {
 /** A year (371 days) of study ending on `SAMPLE_TODAY`, for a student with
  *  five courses: gaps, lighter weekends, mostly under an hour and now and then
  *  a 3 h day. A late night is already counted on the day before, as the 4am
- *  rule does, with the questions done and the sets finished each day. */
+ *  rule does, with the questions done, the sets finished and the questions left each
+ *  day. */
 export function sampleStudy(): StudyDay[] {
   const rand = seeded(2026);
   // Apart from `rand`, so the days and their minutes stay as they were.
   const extra = seeded(7);
+  // The questions still to do, as of each day: new work arrives now and
+  // then and working it off brings the number down, a sawtooth.
+  const arrivals = seeded(11);
+  let left = 8;
   const out: StudyDay[] = [];
   for (let back = 370; back >= 0; back--) {
     const date = addDays(SAMPLE_TODAY, -back);
     const weekend = date.getDay() === 0 || date.getDay() === 6;
-    if (rand() < (weekend ? 0.55 : 0.25) && back > 1) continue;
+    if (back % 5 === 3 || arrivals() < 0.08)
+      left += 8 + Math.floor(arrivals() * 8);
+    if (rand() < (weekend ? 0.55 : 0.25) && back > 1) {
+      out.push({
+        date: dayKey(date),
+        courses: [],
+        questions: 0,
+        sets: 0,
+        left,
+      });
+      continue;
+    }
     // Minutes: usually 15 to 75, rarely 2.5 to 3.5 hours.
     const long = rand() < 0.07;
     let minutes = long ? 150 + rand() * 60 : 15 + rand() * 60;
@@ -47,11 +63,17 @@ export function sampleStudy(): StudyDay[] {
       minutes: Math.max(5, Math.round(minutes / picks / 5) * 5),
     }));
     const total = courses.reduce((n, c) => n + c.minutes, 0);
+    const questions = Math.max(
+      1,
+      Math.round((total / 6) * (0.6 + extra() * 0.8)),
+    );
+    left = Math.max(0, left - Math.round(questions * 0.6));
     out.push({
       date: dayKey(date),
       courses,
-      questions: Math.max(1, Math.round((total / 6) * (0.6 + extra() * 0.8))),
+      questions,
       sets: extra() < 0.1 ? 1 : 0,
+      left,
     });
   }
   return out;

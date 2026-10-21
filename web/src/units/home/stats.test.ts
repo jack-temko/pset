@@ -23,14 +23,15 @@ describe('changeOf', () => {
 
 describe('homeStats', () => {
   const study = [
-    day('2026-10-05', 60, 4), // last week
+    day('2026-10-05', 60, 4), // last Monday
+    day('2026-10-09', 99, 9), // last Friday: after the same weekday
     day('2026-10-12', 30, 2), // this week, Monday
     day('2026-10-14', 45, 3), // today
     day('2026-09-20', 90),
   ];
   const s = homeStats(study, today);
 
-  it('splits this week from the one before', () => {
+  it('compares this week with last week up to the same weekday', () => {
     expect(s.time).toEqual({ week: 75, last: 60 });
     expect(s.questions).toEqual({ week: 5, last: 4 });
   });

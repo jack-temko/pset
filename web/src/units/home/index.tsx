@@ -36,17 +36,10 @@ function Bar({ className }: { className: string }) {
   );
 }
 
-/** A change as a glyph and its words: a green up arrow or an amber down one,
- *  so colour is never the only signal. */
+/** A change as a glyph and its words, muted: being behind is not a warning. */
 function ChangeText({ change }: { change: Change }) {
   return (
-    <span
-      className={`inline-flex items-center gap-0.5 ${
-        change.direction === 'up'
-          ? 'text-(--ds-success)'
-          : 'text-(--ds-attention)'
-      }`}
-    >
+    <span className="inline-flex items-center gap-0.5 text-(--ds-fg-muted)">
       {change.direction === 'up' ? (
         <ArrowUp size={14} aria-hidden />
       ) : (
@@ -83,7 +76,9 @@ function RowSkeleton({ first }: { first?: boolean }) {
         </p>
       }
       label={
-        <p className="ds-small flex h-(--ds-small-line) items-center">
+        <p
+          className={`ds-small flex h-(--ds-small-line) items-center ${first ? '@max-[419px]:h-10 @max-[419px]:items-start @max-[419px]:pt-1' : ''}`}
+        >
           <Bar className="h-3 w-24" />
         </p>
       }
@@ -123,6 +118,9 @@ export function Home({
   const today = studyDay(now);
   const s = homeStats(study, today);
   const left = leftToDo(sets, today);
+  // Today's point is the live number, so the line ends where the figure is.
+  const leftSpark = [...s.spark.left.slice(0, -1), left.questions];
+  const questionsChange = changeOf(s.questions.week, s.questions.last);
   const timeChange = changeOf(s.time.week, s.time.last);
 
   const info = (
@@ -135,8 +133,8 @@ export function Home({
               {minutesText(s.time.week)}{' '}
               <span className="text-(--ds-fg-muted)">this week</span>
             </p>
-            <p className="ds-small ds-tabular flex items-center gap-x-2 whitespace-nowrap text-(--ds-fg-muted)">
-              {minutesText(s.time.last)} last week
+            <p className="ds-small ds-tabular flex flex-wrap items-center gap-x-2 text-(--ds-fg-muted)">
+              {minutesText(s.time.last)} by this time last week
               {timeChange && <ChangeText change={timeChange} />}
             </p>
           </Line>
@@ -154,12 +152,14 @@ export function Home({
           <Row
             first
             figure={figureOf(count(s.questions.week))}
-            label={<p className={small}>Questions done</p>}
+            label={
+              <p className="ds-small flex items-center gap-x-2 text-(--ds-fg-muted)">
+                <span>Questions done</span>
+                {questionsChange && <ChangeText change={questionsChange} />}
+              </p>
+            }
             caption={
-              <Moved
-                text={`Last week: ${count(s.questions.last)}`}
-                change={changeOf(s.questions.week, s.questions.last)}
-              />
+              <Moved text={`Last week by now: ${count(s.questions.last)}`} />
             }
             trailing={<Sparkline values={s.spark.questions} height={28} />}
           />
@@ -175,7 +175,7 @@ export function Home({
                 }
               />
             }
-            trailing={<Sparkline values={s.spark.sets} height={28} />}
+            trailing={<Sparkline values={leftSpark} height={28} />}
           />
         </>
       }
@@ -254,7 +254,7 @@ export function HomeSkeleton({
                 <p className="ds-body flex h-(--ds-body-line) items-center">
                   <Bar className="h-4 w-28" />
                 </p>
-                <p className="ds-small flex h-(--ds-small-line) items-center">
+                <p className="ds-small flex h-(--ds-small-line) items-center @max-[419px]:h-[82px] @max-[419px]:items-start @max-[419px]:pt-1">
                   <Bar className="h-3 w-28" />
                 </p>
               </Line>

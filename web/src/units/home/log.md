@@ -25,3 +25,5 @@ Jack, 2026-10-21, on the options: **"Week is my favorite. Drop the rest. Can we 
 Jack, 2026-10-21: **"Go back to having all the stat stuff in one box, how it was."** Then: **"heatmap in box too please"**: the whole info block is one outlined box (home-d9).
 
 Jack, 2026-10-21: **"Lets go with spark lines, drop the other one, and anything else not used anymore."** State A and the meter and stat tile units are removed (home-d10).
+
+Coordinator, 2026-10-21 (home-d11, home-d12): changes compare this week so far with last week up to the same weekday and are muted text; the "Questions left" sparkline is questions left per day.
