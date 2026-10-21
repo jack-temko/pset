@@ -369,3 +369,56 @@ describe('Loaded', () => {
     });
   });
 });
+
+describe('Loaded placeholder', () => {
+  const showBone = (q: Q) => {
+    act(() => {
+      root.render(
+        <Loaded query={q} placeholder="sample">
+          {(d) => <span data-testid="text">{d}</span>}
+        </Loaded>,
+      );
+    });
+  };
+
+  it('draws the render function on the sample as a bone while pending', () => {
+    showBone(pending);
+    const layer = skeletonLayer();
+    expect(layer?.hasAttribute('data-bone')).toBe(true);
+    expect(layer?.hasAttribute('inert')).toBe(true);
+    expect(layer?.getAttribute('aria-hidden')).toBe('true');
+    expect(layer?.textContent).toBe('sample');
+    expect(box().getAttribute('aria-busy')).toBe('true');
+    // The real content is not drawn, and the layer holds back for the grace.
+    expect(contentLayer()?.textContent).toBe('');
+    expect(layer?.className).toContain('opacity-0');
+    act(() => void vi.advanceTimersByTime(GRACE_MS));
+    expect(layer?.className).toContain('opacity-100');
+  });
+
+  it('shows the data with no bone once it lands inside the grace', () => {
+    showBone(pending);
+    showBone(loaded);
+    expect(host.querySelector('[data-bone]')).toBeNull();
+    expect(contentLayer()?.textContent).toBe('hello');
+    expect(box().hasAttribute('aria-busy')).toBe(false);
+  });
+
+  it('keeps the bone under the content through the crossfade', () => {
+    showBone(pending);
+    act(() => void vi.advanceTimersByTime(GRACE_MS));
+    showBone(loaded);
+    act(() => void vi.advanceTimersByTime(REVEAL_MS));
+    expect(contentLayer()?.textContent).toBe('hello');
+    const bone = host.querySelector('[data-bone]');
+    if (bone) expect(bone.textContent).toBe('sample');
+    act(() => void vi.advanceTimersByTime(200));
+    expect(host.querySelector('[data-bone]')).toBeNull();
+  });
+
+  it('shows the error line, not the bone, when the query failed', () => {
+    showBone(failed);
+    expect(host.querySelector('[data-bone]')).toBeNull();
+    expect(host.querySelector('[role=status]')).not.toBeNull();
+  });
+});

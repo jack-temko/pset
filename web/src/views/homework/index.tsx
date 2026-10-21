@@ -120,6 +120,25 @@ export function ListSkeleton({
   );
 }
 
+/** Sample sets for the list's bones: as many as last time, each a set with
+ *  its bar, its done line and its due line. */
+function sampleSets(active: number, turnedIn: number): HomeworkSet[] {
+  const set = (i: number, turned: boolean): HomeworkSet => ({
+    id: `sample-${turned ? 't' : 'a'}${i}`,
+    bookId: '',
+    title: 'Problem set 1',
+    dueDate: '2026-01-01',
+    turnedInAt: turned ? '2026-01-01T00:00:00Z' : '',
+    total: 4,
+    done: 0,
+    createdAt: '2026-01-01T00:00:00Z',
+  });
+  return [
+    ...Array.from({ length: active }, (_, i) => set(i, false)),
+    ...Array.from({ length: turnedIn }, (_, i) => set(i, true)),
+  ];
+}
+
 /** The homework list: active sets, then turned-in ones under a quiet
  *  label. Opening a set fills the panel with its walkthrough. */
 export function HomeworkTab({
@@ -234,35 +253,11 @@ export function HomeworkTab({
         }
         // Nothing remembered for this book: the door under two quiet rows, never a
         // door alone, which reads as an empty list.
-        neutral={<ListSkeleton active={2} turnedIn={0} />}
-        skeletons={{
-          empty: (
-            <div className="flex h-full flex-col justify-center space-y-4">
-              <div className="space-y-0" aria-hidden>
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="py-1">
-                    <Skeleton className="mx-auto block h-3 w-5/6" />
-                  </div>
-                ))}
-              </div>
-              <Box>
-                <DoorAction
-                  icon={<Plus aria-hidden />}
-                  onClick={() => {}}
-                  className="pointer-events-none"
-                >
-                  New homework
-                </DoorAction>
-              </Box>
-            </div>
-          ),
-          active: <ListSkeleton active={last?.active ?? 0} turnedIn={0} />,
-          turnedIn: (
-            <ListSkeleton
-              active={last?.active ?? 0}
-              turnedIn={last?.turnedIn ?? 0}
-            />
-          ),
+        neutral={sampleSets(2, 0)}
+        placeholders={{
+          empty: [],
+          active: sampleSets(last?.active ?? 0, 0),
+          turnedIn: sampleSets(last?.active ?? 0, last?.turnedIn ?? 0),
         }}
       >
         {(sets) => {

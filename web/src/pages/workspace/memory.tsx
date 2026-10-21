@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 
 import { Button, IconButton } from '@/components/button';
 import { Dialog } from '@/components/dialog';
 import { Field, Input } from '@/components/input';
 import { Loaded } from '@/components/loaded';
-import { Skeleton } from '@/components/skeleton';
 import { useLastCount } from '@/lib/last-count';
 import { StepAction } from '@/components/transcript';
 import { ApiError } from '@/api/client';
@@ -45,6 +44,17 @@ export function MemoryUndo({
     </StepAction>
   );
 }
+
+/** Sample memories for the bones: the real row's two lines, at the length of
+ *  a typical preference. */
+const sampleMemories = (n: number): Memory[] =>
+  Array.from({ length: n }, (_, i) => ({
+    id: `sample-${i}`,
+    bookId: '',
+    text: 'Use SI units and show the algebra',
+    source: 'you',
+    createdAt: '2026-01-01T00:00:00Z',
+  }));
 
 const SOURCE: Record<Source, string> = { you: 'You', tutor: 'Tutor' };
 
@@ -93,7 +103,9 @@ export function MemoryDialog({
     );
   };
 
+  // The list before it arrives: as many rows as last time, drawn as bones.
   const rows = useLastCount(`memory-rows-${bookId}`, memories.data?.length, 2);
+  const sample = useMemo(() => sampleMemories(rows), [rows]);
 
   return (
     <Dialog
@@ -144,7 +156,7 @@ export function MemoryDialog({
           query={memories}
           className="space-y-3"
           errorText="Couldn't load the preferences. Try again in a moment."
-          skeleton={<MemorySkeleton rows={rows} />}
+          placeholder={sample}
         >
           {(all) =>
             all.length === 0 ? (
@@ -169,50 +181,6 @@ export function MemoryDialog({
         </Loaded>
       </div>
     </Dialog>
-  );
-}
-
-/** The preferences before they arrive: as many rows as last time, each the
- *  two lines of a real one and the delete button. */
-function MemorySkeleton({ rows }: { rows: number }) {
-  if (rows === 0)
-    return (
-      // The empty sentence is two lines at the dialog's width.
-      <div aria-hidden>
-        <p className="text-sm">
-          <Skeleton className="h-3 w-full" />
-        </p>
-        <p className="text-sm">
-          <Skeleton className="h-3 w-2/3" />
-        </p>
-      </div>
-    );
-  return (
-    <ul className="divide-y divide-border-muted">
-      {Array.from({ length: rows }, (_, i) => (
-        <li
-          key={i}
-          className="flex items-start gap-2 py-3 first:pt-0 last:pb-0"
-        >
-          <div className="min-w-0 flex-1 space-y-1">
-            <p className="text-sm">
-              <Skeleton className="h-3 w-2/3" />
-            </p>
-            <p className="text-xs">
-              <Skeleton className="h-3 w-24" />
-            </p>
-          </div>
-          <IconButton
-            variant="ghost"
-            size="sm"
-            aria-label="Delete this preference"
-            disabled
-          >
-            <Trash2 />
-          </IconButton>
-        </li>
-      ))}
-    </ul>
   );
 }
 
