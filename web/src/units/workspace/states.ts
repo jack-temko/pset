@@ -17,9 +17,13 @@ export const STATES = {
     return m.select(st, st.sides[0][0].id);
   },
   folded: () => m.close(start(), start().sides[0][0].id),
-  beside: () => {
+  returned: () => {
     const first = start();
-    return m.add(m.close(first, first.sides[0][0].id), 0, book('lab', 1));
+    const folded = m.add(m.close(first, first.sides[0][0].id), 1, {
+      kind: 'ask',
+      ref: '',
+    });
+    return m.move(folded, folded.sides[1][1].id, 0, undefined);
   },
   twice: () => m.add(start(), 1, book('griffiths', 45)),
   ask: () => m.askAbout(start(), 1, 'p2'),

@@ -9,8 +9,8 @@ import spec from './spec';
 const noop = () => {};
 
 const TABS: TabItem[] = [
-  { id: 'a', label: 'Griffiths · p. 112' },
-  { id: 'b', label: 'Lecture notes, week 6 · p. 4' },
+  { id: 'a', label: 'Griffiths', note: 'p. 112' },
+  { id: 'b', label: 'Lecture notes, week 6', note: 'p. 4' },
 ];
 
 function Demo({
@@ -52,7 +52,8 @@ function Demo({
 
 const many = Array.from({ length: 10 }, (_, i) => ({
   id: `t${String(i)}`,
-  label: `Griffiths · p. ${String(10 + i * 17)}`,
+  label: 'Griffiths',
+  note: `p. ${String(10 + i * 17)}`,
 }));
 
 export default defineExamples(spec, {
@@ -68,7 +69,8 @@ export default defineExamples(spec, {
         {
           id: 'a',
           label:
-            'Introduction to Electrodynamics, fourth edition, by David J. Griffiths · p. 112',
+            'Introduction to Electrodynamics, fourth edition, by David J. Griffiths',
+          note: 'p. 112',
         },
         ...many,
       ]}

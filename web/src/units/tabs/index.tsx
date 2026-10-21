@@ -1,11 +1,5 @@
 import { Plus, X } from 'lucide-react';
-import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { Menu, type MenuGroup } from '@/units/menu';
 import { draggedTab, endDrag, startDrag } from './drag';
@@ -13,6 +7,8 @@ import { draggedTab, endDrag, startDrag } from './drag';
 export interface TabItem {
   id: string;
   label: string;
+  /** Dim text after the label, separated by a space: a material's page. */
+  note?: string;
 }
 
 export type TabAction = 'move' | 'swap' | 'close' | 'close-others';
@@ -50,7 +46,6 @@ export function Tabs({
   tabs,
   open,
   add,
-  end,
   onOpen,
   onClose,
   onAdd,
@@ -66,8 +61,6 @@ export function Tabs({
   open: string | null;
   /** What the + menu offers. */
   add: readonly MenuGroup[];
-  /** Shown after the +, such as "Open beside". */
-  end?: ReactNode;
   onOpen: (id: string) => void;
   onClose: (id: string) => void;
   onAdd: (id: string) => void;
@@ -192,7 +185,7 @@ export function Tabs({
               role="tab"
               tabIndex={0}
               aria-selected={active}
-              title={t.label}
+              title={t.note ? `${t.label} ${t.note}` : t.label}
               draggable
               onDragStart={(e) => {
                 startDrag(t.id, e);
@@ -231,13 +224,18 @@ export function Tabs({
                 <span className="absolute inset-y-2 right-0 w-0.5 bg-(--ds-accent)" />
               )}
               <span
-                className={`ds-body min-w-0 flex-1 truncate ${active ? 'font-medium' : ''}`}
+                className={`ds-body flex min-w-0 flex-1 items-baseline gap-1 ${active ? 'font-medium' : ''}`}
               >
-                {t.label}
+                <span className="min-w-0 truncate">{t.label}</span>
+                {t.note && (
+                  <span className="shrink-0 font-normal opacity-60">
+                    {t.note}
+                  </span>
+                )}
               </span>
               <button
                 type="button"
-                aria-label={`Close ${t.label}`}
+                aria-label={`Close ${t.label}${t.note ? ` ${t.note}` : ''}`}
                 tabIndex={-1}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -269,7 +267,6 @@ export function Tabs({
         >
           <Plus size={16} aria-hidden />
         </button>
-        {end}
       </div>
       {menu && (
         <Menu

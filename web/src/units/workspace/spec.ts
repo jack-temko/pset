@@ -32,13 +32,13 @@ export default defineSpec({
     {
       id: 'folded',
       name: 'One side folded',
-      when: 'The material’s last tab was closed: the set takes the full width and "Open beside" waits in its tab row.',
+      when: 'The material’s last tab was closed: the set takes the full width.',
       skeleton: WAIT,
     },
     {
-      id: 'beside',
-      name: 'Opened beside',
-      when: 'After "Open beside" and a pick of the lab manual: the left side is back with that one tab.',
+      id: 'returned',
+      name: 'A tab dragged back',
+      when: 'Ask was dragged onto the folded left half: the side is back with that one tab and the set keeps the right.',
       skeleton: WAIT,
     },
     {
@@ -77,7 +77,7 @@ export default defineSpec({
         'follow-page-link',
         'ask-about',
         'close-material-side',
-        'open-beside',
+        'move-tab',
       ],
     },
   ],
@@ -88,8 +88,8 @@ export default defineSpec({
     },
     { unit: 'side', use: 'Each side: its tabs over its pane.' },
     { unit: 'tabs', use: 'The drag in progress, and the tab actions.' },
+    { unit: 'menu', use: 'The shape of what a side’s + menu offers.' },
     { unit: 'divider', use: 'The hairline between the sides.' },
-    { unit: 'menu', use: '"Open beside" offers what the course has.' },
     {
       unit: 'pane-stub',
       use: 'STAND-INS for the work, material and Ask panes until they are designed.',
@@ -124,16 +124,10 @@ export default defineSpec({
       target: { unit: 'workspace', state: 'folded' },
     },
     {
-      id: 'open-beside',
-      label: 'Open beside',
-      key: 'Enter',
-      does: 'Offers what the course has; the pick opens as the one tab of the side that comes back.',
-      target: { unit: 'workspace', state: 'beside' },
-    },
-    {
       id: 'move-tab',
       label: 'Drag a tab, or "Move to other side"',
       does: 'The tab moves to the other side and opens there; dropped on either half of the window it goes to that side; a folded side’s half brings it back.',
+      target: { unit: 'workspace', state: 'returned' },
     },
     {
       id: 'swap-sides',
@@ -225,8 +219,8 @@ export default defineSpec({
     {
       id: 'workspace-d3',
       decision:
-        'A side whose last tab closes folds away; the other takes the full width. "Open beside" brings it back, and so does a tab dropped on its half.',
-      why: 'Jack’s pick, W4: no empty boxes. Confirms A1.',
+        'A side whose last tab closes folds away; the other takes the full width. It comes back only when a tab is dragged onto either half of the window.',
+      why: 'Jack’s pick, W4: no empty boxes. Confirms A1. Jack: "Drop the open to the side please... No more open to the side."',
       beat: 'An empty side listing what to open',
       date: '2026-10-21',
     },
@@ -281,8 +275,8 @@ export default defineSpec({
     {
       id: 'workspace-d10',
       decision:
-        'A side’s + menu offers the course’s materials, its other sets, and Ask. "Open beside" offers the same.',
-      why: 'Jack’s pick, W10: one place to open anything. What "Open beside" offers is assumed.',
+        'A side’s + menu offers the course’s materials, its other sets, and Ask.',
+      why: 'Jack’s pick, W10: one place to open anything.',
       beat: 'Materials and Ask only',
       date: '2026-10-21',
     },

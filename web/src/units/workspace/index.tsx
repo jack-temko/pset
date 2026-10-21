@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 
 import { Divider } from '@/units/divider';
-import { Menu, type MenuGroup } from '@/units/menu';
+import type { MenuGroup } from '@/units/menu';
 import {
   AskStub,
   AskStubSkeleton,
@@ -54,46 +54,6 @@ function pick(id: string): m.Spec {
   if (id === 'a') return { kind: 'ask', ref: '' };
   const [k, ref] = id.split(':');
   return k === 'm' ? { kind: 'material', ref, page: 1 } : { kind: 'set', ref };
-}
-
-/** "Open beside": brings a folded side back with whatever the student picks. */
-function OpenBeside({
-  groups,
-  onPick,
-}: {
-  groups: MenuGroup[];
-  onPick: (id: string) => void;
-}) {
-  const [at, setAt] = useState<{ x: number; y: number }>();
-  return (
-    <>
-      <button
-        type="button"
-        data-menu-trigger
-        onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect();
-          setAt((a) => (a ? undefined : { x: r.left, y: r.bottom + 4 }));
-        }}
-        className="ds-body h-8 shrink-0 rounded-(--ds-radius-control) px-2 whitespace-nowrap text-(--ds-fg) hover:bg-(--ds-hover) active:bg-(--ds-pressed)"
-      >
-        Open beside
-      </button>
-      {at && (
-        <Menu
-          at={at}
-          label="Open beside"
-          groups={groups}
-          onClose={() => {
-            setAt(undefined);
-          }}
-          onPick={(id) => {
-            setAt(undefined);
-            onPick(id);
-          }}
-        />
-      )}
-    </>
-  );
 }
 
 /** The workspace (S5 to S9, W1 to W15): the top bar with the path, then two
@@ -194,7 +154,7 @@ export function Workspace({
       label={NAMES[side]}
       tabs={st.sides[side].map((t) => ({
         id: t.id,
-        label: tabLabel(course, t),
+        ...tabLabel(course, t),
       }))}
       open={st.open[side]}
       add={offer(course, st)}
@@ -230,16 +190,6 @@ export function Workspace({
       onDropTab={(id, before) => {
         apply((s) => m.move(s, id, side, before));
       }}
-      end={
-        folded !== undefined && !empty ? (
-          <OpenBeside
-            groups={offer(course, st)}
-            onPick={(id) => {
-              apply((s) => m.add(s, m.other(side), pick(id)));
-            }}
-          />
-        ) : undefined
-      }
     />
   );
 
@@ -282,7 +232,7 @@ export function Workspace({
             }}
             className={`ds-small absolute inset-y-0 z-20 flex w-1/2 items-center justify-center border-2 border-dashed border-(--ds-accent) bg-(--ds-bg) text-center text-(--ds-fg-muted) ${folded === 0 ? 'left-0' : 'right-0'}`}
           >
-            Open beside
+            Drop to open here
           </div>
         )}
       </div>

@@ -16,7 +16,7 @@ On `/design`, as units with typed `spec.ts`, `examples.tsx` and `log.md`, like
    width, then the row scrolls sideways with a fade at the edge (W13). A tab's menu
    (right click and a small chevron or the context menu): Move to other side, Swap
    sides, Close, Close others. Tab labels: a set's name; a material's name and page,
-   "Griffiths · p. 112" (W11); "Ask".
+   "Griffiths p. 112" with the page dim, no dot (W11); "Ask".
 2. **`divider` (component).** A 1px hairline between the sides that turns the accent
    while hovered or dragged, double-click resets to half and half (W15); a side never
    narrower than 360px.
@@ -36,9 +36,9 @@ On `/design`, as units with typed `spec.ts`, `examples.tsx` and `log.md`, like
    Behaviour, all of it working in the design page:
    - Opening a set: its material on the left at the current problem's page, the set
      on the right (W9).
-   - A side whose last tab closes folds away; the other takes the full width; "Open
-     beside" in the tab row brings a second side back (W4). Dropping a tab on the
-     edge of a folded side reopens it.
+   - A side whose last tab closes folds away; the other takes the full width; it
+     returns only by dragging a tab onto either half of the window (W4, W16).
+     No "Open beside" control.
    - Tabs drag between sides, or "Move to other side"; "Swap sides" (W7).
    - A material may be open twice, each at its own page (W6).
    - A page link in the work turns the book's showing tab (either side); if none is
@@ -53,7 +53,7 @@ On `/design`, as units with typed `spec.ts`, `examples.tsx` and `log.md`, like
      folded; the same book twice; Ask open; many tabs (overflow); loading (each side's
      skeleton); stress (long course, set and material names).
      A flow on the design page, like Home's: open a set, follow a page link, ask
-     about a problem, close the material side, open it beside again.
+     about a problem, close the material side, drag a tab back.
 
 Earlier docs to update: in `ideas/screens-grill.md`, mark A2 replaced by W6 and A3
 replaced by W8, and note S6, S7, S9 reaffirmed by W2, W9, W5.

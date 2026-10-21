@@ -19,14 +19,15 @@ const ADD: MenuGroup[] = [
 
 const THREE: TabItem[] = [
   { id: 'a', label: 'Problem set 4' },
-  { id: 'b', label: 'Griffiths · p. 112' },
+  { id: 'b', label: 'Griffiths', note: 'p. 112' },
   { id: 'c', label: 'Ask' },
 ];
 
-const twelve = (label: (i: number) => string): TabItem[] =>
+const twelve = (label: string, note: (i: number) => string): TabItem[] =>
   Array.from({ length: 12 }, (_, i) => ({
     id: `t${String(i)}`,
-    label: label(i),
+    label,
+    note: note(i),
   }));
 
 /** A row that holds its own state, so the example can be driven. */
@@ -100,7 +101,7 @@ export default defineExamples(spec, {
     ),
     overflow: () => (
       <Demo
-        initial={twelve((i) => `Griffiths · p. ${String(10 + i * 17)}`)}
+        initial={twelve('Griffiths', (i) => `p. ${String(10 + i * 17)}`)}
         open="t5"
       />
     ),
@@ -109,8 +110,8 @@ export default defineExamples(spec, {
   stress: () => (
     <Demo
       initial={twelve(
-        (i) =>
-          `Introduction to Electrodynamics, fourth edition, by David J. Griffiths · p. ${String(i)}`,
+        'Introduction to Electrodynamics, fourth edition, by David J. Griffiths',
+        (i) => `p. ${String(i)}`,
       )}
       open="t8"
     />

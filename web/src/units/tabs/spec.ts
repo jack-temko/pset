@@ -78,10 +78,10 @@ export default defineSpec({
       does: 'The tabs in order and the id of the open one.',
     },
     {
-      name: 'add, end',
-      type: 'MenuGroup[], ReactNode',
+      name: 'add',
+      type: 'MenuGroup[]',
       default: 'none',
-      does: 'What the + menu offers, and anything after the + (such as Open beside).',
+      does: 'What the + menu offers, and anything after the +.',
     },
     {
       name: 'onOpen, onClose, onAdd, onAction, onDropTab',
@@ -116,8 +116,8 @@ export default defineSpec({
     {
       id: 'tabs-d2',
       decision:
-        'A material’s tab reads its name and page, "Griffiths · p. 112"; the caller writes the label.',
-      why: 'Jack’s pick, W11: two tabs of one book tell themselves apart.',
+        'A material’s tab reads its name, then its page dim, a space between and no dot: "Griffiths p. 112". A tab has a label and an optional note.',
+      why: 'Jack: "Make the page number on material dim, no dot separator." (W11 refined; the pick was name and page.)',
       beat: 'Name only',
       date: '2026-10-21',
     },

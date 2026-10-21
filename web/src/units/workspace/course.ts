@@ -32,12 +32,15 @@ export const setOf = (c: Course, id: string) => c.sets.find((s) => s.id === id);
 export const materialOf = (c: Course, id: string) =>
   c.materials.find((m) => m.id === id);
 
-/** A tab's label (workspace-d11): a set's name; a material's name and page,
- *  "Griffiths · p. 112"; "Ask". */
-export function tabLabel(c: Course, t: Tab): string {
-  if (t.kind === 'set') return setOf(c, t.ref)?.name ?? t.ref;
-  if (t.kind === 'ask') return 'Ask';
-  return `${materialOf(c, t.ref)?.name ?? t.ref} · p. ${String(t.page ?? 1)}`;
+/** A tab's words (workspace-d11): a set's name; a material's name with its
+ *  page as a dim note, "Griffiths" "p. 112"; "Ask". */
+export function tabLabel(c: Course, t: Tab): { label: string; note?: string } {
+  if (t.kind === 'set') return { label: setOf(c, t.ref)?.name ?? t.ref };
+  if (t.kind === 'ask') return { label: 'Ask' };
+  return {
+    label: materialOf(c, t.ref)?.name ?? t.ref,
+    note: `p. ${String(t.page ?? 1)}`,
+  };
 }
 
 /** The problem an Ask tab is about, as "Problem 2, Problem set 4". */
