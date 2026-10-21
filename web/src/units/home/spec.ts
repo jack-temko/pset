@@ -227,7 +227,7 @@ export default defineSpec({
     {
       id: 'home-d12',
       decision:
-        'A change is muted text: an arrow and a percent in the muted colour, never the yellow or red. The "Questions left" sparkline is questions left per day over 14 days.',
+        'A change is muted: arrow and percent in the muted colour, never yellow or red. The Questions left sparkline is questions left per day over 14 days.',
       why: 'Coordinator, 2026-10-21: being behind on a Tuesday is not a warning; sets finished per day read as a flat line beside the figure and said nothing.',
       beat: 'Green and amber changes; sets finished per day',
       date: '2026-10-21',
