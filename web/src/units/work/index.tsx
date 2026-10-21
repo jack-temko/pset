@@ -190,10 +190,10 @@ export function Work({
     set.minutesLeft === undefined ? '' : timeLeft(set.minutesLeft);
 
   return (
-    <div className="@container mx-auto flex min-w-0 max-w-[760px] flex-col gap-4">
-      <div className="flex min-w-0 items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <List>
+    <div className="@container mx-auto flex min-w-0 max-w-[760px] flex-col gap-4 py-6">
+      <List>
+        <div className="flex min-w-0 items-center pr-3">
+          <div className="min-w-0 flex-1">
             <ListRow
               title={set.name}
               label={dueBadge(set.due, today)}
@@ -205,16 +205,14 @@ export function Work({
               aside={<ProgressBar done={done} total={problems.length} />}
               asideWidth={140}
             />
-          </List>
-        </div>
-        <span className="mt-3">
+          </div>
           <ActionMenu
             label="More for this set"
             items={menu}
             onSelect={onSetItem}
           />
-        </span>
-      </div>
+        </div>
+      </List>
 
       {turnedIn && !(finish && all) && (
         <div className="ds-body flex min-w-0 flex-wrap items-center gap-3 rounded-(--ds-radius-control) border border-(--ds-border) px-4 py-2">
@@ -327,12 +325,9 @@ export function WorkSkeleton({ chips = 8 }: { chips?: number }) {
   return (
     <div
       aria-hidden
-      className="@container mx-auto flex min-w-0 max-w-[760px] flex-col gap-4"
+      className="@container mx-auto flex min-w-0 max-w-[760px] flex-col gap-4 py-6"
     >
-      <div className="flex min-w-0 items-start gap-2">
-        <div className="h-[58px] min-w-0 flex-1 animate-pulse rounded-(--ds-radius-control) border border-(--ds-border-muted) motion-reduce:animate-none" />
-        <span className="mt-3 block size-(--ds-control) shrink-0 rounded-(--ds-radius-control) border border-(--ds-border-muted)" />
-      </div>
+      <div className="h-[58px] min-w-0 animate-pulse rounded-(--ds-radius-control) border border-(--ds-border-muted) motion-reduce:animate-none" />
       <ProblemStripSkeleton count={chips} />
       <ProblemSkeleton />
     </div>
