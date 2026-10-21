@@ -62,3 +62,36 @@ still stand). Decisions go into each unit's spec with Jack's words verbatim in
 `make check` is green; each new unit and the Home view render on `/design` at 1280
 and 360 with no overflow, in loaded, loading (skeletons) and stress; the A/B states
 switch; you looked at screenshots.
+
+## Round 2: stats options (2026-10-21)
+
+Jack: **"I really want this home screen stats to look really cool. I like the heatmap for sure. Can you come up with some other options for this? I want some that look good and don't leave any large empty gaps. Lets go with the 6 months."**
+
+- Span is settled: 6 months (D2 closed). Drop the year span and its states.
+- The tiles and layout A/B (D3, D9) give way to four options, each a state of the
+  Home view, each filling the content width (1012 at most) with no empty run wider
+  than 48px inside the info area, at 1012 and at the design page's default width.
+- Every option uses the heatmap, now with month labels above and Mon, Wed, Fri
+  labels on the left (as GitHub does), 6 months, hover as before.
+  1. **panel**: one bordered panel. Heatmap left; right of it, filling the rest,
+     three stats stacked and split by hairlines: time this week, questions done this
+     week (each with last week muted and an up or down change), and the course with
+     the most time this week.
+  2. **courses**: a row of four stats without boxes, big figures, split by vertical
+     hairlines, across the full width (time this week, questions this week, time
+     this month, active days in the last 30). Below: the heatmap left and, filling
+     the rest, "This week by course": one row per course, name, a bar in the
+     accent, its time, most first.
+  3. **week**: heatmap left; right of it this week as seven vertical bars, Mon to
+     Sun, today marked, headed "1 h 35 m this week" with "8 h 55 m last week"
+     muted, and questions done beneath.
+  4. **sparklines**: three tiles across the full width, each a label, a big figure,
+     last week muted and a small 14-day sparkline (time, questions, sets
+     finished); below, the heatmap grown to fill the full width (squares size to
+     fit, at most 32px).
+- New pieces are units if reused (a `stat` without a box, a `bar-chart` of days, a
+  `course-bars` list, a `sparkline`); keep them small. Sample data grows a
+  per-day questions count and per-course time this week.
+- Phone width: every option stacks, nothing scrolls sideways.
+- Decisions home-d5 (6 months, Jack's words) and home-d6 (the four options replace
+  the tiles and layout A/B) with the quote in `log.md`.
