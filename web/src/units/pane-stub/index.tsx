@@ -1,5 +1,5 @@
-/** STAND-INS (pane-stub-d1): these exist so the workspace can be driven. The
- *  real material and Ask panes are their own grills. */
+/** STAND-IN (pane-stub-d1): this exists so the workspace can be driven. The
+ *  real Ask pane is its own grill. */
 
 function Bar({ className }: { className: string }) {
   return (
@@ -11,56 +11,6 @@ function Bar({ className }: { className: string }) {
 }
 
 const frame = 'mx-auto w-full max-w-[640px] px-6 py-6';
-
-/** A material: its name, the page number and a page-shaped block. */
-export function MaterialStub({
-  name,
-  page,
-  boxed,
-}: {
-  name: string;
-  page: number;
-  /** The problem whose box is outlined for a moment (P11); `n` restarts it. */
-  boxed?: { problem: string; n: number };
-}) {
-  return (
-    <div className={frame}>
-      <p className="ds-label text-(--ds-fg-muted)">Stand-in for the material</p>
-      <h2 className="ds-heading mt-1 [overflow-wrap:anywhere]">{name}</h2>
-      <p className="ds-body ds-tabular mt-1 text-(--ds-fg-muted)">
-        Page {page}
-      </p>
-      <div className="relative mt-6 aspect-[8.5/11] w-full rounded-(--ds-radius-control) border border-(--ds-border-muted) bg-(--ds-bg-raised)">
-        {boxed && (
-          <span
-            key={boxed.n}
-            data-box={boxed.problem}
-            className="box-flash absolute inset-x-6 top-[22%] h-[18%] rounded-(--ds-radius-control) outline-2 outline-(--ds-accent)"
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-export function MaterialStubSkeleton() {
-  return (
-    <div className={frame}>
-      <p className="ds-label flex h-[18px] items-center">
-        <Bar className="h-3 w-36" />
-      </p>
-      <p className="ds-heading mt-1 flex h-(--ds-heading-line) items-center">
-        <Bar className="h-5 w-40" />
-      </p>
-      <p className="ds-body mt-1 flex h-(--ds-body-line) items-center">
-        <Bar className="h-4 w-16" />
-      </p>
-      <div className="mt-6 aspect-[8.5/11] w-full">
-        <Bar className="h-full w-full" />
-      </div>
-    </div>
-  );
-}
 
 /** Ask: the problem it is about, and an empty input. */
 export function AskStub({ about }: { about?: string }) {

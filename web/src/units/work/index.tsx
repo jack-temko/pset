@@ -64,7 +64,9 @@ export interface WorkProps {
   /** Ask about this: open Ask with the problem as its chip (P6). */
   onAsk?: (problemId: string) => void;
   onBackToCourse?: () => void;
-  onSetMenu?: (item: SetMenuItem) => void;
+  /** The menu item picked, and for "Box one on the page" the problem you
+   *  are on. */
+  onSetMenu?: (item: SetMenuItem, problemId?: string) => void;
   onProblemMenu?: (item: ProblemMenuItem, problemId: string) => void;
   onFix?: (fix: Fix, problemId: string) => void;
   /** Its marks changed: the problems (done, removed), when it was finished and
@@ -249,7 +251,7 @@ export function Work({
           setNotice(null);
         },
       });
-    } else onSetMenu?.(item);
+    } else onSetMenu?.(item, here?.id);
   };
 
   const stands =

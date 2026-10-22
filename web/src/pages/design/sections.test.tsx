@@ -146,7 +146,7 @@ describe('the sections', () => {
   );
 
   it('says which units cite a rule, or that none does', () => {
-    const keep = at('/design/rules/keep-the-place');
+    const keep = at('/design/rules/generated-is-marked');
     expect(keep.textContent).toContain('No unit cites it.');
     const cited = at('/design/rules/failure-says-what');
     expect(cited.textContent).toContain('Sample row');
