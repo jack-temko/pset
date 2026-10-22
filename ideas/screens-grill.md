@@ -69,8 +69,11 @@ button, text link, course row, progress bar, tag, section heading, set line (the
 
 - A1: closing one side gives the other the full width; that replaces today's Focus.
 - A2: a thing is open at most once across both sides; opening it again shows its tab.
+  Replaced by W6 (`ideas/workspace-grill.md`): a material can be open twice.
 - A3: each side is at least 360px wide; below a width where two do not fit, one side
-  shows with a switch to the other.
+  shows with a switch to the other. Replaced by W8: no code for narrow windows; 360px
+  stays only as the divider's drag stop.
+- S6, S7 and S9 are reaffirmed by W2, W9 and W5 of `ideas/workspace-grill.md`.
 - A4: printing a worksheet is an action in the work pane.
 - A5: health, errors, updates, the key and appearance stay in Settings.
 - A6: the addresses above; a set, a material and the page are in the workspace's
