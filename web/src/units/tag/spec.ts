@@ -32,30 +32,14 @@ export default defineSpec({
   stress: 'A 40 character tag in a 120px container, which truncates.',
   actions: [],
   inputs: [
-    {
-      name: 'tone',
-      type: "'neutral' | 'attention' | 'danger'",
-      default: 'neutral',
-      does: 'Which border and text colour.',
-    },
-    {
-      name: 'icon',
-      type: 'LucideIcon',
-      default: 'none',
-      does: 'One glyph before the word.',
-    },
-    {
-      name: 'children',
-      type: 'ReactNode',
-      default: 'none',
-      does: 'The word or two.',
-    },
+    { name: 'tone', does: 'Which border and text colour.' },
+    { name: 'icon', does: 'One glyph before the word.' },
+    { name: 'children', does: 'The word or two.' },
   ],
   priority: {
     first: 'Its word, small beside the thing it names.',
   },
   sizes: {
-    narrowest: 40,
     gives: ['The text truncates with an ellipsis'],
   },
   rules: {

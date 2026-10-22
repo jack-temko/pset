@@ -22,12 +22,20 @@ failing files.
 Links are written once, as an action with a target (a unit and a state). What leads
 here, what it leads to, what is inside it and what it is made of are derived and drawn as
 the neighbourhood map. A flow is an ordered list of the unit's action ids; a step may
-land in any unit. A pane or view lists its components by id, and a test checks the list
-against its imports.
+land in any unit. A unit's components are not listed: the page derives them from its
+imports.
 
 Units import each other only through the `@/units/` alias; a relative import that leaves the
-unit's folder is not allowed, and a check fails on it (so the components list can be read
-from imports).
+unit's folder is not allowed, and a check fails on it (so a unit's components can be read
+from its imports).
+
+The format is locked (ideas/spec-format-grill.md): it changes only through its own
+grill, in one change that updates every spec and the checks together. A state's exact
+`text` is optional; where given, a test renders the state and fails when the text is
+not on screen. A data `call` is `'sample'` until the unit is wired, then an endpoint
+that the comments of `web/src/api/gen` name. `remembers` (what, per what, for how
+long) is optional. There is no skeleton prose, no narrowest width and no action key:
+the skeleton render per state is the spec.
 
 ## The page
 
@@ -75,17 +83,19 @@ the docs of those pipelines cite it, not units on `/design`.
 ## The checks
 
 `web/src/design/checks.test.ts` runs on every registered unit: the fields its kind
-requires, the length limits, unique ids, every action target, flow step, cited rule and
-listed component exists, the components list equals the imports, a render for every
-state, a stress render, a skeleton per state when `data` is not empty. Each is proven by a
-deliberately broken fixture.
+requires, the length limits, unique ids, every action target, flow step and cited rule
+exists, a render for every state, a stress render, a skeleton render per state when
+`data` is not empty, a wired data call that is an endpoint in the generated API types,
+and each state's `text` found in its render. The inputs are checked against the
+component's props, both ways, by the typecheck: `defineExamples(spec, Component, ...)`
+fails when they differ. Each check is proven by a deliberately broken fixture.
 
 ## Adding a unit
 
 1. Make `web/src/units/<id>/` (the folder name is the id) with `spec.ts` and `examples.tsx`,
    copying `web/src/design/sample/sample-row/`.
 2. Open `/design/<kind>/<id>` and judge it: states, Stress, Loading and Both, both themes,
-   narrow widths, the flow.
+   the flow (desktop only).
 3. `cd web && npx vitest run src/design` until the checks pass.
 
 `web/src/design/sample/` is a test fixture (a component and a view), shown at the hidden

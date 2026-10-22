@@ -12,20 +12,17 @@ export default defineSpec({
       id: 'rest',
       name: 'Rest',
       when: 'The item has loaded and nothing is open.',
-      skeleton: 'Two text lines and a square for the menu button.',
     },
     {
       id: 'menu',
       name: 'Menu open',
       when: 'The student pressed the menu button.',
-      skeleton: 'The rest skeleton: the menu opens only on loaded content.',
     },
     {
       id: 'failed',
       name: 'Failed',
       when: 'The item did not load.',
       text: 'Could not load this item: the connection dropped. Try again.',
-      skeleton: 'The rest skeleton.',
     },
   ],
   stress:
@@ -41,7 +38,6 @@ export default defineSpec({
     {
       id: 'open-menu',
       label: 'More',
-      key: 'm',
       does: 'Opens the row menu.',
       target: { unit: 'sample-row', state: 'menu' },
     },
@@ -60,29 +56,16 @@ export default defineSpec({
   data: [
     {
       reads: 'One item',
-      call: 'GET /api/sample/items/:id',
-      waiting: 'The skeleton row.',
-      failed: 'The failed state, with its text.',
+      call: 'sample',
     },
   ],
   inputs: [
+    { name: 'title', does: 'The first line.' },
+    { name: 'detail', does: 'The second line, muted.' },
+    { name: 'menuOpen', does: 'Shows the menu under the row.' },
     {
-      name: 'title',
-      type: 'string',
-      default: 'none',
-      does: 'The first line.',
-    },
-    {
-      name: 'detail',
-      type: 'string',
-      default: 'none',
-      does: 'The second line, muted.',
-    },
-    {
-      name: 'menuOpen',
-      type: 'boolean',
-      default: 'false',
-      does: 'Shows the menu under the row.',
+      name: 'failed',
+      does: 'Draws the failed state: the detail in red with an icon.',
     },
   ],
   priority: {
@@ -90,7 +73,6 @@ export default defineSpec({
     main: 'open-item',
   },
   sizes: {
-    narrowest: 160,
     gives: ['The second line truncates', 'The title truncates'],
   },
   rules: {

@@ -45,22 +45,14 @@ export default defineSpec({
   inputs: [
     {
       name: 'done',
-      type: 'number',
-      default: 'none',
       does: 'How many problems are done; kept between 0 and total.',
     },
-    {
-      name: 'total',
-      type: 'number',
-      default: 'none',
-      does: 'How many problems the set has.',
-    },
+    { name: 'total', does: 'How many problems the set has.' },
   ],
   priority: {
     first: 'The count, "2 of 6", beside the bar.',
   },
   sizes: {
-    narrowest: 80,
     gives: ['The bar shrinks to its 16px floor', 'The count never gives way'],
   },
   rules: {

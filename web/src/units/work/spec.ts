@@ -1,8 +1,5 @@
 import { defineSpec } from '@/design/spec';
 
-const SKELETON =
-  'The set line, a strip of segments, then what it opens on: a problem as bars and help rows, or the summary as bars and two button stubs, centred.';
-
 export default defineSpec({
   id: 'work',
   kind: 'pane',
@@ -15,55 +12,47 @@ export default defineSpec({
       id: 'current-underline',
       name: 'In progress, current underlined',
       when: 'Eight problems, one in each state, the current one marked by a line under its segment; the fourth problem with its note and parts.',
-      skeleton: SKELETON,
     },
     {
       id: 'summary',
       name: 'Summary, not finished',
-      when: 'The "Summary" label after the bar was pressed with 2 of 8 done: "2 of 8 done", total time, when it is due, time per problem, Turn in.',
+      when: 'The "Summary" label after the bar was pressed with 2 of 8 done: "2 of 8 done", total time, time per problem, Turn in.',
       text: '2 of 8 done',
-      skeleton: SKELETON,
     },
     {
       id: 'summary-finished',
       name: 'Summary, finished',
       when: 'All done: "All 8 done", one muted line of figures, the bars, the longest, Turn in and Back to the course.',
       text: 'All 8 done',
-      skeleton: SKELETON,
     },
     {
       id: 'summary-turned-in',
       name: 'Summary, turned in',
       when: 'Handed in: "Turned in Oct 14", the same figures, and Take back where Turn in was.',
       text: 'Turned in Oct 14',
-      skeleton: SKELETON,
     },
     {
       id: 'empty',
       name: 'No problems yet',
       when: 'A set with no problems: "No problems yet" and Add problems, centred in the pane.',
       text: 'No problems yet',
-      skeleton: SKELETON,
     },
     {
       id: 'plain',
       name: 'Plain problem',
       when: 'A one line statement, no note, no figures, help closed: the plainest a problem gets.',
-      skeleton: SKELETON,
     },
     {
       id: 'finding',
       name: 'A problem still being found',
       when: 'The fifth problem is being found: its place and the wait, a dashed chip, and the rest of the set works.',
       text: 'Finding 4.62 on page 112 · about 10 s',
-      skeleton: SKELETON,
     },
     {
       id: 'failed',
       name: 'A problem not found',
       when: 'The fifth problem could not be found: what failed, what was tried, and the fix to try next.',
       text: "Couldn't find 4.62",
-      skeleton: SKELETON,
     },
   ],
   exampleWidth: 640,
@@ -84,110 +73,74 @@ export default defineSpec({
       ],
     },
   ],
-  components: [
-    { unit: 'menu', use: 'The set menu beside the set line.' },
-    {
-      unit: 'button',
-      use: 'Take back, Turn in anyway, Keep working and Undo.',
-    },
-    { unit: 'list', use: 'Frames the set line.' },
-    {
-      unit: 'list-row',
-      use: 'The set line: name, due, time left and progress.',
-    },
-    { unit: 'problem', use: 'The problem being worked.' },
-    { unit: 'problem-strip', use: 'The strip of numbered chips.' },
-    {
-      unit: 'set-line',
-      use: 'The due date and its label, and the time-left wording.',
-    },
-    {
-      unit: 'summary',
-      use: 'The last stop: figures for the set, Turn in, Back to the course.',
-    },
-    { unit: 'tag', use: 'The "Turned in" tag.' },
-  ],
   actions: [
     {
       id: 'open-set',
       label: 'A set in Assignments',
-      key: 'Enter',
       does: 'Opens the set at the problem the student left, or the first one to do.',
       target: { unit: 'work', state: 'current-underline' },
     },
     {
       id: 'read-hint',
       label: 'Hint',
-      key: 'Enter',
       does: 'Opens the hint under the problem; the walkthrough and answer stay closed until asked.',
     },
     {
       id: 'mark-done',
       label: 'Mark done',
-      key: 'Enter',
       does: 'Marks the problem done. It does not move on.',
     },
     {
       id: 'next',
       label: 'Next',
-      key: 'Enter',
       does: 'Goes to the next problem still to do, past the end back to the start. It marks nothing.',
     },
     {
       id: 'jump',
       label: 'A chip in the strip',
-      key: 'Enter',
       does: 'Goes to that problem in one click, such as the fifth.',
     },
     {
       id: 'finish',
       label: 'Mark done on the last problem',
-      key: 'Enter',
       does: 'Shows the summary, with every problem done.',
       target: { unit: 'work', state: 'summary-finished' },
     },
     {
       id: 'open-summary',
       label: 'The "Summary" label after the bar',
-      key: 'Enter',
       does: 'Opens the summary any time. A segment returns to its problem; Next on the last problem comes here too.',
       target: { unit: 'work', state: 'summary' },
     },
     {
       id: 'turn-in',
       label: 'Turn in',
-      key: 'Enter',
       does: 'Hands the set in; with problems left it asks first.',
       target: { unit: 'work', state: 'summary-turned-in' },
     },
     {
       id: 'take-back',
       label: 'Take back',
-      key: 'Enter',
       does: 'Takes the set back so it can be worked on again.',
     },
     {
       id: 'open-page',
       label: 'The page link',
-      key: 'Enter',
       does: 'Tells the workspace to turn the material to the page and outline the problem’s box. The workspace is not a unit yet, so it has no target.',
     },
     {
       id: 'ask',
       label: 'Ask about this',
-      key: 'Enter',
       does: 'Tells the workspace to open Ask with "About 4.62" as a chip. It has no target yet.',
     },
     {
       id: 'remove',
       label: 'Remove, in the problem menu',
-      key: 'Enter',
       does: 'Removes the problem at once and says "Removed 4.62 · Undo" for six seconds.',
     },
     {
       id: 'set-menu',
       label: 'The set menu',
-      key: 'Enter',
       does: 'Add problems, Box one on the page, Edit, Print worksheet, Turn in or Take back, Delete (with Undo).',
     },
   ],
@@ -195,37 +148,63 @@ export default defineSpec({
     {
       reads:
         'The set (name, due, time left, time spent) and its problems with their labels, pages, statements, figures, parts and help',
-      call: 'None yet: sample data (the workspace will pass the real set)',
-      waiting:
-        'The set line, the strip and the problem as skeletons in their own heights; a problem still being found says so and when.',
-      failed:
-        'A problem that cannot be found says what failed, what was tried and what to do next, on its own page.',
+      call: 'sample',
+    },
+  ],
+  remembers: [
+    {
+      what: 'The problem you were on',
+      per: 'Set',
+      for: 'Until you move to another problem; today only until the page closes (the workspace will keep it across visits).',
+    },
+    {
+      what: 'Whether you were on the summary, as a place beside the problem',
+      per: 'Set',
+      for: 'Until you leave the summary; today only until the page closes.',
     },
   ],
   inputs: [
+    { name: 'set', does: 'The set and its problems.' },
+    { name: 'startAt', does: 'The problem to open on.' },
     {
-      name: 'set',
-      type: 'WorkSet',
-      default: 'none',
-      does: 'The set and its problems.',
-    },
-    {
-      name: 'startAt, startSummary',
-      type: 'string, boolean',
-      default: 'where the student left, false',
-      does: 'The problem to open on, or the summary.',
+      name: 'startSummary',
+      does: 'Opens on the summary when true.',
     },
     {
       name: 'memory',
-      type: 'Memory',
-      default: 'one kept while the page is open',
       does: 'Where the current problem of each set is remembered.',
     },
     {
-      name: 'onOpenPage, onAsk, onBackToCourse, onSetMenu, onProblemMenu, onFix',
-      type: 'callbacks',
-      default: 'none',
-      does: 'What the workspace will handle: open a page with the problem’s box, ask about a problem, and the menus.',
+      name: 'today',
+      does: 'The day Due soon counts from (the design page and tests).',
+    },
+    {
+      name: 'onOpenPage',
+      does: 'Called to open a page with the problem’s box.',
+    },
+    {
+      name: 'onAsk',
+      does: 'Called with the problem to ask about.',
+    },
+    {
+      name: 'onBackToCourse',
+      does: 'Called when Back to the course is pressed.',
+    },
+    {
+      name: 'onSetMenu',
+      does: 'Called with the set menu item picked.',
+    },
+    {
+      name: 'onProblemMenu',
+      does: 'Called with the problem menu item picked.',
+    },
+    {
+      name: 'onFix',
+      does: 'Called with the fix the student picked.',
+    },
+    {
+      name: 'onChange',
+      does: 'Called when the marks change: the problems done or removed, when it was finished and turned in.',
     },
   ],
   priority: {
@@ -233,10 +212,8 @@ export default defineSpec({
     main: 'mark-done',
   },
   sizes: {
-    narrowest: 320,
     gives: [
       'The pane’s content is at most 760 wide, centred',
-      'The progress bar goes below 440 and the count stays in the meta',
       'The strip wraps to more rows',
     ],
   },

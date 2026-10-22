@@ -41,15 +41,12 @@ export default defineSpec({
   inputs: [
     {
       name: 'onMove',
-      type: '(clientX: number) => void',
-      default: 'none',
       does: 'Called with the pointer’s x in window coordinates while dragging.',
     },
+    { name: 'onReset', does: 'Called on a double click.' },
     {
-      name: 'onReset',
-      type: '() => void',
-      default: 'none',
-      does: 'Called on a double click.',
+      name: 'forceState',
+      does: 'Draws the hover or drag look without either (the design page only).',
     },
   ],
   priority: {
@@ -57,7 +54,6 @@ export default defineSpec({
     main: 'drag',
   },
   sizes: {
-    narrowest: 9,
     gives: ['It is always 1px wide; only the grip area could shrink'],
   },
   rules: { cite: ['material-is-main', 'contrast-floors'] },

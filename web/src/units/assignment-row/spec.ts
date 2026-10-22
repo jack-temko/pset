@@ -41,83 +41,50 @@ export default defineSpec({
   ],
   exampleWidth: 960,
   stress:
-    'A 70 character set name and a 40 character course name at 320px: the bar is gone and the title and meta truncate.',
-  components: [
-    { unit: 'list-row', use: 'The row: title, label, status, meta and aside.' },
-    { unit: 'progress-bar', use: 'The set\u2019s progress, in the aside.' },
-    {
-      unit: 'set-line',
-      use: 'The due date, its label and the time-left wording.',
-    },
-    { unit: 'link', use: 'The course name in the meta.' },
-    { unit: 'list', use: 'Frames the five rows in the Home example.' },
-    { unit: 'section-heading', use: 'Titles each list in the Home example.' },
-    {
-      unit: 'course-row',
-      use: 'The Courses list below it in the Home example.',
-    },
-  ],
+    'A 70 character set name and a 40 character course name: the title and meta truncate.',
   actions: [
     {
       id: 'open-set',
       label: 'The set name',
-      key: 'Enter',
       does: 'Opens the set in the workspace, where the student left off. The workspace is not a unit yet, so it has no target.',
     },
     {
       id: 'open-course',
       label: 'The course name in the meta',
-      key: 'Enter',
       does: 'Opens the course. The course screen is not a unit yet, so it has no target.',
     },
   ],
   inputs: [
+    { name: 'set', does: 'The set’s name.' },
+    { name: 'href', does: 'Where the set opens.' },
+    { name: 'course', does: 'The course’s name.' },
+    { name: 'courseHref', does: 'Where the course opens.' },
     {
-      name: 'set, href',
-      type: 'string',
-      default: 'none',
-      does: 'The set\u2019s name and where it opens.',
+      name: 'done',
+      does: 'Problems done; with total they draw the progress bar.',
     },
     {
-      name: 'course, courseHref',
-      type: 'string',
-      default: 'none',
-      does: 'The course\u2019s name and where it opens.',
-    },
-    {
-      name: 'done, total',
-      type: 'number',
-      default: 'none',
-      does: 'Problems done and in the set; they draw the progress bar.',
+      name: 'total',
+      does: 'Problems in the set.',
     },
     {
       name: 'minutesLeft',
-      type: 'number',
-      default: 'none',
       does: 'The time left, shown only when PSet knows it.',
     },
     {
       name: 'due',
-      type: 'Date',
-      default: 'none',
       does: 'A local calendar date (see parseDueDate); without it no date or label shows.',
     },
     {
       name: 'reason',
-      type: "'due' | 'opened'",
-      default: 'none',
       does: 'Why it is listed; only an `opened` one says when it was opened.',
     },
     {
       name: 'openedAt',
-      type: 'Date',
-      default: 'none',
       does: 'When the student last opened it; read for an `opened` one.',
     },
     {
       name: 'today',
-      type: 'Date',
-      default: 'now',
       does: 'The moment "within 2 days" and "Opened 2 h ago" count from; for the design page and tests.',
     },
   ],
@@ -126,9 +93,7 @@ export default defineSpec({
     main: 'open-set',
   },
   sizes: {
-    narrowest: 320,
     gives: [
-      'The progress bar goes below 440, and the count stays in the meta',
       'Then the meta truncates, as a whole',
       'Then the set name truncates',
     ],

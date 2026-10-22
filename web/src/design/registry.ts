@@ -82,16 +82,20 @@ export function leadsHere(specs: readonly AnySpec[], id: string): Link[] {
   );
 }
 
-/** Used by: the units that list this one in `components`. */
-export function usedBy(specs: readonly AnySpec[], id: string): string[] {
-  return specs
-    .filter((s) => s.components?.some((c) => c.unit === id))
-    .map((s) => s.id);
+/** What each unit is made of: the other units its source imports, by unit
+ *  id (see `loadImports`). */
+export type Imports = Record<string, readonly string[]>;
+
+/** Used by: the units whose source imports this one. */
+export function usedBy(imports: Imports, id: string): string[] {
+  return Object.entries(imports)
+    .filter(([from, made]) => from !== id && made.includes(id))
+    .map(([from]) => from);
 }
 
-/** Made of: what this unit lists in `components`. */
-export function madeOf(spec: AnySpec): string[] {
-  return (spec.components ?? []).map((c) => c.unit);
+/** Made of: the units this unit's source imports. */
+export function madeOf(imports: Imports, id: string): string[] {
+  return [...(imports[id] ?? [])];
 }
 
 export interface RuleUse {

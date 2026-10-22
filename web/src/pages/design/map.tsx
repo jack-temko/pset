@@ -1,9 +1,16 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Box } from '@/components/box';
 import { Label } from '@/components/label';
-import { leadsHere, leadsTo, madeOf, usedBy } from '@/design/registry';
+import { loadImports } from '@/design/imports';
+import {
+  leadsHere,
+  leadsTo,
+  madeOf,
+  usedBy,
+  type Imports,
+} from '@/design/registry';
 import type { AnySpec } from '@/design/spec';
 import { cn } from '@/lib/utils';
 import { ALL_SPECS, specOf, unitPath } from './lookup';
@@ -104,8 +111,18 @@ export function NeighbourMap({ spec }: { spec: AnySpec }) {
     id: l.unit,
     label: l.action.label,
   }));
-  const inside = usedBy(ALL_SPECS, spec.id);
-  const made = madeOf(spec);
+  const [imports, setImports] = useState<Imports>({});
+  useEffect(() => {
+    let live = true;
+    void loadImports().then((i) => {
+      if (live) setImports(i);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const inside = usedBy(imports, spec.id);
+  const made = madeOf(imports, spec.id);
   if (from.length === 0 && to.length === 0 && inside.length + made.length === 0)
     return <Quiet>Nothing links to this unit, and it links to nothing.</Quiet>;
   if (from.length === 0 && to.length === 0)

@@ -145,7 +145,7 @@ export const RULES: readonly Rule[] = [
     id: 'say-it-once',
     rule: "Show each fact once on a screen; where two parts would repeat it, the one nearer the student's eye keeps it",
     check:
-      'No date, count, name or state is written in two parts of one screen at once',
+      'No date, count, name or state is written twice on one screen, unless never shown together or one answers at a glance what the other needs reading for',
     scope: 'all',
   },
 ];

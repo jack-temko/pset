@@ -3,7 +3,7 @@ import { HomeLists } from '@/units/assignment-row/home';
 import { CourseRow } from './index';
 import spec from './spec';
 
-export default defineExamples(spec, {
+export default defineExamples(spec, CourseRow, {
   states: {
     'to-do': () => (
       <CourseRow

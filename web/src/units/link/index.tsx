@@ -1,4 +1,4 @@
-import type { ComponentPropsWithRef } from 'react';
+import type { ComponentPropsWithRef, ReactNode } from 'react';
 
 export type LinkTone = 'accent' | 'fg' | 'muted';
 
@@ -7,6 +7,28 @@ const TONES: Record<LinkTone, string> = {
   fg: 'text-(--ds-fg)',
   muted: 'text-(--ds-fg-muted)',
 };
+
+/** What the link adds to the anchor. */
+export interface LinkOwnProps {
+  href: string;
+  inline?: boolean;
+  /** `accent` is the link colour; `fg` and `muted` quieten a link in a list
+   *  or a path (link-d3). */
+  tone?: LinkTone;
+  weight?: 'regular' | 'medium';
+  /** The step of a standalone link; an inline link takes the text's own.
+   *  `brand` is the wordmark's, and only the wordmark's. */
+  size?: 'body' | 'small' | 'brand';
+  /** Draws the hover or focus look without either (the design page only). */
+  forceState?: 'hover' | 'focus';
+  className?: string;
+  children?: ReactNode;
+}
+
+/** The anchor's own props (`onClick`, `ref` and the rest) pass through, so
+ *  a router-aware screen can intercept navigation. */
+export type LinkProps = Omit<ComponentPropsWithRef<'a'>, keyof LinkOwnProps> &
+  LinkOwnProps;
 
 /** Goes somewhere (link-d2). Underlined inside text; plain when it stands
  *  alone, underlined on hover and focus (link-d1). The anchor's own props
@@ -22,19 +44,7 @@ export function Link({
   className,
   children,
   ...rest
-}: Omit<ComponentPropsWithRef<'a'>, 'href'> & {
-  href: string;
-  inline?: boolean;
-  /** `accent` is the link colour; `fg` and `muted` quieten a link in a list
-   *  or a path (link-d3). */
-  tone?: LinkTone;
-  weight?: 'regular' | 'medium';
-  /** The step of a standalone link; an inline link takes the text's own.
-   *  `brand` is the wordmark's, and only the wordmark's. */
-  size?: 'body' | 'small' | 'brand';
-  /** Draws the hover or focus look without either (the design page only). */
-  forceState?: 'hover' | 'focus';
-}) {
+}: LinkProps) {
   const underline =
     inline || forceState
       ? 'underline'

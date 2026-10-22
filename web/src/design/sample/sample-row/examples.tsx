@@ -7,7 +7,7 @@ const LONG_TITLE =
 const LONG_DETAIL =
   'A second line that also goes on, well past the width of the row, with a date, a count and a name in it';
 
-export default defineExamples(spec, {
+export default defineExamples(spec, SampleRow, {
   states: {
     rest: () => (
       <SampleRow title="Problem set 4" detail="Due Friday, 6 questions" />

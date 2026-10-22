@@ -61,4 +61,4 @@ const skeletons = Object.fromEntries(
   ]),
 ) as Record<keyof typeof STATES, () => React.ReactNode>;
 
-export default defineExamples(spec, { states, stress, skeletons });
+export default defineExamples(spec, Workspace, { states, stress, skeletons });

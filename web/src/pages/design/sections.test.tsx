@@ -7,7 +7,12 @@ import { describe, expect, it } from 'vitest';
 import { fixture } from '@/design/registry';
 import { LOG_BRANCH, logUrl } from './lookup';
 import { RulesPage } from './rules';
-import { Decisions, PriorityAndSizes, RulesSection } from './sections';
+import {
+  Decisions,
+  PriorityAndSizes,
+  Remembers,
+  RulesSection,
+} from './sections';
 import { RULES } from '@/design/rules';
 import { VISION } from '@/design/vision';
 
@@ -54,6 +59,48 @@ describe('the sections', () => {
     );
     expect(el.textContent).toContain('Replaced by sample-row-d2');
     expect(el.textContent.match(/Replaced by/g)).toHaveLength(1);
+  });
+
+  it('shows decisions in force first and folds the replaced ones away', () => {
+    const el = render(
+      <Decisions
+        spec={{
+          ...row,
+          decisions: [
+            { ...row.decisions[0], supersededBy: 'sample-row-d2' },
+            row.decisions[1],
+          ],
+        }}
+      />,
+    );
+    const details = el.querySelector('details');
+    expect(details?.open).toBe(false);
+    expect(details?.textContent).toContain(row.decisions[0].decision);
+    expect(details?.textContent).not.toContain(row.decisions[1].decision);
+    const first = el.querySelector('table');
+    expect(first?.textContent).toContain(row.decisions[1].decision);
+    expect(first?.textContent).not.toContain(row.decisions[0].decision);
+    expect(el.querySelector('summary')?.textContent).toBe('1 replaced');
+  });
+
+  it('has no fold when nothing is replaced', () => {
+    const el = render(<Decisions spec={row} />);
+    expect(el.querySelector('details')).toBeNull();
+  });
+
+  it('shows what a unit remembers only when it says so', () => {
+    expect(render(<Remembers spec={row} />).textContent).toBe('');
+    const el = render(
+      <Remembers
+        spec={{
+          ...row,
+          remembers: [{ what: 'The problem', per: 'Set', for: 'A week' }],
+        }}
+      />,
+    );
+    expect(el.textContent).toContain('Remembers');
+    expect(el.textContent).toContain('The problem');
+    expect(el.textContent).toContain('A week');
   });
 
   it('opens the Rules tab with the vision, then every rule in one list', () => {

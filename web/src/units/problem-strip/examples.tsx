@@ -20,7 +20,7 @@ const chips = (): Chip[] =>
     ...s,
   })) as Chip[];
 
-export default defineExamples(spec, {
+export default defineExamples(spec, ProblemStrip, {
   states: {
     'in-progress': () => <ProblemStrip chips={chips()} current="p4" />,
     'each-state': () => (

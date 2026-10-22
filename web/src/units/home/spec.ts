@@ -1,8 +1,5 @@
 import { defineSpec } from '@/design/spec';
 
-const SKELETON =
-  'Greeting and each stat as skeletons in the option\u2019s own layout, then the two lists as a heading bar over a block.';
-
 export default defineSpec({
   id: 'home',
   kind: 'view',
@@ -15,18 +12,16 @@ export default defineSpec({
       id: 'default',
       name: 'This week with sparklines',
       when: 'The one box: the heatmap left; right, this week as seven bars with last week muted, then questions done and what is left, a 14-day sparkline beside each.',
-      skeleton: SKELETON,
     },
     {
       id: 'no-time',
       name: 'No time yet, no name',
       when: 'A new student: no name, the empty grid under "No time studied yet", 0 m and 0 in the figures and nothing due.',
       text: 'No time studied yet',
-      skeleton: SKELETON,
     },
   ],
   stress:
-    'A 40 character name, a 70 character set title and a set of 999 questions and figures of 99 h or more, at 360px: every line wraps and nothing overflows.',
+    'A 40 character name, a 70 character set title and a set of 999 questions and figures of 99 h or more: long text wraps or truncates and nothing overflows.',
   flows: [
     {
       id: 'pick-tonights-work',
@@ -40,44 +35,20 @@ export default defineSpec({
     },
     { id: 'see-every-set', name: 'See every set', steps: ['show-all'] },
   ],
-  components: [
-    { unit: 'top-bar', use: 'The top of the screen, in its Home state.' },
-    {
-      unit: 'greeting',
-      use: 'The big line for the hour and what is due next.',
-    },
-    {
-      unit: 'heatmap',
-      use: 'Time studied per day over 6 months, grown to fill its column.',
-    },
-    { unit: 'bar-chart', use: 'This week as seven bars.' },
-    {
-      unit: 'sparkline',
-      use: 'The last 14 days beside each figure.',
-    },
-    {
-      unit: 'assignment-row',
-      use: 'HomeLists: the Assignments and Courses lists below the info area.',
-    },
-    { unit: 'set-line', use: 'minutesText, for every time shown.' },
-  ],
   actions: [
     {
       id: 'open-set',
       label: 'A set in Assignments',
-      key: 'Enter',
       does: 'Opens the set in the workspace. The workspace is not a unit yet, so it has no target.',
     },
     {
       id: 'open-course',
       label: 'A course\u2019s name',
-      key: 'Enter',
       does: 'Opens the course. The course screen is not a unit yet, so it has no target.',
     },
     {
       id: 'show-all',
       label: 'Show all',
-      key: 'Enter',
       does: 'Shows every set or every course. The list screens are not units yet, so it has no target.',
     },
   ],
@@ -85,40 +56,39 @@ export default defineSpec({
     {
       reads:
         'The name, the sets (with questions done and total), and per day: minutes by course, questions done, questions left',
-      call: 'None yet: sample data (the server has no per-day endpoint)',
-      waiting:
-        'Skeletons for the greeting, the stats and the heatmap, and a block for each list.',
-      failed: 'Not designed: Home has no failed state yet.',
+      call: 'sample',
     },
   ],
   inputs: [
     {
-      name: 'name, now, pick',
-      type: 'string, Date, number',
-      default: 'none (pick: random per visit)',
-      does: 'The student, the moment, and which of the hour\u2019s greetings.',
+      name: 'name',
+      does: 'The student’s name, empty for a new student.',
     },
     {
-      name: 'sets, study',
-      type: 'GreetingSet[], StudyDay[]',
-      default: 'none',
-      does: 'The sets for the muted line and what is left, and per-day study with questions done and questions left.',
+      name: 'now',
+      does: 'The moment, for the greeting and the dates.',
     },
     {
-      name: 'homeHref, settingsHref',
-      type: 'string',
-      default: "'/', '/settings'",
-      does: 'Where the wordmark and Settings go.',
+      name: 'pick',
+      does: 'Which of the hour’s greetings.',
     },
+    {
+      name: 'sets',
+      does: 'The sets for the greeting’s line and what is left.',
+    },
+    {
+      name: 'study',
+      does: 'Per-day study, with questions done and questions left.',
+    },
+    { name: 'homeHref', does: 'Where the wordmark goes.' },
+    { name: 'settingsHref', does: 'Where Settings goes.' },
   ],
   priority: {
     first: 'The greeting and what is due next, then the Assignments list.',
     main: 'open-set',
   },
   sizes: {
-    narrowest: 320,
     gives: [
-      'Under 940 wide this week sits under the heatmap, not beside it',
       'The heatmap shows fewer weeks, the oldest going first',
       'The lists give way as their rows do',
     ],
@@ -131,6 +101,7 @@ export default defineSpec({
       'serif-to-read',
       'honest-waits',
       'sentence-case',
+      'say-it-once',
     ],
   },
   log: 'web/src/units/home/log.md',
@@ -159,6 +130,7 @@ export default defineSpec({
       why: 'Assumed in home-info-grill.',
       beat: 'Scrolling the heatmap sideways',
       date: '2026-10-16',
+      supersededBy: 'home-d13',
     },
     {
       id: 'home-d4',
@@ -231,6 +203,46 @@ export default defineSpec({
       why: 'Coordinator, 2026-10-21: being behind on a Tuesday is not a warning; sets finished per day read as a flat line beside the figure and said nothing.',
       beat: 'Green and amber changes; sets finished per day',
       date: '2026-10-21',
+    },
+    {
+      id: 'home-d13',
+      decision:
+        'Home has no narrow layout: this week is always beside the heatmap, and the heatmap alone gives way by showing fewer weeks.',
+      why: 'Desktop only; the spec format change strips the narrow code (ideas/spec-format-grill.md, F10).',
+      beat: 'Stacking the tiles above the heatmap at phone width (home-d3)',
+      date: '2026-10-22',
+    },
+    {
+      id: 'home-d14',
+      decision:
+        'The greeting\u2019s due line stays, though the first Assignments row shows the same date (say-it-once).',
+      why: 'Jack, 2026-10-22: you know when the next one is due without reading Assignments.',
+      beat: 'Dropping the repeat from the greeting',
+      date: '2026-10-22',
+    },
+    {
+      id: 'home-d15',
+      decision:
+        'Time this week shows in the info area and again on each course row (say-it-once).',
+      why: 'Jack, 2026-10-22: the two are never on screen together, so nothing is said twice at once.',
+      beat: 'Dropping the time from the course rows',
+      date: '2026-10-22',
+    },
+    {
+      id: 'home-d16',
+      decision:
+        'A row keeps the due tag beside the set name and the due date at the right (say-it-once).',
+      why: 'Assumed, not asked: the tag gives urgency at a glance and the date gives the exact day.',
+      beat: 'The tag in place of the date (set-line-d7)',
+      date: '2026-10-22',
+    },
+    {
+      id: 'home-d17',
+      decision:
+        'Home has no failed state yet: it reads sample data, and how a failed read looks is not designed.',
+      why: 'Not designed: noted when the spec format dropped the data waiting and failed fields (ideas/spec-format-grill.md, F9).',
+      beat: 'A failed line in the data section',
+      date: '2026-10-22',
     },
   ],
 });

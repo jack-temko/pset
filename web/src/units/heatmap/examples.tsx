@@ -36,7 +36,7 @@ function In({ px, children }: { px: number; children: React.ReactNode }) {
 
 const skeleton = () => <HeatmapSkeleton />;
 
-export default defineExamples(spec, {
+export default defineExamples(spec, Heatmap, {
   states: {
     'six-months': () => <Heatmap days={DAYS} today={SAMPLE_TODAY} weeks={26} />,
     grown: () => (

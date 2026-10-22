@@ -41,56 +41,35 @@ export default defineSpec({
     },
   ],
   stress:
-    'A 70 character set name in a 360px container: the bar is gone, the title and the meta truncate, the count stays.',
-  components: [
-    {
-      unit: 'list-row',
-      use: 'The row: title, status, meta and the progress aside.',
-    },
-    { unit: 'progress-bar', use: 'The set\u2019s progress, in the aside.' },
-    {
-      unit: 'tag',
-      use: 'The "Due soon" and "Overdue" badges, in the label slot.',
-    },
-  ],
+    'A 70 character set name beside its bar: the title and the meta truncate and the bar keeps its width.',
   actions: [
     {
       id: 'open-set',
       label: 'The title',
-      key: 'Enter',
       does: 'Opens the set in the workspace. The workspace is not a unit yet, so it has no target.',
     },
   ],
   inputs: [
-    { name: 'set', type: 'string', default: 'none', does: 'The set’s name.' },
+    { name: 'set', does: 'The set’s name.' },
     {
-      name: 'done, total',
-      type: 'number',
-      default: 'none',
-      does: 'Problems done and in the set; they draw the progress bar.',
+      name: 'done',
+      does: 'Problems done; with total they draw the progress bar.',
+    },
+    {
+      name: 'total',
+      does: 'Problems in the set.',
     },
     {
       name: 'minutesLeft',
-      type: 'number',
-      default: 'none',
       does: 'The time left, shown only when PSet knows it.',
     },
     {
       name: 'due',
-      type: 'Date',
-      default: 'none',
       does: 'A local calendar date (see parseDueDate); without it no status is shown.',
     },
-    {
-      name: 'href',
-      type: 'string',
-      default: 'none',
-      does: 'Where the title goes.',
-    },
+    { name: 'href', does: 'Where the title goes.' },
     {
       name: 'today',
-      type: 'Date',
-      default: 'now',
       does: 'The day "within 2 days" counts from; for the design page and tests.',
     },
   ],
@@ -99,9 +78,7 @@ export default defineSpec({
     main: 'open-set',
   },
   sizes: {
-    narrowest: 320,
     gives: [
-      'The progress bar goes below 440, and the count stays in the meta',
       'Then the meta truncates, as a whole',
       'Then the set name truncates',
     ],
@@ -167,6 +144,7 @@ export default defineSpec({
       why: 'Jack: "We need to package as tightly as possible, this will be used in the window pane for sets likely too."',
       beat: 'A one-line grid of columns',
       date: '2026-10-14',
+      supersededBy: 'set-line-d8',
     },
     {
       id: 'set-line-d7',
@@ -175,6 +153,14 @@ export default defineSpec({
       why: 'Jack: "These look weird because it replaces the original text. Can we try to always have the due date, but have badges?"',
       beat: 'The badge in place of the date (set-line-d2, d4)',
       date: '2026-10-16',
+    },
+    {
+      id: 'set-line-d8',
+      decision:
+        'A set line is a two-line list row: title and due, then time left, the bar at the right. The count is the bar; it is not repeated.',
+      why: 'Desktop only: the bar never goes first, so the count has no place to stay (ideas/spec-format-grill.md, F10).',
+      beat: 'The bar going first when narrow, with the count in the meta (set-line-d6)',
+      date: '2026-10-22',
     },
   ],
 });

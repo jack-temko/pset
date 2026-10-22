@@ -1,5 +1,4 @@
 import { ListRow } from '@/units/list-row';
-import { narrowOnly } from '@/units/list-row/meta';
 import { ProgressBar } from '@/units/progress-bar';
 import { dueBadge } from './badge';
 import { dueText, timeLeft } from './dates';
@@ -34,23 +33,14 @@ export function DueStatus({
   return <>{dueText(due, today).text}</>;
 }
 
-/** The meta of a set: the time left when PSet knows it, and the count where
- *  the progress bar is not drawn. */
-function setMeta({
-  done,
-  total,
-  minutesLeft,
-}: Pick<SetLineProps, 'done' | 'total' | 'minutesLeft'>) {
+/** The meta of a set: the time left when PSet knows it. */
+function setMeta({ minutesLeft }: Pick<SetLineProps, 'minutesLeft'>) {
   const time = minutesLeft === undefined ? '' : timeLeft(minutesLeft);
-  return [
-    narrowOnly(`${String(done)} of ${String(total)}`),
-    ...(time ? [time] : []),
-  ];
+  return time ? [time] : [];
 }
 
 /** One active set as a list row, for the window pane: opens the set in the
- *  workspace (set-line-d3). It has no course name. At pane widths the bar goes
- *  first and the count stays in the meta (set-line-d6). */
+ *  workspace (set-line-d3). It has no course name. */
 export function SetLine({
   set,
   done,
@@ -66,7 +56,7 @@ export function SetLine({
       href={href}
       label={dueBadge(due, today)}
       status={<DueStatus due={due} today={today} />}
-      meta={setMeta({ done, total, minutesLeft })}
+      meta={setMeta({ minutesLeft })}
       aside={<ProgressBar done={done} total={total} />}
       asideWidth={ASIDE}
     />

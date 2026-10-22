@@ -37,72 +37,38 @@ export default defineSpec({
   ],
   exampleWidth: 720,
   stress:
-    'An 80 character title and 80 characters of meta at 320px: the aside is gone and both truncate on one line.',
-  components: [
-    { unit: 'link', use: 'The title, and any meta links.' },
-    { unit: 'tag', use: 'The status, in the examples.' },
-    { unit: 'progress-bar', use: 'The aside, in the examples.' },
-  ],
+    'An 80 character title and 80 characters of meta beside an aside: both truncate on one line and the aside keeps its width.',
   actions: [
     {
       id: 'open',
       label: 'The title',
-      key: 'Enter',
       does: 'Goes where the title\u2019s href says; the caller decides where. Only the title is a link, not the row.',
     },
   ],
   inputs: [
-    {
-      name: 'title',
-      type: 'string',
-      default: 'none',
-      does: 'Line one, truncating.',
-    },
-    {
-      name: 'href',
-      type: 'string',
-      default: 'none',
-      does: 'Makes the title a link.',
-    },
+    { name: 'title', does: 'Line one, truncating.' },
+    { name: 'href', does: 'Makes the title a link.' },
     {
       name: 'label',
-      type: 'ReactNode',
-      default: 'none',
       does: 'A Tag right after the title on line one, 8 apart, centred on the title.',
     },
     {
       name: 'status',
-      type: 'ReactNode',
-      default: 'none',
       does: 'A Tag or short muted text at the right of the row, centred vertically in it.',
     },
     {
       name: 'meta',
-      type: 'ReactNode[]',
-      default: '[]',
-      does: 'Short items joined by " \u00b7 ", truncating as a whole; narrowOnly() marks one that shows only where the aside does not.',
+      does: 'Short items joined by " · ", truncating as a whole.',
     },
-    {
-      name: 'aside',
-      type: 'ReactNode',
-      default: 'none',
-      does: 'At the right, spanning both lines.',
-    },
+    { name: 'aside', does: 'At the right, spanning both lines.' },
     {
       name: 'asideWidth',
-      type: 'number | string',
-      default: '120',
-      does: 'The aside\u2019s width: a number is px, a string any CSS width, so asides align down a list.',
+      does: 'The aside’s width: a number is px, a string any CSS width, so asides align down a list.',
     },
   ],
   priority: { first: 'The title.', main: 'open' },
   sizes: {
-    narrowest: 280,
-    gives: [
-      'The aside goes below 440',
-      'Then the meta truncates, as a whole',
-      'Then the title truncates',
-    ],
+    gives: ['Then the meta truncates, as a whole', 'Then the title truncates'],
   },
   rules: {
     cite: [
@@ -138,6 +104,7 @@ export default defineSpec({
       why: 'Jack: the count always shows. Settled afterwards, not asked: how it is done.',
       beat: 'Hide the count; shrink the aside',
       date: '2026-10-14',
+      supersededBy: 'list-row-d10',
     },
     {
       id: 'list-row-d4',
@@ -188,6 +155,14 @@ export default defineSpec({
       why: 'Jack: "change the icons to text, e.g. 3 sets * 5 materials"; nothing else used them.',
       beat: 'A muted icon and number in the meta (list-row-d8)',
       date: '2026-10-16',
+    },
+    {
+      id: 'list-row-d10',
+      decision:
+        'The aside always shows, and no meta item is narrow-only: there is no narrow layout.',
+      why: 'Desktop only; the spec format change (ideas/spec-format-grill.md, F10) strips the narrow code.',
+      beat: 'The aside going first when the row is narrow (list-row-d3)',
+      date: '2026-10-22',
     },
   ],
 });

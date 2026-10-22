@@ -5,7 +5,7 @@ import spec from './spec';
 const FRAME =
   'w-[240px] max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)';
 
-export default defineExamples(spec, {
+export default defineExamples(spec, Sparkline, {
   states: {
     busy: () => (
       <div className={FRAME}>

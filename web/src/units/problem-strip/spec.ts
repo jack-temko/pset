@@ -31,40 +31,35 @@ export default defineSpec({
     {
       id: 'jump',
       label: 'A segment',
-      key: 'Enter',
       does: 'Goes to that problem in one click.',
     },
     {
       id: 'summary',
       label: 'The Summary label',
-      key: 'Enter',
       does: 'Opens the summary. The summary is not in this unit, so it has no target.',
     },
   ],
   inputs: [
     {
       name: 'chips',
-      type: 'Chip[]',
-      default: 'none',
       does: 'Each problem’s id, label, title, state (done, started, todo, working, queued or failed) and the state in words.',
     },
     {
-      name: 'summary, allDone, onSummary',
-      type: 'boolean, boolean, () => void',
-      default: 'false',
-      does: 'A "Summary" label ends the bar and opens the summary; while it shows, label and line are the text colour, green when all are done.',
-    },
-    {
       name: 'current',
-      type: 'string',
-      default: 'none',
       does: 'The id of the problem the student is on, marked.',
     },
     {
-      name: 'onJump',
-      type: '(id) => void',
-      default: 'none',
-      does: 'Which segment was pressed.',
+      name: 'summary',
+      does: 'Shows the Summary label at the end of the bar; while the summary is open it is in the text colour.',
+    },
+    {
+      name: 'allDone',
+      does: 'Turns the Summary label and its line green.',
+    },
+    { name: 'onJump', does: 'Which segment was pressed.' },
+    {
+      name: 'onSummary',
+      does: 'Called when the Summary label is pressed.',
     },
   ],
   priority: {
@@ -72,15 +67,8 @@ export default defineSpec({
     main: 'jump',
   },
   sizes: {
-    narrowest: 320,
     gives: ['The segments get narrower and the bar never wraps'],
   },
-  components: [
-    {
-      unit: 'tooltip',
-      use: 'Names a segment by its number, title and state on hover.',
-    },
-  ],
   rules: {
     cite: [
       'work-first',

@@ -81,7 +81,6 @@ export function Actions({ spec }: { spec: AnySpec }) {
         columns={[
           { key: 'i', header: 'Id', fit: true, cell: (r) => r.id },
           { key: 'l', header: 'Label', cell: (r) => r.label },
-          { key: 'k', header: 'Key', fit: true, cell: (r) => r.key ?? '' },
           { key: 'd', header: 'The student', cell: (r) => r.does },
           {
             key: 't',
@@ -118,9 +117,32 @@ export function DataSection({ spec }: { spec: AnySpec }) {
         rows={data}
         columns={[
           { key: 'r', header: 'Reads', cell: (r) => r.reads },
-          { key: 'c', header: 'Call', cell: (r) => r.call },
-          { key: 'w', header: 'Waiting', cell: (r) => r.waiting },
-          { key: 'f', header: 'Fails', cell: (r) => r.failed },
+          {
+            key: 'c',
+            header: 'Call',
+            cell: (r) =>
+              r.call === 'sample' ? 'Sample data, not wired' : r.call,
+          },
+        ]}
+      />
+    </Sec>
+  );
+}
+
+/** What the unit keeps between visits; nothing is a section only when the
+ *  spec says something. */
+export function Remembers({ spec }: { spec: AnySpec }) {
+  const kept = spec.remembers ?? [];
+  if (kept.length === 0) return null;
+  return (
+    <Sec title="Remembers">
+      <Tbl
+        caption="Remembers"
+        rows={kept}
+        columns={[
+          { key: 'w', header: 'What', cell: (r) => r.what },
+          { key: 'p', header: 'Per', cell: (r) => r.per },
+          { key: 'f', header: 'For', cell: (r) => r.for },
         ]}
       />
     </Sec>
@@ -136,21 +158,6 @@ export function Inputs({ spec }: { spec: AnySpec }) {
         rows={spec.inputs}
         columns={[
           { key: 'n', header: 'Name', fit: true, cell: (r) => r.name },
-          {
-            key: 't',
-            header: 'Type',
-            mono: true,
-            cls: 'w-1/3 align-top break-words whitespace-normal',
-            cell: (r) =>
-              r.type.split(' | ').map((p, i) => (
-                <span key={p}>
-                  {i > 0 && ' | '}
-                  <wbr />
-                  {p}
-                </span>
-              )),
-          },
-          { key: 'd', header: 'Default', fit: true, cell: (r) => r.default },
           {
             key: 'w',
             header: 'Does',
@@ -168,7 +175,6 @@ export function PriorityAndSizes({ spec }: { spec: AnySpec }) {
   const rows: { k: string; v: string; list?: readonly string[] }[] = [
     { k: 'Seen first', v: spec.priority.first },
     { k: 'Main action', v: main ? `${main.label} (${main.id})` : 'None' },
-    { k: 'Narrowest', v: `${String(spec.sizes.narrowest)}px` },
     { k: 'Gives way first', v: '', list: spec.sizes.gives },
   ];
   return (
@@ -255,7 +261,69 @@ export function RulesSection({
   );
 }
 
+type DecisionRow = AnySpec['decisions'][number];
+
+function DecisionTable({
+  caption,
+  rows,
+}: {
+  caption: string;
+  rows: readonly DecisionRow[];
+}) {
+  return (
+    <Tbl
+      caption={caption}
+      rows={rows}
+      columns={[
+        {
+          key: 'w',
+          header: 'What',
+          cell: (r) => (
+            <>
+              <span
+                className={
+                  r.supersededBy
+                    ? 'text-muted-foreground line-through'
+                    : undefined
+                }
+              >
+                {r.decision}
+              </span>
+              {r.supersededBy && (
+                <span className="block text-xs text-muted-foreground">
+                  Replaced by {r.supersededBy}
+                </span>
+              )}
+            </>
+          ),
+        },
+        { key: 'y', header: 'Why', cell: (r) => r.why },
+        { key: 'b', header: 'Beat', cell: (r) => r.beat },
+        {
+          key: 'i',
+          header: 'Id',
+          cls: 'w-px align-top whitespace-nowrap',
+          cell: (r) => (
+            <>
+              <span className="font-mono text-xs text-muted-foreground">
+                {r.id}
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                {r.date}
+              </span>
+            </>
+          ),
+        },
+      ]}
+    />
+  );
+}
+
+/** The decisions in force first; the replaced ones stay, folded behind a
+ *  disclosure with their full history. */
 export function Decisions({ spec }: { spec: AnySpec }) {
+  const inForce = spec.decisions.filter((d) => !d.supersededBy);
+  const replaced = spec.decisions.filter((d) => d.supersededBy);
   return (
     <Sec
       title="Decisions"
@@ -271,51 +339,21 @@ export function Decisions({ spec }: { spec: AnySpec }) {
         )
       }
     >
-      <Tbl
-        caption="Decisions"
-        rows={spec.decisions}
-        columns={[
-          {
-            key: 'w',
-            header: 'What',
-            cell: (r) => (
-              <>
-                <span
-                  className={
-                    r.supersededBy
-                      ? 'text-muted-foreground line-through'
-                      : undefined
-                  }
-                >
-                  {r.decision}
-                </span>
-                {r.supersededBy && (
-                  <span className="block text-xs text-muted-foreground">
-                    Replaced by {r.supersededBy}
-                  </span>
-                )}
-              </>
-            ),
-          },
-          { key: 'y', header: 'Why', cell: (r) => r.why },
-          { key: 'b', header: 'Beat', cell: (r) => r.beat },
-          {
-            key: 'i',
-            header: 'Id',
-            cls: 'w-px align-top whitespace-nowrap',
-            cell: (r) => (
-              <>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {r.id}
-                </span>
-                <span className="block text-xs text-muted-foreground">
-                  {r.date}
-                </span>
-              </>
-            ),
-          },
-        ]}
-      />
+      {inForce.length > 0 ? (
+        <DecisionTable caption="Decisions in force" rows={inForce} />
+      ) : (
+        <Quiet>No decision is in force: all are replaced.</Quiet>
+      )}
+      {replaced.length > 0 && (
+        <details className="mt-card">
+          <summary className="cursor-pointer text-sm text-muted-foreground">
+            {replaced.length} replaced
+          </summary>
+          <div className="mt-card">
+            <DecisionTable caption="Replaced decisions" rows={replaced} />
+          </div>
+        </details>
+      )}
     </Sec>
   );
 }

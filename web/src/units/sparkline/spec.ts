@@ -30,20 +30,15 @@ export default defineSpec({
   inputs: [
     {
       name: 'values',
-      type: 'number[]',
-      default: 'none',
       does: 'One value per day, oldest first; scaled so the highest reaches the top.',
     },
     {
       name: 'height',
-      type: 'number',
-      default: '44',
       does: 'How tall it is, in px: 44 on a tile, 28 beside a figure.',
     },
   ],
   priority: { first: 'The shape of the fortnight.' },
   sizes: {
-    narrowest: 48,
     gives: ['It narrows with its container; the height stays as given'],
   },
   rules: { cite: ['colour-has-a-word'] },

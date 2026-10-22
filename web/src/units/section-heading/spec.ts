@@ -31,36 +31,19 @@ export default defineSpec({
   ],
   stress:
     'A 60 character title in a 240px container: the title wraps; the Counter stays beside its first line and the action at the right.',
-  components: [
-    { unit: 'counter', use: 'The count after the title.' },
-    { unit: 'link', use: 'The "Show all" action in the examples.' },
-  ],
   actions: [],
   inputs: [
-    {
-      name: 'children',
-      type: 'ReactNode',
-      default: 'none',
-      does: 'The title.',
-    },
+    { name: 'children', does: 'The title.' },
     {
       name: 'count',
-      type: 'ReactNode',
-      default: 'none',
       does: 'How many things follow, in a Counter right after the title.',
     },
-    {
-      name: 'action',
-      type: 'ReactNode',
-      default: 'none',
-      does: 'A text link, such as "Show all", at the right.',
-    },
+    { name: 'action', does: 'A text link, such as "Show all", at the right.' },
   ],
   priority: {
     first: 'The title, in the heading size.',
   },
   sizes: {
-    narrowest: 160,
     gives: [
       'The title wraps; the Counter and the action stay on its first line',
     ],

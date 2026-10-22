@@ -12,7 +12,6 @@ function week(minutes: number[], today: number, big = 1): Bar[] {
   return DAYS.map((d, i) => ({
     label: d,
     value: (minutes[i] ?? 0) * big,
-    text: text((minutes[i] ?? 0) * big),
     tip: `${d}\n${text((minutes[i] ?? 0) * big)}`,
     today: i === today,
     future: i > today,
@@ -21,7 +20,7 @@ function week(minutes: number[], today: number, big = 1): Bar[] {
 
 const skeleton = () => <BarChartSkeleton />;
 
-export default defineExamples(spec, {
+export default defineExamples(spec, BarChart, {
   states: {
     midweek: () => (
       <div className="h-40">
@@ -34,7 +33,7 @@ export default defineExamples(spec, {
     quiet: () => <BarChart bars={week([0, 0, 0], 2)} />,
   },
   stress: () => (
-    <div className="w-[280px] max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">
+    <div className="w-[320px] max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">
       <BarChart bars={week([65, 95, 600, 40, 130, 20, 75], 6, 1)} />
     </div>
   ),

@@ -9,7 +9,7 @@ const showAll = (
   </Link>
 );
 
-export default defineExamples(spec, {
+export default defineExamples(spec, SectionHeading, {
   states: {
     plain: () => <SectionHeading>In progress</SectionHeading>,
     count: () => <SectionHeading count={3}>In progress</SectionHeading>,

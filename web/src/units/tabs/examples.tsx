@@ -85,7 +85,7 @@ const Room = ({ children }: { children: React.ReactNode }) => (
   <div className="h-60">{children}</div>
 );
 
-export default defineExamples(spec, {
+export default defineExamples(spec, Tabs, {
   states: {
     rest: () => <Demo initial={THREE} open="a" />,
     hover: () => <Demo initial={THREE} open="a" forceHover="b" />,

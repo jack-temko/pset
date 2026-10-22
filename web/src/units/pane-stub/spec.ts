@@ -12,54 +12,49 @@ export default defineSpec({
       id: 'material',
       name: 'Material (stand-in)',
       when: 'The material’s name, "Page 112" and a page-shaped block. Not the material pane’s design.',
-      skeleton:
-        'A label bar, a title bar, a page number bar and a page-shaped block.',
     },
     {
       id: 'boxed',
       name: 'Material with a problem boxed (stand-in)',
       when: 'After a page link in the work (P11): the problem’s box on the page-shaped block is outlined in the accent for a moment, then the outline fades.',
-      skeleton: 'The material’s own skeleton: the box is not drawn.',
     },
     {
       id: 'ask',
       name: 'Ask (stand-in)',
       when: 'The problem Ask is about and an empty input. Not Ask’s design.',
-      skeleton:
-        'A label bar, a title bar, the problem line and an input-sized block.',
     },
   ],
   stress:
     'A 79 character material name and a four digit page: everything wraps and nothing overflows.',
-  components: [],
   actions: [
     {
       id: 'type',
       label: 'The Ask input',
-      key: 'Tab',
       does: 'Takes typed text and does nothing with it: Ask is not designed yet.',
     },
   ],
   data: [
     {
       reads: 'A material’s name and page, the problem Ask is about',
-      call: 'None yet: sample data in the workspace unit',
-      waiting: 'Each pane’s own skeleton, in the same frame.',
-      failed: 'Not designed: stand-ins have no failed state.',
+      call: 'sample',
     },
   ],
   inputs: [
     {
-      name: 'name, page, boxed',
-      type: 'MaterialStub props',
-      default: 'none',
-      does: 'The material’s name, the page it shows, and the problem whose box to outline (with a counter that restarts the outline when the same problem is followed again).',
+      name: 'name',
+      does: 'The material’s name.',
+    },
+    {
+      name: 'page',
+      does: 'The page it shows.',
+    },
+    {
+      name: 'boxed',
+      does: 'The problem whose box to outline, with a counter that restarts the outline when the same problem is followed again.',
     },
     {
       name: 'about',
-      type: 'AskStub prop',
-      default: 'none',
-      does: 'The problem Ask is about; without it, "About nothing yet".',
+      does: 'Ask only: the problem Ask is about; without it, "About nothing yet".',
     },
   ],
   priority: {
@@ -67,7 +62,6 @@ export default defineSpec({
     main: 'type',
   },
   sizes: {
-    narrowest: 360,
     gives: [
       'Text wraps',
       'The page block keeps its shape and scrolls with the pane',
@@ -91,6 +85,14 @@ export default defineSpec({
       why: 'ideas/workspace.md: "They exist only so the workspace can be driven; their real designs are later grills."',
       beat: 'Designing the panes here',
       date: '2026-10-21',
+    },
+    {
+      id: 'pane-stub-d2',
+      decision:
+        'The stand-ins have no failed state: they are replaced by the real panes, which decide theirs.',
+      why: 'Not designed: noted when the spec format dropped the data waiting and failed fields (ideas/spec-format-grill.md, F9).',
+      beat: 'A failed line in the data section',
+      date: '2026-10-22',
     },
   ],
 });

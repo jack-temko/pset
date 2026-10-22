@@ -32,57 +32,26 @@ export default defineSpec({
   exampleWidth: 960,
   stress:
     'A 70 character course name at 320px: the aside is gone, the name truncates and line two truncates.',
-  components: [
-    {
-      unit: 'list-row',
-      use: 'The row itself: title, meta and the aside.',
-    },
-    {
-      unit: 'set-line',
-      use: 'The minutes wording, "2 h 10 m".',
-    },
-    {
-      unit: 'assignment-row',
-      use: 'The Assignments list above it in the Home example.',
-    },
-  ],
   actions: [
     {
       id: 'open-course',
       label: 'The course name',
-      key: 'Enter',
       does: 'Opens the course. The course screen is not a unit yet, so it has no target.',
     },
   ],
   inputs: [
-    {
-      name: 'name',
-      type: 'string',
-      default: 'none',
-      does: 'The course\u2019s name.',
-    },
-    {
-      name: 'href',
-      type: 'string',
-      default: 'none',
-      does: 'Where the course name goes.',
-    },
+    { name: 'name', does: 'The course’s name.' },
+    { name: 'href', does: 'Where the course name goes.' },
     {
       name: 'todo',
-      type: 'number',
-      default: 'none',
       does: 'Sets still to do, in words on line two: "3 sets to do", zero as "0 sets to do".',
     },
     {
       name: 'materials',
-      type: 'number',
-      default: 'none',
       does: 'Materials in the course, in words on line two: "5 materials", "1 material".',
     },
     {
       name: 'weekMinutes',
-      type: 'number',
-      default: 'none',
       does: 'Minutes spent this week: "2 h 10 m this week" in the aside, "0 m this week" for none.',
     },
   ],
@@ -91,9 +60,7 @@ export default defineSpec({
     main: 'open-course',
   },
   sizes: {
-    narrowest: 280,
     gives: [
-      'The time this week goes below 440',
       'Then line two truncates, as a whole',
       'Then the course name truncates',
     ],

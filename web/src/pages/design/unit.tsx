@@ -9,6 +9,7 @@ import {
   Decisions,
   Inputs,
   PriorityAndSizes,
+  Remembers,
   RulesSection,
   Sec,
 } from './sections';
@@ -41,6 +42,7 @@ export function UnitPage({ entry }: { entry: Entry }) {
       </Sec>
       <Actions spec={spec} />
       <DataSection spec={spec} />
+      <Remembers spec={spec} />
       <Inputs spec={spec} />
       <PriorityAndSizes spec={spec} />
       <RulesSection spec={spec} rulebook={RULES} />

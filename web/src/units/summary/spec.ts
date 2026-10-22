@@ -39,54 +39,50 @@ export default defineSpec({
     {
       id: 'turn-in',
       label: 'Turn in',
-      key: 'Enter',
       does: 'Hands the set in; the pane asks first when problems are left.',
     },
     {
       id: 'take-back',
       label: 'Take back',
-      key: 'Enter',
       does: 'Takes a turned-in set back, so it can be worked on again.',
     },
     {
       id: 'back',
       label: 'Back to the course',
-      key: 'Enter',
       does: 'Opens the course. The course screen is not a unit yet, so it has no target.',
     },
   ],
   inputs: [
     {
       name: 'problems',
-      type: 'SummaryProblem[]',
-      default: 'none',
-      does: 'Each problem\u2019s label, title, state and minutes spent.',
+      does: 'Each problem’s label, title, state and minutes spent.',
     },
     {
-      name: 'due, finished, turnedIn',
-      type: 'Date',
-      default: 'none',
-      does: 'The due date (only to say how early or late it was finished), when the last problem was done, and when it was turned in.',
+      name: 'due',
+      does: 'The due date, only to say how early or late it was finished.',
     },
+    {
+      name: 'finished',
+      does: 'When the last problem was done.',
+    },
+    {
+      name: 'turnedIn',
+      does: 'When the set was turned in.',
+    },
+    { name: 'onTurnIn', does: 'Called when Turn in is pressed.' },
+    { name: 'onTakeBack', does: 'Called when Take back is pressed.' },
+    { name: 'onBack', does: 'Called when Back to the course is pressed.' },
   ],
   priority: {
     first: 'How many are done, then how long it took.',
     main: 'turn-in',
   },
   sizes: {
-    narrowest: 320,
     gives: [
       'The box is as wide as the pane\u2019s column',
       'Long values wrap in their row',
     ],
   },
-  components: [
-    { unit: 'button', use: 'Turn in and Take back.' },
-    { unit: 'link', use: 'Back to the course.' },
-    { unit: 'problem-strip', use: 'The segment colours, for the bars.' },
-    { unit: 'set-line', use: 'Time and day wording.' },
-    { unit: 'tooltip', use: 'Names a bar by its problem and time.' },
-  ],
   rules: {
     cite: [
       'work-first',

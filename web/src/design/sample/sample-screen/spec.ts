@@ -11,13 +11,11 @@ export default defineSpec({
       id: 'list',
       name: 'List',
       when: 'The items have loaded.',
-      skeleton: 'A heading and two skeleton rows.',
     },
     {
       id: 'detail',
       name: 'One item',
       when: 'The student opened a row.',
-      skeleton: 'A heading and two skeleton rows.',
     },
   ],
   stress: 'Twelve items with 80 character titles.',
@@ -28,7 +26,6 @@ export default defineSpec({
       steps: ['pick-row', 'back'],
     },
   ],
-  components: [{ unit: 'sample-row', use: 'One per item.' }],
   actions: [
     {
       id: 'pick-row',
@@ -39,7 +36,6 @@ export default defineSpec({
     {
       id: 'back',
       label: 'Back',
-      key: 'Escape',
       does: 'Returns to the list.',
       target: { unit: 'sample-screen', state: 'list' },
     },
@@ -53,21 +49,22 @@ export default defineSpec({
   data: [
     {
       reads: 'The items',
-      call: 'GET /api/sample/items',
-      waiting: 'Two skeleton rows.',
-      failed: 'A failed row.',
+      call: 'sample',
+    },
+  ],
+  remembers: [
+    {
+      what: 'Which item is open',
+      per: 'List',
+      for: 'Until another is opened.',
     },
   ],
   inputs: [
-    {
-      name: 'open',
-      type: 'string | undefined',
-      default: 'undefined',
-      does: 'The title of the row to open.',
-    },
+    { name: 'items', does: 'The list: a title and a second line each.' },
+    { name: 'open', does: 'The title of the row to open.' },
   ],
   priority: { first: 'The list.', main: 'pick-row' },
-  sizes: { narrowest: 320, gives: ['The heading wraps', 'Rows truncate'] },
+  sizes: { gives: ['The heading wraps', 'Rows truncate'] },
   rules: { cite: [] },
   decisions: [
     {

@@ -32,42 +32,19 @@ export default defineSpec({
   ],
   stress:
     'A 70 character title in a 240px container: the title truncates; the Counter and action stay.',
-  components: [
-    { unit: 'counter', use: 'The header\u2019s count.' },
-    { unit: 'list-row', use: 'The rows, in the examples.' },
-    { unit: 'link', use: 'The header\u2019s action, in the examples.' },
-  ],
   actions: [],
   inputs: [
     {
       name: 'title',
-      type: 'string',
-      default: 'none',
-      does: 'The header\u2019s title; without it there is no header.',
+      does: 'The header’s title; without it there is no header.',
     },
-    {
-      name: 'count',
-      type: 'ReactNode',
-      default: 'none',
-      does: 'A Counter after the title.',
-    },
-    {
-      name: 'action',
-      type: 'ReactNode',
-      default: 'none',
-      does: 'A text link at the right of the header.',
-    },
-    {
-      name: 'empty',
-      type: 'string',
-      default: 'Nothing here yet',
-      does: 'The line shown with no rows.',
-    },
-    { name: 'children', type: 'ReactNode', default: 'none', does: 'The rows.' },
+    { name: 'count', does: 'A Counter after the title.' },
+    { name: 'action', does: 'A text link at the right of the header.' },
+    { name: 'empty', does: 'The line shown with no rows.' },
+    { name: 'children', does: 'The rows.' },
   ],
   priority: { first: 'The rows; the header, when there is one.' },
   sizes: {
-    narrowest: 240,
     gives: ['The header title truncates', 'The rows truncate their own lines'],
   },
   rules: { cite: ['contrast-floors', 'sentence-case'] },

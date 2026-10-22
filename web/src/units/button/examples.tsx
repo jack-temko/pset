@@ -6,7 +6,7 @@ import spec from './spec';
 
 const LONG = 'Start the next problem set from the chapter on magnetic circuits';
 
-export default defineExamples(spec, {
+export default defineExamples(spec, Button, {
   states: {
     primary: () => <Button variant="primary">Continue</Button>,
     default: () => <Button>Open</Button>,

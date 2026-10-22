@@ -48,7 +48,7 @@ function Recorded(props: WorkProps) {
   );
 }
 
-export default defineExamples(spec, {
+export default defineExamples(spec, Work, {
   states: {
     'current-underline': () => (
       <Recorded set={sample.inProgress()} startAt="p4" />

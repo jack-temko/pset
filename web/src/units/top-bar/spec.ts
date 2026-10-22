@@ -26,54 +26,35 @@ export default defineSpec({
   ],
   stress:
     'A 70 character course, a 70 character set and a 40 character material in a 1024px container: the middle truncates first; the wordmark and Settings never move.',
-  components: [
-    { unit: 'link', use: 'The path items and Settings, standing alone.' },
-  ],
   actions: [
     {
       id: 'go-home',
       label: 'PSet',
-      key: 'Enter',
       does: 'Goes Home. Home is not a unit yet, so it has no target.',
     },
     {
       id: 'go-up',
       label: 'A path item',
-      key: 'Enter',
       does: 'Goes to that level. Every item but the last is a link; the screens are not units yet, so it has no target.',
     },
     {
       id: 'open-settings',
       label: 'Settings',
-      key: 'Enter',
       does: 'Opens Settings. Settings is not a unit yet, so it has no target.',
     },
   ],
   inputs: [
-    {
-      name: 'homeHref',
-      type: 'string',
-      default: 'none',
-      does: 'Where the wordmark goes: Home.',
-    },
+    { name: 'homeHref', does: 'Where the wordmark goes: Home.' },
     {
       name: 'path',
-      type: '{ label: string; href?: string }[]',
-      default: '[]',
       does: 'Where you are, outermost first. The last item is not a link.',
     },
-    {
-      name: 'settingsHref',
-      type: 'string',
-      default: 'none',
-      does: 'Where Settings goes.',
-    },
+    { name: 'settingsHref', does: 'Where Settings goes.' },
   ],
   priority: {
     first: 'Where you are, the last item of the path.',
   },
   sizes: {
-    narrowest: 480,
     gives: [
       'The middle items of the path truncate first',
       'Then the first and last items',
