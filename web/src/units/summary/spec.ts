@@ -6,30 +6,30 @@ export default defineSpec({
   title: 'Summary',
   group: 'Work',
   purpose:
-    'The last stop of a set: how far it is and how it went in a few figures, then Turn in or Take back and Back to the course. It stands alone, centred.',
+    'The last stop of a set as a box like a list: how far it is in the header with Turn in or Take back, then rows for total time, finish and longest, and the bars.',
   states: [
     {
       id: 'unfinished',
       name: 'Not finished',
-      when: 'Some problems left: "5 of 8 done", total time, when it is due, time per problem, Turn in.',
+      when: 'Some problems left: "5 of 8 done" with Turn in, total time, the longest problem and time per problem. No due date.',
       text: '5 of 8 done',
     },
     {
       id: 'finished',
       name: 'Finished',
-      when: 'Every problem done: "All 8 done", total time, "Finished Tue · 2 days early", time per problem, Turn in.',
+      when: 'Every problem done: "All 8 done" with Turn in, total time, "Finished Tue · 2 days early", the longest and the bars.',
       text: 'All 8 done',
     },
     {
       id: 'turned-in',
       name: 'Turned in',
-      when: 'Handed in: "Turned in Oct 14", a line under it with how many were done, and Take back where Turn in was.',
+      when: 'Handed in: "Turned in Oct 14" with Take back where Turn in was, and a Done row saying how many were done.',
       text: 'Turned in Oct 14',
     },
     {
       id: 'no-time',
       name: 'No time yet',
-      when: 'No time is known: the time figure and the bars are left out, not shown as 0.',
+      when: 'No time is known: the time, longest and bars rows are left out, not shown as 0.',
     },
   ],
   exampleWidth: 640,
@@ -66,13 +66,7 @@ export default defineSpec({
       name: 'due, finished, turnedIn',
       type: 'Date',
       default: 'none',
-      does: 'The due date, when the last problem was done, and when it was turned in.',
-    },
-    {
-      name: 'today',
-      type: 'Date',
-      default: 'now',
-      does: 'The moment "Due Thu" counts from; for the design page and tests.',
+      does: 'The due date (only to say how early or late it was finished), when the last problem was done, and when it was turned in.',
     },
   ],
   priority: {
@@ -81,13 +75,20 @@ export default defineSpec({
   },
   sizes: {
     narrowest: 320,
-    gives: ['The content is at most 520 wide, centred', 'The buttons wrap'],
+    gives: [
+      'The box is as wide as the pane\u2019s column',
+      'Long values wrap in their row',
+    ],
   },
   components: [
     { unit: 'button', use: 'Turn in and Take back.' },
+    {
+      unit: 'list',
+      use: 'The box: header with the heading and the action, then rows.',
+    },
     { unit: 'link', use: 'Back to the course.' },
     { unit: 'problem-strip', use: 'The segment colours, for the bars.' },
-    { unit: 'set-line', use: 'Time and due-date wording.' },
+    { unit: 'set-line', use: 'Time and day wording.' },
     { unit: 'tooltip', use: 'Names a bar by its problem and time.' },
   ],
   rules: {
@@ -95,6 +96,7 @@ export default defineSpec({
       'work-first',
       'one-primary',
       'colour-has-a-word',
+      'say-it-once',
       'links-go-buttons-do',
       'sentence-case',
     ],
@@ -131,6 +133,22 @@ export default defineSpec({
         'The longest problem\u2019s bar stays full colour and the others are dimmed a little, so the line naming it points at something.',
       why: 'Coordinator, 2026-10-21, so the "Longest:" line has a bar to point at.',
       beat: 'All bars alike',
+      date: '2026-10-21',
+    },
+    {
+      id: 'summary-d5',
+      decision:
+        'A box like a list: heading and Turn in or Take back in the header, icon rows, the bars last; Back to the course is a link under it.',
+      why: 'Jack: "Can we show these a bit more github-y".',
+      beat: 'Centred figures and buttons with no box',
+      date: '2026-10-21',
+    },
+    {
+      id: 'summary-d6',
+      decision:
+        'The summary shows no due date: the set line has it. Each fact is shown once on a screen.',
+      why: 'Jack: "Shown in two spots. This should be a rule, avoid duplication where possible"',
+      beat: 'Due on the summary and in the set line',
       date: '2026-10-21',
     },
   ],

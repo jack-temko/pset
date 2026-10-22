@@ -21,3 +21,5 @@ Jack, 2026-10-21: **"go with the underline, drop the others"**
 Jack, 2026-10-21: **"yes, make the queued line full yellow. Also the finished page doesnt look the best. Can we include some light stats? Make sure every part of the panel looks good when not expanded or empty. For example we should center what we can vertically and horizontally. Also we need to make the behavior of the turned in/stat page better, how to get to it and see it, and switch to and from it."**
 
 Answers: stats **"all the most useful information shown in a nice way. not cluttered. no help stats"**; reach it **A last stop after the segments**; reopen **The summary**; turn in **On the summary, plus the set menu**.
+
+Jack, 2026-10-21: **"The underline overlaps the icon and looks weird."** (the flag); **"Can we show these a bit more github-y"** (the summary); **"Shown in two spots. This should be a rule, avoid duplication where possible"** (the due date).

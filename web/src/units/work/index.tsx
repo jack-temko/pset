@@ -338,7 +338,6 @@ export function Work({
             due={set.due}
             finished={finishedAt}
             turnedIn={turnedInAt}
-            today={today}
             onTurnIn={wantTurnIn}
             onTakeBack={takeBack}
             onBack={onBackToCourse}

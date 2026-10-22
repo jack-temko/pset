@@ -30,3 +30,5 @@ Jack, 2026-10-21, after the three markers: **"go with the underline, drop the ot
 Jack, 2026-10-21: **"Can we make the line the same color as the segment"**. The underline takes its segment's colour; a not-started segment, the neutral track, uses the muted text colour so it still shows.
 
 Jack, 2026-10-21: **"yes, make the queued line full yellow."** And on the summary: reach it **A last stop after the segments**, so a flag button ends the bar.
+
+Jack, 2026-10-21, on the flag: **"The underline overlaps the icon and looks weird."** The flag now has a segment's slot: a 12px icon centred on the track, its line at the same y as a segment's underline, 3px below the track.

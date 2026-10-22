@@ -175,5 +175,13 @@ export default defineSpec({
       beat: 'A faint underline on a faint segment',
       date: '2026-10-21',
     },
+    {
+      id: 'problem-strip-d11',
+      decision:
+        'The flag has a segment\u2019s slot: a 12px icon centred on the track and its underline at the segments\u2019 y, 3px below the track, clear of the icon.',
+      why: 'Jack: "The underline overlaps the icon and looks weird."',
+      beat: 'A 14px icon with its line at the slot\u2019s edge',
+      date: '2026-10-21',
+    },
   ],
 });

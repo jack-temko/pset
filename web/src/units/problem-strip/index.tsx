@@ -88,14 +88,14 @@ export function ProblemStrip({
             }}
             className="relative flex h-5 w-5 items-center justify-center text-(--ds-fg-muted) hover:text-(--ds-fg)"
           >
-            <Flag className="size-3.5" aria-hidden />
+            <Flag className="size-3" aria-hidden />
             {summary && (
               <span
                 aria-hidden
                 className="absolute left-0 block w-full"
                 style={{
                   height: 2,
-                  bottom: 0,
+                  bottom: 1,
                   background: allDone
                     ? 'var(--ds-success)'
                     : 'var(--ds-fg-muted)',

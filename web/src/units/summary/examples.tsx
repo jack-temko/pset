@@ -2,7 +2,6 @@ import { defineExamples } from '@/design/examples';
 import { Summary, type SummaryProblem } from './index';
 import spec from './spec';
 
-const TODAY = new Date(2026, 9, 13, 12);
 const DUE = new Date(2026, 9, 15);
 const MINUTES = [18, 25, 22, 31, 34, 12, 20, 8];
 const TITLES = [
@@ -27,15 +26,12 @@ const problems = (done: number): SummaryProblem[] =>
 
 export default defineExamples(spec, {
   states: {
-    unfinished: () => (
-      <Summary problems={problems(5)} due={DUE} today={TODAY} />
-    ),
+    unfinished: () => <Summary problems={problems(5)} due={DUE} />,
     finished: () => (
       <Summary
         problems={problems(8)}
         due={DUE}
         finished={new Date(2026, 9, 13, 11)}
-        today={TODAY}
       />
     ),
     'turned-in': () => (
@@ -44,20 +40,17 @@ export default defineExamples(spec, {
         due={DUE}
         finished={new Date(2026, 9, 13, 11)}
         turnedIn={new Date(2026, 9, 14)}
-        today={TODAY}
       />
     ),
     'no-time': () => (
       <Summary
         problems={problems(0).map((p) => ({ ...p, minutes: 0 }))}
         due={DUE}
-        today={TODAY}
       />
     ),
   },
   stress: () => (
     <Summary
-      today={TODAY}
       due={DUE}
       finished={new Date(2026, 9, 20)}
       turnedIn={new Date(2026, 9, 21)}

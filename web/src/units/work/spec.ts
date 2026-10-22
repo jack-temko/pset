@@ -375,5 +375,13 @@ export default defineSpec({
       beat: 'A due badge on a finished set',
       date: '2026-10-21',
     },
+    {
+      id: 'work-d16',
+      decision:
+        'The summary is a box like a list, and shows no due date; the set line keeps it. The rulebook gets say-it-once.',
+      why: 'Jack: "Can we show these a bit more github-y" and "Shown in two spots. This should be a rule, avoid duplication where possible".',
+      beat: 'Due on both the summary and the set line',
+      date: '2026-10-21',
+    },
   ],
 });
