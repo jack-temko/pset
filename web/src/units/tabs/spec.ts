@@ -106,6 +106,14 @@ export default defineSpec({
   components: [{ unit: 'menu', use: 'The + menu and each tab’s menu.' }],
   decisions: [
     {
+      id: 'tabs-d-plus',
+      decision:
+        'The + at the end of a tab row is the close x’s size: a 20 by 20 hit area and a 14 icon.',
+      why: 'Jack, 2026-10-21: "For the workspace the plus button size should be the same size as the close button on the tabs".',
+      beat: 'A 32 square + beside 20 square close buttons',
+      date: '2026-10-21',
+    },
+    {
       id: 'tabs-d1',
       decision:
         'Each side’s tabs are GitHub underline tabs: text, an accent underline on the open one, a close x always shown, a + at the end.',

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { ActionMenu, type MenuItem } from '@/units/action-menu';
+import { MoreMenu, type MenuItem } from '@/units/menu';
 import { Button } from '@/units/button';
 import { HelpRow } from '@/units/help-row';
 import { waitText } from '@/units/help-row/wait';
@@ -397,7 +397,7 @@ export function Problem({
           Next
         </Button>
         <span className={stands ? '' : 'ml-auto'}>
-          <ActionMenu
+          <MoreMenu
             label="More for this problem"
             items={items}
             onSelect={onMenu}

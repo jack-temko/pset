@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { ActionMenu, type MenuItem } from '@/units/action-menu';
+import { MoreMenu, type MenuItem } from '@/units/menu';
 import { Button } from '@/units/button';
 import { List } from '@/units/list';
 import { ListRow } from '@/units/list-row';
@@ -20,7 +20,7 @@ import { dueBadge } from '@/units/set-line/badge';
 import { timeLeft } from '@/units/set-line/dates';
 import { Summary, SummarySkeleton } from '@/units/summary';
 import { Tag } from '@/units/tag';
-import { sessionMemory, type Memory } from './memory';
+import { sessionMemory, summaryKey, type Memory } from './memory';
 import {
   doneCount,
   UNDO_MS,
@@ -67,7 +67,14 @@ export interface WorkProps {
   onSetMenu?: (item: SetMenuItem) => void;
   onProblemMenu?: (item: ProblemMenuItem, problemId: string) => void;
   onFix?: (fix: Fix, problemId: string) => void;
+  /** Its marks changed: the problems (done, removed), when it was finished and
+   *  when it was turned in. The workspace keeps them, so the pane can be
+   *  closed or moved and come back as it was. */
+  onChange?: (marks: Marks) => void;
 }
+
+/** What the pane changes of its set while it is open. */
+export type Marks = Pick<WorkSet, 'problems' | 'finishedAt' | 'turnedInAt'>;
 
 /** The pane for one problem set: the set line, a strip of every problem,
  *  the one you are on, and at the end a finish card (P1, P5, P12). It keeps
@@ -85,6 +92,7 @@ export function Work({
   onSetMenu,
   onProblemMenu,
   onFix,
+  onChange,
 }: WorkProps) {
   const [problems, setProblems] = useState(set.problems);
   const [current, setCurrent] = useState(() => {
@@ -99,16 +107,35 @@ export function Work({
   const [seen, setSeen] = useState<ReadonlySet<string>>(
     () => new Set(current ? [current] : []),
   );
-  const [summary, setSummary] = useState(
-    startSummary ??
-      (startAt === undefined &&
-        (set.turnedInAt !== undefined ||
-          (set.problems.length > 0 && set.problems.every((p) => p.done)))),
-  );
+  const [summary, setSummary] = useState(() => {
+    if (startSummary !== undefined) return startSummary;
+    if (startAt !== undefined) return false;
+    const kept = memory.get(summaryKey(set.id));
+    if (kept !== undefined) return kept === '1';
+    return (
+      set.turnedInAt !== undefined ||
+      (set.problems.length > 0 && set.problems.every((p) => p.done))
+    );
+  });
+  useEffect(() => {
+    memory.set(summaryKey(set.id), summary ? '1' : '0');
+  }, [memory, set.id, summary]);
   const [turnedInAt, setTurnedInAt] = useState(set.turnedInAt);
   const [finishedAt, setFinishedAt] = useState(set.finishedAt);
   const turnedIn = turnedInAt !== undefined;
   const now = today ?? new Date();
+  const changed = useRef(onChange);
+  useEffect(() => {
+    changed.current = onChange;
+  });
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    changed.current?.({ problems, finishedAt, turnedInAt });
+  }, [problems, finishedAt, turnedInAt]);
   const [asking, setAsking] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -255,7 +282,7 @@ export function Work({
               meta={[...(minutes ? [minutes] : [])]}
             />
           </div>
-          <ActionMenu
+          <MoreMenu
             label="More for this set"
             items={menu}
             onSelect={onSetItem}

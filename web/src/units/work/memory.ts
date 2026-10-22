@@ -18,3 +18,7 @@ export function pageMemory(): Memory {
 
 /** The one the pane uses when it is given none. */
 export const sessionMemory: Memory = pageMemory();
+
+/** The key under which the memory notes whether the student was on the summary
+ *  of a set (a place too, S8), beside the problem they were on. */
+export const summaryKey = (setId: string) => `${setId}#summary`;

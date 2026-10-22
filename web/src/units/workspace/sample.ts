@@ -1,3 +1,4 @@
+import { inProgress } from '@/units/work/sample';
 import type { Course } from './course';
 
 /** A fixed course for the design page: Circuits I, with one textbook, lecture
@@ -11,43 +12,16 @@ export const COURSE: Course = {
     { id: 'lab', name: 'Lab manual' },
   ],
   sets: [
+    { ...inProgress(), material: 'griffiths' },
     {
-      id: 'ps4',
-      name: 'Problem set 4',
-      material: 'griffiths',
-      problems: [
-        {
-          id: 'p1',
-          title: 'Problem 1',
-          text: 'Find the equivalent resistance seen by the source in the ladder network.',
-          page: 112,
-        },
-        {
-          id: 'p2',
-          title: 'Problem 2',
-          text: 'Use mesh analysis to find the current through the 4 ohm resistor.',
-          page: 118,
-        },
-        {
-          id: 'p3',
-          title: 'Problem 3',
-          text: 'State and apply the superposition principle to the circuit of problem 2.',
-          page: 121,
-        },
-      ],
-    },
-    {
+      ...inProgress(),
       id: 'ps5',
       name: 'Problem set 5',
       material: 'notes',
-      problems: [
-        {
-          id: 'q1',
-          title: 'Problem 1',
-          text: 'Derive the step response of a series RC circuit.',
-          page: 4,
-        },
-      ],
+      minutesLeft: 45,
+      problems: inProgress()
+        .problems.slice(0, 3)
+        .map((p, i) => ({ ...p, id: `q${String(i + 1)}`, page: 2 + i * 2 })),
     },
   ],
 };

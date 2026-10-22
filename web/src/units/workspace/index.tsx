@@ -7,13 +7,14 @@ import {
   AskStubSkeleton,
   MaterialStub,
   MaterialStubSkeleton,
-  WorkStub,
-  WorkStubSkeleton,
 } from '@/units/pane-stub';
 import { DropFill, Side } from '@/units/side';
 import { type TabAction } from '@/units/tabs';
 import { endDrag, useDraggedTab } from '@/units/tabs/drag';
 import { TopBar } from '@/units/top-bar';
+import { Work, WorkSkeleton, type Marks } from '@/units/work';
+import { pageMemory } from '@/units/work/memory';
+import type { WorkSet } from '@/units/work/sets';
 
 import { aboutOf, materialOf, setOf, tabLabel, type Course } from './course';
 import * as m from './model';
@@ -123,6 +124,7 @@ export function Workspace({
   course,
   initial,
   loading,
+  today,
   onChange,
   homeHref = '/',
   courseHref = '#',
@@ -133,12 +135,20 @@ export function Workspace({
   /** Which sides are still loading their pane; the tab row never waits. */
   loading?: { left?: boolean; right?: boolean };
   onChange?: (state: m.State) => void;
+  /** The day "Due soon" counts from (the design page and tests). */
+  today?: Date;
   homeHref?: string;
   courseHref?: string;
   settingsHref?: string;
 }) {
   const [st, setState] = useState(initial);
   const row = useRef<HTMLDivElement>(null);
+  /** Where the student was in each set (S8) and what they marked: both outlive
+   *  the pane, which is closed and rebuilt as tabs switch and move. */
+  const [memory] = useState(pageMemory);
+  const [marks, setMarks] = useState<Record<string, Marks>>({});
+  /** The problem whose box the material outlines (P11), and which tab. */
+  const [box, setBox] = useState<{ tab: string; problem: string; n: number }>();
   const dragged = useDraggedTab();
   const apply = (f: (s: m.State) => m.State) => {
     const next = f(st);
@@ -178,19 +188,49 @@ export function Workspace({
     const wait = side === 0 ? loading?.left : loading?.right;
     if (tab.kind === 'set') {
       const set = setOf(course, tab.ref);
-      if (wait || !set) return <WorkStubSkeleton />;
+      if (wait || !set)
+        return (
+          <div className="px-6">
+            <WorkSkeleton />
+          </div>
+        );
+      const work: WorkSet = { ...set, ...marks[set.id] };
       return (
-        <WorkStub
-          name={set.name}
-          material={materialOf(course, set.material)?.name ?? set.material}
-          problems={set.problems}
-          onPage={(page) => {
-            apply((s) => m.follow(s, side, set.material, page));
-          }}
-          onAsk={(problem) => {
-            apply((s) => m.askAbout(s, side, problem));
-          }}
-        />
+        <div className="px-6">
+          <Work
+            key={set.id}
+            set={work}
+            memory={memory}
+            today={today}
+            onChange={(next) => {
+              setMarks((all) => ({ ...all, [set.id]: next }));
+            }}
+            onOpenPage={(page, problem) => {
+              const next = m.follow(st, side, set.material, page);
+              apply(() => next);
+              const shown = [m.other(side), side]
+                .map((x) => m.openTab(next, x))
+                .find(
+                  (t) =>
+                    t?.kind === 'material' &&
+                    t.ref === set.material &&
+                    t.page === page,
+                );
+              if (shown)
+                setBox((b) => ({
+                  tab: shown.id,
+                  problem,
+                  n: (b?.n ?? 0) + 1,
+                }));
+            }}
+            onAsk={(problem) => {
+              apply((s) => m.askAbout(s, side, problem));
+            }}
+            onBackToCourse={() => {
+              // The course screen is not a unit yet; the link does nothing here.
+            }}
+          />
+        </div>
       );
     }
     if (tab.kind === 'material') {
@@ -199,6 +239,7 @@ export function Workspace({
         <MaterialStub
           name={materialOf(course, tab.ref)?.name ?? tab.ref}
           page={tab.page ?? 1}
+          boxed={box?.tab === tab.id ? box : undefined}
         />
       );
     }

@@ -18,6 +18,11 @@ export default defineSpec({
       name: 'Plain groups',
       when: 'A tab’s menu: two groups without headings, moves first and closes second.',
     },
+    {
+      id: 'more',
+      name: 'More button',
+      when: 'The "⋯" button opens a short list of actions under it, right-aligned to it, with a danger item in the danger colour (menu-d2).',
+    },
   ],
   stress:
     'A 100 character item and twelve more: the long one truncates with its full text as a title, and the list scrolls inside 70% of the window.',
@@ -71,6 +76,14 @@ export default defineSpec({
         'A menu is opened at a point and drawn in the top layer, so a scrolling tab row cannot clip it.',
       why: 'Built small for the + menu and the tab menu of the workspace (ideas/workspace.md); no menu existed.',
       beat: 'A menu inside the row',
+      date: '2026-10-21',
+    },
+    {
+      id: 'menu-d2',
+      decision:
+        'One menu for the workspace and the work pane: `Menu` stays, and the "⋯" button is `MoreMenu` in the same unit; the action menu is gone.',
+      why: 'Both did one job. Menu already has the top layer, window clamping, truncation and groups; the action menu was a button and a plain list.',
+      beat: 'Keeping the action menu and widening it to open at a point',
       date: '2026-10-21',
     },
   ],

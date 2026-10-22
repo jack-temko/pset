@@ -1,6 +1,6 @@
 import * as m from './model';
 
-const start = () => m.openSet('ps4', { ref: 'griffiths', page: 112 });
+const start = () => m.openSet('ps4', { ref: 'griffiths', page: 111 });
 
 const book = (ref: string, page: number): m.Spec => ({
   kind: 'material',
@@ -11,7 +11,7 @@ const book = (ref: string, page: number): m.Spec => ({
 /** The workspace's design-page states, each as the state it opens in. */
 export const STATES = {
   opening: start,
-  followed: () => m.follow(start(), 1, 'griffiths', 118),
+  followed: () => m.follow(start(), 1, 'griffiths', 113),
   'two-materials': () => {
     const st = m.add(start(), 0, book('notes', 6));
     return m.select(st, st.sides[0][0].id);
