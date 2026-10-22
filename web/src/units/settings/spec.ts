@@ -32,8 +32,8 @@ export default defineSpec({
     {
       id: 'update-available',
       name: 'Update available',
-      when: 'A newer version exists: its notes and "Update to v0.3.0" show under the version.',
-      text: 'Update to v0.3.0',
+      when: 'A newer version exists: its notes and "Update to 0.3.0" show under the version.',
+      text: 'Update to 0.3.0',
     },
     {
       id: 'updating',
@@ -109,7 +109,7 @@ export default defineSpec({
     },
     {
       id: 'update',
-      label: 'Update to v0.3.0',
+      label: 'Update to 0.3.0',
       does: 'Updates in place and restarts PSet.',
     },
     {
@@ -124,13 +124,13 @@ export default defineSpec({
     },
     {
       id: 'clear-history',
-      label: 'Clear study history',
+      label: 'Clear',
       does: 'Asks first, with the hours and answers that go.',
       target: { unit: 'confirm', state: 'reset' },
     },
     {
       id: 'reset-everything',
-      label: 'Reset everything',
+      label: 'Reset',
       does: 'Asks first, with the counts of courses, sets, materials and memories that go.',
       target: { unit: 'confirm', state: 'reset' },
     },
@@ -234,7 +234,7 @@ export default defineSpec({
     {
       id: 'settings-d7',
       decision:
-        'Updates show the version and Check for updates; an available one adds its notes and "Update to v0.3.0", and the wait shows in place (G7).',
+        'Updates show the version once and Check for updates; an available one adds a card of notes with "Update to 0.3.0"; updating swaps the card’s face in place (G7).',
       why: `${ASSUMED}: as today.`,
       beat: 'Automatic updates with no button',
       date: '2026-10-22',
@@ -250,7 +250,7 @@ export default defineSpec({
     {
       id: 'settings-d9',
       decision:
-        'Clear study history and Reset everything sit in Reset at the foot, each confirming with counts; Clear all for errors stays with the errors (G9).',
+        'Clear study history and Reset everything sit in Reset; buttons say Clear and Reset and a popover confirms with counts; Clear all stays with errors (G9).',
       why: `${ASSUMED}: one danger zone.`,
       beat: 'Each beside what it clears',
       date: '2026-10-22',
@@ -277,6 +277,22 @@ export default defineSpec({
         'Settings loads as the Loaded standard asks: a skeleton shaped like the sections, revealed together (G12).',
       why: `${ASSUMED}: nothing jumps on load.`,
       beat: 'A spinner',
+      date: '2026-10-22',
+    },
+    {
+      id: 'settings-d13',
+      decision:
+        'Path and heading both stay, and Settings in the top bar shows plain here. The version is said once, in Updates; the foot line is the data folder.',
+      why: 'Assumed, to confirm with Jack (say-it-once): the path is navigation, the heading is identity; the version, update and foot repeated it.',
+      beat: 'The version in Updates and again in the foot; a Settings link to itself',
+      date: '2026-10-22',
+    },
+    {
+      id: 'settings-d14',
+      decision:
+        'Health is hidden when no errors are kept: "Recent errors" shows only with at least one.',
+      why: 'Assumed, to confirm with Jack: a fold labelled (0) is a door to nothing.',
+      beat: 'A fold that opens to "No errors kept"',
       date: '2026-10-22',
     },
   ],

@@ -21,7 +21,7 @@ export function SegmentedControl({
     <div
       role="radiogroup"
       aria-label={label}
-      className="inline-flex rounded-(--ds-radius-control) border border-(--ds-border) p-0.5"
+      className="inline-flex h-(--ds-control) rounded-(--ds-radius-control) border border-(--ds-border) p-0.5"
     >
       {options.map((o) => {
         const on = o.id === value;
@@ -34,8 +34,7 @@ export function SegmentedControl({
             onClick={() => {
               onChange(o.id);
             }}
-            style={{ fontWeight: 500 }}
-            className={`ds-body h-7 min-w-16 rounded-(--ds-radius-segment) px-3 whitespace-nowrap ${on ? 'bg-(--ds-pressed) text-(--ds-fg)' : 'text-(--ds-fg-muted) hover:bg-(--ds-hover) hover:text-(--ds-fg)'}`}
+            className={`ds-body h-full min-w-16 font-medium rounded-(--ds-radius-segment) px-3 whitespace-nowrap ${on ? 'bg-(--ds-pressed) text-(--ds-fg)' : 'text-(--ds-fg-muted) hover:bg-(--ds-hover) hover:text-(--ds-fg)'}`}
           >
             {o.label}
           </button>

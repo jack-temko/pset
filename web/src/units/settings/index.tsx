@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
+import { money, plural } from '@/lib/format';
 import { Button } from '@/units/button';
 import { Confirm } from '@/units/confirm';
 import { Fold } from '@/units/fold';
@@ -12,12 +13,6 @@ import { Tag } from '@/units/tag';
 import { TextField } from '@/units/text-field';
 import { TopBar } from '@/units/top-bar';
 import type { Appearance, SettingsData } from './sample';
-
-const money = (n: number) =>
-  `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const plural = (n: number, one: string, many: string) =>
-  `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
 
 /** How long a "Saved" stays under a field. */
 const SAVED_MS = 2000;
@@ -84,8 +79,15 @@ export function Settings({
   const [name, setName] = useState(settings.name);
   const [saved, setSaved] = useState(false);
   const [key, setKey] = useState(settings.key.value);
-  const [keyStatus, setKeyStatus] = useState(settings.key.status);
-  const [keyNote, setKeyNote] = useState(settings.key.failure);
+  /** What the last Test said; editing the key clears it. */
+  const [result, setResult] = useState<'ok' | 'failed' | 'saved' | undefined>(
+    settings.key.status === 'none'
+      ? undefined
+      : settings.key.status === 'ok'
+        ? 'ok'
+        : 'failed',
+  );
+  const [failure, setFailure] = useState(settings.key.failure);
   const [testing, setTesting] = useState(false);
   const [appearance, setAppearance] = useState<Appearance>(settings.appearance);
   const [update, setUpdate] = useState(settings.update.status);
@@ -93,6 +95,8 @@ export function Settings({
   const [upToDate, setUpToDate] = useState(false);
   const [errors, setErrors] = useState(settings.errors);
   const [confirming, setConfirming] = useState<'history' | 'all'>();
+  const [historyEl, setHistoryEl] = useState<HTMLElement | null>(null);
+  const [resetEl, setResetEl] = useState<HTMLElement | null>(null);
 
   const { counts } = settings;
 
@@ -103,18 +107,16 @@ export function Settings({
     }, SAVED_MS);
   };
 
-  /** Tests the key; the sample accepts any that looks like one. */
-  const test = (then?: () => void) => {
+  /** Tests the key; the sample accepts any that looks like one. Save tests
+   *  first, then keeps it. */
+  const test = (save: boolean) => {
     setTesting(true);
     later(() => {
       setTesting(false);
-      if (key.trim().startsWith('sk-or-')) {
-        setKeyStatus('ok');
-        setKeyNote('The key works.');
-        then?.();
-      } else {
-        setKeyStatus('failed');
-        setKeyNote('OpenRouter refused this key. Check it and paste it again.');
+      if (key.trim().startsWith('sk-or-')) setResult(save ? 'saved' : 'ok');
+      else {
+        setResult('failed');
+        setFailure('OpenRouter refused this key. Check it and paste it again.');
       }
     }, 800);
   };
@@ -128,9 +130,25 @@ export function Settings({
     }, 1000);
   };
 
+  const needsKey =
+    settings.key.status === 'none' &&
+    result === undefined &&
+    key === settings.key.value;
+  const keyNote = testing
+    ? 'Testing the key'
+    : result === 'failed'
+      ? failure
+      : result === 'saved'
+        ? 'Saved'
+        : result === 'ok'
+          ? 'The key works.'
+          : needsKey
+            ? 'PSet needs a key to read and guide.'
+            : undefined;
   const keyReady = key.trim() === '' ? 'Paste a key first.' : undefined;
   const failing = settings.checks.filter((c) => !c.ok);
 
+  const anyFix = settings.checks.some((c) => c.fix);
   const rows = settings.checks.map((c) => (
     <ListRow
       key={c.id}
@@ -138,25 +156,26 @@ export function Settings({
       meta={[c.detail]}
       status={c.ok ? <Tag>Working</Tag> : <Tag tone="danger">Failing</Tag>}
       aside={
-        c.fix ? (
+        anyFix ? (
           <div className="flex justify-end">
-            <Button>{c.fix}</Button>
+            {c.fix && <Button>{c.fix}</Button>}
           </div>
         ) : undefined
       }
-      asideWidth={c.fix ? 140 : 0}
+      asideWidth={140}
     />
   ));
 
   return (
-    <div className="@container">
+    <div>
       <TopBar
         homeHref={homeHref}
         settingsHref={settingsHref}
+        onSettings
         path={[{ label: 'Home', href: homeHref }, { label: 'Settings' }]}
       />
       <div className="px-(--ds-gutter) pb-16">
-        <div className="mx-auto max-w-180">
+        <div className="@container mx-auto max-w-[720px]">
           <div className="ds-room-display">
             <h1 className="ds-display text-(--ds-fg)">Settings</h1>
           </div>
@@ -184,35 +203,25 @@ export function Settings({
               </Section>
 
               <Section title="Model key">
-                {keyStatus === 'none' && (
-                  <p className="ds-body mb-3 text-(--ds-fg)">
-                    PSet needs a key to read and guide.
-                  </p>
-                )}
                 <TextField
                   label="OpenRouter key"
                   value={key}
                   onChange={(v) => {
                     setKey(v);
-                    setKeyNote(undefined);
+                    setResult(undefined);
                   }}
                   mono
                   secret
                   placeholder="sk-or-v1-"
-                  failed={keyStatus === 'failed'}
-                  note={
-                    testing
-                      ? 'Testing the key'
-                      : (keyNote ??
-                        (keyStatus === 'ok' ? 'The key works.' : undefined))
-                  }
+                  failed={result === 'failed'}
+                  note={keyNote}
                   action={
                     <div className="flex gap-2">
                       <Button
                         busy={testing}
                         notReady={keyReady}
                         onPress={() => {
-                          test();
+                          test(false);
                         }}
                       >
                         Test
@@ -222,7 +231,7 @@ export function Settings({
                         busy={testing}
                         notReady={keyReady}
                         onPress={() => {
-                          test();
+                          test(true);
                         }}
                       >
                         Save
@@ -254,46 +263,54 @@ export function Settings({
                 <div className="flex min-h-8 items-center justify-between gap-4">
                   <p className="ds-body text-(--ds-fg)">
                     pset {settings.version}
-                    <span className="text-(--ds-fg-muted)">
-                      {upToDate
-                        ? ' · You have the latest version'
-                        : update === 'current'
-                          ? ' · Up to date'
-                          : ''}
-                    </span>
+                    {update === 'current' && (
+                      <span className="text-(--ds-fg-muted)">
+                        {upToDate
+                          ? ' · You have the latest version'
+                          : ' · Up to date'}
+                      </span>
+                    )}
                   </p>
                   <Button busy={checking} onPress={check}>
                     Check for updates
                   </Button>
                 </div>
                 {update !== 'current' && (
-                  <div className="mt-3 rounded-(--ds-radius-control) border border-(--ds-border) px-4 py-3">
-                    <div className="flex min-w-0 items-center justify-between gap-4">
-                      <p className="ds-body min-w-0 font-medium text-(--ds-fg)">
-                        pset {settings.update.latest} is available
-                      </p>
+                  <div className="mt-3 grid rounded-(--ds-radius-control) border border-(--ds-border) px-4 py-3">
+                    {/* Both faces stack in one cell, so the card keeps its height. */}
+                    <div
+                      className={`flex min-w-0 items-start justify-between gap-4 [grid-area:1/1] ${update === 'updating' ? 'invisible' : ''}`}
+                      aria-hidden={update === 'updating'}
+                      inert={update === 'updating'}
+                    >
+                      <ul className="ds-small min-w-0 list-disc space-y-1 pl-5 text-(--ds-fg-muted)">
+                        {(settings.update.notes ?? []).map((n) => (
+                          <li key={n} className="[overflow-wrap:anywhere]">
+                            {n}
+                          </li>
+                        ))}
+                      </ul>
                       <Button
                         variant="primary"
-                        busy={update === 'updating'}
                         onPress={() => {
                           setUpdate('updating');
                         }}
                       >
-                        {`Update to v${settings.update.latest ?? ''}`}
+                        {`Update to ${settings.update.latest ?? ''}`}
                       </Button>
                     </div>
-                    <ul className="ds-small mt-2 list-disc space-y-1 pl-5 text-(--ds-fg-muted)">
-                      {(settings.update.notes ?? []).map((n) => (
-                        <li key={n} className="[overflow-wrap:anywhere]">
-                          {n}
-                        </li>
-                      ))}
-                    </ul>
-                    {update === 'updating' && (
-                      <p className="ds-small mt-3 text-(--ds-fg)">
+                    <div
+                      className={`flex min-w-0 items-start justify-between gap-4 [grid-area:1/1] ${update === 'updating' ? '' : 'invisible'}`}
+                      aria-hidden={update !== 'updating'}
+                      inert={update !== 'updating'}
+                    >
+                      <p className="ds-small text-(--ds-fg)">
                         Updating in place. PSet restarts when it is done.
                       </p>
-                    )}
+                      <Button variant="primary" busy>
+                        {`Update to ${settings.update.latest ?? ''}`}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </Section>
@@ -343,22 +360,22 @@ export function Settings({
                     <List>{rows}</List>
                   </>
                 )}
-                <div className="mt-2">
-                  <Fold
-                    label={`Recent errors (${String(errors.length)})`}
-                    defaultOpen={unfolded}
-                  >
-                    <List empty="No errors kept.">
-                      {errors.map((e) => (
-                        <ListRow
-                          key={e.id}
-                          title={e.reason}
-                          meta={[e.fix, e.when]}
-                          status={<span className="ds-code">{e.id}</span>}
-                        />
-                      ))}
-                    </List>
-                    {errors.length > 0 && (
+                {errors.length > 0 && (
+                  <div className="mt-2">
+                    <Fold
+                      label={`Recent errors (${String(errors.length)})`}
+                      defaultOpen={unfolded}
+                    >
+                      <List>
+                        {errors.map((e) => (
+                          <ListRow
+                            key={e.id}
+                            title={e.reason}
+                            meta={[e.fix, e.when]}
+                            status={<span className="ds-code">{e.id}</span>}
+                          />
+                        ))}
+                      </List>
                       <div className="mt-3">
                         <Button
                           onPress={() => {
@@ -368,9 +385,9 @@ export function Settings({
                           Clear all
                         </Button>
                       </div>
-                    )}
-                  </Fold>
-                </div>
+                    </Fold>
+                  </div>
+                )}
               </Section>
 
               <Section title="Reset">
@@ -381,23 +398,23 @@ export function Settings({
                       'Removes time studied and answers; keeps your courses',
                     ]}
                     aside={
-                      <div className="flex justify-end">
+                      <div ref={setHistoryEl} className="flex justify-end">
                         <Button
                           onPress={() => {
                             setConfirming('history');
                           }}
                         >
-                          Clear history
+                          Clear
                         </Button>
                       </div>
                     }
-                    asideWidth={140}
+                    asideWidth={96}
                   />
                   <ListRow
                     title="Reset everything"
                     meta={['Removes every course, set, material and memory']}
                     aside={
-                      <div className="flex justify-end">
+                      <div ref={setResetEl} className="flex justify-end">
                         <Button
                           variant="danger"
                           onPress={() => {
@@ -408,35 +425,34 @@ export function Settings({
                         </Button>
                       </div>
                     }
-                    asideWidth={140}
+                    asideWidth={96}
                   />
                 </List>
                 {confirming && (
-                  <div className="mt-3">
-                    <Confirm
-                      message={
-                        confirming === 'history'
-                          ? `This deletes ${String(counts.studyHours)} h of study time and ${plural(counts.answers, 'answer', 'answers')}.`
-                          : `This deletes ${plural(counts.courses, 'course', 'courses')}, ${plural(counts.sets, 'set', 'sets')}, ${plural(counts.materials, 'material', 'materials')} and ${plural(counts.memories, 'memory', 'memories')}.`
-                      }
-                      confirmLabel={
-                        confirming === 'history'
-                          ? 'Clear history'
-                          : 'Reset everything'
-                      }
-                      onConfirm={() => {
-                        setConfirming(undefined);
-                      }}
-                      onCancel={() => {
-                        setConfirming(undefined);
-                      }}
-                    />
-                  </div>
+                  <Confirm
+                    anchor={confirming === 'history' ? historyEl : resetEl}
+                    message={
+                      confirming === 'history'
+                        ? `This deletes ${String(counts.studyHours)} h of study time and ${plural(counts.answers, 'answer', 'answers')}.`
+                        : `This deletes ${plural(counts.courses, 'course', 'courses')}, ${plural(counts.sets, 'set', 'sets')}, ${plural(counts.materials, 'material', 'materials')} and ${plural(counts.memories, 'memory', 'memories')}.`
+                    }
+                    confirmLabel={
+                      confirming === 'history'
+                        ? 'Clear study history'
+                        : 'Reset everything'
+                    }
+                    onConfirm={() => {
+                      setConfirming(undefined);
+                    }}
+                    onCancel={() => {
+                      setConfirming(undefined);
+                    }}
+                  />
                 )}
               </Section>
 
               <p className="ds-small text-(--ds-fg-muted)">
-                pset {settings.version} · {settings.dataDir}
+                {settings.dataDir}
               </p>
             </div>
           )}
@@ -454,19 +470,20 @@ export function SettingsSkeleton({
   homeHref?: string;
   settingsHref?: string;
 }) {
-  const heights = [72, 128, 40, 72, 200, 96, 120];
+  const heights = [80, 112, 32, 32, 186, 32, 123];
   return (
-    <div className="@container">
+    <div>
       <TopBar
         homeHref={homeHref}
         settingsHref={settingsHref}
+        onSettings
         path={[{ label: 'Home', href: homeHref }, { label: 'Settings' }]}
       />
       <div className="px-(--ds-gutter) pb-16">
-        <div className="mx-auto max-w-180">
+        <div className="@container mx-auto max-w-[720px]">
           <div className="ds-room-display">
             <div className="flex h-(--ds-display-line) items-center">
-              <Bar className="h-9 w-56" />
+              <Bar className="h-9 w-[224px]" />
             </div>
           </div>
           <div className="space-y-12">
@@ -482,6 +499,9 @@ export function SettingsSkeleton({
                 </div>
               </div>
             ))}
+            <div className="flex h-5 items-center">
+              <Bar className="h-3 w-48" />
+            </div>
           </div>
         </div>
       </div>

@@ -20,6 +20,11 @@ export default defineExamples(spec, TextField, {
   states: {
     empty: () => <Held start="" label="Name" placeholder="Your first name" />,
     filled: () => <Held start="Jack" label="Name" />,
+    inline: () => (
+      <div className="ds-body flex h-8 items-center rounded-(--ds-radius-control) border border-(--ds-border-muted) px-4">
+        <Held start="Problem set 7" label="Name" inline="row" />
+      </div>
+    ),
     saved: () => <Held start="Jack" label="Name" note="Saved" />,
     key: () => (
       <Held
