@@ -25,3 +25,5 @@ Answers: stats **"all the most useful information shown in a nice way. not clutt
 Jack, 2026-10-21: **"The underline overlaps the icon and looks weird."** (the flag); **"Can we show these a bit more github-y"** (the summary); **"Shown in two spots. This should be a rule, avoid duplication where possible"** (the due date).
 
 Jack, 2026-10-21: **"the set panel summary page still looks not my favorite, almost too github-y now. lest A/B some options, also the underline of the summary is much thicker and a different color than the icon."**
+
+Jack, 2026-10-21: **"lets go with C. Still dont like the summary as that icon at the end, lets A/B that now"**

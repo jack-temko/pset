@@ -183,5 +183,13 @@ export default defineSpec({
       beat: 'A 14px icon with its line at the slot\u2019s edge',
       date: '2026-10-21',
     },
+    {
+      id: 'problem-strip-d12',
+      decision:
+        'Four ways to the summary to compare: the flag, a label after the bar, a link in the set line, one more segment; each underlined while it shows.',
+      why: 'Jack: "Still dont like the summary as that icon at the end, lets A/B that now".',
+      beat: 'Only the flag',
+      date: '2026-10-21',
+    },
   ],
 });

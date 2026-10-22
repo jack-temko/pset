@@ -68,7 +68,7 @@ describe('Work', () => {
   it('opens a finished set on the summary, and a segment goes back', () => {
     const { el } = render(<Work set={allDone()} memory={pageMemory()} />);
     expect(el.textContent).toContain('All 8 done');
-    expect(el.textContent).toContain('Finished');
+    expect(el.textContent).toContain('finished Tue');
     press(el.querySelector('[aria-label^="Problem 2"]'));
     expect(el.querySelector('h2')?.textContent).toContain('Problem 2 ·');
   });

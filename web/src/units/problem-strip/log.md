@@ -34,3 +34,5 @@ Jack, 2026-10-21: **"yes, make the queued line full yellow."** And on the summar
 Jack, 2026-10-21, on the flag: **"The underline overlaps the icon and looks weird."** The flag now has a segment's slot: a 12px icon centred on the track, its line at the same y as a segment's underline, 3px below the track.
 
 Jack, 2026-10-21: **"also the underline of the summary is much thicker and a different color than the icon."** The flag and its line now share one colour (green when all are done, the text colour otherwise), the line 2px like a segment's.
+
+Jack, 2026-10-21: **"Still dont like the summary as that icon at the end, lets A/B that now"**. Built: flag, label, set-line link, one more segment (the last is in the pane).

@@ -54,17 +54,30 @@ export default defineExamples(spec, {
       <Recorded set={sample.inProgress()} startAt="p4" />
     ),
     summary: () => <Recorded set={sample.inProgress()} startSummary />,
-    'summary-box': () => <Recorded set={sample.allDone()} />,
-    'summary-home': () => (
-      <Recorded set={sample.allDone()} summaryView="home" />
-    ),
-    'summary-plain': () => (
-      <Recorded set={sample.allDone()} summaryView="plain" />
-    ),
-    'summary-tiles': () => (
-      <Recorded set={sample.allDone()} summaryView="tiles" />
-    ),
+    'summary-finished': () => <Recorded set={sample.allDone()} />,
     'summary-turned-in': () => <Recorded set={sample.turnedIn()} />,
+    'reach-flag': () => <Recorded set={sample.inProgress()} startAt="p4" />,
+    'reach-flag-summary': () => (
+      <Recorded set={sample.inProgress()} startSummary />
+    ),
+    'reach-label': () => (
+      <Recorded set={sample.inProgress()} startAt="p4" reach="label" />
+    ),
+    'reach-label-summary': () => (
+      <Recorded set={sample.inProgress()} startSummary reach="label" />
+    ),
+    'reach-header': () => (
+      <Recorded set={sample.inProgress()} startAt="p4" reach="header" />
+    ),
+    'reach-header-summary': () => (
+      <Recorded set={sample.inProgress()} startSummary reach="header" />
+    ),
+    'reach-segment': () => (
+      <Recorded set={sample.inProgress()} startAt="p4" reach="segment" />
+    ),
+    'reach-segment-summary': () => (
+      <Recorded set={sample.inProgress()} startSummary reach="segment" />
+    ),
     empty: () => <Recorded set={sample.empty()} />,
     plain: () => <Recorded set={sample.plain()} startAt="p6" />,
     finding: () => <Recorded set={sample.finding()} startAt="p5" />,
@@ -74,11 +87,16 @@ export default defineExamples(spec, {
   skeletons: {
     'current-underline': () => <WorkSkeleton />,
     summary: () => <WorkSkeleton />,
-    'summary-box': () => <WorkSkeleton opens="summary" />,
-    'summary-home': () => <WorkSkeleton opens="summary" summaryView="home" />,
-    'summary-plain': () => <WorkSkeleton opens="summary" summaryView="plain" />,
-    'summary-tiles': () => <WorkSkeleton opens="summary" summaryView="tiles" />,
+    'summary-finished': () => <WorkSkeleton opens="summary" />,
     'summary-turned-in': () => <WorkSkeleton opens="turned-in" />,
+    'reach-flag': () => <WorkSkeleton reach="flag" />,
+    'reach-flag-summary': () => <WorkSkeleton reach="flag" />,
+    'reach-label': () => <WorkSkeleton reach="label" />,
+    'reach-label-summary': () => <WorkSkeleton reach="label" />,
+    'reach-header': () => <WorkSkeleton reach="header" />,
+    'reach-header-summary': () => <WorkSkeleton reach="header" />,
+    'reach-segment': () => <WorkSkeleton reach="segment" />,
+    'reach-segment-summary': () => <WorkSkeleton reach="segment" />,
     empty: () => <WorkSkeleton />,
     plain: () => <WorkSkeleton />,
     finding: () => <WorkSkeleton />,
