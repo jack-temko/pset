@@ -14,7 +14,6 @@ import {
   ProblemStrip,
   ProblemStripSkeleton,
   type Chip,
-  type Reach,
 } from '@/units/problem-strip';
 import { DueStatus } from '@/units/set-line';
 import { dueBadge } from '@/units/set-line/badge';
@@ -52,9 +51,6 @@ export interface WorkProps {
   /** Where to start: a problem's id. Without it the pane goes to where the
    *  student left (S8), else the first problem still to do. */
   startAt?: string;
-  /** How the summary is reached, to compare: the flag, a label, a link in
-   *  the set line, or one more segment. */
-  reach?: Reach;
   /** Start on the summary. Without it a finished or turned-in set opens
    *  on the summary and an unfinished one on the remembered problem. */
   startSummary?: boolean;
@@ -81,7 +77,6 @@ export function Work({
   set,
   startAt,
   startSummary,
-  reach = 'flag',
   memory = sessionMemory,
   today,
   onOpenPage,
@@ -260,18 +255,6 @@ export function Work({
               meta={[...(minutes ? [minutes] : [])]}
             />
           </div>
-          {reach === 'header' && problems.length > 0 && (
-            <button
-              type="button"
-              aria-current={summary ? 'step' : undefined}
-              onClick={() => {
-                setSummary(true);
-              }}
-              className={`ds-small mr-3 inline-flex h-(--ds-control) items-center border-b-2 px-1 hover:text-(--ds-fg) ${summary ? 'border-(--ds-accent) font-medium text-(--ds-fg)' : 'border-transparent text-(--ds-fg-muted)'}`}
-            >
-              Summary
-            </button>
-          )}
           <ActionMenu
             label="More for this set"
             items={menu}
@@ -318,7 +301,6 @@ export function Work({
           current={summary ? undefined : current}
           summary={summary}
           allDone={all}
-          reach={reach}
           onJump={go}
           onSummary={() => {
             setSummary(true);
@@ -409,11 +391,9 @@ export function Work({
 export function WorkSkeleton({
   chips = 8,
   opens = 'problem',
-  reach = 'flag',
 }: {
   chips?: number;
   opens?: 'problem' | 'summary' | 'turned-in';
-  reach?: Reach;
 }) {
   return (
     <div
@@ -422,7 +402,7 @@ export function WorkSkeleton({
       style={{ minHeight: PANE_MIN }}
     >
       <div className="h-[58px] min-w-0 animate-pulse rounded-(--ds-radius-control) border border-(--ds-border-muted) motion-reduce:animate-none" />
-      <ProblemStripSkeleton count={chips} reach={reach} />
+      <ProblemStripSkeleton count={chips} />
       {opens === 'problem' ? (
         <ProblemSkeleton />
       ) : (

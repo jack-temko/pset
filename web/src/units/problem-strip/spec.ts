@@ -36,7 +36,7 @@ export default defineSpec({
     },
     {
       id: 'summary',
-      label: 'The flag at the end',
+      label: 'The Summary label',
       key: 'Enter',
       does: 'Opens the summary. The summary is not in this unit, so it has no target.',
     },
@@ -52,7 +52,7 @@ export default defineSpec({
       name: 'summary, allDone, onSummary',
       type: 'boolean, boolean, () => void',
       default: 'false',
-      does: 'A flag button ends the bar and opens the summary; while it shows, the flag is underlined, green when all are done.',
+      does: 'A "Summary" label ends the bar and opens the summary; while it shows, label and line are the text colour, green when all are done.',
     },
     {
       name: 'current',
@@ -177,6 +177,7 @@ export default defineSpec({
     },
     {
       id: 'problem-strip-d11',
+      supersededBy: 'problem-strip-d13',
       decision:
         'The flag has a segment\u2019s slot: a 12px icon centred on the track and its underline at the segments\u2019 y, 3px below the track, clear of the icon.',
       why: 'Jack: "The underline overlaps the icon and looks weird."',
@@ -185,10 +186,19 @@ export default defineSpec({
     },
     {
       id: 'problem-strip-d12',
+      supersededBy: 'problem-strip-d13',
       decision:
         'Four ways to the summary to compare: the flag, a label after the bar, a link in the set line, one more segment; each underlined while it shows.',
       why: 'Jack: "Still dont like the summary as that icon at the end, lets A/B that now".',
       beat: 'Only the flag',
+      date: '2026-10-21',
+    },
+    {
+      id: 'problem-strip-d13',
+      decision:
+        'A "Summary" label follows the bar; while it shows, label and 2px line are the text colour (green when all done); closed, muted with no line.',
+      why: 'Jack: "B, then approved, make sure the bar is the similar color as the text".',
+      beat: 'The flag; a set-line link; one more segment',
       date: '2026-10-21',
     },
   ],

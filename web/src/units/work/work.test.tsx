@@ -73,14 +73,14 @@ describe('Work', () => {
     expect(el.querySelector('h2')?.textContent).toContain('Problem 2 ·');
   });
 
-  it('opens the summary from the flag, and Next on the last problem goes there', () => {
+  it('opens the summary from the label, and Next on the last problem goes there', () => {
     const { el } = render(
       <Work set={inProgress()} startAt="p8" memory={pageMemory()} />,
     );
     press(button(el, 'Next'));
     expect(el.textContent).toContain('2 of 8 done');
     press(el.querySelector('[aria-label^="Problem 3"]'));
-    press(el.querySelector('[aria-label="Summary"]'));
+    press(button(el, 'Summary'));
     expect(el.textContent).toContain('2 of 8 done');
   });
 

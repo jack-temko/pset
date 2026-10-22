@@ -52,3 +52,32 @@ Decisions in each unit's spec with Jack's words verbatim in `log.md`.
 `make check` green; every unit and the pane render on `/design` at 1280 and 1920
 (Full), loaded, loading and stress, and you looked at the screenshots; the flow runs
 end to end in Playwright.
+
+## Where it ended
+
+Built and approved on the `work-pane` branch (the grill's P1 to P16 stand; these are
+what the review rounds changed, with Jack's words in each unit's `log.md`):
+
+- **Navigator:** the `problem-strip` is one rounded 8px bar with a segment per problem,
+  2px apart, never wrapping. A segment's colour is the problem's state: done green,
+  started accent, not started the track, working (being found or its guide written)
+  yellow and pulsing, queued yellow at 40%, failed red. The tooltip says the state. The
+  current problem has a 2px line under its segment in the segment's own colour (muted
+  text for a not-started one; full yellow for a queued one). The boxes of numbers and the
+  other options tried (plain numbers, picker, titled list, titled numbers, rail) are gone.
+- **Set line:** name, badge (a neutral "Done" or "Turned in" once finished), time left and
+  due date; no progress bar or count, since the segments are the progress.
+- **Summary:** plain, no box: heading ("All 8 done", "5 of 8 done" or "Turned in Oct 14"),
+  one muted line (total time, finished against the due date), the time-per-problem bars
+  with the longest at full colour and named under them, Turn in or Take back, Back to the
+  course. It is reached by a "Summary" label after the bar (its 2px line is exactly the
+  label's colour, green when all are done), or by Next on the last problem. A finished or
+  turned-in set opens on it. Nothing about help, and no due date.
+- **Centring:** anything that stands alone in the pane (the summary, a set with no
+  problems, a problem being found or not found) is centred across and down.
+- **Rulebook:** `say-it-once` (show each fact once on a screen).
+- **Design page:** the stage remounts an example when the state, load or content mode
+  changes (the pane keeps its own state).
+- **Not done:** the workspace swaps this pane in for its stand-in, and passes real
+  problems, minutes spent and the due date; the Home screen has duplicates the new rule
+  would remove (a due tag beside the due date, the greeting repeating the first row).

@@ -20,7 +20,7 @@ export default defineSpec({
     {
       id: 'summary',
       name: 'Summary, not finished',
-      when: 'The summary stop (flag, label, link or segment) was pressed with 2 of 8 done: "2 of 8 done", total time, when it is due, time per problem, Turn in.',
+      when: 'The "Summary" label after the bar was pressed with 2 of 8 done: "2 of 8 done", total time, when it is due, time per problem, Turn in.',
       text: '2 of 8 done',
       skeleton: SKELETON,
     },
@@ -36,54 +36,6 @@ export default defineSpec({
       name: 'Summary, turned in',
       when: 'Handed in: "Turned in Oct 14", the same figures, and Take back where Turn in was.',
       text: 'Turned in Oct 14',
-      skeleton: SKELETON,
-    },
-    {
-      id: 'reach-flag',
-      name: 'Reach flag: problem open',
-      when: 'Reaching the summary by the flag icon at the end of the bar (today), with a problem open.',
-      skeleton: SKELETON,
-    },
-    {
-      id: 'reach-flag-summary',
-      name: 'Reach flag: summary open',
-      when: 'Reaching the summary by the flag icon at the end of the bar (today), with the summary open.',
-      skeleton: SKELETON,
-    },
-    {
-      id: 'reach-label',
-      name: 'Reach label: problem open',
-      when: 'Reaching the summary by a muted "Summary" label after the bar, with a problem open.',
-      skeleton: SKELETON,
-    },
-    {
-      id: 'reach-label-summary',
-      name: 'Reach label: summary open',
-      when: 'Reaching the summary by a muted "Summary" label after the bar, with the summary open.',
-      skeleton: SKELETON,
-    },
-    {
-      id: 'reach-header',
-      name: 'Reach header: problem open',
-      when: 'Reaching the summary by a "Summary" link in the set line, before the menu, with a problem open.',
-      skeleton: SKELETON,
-    },
-    {
-      id: 'reach-header-summary',
-      name: 'Reach header: summary open',
-      when: 'Reaching the summary by a "Summary" link in the set line, before the menu, with the summary open.',
-      skeleton: SKELETON,
-    },
-    {
-      id: 'reach-segment',
-      name: 'Reach segment: problem open',
-      when: 'Reaching the summary by one more short segment at the end of the bar, with a problem open.',
-      skeleton: SKELETON,
-    },
-    {
-      id: 'reach-segment-summary',
-      name: 'Reach segment: summary open',
-      when: 'Reaching the summary by one more short segment at the end of the bar, with the summary open.',
       skeleton: SKELETON,
     },
     {
@@ -196,7 +148,7 @@ export default defineSpec({
     },
     {
       id: 'open-summary',
-      label: 'The summary stop (flag, label, link or segment)',
+      label: 'The "Summary" label after the bar',
       key: 'Enter',
       does: 'Opens the summary any time. A segment returns to its problem; Next on the last problem comes here too.',
       target: { unit: 'work', state: 'summary' },
@@ -442,10 +394,19 @@ export default defineSpec({
     },
     {
       id: 'work-d18',
+      supersededBy: 'work-d19',
       decision:
         'The summary is the plain look only. Four ways to reach it are compared: the flag, a label after the bar, a link in the set line, one more segment.',
       why: 'Jack: "lets go with C. Still dont like the summary as that icon at the end, lets A/B that now".',
       beat: 'Four summary looks; only the flag',
+      date: '2026-10-21',
+    },
+    {
+      id: 'work-d19',
+      decision:
+        'The summary is reached by a "Summary" label after the bar, underlined in its own colour while it shows; Next on the last problem goes there too.',
+      why: 'Jack: "B, then approved, make sure the bar is the similar color as the text".',
+      beat: 'A flag icon; a link in the set line; one more segment',
       date: '2026-10-21',
     },
   ],

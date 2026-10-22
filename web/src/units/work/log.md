@@ -27,3 +27,5 @@ Jack, 2026-10-21: **"The underline overlaps the icon and looks weird."** (the fl
 Jack, 2026-10-21: **"the set panel summary page still looks not my favorite, almost too github-y now. lest A/B some options, also the underline of the summary is much thicker and a different color than the icon."**
 
 Jack, 2026-10-21: **"lets go with C. Still dont like the summary as that icon at the end, lets A/B that now"**
+
+Jack, 2026-10-21: **"B, then approved, make sure the bar is the similar color as the text"**

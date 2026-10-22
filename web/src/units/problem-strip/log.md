@@ -36,3 +36,5 @@ Jack, 2026-10-21, on the flag: **"The underline overlaps the icon and looks weir
 Jack, 2026-10-21: **"also the underline of the summary is much thicker and a different color than the icon."** The flag and its line now share one colour (green when all are done, the text colour otherwise), the line 2px like a segment's.
 
 Jack, 2026-10-21: **"Still dont like the summary as that icon at the end, lets A/B that now"**. Built: flag, label, set-line link, one more segment (the last is in the pane).
+
+Jack, 2026-10-21: **"B, then approved, make sure the bar is the similar color as the text"**. The label is the only way to the summary; its line is the label's own colour.

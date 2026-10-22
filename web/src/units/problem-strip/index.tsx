@@ -1,11 +1,7 @@
-import { Flag } from 'lucide-react';
-
 import { Tooltip } from '@/units/tooltip';
 import { FILL, LINE, type ChipState } from './colors';
 
 export type { ChipState };
-
-export type Reach = 'flag' | 'label' | 'header' | 'segment';
 
 export interface Chip {
   id: string;
@@ -32,7 +28,6 @@ export function ProblemStrip({
   current,
   summary = false,
   allDone = false,
-  reach = 'flag',
   onJump,
   onSummary,
 }: {
@@ -40,11 +35,8 @@ export function ProblemStrip({
   current?: string;
   /** The summary is showing: the flag is underlined like a current segment. */
   summary?: boolean;
-  /** Every problem is done, so the summary's line is green. */
+  /** Every problem is done, so the label and its line are green. */
   allDone?: boolean;
-  /** How the summary is reached: the flag, a label, or one more segment (a
-   *  link in the set line is the pane's, not the strip's). */
-  reach?: Reach;
   onJump?: (id: string) => void;
   /** The flag at the end of the bar was pressed. */
   onSummary?: () => void;
@@ -84,82 +76,27 @@ export function ProblemStrip({
           </li>
         );
       })}
-      {reach === 'flag' && (
-        <li className="ml-1 flex shrink-0">
-          <Tooltip text="Summary">
-            <button
-              type="button"
-              aria-label="Summary"
-              aria-current={summary ? 'step' : undefined}
-              onClick={() => {
-                onSummary?.();
-              }}
-              style={{ color: summary ? ink : undefined }}
-              className={`relative flex h-5 w-5 items-center justify-center ${summary ? '' : 'text-(--ds-fg-muted) hover:text-(--ds-fg)'}`}
-            >
-              <Flag className="size-3" aria-hidden />
-              {summary && <Underline />}
-            </button>
-          </Tooltip>
-        </li>
-      )}
-      {reach === 'label' && (
-        <li className="ml-2 flex shrink-0">
-          <button
-            type="button"
-            aria-current={summary ? 'step' : undefined}
-            onClick={() => {
-              onSummary?.();
-            }}
-            style={{ color: summary ? ink : undefined }}
-            className={`ds-small relative flex h-5 items-center ${summary ? '' : 'text-(--ds-fg-muted) hover:text-(--ds-fg)'}`}
-          >
-            <span style={{ lineHeight: '14px', marginTop: -2 }}>Summary</span>
-            {summary && <Underline />}
-          </button>
-        </li>
-      )}
-      {reach === 'segment' && (
-        <li
-          className="flex w-6 shrink-0 [&>span]:w-full"
-          style={{ marginLeft: 4 }}
+      <li className="ml-2 flex shrink-0">
+        <button
+          type="button"
+          aria-current={summary ? 'step' : undefined}
+          onClick={() => {
+            onSummary?.();
+          }}
+          style={{ color: summary ? ink : undefined }}
+          className={`ds-small relative flex h-5 items-center ${summary ? '' : 'text-(--ds-fg-muted) hover:text-(--ds-fg)'}`}
         >
-          <Tooltip text="Summary">
-            <button
-              type="button"
-              aria-label="Summary"
-              aria-current={summary ? 'step' : undefined}
-              onClick={() => {
-                onSummary?.();
-              }}
-              className="group relative flex h-5 w-full items-center"
-            >
-              <span
-                style={{ background: FILL.todo }}
-                className="block h-2 w-full rounded-full group-hover:brightness-125"
-              />
-              {summary && (
-                <Underline
-                  color={allDone ? 'var(--ds-success)' : 'var(--ds-fg-muted)'}
-                />
-              )}
-            </button>
-          </Tooltip>
-        </li>
-      )}
+          <span style={{ lineHeight: '14px', marginTop: -2 }}>Summary</span>
+          {summary && <Underline />}
+        </button>
+      </li>
     </ul>
   );
 }
 
 /** The strip while the set loads: the track with as many segments as it
  *  will have, in the same heights. */
-export function ProblemStripSkeleton({
-  count = 8,
-  reach = 'flag',
-}: {
-  count?: number;
-  reach?: Reach;
-}) {
+export function ProblemStripSkeleton({ count = 8 }: { count?: number }) {
   return (
     <ul
       aria-hidden
@@ -172,22 +109,9 @@ export function ProblemStripSkeleton({
           className={`h-2 min-w-0 flex-1 animate-pulse bg-(--ds-border-muted) motion-reduce:animate-none ${i === 0 ? 'rounded-l-full' : ''} ${i === count - 1 ? 'rounded-r-full' : ''}`}
         />
       ))}
-      {reach === 'flag' && (
-        <li className="ml-1 flex h-5 w-5 shrink-0 items-center justify-center">
-          <span className="size-3 animate-pulse rounded-(--ds-radius-segment) bg-(--ds-border-muted) motion-reduce:animate-none" />
-        </li>
-      )}
-      {reach === 'label' && (
-        <li className="ml-2 flex h-5 w-14 shrink-0 items-center">
-          <span className="h-3 w-full animate-pulse rounded-(--ds-radius-tag) bg-(--ds-border-muted) motion-reduce:animate-none" />
-        </li>
-      )}
-      {reach === 'segment' && (
-        <li
-          className="h-2 w-6 shrink-0 animate-pulse rounded-full bg-(--ds-border-muted) motion-reduce:animate-none"
-          style={{ marginLeft: 4 }}
-        />
-      )}
+      <li className="ml-2 flex h-5 w-14 shrink-0 items-center">
+        <span className="h-3 w-full animate-pulse rounded-(--ds-radius-tag) bg-(--ds-border-muted) motion-reduce:animate-none" />
+      </li>
     </ul>
   );
 }
