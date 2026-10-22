@@ -1,4 +1,9 @@
-import { problemAt, sampleProblems, WITH_PARTS } from '@/units/problem/sample';
+import {
+  problemAt,
+  sampleProblems,
+  WALKTHROUGH_WRITING,
+  WITH_PARTS,
+} from '@/units/problem/sample';
 import type { ProblemData } from '@/units/problem/types';
 import { parseDueDate } from '@/units/set-line/dates';
 import type { WorkSet } from './sets';
@@ -19,8 +24,28 @@ const base = (
   ...over,
 });
 
-/** Eight problems, three done, the fourth (with a note and parts) next. */
-export const inProgress = () => base(sampleProblems(3));
+/** Eight problems, one in each state: two done, one started, the fourth (with
+ *  a note and parts) current, one with its guide being written, one queued,
+ *  one not found, one not started. */
+export const inProgress = () =>
+  base(
+    sampleProblems(0).map((p, i) => {
+      if (i < 2) return { ...p, done: true };
+      if (i === 2) return { ...p, started: true };
+      if (i === 4) return { ...p, ...WALKTHROUGH_WRITING };
+      if (i === 5) return { ...p, found: { status: 'queued' as const } };
+      if (i === 6)
+        return {
+          ...p,
+          found: {
+            status: 'failed' as const,
+            tries: 1,
+            tried: ['Looked for "4.64" on page 113 and found no problem.'],
+          },
+        };
+      return p;
+    }),
+  );
 
 /** All eight done. */
 export const allDone = () =>
@@ -65,6 +90,19 @@ export function stress(): WorkSet {
         'Hysteresis loss in a laminated transformer core with a gapped limb',
       label: `Chapter 12 review, section 12.${String(i + 1)}, exercise ${String(i + 1)}b`,
       done: i % 3 === 0,
+      ...(i % 7 === 3
+        ? {
+            found: {
+              status: 'failed' as const,
+              tries: 1,
+              tried: ['Looked on the page.'],
+            },
+          }
+        : i % 7 === 5
+          ? { found: { status: 'queued' as const } }
+          : i % 7 === 6
+            ? { found: { status: 'finding' as const, seconds: 10 } }
+            : {}),
     });
     return i === 0
       ? {

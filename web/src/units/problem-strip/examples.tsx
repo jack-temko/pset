@@ -1,25 +1,37 @@
 import { defineExamples } from '@/design/examples';
-import { ProblemStrip, type Chip } from './index';
+import { ProblemStrip, type Chip, type Marker } from './index';
 import spec from './spec';
 
-const chips = (over: Record<number, Chip['state']> = {}): Chip[] =>
-  Array.from({ length: 8 }, (_, i) => ({
+/** One problem in each state, the fourth current. */
+const chips = (): Chip[] =>
+  [
+    { state: 'done', word: 'Done' },
+    { state: 'done', word: 'Done' },
+    { state: 'started', word: 'Started' },
+    { state: 'started', word: 'Started' },
+    { state: 'working', word: 'Writing the guide' },
+    { state: 'queued', word: 'Queued' },
+    { state: 'failed', word: 'Not found' },
+    { state: 'todo', word: 'Not started' },
+  ].map((s, i) => ({
     id: `p${String(i + 1)}`,
     label: `4.${String(58 + i)}`,
     title: `Title ${String(i + 1)}`,
-    state: over[i] ?? (i < 3 ? 'done' : 'todo'),
-  }));
+    ...s,
+  })) as Chip[];
+
+const show = (marker: Marker) => (
+  <ProblemStrip chips={chips()} current="p4" marker={marker} />
+);
 
 export default defineExamples(spec, {
   states: {
-    'in-progress': () => <ProblemStrip chips={chips()} current="p4" />,
-    failed: () => <ProblemStrip chips={chips({ 4: 'failed' })} current="p5" />,
-    finding: () => (
-      <ProblemStrip chips={chips({ 4: 'finding' })} current="p5" />
-    ),
+    underline: () => show('underline'),
+    taller: () => show('taller'),
+    inset: () => show('inset'),
     'all-done': () => (
       <ProblemStrip
-        chips={chips({ 3: 'done', 4: 'done', 5: 'done', 6: 'done', 7: 'done' })}
+        chips={chips().map((c) => ({ ...c, state: 'done', word: 'Done' }))}
       />
     ),
   },
@@ -30,7 +42,10 @@ export default defineExamples(spec, {
         label: `4.${String(i)}`,
         title:
           'Hysteresis loss in a laminated transformer core with a gapped limb',
-        state: i % 7 === 3 ? 'failed' : i % 3 === 0 ? 'done' : 'todo',
+        state: (
+          ['done', 'started', 'todo', 'working', 'queued', 'failed'] as const
+        )[i % 6],
+        word: 'State',
       }))}
       current="s5"
     />

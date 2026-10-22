@@ -44,6 +44,7 @@ export interface Part {
  *  found after `tries` goes (P10, P16). */
 export type Found =
   | { status: 'ready' }
+  | { status: 'queued' }
   | { status: 'finding'; seconds: number }
   | { status: 'failed'; tries: number; tried: string[] };
 
@@ -63,6 +64,8 @@ export interface ProblemData {
   help: Record<HelpKind, Help>;
   found: Found;
   done: boolean;
+  /** Opened, help read or time spent, but not done. */
+  started?: boolean;
 }
 
 /** The items of a problem's menu: everything that is not the work itself

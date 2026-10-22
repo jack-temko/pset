@@ -50,7 +50,15 @@ function Recorded(props: WorkProps) {
 
 export default defineExamples(spec, {
   states: {
-    'in-progress': () => <Recorded set={sample.inProgress()} startAt="p4" />,
+    'current-underline': () => (
+      <Recorded set={sample.inProgress()} startAt="p4" />
+    ),
+    'current-taller': () => (
+      <Recorded set={sample.inProgress()} startAt="p4" marker="taller" />
+    ),
+    'current-inset': () => (
+      <Recorded set={sample.inProgress()} startAt="p4" marker="inset" />
+    ),
     'all-done': () => <Recorded set={sample.allDone()} startFinish />,
     finding: () => <Recorded set={sample.finding()} startAt="p5" />,
     failed: () => <Recorded set={sample.failedOnce()} startAt="p5" />,
@@ -58,7 +66,9 @@ export default defineExamples(spec, {
   },
   stress: () => <Recorded set={sample.stress()} startAt="s1" />,
   skeletons: {
-    'in-progress': () => <WorkSkeleton />,
+    'current-underline': () => <WorkSkeleton />,
+    'current-taller': () => <WorkSkeleton />,
+    'current-inset': () => <WorkSkeleton />,
     'all-done': () => <WorkSkeleton />,
     finding: () => <WorkSkeleton />,
     failed: () => <WorkSkeleton />,

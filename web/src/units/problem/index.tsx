@@ -253,6 +253,7 @@ export function Problem({
   };
   const ready = problem.found.status === 'ready';
   const finding = problem.found.status === 'finding';
+  const queued = problem.found.status === 'queued';
   const hasParts = problem.parts.length > 0;
   const items = MENU.filter(
     (m) => m.id !== 'check-figure' || problem.figures.length > 0,
@@ -276,6 +277,19 @@ export function Problem({
             />
             Finding {problem.label} on page {problem.page} ·{' '}
             {waitText(problem.found.seconds)}
+          </p>
+          <FoundSkeleton />
+        </div>
+      )}
+
+      {queued && (
+        <div className="space-y-3">
+          <p
+            role="status"
+            className="ds-body flex items-center gap-2 text-(--ds-fg-muted)"
+          >
+            Waiting its turn: {problem.label} on page {problem.page} is next to
+            be found
           </p>
           <FoundSkeleton />
         </div>

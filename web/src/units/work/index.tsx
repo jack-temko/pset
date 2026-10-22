@@ -6,8 +6,17 @@ import { FinishCard } from '@/units/finish-card';
 import { List } from '@/units/list';
 import { ListRow } from '@/units/list-row';
 import { Problem, ProblemSkeleton, type Fix } from '@/units/problem';
-import type { ProblemMenuItem } from '@/units/problem/types';
-import { ProblemStrip, ProblemStripSkeleton } from '@/units/problem-strip';
+import {
+  HELP_KINDS,
+  type ProblemData,
+  type ProblemMenuItem,
+} from '@/units/problem/types';
+import {
+  ProblemStrip,
+  ProblemStripSkeleton,
+  type Chip,
+  type Marker,
+} from '@/units/problem-strip';
 import { DueStatus } from '@/units/set-line';
 import { dueBadge } from '@/units/set-line/badge';
 import { timeLeft } from '@/units/set-line/dates';
@@ -41,6 +50,8 @@ export interface WorkProps {
   startAt?: string;
   /** Start on the finish card. */
   startFinish?: boolean;
+  /** How the current problem is marked in the strip. */
+  marker?: Marker;
   /** Where the place is kept. */
   memory?: Memory;
   /** The day "Due soon" counts from (the design page and tests). */
@@ -64,6 +75,7 @@ export function Work({
   set,
   startAt,
   startFinish = false,
+  marker,
   memory = sessionMemory,
   today,
   onOpenPage,
@@ -83,6 +95,9 @@ export function Work({
       (set.problems.length > 0 ? set.problems[0].id : '')
     );
   });
+  const [seen, setSeen] = useState<ReadonlySet<string>>(
+    () => new Set(current ? [current] : []),
+  );
   const [finish, setFinish] = useState(startFinish);
   const [turnedIn, setTurnedIn] = useState(Boolean(set.turnedIn));
   const [asking, setAsking] = useState(false);
@@ -106,8 +121,25 @@ export function Work({
 
   const go = (id: string) => {
     setCurrent(id);
+    setSeen((s) => new Set(s).add(id));
     setFinish(false);
     memory.set(set.id, id);
+  };
+
+  const chipOf = (p: ProblemData): Chip => {
+    const base = { id: p.id, label: p.label, title: p.title };
+    if (p.done) return { ...base, state: 'done', word: 'Done' };
+    if (p.found.status === 'failed')
+      return { ...base, state: 'failed', word: 'Not found' };
+    if (p.found.status === 'finding')
+      return { ...base, state: 'working', word: 'Finding the problem' };
+    if (p.found.status === 'queued')
+      return { ...base, state: 'queued', word: 'Queued' };
+    if (HELP_KINDS.some((k) => p.help[k].status === 'writing'))
+      return { ...base, state: 'working', word: 'Writing the guide' };
+    if (p.started || seen.has(p.id))
+      return { ...base, state: 'started', word: 'Started' };
+    return { ...base, state: 'todo', word: 'Not started' };
   };
 
   const done = doneCount(problems);
@@ -240,19 +272,8 @@ export function Work({
       )}
 
       <ProblemStrip
-        chips={problems.map((p) => ({
-          id: p.id,
-          label: p.label,
-          title: p.title,
-          state:
-            p.found.status === 'failed'
-              ? 'failed'
-              : p.found.status === 'finding'
-                ? 'finding'
-                : p.done
-                  ? 'done'
-                  : 'todo',
-        }))}
+        marker={marker}
+        chips={problems.map(chipOf)}
         current={finish ? undefined : current}
         onJump={go}
       />

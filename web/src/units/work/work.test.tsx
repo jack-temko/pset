@@ -39,7 +39,7 @@ const button = (el: Element, name: string) =>
 describe('nextUnfinished', () => {
   it('goes on past the end, and finds nothing when all are done', () => {
     const ps = inProgress().problems;
-    expect(nextUnfinished(ps, 'p8')).toBe('p4');
+    expect(nextUnfinished(ps, 'p8')).toBe('p3');
     expect(nextUnfinished(allDone().problems, 'p1')).toBeUndefined();
   });
 });
@@ -47,10 +47,10 @@ describe('nextUnfinished', () => {
 describe('Work', () => {
   it('opens on the first problem to do, and Next marks nothing', () => {
     const { el } = render(<Work set={inProgress()} memory={pageMemory()} />);
-    expect(el.querySelector('h2')?.textContent).toContain('Problem 4');
+    expect(el.querySelector('h2')?.textContent).toContain('Problem 3');
     press(button(el, 'Next'));
-    expect(el.querySelector('h2')?.textContent).toContain('Problem 5 ·');
-    expect(el.querySelectorAll('[aria-label$="· done"]')).toHaveLength(3);
+    expect(el.querySelector('h2')?.textContent).toContain('Problem 4 ·');
+    expect(el.querySelectorAll('[aria-label$="· Done"]')).toHaveLength(2);
   });
 
   it('remembers where the student left', () => {
@@ -61,7 +61,7 @@ describe('Work', () => {
       first.root.unmount();
     });
     const { el } = render(<Work set={inProgress()} memory={memory} />);
-    expect(el.querySelector('h2')?.textContent).toContain('Problem 5 ·');
+    expect(el.querySelector('h2')?.textContent).toContain('Problem 4 ·');
   });
 
   it('shows the finish card when the last problem is marked done', () => {

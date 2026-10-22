@@ -12,9 +12,21 @@ export default defineSpec({
     'One problem set being worked: the set line, a strip of every problem, the one you are on with its help, and a finish card at the end.',
   states: [
     {
-      id: 'in-progress',
-      name: 'In progress',
-      when: 'Eight problems, three done: the set line, the strip, and the fourth problem with its note and parts.',
+      id: 'current-underline',
+      name: 'In progress, current underlined',
+      when: 'Eight problems, one in each state, the current one marked by a line under its segment; the fourth problem with its note and parts.',
+      skeleton: SKELETON,
+    },
+    {
+      id: 'current-taller',
+      name: 'Current taller',
+      when: 'The same set with the current segment 4px taller than the track, in its own colour.',
+      skeleton: SKELETON,
+    },
+    {
+      id: 'current-inset',
+      name: 'Current inset outline',
+      when: 'The same set with a 2px outline in the text colour drawn inside the current segment.',
       skeleton: SKELETON,
     },
     {
@@ -89,7 +101,7 @@ export default defineSpec({
       label: 'A set in Assignments',
       key: 'Enter',
       does: 'Opens the set at the problem the student left, or the first one to do.',
-      target: { unit: 'work', state: 'in-progress' },
+      target: { unit: 'work', state: 'current-underline' },
     },
     {
       id: 'read-hint',
@@ -286,6 +298,14 @@ export default defineSpec({
         'The navigator is the segments bar, with no line under it; the set line drops its progress bar and "3 of 8" and keeps the name, badge, time left and due date.',
       why: 'Jack: "Lets go with the segments"; on the segments, the line and "3 of 8": "Don\'t these show the same thing?"; "We don\'t need the title twice".',
       beat: 'Boxes of numbers; a progress bar and count in the set line',
+      date: '2026-10-21',
+    },
+    {
+      id: 'work-d9',
+      decision:
+        'Segments are coloured by state (done, started, not started, working, queued, failed); the current one is underlined, taller or inset.',
+      why: 'Jack: "Also have the colors of the bar represent the state of the question".',
+      beat: 'Accent and danger only; an outer outline',
       date: '2026-10-21',
     },
   ],

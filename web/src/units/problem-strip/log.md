@@ -20,3 +20,7 @@ His four notes on the segments, word for word:
 4. **"Can we make this more github-y? Not a fan of the current option"**
 
 On the outline, Jack clarified: **"just the white outline for the active problem, find a different way to show it"**, then: **"leave the rest of the segments alonge, I just wanted either a different outline color, or it to change color."** Finally: **"Keep the GitHub restyle tho"**. So the Primer-style track stays, and the current segment keeps its colour with an accent outline.
+
+Jack, 2026-10-21: **"Try some other options to show the active question including underlining the segment. The outline overlaps the next bar slighlty. Also have the colors of the bar represent the state of the question, error in progress, queue, searching etc. Just pick a small representative set"**
+
+Built: six state colours (done, started, not started, working, queued, failed) with the state word in the tooltip, and three markers for the current segment (underline, taller, inset) to compare. The underline is the default.

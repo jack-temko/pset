@@ -1,6 +1,16 @@
 import { Tooltip } from '@/units/tooltip';
 
-export type ChipState = 'todo' | 'done' | 'failed' | 'finding';
+/** Where a problem stands, from the student's side (one set of colours, used
+ *  by every way of marking the current one). */
+export type ChipState =
+  | 'done'
+  | 'started'
+  | 'todo'
+  | 'working'
+  | 'queued'
+  | 'failed';
+
+export type Marker = 'underline' | 'taller' | 'inset';
 
 export interface Chip {
   id: string;
@@ -9,46 +19,45 @@ export interface Chip {
   /** The short generated title, "RC step response". */
   title: string;
   state: ChipState;
+  /** The state in words for the tooltip: "Writing the guide". */
+  word: string;
 }
 
-const WORD: Record<ChipState, string> = {
-  todo: '',
-  done: ' · done',
-  failed: ' · not found',
-  finding: ' · being found',
+const LOOK: Record<ChipState, string> = {
+  done: 'bg-(--ds-success)',
+  started: 'bg-(--ds-accent-solid)',
+  todo: 'bg-(--ds-border)',
+  working: 'animate-pulse bg-(--ds-attention) motion-reduce:animate-none',
+  queued: 'bg-[color-mix(in_srgb,var(--ds-attention)_40%,transparent)]',
+  failed: 'bg-(--ds-danger)',
 };
 
 /** The whole set as one bar, like GitHub's progress bar: a track 8px tall
- *  with fully rounded ends and one segment per problem, 2px apart. Done is
- *  the accent, upcoming the track colour, a problem that could not be found
- *  the danger colour, one still being found dashed. The one you are on keeps
- *  its colour and gets a 2px accent outline, offset 2px so it shows on a done
- *  segment. Hover brightens a segment and names it, such as "4 · RC step
- *  response"; one click jumps there. The bar never wraps: with many problems
- *  the segments narrow and the gaps stay 2px. */
+ *  with fully rounded ends and one segment per problem, 2px apart. The colour
+ *  is the problem's state: done green, started accent, not started the track
+ *  colour, working (being found or its guide written) yellow and pulsing,
+ *  queued yellow at 40%, failed red. The one you are on is marked in one of
+ *  three ways that never touch a neighbour: an accent line under it, a
+ *  segment 4px taller, or an inner outline in the text colour. Hover
+ *  brightens a segment and names it with its state, such as "4 · RC step
+ *  response · Started"; one click jumps there. The bar never wraps. */
 export function ProblemStrip({
   chips,
   current,
+  marker = 'underline',
   onJump,
 }: {
   chips: readonly Chip[];
   current?: string;
+  marker?: Marker;
   onJump?: (id: string) => void;
 }) {
   return (
     <ul className="flex min-w-0" style={{ gap: 2 }}>
       {chips.map((c, i) => {
         const here = c.id === current;
-        const name = `${String(i + 1)} · ${c.title}${WORD[c.state]}`;
+        const name = `${String(i + 1)} \u00b7 ${c.title} \u00b7 ${c.word}`;
         const ends = `${i === 0 ? 'rounded-l-full' : ''} ${i === chips.length - 1 ? 'rounded-r-full' : ''}`;
-        const look =
-          c.state === 'failed'
-            ? 'bg-(--ds-danger)'
-            : c.state === 'done'
-              ? 'bg-(--ds-accent-solid)'
-              : c.state === 'finding'
-                ? 'animate-pulse bg-(--ds-border) motion-reduce:animate-none'
-                : 'bg-(--ds-border)';
         return (
           <li key={c.id} className="flex min-w-0 flex-1 [&>span]:w-full">
             <Tooltip text={name}>
@@ -59,11 +68,23 @@ export function ProblemStrip({
                 onClick={() => {
                   onJump?.(c.id);
                 }}
-                className="group flex h-5 w-full min-w-0 items-center"
+                className="group relative flex h-5 w-full min-w-0 items-center"
               >
                 <span
-                  className={`block h-2 w-full group-hover:brightness-125 ${ends} ${look} ${here ? 'outline-2 outline-offset-2 outline-solid outline-(--ds-accent)' : ''}`}
+                  style={
+                    here && marker === 'inset'
+                      ? { boxShadow: 'inset 0 0 0 2px var(--ds-fg)' }
+                      : undefined
+                  }
+                  className={`block w-full group-hover:brightness-125 ${here && marker === 'taller' ? 'h-3' : 'h-2'} ${ends} ${LOOK[c.state]}`}
                 />
+                {here && marker === 'underline' && (
+                  <span
+                    aria-hidden
+                    className="absolute left-0 block w-full bg-(--ds-accent)"
+                    style={{ height: 2, bottom: 1 }}
+                  />
+                )}
               </button>
             </Tooltip>
           </li>
