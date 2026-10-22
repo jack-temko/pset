@@ -12,91 +12,62 @@ export default defineSpec({
       id: 'six-months',
       name: 'Six months',
       when: 'The span is 26 weeks and the container fits them: "N h studied in the last 6 months".',
-      skeleton: 'The heading line as a bar and a block the height of the grid.',
     },
     {
       id: 'grown',
       name: 'Grown to its container',
       when: 'The grow prop: the squares size up to 32 and the gaps widen so the grid reaches the container\u2019s right edge.',
-      skeleton:
-        'The heading line as a bar and a block as tall as the grown labels and grid.',
     },
     {
       id: 'narrow',
       name: 'Too narrow for the span',
       when: 'The container fits fewer weeks than the span: it shows the latest ones, never scrolls sideways, and the heading names the weeks on show.',
-      skeleton: 'The heading line as a bar and a block the height of the grid.',
     },
     {
       id: 'hover',
       name: 'Hovering a day',
       when: 'The tooltip names the day, its total, then each course studied with its time, most first.',
-      skeleton: 'The heading line as a bar and a block the height of the grid.',
     },
     {
       id: 'empty',
       name: 'No time yet',
       when: 'No day has any time: the empty grid under the heading.',
       text: 'No time studied yet',
-      skeleton: 'The heading line as a bar and a block the height of the grid.',
     },
   ],
   stress:
     'A year of days with 70 character course names, in a 160px container: 8 weeks show and the tooltip wraps at 250.',
-  components: [
-    {
-      unit: 'tooltip',
-      use: 'On each square: the day, its total and its courses.',
-    },
-    {
-      unit: 'set-line',
-      use: 'minutesText, the wording of every time.',
-    },
-  ],
   actions: [],
   data: [
     {
       reads: 'Minutes studied per day, by course',
-      call: 'None yet: sample data (the server has no per-day endpoint)',
-      waiting: 'A bar for the heading and a block the size of the grid.',
-      failed: 'Not designed: Home has no failed state yet.',
+      call: 'sample',
     },
   ],
   inputs: [
     {
       name: 'days',
-      type: '{ date: string; courses: { course: string; minutes: number }[] }[]',
-      default: 'none',
       does: 'The study days, each under its date "2026-10-13"; a day left out is empty.',
     },
     {
       name: 'today',
-      type: 'Date',
-      default: 'none',
       does: 'The study day that is today (see studyDay): the last square.',
     },
     {
       name: 'weeks',
-      type: 'number',
-      default: '26',
       does: 'The most weeks to show: 26 for about 6 months, 53 for a year.',
     },
     {
       name: 'grow',
-      type: 'boolean',
-      default: 'false',
       does: 'Fill the container: the squares up to 32 and the gaps wider, the same weeks.',
     },
     {
       name: 'openDay',
-      type: 'string',
-      default: 'none',
       does: 'A date whose tooltip stays open, for the design page.',
     },
   ],
   priority: { first: 'The total in the heading, then the brightest squares.' },
   sizes: {
-    narrowest: 60,
     gives: [
       'Fewer weeks show, the oldest going first, down to one',
       'The heading wraps',

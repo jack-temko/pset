@@ -12,20 +12,16 @@ export default defineSpec({
       id: 'default',
       name: 'Two tabs and a pane',
       when: 'The first tab is open and its pane fills the side.',
-      skeleton:
-        'The real tab row over the pane’s own skeleton: a label bar, a title bar, a page number bar and a page-shaped block.',
     },
     {
       id: 'dropping',
       name: 'A tab dragged over the side',
       when: 'A tab of the other side is dragged anywhere over this one: a translucent accent fill covers the whole side, tab row included, and no outline.',
-      skeleton: 'The same fill over the pane’s skeleton.',
     },
     {
       id: 'overflow',
       name: 'Too many tabs',
       when: 'Ten tabs: the row shrinks them, then scrolls with a fade at the edge; the pane below does not change.',
-      skeleton: 'The real tab row, scrolling, over the pane’s skeleton.',
     },
   ],
   stress:
@@ -37,15 +33,10 @@ export default defineSpec({
       steps: ['open-tab', 'close-tab'],
     },
   ],
-  components: [
-    { unit: 'tabs', use: 'The row of tabs over the pane.' },
-    { unit: 'pane-stub', use: 'Stand-in panes for the example.' },
-  ],
   actions: [
     {
       id: 'open-tab',
       label: 'A tab',
-      key: 'Enter',
       does: 'Shows that tab’s pane in this side.',
     },
     {
@@ -62,34 +53,57 @@ export default defineSpec({
   data: [
     {
       reads: 'The open tab’s pane: a set, a material or Ask',
-      call: 'None yet: stand-in panes with sample data',
-      waiting: 'The tab row shows at once; the pane is its own skeleton.',
-      failed: 'Not designed: the panes’ own grills decide.',
+      call: 'sample',
     },
   ],
   inputs: [
+    { name: 'label', does: 'The side’s name.' },
+    { name: 'tabs', does: 'The tabs in its row.' },
+    { name: 'open', does: 'The id of the open tab, or null.' },
+    { name: 'add', does: 'The groups of the + menu.' },
     {
-      name: 'label, tabs, open, add, end',
-      type: 'as Tabs',
-      default: 'none',
-      does: 'The side’s name and what its tab row shows.',
+      name: 'onOpen',
+      does: 'Called with the id of a tab pressed.',
+    },
+    {
+      name: 'onClose',
+      does: 'Called with the id of a tab closed.',
+    },
+    {
+      name: 'onAdd',
+      does: 'Called with the id of the item picked in the + menu.',
+    },
+    {
+      name: 'onAction',
+      does: 'Called with the tab and the action picked in its menu.',
+    },
+    {
+      name: 'onDropTab',
+      does: 'Called with the tab dropped and the tab it lands before, or null for the end.',
+    },
+    {
+      name: 'forceMenu',
+      does: 'Draws a menu open without a press (the design page only).',
+    },
+    {
+      name: 'forceHover',
+      does: 'Draws the hover look without a pointer (the design page only).',
+    },
+    {
+      name: 'forceDropBefore',
+      does: 'Draws the drop mark before a tab without a drag (the design page only).',
     },
     {
       name: 'body',
-      type: 'ReactNode',
-      default: 'none',
       does: 'The open tab’s pane, or its skeleton while it loads.',
     },
     {
-      name: 'onOpen, onClose, onAdd, onAction, onDropTab, dropping',
-      type: 'callbacks, boolean',
-      default: 'none',
-      does: 'Every change goes to the caller; dropping draws the drop look without a drag.',
+      name: 'dropping',
+      does: 'Draws the drop look without a drag.',
     },
   ],
   priority: { first: 'The open pane.', main: 'open-tab' },
   sizes: {
-    narrowest: 360,
     gives: [
       'Tabs shrink, then the row scrolls',
       'The pane scrolls inside the side',

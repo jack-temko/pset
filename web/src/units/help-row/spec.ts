@@ -32,42 +32,30 @@ export default defineSpec({
     {
       id: 'toggle',
       label: 'The row',
-      key: 'Enter',
       does: 'Opens the row, or closes it when open. A row that is being written ignores the press.',
     },
   ],
   inputs: [
-    {
-      name: 'title',
-      type: 'string',
-      default: 'none',
-      does: 'The step: Hint, Walkthrough or Answer.',
-    },
-    {
-      name: 'state',
-      type: "'ready' | 'writing'",
-      default: 'ready',
-      does: 'Writing swaps the title for the wait.',
-    },
+    { name: 'title', does: 'The step: Hint, Walkthrough or Answer.' },
+    { name: 'state', does: 'Writing swaps the title for the wait.' },
     {
       name: 'seconds',
-      type: 'number',
-      default: '20',
       does: 'How long the writing should take, said as "about 20 s".',
     },
     {
-      name: 'open, onToggle',
-      type: 'boolean, () => void',
-      default: 'closed',
-      does: 'Whether the text shows, and what a press asks for.',
+      name: 'open',
+      does: 'Whether the text shows.',
     },
+    {
+      name: 'onToggle',
+      does: 'Called on a press; the row opens only when the step is ready.',
+    },
+    { name: 'children', does: 'The help text shown when the row is open.' },
   ],
   priority: { first: 'The step’s name.', main: 'toggle' },
   sizes: {
-    narrowest: 320,
     gives: ['The title truncates', 'The text wraps, long words break'],
   },
-  components: [],
   rules: {
     cite: [
       'smallest-help-first',

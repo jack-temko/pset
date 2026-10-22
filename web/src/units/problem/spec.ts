@@ -60,70 +60,58 @@ export default defineSpec({
     {
       id: 'mark-done',
       label: 'Mark done',
-      key: 'Enter',
       does: 'Marks this problem done, or takes it back when it already is.',
     },
     {
       id: 'ask',
       label: 'Ask about this',
-      key: 'Enter',
       does: 'Asks the workspace to open Ask with this problem as a chip. The workspace is not a unit yet, so it has no target.',
     },
     {
       id: 'next',
       label: 'Next',
-      key: 'Enter',
       does: 'Goes to the next problem still to do; it marks nothing.',
     },
     {
       id: 'open-page',
       label: 'p. 112',
-      key: 'Enter',
       does: 'Asks the workspace to turn the material to the page and outline the problem’s box. It has no target yet.',
     },
     {
       id: 'open-help',
       label: 'Hint, Walkthrough, Answer',
-      key: 'Enter',
       does: 'Opens or closes that help step.',
     },
     {
       id: 'menu',
       label: 'The "⋯" menu',
-      key: 'Enter',
       does: 'Edit, move, note, check the figure, wrong problem, remove.',
     },
     {
       id: 'fix',
       label: 'Try again, Box it on the page, Paste the text',
-      key: 'Enter',
       does: 'What to try after a problem was not found.',
     },
   ],
   inputs: [
     {
       name: 'problem',
-      type: 'ProblemData',
-      default: 'none',
       does: 'The label, page, note, statement as runs, figures, parts, the help steps, whether it was found, and whether it is done.',
     },
+    { name: 'index', does: 'Its place in the set, from 1.' },
+    { name: 'openHelp', does: 'Which help steps start open.' },
+    { name: 'nextNotReady', does: 'Why Next cannot go on, said in a tooltip.' },
+    { name: 'onDone', does: 'Called when Mark done is pressed or taken back.' },
+    { name: 'onAsk', does: 'Called when Ask about this is pressed.' },
+    { name: 'onOpenPage', does: 'Called when the page link is pressed.' },
+    { name: 'onNext', does: 'Called when Next is pressed.' },
     {
-      name: 'index',
-      type: 'number',
-      default: 'none',
-      does: 'Its place in the set, from 1.',
+      name: 'onMenu',
+      does: 'Called when a menu item of the problem is picked.',
     },
     {
-      name: 'openHelp',
-      type: 'HelpKind[]',
-      default: '[]',
-      does: 'Which help steps start open.',
-    },
-    {
-      name: 'nextNotReady',
-      type: 'string',
-      default: 'none',
-      does: 'Why Next cannot go on, said in a tooltip.',
+      name: 'onFix',
+      does: 'Called with the fix the student picked on a failed or stuck problem.',
     },
   ],
   priority: {
@@ -131,20 +119,12 @@ export default defineSpec({
     main: 'mark-done',
   },
   sizes: {
-    narrowest: 320,
     gives: [
       'The text keeps to 66 characters, then fills the width',
       'The actions wrap',
       'The figures wrap under each other',
     ],
   },
-  components: [
-    { unit: 'menu', use: 'The one menu for everything but the work.' },
-    { unit: 'button', use: 'Mark done, Ask about this, Next and the fixes.' },
-    { unit: 'help-row', use: 'The three help steps.' },
-    { unit: 'link', use: 'The page link beside the label.' },
-    { unit: 'tag', use: '"Skipped" on a part the note skips.' },
-  ],
   rules: {
     cite: [
       'smallest-help-first',

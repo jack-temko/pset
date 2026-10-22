@@ -51,88 +51,43 @@ export default defineSpec({
     },
   ],
   stress: 'A 60 character label in a 160px container.',
-  components: [
-    {
-      unit: 'tooltip',
-      use: 'Says why a button is not ready.',
-    },
-  ],
   actions: [
     {
       id: 'press',
       label: "The button's own",
-      key: 'Enter or Space',
       does: 'Runs the action the caller gave it.',
     },
     {
       id: 'press-not-ready',
       label: "The button's own",
-      key: 'Enter or Space',
       does: 'Opens the reason in a tooltip and does nothing else.',
     },
   ],
   inputs: [
-    {
-      name: 'variant',
-      type: "'primary' | 'default' | 'quiet' | 'danger'",
-      default: 'default',
-      does: 'Which look.',
-    },
-    {
-      name: 'icon',
-      type: 'LucideIcon',
-      default: 'none',
-      does: 'One icon before the label.',
-    },
+    { name: 'variant', does: 'Which look.' },
+    { name: 'icon', does: 'One icon before the label.' },
     {
       name: 'busy',
-      type: 'boolean',
-      default: 'false',
       does: 'Shows a spinner, keeps its exact size and ignores presses.',
     },
-    {
-      name: 'busyLabel',
-      type: 'string',
-      default: 'Working',
-      does: 'What assistive tech hears while it is busy.',
-    },
+    { name: 'busyLabel', does: 'What assistive tech hears while it is busy.' },
     {
       name: 'notReady',
-      type: 'string',
-      default: 'none',
       does: 'The reason it cannot act yet; setting it makes the button not ready.',
     },
     {
-      name: 'onPress',
-      type: '() => void',
-      default: 'none',
-      does: 'The action.',
-    },
-    {
-      name: 'type',
-      type: "'button' | 'submit'",
-      default: 'button',
-      does: 'The HTML type.',
-    },
-    {
-      name: 'children',
-      type: 'ReactNode',
-      default: 'none',
-      does: 'The label, on one line.',
-    },
-    {
       name: 'reasonOpen',
-      type: 'boolean',
-      default: 'false',
       does: 'Forces the not-ready tooltip open; for the design page only.',
     },
+    { name: 'onPress', does: 'The action.' },
+    { name: 'type', does: 'The HTML type.' },
+    { name: 'children', does: 'The label, on one line.' },
   ],
   priority: {
     first: 'Its label.',
     main: 'press',
   },
   sizes: {
-    narrowest: 64,
     gives: ['The label truncates with an ellipsis'],
   },
   rules: {

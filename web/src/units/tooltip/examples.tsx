@@ -18,7 +18,7 @@ const SHORT = 'Add a file first.';
 const LONG =
   'This button cannot act yet because the course has no textbook file, so add one in the course settings first and then come back here.';
 
-export default defineExamples(spec, {
+export default defineExamples(spec, Tooltip, {
   states: {
     below: () => (
       <div className="pb-12">

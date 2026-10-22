@@ -2,7 +2,7 @@ import { defineExamples } from '@/design/examples';
 import { ProgressBar } from './index';
 import spec from './spec';
 
-export default defineExamples(spec, {
+export default defineExamples(spec, ProgressBar, {
   states: {
     'none-done': () => <ProgressBar done={0} total={6} />,
     'some-done': () => <ProgressBar done={2} total={6} />,

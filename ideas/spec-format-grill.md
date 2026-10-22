@@ -19,40 +19,40 @@ against the render, and from now on it changes only through its own grill.
 
 ### Decisions
 
-| #    | Decision                                                                                                                                         | Why                                                                       | Beat                                       |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- | ------------------------------------------ |
-| F1   | `sizes.narrowest` goes; `sizes` keeps only "gives way first", the ordered list of what shrinks or scrolls when a side gets narrow                  | Desktop only; a side still narrows inside the workspace split             | Drop sizes entirely; keep narrowest        |
-| F2   | A state's exact `text` is checked: a test renders the state and fails when the text is missing. The `when` prose stays short, reviewed by eye      | The work pane's summary still claimed a due date after say-it-once       | Review by eye only; cut prose to one line  |
-| F3   | No skeleton prose at all, per unit or per state. The required skeleton render per state is the spec                                                | The render is what Jack looks at; the sentence repeated it 8 times        | One sentence per unit; one per state       |
-| F4   | Decisions keep their full history; the design page shows those in force and folds the replaced ones away                                          | Work has 19, workspace 15; the current ones should read first             | Current only; flat list                    |
-| F5   | Once locked, the format changes only through its own small grill and one PR that updates every spec and the checks together. New fields optional  | No unit drifts onto a private variant                                     | Additive without a grill; frozen till data |
-| F6   | New optional `remembers` section: what is kept, per what (set, course, material), for how long. Shown on the design page                         | keep-the-place becomes readable: problem and summary per set, arrangement | Leave it to decisions                      |
-| F7   | Input names are checked against the component's props, both ways                                                                                | Inputs were hand written and could drift                                  | Prose only                                 |
-| F8   | A data `call` is marked sample until the unit is wired; once wired, the check fails if it is not an endpoint in the generated API types           | The spec stays true when Home and the workspace meet the server           | Prose forever                              |
-| F9   | Cut: the `components` list (the design page lists them from the imports), input `type` and `default` (TypeScript has them), the action `key` (no shortcuts, W18), data `waiting` and `failed` (the states hold them) | Each repeated something the code or another field already holds           | Keeping them, typed by hand and checked    |
-| F10  | Home's narrow-width code (360 states, narrow skeleton heights) is stripped in this change                                                        | It dies with `narrowest`; the change already edits every spec             | A separate cleanup PR                      |
-| F11  | Home keeps its repeats, with a reason recorded under say-it-once: the greeting's due line answers "when is the next one due" without reading Assignments; "this week" on Home and per course are never on screen together | Jack: the repeats earn their place                                        | Fixing them, A/B'd                         |
+| #   | Decision                                                                                                                                                                                                                  | Why                                                                       | Beat                                       |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------ |
+| F1  | `sizes.narrowest` goes; `sizes` keeps only "gives way first", the ordered list of what shrinks or scrolls when a side gets narrow                                                                                         | Desktop only; a side still narrows inside the workspace split             | Drop sizes entirely; keep narrowest        |
+| F2  | A state's exact `text` is checked: a test renders the state and fails when the text is missing. The `when` prose stays short, reviewed by eye                                                                             | The work pane's summary still claimed a due date after say-it-once        | Review by eye only; cut prose to one line  |
+| F3  | No skeleton prose at all, per unit or per state. The required skeleton render per state is the spec                                                                                                                       | The render is what Jack looks at; the sentence repeated it 8 times        | One sentence per unit; one per state       |
+| F4  | Decisions keep their full history; the design page shows those in force and folds the replaced ones away                                                                                                                  | Work has 19, workspace 15; the current ones should read first             | Current only; flat list                    |
+| F5  | Once locked, the format changes only through its own small grill and one PR that updates every spec and the checks together. New fields optional                                                                          | No unit drifts onto a private variant                                     | Additive without a grill; frozen till data |
+| F6  | New optional `remembers` section: what is kept, per what (set, course, material), for how long. Shown on the design page                                                                                                  | keep-the-place becomes readable: problem and summary per set, arrangement | Leave it to decisions                      |
+| F7  | Input names are checked against the component's props, both ways                                                                                                                                                          | Inputs were hand written and could drift                                  | Prose only                                 |
+| F8  | A data `call` is marked sample until the unit is wired; once wired, the check fails if it is not an endpoint in the generated API types                                                                                   | The spec stays true when Home and the workspace meet the server           | Prose forever                              |
+| F9  | Cut: the `components` list (the design page lists them from the imports), input `type` and `default` (TypeScript has them), the action `key` (no shortcuts, W18), data `waiting` and `failed` (the states hold them)      | Each repeated something the code or another field already holds           | Keeping them, typed by hand and checked    |
+| F10 | Home's narrow-width code (360 states, narrow skeleton heights) is stripped in this change                                                                                                                                 | It dies with `narrowest`; the change already edits every spec             | A separate cleanup PR                      |
+| F11 | Home keeps its repeats, with a reason recorded under say-it-once: the greeting's due line answers "when is the next one due" without reading Assignments; "this week" on Home and per course are never on screen together | Jack: the repeats earn their place                                        | Fixing them, A/B'd                         |
 
 ### The artifact(s)
 
 **The locked format** (page order; * = required)
 
-| Field              | Holds                                                                                   |
-| ------------------ | --------------------------------------------------------------------------------------- |
-| id*, kind*, title*, group* | as today                                                                        |
-| purpose*           | one sentence                                                                            |
-| states*            | id, name, when (short prose), text (exact, checked against the render)                 |
-| stress*            | the worst case, one line                                                                |
-| flows              | pane and view: journeys as action ids                                                   |
-| actions*           | id, label, does, target                                                                 |
-| data               | reads, call (`sample` until wired, then checked against the API types)                  |
-| remembers          | new: what, per what, how long                                                           |
-| inputs*            | name (checked against props), does                                                      |
-| priority*          | first, main                                                                             |
-| sizes*             | gives (ordered)                                                                         |
-| rules*             | cite, local                                                                             |
-| decisions*         | as today; replaced ones folded on the design page                                       |
-| exampleWidth, log  | as today                                                                                |
+| Field                      | Holds                                                                  |
+| -------------------------- | ---------------------------------------------------------------------- |
+| id*, kind*, title*, group* | as today                                                               |
+| purpose*                   | one sentence                                                           |
+| states*                    | id, name, when (short prose), text (exact, checked against the render) |
+| stress*                    | the worst case, one line                                               |
+| flows                      | pane and view: journeys as action ids                                  |
+| actions*                   | id, label, does, target                                                |
+| data                       | reads, call (`sample` until wired, then checked against the API types) |
+| remembers                  | new: what, per what, how long                                          |
+| inputs*                    | name (checked against props), does                                     |
+| priority*                  | first, main                                                            |
+| sizes*                     | gives (ordered)                                                        |
+| rules*                     | cite, local                                                            |
+| decisions*                 | as today; replaced ones folded on the design page                      |
+| exampleWidth, log          | as today                                                               |
 
 Gone: `sizes.narrowest`, state `skeleton` prose, `components`, input `type` and
 `default`, action `key`, data `waiting` and `failed`. The design page lists a unit's

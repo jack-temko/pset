@@ -5,7 +5,7 @@ import spec from './spec';
 const text =
   'Start from what stays the same across the capacitor: its voltage cannot jump.';
 
-export default defineExamples(spec, {
+export default defineExamples(spec, HelpRow, {
   states: {
     closed: () => <HelpRow title="Hint" />,
     open: () => (

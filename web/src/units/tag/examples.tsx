@@ -4,7 +4,7 @@ import { defineExamples } from '@/design/examples';
 import { Tag } from './index';
 import spec from './spec';
 
-export default defineExamples(spec, {
+export default defineExamples(spec, Tag, {
   states: {
     neutral: () => <Tag>Generated</Tag>,
     attention: () => (

@@ -1,8 +1,5 @@
 import { defineSpec } from '@/design/spec';
 
-const WAIT =
-  'The top bar and each tab row as they are; each pane its own skeleton: the work as a title and problems, a material as a title over a page block.';
-
 export default defineSpec({
   id: 'workspace',
   kind: 'view',
@@ -15,55 +12,46 @@ export default defineSpec({
       id: 'opening',
       name: 'Opening a set',
       when: 'A set was opened: its material on the left at the current problem’s page, the set on the right, half and half.',
-      skeleton: WAIT,
     },
     {
       id: 'followed',
       name: 'A page link followed',
       when: 'The work’s page link was followed: the book’s showing tab turned from p. 111 to p. 113.',
-      skeleton: WAIT,
     },
     {
       id: 'two-materials',
       name: 'Two materials and a set',
       when: 'The left side has Griffiths and the lecture notes as tabs, the set on the right.',
-      skeleton: WAIT,
     },
     {
       id: 'folded',
       name: 'One side folded',
       when: 'The material’s last tab was closed: the set takes the full width.',
-      skeleton: WAIT,
     },
     {
       id: 'returned',
       name: 'A tab dragged back',
       when: 'Ask was dragged onto the outer left third of the one open side: a new left side opens with that one tab, half and half.',
-      skeleton: WAIT,
     },
     {
       id: 'twice',
       name: 'The same book twice',
       when: 'Griffiths is open at p. 111 on the left and p. 45 on the right, each at its own page, the set beside the second.',
-      skeleton: WAIT,
     },
     {
       id: 'ask',
       name: 'Ask open',
       when: 'After "Ask about this" on problem 2: Ask is a tab on the left, side opposite the work, with the problem attached.',
-      skeleton: WAIT,
     },
     {
       id: 'many',
       name: 'Many tabs',
       when: 'The left side has ten tabs: they shrink to their minimum, then the row scrolls with a fade at the edge.',
-      skeleton: WAIT,
     },
     {
       id: 'loading',
       name: 'One side still loading',
       when: 'The left side has loaded and the right is still a skeleton: each side loads on its own, and both tab rows are there.',
-      skeleton: WAIT,
     },
   ],
   stress:
@@ -81,40 +69,22 @@ export default defineSpec({
       ],
     },
   ],
-  components: [
-    {
-      unit: 'top-bar',
-      use: 'The path only: PSet / course / set, and Settings.',
-    },
-    { unit: 'side', use: 'Each side: its tabs over its pane.' },
-    { unit: 'tabs', use: 'The drag in progress, and the tab actions.' },
-    { unit: 'menu', use: 'The shape of what a side’s + menu offers.' },
-    { unit: 'work', use: 'The work tab: the real pane, one per set.' },
-    { unit: 'divider', use: 'The hairline between the sides.' },
-    {
-      unit: 'pane-stub',
-      use: 'STAND-INS for the material and Ask panes until they are designed.',
-    },
-  ],
   actions: [
     {
       id: 'open-set',
       label: 'A set, from Home or the course',
-      key: 'Enter',
       does: 'Opens the workspace: the set’s material on the left at the current problem’s page, the set on the right.',
       target: { unit: 'workspace', state: 'opening' },
     },
     {
       id: 'follow-page-link',
       label: 'A page link in the work',
-      key: 'Enter',
       does: 'Turns the book’s showing tab, on either side; if none is showing, its tab opposite the work, or a new one there.',
       target: { unit: 'workspace', state: 'followed' },
     },
     {
       id: 'ask-about',
       label: 'Ask about this',
-      key: 'Enter',
       does: 'Opens Ask as a tab on the side not holding the work, with the problem attached.',
       target: { unit: 'workspace', state: 'ask' },
     },
@@ -143,7 +113,6 @@ export default defineSpec({
     {
       id: 'open-from-plus',
       label: '+ on a side',
-      key: 'Enter',
       does: 'Opens a material (a new tab, so it can be open twice), another set, or Ask, as a tab on that side.',
     },
   ],
@@ -151,36 +120,55 @@ export default defineSpec({
     {
       reads:
         'The course’s name, materials and sets with their problems; which tabs are open',
-      call: 'None yet: sample data and the state in memory (no server, no address)',
-      waiting:
-        'Each pane is its own skeleton; the top bar and tab rows are not waiting.',
-      failed: 'Not designed: the panes’ own grills decide.',
+      call: 'sample',
+    },
+  ],
+  remembers: [
+    {
+      what: 'Which tabs are open on each side, the open tab on each, and the split',
+      per: 'Course',
+      for: 'Until you change the arrangement; not kept yet (the address will hold it).',
+    },
+    {
+      what: 'The page each material tab shows',
+      per: 'Material tab',
+      for: 'Until you turn the page; not kept yet.',
+    },
+    {
+      what: 'The problem you were on and the summary place, kept by the work pane',
+      per: 'Set',
+      for: 'Until the page closes today; see the work pane.',
     },
   ],
   inputs: [
+    { name: 'course', does: 'The course’s name, materials and sets.' },
     {
-      name: 'course',
-      type: 'Course',
-      default: 'none',
-      does: 'The course’s name, materials and sets.',
-    },
-    {
-      name: 'initial, onChange',
-      type: 'State, (State) => void',
-      default: 'none',
+      name: 'initial',
       does: 'Both sides’ tabs, the open tab on each, the split and each material tab’s page: all the address would hold, as one value.',
     },
     {
       name: 'loading',
-      type: '{ left?, right? }',
-      default: 'none',
       does: 'Which sides still show their pane as a skeleton.',
     },
     {
-      name: 'homeHref, courseHref, settingsHref',
-      type: 'string',
-      default: "'/', '#', '/settings'",
-      does: 'Where the wordmark, the course in the path and Settings go.',
+      name: 'onChange',
+      does: 'Called with the whole state when anything in it changes.',
+    },
+    {
+      name: 'today',
+      does: 'The day Due soon counts from (the design page and tests).',
+    },
+    {
+      name: 'homeHref',
+      does: 'Where the wordmark goes.',
+    },
+    {
+      name: 'courseHref',
+      does: 'Where the course in the path goes.',
+    },
+    {
+      name: 'settingsHref',
+      does: 'Where Settings goes.',
     },
   ],
   priority: {
@@ -188,7 +176,6 @@ export default defineSpec({
     main: 'follow-page-link',
   },
   sizes: {
-    narrowest: 721,
     gives: [
       'Desktop only: there is no layout for a narrow window',
       'The divider stops at 360px for each side',

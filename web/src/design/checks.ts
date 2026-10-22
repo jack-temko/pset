@@ -8,6 +8,9 @@ import type { Vision } from './vision';
 export interface Context {
   specs: readonly AnySpec[];
   rules: readonly Rule[];
+  /** The endpoints of the generated API types ('GET /api/week'), as
+   *  `endpointsIn` reads them. A wired data call must be one of them. */
+  endpoints: readonly string[];
 }
 
 export interface Subject {
@@ -42,6 +45,26 @@ export function importedUnits(source: string): string[] {
   ))
     found.add(m[1]);
   return [...found];
+}
+
+/** One endpoint as a comparable key: `:id`, `{id}` and a query string all
+ *  become the same shape. */
+function endpointKey(call: string): string {
+  return call
+    .trim()
+    .replace(/\?.*$/, '')
+    .replace(/[:{][A-Za-z]+\}?/g, '{}')
+    .replace(/\/$/, '');
+}
+
+/** The endpoints a generated API types file names in its comments, like
+ *  "Detail is GET /api/homework/{id}.", as comparable keys. */
+export function endpointsIn(source: string): string[] {
+  return [
+    ...source.matchAll(
+      /\b(GET|POST|PUT|PATCH|DELETE) (\/api\/[A-Za-z0-9_\-/{}:]*)/g,
+    ),
+  ].map((m) => endpointKey(`${m[1]} ${m[2]}`));
 }
 
 /** Relative imports in a source text. */
@@ -134,7 +157,6 @@ export function checkUnit(u: Subject, ctx: Context): string[] {
   if (spec.kind !== 'component') {
     if (!spec.flows || spec.flows.length === 0)
       fail(`a ${spec.kind} needs at least one flow`);
-    if (!spec.components) fail(`a ${spec.kind} needs its components list`);
   }
   if (u.dir !== spec.id) fail(`folder ${u.dir} does not match the id`);
 
@@ -157,7 +179,6 @@ export function checkUnit(u: Subject, ctx: Context): string[] {
     ['local rule', local.map((r) => r.id)],
     ['decision', spec.decisions.map((d) => d.id)],
     ['input', spec.inputs.map((i) => i.name)],
-    ['listed component', (spec.components ?? []).map((c) => c.unit)],
   ] as const)
     for (const id of dupes(ids)) fail(`duplicate ${what} id ${id}`);
   const same = ctx.specs.filter((s) => s.id === spec.id);
@@ -165,7 +186,6 @@ export function checkUnit(u: Subject, ctx: Context): string[] {
 
   // Actions, flows, priority.
   if (!spec.priority.first) fail('priority.first is empty');
-  if (!(spec.sizes.narrowest > 0)) fail('sizes.narrowest must be above 0');
   const actionIds = spec.actions.map((a) => a.id);
   for (const a of spec.actions) {
     if (!a.target) continue;
@@ -191,13 +211,14 @@ export function checkUnit(u: Subject, ctx: Context): string[] {
     if (globalIds.includes(r.id))
       fail(`local rule ${r.id} has the id of a global rule`);
 
-  // Components.
-  const listed = (spec.components ?? []).map((c) => c.unit);
-  for (const id of listed) {
-    if (id === spec.id) fail('lists itself as a component');
-    else if (!ctx.specs.some((s) => s.id === id))
-      fail(`lists unknown component ${id}`);
-  }
+  // Data: sample until wired, then a real endpoint.
+  for (const d of spec.data ?? [])
+    if (d.call !== 'sample' && !ctx.endpoints.includes(endpointKey(d.call)))
+      fail(
+        `data call "${d.call}" is not an endpoint in the generated API types (use "sample" until it is wired)`,
+      );
+
+  // Sources: imports stay inside the unit's folder or use the alias.
   if (u.sources) {
     for (const [path, src] of Object.entries(u.sources)) {
       const at = path.indexOf(`/${u.dir}/`);
@@ -208,16 +229,6 @@ export function checkUnit(u: Subject, ctx: Context): string[] {
             `${path} imports ${rel}, out of the unit's folder: use the @/units/ alias`,
           );
     }
-    const imported = [
-      ...new Set(Object.values(u.sources).flatMap(importedUnits)),
-    ]
-      .filter((id) => id !== spec.id)
-      .sort();
-    const sorted = [...new Set(listed)].sort();
-    if (imported.join() !== sorted.join())
-      fail(
-        `components [${sorted.join(', ')}] differ from imports [${imported.join(', ')}]`,
-      );
   }
 
   // Examples.
@@ -227,11 +238,9 @@ export function checkUnit(u: Subject, ctx: Context): string[] {
         fail(`no example render for state ${s.id}`);
     if (typeof u.examples.stress !== 'function') fail('no stress render');
     if (spec.data && spec.data.length > 0)
-      for (const s of spec.states) {
-        if (!s.skeleton) fail(`state ${s.id} names no skeleton`);
+      for (const s of spec.states)
         if (typeof u.examples.skeletons?.[s.id] !== 'function')
           fail(`no skeleton render for state ${s.id}`);
-      }
   } else fail('has no examples');
 
   return bad;

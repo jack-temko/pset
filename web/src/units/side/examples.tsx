@@ -56,7 +56,7 @@ const many = Array.from({ length: 10 }, (_, i) => ({
   note: `p. ${String(10 + i * 17)}`,
 }));
 
-export default defineExamples(spec, {
+export default defineExamples(spec, Side, {
   states: {
     default: () => <Demo />,
     dropping: () => <Demo dropping />,

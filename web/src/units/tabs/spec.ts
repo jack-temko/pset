@@ -45,7 +45,6 @@ export default defineSpec({
     {
       id: 'open-tab',
       label: 'A tab',
-      key: 'Enter',
       does: 'Opens it; the accent underline moves to it.',
     },
     {
@@ -56,7 +55,6 @@ export default defineSpec({
     {
       id: 'add',
       label: '+',
-      key: 'Enter',
       does: 'Opens the menu of everything the course has; a pick opens it as a tab here.',
     },
     {
@@ -72,27 +70,53 @@ export default defineSpec({
   ],
   inputs: [
     {
-      name: 'tabs, open',
-      type: '{ id, label }[], string | null',
-      default: 'none',
-      does: 'The tabs in order and the id of the open one.',
+      name: 'label',
+      does: 'The row’s name.',
     },
     {
-      name: 'add',
-      type: 'MenuGroup[]',
-      default: 'none',
-      does: 'What the + menu offers, and anything after the +.',
+      name: 'tabs',
+      does: 'The tabs in order.',
     },
     {
-      name: 'onOpen, onClose, onAdd, onAction, onDropTab',
-      type: 'callbacks',
-      default: 'none',
-      does: 'The row holds no state of its own: every change goes to the caller.',
+      name: 'open',
+      does: 'The id of the open tab.',
+    },
+    { name: 'add', does: 'What the + menu offers, and anything after the +.' },
+    {
+      name: 'onOpen',
+      does: 'Called with the id of a tab pressed.',
+    },
+    {
+      name: 'onClose',
+      does: 'Called with the id of a tab closed.',
+    },
+    {
+      name: 'onAdd',
+      does: 'Called with the id of the item picked in the + menu.',
+    },
+    {
+      name: 'onAction',
+      does: 'Called with the tab and the action picked in its menu.',
+    },
+    {
+      name: 'onDropTab',
+      does: 'Called with the tab dropped and the tab it lands before, or null for the end.',
+    },
+    {
+      name: 'forceMenu',
+      does: 'Draws a menu open without a press (the design page only).',
+    },
+    {
+      name: 'forceHover',
+      does: 'Draws the hover look without a pointer (the design page only).',
+    },
+    {
+      name: 'forceDropBefore',
+      does: 'Draws the drop mark before a tab without a drag (the design page only).',
     },
   ],
   priority: { first: 'The open tab.', main: 'open-tab' },
   sizes: {
-    narrowest: 360,
     gives: [
       'Tabs shrink from their text’s width to 112px',
       'Then the row scrolls sideways with a fade at the edge',
@@ -103,7 +127,6 @@ export default defineSpec({
     cite: ['links-go-buttons-do', 'sentence-case', 'contrast-floors'],
   },
   log: 'web/src/units/tabs/log.md',
-  components: [{ unit: 'menu', use: 'The + menu and each tab’s menu.' }],
   decisions: [
     {
       id: 'tabs-d-plus',

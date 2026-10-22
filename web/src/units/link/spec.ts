@@ -54,66 +54,36 @@ export default defineSpec({
     {
       id: 'follow',
       label: 'The link text',
-      key: 'Enter',
       does: 'Goes to the place it names; the caller decides where.',
     },
   ],
   inputs: [
-    {
-      name: 'href',
-      type: 'string',
-      default: 'none',
-      does: 'Where it goes.',
-    },
+    { name: 'href', does: 'Where it goes.' },
     {
       name: 'inline',
-      type: 'boolean',
-      default: 'false',
       does: 'Underlined, and takes the size and face of the text around it.',
     },
     {
       name: 'tone',
-      type: "'accent' | 'fg' | 'muted'",
-      default: 'accent',
       does: 'The colour: the link colour, the text colour or the muted colour.',
     },
-    {
-      name: 'weight',
-      type: "'regular' | 'medium'",
-      default: 'regular',
-      does: 'Weight 400 or 500.',
-    },
+    { name: 'weight', does: 'Weight 400 or 500.' },
     {
       name: 'size',
-      type: "'body' | 'small' | 'brand'",
-      default: 'body',
       does: "The type step of a standalone link; brand is the top bar wordmark's.",
     },
     {
-      name: 'children',
-      type: 'ReactNode',
-      default: 'none',
-      does: 'The link text.',
-    },
-    {
-      name: 'onClick, ref and the other anchor props',
-      type: 'anchor props',
-      default: 'none',
-      does: 'Pass through to the anchor, so a router-aware screen can intercept navigation.',
-    },
-    {
       name: 'forceState',
-      type: "'hover' | 'focus'",
-      default: 'none',
       does: 'Draws the hover or focus look without either; for the design page only.',
     },
+    { name: 'className', does: 'Extra classes for the anchor.' },
+    { name: 'children', does: 'The link text.' },
   ],
   priority: {
     first: 'Its text, in the accent colour.',
     main: 'follow',
   },
   sizes: {
-    narrowest: 80,
     gives: ['The text wraps like the text around it'],
   },
   rules: {

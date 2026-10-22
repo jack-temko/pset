@@ -15,7 +15,7 @@ const FAILED_TRIED = [
   'Looked one page either side.',
 ];
 
-export default defineExamples(spec, {
+export default defineExamples(spec, Problem, {
   states: {
     ready: () => show(problemAt(2), 3, { openHelp: ['hint'] }),
     parts: () => show(problemAt(3, WITH_PARTS), 4),

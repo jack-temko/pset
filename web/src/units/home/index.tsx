@@ -76,9 +76,7 @@ function RowSkeleton({ first }: { first?: boolean }) {
         </p>
       }
       label={
-        <p
-          className={`ds-small flex h-(--ds-small-line) items-center ${first ? '@max-[419px]:h-10 @max-[419px]:items-start @max-[419px]:pt-1' : ''}`}
-        >
+        <p className="ds-small flex h-(--ds-small-line) items-center">
           <Bar className="h-3 w-24" />
         </p>
       }
@@ -254,7 +252,7 @@ export function HomeSkeleton({
                 <p className="ds-body flex h-(--ds-body-line) items-center">
                   <Bar className="h-4 w-28" />
                 </p>
-                <p className="ds-small flex h-(--ds-small-line) items-center @max-[419px]:h-[82px] @max-[419px]:items-start @max-[419px]:pt-1">
+                <p className="ds-small flex h-(--ds-small-line) items-center">
                   <Bar className="h-3 w-28" />
                 </p>
               </Line>

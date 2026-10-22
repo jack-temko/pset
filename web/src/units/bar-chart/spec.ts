@@ -1,7 +1,5 @@
 import { defineSpec } from '@/design/spec';
 
-const SKELETON = 'One block as tall as the chart.';
-
 export default defineSpec({
   id: 'bar-chart',
   kind: 'component',
@@ -14,19 +12,16 @@ export default defineSpec({
       id: 'midweek',
       name: 'Midweek',
       when: 'Days so far as bars, today in the accent, the days to come as bare tracks.',
-      skeleton: SKELETON,
     },
     {
       id: 'full-week',
       name: 'A full week',
       when: 'All seven days have gone; none is future. Today, Sunday, is the accent bar.',
-      skeleton: SKELETON,
     },
     {
       id: 'quiet',
       name: 'A quiet week',
       when: 'No time yet: each past day is an empty track and no figure shows.',
-      skeleton: SKELETON,
     },
   ],
   stress:
@@ -35,23 +30,17 @@ export default defineSpec({
   data: [
     {
       reads: 'Minutes studied on each day of this week',
-      call: 'None yet: sample data (the server has no per-day endpoint)',
-      waiting: 'One block as tall as the chart.',
-      failed: 'Not designed: Home has no failed state yet.',
+      call: 'sample',
     },
   ],
-  components: [{ unit: 'tooltip', use: 'On each bar: the day and its total.' }],
   inputs: [
     {
       name: 'bars',
-      type: '{ label; value; text?; tip?; today?; future? }[]',
-      default: 'none',
       does: 'One per column: the day under it, its figure, the words over it and in its tooltip, and whether it is today or still to come.',
     },
   ],
   priority: { first: 'Today’s bar, then the tallest.' },
   sizes: {
-    narrowest: 200,
     gives: [
       'The figures over the bars hide under 360px',
       'Under 420px the days shrink to their first two letters, never fewer',

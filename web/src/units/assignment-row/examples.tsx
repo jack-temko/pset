@@ -27,7 +27,7 @@ const row = (p: Partial<AssignmentRowProps> = {}) => (
   />
 );
 
-export default defineExamples(spec, {
+export default defineExamples(spec, AssignmentRow, {
   states: {
     'due-soon': () => row({ done: 0, due: day(15) }),
     overdue: () => row({ done: 3, due: day(10) }),

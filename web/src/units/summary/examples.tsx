@@ -34,7 +34,7 @@ const show = (status: 'finished' | 'unfinished' | 'turned-in') => (
   />
 );
 
-export default defineExamples(spec, {
+export default defineExamples(spec, Summary, {
   states: {
     finished: () => show('finished'),
     unfinished: () => show('unfinished'),

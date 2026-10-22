@@ -1,9 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { act, type ReactNode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   checkRulebook,
   checkUnit,
   checkVision,
+  endpointsIn,
   importedUnits,
   type Context,
   type Subject,
@@ -12,6 +15,7 @@ import { LINE_MAX, PURPOSE_MAX } from './limits';
 import { fixture, FIXTURES, UNITS } from './registry';
 import { RULES } from './rules';
 import { VISION } from './vision';
+import { defineExamples } from './examples';
 import { defineSpec, type AnySpec } from './spec';
 
 // Every unit's source, raw, for the imports check. Test-only: the page
@@ -27,7 +31,21 @@ const SOURCES = import.meta.glob<string>(
 );
 
 const ALL = [...UNITS, ...FIXTURES];
-const CTX: Context = { specs: ALL.map((e) => e.spec), rules: RULES };
+
+// The generated API types name each endpoint in a comment ("Detail is GET
+// /api/homework/{id}."); a wired data call must be one of them (F8).
+const GEN = import.meta.glob<string>('/src/api/gen/*.ts', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const ENDPOINTS = Object.values(GEN).flatMap(endpointsIn);
+
+const CTX: Context = {
+  specs: ALL.map((e) => e.spec),
+  rules: RULES,
+  endpoints: ENDPOINTS,
+};
 
 function sourcesOf(dir: string) {
   return Object.fromEntries(
@@ -89,6 +107,40 @@ async function broken(
   });
 }
 
+const roots: ReturnType<typeof createRoot>[] = [];
+
+afterEach(() => {
+  act(() => {
+    for (const r of roots.splice(0)) r.unmount();
+  });
+  document.body.replaceChildren();
+});
+
+function textOf(node: ReactNode) {
+  const el = document.createElement('div');
+  document.body.append(el);
+  const root = createRoot(el);
+  roots.push(root);
+  act(() => {
+    root.render(node);
+  });
+  return document.body.textContent.replace(/\s+/g, ' ');
+}
+
+// F2: a state's exact text is on screen when the state is rendered.
+describe('every state text', () => {
+  const withText = ALL.flatMap((e, i) =>
+    e.spec.states
+      .filter((s) => s.text !== undefined)
+      .map((s) => [e.spec.id, s.id, i] as const),
+  );
+  it.each(withText)('%s, state %s, shows its text', async (_id, state, i) => {
+    const text = ALL[i].spec.states.find((s) => s.id === state)?.text ?? '';
+    const examples = await ALL[i].examples();
+    expect(textOf(examples.states[state]())).toContain(text);
+  });
+});
+
 describe('the checks', () => {
   it('the fixtures are sound', async () => {
     expect(await broken(ROW, () => ({}))).toEqual([]);
@@ -98,8 +150,6 @@ describe('the checks', () => {
   it('requires the fields of a kind', async () => {
     const r = await broken(SCREEN, () => ({ flows: [] }));
     expect(r.join()).toContain('needs at least one flow');
-    const c = await broken(SCREEN, () => ({ components: undefined }));
-    expect(c.join()).toContain('needs its components list');
     const p = await broken(ROW, () => ({ purpose: '' }));
     expect(p.join()).toContain('missing purpose');
   });
@@ -162,19 +212,6 @@ describe('the checks', () => {
     expect(r.join()).toContain('cites unknown rule no-such-rule');
   });
 
-  it('requires listed components to exist and match the imports', async () => {
-    const unknown = await broken(SCREEN, () => ({
-      components: [{ unit: 'ghost', use: 'x' }],
-    }));
-    expect(unknown.join()).toContain('unknown component ghost');
-    const missing = await broken(SCREEN, () => ({ components: [] }));
-    expect(missing.join()).toContain('differ from imports [sample-row]');
-    const extra = await broken(ROW, () => ({
-      components: [{ unit: 'sample-screen', use: 'x' }],
-    }));
-    expect(extra.join()).toContain('differ from imports []');
-  });
-
   it('requires a render for every state and a stress render', async () => {
     const noState = await broken(
       ROW,
@@ -212,10 +249,6 @@ describe('the checks', () => {
       }),
     );
     expect(noRender.join()).toContain('no skeleton render for state menu');
-    const noName = await broken(ROW, (s) => ({
-      states: s.states.map((st) => ({ ...st, skeleton: undefined })),
-    }));
-    expect(noName.join()).toContain('state rest names no skeleton');
     const noData = await broken(
       ROW,
       () => ({ data: [] }),
@@ -277,7 +310,7 @@ describe('the checks', () => {
     expect(r.join()).toContain('folder elsewhere does not match the id');
   });
 
-  it('fails on a missing stress line, priority or narrowest', async () => {
+  it('fails on a missing stress line or priority', async () => {
     expect((await broken(ROW, () => ({ stress: '' }))).join()).toContain(
       'missing stress',
     );
@@ -286,11 +319,6 @@ describe('the checks', () => {
         await broken(ROW, (s) => ({ priority: { ...s.priority, first: '' } }))
       ).join(),
     ).toContain('priority.first is empty');
-    expect(
-      (
-        await broken(ROW, (s) => ({ sizes: { ...s.sizes, narrowest: 0 } }))
-      ).join(),
-    ).toContain('sizes.narrowest');
   });
 
   it('fails on a relative import into another unit', async () => {
@@ -311,6 +339,65 @@ describe('the checks', () => {
     );
     const out = r.filter((m) => m.includes('use the @/units/ alias'));
     expect(out).toHaveLength(2);
+  });
+
+  it('lets a data call be sample, or an endpoint of the generated API types', async () => {
+    const sample = await broken(ROW, () => ({
+      data: [{ reads: 'r', call: 'sample' }],
+    }));
+    expect(sample).toEqual([]);
+    const real = await broken(ROW, () => ({
+      data: [{ reads: 'r', call: 'GET /api/homework/:id' }],
+    }));
+    expect(real).toEqual([]);
+    const query = await broken(ROW, () => ({
+      data: [{ reads: 'r', call: 'GET /api/week?since=2026-10-01' }],
+    }));
+    expect(query).toEqual([]);
+    const invented = await broken(ROW, () => ({
+      data: [{ reads: 'r', call: 'GET /api/sample/items/:id' }],
+    }));
+    expect(invented.join()).toContain('is not an endpoint');
+    const wrongMethod = await broken(ROW, () => ({
+      data: [{ reads: 'r', call: 'DELETE /api/week' }],
+    }));
+    expect(wrongMethod.join()).toContain('is not an endpoint');
+  });
+
+  it('reads endpoints from the comments of the generated types', () => {
+    expect(
+      endpointsIn(
+        '/** Detail is GET /api/homework/{id}. */\n/** X is POST /api/books/{id}/turns. */',
+      ),
+    ).toEqual(['GET /api/homework/{}', 'POST /api/books/{}/turns']);
+    expect(ENDPOINTS).toContain('GET /api/homework/{}');
+  });
+
+  it('fails the typecheck for inputs that are not the component props', () => {
+    const spec = defineSpec({
+      id: 'x',
+      kind: 'component',
+      title: 'X',
+      group: 'G',
+      purpose: 'p',
+      states: [{ id: 'a', name: 'A', when: 'w' }],
+      stress: 's',
+      actions: [{ id: 'go', label: 'Go', does: 'd' }],
+      inputs: [{ name: 'title', does: 'd' }],
+      priority: { first: 'f' },
+      sizes: { gives: [] },
+      rules: { cite: [] },
+      decisions: [],
+    });
+    const render = { states: { a: () => null }, stress: () => null };
+    const same = ({ title }: { title: string }) => title;
+    expect(defineExamples(spec, same, render)).toBe(render);
+    const extra = ({ title }: { title: string; extra: number }) => title;
+    const other = ({ other }: { other: string }) => other;
+    // @ts-expect-error the component has a prop the spec does not list
+    defineExamples(spec, extra, render);
+    // @ts-expect-error the spec lists an input the component does not have
+    defineExamples(spec, other, render);
   });
 
   it('finds imports of other units', () => {
@@ -342,7 +429,7 @@ describe('the checks', () => {
       inputs: [],
       // @ts-expect-error nope is not an action id of this unit
       priority: { first: 'f', main: 'nope' },
-      sizes: { narrowest: 1, gives: [] },
+      sizes: { gives: [] },
       rules: { cite: [] },
       decisions: [],
     });

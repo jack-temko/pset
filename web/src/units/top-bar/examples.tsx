@@ -9,7 +9,7 @@ const LONG_SET =
 
 const LONG_MATERIAL = 'Lecture notes, week 6: magnetic circuits';
 
-export default defineExamples(spec, {
+export default defineExamples(spec, TopBar, {
   states: {
     home: () => <TopBar homeHref="#" settingsHref="#" />,
     course: () => (

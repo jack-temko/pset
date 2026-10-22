@@ -12,7 +12,6 @@ import { CourseRow } from './course-row';
 import { Link } from './link';
 import { List } from './list';
 import { ListRow } from './list-row';
-import { narrowOnly } from './list-row/meta';
 import { ProgressBar } from './progress-bar';
 import { SectionHeading } from './section-heading';
 import { SetLine } from './set-line';
@@ -987,15 +986,13 @@ describe('ListRow', () => {
     expect(el.querySelectorAll('a')).toHaveLength(2);
   });
 
-  it('shows a status, and an aside of the width it is given, hidden when narrow', () => {
+  it('shows a status, and an aside of the width it is given', () => {
     const { el } = render(
       <ListRow title="T" status="Due Fri" aside="bar" asideWidth={96} />,
     );
     expect(el.textContent).toContain('Due Fri');
     const aside = el.querySelector<HTMLElement>('[data-aside]');
     expect(aside?.style.width).toBe('96px');
-    expect(aside?.className).toContain('hidden');
-    expect(aside?.className).toContain('@min-[440px]:block');
   });
 
   it('puts a label after the title, and gives the row no hover ground', () => {
@@ -1005,15 +1002,6 @@ describe('ListRow', () => {
     expect(line?.className).toContain('gap-2');
     expect(el.innerHTML).not.toContain('hover:bg');
     expect(el.querySelector('a')?.className).toContain('w-fit');
-  });
-
-  it('shows a narrow-only item only where the aside is not', () => {
-    const { el } = render(
-      <ListRow title="T" meta={['a', narrowOnly('2 of 6')]} />,
-    );
-    const spans = el.querySelectorAll('p > span');
-    expect(spans[1]?.className).toContain('@min-[440px]:hidden');
-    expect(spans[1]?.textContent).toBe(' \u00b7 2 of 6');
   });
 
   it('sits the status at the right of the row, out of line one', () => {
@@ -1158,12 +1146,9 @@ describe('SetLine', () => {
     expect(el.textContent).not.toContain('left');
   });
 
-  it('keeps the count in the meta where the bar is not drawn', () => {
+  it('leaves the count to the bar: the meta has only the time left', () => {
     const { el } = line({});
-    const count = [...el.querySelectorAll('p > span')].find((n) =>
-      n.textContent.includes('2 of 6'),
-    );
-    expect(count?.className).toContain('@min-[440px]:hidden');
+    expect(el.querySelector('p')?.textContent).not.toContain('2 of 6');
   });
 
   it('writes the time left', () => {
@@ -1261,7 +1246,7 @@ describe('AssignmentRow', () => {
     const a = [...el.querySelectorAll('a')];
     expect(a.map((x) => x.getAttribute('href'))).toEqual(['/s/4', '/c/1']);
     expect(el.querySelector('p')?.textContent).toBe(
-      'Circuits I \u00b7 2 of 6 \u00b7 About 1 h 10 m left',
+      'Circuits I \u00b7 About 1 h 10 m left',
     );
     expect(el.querySelector('[data-bar]')).not.toBeNull();
   });

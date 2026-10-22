@@ -8,7 +8,7 @@ import spec from './spec';
 const LONG =
   'Problem set 4: magnetic circuits, hysteresis and transformer losses, parts A to F, with the lab handout';
 
-export default defineExamples(spec, {
+export default defineExamples(spec, ListRow, {
   states: {
     plain: () => (
       <ListRow title="Circuits I" href="#" meta={['Problem set 4', '2 of 6']} />

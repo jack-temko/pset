@@ -1,10 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
 
 import { Link } from '@/units/link';
-import { isNarrowOnly, type NarrowOnly } from './meta';
-
-/** The aside shows from this width of the row; narrower, it goes first. */
-const ASIDE_MIN = '@min-[440px]';
 
 /** The one row shape: a title on line one, small meta on line two, the
  *  status and an optional aside at the right, each centred vertically in
@@ -28,7 +24,7 @@ export function ListRow({
   /** A Tag or a short muted text, at the right of the row, centred in it. */
   status?: ReactNode;
   /** Short items joined by " · ", truncating as a whole. */
-  meta?: readonly (ReactNode | NarrowOnly)[];
+  meta?: readonly ReactNode[];
   /** At the right, spanning both lines, such as a progress bar. */
   aside?: ReactNode;
   /** The aside's width: a number is px, a string any CSS width, so asides
@@ -36,7 +32,7 @@ export function ListRow({
   asideWidth?: number | string;
 }) {
   return (
-    <div className="@container min-h-14 min-w-0">
+    <div className="min-h-14 min-w-0">
       <div className="flex min-w-0 items-center gap-4 px-4 py-2">
         <div className="min-w-0 flex-1">
           <div className="flex min-h-6 min-w-0 items-center gap-2">
@@ -60,18 +56,12 @@ export function ListRow({
             {label !== undefined && <div className="shrink-0">{label}</div>}
           </div>
           <p className="ds-small ds-tabular min-h-5 truncate text-(--ds-fg-muted)">
-            {meta.map((item, i) => {
-              const narrow = isNarrowOnly(item);
-              return (
-                <span
-                  key={i}
-                  className={narrow ? `${ASIDE_MIN}:hidden` : undefined}
-                >
-                  {i > 0 && <Fragment> · </Fragment>}
-                  {narrow ? item.node : item}
-                </span>
-              );
-            })}
+            {meta.map((item, i) => (
+              <span key={i}>
+                {i > 0 && <Fragment> · </Fragment>}
+                {item}
+              </span>
+            ))}
           </p>
         </div>
         {status !== undefined && (
@@ -80,11 +70,7 @@ export function ListRow({
           </div>
         )}
         {aside !== undefined && (
-          <div
-            data-aside
-            style={{ width: asideWidth }}
-            className={`hidden shrink-0 ${ASIDE_MIN}:block`}
-          >
+          <div data-aside style={{ width: asideWidth }} className="shrink-0">
             {aside}
           </div>
         )}

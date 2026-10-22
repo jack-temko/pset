@@ -22,7 +22,7 @@ const at = (hour: number, p: Partial<Parameters<typeof Greeting>[0]> = {}) => (
 
 const skeleton = () => <GreetingSkeleton />;
 
-export default defineExamples(spec, {
+export default defineExamples(spec, Greeting, {
   states: {
     'band-12am': () => at(1),
     'band-3am': () => at(4),

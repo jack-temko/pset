@@ -21,7 +21,7 @@ function week(minutes: number[], today: number, big = 1): Bar[] {
 
 const skeleton = () => <BarChartSkeleton />;
 
-export default defineExamples(spec, {
+export default defineExamples(spec, BarChart, {
   states: {
     midweek: () => (
       <div className="h-40">

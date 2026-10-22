@@ -1,4 +1,6 @@
 import { defineExamples } from '@/design/examples';
+import type { ReactNode } from 'react';
+
 import {
   AskStub,
   AskStubSkeleton,
@@ -7,7 +9,12 @@ import {
 } from './index';
 import spec from './spec';
 
-export default defineExamples(spec, {
+/** Both stand-ins, one input list: the material's props and Ask's. */
+const BOTH: (
+  props: Parameters<typeof MaterialStub>[0] & Parameters<typeof AskStub>[0],
+) => ReactNode = MaterialStub;
+
+export default defineExamples(spec, BOTH, {
   states: {
     material: () => <MaterialStub name="Griffiths" page={112} />,
     boxed: () => (

@@ -1,11 +1,16 @@
 import { defineExamples } from '@/design/examples';
-import { Link } from './index';
+import type { ReactNode } from 'react';
+
+import { Link, type LinkOwnProps } from './index';
 import spec from './spec';
 
 const LONG =
   'Read the whole chapter on magnetic circuits, hysteresis and transformer losses before the next set';
 
-export default defineExamples(spec, {
+/** The link's own props: the anchor's pass through and are not inputs. */
+const OWN: (props: LinkOwnProps) => ReactNode = Link;
+
+export default defineExamples(spec, OWN, {
   states: {
     standalone: () => <Link href="#">Open the course</Link>,
     'inline-serif': () => (

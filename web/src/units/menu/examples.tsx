@@ -57,7 +57,7 @@ function Open({ groups, label }: { groups: MenuGroup[]; label: string }) {
   );
 }
 
-export default defineExamples(spec, {
+export default defineExamples(spec, Menu, {
   states: {
     add: () => <Open groups={ADD} label="Open" />,
     tab: () => <Open groups={TAB} label="Tab" />,

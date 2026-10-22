@@ -1,6 +1,5 @@
 import { Link } from '@/units/link';
 import { ListRow } from '@/units/list-row';
-import { narrowOnly } from '@/units/list-row/meta';
 import { ProgressBar } from '@/units/progress-bar';
 import { DueStatus } from '@/units/set-line';
 import { dueBadge } from '@/units/set-line/badge';
@@ -66,7 +65,6 @@ export function AssignmentRow({
         >
           {course}
         </Link>,
-        narrowOnly(`${String(done)} of ${String(total)}`),
         ...(time ? [time] : []),
         ...(reason === 'opened' && openedAt !== undefined
           ? [openedAgo(openedAt, today)]

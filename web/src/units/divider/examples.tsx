@@ -15,7 +15,7 @@ function Between({ state }: { state?: 'hover' | 'drag' }) {
   );
 }
 
-export default defineExamples(spec, {
+export default defineExamples(spec, Divider, {
   states: {
     rest: () => <Between />,
     hover: () => <Between state="hover" />,

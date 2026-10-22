@@ -14,18 +14,15 @@ export interface UnitState<S extends string = string> {
   name: string;
   /** When it happens. */
   when: string;
-  /** The exact text it shows, for a state that is empty or failed. */
+  /** The exact text it shows, for a state that is empty or failed. A test
+   *  renders the state and fails when this text is not on screen. */
   text?: string;
-  /** The skeleton it draws while it waits. Required when the unit reads data. */
-  skeleton?: string;
 }
 
 export interface Action<A extends string = string> {
   id: A;
   /** The exact label on screen. */
   label: string;
-  /** The shortcut key, if it has one. */
-  key?: string;
   does: string;
   target?: Target;
 }
@@ -37,22 +34,28 @@ export interface Flow<A extends string = string> {
   steps: readonly A[];
 }
 
-export interface ComponentUse {
-  unit: string;
-  use: string;
-}
-
 export interface DataRead {
   reads: string;
+  /** 'sample' until the unit is wired to the server; then the endpoint it
+   *  calls, as the generated API types write it ('GET /api/week'), which
+   *  the checks look up in `web/src/api/gen`. */
   call: string;
-  waiting: string;
-  failed: string;
 }
 
-export interface Input {
-  name: string;
-  type: string;
-  default: string;
+/** What a unit keeps for the student between visits (keep-the-place). */
+export interface Remembered {
+  /** What is kept: "the problem you were on". */
+  what: string;
+  /** Per what: a set, a course, a material. */
+  per: string;
+  /** For how long it is kept. */
+  for: string;
+}
+
+export interface Input<I extends string = string> {
+  /** A prop of the component (or an entry of its opening), checked against
+   *  the component's props in both directions by the typecheck. */
+  name: I;
   does: string;
 }
 
@@ -73,11 +76,14 @@ export interface Decision {
 }
 
 /** The fields of a spec, in page order. Every field added after the first
- *  release must be optional, and keep its meaning (A3). */
+ *  release must be optional, and keep its meaning (A3). The format changes
+ *  only through its own grill, in one change that updates every spec and the
+ *  checks together (F5, ideas/spec-format-grill.md). */
 export interface Spec<
   S extends string = string,
   A extends string = string,
   D extends readonly DataRead[] = readonly DataRead[],
+  I extends string = string,
 > {
   id: string;
   kind: Kind;
@@ -90,12 +96,12 @@ export interface Spec<
   stress: string;
   /** Pane and view: the student's journeys. */
   flows?: readonly Flow<NoInfer<A>>[];
-  /** Pane and view: the components it is made of, checked against imports. */
-  components?: readonly ComponentUse[];
   actions: readonly Action<A>[];
   /** When it reads data. */
   data?: D;
-  inputs: readonly Input[];
+  /** What it keeps between visits, per what, for how long. */
+  remembers?: readonly Remembered[];
+  inputs: readonly Input<I>[];
   priority: {
     /** What the student sees first. */
     first: string;
@@ -103,8 +109,6 @@ export interface Spec<
     main?: NoInfer<A>;
   };
   sizes: {
-    /** The narrowest width it must work at, in px. */
-    narrowest: number;
     /** What gives way first, in order. */
     gives: readonly string[];
   };
@@ -131,6 +135,7 @@ export function defineSpec<
   const S extends string,
   const A extends string,
   const D extends readonly DataRead[] = readonly [],
->(spec: Spec<S, A, D>): Spec<S, A, D> {
+  const I extends string = string,
+>(spec: Spec<S, A, D, I>): Spec<S, A, D, I> {
   return spec;
 }

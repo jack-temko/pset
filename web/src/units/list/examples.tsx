@@ -24,7 +24,7 @@ const rows = (n: number) =>
     <ListRow key={c} title={c} href="#" meta={['Problem set 4', '2 of 6']} />
   ));
 
-export default defineExamples(spec, {
+export default defineExamples(spec, List, {
   states: {
     header: () => (
       <List title="Courses" count={8} action={action}>

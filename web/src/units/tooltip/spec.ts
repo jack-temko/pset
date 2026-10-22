@@ -35,47 +35,37 @@ export default defineSpec({
     {
       id: 'show',
       label: 'The control',
-      key: 'Focus',
       does: 'Shows the tooltip on hover (after 50ms) or on keyboard focus (at once).',
     },
     {
       id: 'hide',
       label: 'The control',
-      key: 'Escape',
       does: 'Hides it on pointer leave, blur or Escape.',
     },
   ],
   inputs: [
     {
       name: 'text',
-      type: 'string',
-      default: 'none',
       does: 'One short line; a data point may run a few, split by a newline.',
     },
-    {
-      name: 'children',
-      type: 'ReactNode',
-      default: 'none',
-      does: 'The one control it belongs to.',
-    },
+    { name: 'children', does: 'The one control it belongs to.' },
     {
       name: 'open',
-      type: 'boolean',
-      default: 'false',
       does: 'Opens it from outside: the design page, or a press that opens it.',
     },
     {
       name: 'side',
-      type: "'below' | 'above' | 'right' | 'left'",
-      default: 'below',
       does: 'The side it prefers; it takes another when there is no room.',
+    },
+    {
+      name: 'onClose',
+      does: 'Called when the tooltip closes itself: Escape, pointer leave, blur.',
     },
   ],
   priority: {
     first: 'The text.',
   },
   sizes: {
-    narrowest: 48,
     gives: ['The text wraps'],
   },
   rules: {

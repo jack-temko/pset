@@ -8,7 +8,7 @@ const ITEMS = [
   { title: 'Midterm review', detail: 'No date, 20 questions' },
 ];
 
-export default defineExamples(spec, {
+export default defineExamples(spec, SampleScreen, {
   states: {
     list: () => <SampleScreen items={ITEMS} />,
     detail: () => <SampleScreen items={ITEMS} open />,

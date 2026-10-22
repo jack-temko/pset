@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { importsOf } from './imports';
 import {
   FIXTURES,
   findEntry,
@@ -14,6 +15,17 @@ import {
 const specs = FIXTURES.map((e) => e.spec);
 const row = fixture('sample-row').spec;
 const screen = fixture('sample-screen').spec;
+const made = importsOf(
+  Object.fromEntries(
+    Object.entries(
+      import.meta.glob<string>('/src/design/sample/*/*.tsx', {
+        query: '?raw',
+        import: 'default',
+        eager: true,
+      }),
+    ),
+  ),
+);
 
 describe('the derived map', () => {
   it('leads to other units only', () => {
@@ -33,9 +45,9 @@ describe('the derived map', () => {
   });
 
   it('knows what holds a unit and what it holds', () => {
-    expect(usedBy(specs, 'sample-row')).toEqual(['sample-screen']);
-    expect(usedBy(specs, 'sample-screen')).toEqual([]);
-    expect(madeOf(screen)).toEqual(['sample-row']);
+    expect(usedBy(made, 'sample-row')).toEqual(['sample-screen']);
+    expect(usedBy(made, 'sample-screen')).toEqual([]);
+    expect(madeOf(made, 'sample-screen')).toEqual(['sample-row']);
   });
 
   it('lists the rulebook and local rules with their units', () => {

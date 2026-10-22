@@ -21,7 +21,7 @@ const line = (p: Partial<SetLineProps> = {}) => (
   />
 );
 
-export default defineExamples(spec, {
+export default defineExamples(spec, SetLine, {
   states: {
     'with-time': () => line(),
     'without-time': () => line({ minutesLeft: undefined }),

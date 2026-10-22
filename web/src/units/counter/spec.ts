@@ -19,16 +19,10 @@ export default defineSpec({
     'The number "1,234" in a 32px container: it never truncates, and overflows the container rather than lie.',
   actions: [],
   inputs: [
-    {
-      name: 'children',
-      type: 'ReactNode',
-      default: 'none',
-      does: 'The number, written as it should read.',
-    },
+    { name: 'children', does: 'The number, written as it should read.' },
   ],
   priority: { first: 'The number.' },
   sizes: {
-    narrowest: 24,
     gives: ['Nothing: it may overflow its container, never truncate'],
   },
   rules: { cite: ['figures-follow-text', 'contrast-floors'] },
