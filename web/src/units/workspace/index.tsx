@@ -10,9 +10,9 @@ import {
   WorkStub,
   WorkStubSkeleton,
 } from '@/units/pane-stub';
-import { Side } from '@/units/side';
+import { DropFill, Side } from '@/units/side';
 import { type TabAction } from '@/units/tabs';
-import { useDraggedTab } from '@/units/tabs/drag';
+import { endDrag, useDraggedTab } from '@/units/tabs/drag';
 import { TopBar } from '@/units/top-bar';
 
 import { aboutOf, materialOf, setOf, tabLabel, type Course } from './course';
@@ -54,6 +54,31 @@ function pick(id: string): m.Spec {
   if (id === 'a') return { kind: 'ask', ref: '' };
   const [k, ref] = id.split(':');
   return k === 'm' ? { kind: 'material', ref, page: 1 } : { kind: 'set', ref };
+}
+
+/** A folded side's half of the window while a tab is dragged: the same box a
+ *  side would have, tinted as any drop target is (workspace-d13). */
+function FoldedHalf({ left, onDrop }: { left: boolean; onDrop: () => void }) {
+  const [over, setOver] = useState(false);
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        setOver(true);
+      }}
+      onDragLeave={() => {
+        setOver(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setOver(false);
+        onDrop();
+      }}
+      className={`absolute inset-y-0 z-20 w-1/2 ${left ? 'left-0' : 'right-0'}`}
+    >
+      {over && <DropFill />}
+    </div>
+  );
 }
 
 /** The workspace (S5 to S9, W1 to W15): the top bar with the path, then two
@@ -222,18 +247,13 @@ export function Workspace({
           </div>
         ))}
         {dragged && folded !== undefined && (
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
+          <FoldedHalf
+            left={folded === 0}
+            onDrop={() => {
               apply((s) => m.move(s, dragged, folded, undefined));
+              endDrag();
             }}
-            className={`ds-small absolute inset-y-0 z-20 flex w-1/2 items-center justify-center border-2 border-dashed border-(--ds-accent) bg-(--ds-bg) text-center text-(--ds-fg-muted) ${folded === 0 ? 'left-0' : 'right-0'}`}
-          >
-            Drop to open here
-          </div>
+          />
         )}
       </div>
     </div>

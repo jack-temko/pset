@@ -249,6 +249,14 @@ export default defineSpec({
       date: '2026-10-21',
     },
     {
+      id: 'workspace-d13',
+      decision:
+        'A folded side\u2019s half is a drop target in the same box and tint as an open side: the whole half below the top bar, no outline, never dashed.',
+      why: 'Jack, W18 (workspace-grill): the outlines differed in style and size; one look for every drop target.',
+      beat: 'A dashed box labelled Drop to open here',
+      date: '2026-10-21',
+    },
+    {
       id: 'workspace-d7',
       decision:
         'No code for narrow windows: PSet is desktop only. There is no notice, no breakpoint and no small layout. Replaces A3.',

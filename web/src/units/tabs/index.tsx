@@ -137,7 +137,7 @@ export function Tabs({
   ) => {
     if (!draggedTab()) return;
     e.preventDefault();
-    e.stopPropagation();
+
     e.dataTransfer.dropEffect = 'move';
     if (over === null) {
       setDropBefore(null);
@@ -160,7 +160,8 @@ export function Tabs({
     <div
       className="relative flex h-[45px] min-w-0 items-stretch border-b border-(--ds-border-muted)"
       onDragOver={(e) => {
-        dragOver(e, null, null);
+        // A tab under the pointer already placed the bar.
+        if (!e.defaultPrevented) dragOver(e, null, null);
       }}
       onDragLeave={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null))
@@ -218,10 +219,10 @@ export function Tabs({
               }`}
             >
               {dropBefore === t.id && (
-                <span className="absolute inset-y-2 left-0 w-0.5 bg-(--ds-accent)" />
+                <span className="absolute inset-y-2 left-0 w-[2px] bg-(--ds-accent)" />
               )}
               {dropBefore === null && i === tabs.length - 1 && (
-                <span className="absolute inset-y-2 right-0 w-0.5 bg-(--ds-accent)" />
+                <span className="absolute inset-y-2 right-0 w-[2px] bg-(--ds-accent)" />
               )}
               <span
                 className={`ds-body flex min-w-0 flex-1 items-baseline gap-1 ${active ? 'font-medium' : ''}`}

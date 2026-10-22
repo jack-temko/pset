@@ -17,9 +17,9 @@ export default defineSpec({
     },
     {
       id: 'dropping',
-      name: 'A tab dragged over the pane',
-      when: 'A tab is dragged over the pane: an accent outline marks it as the drop place, and the tab joins the end of this side.',
-      skeleton: 'The same outline over the pane’s skeleton.',
+      name: 'A tab dragged over the side',
+      when: 'A tab of the other side is dragged anywhere over this one: a translucent accent fill covers the whole side, tab row included, and no outline.',
+      skeleton: 'The same fill over the pane’s skeleton.',
     },
     {
       id: 'overflow',
@@ -107,6 +107,14 @@ export default defineSpec({
         'Each side loads on its own, with its own skeleton; its tab row shows at once.',
       why: 'Assumed in workspace-grill.',
       beat: 'One skeleton for both sides',
+      date: '2026-10-21',
+    },
+    {
+      id: 'side-d3',
+      decision:
+        'Every drop target is the whole side, tab row included, tinted with a translucent accent fill: no outline, never dashed. A row reorder shows a 2px bar.',
+      why: 'Jack, W18: "it can look weird when the outline slightly overlaps the underline of the active tab because its the same color." Full words in the log.',
+      beat: 'An outline on the pane; a dashed box on a folded side',
       date: '2026-10-21',
     },
     {
