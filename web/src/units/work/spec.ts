@@ -1,7 +1,7 @@
 import { defineSpec } from '@/design/spec';
 
 const SKELETON =
-  'The set line as an empty outlined row, a strip of chips as blocks, then the problem as a heading bar, three lines, three help rows and the buttons.';
+  'The set line, a strip of segments, then what it opens on: a problem as bars and help rows, or the summary as bars and two button stubs, centred.';
 
 export default defineSpec({
   id: 'work',
@@ -365,6 +365,14 @@ export default defineSpec({
         'Anything that stands alone in the pane (the summary, a set with no problems, a problem being found or not found) is centred, across and down.',
       why: 'Jack: "Make sure every part of the panel looks good when not expanded or empty. For example we should center what we can vertically and horizontally."',
       beat: 'Standing at the top with empty space under',
+      date: '2026-10-21',
+    },
+    {
+      id: 'work-d15',
+      decision:
+        'Once every problem is done or the set is turned in, the set line drops the due badge and shows a neutral "Done" or "Turned in" tag.',
+      why: 'Coordinator, 2026-10-21: a finished set still showed "Due soon" or "Overdue", which no longer means anything.',
+      beat: 'A due badge on a finished set',
       date: '2026-10-21',
     },
   ],

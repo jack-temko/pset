@@ -133,6 +133,7 @@ export function Summary({
                   <span
                     className="block w-full min-w-px rounded-t-(--ds-radius-segment) hover:brightness-125"
                     style={{
+                      opacity: longest && p.id !== longest.id ? 0.55 : 1,
                       height: `${String(Math.max(4, (p.minutes / top) * 100))}%`,
                       background: FILL[p.state],
                     }}
@@ -180,5 +181,79 @@ export function Summary({
         </Link>
       </div>
     </section>
+  );
+}
+
+function Bar({ className }: { className: string }) {
+  return (
+    <span
+      aria-hidden
+      className={`block animate-pulse rounded-(--ds-radius-tag) bg-(--ds-border-muted) motion-reduce:animate-none ${className}`}
+    />
+  );
+}
+
+/** The summary while its set loads: a heading bar, the two figures, the bars
+ *  of time per problem, the longest line and two button stubs, in the heights
+ *  of the real thing. */
+export function SummarySkeleton({
+  turnedIn = false,
+  count = 8,
+}: {
+  turnedIn?: boolean;
+  count?: number;
+}) {
+  return (
+    <div
+      aria-hidden
+      className="mx-auto flex w-full max-w-[520px] min-w-0 flex-col items-center gap-6"
+    >
+      <div className="space-y-1">
+        <div className="flex h-(--ds-heading-line) items-center justify-center">
+          <Bar className="h-5 w-40" />
+        </div>
+        {turnedIn && (
+          <div className="flex h-(--ds-small-line) items-center justify-center">
+            <Bar className="h-3 w-20" />
+          </div>
+        )}
+      </div>
+      <div className="flex w-full min-w-0 justify-center gap-12">
+        {[0, 1].map((i) => (
+          <div key={i} className="flex flex-col items-center">
+            <div className="flex h-(--ds-heading-line) items-center">
+              <Bar className="h-5 w-20" />
+            </div>
+            <div className="flex h-(--ds-small-line) items-center">
+              <Bar className="h-3 w-24" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="w-full min-w-0 space-y-2">
+        <div className="flex h-(--ds-small-line) items-center justify-center">
+          <Bar className="h-3 w-28" />
+        </div>
+        <div
+          className="mx-auto flex h-14 w-full max-w-[360px] items-end"
+          style={{ gap: 2 }}
+        >
+          {Array.from({ length: count }, (_, i) => (
+            <span
+              key={i}
+              className="block min-w-px flex-1 animate-pulse rounded-t-(--ds-radius-segment) bg-(--ds-border-muted) motion-reduce:animate-none"
+              style={{ height: `${String(40 + ((i * 23) % 55))}%` }}
+            />
+          ))}
+        </div>
+        <div className="flex h-(--ds-small-line) items-center justify-center">
+          <Bar className="h-3 w-56" />
+        </div>
+      </div>
+      <div className="flex h-(--ds-control) items-center justify-center gap-4">
+        <Bar className="h-(--ds-control) w-24" />
+        <Bar className="h-4 w-36" />
+      </div>
+    </div>
   );
 }

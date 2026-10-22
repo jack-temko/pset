@@ -65,8 +65,8 @@ export default defineExamples(spec, {
   skeletons: {
     'current-underline': () => <WorkSkeleton />,
     summary: () => <WorkSkeleton />,
-    'summary-finished': () => <WorkSkeleton />,
-    'summary-turned-in': () => <WorkSkeleton />,
+    'summary-finished': () => <WorkSkeleton opens="summary" />,
+    'summary-turned-in': () => <WorkSkeleton opens="turned-in" />,
     empty: () => <WorkSkeleton />,
     plain: () => <WorkSkeleton />,
     finding: () => <WorkSkeleton />,

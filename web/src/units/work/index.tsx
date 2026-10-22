@@ -18,7 +18,7 @@ import {
 import { DueStatus } from '@/units/set-line';
 import { dueBadge } from '@/units/set-line/badge';
 import { timeLeft } from '@/units/set-line/dates';
-import { Summary } from '@/units/summary';
+import { Summary, SummarySkeleton } from '@/units/summary';
 import { Tag } from '@/units/tag';
 import { sessionMemory, type Memory } from './memory';
 import {
@@ -242,7 +242,15 @@ export function Work({
           <div className="min-w-0 flex-1">
             <ListRow
               title={set.name}
-              label={dueBadge(set.due, today)}
+              label={
+                turnedIn ? (
+                  <Tag>Turned in</Tag>
+                ) : all ? (
+                  <Tag>Done</Tag>
+                ) : (
+                  dueBadge(set.due, today)
+                )
+              }
               status={<DueStatus due={set.due} today={today} />}
               meta={[...(minutes ? [minutes] : [])]}
             />
@@ -378,9 +386,16 @@ export function Work({
   );
 }
 
-/** The pane while the set loads: the set line, a strip of eight chips and a
- *  problem, in the heights of the real thing. */
-export function WorkSkeleton({ chips = 8 }: { chips?: number }) {
+/** The pane while the set loads: the set line, a strip of chips and what the
+ *  set will open on, in the heights of the real thing: a problem, or the
+ *  summary of a finished or turned-in set, centred the same way. */
+export function WorkSkeleton({
+  chips = 8,
+  opens = 'problem',
+}: {
+  chips?: number;
+  opens?: 'problem' | 'summary' | 'turned-in';
+}) {
   return (
     <div
       aria-hidden
@@ -389,7 +404,13 @@ export function WorkSkeleton({ chips = 8 }: { chips?: number }) {
     >
       <div className="h-[58px] min-w-0 animate-pulse rounded-(--ds-radius-control) border border-(--ds-border-muted) motion-reduce:animate-none" />
       <ProblemStripSkeleton count={chips} />
-      <ProblemSkeleton />
+      {opens === 'problem' ? (
+        <ProblemSkeleton />
+      ) : (
+        <div className="flex min-w-0 flex-1 flex-col justify-center">
+          <SummarySkeleton turnedIn={opens === 'turned-in'} count={chips} />
+        </div>
+      )}
     </div>
   );
 }

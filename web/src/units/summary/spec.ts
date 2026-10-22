@@ -125,5 +125,13 @@ export default defineSpec({
       beat: 'Turn in only in the menu',
       date: '2026-10-21',
     },
+    {
+      id: 'summary-d4',
+      decision:
+        'The longest problem\u2019s bar stays full colour and the others are dimmed a little, so the line naming it points at something.',
+      why: 'Coordinator, 2026-10-21, so the "Longest:" line has a bar to point at.',
+      beat: 'All bars alike',
+      date: '2026-10-21',
+    },
   ],
 });
