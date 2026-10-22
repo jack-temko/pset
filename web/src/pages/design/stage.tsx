@@ -247,7 +247,12 @@ function Stage({
           style={{ width }}
         >
           {got?.ex ? (
-            <Render ex={got.ex} spec={spec} s={s} />
+            <Render
+              key={`${spec.id}:${s.state}:${s.load}:${String(s.stress)}`}
+              ex={got.ex}
+              spec={spec}
+              s={s}
+            />
           ) : (
             <Message>{got?.error ?? 'Loading the example.'}</Message>
           )}
