@@ -5,6 +5,10 @@ export interface Place {
   at: number;
   zoom: number;
   page?: number;
+  /** The horizontal scroll, for a zoom past fit. */
+  left?: number;
+  /** The PDF pages that have arrived, so they do not fade in again. */
+  loaded?: Set<number>;
 }
 
 /** Kept per tab, so a material open twice keeps two places. */

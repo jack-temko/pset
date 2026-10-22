@@ -4,7 +4,8 @@ import { Divider } from '@/units/divider';
 import type { MenuGroup } from '@/units/menu';
 import { Material, MaterialSkeleton } from '@/units/material';
 import { pageMemory as materialMemory } from '@/units/material/memory';
-import { boxOfProblem, bookOf } from '@/units/material/sample';
+import { bookOf, boxOfProblem } from '@/units/material/sample';
+import { printedOf, type Box } from '@/units/material/types';
 import { AskStub, AskStubSkeleton } from '@/units/pane-stub';
 import { DropFill, Side } from '@/units/side';
 import { type TabAction } from '@/units/tabs';
@@ -159,9 +160,15 @@ export function Workspace({
   const [places] = useState(materialMemory);
   const [boxing, setBoxing] = useState<{
     tab: string;
+    problem: string;
     label: string;
     page: number;
+    /** Drawn so far; kept here so a tab switch mid-boxing loses nothing. */
+    boxes: readonly Box[];
   }>();
+  /** The boxes Done kept, by problem. Sample only (A5): the server saves
+   *  them once the pane is wired, and a page link then flashes them. */
+  const [drawn, setDrawn] = useState<Record<string, readonly Box[]>>({});
   // A flash is a moment: once it is over the request is spent, so a tab
   // that is closed and opened again does not flash.
   const flashN = box?.n;
@@ -224,7 +231,32 @@ export function Workspace({
     const p = set.problems.find((x) => x.id === problem);
     if (!p) return;
     const tab = showMaterial(side, set.material, p.page);
-    if (tab) setBoxing({ tab, label: p.label, page: p.page });
+    if (tab)
+      setBoxing({
+        tab,
+        problem,
+        label: p.label,
+        page: p.page,
+        boxes: drawn[problem] ?? [],
+      });
+  };
+
+  /** What the material flashes for a page link: the box the student drew for
+   *  the problem (the first one, if several), else the sample's. */
+  const flashOf = (
+    ref: string,
+    page: number,
+    shown: { problem: string; n: number },
+    boxes: readonly Box[] | undefined,
+  ) => {
+    const first = boxes?.[0];
+    return first
+      ? {
+          page: printedOf(bookOf(ref), first.pdf) ?? page,
+          box: first,
+          n: shown.n,
+        }
+      : { page, box: boxOfProblem(shown.problem), n: shown.n };
   };
 
   const body = (side: m.Side) => {
@@ -289,11 +321,7 @@ export function Workspace({
           page={tab.page ?? 1}
           flash={
             shown && problem
-              ? {
-                  page: problem.page,
-                  box: boxOfProblem(shown.problem),
-                  n: shown.n,
-                }
+              ? flashOf(tab.ref, problem.page, shown, drawn[shown.problem])
               : undefined
           }
           boxing={
@@ -301,10 +329,15 @@ export function Workspace({
               ? { label: boxing.label, page: boxing.page }
               : undefined
           }
+          startBoxes={boxing?.tab === tab.id ? boxing.boxes : undefined}
+          onBoxes={(boxes) => {
+            setBoxing((b) => b && { ...b, boxes });
+          }}
           onPage={(page) => {
             apply((s) => m.setPage(s, tab.id, page));
           }}
-          onDone={() => {
+          onDone={(boxes) => {
+            if (boxing) setDrawn((d) => ({ ...d, [boxing.problem]: boxes }));
             setBoxing(undefined);
           }}
           onCancel={() => {

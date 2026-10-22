@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { Section } from './types';
 
@@ -42,6 +42,15 @@ export function Contents({
   const [open, setOpen] = useState<ReadonlySet<Section>>(
     () => new Set(here.length > 2 ? [here[1]] : []),
   );
+  const panel = useRef<HTMLDivElement>(null);
+  const markedRow = useRef<HTMLDivElement>(null);
+  // The marked section is brought to the middle when the list opens and when
+  // the marked one changes, not on every render.
+  useEffect(() => {
+    const row = markedRow.current;
+    const box = panel.current;
+    if (row && box) box.scrollTop = row.offsetTop - box.clientHeight / 2;
+  }, [marked]);
   const toggle = (s: Section) => {
     setOpen((o) => {
       const next = new Set(o);
@@ -59,13 +68,7 @@ export function Contents({
         <div
           className={`flex items-start ${isMarked ? 'bg-(--ds-hover)' : ''}`}
           style={{ paddingLeft: level * 16 }}
-          ref={(el) => {
-            if (el && isMarked) {
-              const box = el.closest('[data-contents]');
-              if (box instanceof HTMLElement)
-                box.scrollTop = el.offsetTop - box.clientHeight / 2;
-            }
-          }}
+          ref={isMarked ? markedRow : undefined}
         >
           <span className="flex h-8 w-6 shrink-0 items-center justify-center">
             {folded && (
@@ -109,6 +112,7 @@ export function Contents({
   return (
     <div
       data-contents
+      ref={panel}
       className="absolute inset-x-0 top-11 bottom-0 z-10 overflow-y-auto border-b border-(--ds-border-muted) bg-(--ds-bg) py-2"
     >
       <p className="ds-label px-4 pt-1 pb-2 text-(--ds-fg-muted) [overflow-wrap:anywhere]">

@@ -231,6 +231,10 @@ export default defineSpec({
       does: 'Called with the printed page the scroll reaches.',
     },
     { name: 'onDone', does: 'Called with every box when Done is pressed.' },
+    {
+      name: 'onBoxes',
+      does: 'Called with the boxes drawn so far, whenever one is drawn or removed.',
+    },
     { name: 'onCancel', does: 'Called when boxing is cancelled.' },
     { name: 'onRetry', does: 'Called when Read it again is pressed.' },
   ],

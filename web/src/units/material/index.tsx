@@ -27,6 +27,9 @@ const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 4;
 /** Where in the view the "current page" is read: a share of its height. */
 const PROBE = 0.3;
+/** The material pane the student last used, so Escape acts in one pane. */
+let active: Element | null = null;
+
 /** Smaller boxes than this (a share of the page) are a slip of the hand. */
 const MIN_BOX = 0.02;
 
@@ -102,12 +105,19 @@ function PageSlot({
       : 'loading',
   );
   const [fade, setFade] = useState(false);
+  const [wasBoxing, setWasBoxing] = useState(boxing);
   const [draft, setDraft] = useState<{
     x0: number;
     y0: number;
     x1: number;
     y1: number;
   }>();
+
+  // A draft ends with the mode.
+  if (wasBoxing !== boxing) {
+    setWasBoxing(boxing);
+    if (!boxing) setDraft(undefined);
+  }
 
   useEffect(() => {
     if (load !== 'loading') return;
@@ -151,6 +161,9 @@ function PageSlot({
         const p = at(e);
         setDraft({ ...draft, x1: p.x, y1: p.y });
       }}
+      onPointerCancel={() => {
+        setDraft(undefined);
+      }}
       onPointerUp={() => {
         if (!draft) return;
         const rect = {
@@ -160,7 +173,8 @@ function PageSlot({
           h: Math.abs(draft.y1 - draft.y0),
         };
         setDraft(undefined);
-        if (rect.w >= MIN_BOX && rect.h >= MIN_BOX) onBox({ pdf, ...rect });
+        if (boxing && rect.w >= MIN_BOX && rect.h >= MIN_BOX)
+          onBox({ pdf, ...rect });
       }}
     >
       {load === 'ready' && (
@@ -211,7 +225,7 @@ function PageSlot({
           }}
         />
       )}
-      {boxes.map((b, i) => (
+      {(boxing ? boxes : []).map((b, i) => (
         <span
           key={i}
           data-box
@@ -290,6 +304,9 @@ export interface MaterialProps {
   onPage?: (page: number) => void;
   /** Done in boxing mode, with every box drawn. */
   onDone?: (boxes: readonly Box[]) => void;
+  /** The boxes drawn so far changed (drawn or removed), so the workspace
+   *  can keep them if the tab is switched away mid-boxing. */
+  onBoxes?: (boxes: readonly Box[]) => void;
   /** Cancel or Escape in boxing mode. */
   onCancel?: () => void;
   /** Read it again, on a book that could not be read. */
@@ -320,6 +337,7 @@ export function Material({
   boxing,
   onPage,
   onDone,
+  onBoxes,
   onCancel,
   onRetry,
 }: MaterialProps) {
@@ -331,7 +349,15 @@ export function Material({
   const [contents, setContents] = useState(startContents ?? false);
   const [boxes, setBoxes] = useState<readonly Box[]>(startBoxes ?? []);
   const [boxed, setBoxed] = useState(boxing);
-  const [loaded] = useState(() => new Set<number>());
+  // Pages that have arrived live with the tab's place, so a tab switched
+  // back to does not fade them in again.
+  const [loaded] = useState(
+    () => memory.get(tabId)?.loaded ?? new Set<number>(),
+  );
+  const [left, setLeft] = useState(0);
+  /** The PDF page of the last jump, shown until the student scrolls. */
+  const [pinned, setPinned] = useState<number>();
+  const root = useRef<HTMLDivElement>(null);
 
   const printedMax = book.printedPages;
   const tooFar = (n: number) =>
@@ -371,10 +397,14 @@ export function Material({
       return pdfOf(book, clamp(page ?? 1, 1, book.printedPages)) - 1;
     })(),
     cy: 0,
+    cx: 0,
+    rx: undefined as number | undefined,
   });
+  /** Where our own scrolling left the view, so its echo is not the student's. */
+  const ours = useRef<number | undefined>(undefined);
   const geo = useRef({ pitch, pageH, viewH, innerW, width });
   const reported = useRef(page);
-  const lastZoom = useRef(zoom);
+  const placed = useRef(false);
 
   useLayoutEffect(() => {
     geo.current = { pitch, pageH, viewH, innerW, width };
@@ -402,16 +432,22 @@ export function Material({
     const el = scroller.current;
     if (!el || width === 0) return;
     el.scrollTop = PAD + anchor.current.at * pitch - anchor.current.cy;
-    if (lastZoom.current !== zoom) {
-      el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
-      lastZoom.current = zoom;
+    ours.current = el.scrollTop;
+    const a = anchor.current;
+    if (a.rx !== undefined) {
+      el.scrollLeft = a.rx * innerW - a.cx;
+      a.rx = undefined;
+    } else if (!placed.current) {
+      el.scrollLeft = memory.get(tabId)?.left ?? 0;
     }
+    placed.current = true;
+    setLeft(el.scrollLeft);
     setTop(el.scrollTop);
-  }, [pitch, zoom, width]);
+  }, [pitch, zoom, width, innerW, memory, tabId]);
 
   const probe = top + PROBE * viewH - PAD;
   const idx = clamp(Math.floor(probe / pitch), 0, book.pdfPages - 1);
-  const pdfHere = pitch > PAD ? idx + 1 : 1;
+  const pdfHere = pinned ?? (pitch > PAD ? idx + 1 : 1);
   const printedHere = printedOf(book, pdfHere);
 
   // The place is kept, and the tab hears the page it is on (W11).
@@ -421,13 +457,26 @@ export function Material({
     memory.set(tabId, {
       at: (el.scrollTop - PAD) / pitch,
       zoom,
+      left: el.scrollLeft,
+      loaded,
       page: printedHere ?? reported.current,
     });
     if (printedHere !== undefined && printedHere !== reported.current) {
       reported.current = printedHere;
       onPage?.(printedHere);
     }
-  }, [top, zoom, width, pitch, printedHere, memory, tabId, onPage]);
+  }, [
+    top,
+    left,
+    zoom,
+    width,
+    pitch,
+    printedHere,
+    loaded,
+    memory,
+    tabId,
+    onPage,
+  ]);
 
   const toPdf = useCallback((pdf: number, inside = 0) => {
     const el = scroller.current;
@@ -435,7 +484,14 @@ export function Material({
     const g = geo.current;
     const want = PAD + (pdf - 1) * g.pitch + inside * g.pageH;
     el.scrollTop = inside === 0 ? want - PAD : want - 0.25 * g.viewH;
-    anchor.current = { at: (el.scrollTop - PAD) / g.pitch, cy: 0 };
+    anchor.current = {
+      at: (el.scrollTop - PAD) / g.pitch,
+      cy: 0,
+      cx: 0,
+      rx: undefined,
+    };
+    ours.current = el.scrollTop;
+    setPinned(pdf);
     setTop(el.scrollTop);
   }, []);
 
@@ -451,15 +507,21 @@ export function Material({
   const flashN = flash?.n;
   const flashPage = flash?.page;
   const flashY = flash?.box.y;
+  const flashed = useRef<number | undefined>(undefined);
   useEffect(() => {
     if (!ready || flashN === undefined || flashPage === undefined) return;
+    if (flashed.current === flashN) return;
+    flashed.current = flashN;
     reported.current = flashPage;
     toPdf(pdfOf(book, clamp(flashPage, 1, printedMax)), flashY);
   }, [flashN, flashPage, flashY, ready, book, printedMax, toPdf]);
 
   const boxPage = boxing?.page;
+  const boxed2 = useRef<number | undefined>(undefined);
   useEffect(() => {
     if (!ready || boxPage === undefined) return;
+    if (boxed2.current === boxPage) return;
+    boxed2.current = boxPage;
     reported.current = boxPage;
     toPdf(pdfOf(book, clamp(boxPage, 1, printedMax)));
   }, [boxPage, ready, book, printedMax, toPdf]);
@@ -476,15 +538,23 @@ export function Material({
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
-      const next = clamp(
-        zoomRef.current * Math.exp(-clamp(e.deltaY, -30, 30) * 0.01),
+      const prev = zoomRef.current;
+      let next = clamp(
+        prev * Math.exp(-clamp(e.deltaY, -30, 30) * 0.01),
         ZOOM_MIN,
         ZOOM_MAX,
       );
-      const cy = e.clientY - el.getBoundingClientRect().top;
+      // Zooming toward fit snaps to it when within about 2%.
+      if (Math.abs(next - 1) < 0.02 && Math.abs(next - 1) <= Math.abs(prev - 1))
+        next = 1;
+      const r = el.getBoundingClientRect();
+      const cy = e.clientY - r.top;
+      const cx = e.clientX - r.left;
       anchor.current = {
         at: (el.scrollTop - PAD + cy) / geo.current.pitch,
         cy,
+        cx,
+        rx: (el.scrollLeft + cx) / geo.current.innerW,
       };
       setZoom(next);
     };
@@ -496,8 +566,20 @@ export function Material({
 
   // Escape: cancels boxing (A3), closes Contents, leaves the page box.
   useEffect(() => {
+    if (boxing) active = root.current;
+  }, [boxing]);
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      const mine = root.current;
+      const t = e.target instanceof Element ? e.target : null;
+      if (
+        t &&
+        !mine?.contains(t) &&
+        t.closest('input, textarea, [role=menu], [popover]')
+      )
+        return;
+      if (active?.isConnected && active !== mine) return;
       if (boxing) onCancel?.();
       else if (contents) setContents(false);
     };
@@ -591,7 +673,16 @@ export function Material({
     'ds-small ds-tabular rounded-(--ds-radius-tag) px-1.5 py-0.5';
 
   return (
-    <div className="relative flex h-full min-h-0 min-w-0 flex-col bg-(--ds-bg)">
+    <div
+      ref={root}
+      onPointerDownCapture={(e) => {
+        active = e.currentTarget;
+      }}
+      onFocusCapture={(e) => {
+        active = e.currentTarget;
+      }}
+      className="relative flex h-full min-h-0 min-w-0 flex-col bg-(--ds-bg)"
+    >
       <div className="flex h-11 shrink-0 items-center justify-between gap-3 border-b border-(--ds-border-muted) bg-(--ds-bg) px-3">
         {boxing ? (
           <>
@@ -647,9 +738,9 @@ export function Material({
                     onBlur={() => {
                       setGoTo(null);
                     }}
-                    className="ds-small ds-tabular h-7 w-16 rounded-(--ds-radius-tag) border border-(--ds-accent) bg-transparent px-1.5 text-right text-(--ds-fg)"
+                    className="ds-small ds-tabular h-7 w-14 rounded-(--ds-radius-tag) border border-(--ds-accent) bg-transparent px-1.5 text-right text-(--ds-fg)"
                   />
-                  <span>{`of ${String(printedMax)}`}</span>
+                  <span className="inline-block min-w-14">{`of ${String(printedMax)}`}</span>
                 </>
               ) : (
                 <>
@@ -659,14 +750,14 @@ export function Material({
                       setContents(false);
                       setGoTo({ text: '' });
                     }}
-                    className={`${pageButton} hover:bg-(--ds-hover) ${printedHere === undefined ? '' : 'text-(--ds-fg)'}`}
+                    className={`${pageButton} min-w-14 text-center hover:bg-(--ds-hover) ${printedHere === undefined ? '' : 'text-(--ds-fg)'}`}
                   >
                     {printedHere === undefined
                       ? `PDF ${String(pdfHere)}`
                       : `p. ${String(printedHere)}`}
                   </button>
                   {printedHere !== undefined && (
-                    <span className="ds-tabular">{`of ${String(printedMax)}`}</span>
+                    <span className="ds-tabular inline-block min-w-14">{`of ${String(printedMax)}`}</span>
                   )}
                 </>
               )}
@@ -674,7 +765,9 @@ export function Material({
                 ·
               </span>
               {zoom === 1 ? (
-                <span className={`${pageButton} text-(--ds-fg-muted)`}>
+                <span
+                  className={`${pageButton} inline-block min-w-14 text-right text-(--ds-fg-muted)`}
+                >
                   100%
                 </span>
               ) : (
@@ -685,10 +778,12 @@ export function Material({
                     anchor.current = {
                       at: ((scroller.current?.scrollTop ?? 0) - PAD) / pitch,
                       cy: 0,
+                      cx: 0,
+                      rx: undefined,
                     };
                     setZoom(1);
                   }}
-                  className={`${pageButton} text-(--ds-fg) hover:bg-(--ds-hover)`}
+                  className={`${pageButton} min-w-14 text-right text-(--ds-fg) hover:bg-(--ds-hover)`}
                 >
                   {`${String(Math.round(zoom * 100))}%`}
                 </button>
@@ -721,9 +816,19 @@ export function Material({
         data-scroller
         onScroll={(e) => {
           const el = e.currentTarget;
+          setLeft(el.scrollLeft);
+          if (
+            ours.current !== undefined &&
+            Math.abs(el.scrollTop - ours.current) < 2
+          )
+            return;
+          ours.current = undefined;
+          setPinned(undefined);
           anchor.current = {
             at: (el.scrollTop - PAD) / geo.current.pitch,
             cy: 0,
+            cx: 0,
+            rx: undefined,
           };
           setTop(el.scrollTop);
         }}
@@ -751,10 +856,14 @@ export function Material({
               boxing={boxing !== undefined}
               boxes={boxes.filter((b) => b.pdf === pdf)}
               onBox={(b) => {
-                setBoxes((all) => [...all, b]);
+                const all = [...boxes, b];
+                setBoxes(all);
+                onBoxes?.(all);
               }}
               onRemoveBox={(b) => {
-                setBoxes((all) => all.filter((x) => x !== b));
+                const all = boxes.filter((x) => x !== b);
+                setBoxes(all);
+                onBoxes?.(all);
               }}
             />
           ))}

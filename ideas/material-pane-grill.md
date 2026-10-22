@@ -1,6 +1,6 @@
 # Material pane: grill
 
-- status: awaiting OK
+- status: approved
 - date: 2026-10-22
 - brief: the inside of the material pane (one document with pages, in a side of the workspace), judged from a tired student reading the book beside a problem set
 - sources:

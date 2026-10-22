@@ -95,9 +95,11 @@ export const LONG_NAME =
   'Introduction to Electrodynamics, fourth edition, by David J. Griffiths, with the solutions manual';
 
 /** The books by the ids the sample course uses. */
+const NOTES = shortBook(80);
+const LAB = shortBook(200);
 export function bookOf(ref: string): Book {
-  if (ref === 'notes') return shortBook(80);
-  if (ref === 'lab') return shortBook(200);
+  if (ref === 'notes') return NOTES;
+  if (ref === 'lab') return LAB;
   return GRIFFITHS;
 }
 
