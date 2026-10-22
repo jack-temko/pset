@@ -56,28 +56,61 @@ function pick(id: string): m.Spec {
   return k === 'm' ? { kind: 'material', ref, page: 1 } : { kind: 'set', ref };
 }
 
-/** A folded side's half of the window while a tab is dragged: the same box a
- *  side would have, tinted as any drop target is (workspace-d13). */
-function FoldedHalf({ left, onDrop }: { left: boolean; onDrop: () => void }) {
-  const [over, setOver] = useState(false);
+/** Whether a tab is the only one of the only side open. */
+const onlyTab = (st: m.State, id: string) =>
+  st.sides[0].length + st.sides[1].length === 1 && m.find(st, id) !== undefined;
+
+/** The height of a side's tab row, which the split zones leave alone. */
+const TAB_ROW = 45;
+
+/** VS Code's thirds (workspace-d14): while a tab is dragged over the one open
+ *  side's pane, its outer left third shows the fill over the left half and its
+ *  outer right third over the right half; the middle third shows nothing and
+ *  takes no drop. The tab row below it is left to its own insertion bar. */
+function SplitZones({
+  row,
+  onDrop,
+}: {
+  row: React.RefObject<HTMLDivElement | null>;
+  onDrop: (edge: m.Side) => void;
+}) {
+  const [zone, setZone] = useState<m.Side | null>(null);
+  const at = (x: number): m.Side | null => {
+    const r = row.current?.getBoundingClientRect();
+    if (!r) return null;
+    const f = (x - r.left) / r.width;
+    return f < 1 / 3 ? 0 : f > 2 / 3 ? 1 : null;
+  };
   return (
-    <div
-      onDragOver={(e) => {
-        e.preventDefault();
-        setOver(true);
-      }}
-      onDragLeave={() => {
-        setOver(false);
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        setOver(false);
-        onDrop();
-      }}
-      className={`absolute inset-y-0 z-20 w-1/2 ${left ? 'left-0' : 'right-0'}`}
-    >
-      {over && <DropFill />}
-    </div>
+    <>
+      <div
+        onDragOver={(e) => {
+          const z = at(e.clientX);
+          setZone(z);
+          if (z !== null) e.preventDefault();
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+            setZone(null);
+        }}
+        onDrop={(e) => {
+          const z = at(e.clientX);
+          setZone(null);
+          if (z === null) return;
+          e.preventDefault();
+          onDrop(z);
+        }}
+        style={{ top: TAB_ROW }}
+        className="absolute inset-x-0 bottom-0 z-20"
+      />
+      {zone !== null && (
+        <div
+          className={`pointer-events-none absolute inset-y-0 z-10 w-1/2 ${zone === 0 ? 'left-0' : 'right-0'}`}
+        >
+          <DropFill />
+        </div>
+      )}
+    </>
   );
 }
 
@@ -246,11 +279,11 @@ export function Workspace({
             <div className="min-w-0 flex-1">{sideView(side)}</div>
           </div>
         ))}
-        {dragged && folded !== undefined && (
-          <FoldedHalf
-            left={folded === 0}
-            onDrop={() => {
-              apply((s) => m.move(s, dragged, folded, undefined));
+        {dragged && folded !== undefined && !onlyTab(st, dragged) && (
+          <SplitZones
+            row={row}
+            onDrop={(edge) => {
+              apply((s) => m.splitOpen(s, dragged, edge));
               endDrag();
             }}
           />

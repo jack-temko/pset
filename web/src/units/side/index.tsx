@@ -1,7 +1,7 @@
 import { useState, type ComponentProps, type ReactNode } from 'react';
 
 import { Tabs } from '@/units/tabs';
-import { draggedTab, endDrag } from '@/units/tabs/drag';
+import { draggedTab, endDrag, useDraggedTab } from '@/units/tabs/drag';
 
 /** The one look of a drop target (side-d3): a translucent accent fill over the
  *  whole side, tab row and pane, with no outline, so nothing competes with the
@@ -32,6 +32,7 @@ export function Side({
   dropping?: boolean;
 }) {
   const [over, setOver] = useState(false);
+  const dragging = useDraggedTab();
   const foreign = (id: string | null) =>
     id !== null && !tabs.tabs.some((t) => t.id === id);
   return (
@@ -64,7 +65,7 @@ export function Side({
         }}
       />
       <div className="min-h-0 flex-1 overflow-y-auto">{body}</div>
-      {(over || dropping) && <DropFill />}
+      {((over && dragging !== null) || dropping) && <DropFill />}
     </section>
   );
 }

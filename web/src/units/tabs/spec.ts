@@ -138,6 +138,14 @@ export default defineSpec({
       date: '2026-10-21',
     },
     {
+      id: 'tabs-d6',
+      decision:
+        'Dragging near either end of a long row scrolls it, as in VS Code. A press that moves only a few px is a click, not a drag.',
+      why: 'Jack, W19: "I want it to be similar to [VS Code]. Hit the edge cases please."',
+      beat: 'No scrolling while dragging',
+      date: '2026-10-21',
+    },
+    {
       id: 'tabs-d4',
       decision:
         'A tab moves to the other side by dragging it or by "Move to other side" in its menu, which also has Swap sides, Close and Close others.',

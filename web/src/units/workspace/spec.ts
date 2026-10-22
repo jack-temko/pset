@@ -38,7 +38,7 @@ export default defineSpec({
     {
       id: 'returned',
       name: 'A tab dragged back',
-      when: 'Ask was dragged onto the folded left half: the side is back with that one tab and the set keeps the right.',
+      when: 'Ask was dragged onto the outer left third of the one open side: a new left side opens with that one tab, half and half.',
       skeleton: WAIT,
     },
     {
@@ -126,7 +126,7 @@ export default defineSpec({
     {
       id: 'move-tab',
       label: 'Drag a tab, or "Move to other side"',
-      does: 'The tab moves to the other side and opens there; dropped on either half of the window it goes to that side; a folded side’s half brings it back.',
+      does: 'The tab moves to the other side and opens there; with one side open, an outer third of its pane opens a new side there; the middle does nothing.',
       target: { unit: 'workspace', state: 'returned' },
     },
     {
@@ -219,7 +219,7 @@ export default defineSpec({
     {
       id: 'workspace-d3',
       decision:
-        'A side whose last tab closes folds away; the other takes the full width. It comes back only when a tab is dragged onto either half of the window.',
+        'A side whose last tab closes folds away; the other takes the full width. It comes back only when a tab is dragged onto an outer third of the open side.',
       why: 'Jack’s pick, W4: no empty boxes. Confirms A1. Jack: "Drop the open to the side please... No more open to the side."',
       beat: 'An empty side listing what to open',
       date: '2026-10-21',
@@ -251,9 +251,25 @@ export default defineSpec({
     {
       id: 'workspace-d13',
       decision:
-        'A folded side\u2019s half is a drop target in the same box and tint as an open side: the whole half below the top bar, no outline, never dashed.',
+        'A split zone tints the half the new side will take, whole side with its tab row, in the same tint as any drop target: no outline, never dashed.',
       why: 'Jack, W18 (workspace-grill): the outlines differed in style and size; one look for every drop target.',
       beat: 'A dashed box labelled Drop to open here',
+      date: '2026-10-21',
+    },
+    {
+      id: 'workspace-d14',
+      decision:
+        'With one side open, a tab dragged to an outer third of its pane opens a new side there, half and half; the middle does nothing. A lone tab cannot split.',
+      why: 'Jack, W19: "I want it to be similar to [VS Code]. Hit the edge cases please." Zones: VS Code thirds. Full words in the log.',
+      beat: 'Halves of the window; only the left',
+      date: '2026-10-21',
+    },
+    {
+      id: 'workspace-d15',
+      decision:
+        'When the open tab leaves a side, that side shows its most recently used remaining tab; a dropped tab becomes the open tab of its side.',
+      why: 'Jack, W19: next tab "most recently used".',
+      beat: 'The next tab, or the one before',
       date: '2026-10-21',
     },
     {

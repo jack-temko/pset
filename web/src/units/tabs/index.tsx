@@ -29,6 +29,9 @@ const TAB_MENU: MenuGroup[] = [
 ];
 
 const FADE = 24;
+/** How near an end of the row, in px, a drag starts scrolling it, and how far each step goes. */
+const EDGE = 40;
+const STEP = 16;
 
 /** The mask that fades an edge the row scrolls past. */
 function fade(left: boolean, right: boolean) {
@@ -160,6 +163,13 @@ export function Tabs({
     <div
       className="relative flex h-[45px] min-w-0 items-stretch border-b border-(--ds-border-muted)"
       onDragOver={(e) => {
+        // Near either end the row scrolls (tabs-d6), as in VS Code.
+        const el = scroller.current;
+        if (el && draggedTab()) {
+          const r = el.getBoundingClientRect();
+          if (e.clientX < r.left + EDGE) el.scrollLeft -= STEP;
+          else if (e.clientX > r.right - EDGE) el.scrollLeft += STEP;
+        }
         // A tab under the pointer already placed the bar.
         if (!e.defaultPrevented) dragOver(e, null, null);
       }}

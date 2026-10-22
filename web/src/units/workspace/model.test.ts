@@ -15,6 +15,7 @@ import {
   openTab,
   select,
   showing,
+  splitOpen,
   swap,
   type State,
 } from './model';
@@ -44,14 +45,17 @@ describe('closing', () => {
     expect(after.open[0]).toBeNull();
   });
 
-  it('opens the next tab, or the one before, when the open one closes', () => {
+  it('opens the most recently used remaining tab when the open one closes', () => {
     let st = start();
     st = add(st, 0, { kind: 'material', ref: 'notes', page: 1 });
     st = add(st, 0, { kind: 'material', ref: 'extra', page: 1 });
     const [a, b, c] = st.sides[0];
+    // Used in the order a, c, b: b is open, c was used before it.
+    st = select(select(st, a.id), c.id);
     st = select(st, b.id);
     expect(close(st, b.id).open[0]).toBe(c.id);
-    expect(close(select(st, c.id), c.id).open[0]).toBe(b.id);
+    expect(close(close(st, b.id), c.id).open[0]).toBe(a.id);
+    // Closing a tab that is not open leaves the open one.
     expect(close(st, a.id).open[0]).toBe(b.id);
   });
 
@@ -192,5 +196,86 @@ describe('the address', () => {
     const st = decode('l=x:y,m:book:-4&x=7');
     expect(refs(st, 0)).toEqual(['book@1']);
     expect(st.split).toBe(0.5);
+  });
+});
+
+describe('splitting the one open side (workspace-d14)', () => {
+  const one = () => {
+    // The set alone on the right, with Ask beside it; the left is folded.
+    let st = start();
+    st = close(st, st.sides[0][0].id);
+    return add(st, 1, { kind: 'ask', ref: '' });
+  };
+
+  it('opens a new left side with the tab, whichever side is open', () => {
+    const st = one();
+    const ask = st.sides[1][1].id;
+    const left = splitOpen(st, ask, 0);
+    expect(refs(left, 0)).toEqual(['ask']);
+    expect(refs(left, 1)).toEqual(['ps4']);
+    expect(left.split).toBe(0.5);
+    // The same with the open side on the left.
+    const mirrored = swap(st);
+    const right = splitOpen(mirrored, ask, 1);
+    expect(refs(right, 1)).toEqual(['ask']);
+    expect(refs(right, 0)).toEqual(['ps4']);
+    const same = splitOpen(mirrored, ask, 0);
+    expect(refs(same, 0)).toEqual(['ask']);
+    expect(refs(same, 1)).toEqual(['ps4']);
+  });
+
+  it('starts half and half whatever the split was', () => {
+    const st = { ...one(), split: 0.3 };
+    expect(splitOpen(st, st.sides[1][1].id, 1).split).toBe(0.5);
+  });
+
+  it('makes the dropped tab the open tab of its side and keeps the other open', () => {
+    const st = one();
+    const ask = st.sides[1][1].id;
+    const after = splitOpen(st, ask, 0);
+    expect(after.open[0]).toBe(ask);
+    expect(openTab(after, 1)?.ref).toBe('ps4');
+  });
+
+  it('changes nothing for the only tab of the only side', () => {
+    const st = close(start(), start().sides[0][0].id);
+    const only = st.sides[1][0].id;
+    expect(splitOpen(st, only, 0)).toBe(st);
+    expect(splitOpen(st, only, 1)).toBe(st);
+  });
+
+  it('does nothing when two sides are open', () => {
+    const st = start();
+    expect(splitOpen(st, st.sides[0][0].id, 1)).toBe(st);
+  });
+});
+
+describe('moving the last tab, and recency', () => {
+  it('folds the source and gives the other the full width', () => {
+    const st = start();
+    const after = move(st, st.sides[0][0].id, 1, undefined);
+    expect(foldedSide(after)).toBe(0);
+    expect(refs(after, 1)).toEqual(['ps4', 'griffiths@112']);
+    expect(after.open[1]).toBe(st.sides[0][0].id);
+  });
+
+  it('shows the most recently used tab on the side a tab left', () => {
+    let st = start();
+    st = add(st, 0, { kind: 'material', ref: 'notes', page: 1 });
+    st = add(st, 0, { kind: 'material', ref: 'extra', page: 1 });
+    const [a, b, c] = st.sides[0];
+    st = select(select(st, a.id), c.id);
+    st = select(st, b.id);
+    // b leaves: c was used just before it.
+    expect(move(st, b.id, 1, undefined).open[0]).toBe(c.id);
+  });
+
+  it('keeps recency per side and through swap', () => {
+    let st = start();
+    st = add(st, 1, { kind: 'ask', ref: '' });
+    const [set, ask] = st.sides[1];
+    st = swap(select(st, set.id));
+    // Right (formerly left) has only the book; left has ask then set.
+    expect(close(st, set.id).open[0]).toBe(ask.id);
   });
 });

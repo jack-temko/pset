@@ -22,6 +22,8 @@ export interface State {
   sides: readonly [readonly Tab[], readonly Tab[]];
   /** The open tab's id on each side. */
   open: readonly [string | null, string | null];
+  /** Each side's tab ids, least recently open first (workspace-d14). */
+  recent: readonly [readonly string[], readonly string[]];
   /** The left side's share of the width, in (0, 1). */
   split: number;
   next: number;
@@ -32,7 +34,13 @@ export type Spec = Omit<Tab, 'id'>;
 export const other = (s: Side): Side => (s === 0 ? 1 : 0);
 
 export function emptyState(): State {
-  return { sides: [[], []], open: [null, null], split: 0.5, next: 1 };
+  return {
+    sides: [[], []],
+    open: [null, null],
+    recent: [[], []],
+    split: 0.5,
+    next: 1,
+  };
 }
 
 const withSide = (st: State, side: Side, tabs: readonly Tab[]): State => ({
@@ -40,10 +48,17 @@ const withSide = (st: State, side: Side, tabs: readonly Tab[]): State => ({
   sides: side === 0 ? [tabs, st.sides[1]] : [st.sides[0], tabs],
 });
 
-const withOpen = (st: State, side: Side, id: string | null): State => ({
-  ...st,
-  open: side === 0 ? [id, st.open[1]] : [st.open[0], id],
-});
+const withOpen = (st: State, side: Side, id: string | null): State => {
+  const recent =
+    id === null
+      ? st.recent[side]
+      : [...st.recent[side].filter((x) => x !== id), id];
+  return {
+    ...st,
+    open: side === 0 ? [id, st.open[1]] : [st.open[0], id],
+    recent: side === 0 ? [recent, st.recent[1]] : [st.recent[0], recent],
+  };
+};
 
 export function find(st: State, id: string) {
   for (const side of [0, 1] as const) {
@@ -118,24 +133,30 @@ export function select(st: State, id: string): State {
   return at ? withOpen(st, at.side, id) : st;
 }
 
-/** Removes a tab. If it was open, the next one opens, or the one before. */
+/** Removes a tab. If it was open, the side's most recently used remaining
+ *  tab opens (workspace-d14). */
 export function close(st: State, id: string): State {
   const at = find(st, id);
   if (!at) return st;
-  const tabs = st.sides[at.side];
-  const i = tabs.findIndex((t) => t.id === id);
-  const rest = tabs.filter((t) => t.id !== id);
+  const rest = st.sides[at.side].filter((t) => t.id !== id);
+  const kept = st.recent[at.side].filter((x) => x !== id);
+  const pruned: State = {
+    ...withSide(st, at.side, rest),
+    recent: at.side === 0 ? [kept, st.recent[1]] : [st.recent[0], kept],
+  };
   const open =
-    st.open[at.side] === id
-      ? (rest[Math.min(i, rest.length - 1)]?.id ?? null)
-      : st.open[at.side];
-  return withOpen(withSide(st, at.side, rest), at.side, open);
+    st.open[at.side] === id ? (kept.at(-1) ?? null) : st.open[at.side];
+  return withOpen(pruned, at.side, open);
 }
 
 export function closeOthers(st: State, id: string): State {
   const at = find(st, id);
   if (!at) return st;
-  return withOpen(withSide(st, at.side, [at.tab]), at.side, id);
+  const only: State = {
+    ...withSide(st, at.side, [at.tab]),
+    recent: at.side === 0 ? [[], st.recent[1]] : [st.recent[0], []],
+  };
+  return withOpen(only, at.side, id);
 }
 
 /** Moves a tab to a side, before another tab or at the end, and opens it
@@ -153,7 +174,22 @@ export function move(
   const i = before ? tabs.findIndex((t) => t.id === before) : -1;
   const next =
     i < 0 ? [...tabs, at.tab] : [...tabs.slice(0, i), at.tab, ...tabs.slice(i)];
-  return withOpen(withSide(without, to, next), to, id);
+  // A side that was folded comes back at half and half (workspace-d14).
+  const split = tabs.length === 0 ? 0.5 : without.split;
+  return withOpen({ ...withSide(without, to, next), split }, to, id);
+}
+
+/** A tab dropped on the outer third of the one open side (workspace-d14): a
+ *  new side opens on that edge with the tab, the old side keeps the rest, at
+ *  half and half. The only tab of the only side cannot split: nothing changes. */
+export function splitOpen(st: State, id: string, edge: Side): State {
+  const folded = foldedSide(st);
+  const at = find(st, id);
+  if (folded === undefined || !at) return st;
+  if (st.sides[at.side].length === 1 && at.side === other(folded)) return st;
+  // The old tabs go to the side opposite the edge.
+  const ready = other(folded) === edge ? swap(st) : st;
+  return move(ready, id, edge, undefined);
 }
 
 export function swap(st: State): State {
@@ -161,6 +197,7 @@ export function swap(st: State): State {
     ...st,
     sides: [st.sides[1], st.sides[0]],
     open: [st.open[1], st.open[0]],
+    recent: [st.recent[1], st.recent[0]],
     split: 1 - st.split,
   };
 }
