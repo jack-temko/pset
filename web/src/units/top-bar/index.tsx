@@ -13,11 +13,14 @@ export function TopBar({
   homeHref,
   path = [],
   settingsHref,
+  onSettings,
 }: {
   /** Where the wordmark goes: Home. A router can intercept it like any link. */
   homeHref: string;
   path?: readonly PathItem[];
   settingsHref: string;
+  /** On the Settings screen itself: Settings shows as where you are, not a link. */
+  onSettings?: boolean;
 }) {
   return (
     <header className="sticky top-0 z-10 flex h-(--ds-topbar) items-center justify-between gap-4 border-b border-(--ds-border-muted) bg-(--ds-bg) px-(--ds-gutter)">
@@ -57,9 +60,13 @@ export function TopBar({
           })}
         </ol>
       </nav>
-      <Link href={settingsHref} className="shrink-0">
-        Settings
-      </Link>
+      {onSettings ? (
+        <span className="ds-body shrink-0 text-(--ds-fg-muted)">Settings</span>
+      ) : (
+        <Link href={settingsHref} className="shrink-0">
+          Settings
+        </Link>
+      )}
     </header>
   );
 }

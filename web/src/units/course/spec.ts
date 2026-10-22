@@ -8,19 +8,19 @@ export default defineSpec({
   title: 'Course',
   group: 'Screens',
   purpose:
-    'One course as a student checks on it: its name and where it stands, then its Work, its Materials and a quiet footer of time, cost and what PSet remembers, with one Add for any file.',
+    'One course as a student checks on it: its name, then its Work, its Materials and a quiet footer of time, cost and what PSet remembers, with one Add for any file.',
   exampleWidth: 'full',
   states: [
     {
       id: 'normal',
       name: 'One set to do',
       when: 'The usual course: a set to do, three materials, six finished sets folded under Done.',
-      text: '1 set to do · next due Thu',
+      text: 'Done (6)',
     },
     {
       id: 'nothing-due',
       name: 'Nothing due',
-      when: 'Every set is finished: the muted line says so and Work shows the Done fold.',
+      when: 'Every set is finished: Work says so in one line, has no counter, and keeps the Done fold.',
       text: 'Nothing due',
     },
     {
@@ -67,7 +67,7 @@ export default defineSpec({
     {
       id: 'drop-files',
       label: 'Dropping files on the page',
-      does: 'Adds them as Add does. The sample only says they were accepted.',
+      does: 'Adds them as Add does: each shows as a new material reading in.',
     },
     {
       id: 'open-set',
@@ -88,7 +88,7 @@ export default defineSpec({
     {
       id: 'delete-set',
       label: 'Delete',
-      does: 'Deletes the set at once and says so in the muted line, with Undo.',
+      does: 'The row turns into one line, "Deleted Problem set 7 · Undo", until the next action or 10 seconds, then goes.',
     },
     {
       id: 'remove-material',
@@ -176,6 +176,7 @@ export default defineSpec({
   decisions: [
     {
       id: 'course-d1',
+      supersededBy: 'course-d15',
       decision:
         'The heading is the course name with one muted line under it ("1 set to do · next due Thu", or "Nothing due"), Add and a ... menu at the right (C1).',
       why: `${ASSUMED}: it answers "how is this course going" before any list.`,
@@ -280,10 +281,35 @@ export default defineSpec({
     },
     {
       id: 'course-d14',
+      supersededBy: 'course-d17',
       decision:
         'The muted line under the heading also carries what just happened (Undo, files added), so no toast and no layout change.',
       why: 'Builder’s call, not in the grill: a toast would sit over the lists and one more place to look.',
       beat: 'A toast; a banner',
+      date: '2026-10-22',
+    },
+    {
+      id: 'course-d15',
+      decision:
+        'The muted line under the heading is gone in every state: the Work list right below answers it, with its counter, and "Nothing due" is said once, in the list.',
+      why: 'Assumed, to confirm with Jack (say-it-once): the line repeated the Work list and was untrue on an empty course. Supersedes C1’s line.',
+      beat: '"1 set to do · next due Thu" under the name',
+      date: '2026-10-22',
+    },
+    {
+      id: 'course-d16',
+      decision:
+        'The path in the top bar and the heading stay: the path is navigation, the heading is the page’s identity.',
+      why: 'Assumed, to confirm with Jack (say-it-once): the two say the name but do different jobs, one to go up and one to know where you are.',
+      beat: 'Dropping the name from the path or the heading',
+      date: '2026-10-22',
+    },
+    {
+      id: 'course-d17',
+      decision:
+        'A deleted row becomes a one-line "Deleted … · Undo" row in place until the next action or 10 s. Added files show as new rows reading in.',
+      why: 'Assumed, to confirm with Jack: supersedes the muted-line notice (course-d14); the change shows where it happened and nothing jumps.',
+      beat: 'A notice in the heading’s muted line',
       date: '2026-10-22',
     },
   ],

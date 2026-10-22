@@ -19,6 +19,11 @@ export default defineSpec({
       when: 'A value, such as the student’s name.',
     },
     {
+      id: 'inline',
+      name: 'In a row',
+      when: 'Renaming in place: no visible label or note, and as tall as the title it replaces.',
+    },
+    {
       id: 'saved',
       name: 'Saved',
       when: 'Just committed: the note under the field says so for a moment.',
@@ -45,7 +50,19 @@ export default defineSpec({
     { name: 'onChange', does: 'Called with each edit.' },
     {
       name: 'onCommit',
-      does: 'Called on Enter, or when focus leaves the field.',
+      does: 'Called on Enter, or when focus leaves a field whose value changed, once.',
+    },
+    {
+      name: 'onCancel',
+      does: 'Called on Escape; the field is left without committing.',
+    },
+    {
+      name: 'inline',
+      does: 'Sits in a row’s title or a heading: no visible label or note, as tall as the text it replaces.',
+    },
+    {
+      name: 'autoFocus',
+      does: 'Focuses and selects the value when the field appears.',
     },
     { name: 'placeholder', does: 'The muted words in an empty field.' },
     { name: 'mono', does: 'Fixed-width type, for a key or a path.' },
@@ -54,7 +71,10 @@ export default defineSpec({
       name: 'failed',
       does: 'Draws the field and its note in the danger colour.',
     },
-    { name: 'note', does: 'The line under the field.' },
+    {
+      name: 'note',
+      does: 'The line under the field; false leaves the line out.',
+    },
     { name: 'action', does: 'A control at the field’s right.' },
   ],
   priority: { first: 'The field.' },
@@ -64,7 +84,7 @@ export default defineSpec({
     {
       id: 'text-field-d1',
       decision:
-        'Fields commit on Enter or blur and show a brief note; they have no Save button of their own. The note line always holds its height.',
+        'Fields commit on Enter or on blur when the value changed, once, and show a brief note; no Save button of their own. The note line holds its height.',
       why: 'Assumed, to confirm with Jack (settings-view-grill G8): fewer buttons, and "Saved" appearing must not move the page.',
       beat: 'A Save per field',
       date: '2026-10-22',

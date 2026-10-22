@@ -47,6 +47,10 @@ export default defineSpec({
   ],
   inputs: [
     { name: 'title', does: 'Line one, truncating.' },
+    {
+      name: 'titleField',
+      does: 'An input in the title’s place while it is edited; the row keeps its height.',
+    },
     { name: 'href', does: 'Makes the title a link.' },
     {
       name: 'label',

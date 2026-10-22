@@ -1147,7 +1147,7 @@ describe('SetLine', () => {
   });
 
   it('leaves the count to the bar: the meta has only the time left', () => {
-    const { el } = line({});
+    const { el } = line({ minutesLeft: 70 });
     expect(el.querySelector('p')?.textContent).not.toContain('2 of 6');
   });
 
@@ -1162,10 +1162,16 @@ describe('SetLine', () => {
     expect(timeLeft(0.2)).toBe('');
   });
 
-  it('is a two-line list row, at least 56 high', () => {
-    const { el } = line({ set: 'x'.repeat(70) });
+  it('is a two-line list row, at least 56 high, when it has a time left', () => {
+    const { el } = line({ set: 'x'.repeat(70), minutesLeft: 70 });
     expect(el.firstElementChild?.className).toContain('min-h-14');
     expect(el.querySelector('[data-aside]')).not.toBeNull();
+  });
+
+  it('collapses its second line when there is nothing to say on it', () => {
+    const { el } = line({ set: 'x', minutesLeft: undefined });
+    expect(el.querySelector('p')).toBeNull();
+    expect(el.firstElementChild?.className).not.toContain('min-h-14');
   });
 });
 
