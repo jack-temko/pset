@@ -75,16 +75,36 @@ export const FINE: SettingsData = {
     allTime: 41.8,
   },
   checks: [
-    { id: 'key', name: 'Model key', ok: true, detail: 'Accepted a moment ago' },
-    { id: 'pages', name: 'Page reading', ok: true, detail: 'Working' },
+    {
+      id: 'key',
+      name: 'Model key',
+      ok: true,
+      detail: 'Lets PSet read and guide',
+    },
+    {
+      id: 'pages',
+      name: 'Page reading',
+      ok: true,
+      detail: 'Reads scanned pages',
+    },
     {
       id: 'search',
       name: 'Search',
       ok: true,
       detail: 'Ollama searches your materials',
     },
-    { id: 'data', name: 'Study data', ok: true, detail: 'Saved and readable' },
-    { id: 'disk', name: 'Disk space', ok: true, detail: '38 GB free' },
+    {
+      id: 'data',
+      name: 'Study data',
+      ok: true,
+      detail: 'Keeps your courses and study time',
+    },
+    {
+      id: 'disk',
+      name: 'Disk space',
+      ok: true,
+      detail: 'Room for your materials: 38 GB free',
+    },
   ],
   errors: [],
   counts: {
@@ -102,7 +122,12 @@ export const NO_KEY: SettingsData = {
   key: { status: 'none', value: '' },
   checks: FINE.checks.map((c) =>
     c.id === 'key'
-      ? { ...c, ok: false, detail: 'No key yet', fix: 'Add a key' }
+      ? {
+          ...c,
+          ok: false,
+          detail: 'Lets PSet read and guide',
+          fix: 'Add a key',
+        }
       : c,
   ),
 };
