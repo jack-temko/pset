@@ -139,7 +139,7 @@ export default defineSpec({
     ],
   },
   components: [
-    { unit: 'action-menu', use: 'The one menu for everything but the work.' },
+    { unit: 'menu', use: 'The one menu for everything but the work.' },
     { unit: 'button', use: 'Mark done, Ask about this, Next and the fixes.' },
     { unit: 'help-row', use: 'The three help steps.' },
     { unit: 'link', use: 'The page link beside the label.' },

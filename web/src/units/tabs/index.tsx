@@ -260,7 +260,7 @@ export function Tabs({
           );
         })}
       </div>
-      <div className="flex shrink-0 items-center gap-1 px-1">
+      <div className="flex shrink-0 items-center gap-1 px-2">
         <button
           ref={addButton}
           type="button"
@@ -274,9 +274,9 @@ export function Tabs({
                 : { kind: 'add', x: r.left, y: r.bottom + 4 },
             );
           }}
-          className="flex size-8 items-center justify-center rounded-(--ds-radius-control) text-(--ds-fg-muted) hover:bg-(--ds-hover) hover:text-(--ds-fg) active:bg-(--ds-pressed)"
+          className="flex size-5 items-center justify-center rounded-(--ds-radius-control) text-(--ds-fg-muted) hover:bg-(--ds-hover) hover:text-(--ds-fg) active:bg-(--ds-pressed)"
         >
-          <Plus size={16} aria-hidden />
+          <Plus size={14} aria-hidden />
         </button>
       </div>
       {menu && (

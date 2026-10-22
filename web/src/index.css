@@ -491,6 +491,20 @@
     animation: none;
   }
 }
+/* A box on the page that a page link points at (P11): outlined for a moment,
+   then gone. Reduced motion shows it still for the same time. */
+@keyframes box-flash {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@utility box-flash {
+  animation: box-flash 1800ms ease-out forwards;
+}
 @utility skeleton {
   background-color: var(--muted);
   background-image: linear-gradient(

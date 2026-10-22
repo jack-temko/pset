@@ -1,18 +1,10 @@
+import type { WorkSet } from '@/units/work/sets';
 import type { Tab } from './model';
 
-export interface Problem {
-  id: string;
-  title: string;
-  text: string;
-  page: number;
-}
-
-export interface CourseSet {
-  id: string;
-  name: string;
-  /** The material its problems point into. */
+/** A set as the workspace knows it: the work pane's own data, and the
+ *  material its problems point into. */
+export interface CourseSet extends WorkSet {
   material: string;
-  problems: readonly Problem[];
 }
 
 export interface Material {
@@ -48,7 +40,7 @@ export function aboutOf(c: Course, problem: string | undefined) {
   if (!problem) return undefined;
   for (const s of c.sets) {
     const p = s.problems.find((x) => x.id === problem);
-    if (p) return `${p.title}, ${s.name}`;
+    if (p) return `${p.label}, ${s.name}`;
   }
   return undefined;
 }

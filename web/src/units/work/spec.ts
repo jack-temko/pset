@@ -85,7 +85,7 @@ export default defineSpec({
     },
   ],
   components: [
-    { unit: 'action-menu', use: 'The set menu beside the set line.' },
+    { unit: 'menu', use: 'The set menu beside the set line.' },
     {
       unit: 'button',
       use: 'Take back, Turn in anyway, Keep working and Undo.',

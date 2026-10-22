@@ -1,8 +1,11 @@
+import { Ellipsis } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-export interface MenuItem {
-  id: string;
+export interface MenuItem<Id extends string = string> {
+  id: Id;
   label: string;
+  /** Marks an item that takes something away. */
+  danger?: boolean;
 }
 
 export interface MenuGroup {
@@ -118,7 +121,7 @@ export function Menu({
               onClick={() => {
                 onPick(item.id);
               }}
-              className="ds-body flex h-8 w-full focus-visible:outline-offset-[-2px] items-center px-3 text-left hover:bg-(--ds-hover) active:bg-(--ds-pressed)"
+              className={`ds-body flex h-8 w-full focus-visible:outline-offset-[-2px] items-center px-3 text-left hover:bg-(--ds-hover) active:bg-(--ds-pressed) ${item.danger ? 'text-(--ds-danger)' : ''}`}
             >
               <span className="min-w-0 truncate">{item.label}</span>
             </button>
@@ -128,3 +131,67 @@ export function Menu({
     </div>
   );
 }
+
+/** A "⋯" button that opens a short list of actions under it, right-aligned to
+ *  it (menu-d2). The list is a `Menu`; pressing the button again closes it. */
+export function MoreMenu<Id extends string>({
+  label,
+  items,
+  onSelect,
+  forceOpen,
+}: {
+  /** The button's name: "More for this problem". */
+  label: string;
+  items: readonly MenuItem<Id>[];
+  onSelect?: (id: Id) => void;
+  /** Opens it from outside (the design page only). */
+  forceOpen?: boolean;
+}) {
+  const button = useRef<HTMLButtonElement>(null);
+  const [at, setAt] = useState<{ x: number; y: number }>();
+  const [forced, setForced] = useState(Boolean(forceOpen));
+  const place = () => {
+    const r = button.current?.getBoundingClientRect();
+    return r ? { x: r.right - MORE_WIDTH, y: r.bottom + 4 } : undefined;
+  };
+  useLayoutEffect(() => {
+    if (forced) setAt(place());
+  }, [forced]);
+  const close = () => {
+    setAt(undefined);
+    setForced(false);
+  };
+  return (
+    <>
+      <button
+        ref={button}
+        type="button"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={at !== undefined}
+        data-menu-trigger
+        onClick={() => {
+          if (at) close();
+          else setAt(place());
+        }}
+        className="inline-flex h-(--ds-control) w-(--ds-control) shrink-0 items-center justify-center rounded-(--ds-radius-control) border border-(--ds-border) text-(--ds-fg) hover:bg-(--ds-hover) active:bg-(--ds-pressed)"
+      >
+        <Ellipsis className="size-4" aria-hidden />
+      </button>
+      {at && (
+        <Menu
+          at={at}
+          label={label}
+          groups={[{ items }]}
+          onPick={(id) => {
+            close();
+            onSelect?.(id as Id);
+          }}
+          onClose={close}
+        />
+      )}
+    </>
+  );
+}
+
+const MORE_WIDTH = 240;

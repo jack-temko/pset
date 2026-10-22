@@ -2,25 +2,24 @@ import { defineSpec } from '@/design/spec';
 
 export default defineSpec({
   id: 'pane-stub',
-  kind: 'pane',
+  kind: 'component',
   title: 'Pane stand-ins',
   group: 'Panes',
   purpose:
-    'STAND-INS, not designs: placeholder work, material and Ask panes, so the workspace can be driven. The real panes are their own grills.',
+    'STAND-INS, not designs: placeholder material and Ask panes (the work pane is real now), so the workspace can be driven. The real panes are their own grills.',
   states: [
-    {
-      id: 'work',
-      name: 'Work (stand-in)',
-      when: 'A set’s name and three problems, each with a page link and "Ask about this". Not the work pane’s design.',
-      skeleton:
-        'A label bar, a title bar, and three problems as a bar, a text block and a bar.',
-    },
     {
       id: 'material',
       name: 'Material (stand-in)',
       when: 'The material’s name, "Page 112" and a page-shaped block. Not the material pane’s design.',
       skeleton:
         'A label bar, a title bar, a page number bar and a page-shaped block.',
+    },
+    {
+      id: 'boxed',
+      name: 'Material with a problem boxed (stand-in)',
+      when: 'After a page link in the work (P11): the problem’s box on the page-shaped block is outlined in the accent for a moment, then the outline fades.',
+      skeleton: 'The material’s own skeleton: the box is not drawn.',
     },
     {
       id: 'ask',
@@ -31,33 +30,19 @@ export default defineSpec({
     },
   ],
   stress:
-    'A 79 character set name and problem texts three times as long, with four digit pages: everything wraps and nothing overflows.',
-  flows: [
-    { id: 'follow-a-page', name: 'Follow a page', steps: ['page-link'] },
-    { id: 'ask', name: 'Ask about a problem', steps: ['ask-about'] },
-  ],
-  components: [
-    { unit: 'button', use: '"Ask about this", quiet.' },
-    { unit: 'link', use: 'The page link of each problem.' },
-  ],
+    'A 79 character material name and a four digit page: everything wraps and nothing overflows.',
+  components: [],
   actions: [
     {
-      id: 'page-link',
-      label: 'p. 112',
-      key: 'Enter',
-      does: 'Asks the workspace to turn the material to that page. The workspace decides which tab (workspace-d8).',
-    },
-    {
-      id: 'ask-about',
-      label: 'Ask about this',
-      key: 'Enter',
-      does: 'Asks the workspace to open Ask on the other side with this problem attached.',
+      id: 'type',
+      label: 'The Ask input',
+      key: 'Tab',
+      does: 'Takes typed text and does nothing with it: Ask is not designed yet.',
     },
   ],
   data: [
     {
-      reads:
-        'A set’s problems with their pages, a material’s name and page, the problem Ask is about',
+      reads: 'A material’s name and page, the problem Ask is about',
       call: 'None yet: sample data in the workspace unit',
       waiting: 'Each pane’s own skeleton, in the same frame.',
       failed: 'Not designed: stand-ins have no failed state.',
@@ -65,16 +50,10 @@ export default defineSpec({
   ],
   inputs: [
     {
-      name: 'name, material, problems, onPage, onAsk',
-      type: 'WorkStub props',
-      default: 'none',
-      does: 'The set, the material its links point into, its problems, and what a page link and "Ask about this" do.',
-    },
-    {
-      name: 'name, page',
+      name: 'name, page, boxed',
       type: 'MaterialStub props',
       default: 'none',
-      does: 'The material’s name and the page it shows.',
+      does: 'The material’s name, the page it shows, and the problem whose box to outline (with a counter that restarts the outline when the same problem is followed again).',
     },
     {
       name: 'about',
@@ -84,8 +63,8 @@ export default defineSpec({
     },
   ],
   priority: {
-    first: 'The set’s name and its first problem.',
-    main: 'ask-about',
+    first: 'The material’s name and its page.',
+    main: 'type',
   },
   sizes: {
     narrowest: 360,
@@ -108,7 +87,7 @@ export default defineSpec({
     {
       id: 'pane-stub-d1',
       decision:
-        'These three panes are stand-ins, labelled as such on screen, built only so the workspace can be driven; their real designs are later grills.',
+        'These panes are stand-ins, labelled as such on screen, built only so the workspace can be driven; their real designs are later grills.',
       why: 'ideas/workspace.md: "They exist only so the workspace can be driven; their real designs are later grills."',
       beat: 'Designing the panes here',
       date: '2026-10-21',

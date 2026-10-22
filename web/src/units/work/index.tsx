@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { ActionMenu, type MenuItem } from '@/units/action-menu';
+import { MoreMenu, type MenuItem } from '@/units/menu';
 import { Button } from '@/units/button';
 import { List } from '@/units/list';
 import { ListRow } from '@/units/list-row';
@@ -67,7 +67,14 @@ export interface WorkProps {
   onSetMenu?: (item: SetMenuItem) => void;
   onProblemMenu?: (item: ProblemMenuItem, problemId: string) => void;
   onFix?: (fix: Fix, problemId: string) => void;
+  /** Its marks changed: the problems (done, removed), when it was finished and
+   *  when it was turned in. The workspace keeps them, so the pane can be
+   *  closed or moved and come back as it was. */
+  onChange?: (marks: Marks) => void;
 }
+
+/** What the pane changes of its set while it is open. */
+export type Marks = Pick<WorkSet, 'problems' | 'finishedAt' | 'turnedInAt'>;
 
 /** The pane for one problem set: the set line, a strip of every problem,
  *  the one you are on, and at the end a finish card (P1, P5, P12). It keeps
@@ -85,6 +92,7 @@ export function Work({
   onSetMenu,
   onProblemMenu,
   onFix,
+  onChange,
 }: WorkProps) {
   const [problems, setProblems] = useState(set.problems);
   const [current, setCurrent] = useState(() => {
@@ -109,6 +117,16 @@ export function Work({
   const [finishedAt, setFinishedAt] = useState(set.finishedAt);
   const turnedIn = turnedInAt !== undefined;
   const now = today ?? new Date();
+  const changed = useRef(onChange);
+  changed.current = onChange;
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    changed.current?.({ problems, finishedAt, turnedInAt });
+  }, [problems, finishedAt, turnedInAt]);
   const [asking, setAsking] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -255,7 +273,7 @@ export function Work({
               meta={[...(minutes ? [minutes] : [])]}
             />
           </div>
-          <ActionMenu
+          <MoreMenu
             label="More for this set"
             items={menu}
             onSelect={onSetItem}

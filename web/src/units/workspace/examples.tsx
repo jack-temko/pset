@@ -1,4 +1,5 @@
 import { defineExamples } from '@/design/examples';
+import { TODAY } from '@/units/work/sample';
 import { Workspace } from './index';
 import { COURSE, LONG_COURSE } from './sample';
 import spec from './spec';
@@ -22,6 +23,7 @@ const view = (
       course={COURSE}
       initial={STATES[id]()}
       loading={loading}
+      today={TODAY}
     />
   </Window>
 );
@@ -40,7 +42,7 @@ function stress() {
     });
   return (
     <Window>
-      <Workspace course={LONG_COURSE} initial={st} />
+      <Workspace course={LONG_COURSE} initial={st} today={TODAY} />
     </Window>
   );
 }

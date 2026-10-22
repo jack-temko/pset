@@ -1,16 +1,5 @@
-import { Button } from '@/units/button';
-import { Link } from '@/units/link';
-
 /** STAND-INS (pane-stub-d1): these exist so the workspace can be driven. The
- *  real work, material and Ask panes are their own grills. */
-
-export interface StubProblem {
-  id: string;
-  title: string;
-  text: string;
-  /** The page of the material it is on. */
-  page: number;
-}
+ *  real material and Ask panes are their own grills. */
 
 function Bar({ className }: { className: string }) {
   return (
@@ -23,90 +12,17 @@ function Bar({ className }: { className: string }) {
 
 const frame = 'mx-auto w-full max-w-[640px] px-6 py-6';
 
-/** The work: the set's name, a few problems, each with a link to its page and
- *  "Ask about this". */
-export function WorkStub({
+/** A material: its name, the page number and a page-shaped block. */
+export function MaterialStub({
   name,
-  material,
-  problems,
-  onPage,
-  onAsk,
+  page,
+  boxed,
 }: {
   name: string;
-  /** The material the page links point into. */
-  material: string;
-  problems: readonly StubProblem[];
-  onPage: (page: number) => void;
-  onAsk: (problem: string) => void;
+  page: number;
+  /** The problem whose box is outlined for a moment (P11); `n` restarts it. */
+  boxed?: { problem: string; n: number };
 }) {
-  return (
-    <div className={frame}>
-      <p className="ds-label text-(--ds-fg-muted)">Stand-in for the work</p>
-      <h2 className="ds-heading mt-1 [overflow-wrap:anywhere]">{name}</h2>
-      <ol className="mt-6 space-y-6">
-        {problems.map((p) => (
-          <li key={p.id}>
-            <p className="ds-body font-medium">{p.title}</p>
-            <p className="ds-reading mt-1 min-h-14 [overflow-wrap:anywhere]">
-              {p.text}
-            </p>
-            <p className="ds-small mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-              <Link
-                href="#"
-                title={`${material}, page ${String(p.page)}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  onPage(p.page);
-                }}
-              >
-                p. {p.page}
-              </Link>
-              <Button
-                variant="quiet"
-                onPress={() => {
-                  onAsk(p.id);
-                }}
-              >
-                Ask about this
-              </Button>
-            </p>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
-export function WorkStubSkeleton() {
-  return (
-    <div className={frame}>
-      <p className="ds-label flex h-[18px] items-center">
-        <Bar className="h-3 w-32" />
-      </p>
-      <p className="ds-heading mt-1 flex h-(--ds-heading-line) items-center">
-        <Bar className="h-5 w-48" />
-      </p>
-      <div className="mt-6 space-y-6">
-        {[0, 1, 2].map((i) => (
-          <div key={i}>
-            <p className="ds-body flex h-(--ds-body-line) items-center">
-              <Bar className="h-4 w-24" />
-            </p>
-            <div className="mt-1 flex h-14 items-center">
-              <Bar className="h-12 w-full" />
-            </div>
-            <p className="ds-small mt-2 flex h-(--ds-control) items-center">
-              <Bar className="h-3 w-40" />
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** A material: its name, the page number and a page-shaped block. */
-export function MaterialStub({ name, page }: { name: string; page: number }) {
   return (
     <div className={frame}>
       <p className="ds-label text-(--ds-fg-muted)">Stand-in for the material</p>
@@ -114,7 +30,15 @@ export function MaterialStub({ name, page }: { name: string; page: number }) {
       <p className="ds-body ds-tabular mt-1 text-(--ds-fg-muted)">
         Page {page}
       </p>
-      <div className="mt-6 aspect-[8.5/11] w-full rounded-(--ds-radius-control) border border-(--ds-border-muted) bg-(--ds-bg-raised)" />
+      <div className="relative mt-6 aspect-[8.5/11] w-full rounded-(--ds-radius-control) border border-(--ds-border-muted) bg-(--ds-bg-raised)">
+        {boxed && (
+          <span
+            key={boxed.n}
+            data-box={boxed.problem}
+            className="box-flash absolute inset-x-6 top-[22%] h-[18%] rounded-(--ds-radius-control) outline-2 outline-(--ds-accent)"
+          />
+        )}
+      </div>
     </div>
   );
 }

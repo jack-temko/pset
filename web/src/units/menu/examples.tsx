@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 
 import { defineExamples } from '@/design/examples';
-import { Menu, type MenuGroup } from './index';
+import { Menu, MoreMenu, type MenuGroup } from './index';
 import spec from './spec';
 
 const noop = () => {};
@@ -61,6 +61,19 @@ export default defineExamples(spec, {
   states: {
     add: () => <Open groups={ADD} label="Open" />,
     tab: () => <Open groups={TAB} label="Tab" />,
+    more: () => (
+      <div className="flex h-60 justify-end">
+        <MoreMenu
+          label="More"
+          forceOpen
+          items={[
+            { id: 'edit', label: 'Edit the text' },
+            { id: 'move', label: 'Move' },
+            { id: 'remove', label: 'Remove', danger: true },
+          ]}
+        />
+      </div>
+    ),
   },
   stress: () => (
     <Open
