@@ -145,7 +145,7 @@ export function Workspace({
   const row = useRef<HTMLDivElement>(null);
   /** Where the student was in each set (S8) and what they marked: both outlive
    *  the pane, which is closed and rebuilt as tabs switch and move. */
-  const memory = useRef(pageMemory()).current;
+  const [memory] = useState(pageMemory);
   const [marks, setMarks] = useState<Record<string, Marks>>({});
   /** The problem whose box the material outlines (P11), and which tab. */
   const [box, setBox] = useState<{ tab: string; problem: string; n: number }>();
@@ -188,7 +188,12 @@ export function Workspace({
     const wait = side === 0 ? loading?.left : loading?.right;
     if (tab.kind === 'set') {
       const set = setOf(course, tab.ref);
-      if (wait || !set) return <WorkSkeleton />;
+      if (wait || !set)
+        return (
+          <div className="px-6">
+            <WorkSkeleton />
+          </div>
+        );
       const work: WorkSet = { ...set, ...marks[set.id] };
       return (
         <div className="px-6">

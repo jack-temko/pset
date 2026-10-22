@@ -32,7 +32,7 @@ const both = { left: true, right: true };
 
 /** The worst names, in a workspace with many tabs and a question asked. */
 function stress() {
-  let st = m.openSet('ps4', { ref: 'griffiths', page: 112 });
+  let st = m.openSet('ps4', { ref: 'griffiths', page: 111 });
   st = m.askAbout(st, 1, 'p2');
   for (let i = 0; i < 6; i++)
     st = m.add(st, 1, {

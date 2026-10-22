@@ -18,8 +18,8 @@ pane, standalone).
      unit yet).
    - The pane's remembered place uses the workspace's memory per set (S8), so
      switching tabs and back keeps the problem.
-   Remove the work stand-in once nothing uses it; the material and Ask stand-ins
-   stay until their own panes are designed.
+     Remove the work stand-in once nothing uses it; the material and Ask stand-ins
+     stay until their own panes are designed.
 2. **One menu.** The workspace's `menu` and the work pane's `action-menu` do the
    same job: keep one component (the better of the two, your call, say which), move
    both callers to it, delete the other.

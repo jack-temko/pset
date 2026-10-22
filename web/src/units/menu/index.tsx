@@ -147,32 +147,24 @@ export function MoreMenu<Id extends string>({
   /** Opens it from outside (the design page only). */
   forceOpen?: boolean;
 }) {
-  const button = useRef<HTMLButtonElement>(null);
-  const [at, setAt] = useState<{ x: number; y: number }>();
-  const [forced, setForced] = useState(Boolean(forceOpen));
-  const place = () => {
-    const r = button.current?.getBoundingClientRect();
-    return r ? { x: r.right - MORE_WIDTH, y: r.bottom + 4 } : undefined;
-  };
-  useLayoutEffect(() => {
-    if (forced) setAt(place());
-  }, [forced]);
+  const [button, setButton] = useState<HTMLButtonElement | null>(null);
+  const [shown, setShown] = useState(Boolean(forceOpen));
+  const r = shown ? button?.getBoundingClientRect() : undefined;
+  const at = r && { x: r.right - MORE_WIDTH, y: r.bottom + 4 };
   const close = () => {
-    setAt(undefined);
-    setForced(false);
+    setShown(false);
   };
   return (
     <>
       <button
-        ref={button}
+        ref={setButton}
         type="button"
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={at !== undefined}
         data-menu-trigger
         onClick={() => {
-          if (at) close();
-          else setAt(place());
+          setShown((v) => !v);
         }}
         className="inline-flex h-(--ds-control) w-(--ds-control) shrink-0 items-center justify-center rounded-(--ds-radius-control) border border-(--ds-border) text-(--ds-fg) hover:bg-(--ds-hover) active:bg-(--ds-pressed)"
       >

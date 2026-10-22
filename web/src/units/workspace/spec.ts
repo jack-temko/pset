@@ -20,7 +20,7 @@ export default defineSpec({
     {
       id: 'followed',
       name: 'A page link followed',
-      when: 'The work’s page link was followed: the book’s showing tab turned from p. 112 to p. 118.',
+      when: 'The work’s page link was followed: the book’s showing tab turned from p. 111 to p. 113.',
       skeleton: WAIT,
     },
     {
@@ -44,7 +44,7 @@ export default defineSpec({
     {
       id: 'twice',
       name: 'The same book twice',
-      when: 'Griffiths is open at p. 112 on the left and p. 45 on the right, each at its own page, the set beside the second.',
+      when: 'Griffiths is open at p. 111 on the left and p. 45 on the right, each at its own page, the set beside the second.',
       skeleton: WAIT,
     },
     {

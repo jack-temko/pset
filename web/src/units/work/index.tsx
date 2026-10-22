@@ -118,7 +118,9 @@ export function Work({
   const turnedIn = turnedInAt !== undefined;
   const now = today ?? new Date();
   const changed = useRef(onChange);
-  changed.current = onChange;
+  useEffect(() => {
+    changed.current = onChange;
+  });
   const first = useRef(true);
   useEffect(() => {
     if (first.current) {
