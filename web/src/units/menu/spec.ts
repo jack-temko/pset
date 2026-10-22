@@ -1,0 +1,77 @@
+import { defineSpec } from '@/design/spec';
+
+export default defineSpec({
+  id: 'menu',
+  kind: 'component',
+  title: 'Menu',
+  group: 'Navigation',
+  purpose:
+    'A small list of choices opened at a point, in groups with optional headings. It sits in the top layer, keeps inside the window, and closes on a pick, an outside press or Escape.',
+  states: [
+    {
+      id: 'add',
+      name: 'Grouped, with headings',
+      when: 'The + menu: Materials and Sets under headings, then Ask on its own after a hairline.',
+    },
+    {
+      id: 'tab',
+      name: 'Plain groups',
+      when: 'A tab’s menu: two groups without headings, moves first and closes second.',
+    },
+  ],
+  stress:
+    'A 100 character item and twelve more: the long one truncates with its full text as a title, and the list scrolls inside 70% of the window.',
+  actions: [
+    {
+      id: 'pick',
+      label: 'An item',
+      key: 'Enter',
+      does: 'Does what the item says and closes the menu. Arrow keys move between items.',
+    },
+    {
+      id: 'dismiss',
+      label: 'Outside or Escape',
+      key: 'Escape',
+      does: 'Closes the menu and changes nothing.',
+    },
+  ],
+  inputs: [
+    {
+      name: 'at',
+      type: '{ x: number; y: number }',
+      default: 'none',
+      does: 'Where its top left corner goes, in window coordinates; it shifts to keep 8 from the edge.',
+    },
+    {
+      name: 'groups',
+      type: '{ label?: string; items: { id, label }[] }[]',
+      default: 'none',
+      does: 'The choices, in groups; a heading when the group has a label.',
+    },
+    {
+      name: 'label, onPick, onClose',
+      type: 'string, (id) => void, () => void',
+      default: 'none',
+      does: 'The menu’s name, what a pick does and what closing does.',
+    },
+  ],
+  priority: { first: 'The first item, which has focus.', main: 'pick' },
+  sizes: {
+    narrowest: 240,
+    gives: ['Long labels truncate', 'A long list scrolls inside the menu'],
+  },
+  rules: {
+    cite: ['links-go-buttons-do', 'sentence-case'],
+  },
+  log: 'web/src/units/menu/log.md',
+  decisions: [
+    {
+      id: 'menu-d1',
+      decision:
+        'A menu is opened at a point and drawn in the top layer, so a scrolling tab row cannot clip it.',
+      why: 'Built small for the + menu and the tab menu of the workspace (ideas/workspace.md); no menu existed.',
+      beat: 'A menu inside the row',
+      date: '2026-10-21',
+    },
+  ],
+});
