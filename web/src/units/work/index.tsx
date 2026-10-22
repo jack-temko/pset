@@ -15,7 +15,6 @@ import {
   ProblemStrip,
   ProblemStripSkeleton,
   type Chip,
-  type Marker,
 } from '@/units/problem-strip';
 import { DueStatus } from '@/units/set-line';
 import { dueBadge } from '@/units/set-line/badge';
@@ -50,8 +49,6 @@ export interface WorkProps {
   startAt?: string;
   /** Start on the finish card. */
   startFinish?: boolean;
-  /** How the current problem is marked in the strip. */
-  marker?: Marker;
   /** Where the place is kept. */
   memory?: Memory;
   /** The day "Due soon" counts from (the design page and tests). */
@@ -75,7 +72,6 @@ export function Work({
   set,
   startAt,
   startFinish = false,
-  marker,
   memory = sessionMemory,
   today,
   onOpenPage,
@@ -272,7 +268,6 @@ export function Work({
       )}
 
       <ProblemStrip
-        marker={marker}
         chips={problems.map(chipOf)}
         current={finish ? undefined : current}
         onJump={go}

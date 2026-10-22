@@ -1,5 +1,5 @@
 import { defineExamples } from '@/design/examples';
-import { ProblemStrip, type Chip, type Marker } from './index';
+import { ProblemStrip, type Chip } from './index';
 import spec from './spec';
 
 /** One problem in each state, the fourth current. */
@@ -20,15 +20,16 @@ const chips = (): Chip[] =>
     ...s,
   })) as Chip[];
 
-const show = (marker: Marker) => (
-  <ProblemStrip chips={chips()} current="p4" marker={marker} />
-);
-
 export default defineExamples(spec, {
   states: {
-    underline: () => show('underline'),
-    taller: () => show('taller'),
-    inset: () => show('inset'),
+    'in-progress': () => <ProblemStrip chips={chips()} current="p4" />,
+    'each-state': () => (
+      <div className="space-y-4">
+        {[1, 3, 8, 5, 6, 7].map((n) => (
+          <ProblemStrip key={n} chips={chips()} current={`p${String(n)}`} />
+        ))}
+      </div>
+    ),
     'all-done': () => (
       <ProblemStrip
         chips={chips().map((c) => ({ ...c, state: 'done', word: 'Done' }))}

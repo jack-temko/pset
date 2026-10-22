@@ -24,3 +24,7 @@ On the outline, Jack clarified: **"just the white outline for the active problem
 Jack, 2026-10-21: **"Try some other options to show the active question including underlining the segment. The outline overlaps the next bar slighlty. Also have the colors of the bar represent the state of the question, error in progress, queue, searching etc. Just pick a small representative set"**
 
 Built: six state colours (done, started, not started, working, queued, failed) with the state word in the tooltip, and three markers for the current segment (underline, taller, inset) to compare. The underline is the default.
+
+Jack, 2026-10-21, after the three markers: **"go with the underline, drop the others"**. The state colours stay.
+
+Jack, 2026-10-21: **"Can we make the line the same color as the segment"**. The underline takes its segment's colour; a not-started segment, the neutral track, uses the muted text colour so it still shows.

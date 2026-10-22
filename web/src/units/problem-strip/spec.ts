@@ -9,24 +9,19 @@ export default defineSpec({
     'The whole set as one rounded 8px bar, a segment per problem, coloured by its state. One click jumps; hover names the problem and its state.',
   states: [
     {
-      id: 'underline',
-      name: 'Current underlined',
-      when: 'One problem in each state; the current one has a 2px accent line under its segment, 3px below the track.',
+      id: 'in-progress',
+      name: 'In progress',
+      when: 'One problem in each state; the current one has a 2px line under its segment, in its colour, 3px below the track.',
     },
     {
-      id: 'taller',
-      name: 'Current taller',
-      when: 'The current segment stands 4px taller than the track, in its own colour.',
-    },
-    {
-      id: 'inset',
-      name: 'Current inset outline',
-      when: 'A 2px outline in the text colour is drawn inside the current segment, nothing outside it.',
+      id: 'each-state',
+      name: 'Underline in each state',
+      when: 'Six bars, the current segment moving through done, started, not started, working, queued and failed, each line in its segment\u2019s colour.',
     },
     {
       id: 'all-done',
       name: 'All done',
-      when: 'Every segment green and none marked, as on the finish card.',
+      when: 'Every segment green and none underlined, as on the finish card.',
     },
   ],
   exampleWidth: 560,
@@ -46,12 +41,6 @@ export default defineSpec({
       type: 'Chip[]',
       default: 'none',
       does: 'Each problem’s id, label, title, state (done, started, todo, working, queued or failed) and the state in words.',
-    },
-    {
-      name: 'marker',
-      type: "'underline' | 'taller' | 'inset'",
-      default: 'underline',
-      does: 'How the current problem is marked.',
     },
     {
       name: 'current',
@@ -131,7 +120,7 @@ export default defineSpec({
       why: 'Jack: "Not a fan of the white out line for the active problem." Then: "I just wanted either a different outline color, or it to change color."',
       beat: 'A white outline; a caret; a lighter tint',
       date: '2026-10-21',
-      supersededBy: 'problem-strip-d7',
+      supersededBy: 'problem-strip-d9',
     },
     {
       id: 'problem-strip-d6',
@@ -148,6 +137,7 @@ export default defineSpec({
       why: 'Jack: "Try some other options to show the active question including underlining the segment. The outline overlaps the next bar slighlty."',
       beat: 'An outer outline offset 2px',
       date: '2026-10-21',
+      supersededBy: 'problem-strip-d9',
     },
     {
       id: 'problem-strip-d8',
@@ -155,6 +145,14 @@ export default defineSpec({
         'Colour is state: done green, started accent, not started the track, working yellow and pulsing, queued yellow 40%, failed red. The tooltip says it.',
       why: 'Jack: "Also have the colors of the bar represent the state of the question, error in progress, queue, searching etc. Just pick a small representative set"',
       beat: 'Accent for done, danger for failed, nothing else',
+      date: '2026-10-21',
+    },
+    {
+      id: 'problem-strip-d9',
+      decision:
+        'The current segment has a 2px line under it, its segment\u2019s colour (muted text when not started), 3px below the track. Taller and inset are gone.',
+      why: 'Jack: "go with the underline, drop the others", then "Can we make the line the same color as the segment".',
+      beat: 'A white outline, an offset outline, a taller segment, an inset outline',
       date: '2026-10-21',
     },
   ],

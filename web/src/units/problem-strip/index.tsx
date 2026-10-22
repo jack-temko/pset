@@ -10,8 +10,6 @@ export type ChipState =
   | 'queued'
   | 'failed';
 
-export type Marker = 'underline' | 'taller' | 'inset';
-
 export interface Chip {
   id: string;
   /** The book's label, "4.62". */
@@ -32,24 +30,34 @@ const LOOK: Record<ChipState, string> = {
   failed: 'bg-(--ds-danger)',
 };
 
+/** The underline of the current segment: its segment's colour, so it reads
+ *  as part of it. A not-started segment is the neutral track, which would
+ *  vanish, so its line is the muted text colour. */
+const LINE: Record<ChipState, string> = {
+  done: 'var(--ds-success)',
+  started: 'var(--ds-accent-solid)',
+  todo: 'var(--ds-fg-muted)',
+  working: 'var(--ds-attention)',
+  queued: 'color-mix(in srgb, var(--ds-attention) 40%, transparent)',
+  failed: 'var(--ds-danger)',
+};
+
 /** The whole set as one bar, like GitHub's progress bar: a track 8px tall
  *  with fully rounded ends and one segment per problem, 2px apart. The colour
  *  is the problem's state: done green, started accent, not started the track
  *  colour, working (being found or its guide written) yellow and pulsing,
- *  queued yellow at 40%, failed red. The one you are on is marked in one of
- *  three ways that never touch a neighbour: an accent line under it, a
- *  segment 4px taller, or an inner outline in the text colour. Hover
+ *  queued yellow at 40%, failed red. The one you are on has a 2px line under it in its segment's colour, the
+ *  width of its segment and 3px below the track, so it never touches a
+ *  neighbour. Hover
  *  brightens a segment and names it with its state, such as "4 · RC step
  *  response · Started"; one click jumps there. The bar never wraps. */
 export function ProblemStrip({
   chips,
   current,
-  marker = 'underline',
   onJump,
 }: {
   chips: readonly Chip[];
   current?: string;
-  marker?: Marker;
   onJump?: (id: string) => void;
 }) {
   return (
@@ -71,18 +79,13 @@ export function ProblemStrip({
                 className="group relative flex h-5 w-full min-w-0 items-center"
               >
                 <span
-                  style={
-                    here && marker === 'inset'
-                      ? { boxShadow: 'inset 0 0 0 2px var(--ds-fg)' }
-                      : undefined
-                  }
-                  className={`block w-full group-hover:brightness-125 ${here && marker === 'taller' ? 'h-3' : 'h-2'} ${ends} ${LOOK[c.state]}`}
+                  className={`block h-2 w-full group-hover:brightness-125 ${ends} ${LOOK[c.state]}`}
                 />
-                {here && marker === 'underline' && (
+                {here && (
                   <span
                     aria-hidden
-                    className="absolute left-0 block w-full bg-(--ds-accent)"
-                    style={{ height: 2, bottom: 1 }}
+                    className="absolute left-0 block w-full"
+                    style={{ height: 2, bottom: 1, background: LINE[c.state] }}
                   />
                 )}
               </button>

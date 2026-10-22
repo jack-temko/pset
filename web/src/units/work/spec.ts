@@ -18,18 +18,6 @@ export default defineSpec({
       skeleton: SKELETON,
     },
     {
-      id: 'current-taller',
-      name: 'Current taller',
-      when: 'The same set with the current segment 4px taller than the track, in its own colour.',
-      skeleton: SKELETON,
-    },
-    {
-      id: 'current-inset',
-      name: 'Current inset outline',
-      when: 'The same set with a 2px outline in the text colour drawn inside the current segment.',
-      skeleton: SKELETON,
-    },
-    {
       id: 'all-done',
       name: 'All done',
       when: 'The last problem was marked done: the finish card in place of the problem.',
@@ -303,9 +291,17 @@ export default defineSpec({
     {
       id: 'work-d9',
       decision:
-        'Segments are coloured by state (done, started, not started, working, queued, failed); the current one is underlined, taller or inset.',
+        'Segments are coloured by state (done, started, not started, working, queued, failed); the current one is underlined.',
       why: 'Jack: "Also have the colors of the bar represent the state of the question".',
       beat: 'Accent and danger only; an outer outline',
+      date: '2026-10-21',
+    },
+    {
+      id: 'work-d10',
+      decision:
+        'The current problem is marked by an underline in its segment\u2019s colour, and only that.',
+      why: 'Jack: "go with the underline, drop the others", then "Can we make the line the same color as the segment".',
+      beat: 'Taller and inset segments',
       date: '2026-10-21',
     },
   ],
