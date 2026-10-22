@@ -20,7 +20,7 @@ import { dueBadge } from '@/units/set-line/badge';
 import { timeLeft } from '@/units/set-line/dates';
 import { Summary, SummarySkeleton } from '@/units/summary';
 import { Tag } from '@/units/tag';
-import { sessionMemory, type Memory } from './memory';
+import { sessionMemory, summaryKey, type Memory } from './memory';
 import {
   doneCount,
   UNDO_MS,
@@ -107,12 +107,19 @@ export function Work({
   const [seen, setSeen] = useState<ReadonlySet<string>>(
     () => new Set(current ? [current] : []),
   );
-  const [summary, setSummary] = useState(
-    startSummary ??
-      (startAt === undefined &&
-        (set.turnedInAt !== undefined ||
-          (set.problems.length > 0 && set.problems.every((p) => p.done)))),
-  );
+  const [summary, setSummary] = useState(() => {
+    if (startSummary !== undefined) return startSummary;
+    if (startAt !== undefined) return false;
+    const kept = memory.get(summaryKey(set.id));
+    if (kept !== undefined) return kept === '1';
+    return (
+      set.turnedInAt !== undefined ||
+      (set.problems.length > 0 && set.problems.every((p) => p.done))
+    );
+  });
+  useEffect(() => {
+    memory.set(summaryKey(set.id), summary ? '1' : '0');
+  }, [memory, set.id, summary]);
   const [turnedInAt, setTurnedInAt] = useState(set.turnedInAt);
   const [finishedAt, setFinishedAt] = useState(set.finishedAt);
   const turnedIn = turnedInAt !== undefined;
