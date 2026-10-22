@@ -716,7 +716,7 @@ export function Material({
             >
               Contents
             </Button>
-            <div className="ds-small flex shrink-0 items-center gap-1 text-(--ds-fg-muted)">
+            <div className="ds-small flex shrink-0 items-center gap-2 text-(--ds-fg-muted)">
               {goTo ? (
                 <>
                   <span>p.</span>
@@ -738,9 +738,15 @@ export function Material({
                     onBlur={() => {
                       setGoTo(null);
                     }}
-                    className="ds-small ds-tabular h-7 w-14 rounded-(--ds-radius-tag) border border-(--ds-accent) bg-transparent px-1.5 text-right text-(--ds-fg)"
+                    className="ds-small ds-tabular mx-1 h-7 w-14 rounded-(--ds-radius-tag) border border-(--ds-accent) bg-transparent px-1.5 text-right text-(--ds-fg)"
                   />
-                  <span className="inline-block min-w-14">{`of ${String(printedMax)}`}</span>
+                  {goTo.error ? (
+                    <span role="alert" className="text-(--ds-danger)">
+                      {goTo.error}
+                    </span>
+                  ) : (
+                    <span className="ds-tabular inline-block min-w-14 text-(--ds-fg-muted)">{`of ${String(printedMax)}`}</span>
+                  )}
                 </>
               ) : (
                 <>
@@ -757,14 +763,12 @@ export function Material({
                       : `p. ${String(printedHere)}`}
                   </button>
                   {printedHere !== undefined && (
-                    <span className="ds-tabular inline-block min-w-14">{`of ${String(printedMax)}`}</span>
+                    <span className="ds-tabular inline-block min-w-14 text-(--ds-fg-muted)">{`of ${String(printedMax)}`}</span>
                   )}
                 </>
               )}
-              <span aria-hidden className="px-1">
-                ·
-              </span>
-              {zoom === 1 ? (
+
+              {goTo?.error ? null : zoom === 1 ? (
                 <span
                   className={`${pageButton} inline-block min-w-14 text-right text-(--ds-fg-muted)`}
                 >
@@ -792,14 +796,6 @@ export function Material({
           </>
         )}
       </div>
-      {goTo?.error && (
-        <p
-          role="alert"
-          className="ds-small absolute top-12 right-3 z-20 rounded-(--ds-radius-control) border border-(--ds-danger) bg-(--ds-bg-raised) px-3 py-1.5 text-(--ds-danger)"
-        >
-          {goTo.error}
-        </p>
-      )}
       {contents && !boxing && (
         <Contents
           name={name}
@@ -876,17 +872,20 @@ export function Material({
 /** The pane while it loads (M9): the top line's place and one plain
  *  page-shaped box. */
 export function MaterialSkeleton() {
+  const bar = (w: string) => (
+    <span
+      aria-hidden
+      className={`block h-4 ${w} animate-pulse rounded-(--ds-radius-tag) bg-(--ds-border-muted) motion-reduce:animate-none`}
+    />
+  );
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col bg-(--ds-bg)">
       <div className="flex h-11 shrink-0 items-center justify-between border-b border-(--ds-border-muted) px-3">
-        <span
-          aria-hidden
-          className="block h-4 w-20 animate-pulse rounded-(--ds-radius-tag) bg-(--ds-border-muted) motion-reduce:animate-none"
-        />
-        <span
-          aria-hidden
-          className="block h-4 w-28 animate-pulse rounded-(--ds-radius-tag) bg-(--ds-border-muted) motion-reduce:animate-none"
-        />
+        {bar('w-24')}
+        <div className="flex items-center gap-2">
+          {bar('w-28')}
+          {bar('w-14')}
+        </div>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden bg-(--ds-bg-inset) p-3">
         <div className="aspect-[8.5/11] w-full bg-(--ds-bg-raised)" />

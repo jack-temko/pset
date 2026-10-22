@@ -43,7 +43,7 @@ function Demo(props: Partial<MaterialProps>) {
           }}
         />
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex min-h-8 items-center gap-3">
         {props.flash && (
           <Button
             onPress={() => {
@@ -66,6 +66,19 @@ function Demo(props: Partial<MaterialProps>) {
           {fired}
         </p>
       </div>
+    </div>
+  );
+}
+
+/** The loading render in the same frame as the loaded one, so the example
+ *  keeps its height. */
+function Loading() {
+  return (
+    <div className="space-y-3">
+      <div className="h-[640px] outline-[1px] outline-(--ds-border-muted)">
+        <MaterialSkeleton />
+      </div>
+      <div className="min-h-8" />
     </div>
   );
 }
@@ -101,6 +114,6 @@ export default defineExamples(spec, Material, {
     />
   ),
   skeletons: Object.fromEntries(
-    spec.states.map((s) => [s.id, () => <MaterialSkeleton />]),
+    spec.states.map((s) => [s.id, () => <Loading />]),
   ) as Record<(typeof spec.states)[number]['id'], () => React.ReactNode>,
 });

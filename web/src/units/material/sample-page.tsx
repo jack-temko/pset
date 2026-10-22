@@ -50,7 +50,9 @@ export function SamplePage({
     <div className="@container size-full overflow-hidden bg-(--ds-page) text-(--ds-page-ink)">
       <div className="flex size-full flex-col px-[11cqw] py-[8cqw] font-(family-name:--ds-font-serif)">
         <div className="flex justify-between text-[1.9cqw] opacity-60">
-          <span className="truncate">{printed === undefined ? '' : name}</span>
+          <span className="overflow-hidden whitespace-nowrap">
+            {printed === undefined ? '' : name}
+          </span>
           <span className="tabular-nums">{printed ?? ''}</span>
         </div>
         {heading !== undefined && (
@@ -59,12 +61,13 @@ export function SamplePage({
           </p>
         )}
         <div className="mt-[4cqw] min-h-0 flex-1 overflow-hidden text-[2.35cqw] leading-[1.55]">
-          {Array.from({ length: lines }, (_, i) => (
-            <p
-              key={i}
-              className={`truncate ${i % 6 === 5 ? 'mb-[2.4cqw]' : ''}`}
-            >
-              {SENTENCES[(pdf * 3 + i * 7) % SENTENCES.length]}
+          {Array.from({ length: Math.ceil(lines / 5) }, (_, i) => (
+            <p key={i} className="mb-[2.4cqw] text-justify hyphens-auto">
+              {Array.from(
+                { length: 5 },
+                (_, k) =>
+                  SENTENCES[(pdf * 3 + (i * 5 + k) * 7) % SENTENCES.length],
+              ).join(' ')}
             </p>
           ))}
           {printed !== undefined && pdf % 5 === 0 && (
