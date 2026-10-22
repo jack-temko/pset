@@ -123,6 +123,9 @@ const TITLES = [
   'Discharge time',
 ];
 
+/** Minutes spent on each sample problem. */
+const MINUTES = [18, 25, 22, 31, 34, 12, 20, 8];
+
 const LABELS = ['4.58', '4.59', '4.60', '4.61', '4.62', '4.63', '4.64', '4.65'];
 const PAGES = [110, 110, 111, 111, 112, 112, 113, 114];
 
@@ -141,6 +144,7 @@ export function problemAt(
     help: HELP,
     found: { status: 'ready' },
     done: false,
+    minutes: MINUTES[i % MINUTES.length],
   };
   return { ...base, ...over };
 }

@@ -9,7 +9,7 @@ export default defineSpec({
   title: 'Work',
   group: 'Work',
   purpose:
-    'One problem set being worked: the set line, a strip of every problem, the one you are on with its help, and a finish card at the end.',
+    'One problem set being worked: the set line, a strip of every problem, the one you are on with its help, and a summary as the last stop.',
   states: [
     {
       id: 'current-underline',
@@ -18,10 +18,37 @@ export default defineSpec({
       skeleton: SKELETON,
     },
     {
-      id: 'all-done',
-      name: 'All done',
-      when: 'The last problem was marked done: the finish card in place of the problem.',
-      text: 'All 8 done · 2 h 10 m',
+      id: 'summary',
+      name: 'Summary, not finished',
+      when: 'The flag at the end of the bar was pressed with 2 of 8 done: "2 of 8 done", total time, when it is due, time per problem, Turn in.',
+      text: '2 of 8 done',
+      skeleton: SKELETON,
+    },
+    {
+      id: 'summary-finished',
+      name: 'Summary, finished',
+      when: 'All done: "All 8 done", total time, "Finished Tue · 2 days early", time per problem, Turn in.',
+      text: 'All 8 done',
+      skeleton: SKELETON,
+    },
+    {
+      id: 'summary-turned-in',
+      name: 'Summary, turned in',
+      when: 'Handed in: "Turned in Oct 14", the same figures, and Take back where Turn in was.',
+      text: 'Turned in Oct 14',
+      skeleton: SKELETON,
+    },
+    {
+      id: 'empty',
+      name: 'No problems yet',
+      when: 'A set with no problems: "No problems yet" and Add problems, centred in the pane.',
+      text: 'No problems yet',
+      skeleton: SKELETON,
+    },
+    {
+      id: 'plain',
+      name: 'Plain problem',
+      when: 'A one line statement, no note, no figures, help closed: the plainest a problem gets.',
       skeleton: SKELETON,
     },
     {
@@ -36,12 +63,6 @@ export default defineSpec({
       name: 'A problem not found',
       when: 'The fifth problem could not be found: what failed, what was tried, and the fix to try next.',
       text: "Couldn't find 4.62",
-      skeleton: SKELETON,
-    },
-    {
-      id: 'turned-in',
-      name: 'Turned in',
-      when: 'The set is handed in: a "Turned in" banner with Take back, and the finish card with Take back where Turn in was.',
       skeleton: SKELETON,
     },
   ],
@@ -69,7 +90,6 @@ export default defineSpec({
       unit: 'button',
       use: 'Take back, Turn in anyway, Keep working and Undo.',
     },
-    { unit: 'finish-card', use: 'The card after the last problem is done.' },
     { unit: 'list', use: 'Frames the set line.' },
     {
       unit: 'list-row',
@@ -80,6 +100,10 @@ export default defineSpec({
     {
       unit: 'set-line',
       use: 'The due date and its label, and the time-left wording.',
+    },
+    {
+      unit: 'summary',
+      use: 'The last stop: figures for the set, Turn in, Back to the course.',
     },
     { unit: 'tag', use: 'The "Turned in" tag.' },
   ],
@@ -119,15 +143,22 @@ export default defineSpec({
       id: 'finish',
       label: 'Mark done on the last problem',
       key: 'Enter',
-      does: 'Shows the finish card.',
-      target: { unit: 'work', state: 'all-done' },
+      does: 'Shows the summary, with every problem done.',
+      target: { unit: 'work', state: 'summary-finished' },
+    },
+    {
+      id: 'open-summary',
+      label: 'The flag at the end of the bar',
+      key: 'Enter',
+      does: 'Opens the summary any time. A segment returns to its problem; Next on the last problem comes here too.',
+      target: { unit: 'work', state: 'summary' },
     },
     {
       id: 'turn-in',
       label: 'Turn in',
       key: 'Enter',
       does: 'Hands the set in; with problems left it asks first.',
-      target: { unit: 'work', state: 'turned-in' },
+      target: { unit: 'work', state: 'summary-turned-in' },
     },
     {
       id: 'take-back',
@@ -179,10 +210,10 @@ export default defineSpec({
       does: 'The set and its problems.',
     },
     {
-      name: 'startAt, startFinish',
+      name: 'startAt, startSummary',
       type: 'string, boolean',
       default: 'where the student left, false',
-      does: 'The problem to open on, or the finish card.',
+      does: 'The problem to open on, or the summary.',
     },
     {
       name: 'memory',
@@ -267,7 +298,7 @@ export default defineSpec({
     {
       id: 'work-d6',
       decision:
-        'Next goes to the next problem still to do, or says "This is the only one left to do"; with all done it shows the finish card.',
+        'Next goes to the next problem still to do after this one; on the last it goes to the summary.',
       why: 'Assumed in the work pane grill.',
       beat: 'Next in plain order',
       date: '2026-10-21',
@@ -302,6 +333,38 @@ export default defineSpec({
         'The current problem is marked by an underline in its segment\u2019s colour, and only that.',
       why: 'Jack: "go with the underline, drop the others", then "Can we make the line the same color as the segment".',
       beat: 'Taller and inset segments',
+      date: '2026-10-21',
+    },
+    {
+      id: 'work-d11',
+      decision:
+        'The summary is the last stop after the segments: a flag at the end of the bar opens it any time, Next on the last problem goes to it, a segment returns.',
+      why: 'Jack: "Also the finished page doesnt look the best. Can we include some light stats?" and, on how to reach it, "A last stop after the segments".',
+      beat: 'A finish card only after the last problem; a button in the set line',
+      date: '2026-10-21',
+    },
+    {
+      id: 'work-d12',
+      decision:
+        'The summary replaces the finish card. A finished or turned-in set opens on it; an unfinished one on its remembered problem.',
+      why: 'Jack: "how to get to it and see it, and switch to and from it"; reopen: "The summary".',
+      beat: 'Reopening on the last problem',
+      date: '2026-10-21',
+    },
+    {
+      id: 'work-d13',
+      decision:
+        'Turn in is on the summary and in the set menu; an unfinished set still asks first. Take back is in both places.',
+      why: 'Jack: "On the summary, plus the set menu".',
+      beat: 'Turn in only in the menu',
+      date: '2026-10-21',
+    },
+    {
+      id: 'work-d14',
+      decision:
+        'Anything that stands alone in the pane (the summary, a set with no problems, a problem being found or not found) is centred, across and down.',
+      why: 'Jack: "Make sure every part of the panel looks good when not expanded or empty. For example we should center what we can vertically and horizontally."',
+      beat: 'Standing at the top with empty space under',
       date: '2026-10-21',
     },
   ],

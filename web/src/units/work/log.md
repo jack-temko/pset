@@ -17,3 +17,7 @@ Jack: **"work pane spec is gtg"**, then **"Build along side."**
 Jack, 2026-10-21: **"Not a fan of the boxes with the numbers for questions. Can you give me some other options? Include an option where the problem has a short generated title to show with the problem number"**; after trying five: **"Lets go with the segments"**; on the segments, the line under them and the set line's "3 of 8": **"Don't these show the same thing?"**; **"We don't need the title twice"**. The rest is in `problem-strip/log.md`.
 
 Jack, 2026-10-21: **"go with the underline, drop the others"**
+
+Jack, 2026-10-21: **"yes, make the queued line full yellow. Also the finished page doesnt look the best. Can we include some light stats? Make sure every part of the panel looks good when not expanded or empty. For example we should center what we can vertically and horizontally. Also we need to make the behavior of the turned in/stat page better, how to get to it and see it, and switch to and from it."**
+
+Answers: stats **"all the most useful information shown in a nice way. not cluttered. no help stats"**; reach it **A last stop after the segments**; reopen **The summary**; turn in **On the summary, plus the set menu**.

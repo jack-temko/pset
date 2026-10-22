@@ -19,7 +19,6 @@ const base = (
   name: 'Problem set 4',
   due: parseDueDate('2026-10-15'),
   minutesLeft: 70,
-  minutesSpent: 130,
   problems,
   ...over,
 });
@@ -49,7 +48,10 @@ export const inProgress = () =>
 
 /** All eight done. */
 export const allDone = () =>
-  base(sampleProblems(8), { minutesLeft: undefined });
+  base(sampleProblems(8), {
+    minutesLeft: undefined,
+    finishedAt: new Date(2026, 9, 13, 11),
+  });
 
 /** The fifth problem is still being found. */
 export const finding = () =>
@@ -79,7 +81,17 @@ export const failedOnce = () =>
   );
 
 /** Everything done and handed in. */
-export const turnedIn = () => ({ ...allDone(), turnedIn: true });
+export const turnedIn = () => ({
+  ...allDone(),
+  turnedInAt: new Date(2026, 9, 14),
+});
+
+/** No problems yet. */
+export const empty = () => base([], { minutesLeft: undefined });
+
+/** A problem with a one line statement, no note and no figures, its help
+ *  closed: the plainest a problem gets. */
+export const plain = () => base(sampleProblems(2));
 
 /** Long labels, long statements, a note and 30 problems in the strip. */
 export function stress(): WorkSet {

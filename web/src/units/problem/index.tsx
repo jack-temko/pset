@@ -118,13 +118,17 @@ function Heading({
   index,
   problem,
   onOpenPage,
+  centred = false,
 }: {
   index: number;
   problem: ProblemData;
   onOpenPage?: () => void;
+  centred?: boolean;
 }) {
   return (
-    <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
+    <div
+      className={`flex min-w-0 flex-wrap items-baseline gap-x-3 ${centred ? 'justify-center' : ''}`}
+    >
       <h2 className="ds-heading min-w-0 text-(--ds-fg) [overflow-wrap:anywhere]">
         Problem {index} · {problem.title}
       </h2>
@@ -177,7 +181,7 @@ function Failed({
   return (
     <div
       role="alert"
-      className="min-w-0 space-y-3 rounded-(--ds-radius-control) border border-(--ds-danger) px-4 py-3"
+      className="min-w-0 space-y-3 rounded-(--ds-radius-control) border border-(--ds-danger) px-4 py-3 text-left"
     >
       <p className="ds-body flex min-w-0 items-start gap-2 font-medium text-(--ds-danger)">
         <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -258,18 +262,26 @@ export function Problem({
   const items = MENU.filter(
     (m) => m.id !== 'check-figure' || problem.figures.length > 0,
   );
+  const stands = !ready;
   const wait = ready ? undefined : 'Wait until the problem is found';
 
   return (
-    <article className="min-w-0 space-y-4">
+    <article
+      className={`min-w-0 space-y-4 ${stands ? 'mx-auto w-full max-w-[520px] text-center' : ''}`}
+    >
       <Note problem={problem} />
-      <Heading index={index} problem={problem} onOpenPage={onOpenPage} />
+      <Heading
+        index={index}
+        problem={problem}
+        onOpenPage={onOpenPage}
+        centred={stands}
+      />
 
       {finding && problem.found.status === 'finding' && (
         <div className="space-y-3">
           <p
             role="status"
-            className="ds-body flex items-center gap-2 text-(--ds-fg-muted)"
+            className="ds-body flex items-center justify-center gap-2 text-(--ds-fg-muted)"
           >
             <LoaderCircle
               className="size-4 shrink-0 animate-spin motion-reduce:animate-none"
@@ -286,7 +298,7 @@ export function Problem({
         <div className="space-y-3">
           <p
             role="status"
-            className="ds-body flex items-center gap-2 text-(--ds-fg-muted)"
+            className="ds-body flex items-center justify-center gap-2 text-(--ds-fg-muted)"
           >
             Waiting its turn: {problem.label} on page {problem.page} is next to
             be found
@@ -353,7 +365,9 @@ export function Problem({
         </>
       )}
 
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div
+        className={`flex min-w-0 flex-wrap items-center gap-2 ${stands ? 'justify-center' : ''}`}
+      >
         <Button
           variant={problem.done ? 'default' : 'primary'}
           icon={problem.done ? Check : undefined}
@@ -382,7 +396,7 @@ export function Problem({
         >
           Next
         </Button>
-        <span className="ml-auto">
+        <span className={stands ? '' : 'ml-auto'}>
           <ActionMenu
             label="More for this problem"
             items={items}

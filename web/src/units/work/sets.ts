@@ -8,10 +8,11 @@ export interface WorkSet {
   due?: Date;
   /** Shown only when PSet knows it. */
   minutesLeft?: number;
-  /** What the finish card says it took. */
-  minutesSpent?: number;
   problems: ProblemData[];
-  turnedIn?: boolean;
+  /** When the last problem was marked done. */
+  finishedAt?: Date;
+  /** When it was turned in; set means turned in. */
+  turnedInAt?: Date;
 }
 
 /** The items of the set menu (P: set menu). `undo-delete` is the Undo on
@@ -31,18 +32,14 @@ export type SetMenuItem =
 export const doneCount = (problems: readonly ProblemData[]) =>
   problems.filter((p) => p.done).length;
 
-/** The id of the next problem still to do after `from`, going on past the
- *  end to the start; nothing when none is left. */
-export function nextUnfinished(
+/** The id of the next problem still to do after `from`, going forward only;
+ *  nothing when there is none, which is when Next goes to the summary. */
+export function nextToDo(
   problems: readonly ProblemData[],
   from: string,
 ): string | undefined {
   const at = problems.findIndex((p) => p.id === from);
-  for (let k = 1; k <= problems.length; k++) {
-    const p = problems[(at + k) % problems.length];
-    if (!p.done) return p.id;
-  }
-  return undefined;
+  return problems.slice(at + 1).find((p) => !p.done)?.id;
 }
 
 /** How long "Removed 4.62 · Undo" stays (P8). */

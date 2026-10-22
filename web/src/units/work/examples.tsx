@@ -53,17 +53,23 @@ export default defineExamples(spec, {
     'current-underline': () => (
       <Recorded set={sample.inProgress()} startAt="p4" />
     ),
-    'all-done': () => <Recorded set={sample.allDone()} startFinish />,
+    summary: () => <Recorded set={sample.inProgress()} startSummary />,
+    'summary-finished': () => <Recorded set={sample.allDone()} />,
+    'summary-turned-in': () => <Recorded set={sample.turnedIn()} />,
+    empty: () => <Recorded set={sample.empty()} />,
+    plain: () => <Recorded set={sample.plain()} startAt="p6" />,
     finding: () => <Recorded set={sample.finding()} startAt="p5" />,
     failed: () => <Recorded set={sample.failedOnce()} startAt="p5" />,
-    'turned-in': () => <Recorded set={sample.turnedIn()} startFinish />,
   },
   stress: () => <Recorded set={sample.stress()} startAt="s1" />,
   skeletons: {
     'current-underline': () => <WorkSkeleton />,
-    'all-done': () => <WorkSkeleton />,
+    summary: () => <WorkSkeleton />,
+    'summary-finished': () => <WorkSkeleton />,
+    'summary-turned-in': () => <WorkSkeleton />,
+    empty: () => <WorkSkeleton />,
+    plain: () => <WorkSkeleton />,
     finding: () => <WorkSkeleton />,
     failed: () => <WorkSkeleton />,
-    'turned-in': () => <WorkSkeleton />,
   },
 });

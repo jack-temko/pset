@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ActionMenu, type MenuItem } from '@/units/action-menu';
 import { Button } from '@/units/button';
-import { FinishCard } from '@/units/finish-card';
 import { List } from '@/units/list';
 import { ListRow } from '@/units/list-row';
 import { Problem, ProblemSkeleton, type Fix } from '@/units/problem';
@@ -19,12 +18,13 @@ import {
 import { DueStatus } from '@/units/set-line';
 import { dueBadge } from '@/units/set-line/badge';
 import { timeLeft } from '@/units/set-line/dates';
+import { Summary } from '@/units/summary';
 import { Tag } from '@/units/tag';
 import { sessionMemory, type Memory } from './memory';
 import {
   doneCount,
   UNDO_MS,
-  nextUnfinished,
+  nextToDo,
   type SetMenuItem,
   type WorkSet,
 } from './sets';
@@ -37,6 +37,10 @@ const SET_MENU: readonly MenuItem<SetMenuItem>[] = [
   { id: 'delete', label: 'Delete', danger: true },
 ];
 
+/** The least height of the pane, so a short thing that stands alone has room
+ *  to be centred in. The workspace gives the real pane its own height. */
+const PANE_MIN = 560;
+
 interface Notice {
   text: string;
   undo: () => void;
@@ -47,8 +51,9 @@ export interface WorkProps {
   /** Where to start: a problem's id. Without it the pane goes to where the
    *  student left (S8), else the first problem still to do. */
   startAt?: string;
-  /** Start on the finish card. */
-  startFinish?: boolean;
+  /** Start on the summary. Without it a finished or turned-in set opens
+   *  on the summary and an unfinished one on the remembered problem. */
+  startSummary?: boolean;
   /** Where the place is kept. */
   memory?: Memory;
   /** The day "Due soon" counts from (the design page and tests). */
@@ -71,7 +76,7 @@ export interface WorkProps {
 export function Work({
   set,
   startAt,
-  startFinish = false,
+  startSummary,
   memory = sessionMemory,
   today,
   onOpenPage,
@@ -94,8 +99,16 @@ export function Work({
   const [seen, setSeen] = useState<ReadonlySet<string>>(
     () => new Set(current ? [current] : []),
   );
-  const [finish, setFinish] = useState(startFinish);
-  const [turnedIn, setTurnedIn] = useState(Boolean(set.turnedIn));
+  const [summary, setSummary] = useState(
+    startSummary ??
+      (startAt === undefined &&
+        (set.turnedInAt !== undefined ||
+          (set.problems.length > 0 && set.problems.every((p) => p.done)))),
+  );
+  const [turnedInAt, setTurnedInAt] = useState(set.turnedInAt);
+  const [finishedAt, setFinishedAt] = useState(set.finishedAt);
+  const turnedIn = turnedInAt !== undefined;
+  const now = today ?? new Date();
   const [asking, setAsking] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -118,7 +131,7 @@ export function Work({
   const go = (id: string) => {
     setCurrent(id);
     setSeen((s) => new Set(s).add(id));
-    setFinish(false);
+    setSummary(false);
     memory.set(set.id, id);
   };
 
@@ -142,19 +155,19 @@ export function Work({
   const all = problems.length > 0 && done === problems.length;
   const here = problems.find((p) => p.id === current);
   const index = problems.findIndex((p) => p.id === current);
-  const after = here ? nextUnfinished(problems, here.id) : undefined;
-  const lone = after === here?.id;
+  const after = here ? nextToDo(problems, here.id) : undefined;
 
   const mark = (id: string, value: boolean) => {
     const next = problems.map((p) => (p.id === id ? { ...p, done: value } : p));
     setProblems(next);
-    setFinish(value && next.every((p) => p.done));
+    const finished = value && next.every((p) => p.done);
+    setSummary(finished);
+    setFinishedAt(finished ? now : undefined);
   };
 
   const next = () => {
-    if (!here) return;
-    if (all) setFinish(true);
-    else if (after !== undefined && !lone) go(after);
+    if (after !== undefined) go(after);
+    else setSummary(true);
   };
 
   const remove = (id: string) => {
@@ -163,7 +176,7 @@ export function Work({
     const rest = problems.filter((p) => p.id !== id);
     setProblems(rest);
     if (rest.length > 0) go(rest[Math.min(at, rest.length - 1)].id);
-    setFinish(rest.length > 0 && rest.every((p) => p.done));
+    setSummary(rest.length > 0 && rest.every((p) => p.done));
     show({
       text: `Removed ${gone.label}`,
       undo: () => {
@@ -176,7 +189,7 @@ export function Work({
 
   const turnIn = () => {
     setAsking(false);
-    setTurnedIn(true);
+    setTurnedInAt(now);
     onSetMenu?.('turn-in');
   };
   const wantTurnIn = () => {
@@ -184,7 +197,7 @@ export function Work({
     else turnIn();
   };
   const takeBack = () => {
-    setTurnedIn(false);
+    setTurnedInAt(undefined);
     setAsking(false);
     onSetMenu?.('take-back');
   };
@@ -212,11 +225,18 @@ export function Work({
     } else onSetMenu?.(item);
   };
 
+  const stands =
+    problems.length === 0 ||
+    summary ||
+    (here !== undefined && here.found.status !== 'ready');
   const minutes =
     set.minutesLeft === undefined ? '' : timeLeft(set.minutesLeft);
 
   return (
-    <div className="@container mx-auto flex min-w-0 max-w-[760px] flex-col gap-4 py-6">
+    <div
+      className="@container mx-auto flex min-w-0 max-w-[760px] flex-col gap-4 py-6"
+      style={{ minHeight: PANE_MIN }}
+    >
       <List>
         <div className="flex min-w-0 items-center pr-3">
           <div className="min-w-0 flex-1">
@@ -235,7 +255,7 @@ export function Work({
         </div>
       </List>
 
-      {turnedIn && !(finish && all) && (
+      {turnedInAt && !summary && (
         <div className="ds-body flex min-w-0 flex-wrap items-center gap-3 rounded-(--ds-radius-control) border border-(--ds-border) px-4 py-2">
           <Tag>Turned in</Tag>
           <span className="min-w-0 flex-1 text-(--ds-fg-muted)">
@@ -267,52 +287,81 @@ export function Work({
         </div>
       )}
 
-      <ProblemStrip
-        chips={problems.map(chipOf)}
-        current={finish ? undefined : current}
-        onJump={go}
-      />
-
-      {problems.length === 0 ? (
-        <p className="ds-body text-(--ds-fg-muted)">
-          No problems in this set. Add problems from the set menu.
-        </p>
-      ) : finish && all ? (
-        <FinishCard
-          count={problems.length}
-          minutes={set.minutesSpent}
-          turnedIn={turnedIn}
-          onTurnIn={wantTurnIn}
-          onTakeBack={takeBack}
-          onBack={onBackToCourse}
+      {problems.length > 0 && (
+        <ProblemStrip
+          chips={problems.map(chipOf)}
+          current={summary ? undefined : current}
+          summary={summary}
+          allDone={all}
+          onJump={go}
+          onSummary={() => {
+            setSummary(true);
+          }}
         />
-      ) : (
-        here && (
-          <Problem
-            key={here.id}
-            problem={here}
-            index={index + 1}
-            nextNotReady={lone ? 'This is the only one left to do' : undefined}
-            onDone={(v) => {
-              mark(here.id, v);
-            }}
-            onAsk={() => {
-              onAsk?.(here.id);
-            }}
-            onOpenPage={() => {
-              onOpenPage?.(here.page, here.id);
-            }}
-            onNext={next}
-            onMenu={(item) => {
-              if (item === 'remove') remove(here.id);
-              onProblemMenu?.(item, here.id);
-            }}
-            onFix={(fix) => {
-              onFix?.(fix, here.id);
-            }}
-          />
-        )
       )}
+
+      <div
+        className={`flex min-w-0 flex-1 flex-col ${stands ? 'justify-center' : ''}`}
+      >
+        {problems.length === 0 ? (
+          <div className="mx-auto flex max-w-[520px] flex-col items-center gap-3 text-center">
+            <h2 className="ds-heading text-(--ds-fg)">No problems yet</h2>
+            <p className="ds-body text-(--ds-fg-muted)">
+              Add the problems of this set to start working.
+            </p>
+            <Button
+              variant="primary"
+              onPress={() => {
+                onSetMenu?.('add');
+              }}
+            >
+              Add problems
+            </Button>
+          </div>
+        ) : summary ? (
+          <Summary
+            problems={problems.map((p) => ({
+              id: p.id,
+              label: p.label,
+              title: p.title,
+              state: chipOf(p).state,
+              minutes: p.minutes ?? 0,
+            }))}
+            due={set.due}
+            finished={finishedAt}
+            turnedIn={turnedInAt}
+            today={today}
+            onTurnIn={wantTurnIn}
+            onTakeBack={takeBack}
+            onBack={onBackToCourse}
+          />
+        ) : (
+          here && (
+            <Problem
+              key={here.id}
+              problem={here}
+              index={index + 1}
+              onDone={(v) => {
+                mark(here.id, v);
+              }}
+              onAsk={() => {
+                onAsk?.(here.id);
+              }}
+              onOpenPage={() => {
+                onOpenPage?.(here.page, here.id);
+              }}
+              onNext={next}
+              onMenu={(item) => {
+                if (item === 'remove') remove(here.id);
+                onProblemMenu?.(item, here.id);
+              }}
+              onFix={(fix) => {
+                onFix?.(fix, here.id);
+              }}
+            />
+          )
+        )}
+      </div>
 
       <div className="sticky bottom-4 h-0">
         {notice && (
@@ -336,6 +385,7 @@ export function WorkSkeleton({ chips = 8 }: { chips?: number }) {
     <div
       aria-hidden
       className="@container mx-auto flex min-w-0 max-w-[760px] flex-col gap-4 py-6"
+      style={{ minHeight: PANE_MIN }}
     >
       <div className="h-[58px] min-w-0 animate-pulse rounded-(--ds-radius-control) border border-(--ds-border-muted) motion-reduce:animate-none" />
       <ProblemStripSkeleton count={chips} />

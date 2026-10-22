@@ -19,6 +19,7 @@ export default defineExamples(spec, {
   states: {
     ready: () => show(problemAt(2), 3, { openHelp: ['hint'] }),
     parts: () => show(problemAt(3, WITH_PARTS), 4),
+    plain: () => show(problemAt(5), 6),
     done: () => show(problemAt(2, { done: true }), 3),
     finding: () =>
       show(problemAt(4, { found: { status: 'finding', seconds: 10 } })),

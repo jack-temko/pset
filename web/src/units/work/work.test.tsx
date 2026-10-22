@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Work } from './index';
 import { pageMemory } from './memory';
 import { allDone, inProgress } from './sample';
-import { nextUnfinished } from './sets';
+import { nextToDo } from './sets';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -36,11 +36,12 @@ const press = (el: Element | null | undefined) => {
 const button = (el: Element, name: string) =>
   [...el.querySelectorAll('button')].find((b) => b.textContent === name);
 
-describe('nextUnfinished', () => {
-  it('goes on past the end, and finds nothing when all are done', () => {
+describe('nextToDo', () => {
+  it('goes forward only, and finds nothing after the last', () => {
     const ps = inProgress().problems;
-    expect(nextUnfinished(ps, 'p8')).toBe('p3');
-    expect(nextUnfinished(allDone().problems, 'p1')).toBeUndefined();
+    expect(nextToDo(ps, 'p3')).toBe('p4');
+    expect(nextToDo(ps, 'p8')).toBeUndefined();
+    expect(nextToDo(allDone().problems, 'p1')).toBeUndefined();
   });
 });
 
@@ -64,13 +65,40 @@ describe('Work', () => {
     expect(el.querySelector('h2')?.textContent).toContain('Problem 4 ·');
   });
 
-  it('shows the finish card when the last problem is marked done', () => {
+  it('opens a finished set on the summary, and a segment goes back', () => {
+    const { el } = render(<Work set={allDone()} memory={pageMemory()} />);
+    expect(el.textContent).toContain('All 8 done');
+    expect(el.textContent).toContain('Finished');
+    press(el.querySelector('[aria-label^="Problem 2"]'));
+    expect(el.querySelector('h2')?.textContent).toContain('Problem 2 ·');
+  });
+
+  it('opens the summary from the flag, and Next on the last problem goes there', () => {
+    const { el } = render(
+      <Work set={inProgress()} startAt="p8" memory={pageMemory()} />,
+    );
+    press(button(el, 'Next'));
+    expect(el.textContent).toContain('2 of 8 done');
+    press(el.querySelector('[aria-label^="Problem 3"]'));
+    press(el.querySelector('[aria-label="Summary"]'));
+    expect(el.textContent).toContain('2 of 8 done');
+  });
+
+  it('shows the summary when the last problem is marked done', () => {
     const set = inProgress();
     set.problems = set.problems.map((p, i) => ({ ...p, done: i !== 7 }));
     const { el } = render(
       <Work set={set} startAt="p8" memory={pageMemory()} />,
     );
     press(button(el, 'Mark done'));
-    expect(el.textContent).toContain('All 8 done · 2 h 10 m');
+    expect(el.textContent).toContain('All 8 done');
+  });
+
+  it('warns before turning in an unfinished set', () => {
+    const { el } = render(
+      <Work set={inProgress()} startSummary memory={pageMemory()} />,
+    );
+    press(button(el, 'Turn in'));
+    expect(el.textContent).toContain("6 of 8 aren't done");
   });
 });

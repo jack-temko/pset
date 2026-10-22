@@ -28,3 +28,5 @@ Built: six state colours (done, started, not started, working, queued, failed) w
 Jack, 2026-10-21, after the three markers: **"go with the underline, drop the others"**. The state colours stay.
 
 Jack, 2026-10-21: **"Can we make the line the same color as the segment"**. The underline takes its segment's colour; a not-started segment, the neutral track, uses the muted text colour so it still shows.
+
+Jack, 2026-10-21: **"yes, make the queued line full yellow."** And on the summary: reach it **A last stop after the segments**, so a flag button ends the bar.

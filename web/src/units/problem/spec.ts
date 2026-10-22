@@ -19,6 +19,11 @@ export default defineSpec({
       when: 'A professor’s note above, and parts (a) to (d) with the ones the note skips dimmed, marked "Skipped" and given no help.',
     },
     {
+      id: 'plain',
+      name: 'Plain',
+      when: 'A one line statement, no note, no figures, no parts and help closed.',
+    },
+    {
       id: 'done',
       name: 'Done',
       when: 'Marked done: the button reads "Done" and Next becomes the primary.',

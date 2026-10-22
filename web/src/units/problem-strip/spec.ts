@@ -34,6 +34,12 @@ export default defineSpec({
       key: 'Enter',
       does: 'Goes to that problem in one click.',
     },
+    {
+      id: 'summary',
+      label: 'The flag at the end',
+      key: 'Enter',
+      does: 'Opens the summary. The summary is not in this unit, so it has no target.',
+    },
   ],
   inputs: [
     {
@@ -41,6 +47,12 @@ export default defineSpec({
       type: 'Chip[]',
       default: 'none',
       does: 'Each problem’s id, label, title, state (done, started, todo, working, queued or failed) and the state in words.',
+    },
+    {
+      name: 'summary, allDone, onSummary',
+      type: 'boolean, boolean, () => void',
+      default: 'false',
+      does: 'A flag button ends the bar and opens the summary; while it shows, the flag is underlined, green when all are done.',
     },
     {
       name: 'current',
@@ -153,6 +165,14 @@ export default defineSpec({
         'The current segment has a 2px line under it, its segment\u2019s colour (muted text when not started), 3px below the track. Taller and inset are gone.',
       why: 'Jack: "go with the underline, drop the others", then "Can we make the line the same color as the segment".',
       beat: 'A white outline, an offset outline, a taller segment, an inset outline',
+      date: '2026-10-21',
+    },
+    {
+      id: 'problem-strip-d10',
+      decision:
+        'A queued segment stays faint but its underline is the full yellow. A flag button ends the bar and opens the summary, underlined while it shows.',
+      why: 'Jack: "yes, make the queued line full yellow." The flag is the "last stop after the segments".',
+      beat: 'A faint underline on a faint segment',
       date: '2026-10-21',
     },
   ],

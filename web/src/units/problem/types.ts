@@ -66,6 +66,8 @@ export interface ProblemData {
   done: boolean;
   /** Opened, help read or time spent, but not done. */
   started?: boolean;
+  /** Time spent on it, in minutes. */
+  minutes?: number;
 }
 
 /** The items of a problem's menu: everything that is not the work itself

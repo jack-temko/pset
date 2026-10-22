@@ -1,14 +1,9 @@
-import { Tooltip } from '@/units/tooltip';
+import { Flag } from 'lucide-react';
 
-/** Where a problem stands, from the student's side (one set of colours, used
- *  by every way of marking the current one). */
-export type ChipState =
-  | 'done'
-  | 'started'
-  | 'todo'
-  | 'working'
-  | 'queued'
-  | 'failed';
+import { Tooltip } from '@/units/tooltip';
+import { FILL, LINE, type ChipState } from './colors';
+
+export type { ChipState };
 
 export interface Chip {
   id: string;
@@ -20,27 +15,6 @@ export interface Chip {
   /** The state in words for the tooltip: "Writing the guide". */
   word: string;
 }
-
-const LOOK: Record<ChipState, string> = {
-  done: 'bg-(--ds-success)',
-  started: 'bg-(--ds-accent-solid)',
-  todo: 'bg-(--ds-border)',
-  working: 'animate-pulse bg-(--ds-attention) motion-reduce:animate-none',
-  queued: 'bg-[color-mix(in_srgb,var(--ds-attention)_40%,transparent)]',
-  failed: 'bg-(--ds-danger)',
-};
-
-/** The underline of the current segment: its segment's colour, so it reads
- *  as part of it. A not-started segment is the neutral track, which would
- *  vanish, so its line is the muted text colour. */
-const LINE: Record<ChipState, string> = {
-  done: 'var(--ds-success)',
-  started: 'var(--ds-accent-solid)',
-  todo: 'var(--ds-fg-muted)',
-  working: 'var(--ds-attention)',
-  queued: 'color-mix(in srgb, var(--ds-attention) 40%, transparent)',
-  failed: 'var(--ds-danger)',
-};
 
 /** The whole set as one bar, like GitHub's progress bar: a track 8px tall
  *  with fully rounded ends and one segment per problem, 2px apart. The colour
@@ -54,11 +28,20 @@ const LINE: Record<ChipState, string> = {
 export function ProblemStrip({
   chips,
   current,
+  summary = false,
+  allDone = false,
   onJump,
+  onSummary,
 }: {
   chips: readonly Chip[];
   current?: string;
+  /** The summary is showing: the flag is underlined like a current segment. */
+  summary?: boolean;
+  /** Every problem is done, so the flag's line is green. */
+  allDone?: boolean;
   onJump?: (id: string) => void;
+  /** The flag at the end of the bar was pressed. */
+  onSummary?: () => void;
 }) {
   return (
     <ul className="flex min-w-0" style={{ gap: 2 }}>
@@ -79,7 +62,8 @@ export function ProblemStrip({
                 className="group relative flex h-5 w-full min-w-0 items-center"
               >
                 <span
-                  className={`block h-2 w-full group-hover:brightness-125 ${ends} ${LOOK[c.state]}`}
+                  style={{ background: FILL[c.state] }}
+                  className={`block h-2 w-full group-hover:brightness-125 ${ends} ${c.state === 'working' ? 'animate-pulse motion-reduce:animate-none' : ''}`}
                 />
                 {here && (
                   <span
@@ -93,6 +77,34 @@ export function ProblemStrip({
           </li>
         );
       })}
+      <li className="ml-1 flex shrink-0">
+        <Tooltip text="Summary">
+          <button
+            type="button"
+            aria-label="Summary"
+            aria-current={summary ? 'step' : undefined}
+            onClick={() => {
+              onSummary?.();
+            }}
+            className="relative flex h-5 w-5 items-center justify-center text-(--ds-fg-muted) hover:text-(--ds-fg)"
+          >
+            <Flag className="size-3.5" aria-hidden />
+            {summary && (
+              <span
+                aria-hidden
+                className="absolute left-0 block w-full"
+                style={{
+                  height: 2,
+                  bottom: 0,
+                  background: allDone
+                    ? 'var(--ds-success)'
+                    : 'var(--ds-fg-muted)',
+                }}
+              />
+            )}
+          </button>
+        </Tooltip>
+      </li>
     </ul>
   );
 }
@@ -112,6 +124,9 @@ export function ProblemStripSkeleton({ count = 8 }: { count?: number }) {
           className={`h-2 min-w-0 flex-1 animate-pulse bg-(--ds-border-muted) motion-reduce:animate-none ${i === 0 ? 'rounded-l-full' : ''} ${i === count - 1 ? 'rounded-r-full' : ''}`}
         />
       ))}
+      <li className="ml-1 flex h-5 w-5 shrink-0 items-center justify-center">
+        <span className="size-3.5 animate-pulse rounded-(--ds-radius-segment) bg-(--ds-border-muted) motion-reduce:animate-none" />
+      </li>
     </ul>
   );
 }
