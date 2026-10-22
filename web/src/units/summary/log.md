@@ -7,3 +7,5 @@ Answers: stats **"all the most useful information shown in a nice way. not clutt
 The stats picked: total time; when it was finished against the due date (or when it is due); time per problem as a bar each in its segment colour, the longest named under them. Nothing about hints, walkthroughs, answers or Ask.
 
 Jack, 2026-10-21, on the summary: **"Can we show these a bit more github-y"**; on "Thu / Due" in the summary and "Due Thu" in the set line: **"Shown in two spots. This should be a rule, avoid duplication where possible"**. On the flag's underline: **"The underline overlaps the icon and looks weird."**
+
+Jack, 2026-10-21: **"the set panel summary page still looks not my favorite, almost too github-y now. lest A/B some options, also the underline of the summary is much thicker and a different color than the icon."** Built four looks: A box, B like Home, C plain, D tiles.

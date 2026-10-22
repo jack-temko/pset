@@ -19,6 +19,7 @@ import { DueStatus } from '@/units/set-line';
 import { dueBadge } from '@/units/set-line/badge';
 import { timeLeft } from '@/units/set-line/dates';
 import { Summary, SummarySkeleton } from '@/units/summary';
+import type { SummaryView } from '@/units/summary/views';
 import { Tag } from '@/units/tag';
 import { sessionMemory, type Memory } from './memory';
 import {
@@ -51,6 +52,8 @@ export interface WorkProps {
   /** Where to start: a problem's id. Without it the pane goes to where the
    *  student left (S8), else the first problem still to do. */
   startAt?: string;
+  /** Which look the summary has, to compare. */
+  summaryView?: SummaryView;
   /** Start on the summary. Without it a finished or turned-in set opens
    *  on the summary and an unfinished one on the remembered problem. */
   startSummary?: boolean;
@@ -77,6 +80,7 @@ export function Work({
   set,
   startAt,
   startSummary,
+  summaryView,
   memory = sessionMemory,
   today,
   onOpenPage,
@@ -338,6 +342,7 @@ export function Work({
             due={set.due}
             finished={finishedAt}
             turnedIn={turnedInAt}
+            view={summaryView}
             onTurnIn={wantTurnIn}
             onTakeBack={takeBack}
             onBack={onBackToCourse}
@@ -391,9 +396,11 @@ export function Work({
 export function WorkSkeleton({
   chips = 8,
   opens = 'problem',
+  summaryView,
 }: {
   chips?: number;
   opens?: 'problem' | 'summary' | 'turned-in';
+  summaryView?: SummaryView;
 }) {
   return (
     <div
@@ -407,7 +414,11 @@ export function WorkSkeleton({
         <ProblemSkeleton />
       ) : (
         <div className="flex min-w-0 flex-1 flex-col justify-center">
-          <SummarySkeleton turnedIn={opens === 'turned-in'} count={chips} />
+          <SummarySkeleton
+            view={summaryView}
+            turnedIn={opens === 'turned-in'}
+            count={chips}
+          />
         </div>
       )}
     </div>

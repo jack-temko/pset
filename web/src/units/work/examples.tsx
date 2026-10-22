@@ -54,7 +54,16 @@ export default defineExamples(spec, {
       <Recorded set={sample.inProgress()} startAt="p4" />
     ),
     summary: () => <Recorded set={sample.inProgress()} startSummary />,
-    'summary-finished': () => <Recorded set={sample.allDone()} />,
+    'summary-box': () => <Recorded set={sample.allDone()} />,
+    'summary-home': () => (
+      <Recorded set={sample.allDone()} summaryView="home" />
+    ),
+    'summary-plain': () => (
+      <Recorded set={sample.allDone()} summaryView="plain" />
+    ),
+    'summary-tiles': () => (
+      <Recorded set={sample.allDone()} summaryView="tiles" />
+    ),
     'summary-turned-in': () => <Recorded set={sample.turnedIn()} />,
     empty: () => <Recorded set={sample.empty()} />,
     plain: () => <Recorded set={sample.plain()} startAt="p6" />,
@@ -65,7 +74,10 @@ export default defineExamples(spec, {
   skeletons: {
     'current-underline': () => <WorkSkeleton />,
     summary: () => <WorkSkeleton />,
-    'summary-finished': () => <WorkSkeleton opens="summary" />,
+    'summary-box': () => <WorkSkeleton opens="summary" />,
+    'summary-home': () => <WorkSkeleton opens="summary" summaryView="home" />,
+    'summary-plain': () => <WorkSkeleton opens="summary" summaryView="plain" />,
+    'summary-tiles': () => <WorkSkeleton opens="summary" summaryView="tiles" />,
     'summary-turned-in': () => <WorkSkeleton opens="turned-in" />,
     empty: () => <WorkSkeleton />,
     plain: () => <WorkSkeleton />,

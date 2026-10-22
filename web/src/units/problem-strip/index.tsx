@@ -86,20 +86,21 @@ export function ProblemStrip({
             onClick={() => {
               onSummary?.();
             }}
-            className="relative flex h-5 w-5 items-center justify-center text-(--ds-fg-muted) hover:text-(--ds-fg)"
+            style={{
+              color: summary
+                ? allDone
+                  ? 'var(--ds-success)'
+                  : 'var(--ds-fg)'
+                : undefined,
+            }}
+            className={`relative flex h-5 w-5 items-center justify-center ${summary ? '' : 'text-(--ds-fg-muted) hover:text-(--ds-fg)'}`}
           >
             <Flag className="size-3" aria-hidden />
             {summary && (
               <span
                 aria-hidden
                 className="absolute left-0 block w-full"
-                style={{
-                  height: 2,
-                  bottom: 1,
-                  background: allDone
-                    ? 'var(--ds-success)'
-                    : 'var(--ds-fg-muted)',
-                }}
+                style={{ height: 2, bottom: 1, background: 'currentColor' }}
               />
             )}
           </button>
