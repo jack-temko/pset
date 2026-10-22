@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
 import { defineExamples } from '@/design/examples';
-import type { NavView } from '@/units/problem-nav/layout';
 import { Work, WorkSkeleton, type WorkProps } from './index';
 import { pageMemory } from './memory';
 import * as sample from './sample';
@@ -56,51 +55,13 @@ export default defineExamples(spec, {
     finding: () => <Recorded set={sample.finding()} startAt="p5" />,
     failed: () => <Recorded set={sample.failedOnce()} startAt="p5" />,
     'turned-in': () => <Recorded set={sample.turnedIn()} startFinish />,
-    'nav-segments': () => (
-      <Recorded set={sample.inProgress()} startAt="p4" nav="segments" />
-    ),
-    'nav-numbers': () => (
-      <Recorded set={sample.inProgress()} startAt="p4" nav="numbers" />
-    ),
-    'nav-titled-numbers': () => (
-      <Recorded set={sample.inProgress()} startAt="p4" nav="titled-numbers" />
-    ),
-    'nav-picker': () => (
-      <Recorded set={sample.inProgress()} startAt="p4" nav="picker" />
-    ),
-    'nav-list': () => (
-      <Recorded set={sample.inProgress()} startAt="p4" nav="list" />
-    ),
   },
-  stress: () => (
-    <div className="space-y-10">
-      {[
-        undefined,
-        'segments',
-        'numbers',
-        'titled-numbers',
-        'picker',
-        'list',
-      ].map((nav) => (
-        <Recorded
-          key={nav ?? 'boxes'}
-          set={sample.stress()}
-          startAt="s1"
-          nav={nav as NavView | undefined}
-        />
-      ))}
-    </div>
-  ),
+  stress: () => <Recorded set={sample.stress()} startAt="s1" />,
   skeletons: {
     'in-progress': () => <WorkSkeleton />,
     'all-done': () => <WorkSkeleton />,
     finding: () => <WorkSkeleton />,
     failed: () => <WorkSkeleton />,
     'turned-in': () => <WorkSkeleton />,
-    'nav-segments': () => <WorkSkeleton nav="segments" />,
-    'nav-numbers': () => <WorkSkeleton nav="numbers" />,
-    'nav-titled-numbers': () => <WorkSkeleton nav="titled-numbers" />,
-    'nav-picker': () => <WorkSkeleton nav="picker" />,
-    'nav-list': () => <WorkSkeleton nav="list" />,
   },
 });

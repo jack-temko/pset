@@ -13,3 +13,5 @@ Batch 3: turn in **Warn, and Take back (Recommended)**; waiting **Problem first,
 Batch 4: help look **Rows under the problem (Recommended)**; meta **Label and page link (Recommended)**; notes **A note above the problem (Recommended)**; failure **Says it's the second try (Recommended)**.
 
 Jack: **"work pane spec is gtg"**, then **"Build along side."**
+
+Jack, 2026-10-21: **"Not a fan of the boxes with the numbers for questions. Can you give me some other options? Include an option where the problem has a short generated title to show with the problem number"**; after trying five: **"Lets go with the segments"**; on the segments, the line under them and the set line's "3 of 8": **"Don't these show the same thing?"**; **"We don't need the title twice"**. The rest is in `problem-strip/log.md`.

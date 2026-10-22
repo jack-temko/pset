@@ -47,10 +47,10 @@ describe('nextUnfinished', () => {
 describe('Work', () => {
   it('opens on the first problem to do, and Next marks nothing', () => {
     const { el } = render(<Work set={inProgress()} memory={pageMemory()} />);
-    expect(el.querySelector('h2')?.textContent).toContain('Problem 4 ·');
+    expect(el.querySelector('h2')?.textContent).toContain('Problem 4');
     press(button(el, 'Next'));
     expect(el.querySelector('h2')?.textContent).toContain('Problem 5 ·');
-    expect(el.textContent).toContain('3 of 8');
+    expect(el.querySelectorAll('[aria-label$="· done"]')).toHaveLength(3);
   });
 
   it('remembers where the student left', () => {

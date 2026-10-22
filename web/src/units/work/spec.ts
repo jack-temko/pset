@@ -44,36 +44,6 @@ export default defineSpec({
       when: 'The set is handed in: a "Turned in" banner with Take back, and the finish card with Take back where Turn in was.',
       skeleton: SKELETON,
     },
-    {
-      id: 'nav-segments',
-      name: 'A. Segments',
-      when: 'The in-progress set with a thin bar of segments with "Problem 4 of 8 · RC step response" under it, in place of the boxes of numbers.',
-      skeleton: SKELETON,
-    },
-    {
-      id: 'nav-numbers',
-      name: 'B. Plain numbers',
-      when: 'The in-progress set with the numbers as text with an accent underline, no boxes, in place of the boxes of numbers.',
-      skeleton: SKELETON,
-    },
-    {
-      id: 'nav-picker',
-      name: 'C. Titled picker',
-      when: 'The in-progress set with one line "4 · RC step response" that opens every problem, with arrows, in place of the boxes of numbers.',
-      skeleton: SKELETON,
-    },
-    {
-      id: 'nav-list',
-      name: 'D. Titled list',
-      when: 'The in-progress set with a list of titled problems at the left, the problem to its right, in place of the boxes of numbers.',
-      skeleton: SKELETON,
-    },
-    {
-      id: 'nav-titled-numbers',
-      name: 'E. Titled numbers',
-      when: 'The in-progress set with the numbers of B, each followed by its title; the row scrolls sideways when too long.',
-      skeleton: SKELETON,
-    },
   ],
   exampleWidth: 640,
   stress:
@@ -106,9 +76,7 @@ export default defineSpec({
       use: 'The set line: name, due, time left and progress.',
     },
     { unit: 'problem', use: 'The problem being worked.' },
-    { unit: 'problem-nav', use: 'The five navigators to compare, A to E.' },
     { unit: 'problem-strip', use: 'The strip of numbered chips.' },
-    { unit: 'progress-bar', use: 'How many are done, in the set line.' },
     {
       unit: 'set-line',
       use: 'The due date and its label, and the time-left wording.',
@@ -257,8 +225,9 @@ export default defineSpec({
   decisions: [
     {
       id: 'work-d1',
+      supersededBy: 'work-d8',
       decision:
-        'The header is the set line (name, due, "3 of 8", time left, as on Home), then the strip.',
+        'The header is the set line (name, badge, due date, time left) without a progress bar or count, then the strip, which is the progress.',
       why: 'Jack picked "Set line + strip (Recommended)": the tab already names the set (P5).',
       beat: 'Strip only; a big title',
       date: '2026-10-21',
@@ -309,6 +278,14 @@ export default defineSpec({
         'The pane is built on its own, on the design page; the workspace swaps it in for its stand-in once both have merged.',
       why: 'Jack, 2026-10-21: "Build along side."',
       beat: 'Waiting for the workspace',
+      date: '2026-10-21',
+    },
+    {
+      id: 'work-d8',
+      decision:
+        'The navigator is the segments bar, with no line under it; the set line drops its progress bar and "3 of 8" and keeps the name, badge, time left and due date.',
+      why: 'Jack: "Lets go with the segments"; on the segments, the line and "3 of 8": "Don\'t these show the same thing?"; "We don\'t need the title twice".',
+      beat: 'Boxes of numbers; a progress bar and count in the set line',
       date: '2026-10-21',
     },
   ],
