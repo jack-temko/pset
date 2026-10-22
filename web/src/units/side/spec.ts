@@ -139,5 +139,13 @@ export default defineSpec({
       beat: 'Fixed roles for the sides',
       date: '2026-10-21',
     },
+    {
+      id: 'side-d4',
+      decision:
+        'A side has no failed state yet: the panes inside it decide theirs in their own grills.',
+      why: 'Not designed: noted when the spec format dropped the data waiting and failed fields (ideas/spec-format-grill.md, F9).',
+      beat: 'A failed line in the data section',
+      date: '2026-10-22',
+    },
   ],
 });

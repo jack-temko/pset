@@ -37,7 +37,7 @@ export default defineSpec({
   ],
   exampleWidth: 720,
   stress:
-    'An 80 character title and 80 characters of meta at 320px: the aside is gone and both truncate on one line.',
+    'An 80 character title and 80 characters of meta beside an aside: both truncate on one line and the aside keeps its width.',
   actions: [
     {
       id: 'open',

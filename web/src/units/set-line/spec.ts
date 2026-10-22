@@ -41,7 +41,7 @@ export default defineSpec({
     },
   ],
   stress:
-    'A 70 character set name in a 360px container: the title and the meta truncate, the bar stays.',
+    'A 70 character set name beside its bar: the title and the meta truncate and the bar keeps its width.',
   actions: [
     {
       id: 'open-set',

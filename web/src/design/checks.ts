@@ -53,7 +53,7 @@ function endpointKey(call: string): string {
   return call
     .trim()
     .replace(/\?.*$/, '')
-    .replace(/[:{][A-Za-z]+\}?/g, '{}')
+    .replace(/[:{][A-Za-z_]+\}?/g, '{}')
     .replace(/\/$/, '');
 }
 

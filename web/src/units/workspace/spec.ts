@@ -307,5 +307,13 @@ export default defineSpec({
       beat: 'An editor-style set; the basics',
       date: '2026-10-21',
     },
+    {
+      id: 'workspace-d16',
+      decision:
+        'The workspace has no failed state yet: the panes decide theirs in their own grills.',
+      why: 'Not designed: noted when the spec format dropped the data waiting and failed fields (ideas/spec-format-grill.md, F9).',
+      beat: 'A failed line in the data section',
+      date: '2026-10-22',
+    },
   ],
 });

@@ -339,7 +339,11 @@ export function Decisions({ spec }: { spec: AnySpec }) {
         )
       }
     >
-      <DecisionTable caption="Decisions in force" rows={inForce} />
+      {inForce.length > 0 ? (
+        <DecisionTable caption="Decisions in force" rows={inForce} />
+      ) : (
+        <Quiet>No decision is in force: all are replaced.</Quiet>
+      )}
       {replaced.length > 0 && (
         <details className="mt-card">
           <summary className="cursor-pointer text-sm text-muted-foreground">

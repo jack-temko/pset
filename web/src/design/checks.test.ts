@@ -371,6 +371,9 @@ describe('the checks', () => {
       ),
     ).toEqual(['GET /api/homework/{}', 'POST /api/books/{}/turns']);
     expect(ENDPOINTS).toContain('GET /api/homework/{}');
+    expect(endpointsIn('X is GET /api/pages/{page_id}/image.')).toEqual([
+      'GET /api/pages/{}/image',
+    ]);
   });
 
   it('fails the typecheck for inputs that are not the component props', () => {

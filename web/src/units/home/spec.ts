@@ -236,5 +236,13 @@ export default defineSpec({
       beat: 'The tag in place of the date (set-line-d7)',
       date: '2026-10-22',
     },
+    {
+      id: 'home-d17',
+      decision:
+        'Home has no failed state yet: it reads sample data, and how a failed read looks is not designed.',
+      why: 'Not designed: noted when the spec format dropped the data waiting and failed fields (ideas/spec-format-grill.md, F9).',
+      beat: 'A failed line in the data section',
+      date: '2026-10-22',
+    },
   ],
 });

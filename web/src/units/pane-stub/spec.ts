@@ -86,5 +86,13 @@ export default defineSpec({
       beat: 'Designing the panes here',
       date: '2026-10-21',
     },
+    {
+      id: 'pane-stub-d2',
+      decision:
+        'The stand-ins have no failed state: they are replaced by the real panes, which decide theirs.',
+      why: 'Not designed: noted when the spec format dropped the data waiting and failed fields (ideas/spec-format-grill.md, F9).',
+      beat: 'A failed line in the data section',
+      date: '2026-10-22',
+    },
   ],
 });

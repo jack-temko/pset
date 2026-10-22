@@ -37,8 +37,10 @@ export interface Flow<A extends string = string> {
 export interface DataRead {
   reads: string;
   /** 'sample' until the unit is wired to the server; then the endpoint it
-   *  calls, as the generated API types write it ('GET /api/week'), which
-   *  the checks look up in `web/src/api/gen`. */
+   *  calls, as the generated API types write it ('GET /api/week'). The
+   *  checks read endpoints from the "X is GET /api/..." comments in
+   *  `web/src/api/gen`, so an endpoint without such a comment fails until
+   *  its comment is added. */
   call: string;
 }
 
