@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { defineExamples } from '@/design/examples';
 import { Button } from '@/units/button';
@@ -12,11 +13,23 @@ import spec from './spec';
  *  handle. Boxing and the flash can be started again. */
 function Demo(props: Partial<MaterialProps>) {
   const [memory] = useState(pageMemory);
-  const [fired, setFired] = useState('Nothing told to the workspace yet.');
+  const [fired, setFired] = useState('nothing yet.');
   const [boxing, setBoxing] = useState(props.boxing);
   const [flashN, setFlashN] = useState(1);
+  // The readout is the design page's, not the pane's: it goes in the stage's
+  // caption slot, in the light page's text, outside the pane's frame.
+  const [slot, setSlot] = useState<Element | null>(null);
   return (
-    <div className="space-y-3">
+    <div
+      className="space-y-3"
+      ref={(el) => {
+        setSlot(
+          el
+            ?.closest('.ds')
+            ?.parentElement?.querySelector('[data-stage-caption]') ?? null,
+        );
+      }}
+    >
       <div className="h-[640px] outline-[1px] outline-(--ds-border-muted)">
         <Material
           name={sample.NAME}
@@ -28,18 +41,18 @@ function Demo(props: Partial<MaterialProps>) {
           boxing={boxing}
           flash={props.flash && { ...props.flash, n: flashN }}
           onPage={(p) => {
-            setFired(`Now on page ${String(p)}`);
+            setFired(`now on page ${String(p)}`);
           }}
           onDone={(boxes) => {
-            setFired(`Done with ${String(boxes.length)} box(es)`);
+            setFired(`done with ${String(boxes.length)} box(es)`);
             setBoxing(undefined);
           }}
           onCancel={() => {
-            setFired('Boxing cancelled');
+            setFired('boxing cancelled');
             setBoxing(undefined);
           }}
           onRetry={() => {
-            setFired('Read it again');
+            setFired('read it again');
           }}
         />
       </div>
@@ -62,10 +75,14 @@ function Demo(props: Partial<MaterialProps>) {
             Box again
           </Button>
         )}
-        <p data-fired className="ds-small text-(--ds-fg-muted)">
-          {fired}
-        </p>
       </div>
+      {slot &&
+        createPortal(
+          <p data-fired className="pt-3">
+            {`Told to the workspace: ${fired}`}
+          </p>,
+          slot,
+        )}
     </div>
   );
 }
@@ -88,7 +105,8 @@ const BOX = { x: 0.1, y: 0.3, w: 0.8, h: 0.16 };
 export default defineExamples(spec, Material, {
   states: {
     reading: () => <Demo />,
-    contents: () => <Demo startContents />,
+    contents: () => <Demo startContents besideAt={Infinity} />,
+    'contents-beside': () => <Demo startContents besideAt={0} />,
     'go-to-page': () => <Demo startGoTo={{ text: '2' }} />,
     'page-missing': () => <Demo startGoTo={{ text: '900', entered: true }} />,
     flash: () => <Demo flash={{ page: 112, box: BOX, n: 1 }} />,
@@ -111,6 +129,7 @@ export default defineExamples(spec, Material, {
       book={sample.HUGE}
       page={1700}
       startContents
+      besideAt={Infinity}
     />
   ),
   skeletons: Object.fromEntries(

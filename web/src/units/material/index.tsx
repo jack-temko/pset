@@ -27,6 +27,9 @@ const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 4;
 /** Where in the view the "current page" is read: a share of its height. */
 const PROBE = 0.3;
+/** The pane width from which Contents sits beside the pages: the pages keep
+ *  about 430px or more. */
+const BESIDE_AT = 720;
 /** The material pane the student last used, so Escape acts in one pane. */
 let active: Element | null = null;
 
@@ -281,6 +284,9 @@ export interface MaterialProps {
   startPdf?: number;
   /** Open with Contents showing. */
   startContents?: boolean;
+  /** The pane width from which Contents opens beside the pages (M3, D16)
+   *  instead of over them. */
+  besideAt?: number;
   /** Open with the page number box in use: what is typed, and whether it was
    *  entered already. */
   startGoTo?: { text: string; entered?: boolean };
@@ -327,6 +333,7 @@ export function Material({
   page,
   startPdf,
   startContents,
+  besideAt = BESIDE_AT,
   startGoTo,
   startBoxes,
   status = 'ready',
@@ -343,6 +350,7 @@ export function Material({
 }: MaterialProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
+  const [paneW, setPaneW] = useState(0);
   const [viewH, setViewH] = useState(0);
   const [top, setTop] = useState(0);
   const [zoom, setZoom] = useState(() => memory.get(tabId)?.zoom ?? 1);
@@ -380,6 +388,7 @@ export function Material({
     if (boxing === undefined) setBoxes([]);
   }
 
+  const beside = contents && !boxing && paneW >= besideAt;
   const fitW = Math.max(0, width - 2 * PAD);
   const pageW = Math.round(fitW * zoom);
   const pageH = Math.round(pageW / book.aspect);
@@ -414,7 +423,9 @@ export function Material({
   useLayoutEffect(() => {
     const el = scroller.current;
     if (!el) return;
+    const rootEl = root.current;
     const measure = () => {
+      if (rootEl) setPaneW(rootEl.clientWidth);
       setWidth(el.clientWidth || 600);
       setViewH(el.clientHeight || 640);
     };
@@ -422,6 +433,7 @@ export function Material({
     if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(measure);
     ro.observe(el);
+    if (rootEl) ro.observe(rootEl);
     return () => {
       ro.disconnect();
     };
@@ -671,6 +683,12 @@ export function Material({
 
   const pageButton =
     'ds-small ds-tabular rounded-(--ds-radius-tag) px-1.5 py-0.5';
+  // The page number and its edit box are one control of one size (M4): the
+  // box only gains a field border and background in place.
+  const pageBox = `${pageButton} flex h-7 items-center gap-1`;
+  const numBox =
+    'ds-small ds-tabular box-border flex h-6 items-center justify-end rounded-(--ds-radius-tag) border px-1';
+  const numW = `calc(${String(String(printedMax).length)}ch + 10px)`;
 
   return (
     <div
@@ -719,27 +737,34 @@ export function Material({
             <div className="ds-small flex shrink-0 items-center gap-2 text-(--ds-fg-muted)">
               {goTo ? (
                 <>
-                  <span>p.</span>
-                  <input
-                    autoFocus
-                    inputMode="numeric"
-                    aria-label="Go to printed page"
-                    value={goTo.text}
-                    onChange={(e) => {
-                      setGoTo({ text: e.target.value });
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') commitGo();
-                      if (e.key === 'Escape') {
-                        e.stopPropagation();
-                        setGoTo(null);
-                      }
-                    }}
-                    onBlur={() => {
-                      setGoTo(null);
-                    }}
-                    className="ds-small ds-tabular mx-1 h-7 w-14 rounded-(--ds-radius-tag) border border-(--ds-accent) bg-transparent px-1.5 text-right text-(--ds-fg)"
-                  />
+                  <div className={`${pageBox} text-(--ds-fg)`}>
+                    <span>p.</span>
+                    <div
+                      className={`${numBox} border-(--ds-border) bg-(--ds-bg-inset) focus-within:border-(--ds-accent)`}
+                      style={{ width: numW }}
+                    >
+                      <input
+                        autoFocus
+                        inputMode="numeric"
+                        aria-label="Go to printed page"
+                        value={goTo.text}
+                        onChange={(e) => {
+                          setGoTo({ text: e.target.value });
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') commitGo();
+                          if (e.key === 'Escape') {
+                            e.stopPropagation();
+                            setGoTo(null);
+                          }
+                        }}
+                        onBlur={() => {
+                          setGoTo(null);
+                        }}
+                        className="ds-small ds-tabular size-full min-w-0 bg-transparent p-0 text-right text-(--ds-fg) outline-none"
+                      />
+                    </div>
+                  </div>
                   {goTo.error ? (
                     <span role="alert" className="text-(--ds-danger)">
                       {goTo.error}
@@ -756,11 +781,21 @@ export function Material({
                       setContents(false);
                       setGoTo({ text: '' });
                     }}
-                    className={`${pageButton} min-w-14 text-center hover:bg-(--ds-hover) ${printedHere === undefined ? '' : 'text-(--ds-fg)'}`}
+                    className={`${pageBox} hover:bg-(--ds-hover) ${printedHere === undefined ? '' : 'text-(--ds-fg)'}`}
                   >
-                    {printedHere === undefined
-                      ? `PDF ${String(pdfHere)}`
-                      : `p. ${String(printedHere)}`}
+                    {printedHere === undefined ? (
+                      `PDF ${String(pdfHere)}`
+                    ) : (
+                      <>
+                        <span>p.</span>
+                        <span
+                          className={`${numBox} border-transparent`}
+                          style={{ width: numW }}
+                        >
+                          {printedHere}
+                        </span>
+                      </>
+                    )}
                   </button>
                   {printedHere !== undefined && (
                     <span className="ds-tabular inline-block min-w-14 text-(--ds-fg-muted)">{`of ${String(printedMax)}`}</span>
@@ -770,7 +805,7 @@ export function Material({
 
               {goTo?.error ? null : zoom === 1 ? (
                 <span
-                  className={`${pageButton} inline-block min-w-14 text-right text-(--ds-fg-muted)`}
+                  className={`${pageButton} inline-block min-w-14 text-center text-(--ds-fg-muted)`}
                 >
                   100%
                 </span>
@@ -787,7 +822,7 @@ export function Material({
                     };
                     setZoom(1);
                   }}
-                  className={`${pageButton} min-w-14 text-right text-(--ds-fg) hover:bg-(--ds-hover)`}
+                  className={`${pageButton} min-w-14 text-center text-(--ds-fg) hover:bg-(--ds-hover)`}
                 >
                   {`${String(Math.round(zoom * 100))}%`}
                 </button>
@@ -796,73 +831,76 @@ export function Material({
           </>
         )}
       </div>
-      {contents && !boxing && (
-        <Contents
-          name={name}
-          tree={book.contents}
-          printed={printedHere}
-          onPick={(p) => {
-            setContents(false);
-            toPdf(pdfOf(book, p));
+      <div className="relative flex min-h-0 flex-1">
+        {contents && !boxing && (
+          <Contents
+            name={name}
+            tree={book.contents}
+            printed={printedHere}
+            beside={beside}
+            onPick={(p) => {
+              if (!beside) setContents(false);
+              toPdf(pdfOf(book, p));
+            }}
+          />
+        )}
+        <div
+          ref={scroller}
+          data-scroller
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            setLeft(el.scrollLeft);
+            if (
+              ours.current !== undefined &&
+              Math.abs(el.scrollTop - ours.current) < 2
+            )
+              return;
+            ours.current = undefined;
+            setPinned(undefined);
+            anchor.current = {
+              at: (el.scrollTop - PAD) / geo.current.pitch,
+              cy: 0,
+              cx: 0,
+              rx: undefined,
+            };
+            setTop(el.scrollTop);
           }}
-        />
-      )}
-      <div
-        ref={scroller}
-        data-scroller
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          setLeft(el.scrollLeft);
-          if (
-            ours.current !== undefined &&
-            Math.abs(el.scrollTop - ours.current) < 2
-          )
-            return;
-          ours.current = undefined;
-          setPinned(undefined);
-          anchor.current = {
-            at: (el.scrollTop - PAD) / geo.current.pitch,
-            cy: 0,
-            cx: 0,
-            rx: undefined,
-          };
-          setTop(el.scrollTop);
-        }}
-        className="min-h-0 flex-1 overflow-auto bg-(--ds-bg-inset)"
-      >
-        <div className="relative" style={{ width: innerW, height: total }}>
-          {shown.map((pdf) => (
-            <PageSlot
-              key={pdf}
-              book={book}
-              name={name}
-              pdf={pdf}
-              left={(innerW - pageW) / 2}
-              top={PAD + (pdf - 1) * pitch}
-              w={pageW}
-              h={pageH}
-              loadMs={loadMs}
-              broken={brokenPages.includes(pdf)}
-              loaded={loaded}
-              flash={
-                flash && pdfOf(book, flash.page) === pdf
-                  ? { rect: flash.box, n: flash.n }
-                  : undefined
-              }
-              boxing={boxing !== undefined}
-              boxes={boxes.filter((b) => b.pdf === pdf)}
-              onBox={(b) => {
-                const all = [...boxes, b];
-                setBoxes(all);
-                onBoxes?.(all);
-              }}
-              onRemoveBox={(b) => {
-                const all = boxes.filter((x) => x !== b);
-                setBoxes(all);
-                onBoxes?.(all);
-              }}
-            />
-          ))}
+          className="min-h-0 min-w-0 flex-1 overflow-auto bg-(--ds-bg-inset)"
+        >
+          <div className="relative" style={{ width: innerW, height: total }}>
+            {shown.map((pdf) => (
+              <PageSlot
+                key={pdf}
+                book={book}
+                name={name}
+                pdf={pdf}
+                left={(innerW - pageW) / 2}
+                top={PAD + (pdf - 1) * pitch}
+                w={pageW}
+                h={pageH}
+                loadMs={loadMs}
+                broken={brokenPages.includes(pdf)}
+                loaded={loaded}
+                flash={
+                  flash && pdfOf(book, flash.page) === pdf
+                    ? { rect: flash.box, n: flash.n }
+                    : undefined
+                }
+                boxing={boxing !== undefined}
+                boxes={boxes.filter((b) => b.pdf === pdf)}
+                onBox={(b) => {
+                  const all = [...boxes, b];
+                  setBoxes(all);
+                  onBoxes?.(all);
+                }}
+                onRemoveBox={(b) => {
+                  const all = boxes.filter((x) => x !== b);
+                  setBoxes(all);
+                  onBoxes?.(all);
+                }}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>

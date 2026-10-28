@@ -46,7 +46,7 @@ describe('Material', () => {
 
   it('shows the printed page, and PDF 3 on an unnumbered one', () => {
     const a = render(<Material {...base} memory={pageMemory()} page={112} />);
-    expect(a.textContent).toContain('p. 112');
+    expect(a.textContent).toContain('p.112');
     expect(a.textContent).toContain('of 640');
     const b = render(<Material {...base} memory={pageMemory()} startPdf={3} />);
     expect(b.textContent).toContain('PDF 3');

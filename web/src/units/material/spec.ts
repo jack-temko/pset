@@ -16,7 +16,12 @@ export default defineSpec({
     {
       id: 'contents',
       name: 'Contents',
-      when: 'The list over the pages: chapters and sections, the section you are in marked, anything deeper folded under its section.',
+      when: 'Under 720px wide: the list over the pages, chapters and sections, the section you are in marked, deeper ones folded. A pick closes it.',
+    },
+    {
+      id: 'contents-beside',
+      name: 'Contents beside the pages',
+      when: 'From 720px wide: a column on the left, the pages shrink to the rest. It stays open, its marked row follows the page, a pick jumps and keeps it open.',
     },
     {
       id: 'go-to-page',
@@ -198,6 +203,10 @@ export default defineSpec({
     },
     { name: 'startContents', does: 'Opens with Contents showing.' },
     {
+      name: 'besideAt',
+      does: 'The pane width from which Contents sits beside the pages (720 by default).',
+    },
+    {
       name: 'startGoTo',
       does: 'Opens with the page number box in use: what is typed, and whether it was entered.',
     },
@@ -280,6 +289,7 @@ export default defineSpec({
       id: 'material-d3',
       decision:
         'Contents opens over the pages from its button and closes after a pick.',
+      supersededBy: 'material-d16',
       why: 'Jack picked "Behind a button, over the pages (Recommended)": the pages keep the half-width side (M3).',
       beat: 'An always-shown rail; no contents',
       date: '2026-10-22',
@@ -379,6 +389,14 @@ export default defineSpec({
       why: 'The tab label and the work pane’s page links already speak printed pages (W11, P11).',
       beat: 'PDF pages for the workspace',
       date: '2026-10-22',
+    },
+    {
+      id: 'material-d16',
+      decision:
+        'From 720px wide, Contents is a column beside the pages, which shrink to fit; it stays open and follows the page. Narrower, it stays as M3.',
+      why: 'Jack: "if possible and there is width can we somehow shrink the preview so I can still see some of the page while I scroll" (amends M3; see log.md).',
+      beat: 'Contents always over the pages',
+      date: '2026-10-27',
     },
   ],
 });

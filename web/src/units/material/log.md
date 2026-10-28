@@ -9,3 +9,5 @@ Batch 2: zoom **"Fit width, pinch to zoom, remembered (Recommended)"**; keep the
 Batch 3: controls **"A thin line at the top (Recommended)"**; a page with no printed number **"The PDF page, muted: 'PDF 3' (Recommended)"**; a loading page **"A plain page-shaped box (Recommended)"**; a material being read in **"One wait screen"**.
 
 Batch 4: boxing **"A boxing mode in the material pane (Recommended)"**.
+
+Amendment of 2026-10-27, Jack, on Contents (amends M3): "When context is presset, if possible and there is width can we somehow shrink the preview so I can still see some of the page while I scroll and see the selected page in the contents bar highlight?" See material-d16.

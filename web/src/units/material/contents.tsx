@@ -23,17 +23,21 @@ function currentOf(
 
 /** The list over the pages (M3, A2): chapters and their sections, the
  *  section you are in marked, anything deeper folded under its section. A pick
- *  goes to the page; the pane closes the list. */
+ *  goes to the page; over the pages the pane closes the list, beside them
+ *  (D16) it stays and follows the page. */
 export function Contents({
   name,
   tree,
   printed,
+  beside,
   onPick,
 }: {
   name: string;
   tree: readonly Section[];
   /** The printed page the student is on, if it has one. */
   printed: number | undefined;
+  /** Beside the pages (a column that stays open) rather than over them. */
+  beside: boolean;
   onPick: (page: number) => void;
 }) {
   const here = currentOf(tree, printed);
@@ -43,14 +47,23 @@ export function Contents({
     () => new Set(here.length > 2 ? [here[1]] : []),
   );
   const panel = useRef<HTMLDivElement>(null);
+  const placed = useRef(false);
   const markedRow = useRef<HTMLDivElement>(null);
   // The marked section is brought to the middle when the list opens and when
   // the marked one changes, not on every render.
   useEffect(() => {
     const row = markedRow.current;
     const box = panel.current;
-    if (row && box) box.scrollTop = row.offsetTop - box.clientHeight / 2;
-  }, [marked]);
+    if (!row || !box) return;
+    // Beside the pages the list follows the page quietly: it moves only when
+    // the marked row has left the view.
+    const seen =
+      row.offsetTop >= box.scrollTop &&
+      row.offsetTop + row.offsetHeight <= box.scrollTop + box.clientHeight;
+    if (!(beside && seen && placed.current))
+      box.scrollTop = row.offsetTop - box.clientHeight / 2;
+    placed.current = true;
+  }, [marked, beside]);
   const toggle = (s: Section) => {
     setOpen((o) => {
       const next = new Set(o);
@@ -113,7 +126,11 @@ export function Contents({
     <div
       data-contents
       ref={panel}
-      className="absolute inset-x-0 top-11 bottom-0 z-10 overflow-y-auto border-b border-(--ds-border-muted) bg-(--ds-bg) py-2"
+      className={
+        beside
+          ? 'relative w-72 shrink-0 overflow-y-auto border-r border-(--ds-border-muted) bg-(--ds-bg) py-2'
+          : 'absolute inset-0 z-10 overflow-y-auto border-b border-(--ds-border-muted) bg-(--ds-bg) py-2'
+      }
     >
       <p className="ds-label px-4 pt-1 pb-2 text-(--ds-fg-muted) [overflow-wrap:anywhere]">
         {name}
