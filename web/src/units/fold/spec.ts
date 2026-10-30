@@ -36,7 +36,7 @@ export default defineSpec({
       id: 'fold-d1',
       decision:
         'A fold is a muted line with a chevron, 32 high, that opens in place and pushes what is below down.',
-      why: 'Assumed, to confirm with Jack: the course view and Settings fold what most visits skip (C3, C9, G3, G4, G11).',
+      why: 'Confirmed by Jack: "One list, Done folded (Recommended)" (C3), and the same for the models (G3) and health (G4, G11). The memories fold is assumed.',
       beat: 'A "Show" link; a separate page',
       date: '2026-10-22',
     },

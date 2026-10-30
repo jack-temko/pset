@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { money, plural } from '@/lib/format';
 import { Button } from '@/units/button';
 import { Confirm } from '@/units/confirm';
+import { DangerDialog } from '@/units/danger-dialog';
 import { Fold } from '@/units/fold';
 import { List } from '@/units/list';
 import { ListRow } from '@/units/list-row';
@@ -32,12 +33,65 @@ function Bar({ className }: { className: string }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+/** One group of the page: a heading over an outlined box of rows
+ *  (settings-d15). */
+function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section>
       <SectionHeading>{title}</SectionHeading>
-      <div className="mt-3">{children}</div>
+      <div className="mt-3">
+        <List>{children}</List>
+      </div>
     </section>
+  );
+}
+
+/** One setting: its name and a line saying what it does on the left, the
+ *  control on the right, as GitHub and macOS settings are laid out. A row
+ *  whose control is a field aligns to the top, so the field's note under it
+ *  does not push the name off centre. */
+function Row({
+  name,
+  hint,
+  top,
+  children,
+}: {
+  name: string;
+  hint: ReactNode;
+  top?: boolean;
+  children?: ReactNode;
+}) {
+  return (
+    <div
+      className={`flex min-h-16 min-w-0 justify-between gap-6 px-4 py-3 ${top ? 'items-start' : 'items-center'}`}
+    >
+      <div className="min-w-0 flex-1">
+        <p className="ds-body font-medium text-(--ds-fg)">{name}</p>
+        <p className="ds-small text-(--ds-fg-muted)">{hint}</p>
+      </div>
+      {children !== undefined && <div className="shrink-0">{children}</div>}
+    </div>
+  );
+}
+
+/** A fold inside the box, its rows under a hairline. */
+function FoldRow({
+  label,
+  open,
+  children,
+}: {
+  label: string;
+  open?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="px-2">
+      <Fold label={label} defaultOpen={open}>
+        <div className="-mx-2 divide-y divide-(--ds-border-muted) border-t border-(--ds-border-muted)">
+          {children}
+        </div>
+      </Fold>
+    </div>
   );
 }
 
@@ -57,9 +111,9 @@ function useLater() {
   };
 }
 
-/** The Settings page (G1 to G12, all assumed, to confirm with Jack): one
- *  column of short sections in the order a student needs them. It reads
- *  sample data; nothing is saved or sent. */
+/** The Settings page (G1 to G13, confirmed by Jack in settings-view-grill):
+ *  four groups on one page, each row a name and what it does on the left and
+ *  its control on the right. It reads sample data; nothing is saved or sent. */
 export function Settings({
   settings,
   failed,
@@ -94,9 +148,9 @@ export function Settings({
   const [checking, setChecking] = useState(false);
   const [upToDate, setUpToDate] = useState(false);
   const [errors, setErrors] = useState(settings.errors);
-  const [confirming, setConfirming] = useState<'history' | 'all'>();
+  const [confirming, setConfirming] = useState<'history' | 'errors' | 'all'>();
   const [historyEl, setHistoryEl] = useState<HTMLElement | null>(null);
-  const [resetEl, setResetEl] = useState<HTMLElement | null>(null);
+  const [errorsEl, setErrorsEl] = useState<HTMLElement | null>(null);
 
   const { counts } = settings;
 
@@ -175,7 +229,7 @@ export function Settings({
         path={[{ label: 'Home', href: homeHref }, { label: 'Settings' }]}
       />
       <div className="px-(--ds-gutter) pb-16">
-        <div className="@container mx-auto max-w-[720px]">
+        <div className="@container mx-auto max-w-(--ds-page-width)">
           <div className="ds-room-display">
             <h1 className="ds-display text-(--ds-fg)">Settings</h1>
           </div>
@@ -190,94 +244,135 @@ export function Settings({
               <Button>Try again</Button>
             </div>
           ) : (
-            <div className="space-y-12">
-              <Section title="You">
-                <TextField
-                  label="Name"
-                  value={name}
-                  onChange={setName}
-                  onCommit={commitName}
-                  placeholder="Your first name"
-                  note={saved ? 'Saved' : 'What PSet calls you.'}
-                />
-              </Section>
+            <div className="space-y-10">
+              <Group title="You">
+                <Row name="Name" hint="What PSet calls you." top>
+                  <div className="w-[280px]">
+                    <TextField
+                      label="Name"
+                      labelHidden
+                      value={name}
+                      onChange={setName}
+                      onCommit={commitName}
+                      placeholder="Your first name"
+                      note={saved ? 'Saved' : ''}
+                    />
+                  </div>
+                </Row>
+                <Row
+                  name="Appearance"
+                  hint="Paper, Night, or follow your computer."
+                >
+                  <SegmentedControl
+                    label="Appearance"
+                    options={APPEARANCES}
+                    value={appearance}
+                    onChange={(id) => {
+                      setAppearance(id as Appearance);
+                    }}
+                  />
+                </Row>
+              </Group>
 
-              <Section title="Model key">
-                <TextField
-                  label="OpenRouter key"
-                  value={key}
-                  onChange={(v) => {
-                    setKey(v);
-                    setResult(undefined);
-                  }}
-                  mono
-                  secret
-                  placeholder="sk-or-v1-"
-                  failed={result === 'failed'}
-                  note={keyNote}
-                  action={
-                    <div className="flex gap-2">
-                      <Button
-                        busy={testing}
-                        notReady={keyReady}
-                        onPress={() => {
-                          test(false);
-                        }}
-                      >
-                        Test
-                      </Button>
-                      <Button
-                        variant="primary"
-                        busy={testing}
-                        notReady={keyReady}
-                        onPress={() => {
-                          test(true);
-                        }}
-                      >
-                        Save
-                      </Button>
-                    </div>
+              <Group title="Model">
+                <Row
+                  name="OpenRouter key"
+                  hint="Lets PSet read pages and guide you."
+                  top
+                >
+                  <div className="w-[520px]">
+                    <TextField
+                      label="OpenRouter key"
+                      labelHidden
+                      value={key}
+                      onChange={(v) => {
+                        setKey(v);
+                        setResult(undefined);
+                      }}
+                      mono
+                      secret
+                      placeholder="sk-or-v1-"
+                      failed={result === 'failed'}
+                      note={keyNote}
+                      action={
+                        <div className="flex gap-2">
+                          <Button
+                            busy={testing}
+                            notReady={keyReady}
+                            onPress={() => {
+                              test(false);
+                            }}
+                          >
+                            Test
+                          </Button>
+                          <Button
+                            variant="primary"
+                            busy={testing}
+                            notReady={keyReady}
+                            onPress={() => {
+                              test(true);
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      }
+                    />
+                  </div>
+                </Row>
+                <FoldRow label="Models PSet uses" open={unfolded}>
+                  {settings.models.map((m) => (
+                    <ListRow key={m.job} title={m.job} meta={[m.model]} />
+                  ))}
+                </FoldRow>
+                <Row
+                  name={`Spent in ${settings.usage.month}`}
+                  hint="What the models cost you, by course below."
+                >
+                  <span className="ds-body ds-tabular text-(--ds-fg)">
+                    {money(settings.usage.total)}
+                  </span>
+                </Row>
+                {settings.usage.courses.map((c) => (
+                  <ListRow
+                    key={c.name}
+                    title={c.name}
+                    aside={
+                      <div className="flex items-center gap-3">
+                        <Meter value={c.cost} max={settings.usage.total} />
+                        <span className="ds-small ds-tabular w-20 shrink-0 text-right text-(--ds-fg-muted)">
+                          {money(c.cost)}
+                        </span>
+                      </div>
+                    }
+                    asideWidth={320}
+                  />
+                ))}
+                <Row name="All time" hint="Everything PSet has spent for you.">
+                  <span className="ds-body ds-tabular text-(--ds-fg)">
+                    {money(settings.usage.allTime)}
+                  </span>
+                </Row>
+              </Group>
+
+              <Group title="PSet">
+                <Row
+                  name={`pset ${settings.version}`}
+                  hint={
+                    update === 'current'
+                      ? upToDate
+                        ? 'You have the latest version.'
+                        : 'Up to date.'
+                      : `${settings.update.latest ?? ''} is available.`
                   }
-                />
-                <Fold label="Models PSet uses" defaultOpen={unfolded}>
-                  <List>
-                    {settings.models.map((m) => (
-                      <ListRow key={m.job} title={m.job} meta={[m.model]} />
-                    ))}
-                  </List>
-                </Fold>
-              </Section>
-
-              <Section title="Appearance">
-                <SegmentedControl
-                  label="Appearance"
-                  options={APPEARANCES}
-                  value={appearance}
-                  onChange={(id) => {
-                    setAppearance(id as Appearance);
-                  }}
-                />
-              </Section>
-
-              <Section title="Updates">
-                <div className="flex min-h-8 items-center justify-between gap-4">
-                  <p className="ds-body text-(--ds-fg)">
-                    pset {settings.version}
-                    {update === 'current' && (
-                      <span className="text-(--ds-fg-muted)">
-                        {upToDate
-                          ? ' · You have the latest version'
-                          : ' · Up to date'}
-                      </span>
-                    )}
-                  </p>
+                >
                   <Button busy={checking} onPress={check}>
                     Check for updates
                   </Button>
-                </div>
+                </Row>
                 {update !== 'current' && (
-                  <div className="mt-3 grid rounded-(--ds-radius-control) border border-(--ds-border) px-4 py-3">
-                    {/* Both faces stack in one cell, so the card keeps its height. */}
+                  <div className="grid px-4 py-3">
+                    {/* Both faces stack in one cell, so the row keeps its height. */}
                     <div
                       className={`flex min-w-0 items-start justify-between gap-4 [grid-area:1/1] ${update === 'updating' ? 'invisible' : ''}`}
                       aria-hidden={update === 'updating'}
@@ -313,147 +408,119 @@ export function Settings({
                     </div>
                   </div>
                 )}
-              </Section>
-
-              <Section title="Usage">
-                <p className="ds-body ds-tabular text-(--ds-fg)">
-                  {money(settings.usage.total)}{' '}
-                  <span className="text-(--ds-fg-muted)">
-                    in {settings.usage.month}
-                  </span>
-                </p>
-                <div className="mt-3">
-                  <List empty="Nothing spent yet this month.">
-                    {settings.usage.courses.map((c) => (
+                <Row
+                  name="Health"
+                  hint={
+                    failing.length === 0
+                      ? 'Everything is working'
+                      : `${plural(failing.length, 'check is', 'checks are')} failing.`
+                  }
+                />
+                <FoldRow label="Checks" open={unfolded || failing.length > 0}>
+                  {rows}
+                </FoldRow>
+                {errors.length > 0 && (
+                  <FoldRow
+                    label={`Recent errors (${String(errors.length)})`}
+                    open={unfolded}
+                  >
+                    {errors.map((e) => (
                       <ListRow
-                        key={c.name}
-                        title={c.name}
-                        aside={
-                          <div className="flex items-center gap-3">
-                            <Meter value={c.cost} max={settings.usage.total} />
-                            <span className="ds-small ds-tabular w-20 shrink-0 text-right text-(--ds-fg-muted)">
-                              {money(c.cost)}
-                            </span>
-                          </div>
-                        }
-                        asideWidth={280}
+                        key={e.id}
+                        title={e.reason}
+                        meta={[e.fix, e.when]}
+                        status={<span className="ds-code">{e.id}</span>}
                       />
                     ))}
-                  </List>
-                </div>
-                <p className="ds-small ds-tabular mt-2 text-(--ds-fg-muted)">
-                  {money(settings.usage.allTime)} all time
-                </p>
-              </Section>
-
-              <Section title="Health">
-                {failing.length === 0 ? (
-                  <Fold label="Everything is working" defaultOpen={unfolded}>
-                    <List>{rows}</List>
-                  </Fold>
-                ) : (
-                  <>
-                    <p className="ds-body mb-3 text-(--ds-fg)">
-                      {plural(failing.length, 'check is', 'checks are')}{' '}
-                      failing.
-                    </p>
-                    <List>{rows}</List>
-                  </>
-                )}
-                {errors.length > 0 && (
-                  <div className="mt-2">
-                    <Fold
-                      label={`Recent errors (${String(errors.length)})`}
-                      defaultOpen={unfolded}
-                    >
-                      <List>
-                        {errors.map((e) => (
-                          <ListRow
-                            key={e.id}
-                            title={e.reason}
-                            meta={[e.fix, e.when]}
-                            status={<span className="ds-code">{e.id}</span>}
-                          />
-                        ))}
-                      </List>
-                      <div className="mt-3">
+                    <div className="px-4 py-3">
+                      <div ref={setErrorsEl} className="inline-block">
                         <Button
                           onPress={() => {
-                            setErrors([]);
+                            setConfirming('errors');
                           }}
                         >
                           Clear all
                         </Button>
                       </div>
-                    </Fold>
+                    </div>
+                  </FoldRow>
+                )}
+                <Row
+                  name="Data folder"
+                  hint="Where PSet keeps your courses and study."
+                >
+                  <span className="ds-code text-(--ds-fg-muted)">
+                    {settings.dataDir}
+                  </span>
+                </Row>
+              </Group>
+
+              <Group title="Reset">
+                <Row
+                  name="Clear study history"
+                  hint="Removes time studied and answers; keeps your courses."
+                >
+                  <div ref={setHistoryEl}>
+                    <Button
+                      onPress={() => {
+                        setConfirming('history');
+                      }}
+                    >
+                      Clear
+                    </Button>
                   </div>
-                )}
-              </Section>
-
-              <Section title="Reset">
-                <List>
-                  <ListRow
-                    title="Clear study history"
-                    meta={[
-                      'Removes time studied and answers; keeps your courses',
-                    ]}
-                    aside={
-                      <div ref={setHistoryEl} className="flex justify-end">
-                        <Button
-                          onPress={() => {
-                            setConfirming('history');
-                          }}
-                        >
-                          Clear
-                        </Button>
-                      </div>
-                    }
-                    asideWidth={96}
-                  />
-                  <ListRow
-                    title="Reset everything"
-                    meta={['Removes every course, set, material and memory']}
-                    aside={
-                      <div ref={setResetEl} className="flex justify-end">
-                        <Button
-                          variant="danger"
-                          onPress={() => {
-                            setConfirming('all');
-                          }}
-                        >
-                          Reset
-                        </Button>
-                      </div>
-                    }
-                    asideWidth={96}
-                  />
-                </List>
-                {confirming && (
-                  <Confirm
-                    anchor={confirming === 'history' ? historyEl : resetEl}
-                    message={
-                      confirming === 'history'
-                        ? `This deletes ${String(counts.studyHours)} h of study time and ${plural(counts.answers, 'answer', 'answers')}.`
-                        : `This deletes ${plural(counts.courses, 'course', 'courses')}, ${plural(counts.sets, 'set', 'sets')}, ${plural(counts.materials, 'material', 'materials')} and ${plural(counts.memories, 'memory', 'memories')}.`
-                    }
-                    confirmLabel={
-                      confirming === 'history'
-                        ? 'Clear study history'
-                        : 'Reset everything'
-                    }
-                    onConfirm={() => {
-                      setConfirming(undefined);
+                </Row>
+                <Row
+                  name="Reset everything"
+                  hint="Removes every course, set, material and memory."
+                >
+                  <Button
+                    variant="danger"
+                    onPress={() => {
+                      setConfirming('all');
                     }}
-                    onCancel={() => {
-                      setConfirming(undefined);
-                    }}
-                  />
-                )}
-              </Section>
+                  >
+                    Reset
+                  </Button>
+                </Row>
+              </Group>
 
-              <p className="ds-small text-(--ds-fg-muted)">
-                {settings.dataDir}
-              </p>
+              {(confirming === 'history' || confirming === 'errors') && (
+                <Confirm
+                  anchor={confirming === 'history' ? historyEl : errorsEl}
+                  message={
+                    confirming === 'history'
+                      ? `This deletes ${String(counts.studyHours)} h of study time and ${plural(counts.answers, 'answer', 'answers')}.`
+                      : `This clears ${plural(errors.length, 'kept error', 'kept errors')}.`
+                  }
+                  confirmLabel={
+                    confirming === 'history'
+                      ? 'Clear study history'
+                      : 'Clear errors'
+                  }
+                  onConfirm={() => {
+                    if (confirming === 'errors') setErrors([]);
+                    setConfirming(undefined);
+                  }}
+                  onCancel={() => {
+                    setConfirming(undefined);
+                  }}
+                />
+              )}
+              {confirming === 'all' && (
+                <DangerDialog
+                  title="Reset everything"
+                  message={`This deletes ${plural(counts.courses, 'course', 'courses')}, ${plural(counts.sets, 'set', 'sets')}, ${plural(counts.materials, 'material', 'materials')} and ${plural(counts.memories, 'memory', 'memories')}.`}
+                  word="reset"
+                  confirmLabel="Reset everything"
+                  onConfirm={() => {
+                    setConfirming(undefined);
+                  }}
+                  onCancel={() => {
+                    setConfirming(undefined);
+                  }}
+                />
+              )}
             </div>
           )}
         </div>
@@ -470,7 +537,7 @@ export function SettingsSkeleton({
   homeHref?: string;
   settingsHref?: string;
 }) {
-  const heights = [80, 112, 32, 32, 186, 32, 123];
+  const heights = [145, 372, 235, 135];
   return (
     <div>
       <TopBar
@@ -480,13 +547,13 @@ export function SettingsSkeleton({
         path={[{ label: 'Home', href: homeHref }, { label: 'Settings' }]}
       />
       <div className="px-(--ds-gutter) pb-16">
-        <div className="@container mx-auto max-w-[720px]">
+        <div className="@container mx-auto max-w-(--ds-page-width)">
           <div className="ds-room-display">
             <div className="flex h-(--ds-display-line) items-center">
               <Bar className="h-9 w-[224px]" />
             </div>
           </div>
-          <div className="space-y-12">
+          <div className="space-y-10">
             {heights.map((h, i) => (
               <div key={i}>
                 <div className="flex min-h-8 items-center">
@@ -499,9 +566,6 @@ export function SettingsSkeleton({
                 </div>
               </div>
             ))}
-            <div className="flex h-5 items-center">
-              <Bar className="h-3 w-48" />
-            </div>
           </div>
         </div>
       </div>

@@ -6,18 +6,19 @@ export default defineSpec({
   title: 'Confirm',
   group: 'Basics',
   purpose:
-    'A question before something is taken away: it says what goes, with counts, then a danger button and Cancel. It floats under the button that began it, so nothing moves.',
+    'A question before something is taken away: what goes with counts, then a danger button and Cancel. The middle level of asking; it floats under its button.',
   states: [
     {
-      id: 'course',
-      name: 'Delete a course',
-      when: 'Counts the sets and materials that go with the course.',
-      text: 'This deletes 12 sets and 9 materials.',
+      id: 'history',
+      name: 'Clear study history',
+      when: 'Counts the hours and answers that go.',
+      text: 'This deletes 86 h of study time and 1,032 answers.',
     },
     {
-      id: 'reset',
-      name: 'Reset everything',
-      when: 'Counts what a full reset takes.',
+      id: 'errors',
+      name: 'Clear kept errors',
+      when: 'Counts the errors Settings has kept.',
+      text: 'This clears 3 kept errors.',
     },
   ],
   stress:
@@ -25,7 +26,7 @@ export default defineSpec({
   actions: [
     {
       id: 'confirm',
-      label: 'Delete course',
+      label: 'Clear study history',
       does: 'Does the thing, and the confirm closes.',
     },
     {
@@ -49,7 +50,14 @@ export default defineSpec({
   ],
   priority: { first: 'What goes.', main: 'cancel' },
   sizes: { gives: ['The message wraps'] },
-  rules: { cite: ['student-decides', 'colour-has-a-word', 'sentence-case'] },
+  rules: {
+    cite: [
+      'friction-matches-loss',
+      'student-decides',
+      'colour-has-a-word',
+      'sentence-case',
+    ],
+  },
   decisions: [
     {
       id: 'confirm-d1',
@@ -67,6 +75,14 @@ export default defineSpec({
       why: 'Review of the Course and Settings builds: an in-place block moved the content below it. Assumed, to confirm with Jack.',
       beat: 'A block that replaces the button or opens above the lists',
       date: '2026-10-22',
+    },
+    {
+      id: 'confirm-d3',
+      decision:
+        'The confirm is the second level: it clears one kind of data (study history, kept errors). A course or everything opens the danger dialog and asks for a name.',
+      why: 'Confirmed by Jack: "Three levels (Recommended)" (settings-view-grill G9).',
+      beat: 'One confirm for every destructive action',
+      date: '2026-10-30',
     },
   ],
 });

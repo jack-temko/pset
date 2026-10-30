@@ -36,7 +36,7 @@ export default defineSpec({
       id: 'segmented-control-d1',
       decision:
         'A segmented control has no Apply: choosing is applying. The chosen segment is filled with the pressed ground.',
-      why: 'Assumed, to confirm with Jack (settings-view-grill G6): Paper, Night and System as one row, applied at once.',
+      why: 'Confirmed by Jack: "Three-part switch (Recommended)" (settings-view-grill G6): Paper, Night and System as one row, applied at once.',
       beat: 'A toggle; a dropdown',
       date: '2026-10-22',
     },

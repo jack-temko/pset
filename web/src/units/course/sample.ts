@@ -1,4 +1,6 @@
+import { sampleStudy } from '@/design/study-sample';
 import { TODAY } from '@/units/assignment-row/sample';
+import type { StudyDay } from '@/units/heatmap';
 import { parseDueDate } from '@/units/set-line/dates';
 
 export { TODAY };
@@ -12,6 +14,8 @@ export interface CourseSet {
   total: number;
   /** Shown only when PSet knows it. */
   minutesLeft?: number;
+  /** Set while PSet is still reading the sheet in: about how many minutes to go. */
+  readingMinutes?: number;
 }
 
 export interface CourseMaterial {
@@ -28,13 +32,26 @@ export interface CourseData {
   name: string;
   sets: readonly CourseSet[];
   materials: readonly CourseMaterial[];
-  studiedMinutes: number;
-  weekMinutes: number;
+  /** Study by day for this course alone, oldest first: the heatmap and the
+   *  week's figures come from it. */
+  study: readonly StudyDay[];
   /** Dollars spent on the course so far. */
   cost: number;
+  /** The last 14 days' spend, oldest first, for the sparkline. */
+  costSpark: readonly number[];
   /** What PSet remembers about the course, one line each. */
   memories: readonly string[];
 }
+
+/** One course's slice of the sample year, kept for it alone. */
+const STUDY: StudyDay[] = sampleStudy().map((d) => ({
+  ...d,
+  courses: d.courses.map((c) => ({ ...c, course: 'ECE 210' })),
+}));
+const COST = 4.2;
+const dayMinutes = (d: StudyDay) =>
+  d.courses.reduce((n, c) => n + c.minutes, 0);
+const TOTAL_MINUTES = STUDY.reduce((n, d) => n + dayMinutes(d), 0);
 
 const day = (d: number) =>
   parseDueDate(`2026-10-${String(d).padStart(2, '0')}`);
@@ -87,9 +104,11 @@ export const ECE: CourseData = {
       pages: 3,
     },
   ],
-  studiedMinutes: 1120,
-  weekMinutes: 130,
-  cost: 4.2,
+  study: STUDY,
+  cost: COST,
+  costSpark: STUDY.slice(-14).map(
+    (d) => (dayMinutes(d) / TOTAL_MINUTES) * COST,
+  ),
   memories: MEMORIES,
 };
 
@@ -103,9 +122,9 @@ export const EMPTY: CourseData = {
   ...ECE,
   sets: [],
   materials: [],
-  studiedMinutes: 0,
-  weekMinutes: 0,
+  study: [],
   cost: 0,
+  costSpark: Array.from({ length: 14 }, () => 0),
   memories: [],
 };
 
@@ -144,8 +163,14 @@ export const STRESS: CourseData = {
     pages: 1200 + i,
     readingMinutes: i === 8 ? 45 : undefined,
   })),
-  studiedMinutes: 99 * 60 + 59,
-  weekMinutes: 40 * 60,
+  study: STUDY.map((d) => ({
+    ...d,
+    questions: (d.questions ?? 0) * 80,
+    courses: d.courses.map((c) => ({
+      course: 'Electromagnetics and the physics of electrical machines',
+      minutes: c.minutes * 40,
+    })),
+  })),
   cost: 1234.5,
   memories: MEMORIES.map((m) => `${m}: ${LONG}`),
 };

@@ -19,6 +19,7 @@ export function TextField({
   action,
   inline,
   autoFocus,
+  labelHidden,
 }: {
   label: string;
   value: string;
@@ -43,6 +44,8 @@ export function TextField({
   inline?: 'row' | 'heading';
   /** Focuses and selects the value when it appears. */
   autoFocus?: boolean;
+  /** The label is for the screen reader only: the row it sits in already says it. */
+  labelHidden?: boolean;
 }) {
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
@@ -75,7 +78,9 @@ export function TextField({
       <label
         htmlFor={id}
         className={
-          bare ? 'sr-only' : 'ds-small mb-1 block text-(--ds-fg-muted)'
+          bare || labelHidden
+            ? 'sr-only'
+            : 'ds-small mb-1 block text-(--ds-fg-muted)'
         }
       >
         {label}
