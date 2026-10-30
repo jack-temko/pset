@@ -37,6 +37,8 @@ export interface CourseData {
   study: readonly StudyDay[];
   /** Dollars spent on the course so far. */
   cost: number;
+  /** Dollars spent on the course this month. */
+  monthCost: number;
   /** The last 14 days' spend, oldest first, for the sparkline. */
   costSpark: readonly number[];
   /** What PSet remembers about the course, one line each. */
@@ -106,6 +108,7 @@ export const ECE: CourseData = {
   ],
   study: STUDY,
   cost: COST,
+  monthCost: 1.1,
   costSpark: STUDY.slice(-14).map(
     (d) => (dayMinutes(d) / TOTAL_MINUTES) * COST,
   ),
@@ -124,6 +127,7 @@ export const EMPTY: CourseData = {
   materials: [],
   study: [],
   cost: 0,
+  monthCost: 0,
   costSpark: Array.from({ length: 14 }, () => 0),
   memories: [],
 };
@@ -172,5 +176,6 @@ export const STRESS: CourseData = {
     })),
   })),
   cost: 1234.5,
+  monthCost: 321.5,
   memories: MEMORIES.map((m) => `${m}: ${LONG}`),
 };
