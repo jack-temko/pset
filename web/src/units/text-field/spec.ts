@@ -76,6 +76,10 @@ export default defineSpec({
       does: 'The line under the field; false leaves the line out.',
     },
     { name: 'action', does: 'A control at the field’s right.' },
+    {
+      name: 'labelHidden',
+      does: 'Hides the label from sight, for a field in a settings row that already names it.',
+    },
   ],
   priority: { first: 'The field.' },
   sizes: { gives: ['The field narrows; its button keeps its size'] },
@@ -85,7 +89,7 @@ export default defineSpec({
       id: 'text-field-d1',
       decision:
         'Fields commit on Enter or on blur when the value changed, once, and show a brief note; no Save button of their own. The note line holds its height.',
-      why: 'Assumed, to confirm with Jack (settings-view-grill G8): fewer buttons, and "Saved" appearing must not move the page.',
+      why: 'Confirmed by Jack: "Save on leave (Recommended)" (settings-view-grill G8): fewer buttons, and "Saved" appearing must not move the page.',
       beat: 'A Save per field',
       date: '2026-10-22',
     },

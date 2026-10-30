@@ -148,4 +148,11 @@ export const RULES: readonly Rule[] = [
       'No date, count, name or state is written twice on one screen, unless never shown together or one answers at a glance what the other needs reading for',
     scope: 'all',
   },
+  {
+    id: 'friction-matches-loss',
+    rule: 'Ask in proportion to the loss: Undo for what can be put back, a confirm beside the button for one kind of data, a typed name for what is wide and final',
+    check:
+      'No undoable action asks first, and no action that deletes a course or everything lacks the typed name',
+    scope: 'all',
+  },
 ];

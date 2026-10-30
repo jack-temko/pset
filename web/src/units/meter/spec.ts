@@ -31,7 +31,7 @@ export default defineSpec({
       id: 'meter-d1',
       decision:
         'A meter is the progress bar without its count: 4 high, the accent fill on the border track.',
-      why: 'Assumed, to confirm with Jack (settings-view-grill G5): usage per course needs a thin bar and the progress bar always shows "x of y".',
+      why: 'Confirmed by Jack: "Month, per course, all time (Recommended)" (G5): usage per course needs a thin bar, and the progress bar shows "x of y".',
       beat: 'Reusing the progress bar with a hidden count',
       date: '2026-10-22',
     },

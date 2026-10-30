@@ -65,7 +65,7 @@ never fetched from a CDN.
 
 `web/src/design/rules.ts` holds the rulebook. It starts with the eleven principles of the
 vision (`ideas/vision-grill.md`), then six for the foundations (serif to read, mono for
-copy, figures follow text, colour has a word, contrast floors, room for big type), then two for controls (one-primary, links-go-buttons-do) and one for labels (sentence-case); further rules are written when the thing they govern is
+copy, figures follow text, colour has a word, contrast floors, room for big type), then two for controls (one-primary, links-go-buttons-do), one for labels (sentence-case) and one for destructive actions (friction-matches-loss); further rules are written when the thing they govern is
 designed. A rule has a permanent id, one sentence, a "how to check it" line, a scope and
 what enforces it. It has no kind: every rule is worded as what to do ("Keep a row title on
 one line"), and a rule with a number just states the number. A spec cites rules by id and

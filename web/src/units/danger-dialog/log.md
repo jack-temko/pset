@@ -1,0 +1,3 @@
+# danger-dialog: log
+
+Built from the Settings grill (`ideas/settings-view-grill.md`, G9). Jack asked "how does github do this? I know they have two types of verisions, where one is the conformation box where you type the name of the repo. Whats the best option for destructive actions in pset? One type? more than one type?" and chose "Three levels (Recommended)": undoable at once with Undo; a small confirm beside the button that counts what goes; a dialog where the student types the course name (or "reset") before the red button enables. This is the third level, used for Delete course and Reset everything (rule `friction-matches-loss`).

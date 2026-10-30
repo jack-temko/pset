@@ -6,18 +6,18 @@ const noop = () => {};
 
 export default defineExamples(spec, Confirm, {
   states: {
-    course: () => (
+    history: () => (
       <Confirm
-        message="This deletes 12 sets and 9 materials."
-        confirmLabel="Delete course"
+        message="This deletes 86 h of study time and 1,032 answers."
+        confirmLabel="Clear study history"
         onConfirm={noop}
         onCancel={noop}
       />
     ),
-    reset: () => (
+    errors: () => (
       <Confirm
-        message="This deletes 4 courses, 31 sets, 52 materials and every memory."
-        confirmLabel="Reset everything"
+        message="This clears 3 kept errors."
+        confirmLabel="Clear errors"
         onConfirm={noop}
         onCancel={noop}
       />
@@ -26,8 +26,8 @@ export default defineExamples(spec, Confirm, {
   stress: () => (
     <div className="w-[360px] max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">
       <Confirm
-        message="This deletes 12 sets, 9 materials, 8 memories and 41 hours of study time from Electromagnetics and the physics of electrical machines."
-        confirmLabel="Delete course"
+        message="This deletes 41 hours of study time and 1,032 answers from Electromagnetics and the physics of electrical machines, across 12 sets and 9 materials."
+        confirmLabel="Clear study history"
         onConfirm={noop}
         onCancel={noop}
       />

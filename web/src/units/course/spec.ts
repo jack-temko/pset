@@ -8,7 +8,7 @@ export default defineSpec({
   title: 'Course',
   group: 'Screens',
   purpose:
-    'One course as a student checks on it: its name, then its Work, its Materials and a quiet footer of time, cost and what PSet remembers, with one Add for any file.',
+    'One course as a student checks on it: its name and where it stands, a stats box like Home’s, then its Work and its Materials, each with its own Add.',
   exampleWidth: 'full',
   states: [
     {
@@ -26,8 +26,8 @@ export default defineSpec({
     {
       id: 'empty',
       name: 'Empty course',
-      when: 'No work and no materials: a centred invitation and Add, and no lists.',
-      text: 'Nothing here yet',
+      when: 'No work and no materials: both lists stay, each with its one-line message and its Add, and the stats box says no study time yet.',
+      text: 'No study time yet',
     },
     {
       id: 'reading-in',
@@ -43,10 +43,11 @@ export default defineSpec({
     },
   ],
   stress:
-    'A 55 character name, 12 sets and 9 materials with 95 character names, 99 questions in a set and 8 memories: names wrap in the heading and truncate in rows.',
+    'A 55 character name, 12 sets and 9 materials with 95 character names, 8 memories and 40 times the study: names wrap in the heading and truncate in rows.',
   flows: [
     { id: 'tonights-work', name: 'Open tonight’s work', steps: ['open-set'] },
-    { id: 'add-a-file', name: 'Add a file', steps: ['add'] },
+    { id: 'add-work', name: 'Add an assignment sheet', steps: ['add-work'] },
+    { id: 'add-material', name: 'Add a material', steps: ['add-material'] },
     {
       id: 'delete-and-undo',
       name: 'Delete a set, then undo',
@@ -60,14 +61,19 @@ export default defineSpec({
   ],
   actions: [
     {
-      id: 'add',
-      label: 'Add',
-      does: 'Opens the file picker; several files at once are fine. PSet decides if each is work or a material.',
+      id: 'add-work',
+      label: 'Add work',
+      does: 'At the foot of Work: opens the file picker for an assignment sheet; each shows as a new set reading in.',
+    },
+    {
+      id: 'add-material',
+      label: 'Add material',
+      does: 'At the foot of Materials: opens the file picker; several files at once are fine, each shows as a new material reading in.',
     },
     {
       id: 'drop-files',
       label: 'Dropping files on the page',
-      does: 'Adds them as Add does: each shows as a new material reading in.',
+      does: 'Adds them as Add material does.',
     },
     {
       id: 'open-set',
@@ -109,13 +115,13 @@ export default defineSpec({
     {
       id: 'delete-course',
       label: 'Delete course',
-      does: 'Asks first, counting the sets and materials that go.',
-      target: { unit: 'confirm', state: 'course' },
+      does: 'Opens a dialog counting the sets and materials that go; the red button waits until the course name is typed.',
+      target: { unit: 'danger-dialog', state: 'course' },
     },
     {
       id: 'confirm-delete',
       label: 'Delete course',
-      does: 'Deletes the course. The sample only empties the page.',
+      does: 'Deletes the course once its name is typed. The sample only empties the page.',
     },
     {
       id: 'forget-memory',
@@ -148,7 +154,7 @@ export default defineSpec({
   ],
   priority: {
     first: 'The name and where the course stands, then Work.',
-    main: 'add',
+    main: 'open-set',
   },
   sizes: {
     gives: [
@@ -167,6 +173,7 @@ export default defineSpec({
       'failure-says-what',
       'room-for-big-type',
       'figures-follow-text',
+      'friction-matches-loss',
       'say-it-once',
       'sentence-case',
       'student-decides',
@@ -187,7 +194,7 @@ export default defineSpec({
       id: 'course-d2',
       decision:
         'The page is Home’s width (1012) and top bar, with the path "Home / ECE 210" (C2).',
-      why: `${ASSUMED}: one look across views.`,
+      why: `Confirmed by Jack: "same as home, we need to keep cross page uniformity where possible." one look across views.`,
       beat: 'A narrower page',
       date: '2026-10-22',
     },
@@ -195,7 +202,7 @@ export default defineSpec({
       id: 'course-d3',
       decision:
         'Work is one list: sets to do by due date (undated last), the finished folded under "Done (6)" at its foot (C3).',
-      why: `${ASSUMED}: one active set is the common case and old sets stay one click away.`,
+      why: `Confirmed by Jack: "One list, Done folded (Recommended)". one active set is the common case and old sets stay one click away.`,
       beat: 'Two lists; newest first with no fold',
       date: '2026-10-22',
     },
@@ -203,7 +210,7 @@ export default defineSpec({
       id: 'course-d4',
       decision:
         'A work row is Home’s assignment row without the course name: set, due tag, time left, due date, progress, then its ... menu (C4).',
-      why: `${ASSUMED}: reuse; the course is the page.`,
+      why: `Confirmed by Jack: "same as home, we need to keep cross page uniformity where possible." reuse; the course is the page.`,
       beat: 'A bigger card per set',
       date: '2026-10-22',
     },
@@ -211,12 +218,13 @@ export default defineSpec({
       id: 'course-d5',
       decision:
         'A material row is its name over "Textbook · 640 pages", and opens the workspace on it alone (C5).',
-      why: `${ASSUMED}: enough to tell two materials apart.`,
+      why: `Confirmed by Jack: "Name, kind, pages (Recommended)". enough to tell two materials apart.`,
       beat: 'Name only; a cover thumbnail',
       date: '2026-10-22',
     },
     {
       id: 'course-d6',
+      supersededBy: 'course-d20',
       decision:
         'One Add takes any file or several, and dropping files on the page does the same; PSet decides if each is work or a material (C6).',
       why: `${ASSUMED}: one door, no choosing first.`,
@@ -226,8 +234,8 @@ export default defineSpec({
     {
       id: 'course-d7',
       decision:
-        'The heading’s ... menu holds Rename and Delete course; deleting asks first and counts the sets and materials that go (C7).',
-      why: `${ASSUMED}: rare actions stay out of sight.`,
+        'The ... menu holds Rename and Delete course; deleting opens a dialog that counts what goes and asks for the course’s name (C7, G9).',
+      why: `Confirmed by Jack: "In ... menus (Recommended)". rare actions stay out of sight.`,
       beat: 'Buttons on the page; in Settings',
       date: '2026-10-22',
     },
@@ -235,12 +243,13 @@ export default defineSpec({
       id: 'course-d8',
       decision:
         'A row’s ... menu: work has Open, Rename and Delete with Undo; a material has Open, Rename and Remove, which keeps the work (C8).',
-      why: `${ASSUMED}: the same Menu as the work pane.`,
+      why: `Confirmed by Jack: "In ... menus (Recommended)". the same Menu as the work pane.`,
       beat: 'Hover buttons on the row',
       date: '2026-10-22',
     },
     {
       id: 'course-d9',
+      supersededBy: 'course-d21',
       decision:
         'A quiet "This course" footer: time studied (total and this week), cost so far, and "PSet remembers 8 things" unfolding a list with each removable (C9).',
       why: `${ASSUMED}: the memory screen's part and finding #5 asked for a cost total.`,
@@ -249,6 +258,7 @@ export default defineSpec({
     },
     {
       id: 'course-d10',
+      supersededBy: 'course-d22',
       decision:
         'An empty course is a centred "Nothing here yet", a line and Add; the heading’s Add and the lists wait until there is something (C10).',
       why: `${ASSUMED}: one clear next step, and one primary button.`,
@@ -259,7 +269,7 @@ export default defineSpec({
       id: 'course-d11',
       decision:
         'A material still being read in shows "Reading, about 2 min" where its pages go (C11).',
-      why: `${ASSUMED}: consistent with the material pane's wait.`,
+      why: `Confirmed by Jack: "Row shows the wait (Recommended)". consistent with the material pane's wait.`,
       beat: 'Hiding it until ready',
       date: '2026-10-22',
     },
@@ -290,6 +300,7 @@ export default defineSpec({
     },
     {
       id: 'course-d15',
+      supersededBy: 'course-d19',
       decision:
         'The muted line under the heading is gone in every state: the Work list right below answers it, with its counter, and "Nothing due" is said once, in the list.',
       why: 'Assumed, to confirm with Jack (say-it-once): the line repeated the Work list and was untrue on an empty course. Supersedes C1’s line.',
@@ -311,6 +322,54 @@ export default defineSpec({
       why: 'Assumed, to confirm with Jack: supersedes the muted-line notice (course-d14); the change shows where it happened and nothing jumps.',
       beat: 'A notice in the heading’s muted line',
       date: '2026-10-22',
+    },
+    {
+      id: 'course-d19',
+      decision:
+        'Under the name sits the muted line, "1 set to do · next due Thu" or "Nothing due", then Home’s stats box. This puts back the line course-d15 removed.',
+      why: 'Confirmed by Jack: "muted line + stats box" (C1). The Work list no longer says "Nothing due" itself, so it is said once (say-it-once).',
+      beat: 'The name alone',
+      date: '2026-10-30',
+    },
+    {
+      id: 'course-d20',
+      decision:
+        'No Add by the heading: Work has "Add work" at its foot and Materials "Add material". Dropping files on the page still adds them as materials.',
+      why: 'Confirmed by Jack: "An Add on each list" (C6). The button words and the drop are assumed, not asked.',
+      beat: 'One Add by the heading that decides what a file is',
+      date: '2026-10-30',
+    },
+    {
+      id: 'course-d21',
+      decision:
+        'The quiet footer is gone: time and cost live in the stats box. "PSet remembers 8 things" stays as a small fold at the foot.',
+      why: 'Confirmed by Jack: "Stats box instead" (C9). That the memories stay as a fold at the foot is assumed, not asked.',
+      beat: 'A quiet footer of time, cost and memories',
+      date: '2026-10-30',
+    },
+    {
+      id: 'course-d22',
+      decision:
+        'An empty course keeps its shape: Work and Materials each with a one-line message and its Add, and the stats box says "No study time yet" at the same height.',
+      why: 'Confirmed by Jack: "Both empty lists, each with its Add" (C10). The stats box showing, not hidden, is Jack’s ask in the same answer.',
+      beat: 'A centred invitation and one Add',
+      date: '2026-10-30',
+    },
+    {
+      id: 'course-d23',
+      decision:
+        'The stats box is Home’s own: the heatmap beside this week’s bars, then questions done and cost so far, each with a sparkline, built from Home’s parts.',
+      why: 'Confirmed by Jack: "same as home, we need to keep cross page uniformity where possible." (C2, C4)',
+      beat: 'A different box for the course',
+      date: '2026-10-30',
+    },
+    {
+      id: 'course-d24',
+      decision:
+        'Delete course is the third level of asking: the danger dialog. Deleting a set or removing a material stays the first: at once, with Undo.',
+      why: 'Confirmed by Jack: "Three levels (Recommended)" (settings-view-grill G9); rule friction-matches-loss.',
+      beat: 'A small confirm for deleting a course',
+      date: '2026-10-30',
     },
   ],
 });

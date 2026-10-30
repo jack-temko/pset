@@ -37,7 +37,7 @@ function Bar({ className }: { className: string }) {
 }
 
 /** A change as a glyph and its words, muted: being behind is not a warning. */
-function ChangeText({ change }: { change: Change }) {
+export function ChangeText({ change }: { change: Change }) {
   return (
     <span className="inline-flex items-center gap-0.5 text-(--ds-fg-muted)">
       {change.direction === 'up' ? (
@@ -53,7 +53,7 @@ function ChangeText({ change }: { change: Change }) {
 const small = 'ds-small truncate text-(--ds-fg-muted)';
 
 /** The muted line under a row's label: last week and how it moved. */
-function Moved({ text, change }: { text: string; change?: Change }) {
+export function Moved({ text, change }: { text: string; change?: Change }) {
   return (
     <p className="ds-small ds-tabular flex items-center gap-x-2 whitespace-nowrap text-(--ds-fg-muted)">
       <span className="truncate">{text}</span>
@@ -66,7 +66,7 @@ const figureOf = (value: string) => (
   <p className="ds-heading ds-tabular text-(--ds-fg)">{value}</p>
 );
 
-function RowSkeleton({ first }: { first?: boolean }) {
+export function RowSkeleton({ first }: { first?: boolean }) {
   return (
     <Row
       first={first}

@@ -8,13 +8,13 @@ export default defineSpec({
   title: 'Settings',
   group: 'Screens',
   purpose:
-    'One calm column of short sections for a student who opens it rarely: the key, how it looks, updates, what PSet spends, whether it is healthy, then the rare resets.',
+    'One page in four groups, You, Model, PSet and Reset, each row a name and what it does on the left and its control on the right, for a student who opens it rarely.',
   exampleWidth: 'full',
   states: [
     {
       id: 'fine',
       name: 'All fine',
-      when: 'A key that works, up to date, nothing failing and no errors kept: Health is one quiet line.',
+      when: 'A key that works, up to date, nothing failing and no errors kept: Health is one quiet line with the checks folded under it.',
       text: 'Everything is working',
     },
     {
@@ -44,7 +44,7 @@ export default defineSpec({
     {
       id: 'check-failing',
       name: 'A check failing',
-      when: 'One health check fails: the checks show, the failing one with its Fix.',
+      when: 'One health check fails: Health says so and the checks open, the failing one with its Fix.',
       text: 'Start Ollama',
     },
     {
@@ -120,24 +120,25 @@ export default defineSpec({
     {
       id: 'clear-errors',
       label: 'Clear all',
-      does: 'Forgets every kept error.',
+      does: 'Asks first, in a small confirm beside the button that counts the kept errors, then forgets them.',
+      target: { unit: 'confirm', state: 'errors' },
     },
     {
       id: 'clear-history',
       label: 'Clear',
-      does: 'Asks first, with the hours and answers that go.',
-      target: { unit: 'confirm', state: 'reset' },
+      does: 'Asks first, in a small confirm beside the button with the hours and answers that go.',
+      target: { unit: 'confirm', state: 'history' },
     },
     {
       id: 'reset-everything',
       label: 'Reset',
-      does: 'Asks first, with the counts of courses, sets, materials and memories that go.',
-      target: { unit: 'confirm', state: 'reset' },
+      does: 'Opens a dialog with the counts of courses, sets, materials and memories that go; the red button waits until "reset" is typed.',
+      target: { unit: 'danger-dialog', state: 'reset' },
     },
     {
       id: 'confirm-reset',
       label: 'Reset everything',
-      does: 'Does it. The sample only closes the question.',
+      does: 'Does it once "reset" is typed. The sample only closes the dialog.',
     },
     { id: 'retry', label: 'Try again', does: 'Reads Settings again.' },
   ],
@@ -159,7 +160,7 @@ export default defineSpec({
     { name: 'settingsHref', does: 'Where Settings goes.' },
   ],
   priority: {
-    first: 'The key, when there is none; otherwise the sections in order.',
+    first: 'The key, when there is none; otherwise the groups in order.',
     main: 'save-key',
   },
   sizes: {
@@ -178,6 +179,7 @@ export default defineSpec({
       'colour-has-a-word',
       'room-for-big-type',
       'sentence-case',
+      'friction-matches-loss',
       'say-it-once',
     ],
   },
@@ -185,6 +187,7 @@ export default defineSpec({
   decisions: [
     {
       id: 'settings-d1',
+      supersededBy: 'settings-d15',
       decision:
         'One column 720 wide, centred, with section headings like Home’s and no side nav (G1).',
       why: `${ASSUMED}: seven short sections fit one scroll.`,
@@ -193,6 +196,7 @@ export default defineSpec({
     },
     {
       id: 'settings-d2',
+      supersededBy: 'settings-d16',
       decision:
         'The order is You, Model key, Appearance, Updates, Usage, Health, Reset, with the about line at the foot (G2).',
       why: `${ASSUMED}: first run needs the key; the rest by how often it is wanted.`,
@@ -203,23 +207,23 @@ export default defineSpec({
       id: 'settings-d3',
       decision:
         'The key is one field with Test and Save, and Save tests first. The models PSet picks per job fold under "Models PSet uses" (G3).',
-      why: `${ASSUMED}: the key is the task; the model list is curiosity.`,
+      why: `Confirmed by Jack: "Field, Test, Save, models folded (Recommended)". the key is the task; the model list is curiosity.`,
       beat: 'The model list always shown; the key alone',
       date: '2026-10-22',
     },
     {
       id: 'settings-d4',
       decision:
-        'Health and errors are one section: the checks with Fix where fixable, then "Recent errors (N)" folded, each with its id, reason and fix, and Clear all (G4).',
-      why: `${ASSUMED}: both answer "is something wrong".`,
+        'Health and errors sit together in PSet: a Health row, Checks folded, then "Recent errors (N)" folded with each id, reason and fix, and Clear all (G4).',
+      why: `Confirmed by Jack: "Quiet line, checks folded (Recommended)". both answer "is something wrong".`,
       beat: 'Two sections, as today',
       date: '2026-10-22',
     },
     {
       id: 'settings-d5',
       decision:
-        'A Usage section: this month’s total, per course with a thin bar each, and all time as a muted line (G5).',
-      why: `${ASSUMED}: no screen shows a total today (finding #5).`,
+        'Usage is in Model: this month’s total, per course with a thin bar each, and all time (G5).',
+      why: `Confirmed by Jack: "Month, per course, all time (Recommended)". no screen shows a total today (finding #5).`,
       beat: 'Per course only on the course page; leaving it out',
       date: '2026-10-22',
     },
@@ -227,15 +231,15 @@ export default defineSpec({
       id: 'settings-d6',
       decision:
         'Appearance is Paper, Night and System as a segmented control, applied at once (G6).',
-      why: `${ASSUMED}: as today, it works.`,
+      why: `Confirmed by Jack: "Three-part switch (Recommended)". as today, it works.`,
       beat: 'A toggle; a dropdown',
       date: '2026-10-22',
     },
     {
       id: 'settings-d7',
       decision:
-        'Updates show the version once and Check for updates; an available one adds a card of notes with "Update to 0.3.0"; updating swaps the card’s face in place (G7).',
-      why: `${ASSUMED}: as today.`,
+        'The PSet group shows the version once with Check for updates; a newer one adds a notes row with "Update to 0.3.0" that swaps its face in place (G7).',
+      why: `Confirmed by Jack: "Check button, update in place (Recommended)". as today.`,
       beat: 'Automatic updates with no button',
       date: '2026-10-22',
     },
@@ -243,12 +247,13 @@ export default defineSpec({
       id: 'settings-d8',
       decision:
         'Fields save on Enter or on leaving them, with a brief "Saved"; only the key has a Save button (G8).',
-      why: `${ASSUMED}: fewer buttons.`,
+      why: `Confirmed by Jack: "Save on leave (Recommended)". fewer buttons.`,
       beat: 'A Save per section',
       date: '2026-10-22',
     },
     {
       id: 'settings-d9',
+      supersededBy: 'settings-d17',
       decision:
         'Clear study history and Reset everything sit in Reset; buttons say Clear and Reset and a popover confirms with counts; Clear all stays with errors (G9).',
       why: `${ASSUMED}: one danger zone.`,
@@ -267,7 +272,7 @@ export default defineSpec({
       id: 'settings-d11',
       decision:
         'When all is well, Health is one line, "Everything is working", with the checks folded under it (G11).',
-      why: `${ASSUMED}: the common case is quiet.`,
+      why: `Confirmed by Jack: "Quiet line, checks folded (Recommended)". the common case is quiet.`,
       beat: 'Always listing the five checks',
       date: '2026-10-22',
     },
@@ -282,8 +287,8 @@ export default defineSpec({
     {
       id: 'settings-d13',
       decision:
-        'Path and heading both stay, and Settings in the top bar shows plain here. The version is said once, in Updates; the foot line is the data folder.',
-      why: 'Assumed, to confirm with Jack (say-it-once): the path is navigation, the heading is identity; the version, update and foot repeated it.',
+        'Path and heading both stay, and Settings in the top bar shows plain here. The version is said once, in the PSet group; the data folder is its own row there.',
+      why: 'Confirmed by Jack: "Keep both (Recommended)" (path and heading). The version said once is assumed (say-it-once).',
       beat: 'The version in Updates and again in the foot; a Settings link to itself',
       date: '2026-10-22',
     },
@@ -294,6 +299,30 @@ export default defineSpec({
       why: 'Assumed, to confirm with Jack: a fold labelled (0) is a door to nothing.',
       beat: 'A fold that opens to "No errors kept"',
       date: '2026-10-22',
+    },
+    {
+      id: 'settings-d15',
+      decision:
+        'The page is 1012 wide in four groups, no side nav. Each row is a name and what it does on the left, its control on the right: about 1.5 screens.',
+      why: 'Confirmed by Jack: "Yes, four groups, one page (Recommended)" (G1), after asking about the page’s width, height and a side nav.',
+      beat: 'A 720 column of seven sections; a side nav with a page per section',
+      date: '2026-10-30',
+    },
+    {
+      id: 'settings-d16',
+      decision:
+        'The groups are You (name, appearance), Model (key, models folded, usage), PSet (updates, health, data folder) and Reset (clear history, reset everything).',
+      why: 'Confirmed by Jack: "Try to collapse the categories slightly. Organize in the way you think best" (G2).',
+      beat: 'Seven sections',
+      date: '2026-10-30',
+    },
+    {
+      id: 'settings-d17',
+      decision:
+        'Three levels of asking: a small confirm for clearing one kind of data (history, errors), a danger dialog with the typed word "reset" for Reset everything.',
+      why: 'Confirmed by Jack: "Three levels (Recommended)" (G9), after asking how GitHub does it. Rule friction-matches-loss.',
+      beat: 'One confirm for everything; Clear all outside the levels',
+      date: '2026-10-30',
     },
   ],
 });
