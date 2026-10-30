@@ -389,11 +389,11 @@ export function Material({
   }
 
   const beside = contents && !boxing && paneW >= besideAt;
-  const fitW = Math.max(0, width - 2 * PAD);
+  const fitW = Math.max(0, width);
   const pageW = Math.round(fitW * zoom);
   const pageH = Math.round(pageW / book.aspect);
   const pitch = pageH + PAD;
-  const innerW = Math.max(width, pageW + 2 * PAD);
+  const innerW = Math.max(width, pageW);
   const total = PAD + book.pdfPages * pitch;
 
   /** The spot at the top of the view, in pages scrolled, and how far down the
@@ -740,7 +740,7 @@ export function Material({
                   <div className={`${pageBox} text-(--ds-fg)`}>
                     <span>p.</span>
                     <div
-                      className={`${numBox} border-(--ds-border) bg-(--ds-bg-inset) focus-within:border-(--ds-accent)`}
+                      className={`${numBox} border-(--ds-border) bg-(--ds-bg-inset) focus-within:border-(--ds-accent) focus-within:outline-(length:--ds-focus-width) focus-within:outline-(--ds-accent) focus-within:outline-solid focus-within:outline-offset-(--ds-focus-offset)`}
                       style={{ width: numW }}
                     >
                       <input
@@ -761,7 +761,7 @@ export function Material({
                         onBlur={() => {
                           setGoTo(null);
                         }}
-                        className="ds-small ds-tabular size-full min-w-0 bg-transparent p-0 text-right text-(--ds-fg) outline-none"
+                        className="ds-small ds-tabular size-full min-w-0 bg-transparent p-0 text-right text-(--ds-fg) outline-none!"
                       />
                     </div>
                   </div>

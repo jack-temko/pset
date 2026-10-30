@@ -41,11 +41,23 @@ export function Contents({
   onPick: (page: number) => void;
 }) {
   const here = currentOf(tree, printed);
-  /** The row marked: the deepest one that is shown (two levels). */
-  const marked = here[Math.min(here.length, 2) - 1];
   const [open, setOpen] = useState<ReadonlySet<Section>>(
     () => new Set(here.length > 2 ? [here[1]] : []),
   );
+  /** The row marked: the deepest one that is shown. A section folded over the
+   *  one you are in is marked in its place. */
+  const [picked, setPicked] = useState<{
+    section: Section;
+    from: number | undefined;
+  }>();
+  // A picked row is marked at once; the page's own answer takes over when the
+  // page you are on changes.
+  const held = picked && picked.from === printed ? picked.section : undefined;
+  const marked =
+    held ??
+    (here.length > 2 && open.has(here[1])
+      ? here[2]
+      : here[Math.min(here.length, 2) - 1]);
   const panel = useRef<HTMLDivElement>(null);
   const placed = useRef(false);
   const markedRow = useRef<HTMLDivElement>(null);
@@ -79,7 +91,7 @@ export function Contents({
     return (
       <div key={s.title}>
         <div
-          className={`flex items-start ${isMarked ? 'bg-(--ds-hover)' : ''}`}
+          className={`group mx-2 flex items-start rounded-(--ds-radius-control) hover:bg-(--ds-hover) has-focus-visible:outline-(length:--ds-focus-width) has-focus-visible:outline-(--ds-accent) has-focus-visible:outline-solid has-focus-visible:outline-offset-(--ds-focus-offset) ${isMarked ? 'bg-(--ds-hover)' : ''}`}
           style={{ paddingLeft: level * 16 }}
           ref={isMarked ? markedRow : undefined}
         >
@@ -92,7 +104,7 @@ export function Contents({
                 onClick={() => {
                   toggle(s);
                 }}
-                className="flex size-6 items-center justify-center rounded-(--ds-radius-tag) text-(--ds-fg-muted) hover:bg-(--ds-pressed)"
+                className="flex size-6 items-center justify-center text-(--ds-fg-muted) outline-none! group-hover:text-(--ds-fg)"
               >
                 <ChevronRight
                   className={`size-4 transition-transform ${expanded ? 'rotate-90' : ''}`}
@@ -105,9 +117,10 @@ export function Contents({
             type="button"
             aria-current={isMarked ? 'location' : undefined}
             onClick={() => {
+              setPicked({ section: s, from: printed });
               onPick(s.page);
             }}
-            className={`ds-small flex min-h-8 min-w-0 flex-1 items-start justify-between gap-3 py-1 pr-3 text-left hover:bg-(--ds-hover) ${level === 0 ? 'font-medium' : ''} ${isMarked ? 'font-medium text-(--ds-accent)' : ''}`}
+            className={`ds-small flex min-h-8 min-w-0 flex-1 items-start justify-between gap-3 py-1 pr-3 text-left outline-none! ${level === 0 ? 'font-medium' : ''} ${isMarked ? 'font-medium text-(--ds-accent)' : ''}`}
           >
             <span className="min-w-0 [overflow-wrap:anywhere]">{s.title}</span>
             <span className="ds-tabular shrink-0 text-(--ds-fg-muted)">
