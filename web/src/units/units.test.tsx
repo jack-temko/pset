@@ -12,6 +12,7 @@ import { CourseRow } from './course-row';
 import { Link } from './link';
 import { List } from './list';
 import { ListRow } from './list-row';
+import { MENU_WIDTH, MoreMenu } from './menu';
 import { ProgressBar } from './progress-bar';
 import { SectionHeading } from './section-heading';
 import { SetLine } from './set-line';
@@ -1396,5 +1397,48 @@ describe('TopBar', () => {
     expect(el.querySelector('a')?.className).toContain('shrink-0');
     expect(el.querySelector('header > a')?.className).toContain('shrink-0');
     expect(el.querySelector('header')?.className).toContain('sticky');
+  });
+});
+
+describe('MoreMenu', () => {
+  it('opens right-aligned under its button, at its own width, when the page is scrolled', () => {
+    // The button sits at the right of a scrolled page.
+    const rect = {
+      left: 1264,
+      top: 455,
+      right: 1296,
+      bottom: 487,
+      width: 32,
+      height: 32,
+    } as DOMRect;
+    const r = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(rect);
+    const w = vi
+      .spyOn(document.documentElement, 'clientWidth', 'get')
+      .mockReturnValue(1400);
+    const h = vi
+      .spyOn(document.documentElement, 'clientHeight', 'get')
+      .mockReturnValue(800);
+    Object.defineProperty(window, 'scrollY', {
+      value: 600,
+      configurable: true,
+    });
+    const { el } = render(
+      <MoreMenu label="More" items={[{ id: 'a', label: 'Edit' }]} />,
+    );
+    act(() => {
+      press(el.querySelector('button'));
+    });
+    const menu = document.querySelector<HTMLElement>('[role="menu"]');
+    // The card has its own width (a class that compiles to nothing left it
+    // as wide as its text), so its right edge is the button's.
+    expect(menu?.style.width).toBe(`${String(MENU_WIDTH)}px`);
+    expect(Number.parseFloat(menu?.style.left ?? '')).toBe(1296 - MENU_WIDTH);
+    expect(Number.parseFloat(menu?.style.top ?? '')).toBe(487 + 4);
+    r.mockRestore();
+    w.mockRestore();
+    h.mockRestore();
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
   });
 });

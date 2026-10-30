@@ -94,13 +94,14 @@ export function Menu({
       popover="manual"
       onKeyDown={onKey}
       style={{
+        width: MENU_WIDTH,
         left: pos.x,
         top: pos.y,
         right: 'auto',
         bottom: 'auto',
         margin: 0,
       }}
-      className="fixed max-h-[70vh] w-60 max-w-[calc(100vw-16px)] overflow-y-auto rounded-(--ds-radius-control) border border-(--ds-border) bg-(--ds-bg-raised) py-1 text-(--ds-fg)"
+      className="fixed max-h-[70vh] max-w-[calc(100vw-16px)] overflow-y-auto rounded-(--ds-radius-control) border border-(--ds-border) bg-(--ds-bg-raised) py-1 text-(--ds-fg)"
     >
       {groups.map((g, gi) => (
         <div
@@ -150,7 +151,7 @@ export function MoreMenu<Id extends string>({
   const [button, setButton] = useState<HTMLButtonElement | null>(null);
   const [shown, setShown] = useState(Boolean(forceOpen));
   const r = shown ? button?.getBoundingClientRect() : undefined;
-  const at = r && { x: r.right - MORE_WIDTH, y: r.bottom + 4 };
+  const at = r && { x: r.right - MENU_WIDTH, y: r.bottom + 4 };
   const close = () => {
     setShown(false);
   };
@@ -186,4 +187,7 @@ export function MoreMenu<Id extends string>({
   );
 }
 
-const MORE_WIDTH = 240;
+/** The card's width, set inline: MoreMenu right-aligns by it, and the spacing
+ *  scale has no 60, so a `w-60` class compiled to nothing and the card shrank
+ *  to its text, far from the button. */
+export const MENU_WIDTH = 240;

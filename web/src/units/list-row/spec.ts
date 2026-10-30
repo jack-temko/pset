@@ -51,6 +51,10 @@ export default defineSpec({
       name: 'titleField',
       does: 'An input in the title’s place while it is edited; the row keeps its height.',
     },
+    {
+      name: 'wrap',
+      does: 'Wraps the title onto as many lines as it needs; the row grows.',
+    },
     { name: 'href', does: 'Makes the title a link.' },
     {
       name: 'label',

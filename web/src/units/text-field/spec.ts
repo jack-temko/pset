@@ -24,6 +24,11 @@ export default defineSpec({
       when: 'Renaming in place: no visible label or note, and as tall as the title it replaces.',
     },
     {
+      id: 'multiline',
+      name: 'Several lines',
+      when: 'A sentence or more: it wraps and grows as you type; Enter commits, Shift+Enter adds a line.',
+    },
+    {
       id: 'saved',
       name: 'Saved',
       when: 'Just committed: the note under the field says so for a moment.',
@@ -64,6 +69,10 @@ export default defineSpec({
       name: 'autoFocus',
       does: 'Focuses and selects the value when the field appears.',
     },
+    {
+      name: 'multiline',
+      does: 'Wraps and grows to its text; Enter commits and Shift+Enter adds a line.',
+    },
     { name: 'placeholder', does: 'The muted words in an empty field.' },
     { name: 'mono', does: 'Fixed-width type, for a key or a path.' },
     { name: 'secret', does: 'Hides what is typed.' },
@@ -81,6 +90,14 @@ export default defineSpec({
   sizes: { gives: ['The field narrows; its button keeps its size'] },
   rules: { cite: ['sentence-case', 'contrast-floors', 'colour-has-a-word'] },
   decisions: [
+    {
+      id: 'text-field-d-multiline',
+      decision:
+        'A multiline field is a textarea that grows to its text, in the same type as the text it replaces; Enter commits, Shift+Enter adds a line.',
+      why: 'Jack, 2026-10-30: "editing a saved memory that wraps opens a super smalle inline textblock that sucks to edit".',
+      beat: 'A one-line input for long text',
+      date: '2026-10-30',
+    },
     {
       id: 'text-field-d1',
       decision:
