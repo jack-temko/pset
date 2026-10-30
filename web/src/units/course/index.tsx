@@ -309,7 +309,7 @@ function Stats({ course, today }: { course: CourseData; today: Date }) {
                 text={
                   none
                     ? 'Nothing spent yet'
-                    : `${String(Math.round(total / 60))} h studied in all`
+                    : `${money(course.monthCost)} this month`
                 }
               />
             }
