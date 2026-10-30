@@ -1,4 +1,3 @@
-import { Sparkles, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { Button } from '@/units/button';
@@ -11,8 +10,6 @@ import { SegmentedControl } from '@/units/segmented-control';
 import { Tag } from '@/units/tag';
 import { TextField } from '@/units/text-field';
 import { SAMPLE, TODAY, when, type Memory } from './sample';
-
-export type MemoryOption = 'list' | 'two-lists' | 'chips' | 'review';
 
 const ROW_MENU = [
   { id: 'edit', label: 'Edit' },
@@ -93,13 +90,10 @@ function useMemories(
 
 type Memories = ReturnType<typeof useMemories>;
 
-const matches = (m: Memory, q: string) =>
-  m.text.toLowerCase().includes(q.trim().toLowerCase());
-
-function Intro({ count }: { count: number }) {
+function Intro({ count, action }: { count: number; action?: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <SectionHeading count={count > 0 ? count : undefined}>
+      <SectionHeading count={count > 0 ? count : undefined} action={action}>
         Memory
       </SectionHeading>
       <p className="ds-small text-(--ds-fg-muted)">
@@ -129,6 +123,7 @@ function AddField({
       key={round}
       label="Add a memory"
       placeholder="Use V_0, V_1 for nodal voltages"
+      multiline
       value={text}
       onChange={setText}
       onCommit={add}
@@ -142,24 +137,6 @@ function AddField({
           Add
         </Button>
       }
-    />
-  );
-}
-
-function SearchField({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <TextField
-      label="Search"
-      placeholder="Search memories"
-      value={value}
-      onChange={onChange}
-      note={false}
     />
   );
 }
@@ -197,20 +174,20 @@ function EditingRow({ m, mem }: { m: Memory; mem: Memories }) {
   return (
     <ListRow
       title={m.text}
+      wrap
       titleField={
-        <div className="w-160 max-w-full">
-          <TextField
-            label="Edit memory"
-            inline="row"
-            autoFocus
-            value={draft}
-            onChange={setDraft}
-            onCommit={(v) => {
-              mem.save(m.id, v);
-            }}
-            onCancel={mem.stopEdit}
-          />
-        </div>
+        <TextField
+          label="Edit memory"
+          inline="row"
+          multiline
+          autoFocus
+          value={draft}
+          onChange={setDraft}
+          onCommit={(v) => {
+            mem.save(m.id, v);
+          }}
+          onCancel={mem.stopEdit}
+        />
       }
       meta={source(m, true)}
       asideWidth="auto"
@@ -259,6 +236,7 @@ function Row({
   return (
     <ListRow
       title={m.text}
+      wrap
       label={fresh ? <Tag tone="attention">New</Tag> : undefined}
       meta={source(m, label)}
       asideWidth="auto"
@@ -310,40 +288,70 @@ function EmptyMemory({ mem }: { mem: Memories }) {
   );
 }
 
-function OneList({
-  mem,
-  query,
-  setQuery,
-  review,
-  filter,
-  setFilter,
+/** How many of Ask's older and the student's own memories show before
+ *  "Show all", as Home's lists show five (memory-d3). */
+export const MEMORY_CAP = 5;
+
+/** The memory area (memory-d1): Ask's new saves wait above the rest with Keep
+ *  and Edit, then the list, capped, with the add field over it. Sample data
+ *  only: add, edit, keep and delete work on it and nothing is kept. */
+export function MemoryArea({
+  empty,
+  editing,
+  deleted,
+  showAll: startShowAll = false,
 }: {
-  mem: Memories;
-  query: string;
-  setQuery: (v: string) => void;
-  review?: boolean;
-  filter: string;
-  setFilter: (v: string) => void;
+  /** Nothing remembered yet. */
+  empty?: boolean;
+  /** The id of the memory that starts being edited. */
+  editing?: string;
+  /** The id of the memory that starts deleted, with Undo showing. */
+  deleted?: string;
+  /** Starts with every memory shown, not the first five. */
+  showAll?: boolean;
 }) {
-  const shown = mem.items.filter(
-    (m) => (filter === 'all' || m.source === filter) && matches(m, query),
-  );
-  const fresh = review === true ? mem.items.filter((m) => m.fresh).length : 0;
+  const mem = useMemories(empty ? [] : SAMPLE, deleted, editing);
+  const [filter, setFilter] = useState('all');
+  const [all, setAll] = useState(startShowAll);
+  if (mem.items.length === 0 && mem.undo === null)
+    return (
+      <div className="min-w-0">
+        <EmptyMemory mem={mem} />
+      </div>
+    );
+  const kept = mem.items.filter((m) => filter === 'all' || m.source === filter);
+  const fresh = kept.filter((m) => m.fresh === true);
+  const rest = kept.filter((m) => m.fresh !== true);
+  const shown = [...fresh, ...(all ? rest : rest.slice(0, MEMORY_CAP))];
+  const waiting = mem.items.filter((m) => m.fresh === true).length;
   return (
-    <div className="flex flex-col gap-4">
-      <Intro count={mem.items.length} />
-      {fresh > 0 && (
+    <div className="flex min-w-0 flex-col gap-4">
+      <Intro
+        count={mem.items.length}
+        action={
+          rest.length > MEMORY_CAP ? (
+            <Link
+              href="#"
+              size="small"
+              onClick={(e) => {
+                e.preventDefault();
+                setAll(!all);
+              }}
+            >
+              {all ? 'Show fewer' : 'Show all'}
+            </Link>
+          ) : undefined
+        }
+      />
+      {waiting > 0 && (
         <p className="ds-small text-(--ds-attention)">
-          {fresh === 1
+          {waiting === 1
             ? 'Ask saved 1 preference. Keep it or change it.'
-            : `Ask saved ${String(fresh)} preferences. Keep them or change them.`}
+            : `Ask saved ${String(waiting)} preferences. Keep them or change them.`}
         </p>
       )}
       <AddField onAdd={mem.add} />
-      <div className="flex items-start justify-between gap-4">
-        <div className="max-w-80 flex-1">
-          <SearchField value={query} onChange={setQuery} />
-        </div>
+      <div className="flex justify-end">
         <SegmentedControl
           label="Show"
           options={FILTERS}
@@ -351,246 +359,12 @@ function OneList({
           onChange={setFilter}
         />
       </div>
-      <List
-        empty={
-          query.trim()
-            ? `No memory matches “${query.trim()}”`
-            : 'Nothing here yet'
-        }
-      >
+      <List empty="Nothing here yet">
         {shown.map((m) => (
-          <Row key={m.id} m={m} mem={mem} label review={review} />
+          <Row key={m.id} m={m} mem={mem} label review />
         ))}
       </List>
       <UndoLine m={mem} />
     </div>
-  );
-}
-
-function TwoLists({
-  mem,
-  query,
-  setQuery,
-}: {
-  mem: Memories;
-  query: string;
-  setQuery: (v: string) => void;
-}) {
-  const part = (kind: 'you' | 'ask') =>
-    mem.items.filter((m) => m.source === kind && matches(m, query));
-  const yours = part('you');
-  const asked = part('ask');
-  const none = query.trim() ? 'No match' : 'Nothing here yet';
-  return (
-    <div className="flex flex-col gap-4">
-      <Intro count={mem.items.length} />
-      <div className="max-w-80">
-        <SearchField value={query} onChange={setQuery} />
-      </div>
-      <List title="Yours" count={yours.length}>
-        {[
-          ...yours.map((m) => <Row key={m.id} m={m} mem={mem} label={false} />),
-          yours.length === 0 ? (
-            <p key="none" className="ds-small px-4 py-3 text-(--ds-fg-muted)">
-              {none}
-            </p>
-          ) : null,
-          <div key="add" className="bg-(--ds-bg-raised) px-4 py-2">
-            <AddField onAdd={mem.add} />
-          </div>,
-        ]}
-      </List>
-      <List title="Saved from Ask" count={asked.length} empty={none}>
-        {asked.map((m) => (
-          <Row key={m.id} m={m} mem={mem} label={false} />
-        ))}
-      </List>
-      <UndoLine m={mem} />
-    </div>
-  );
-}
-
-function Chip({ m, mem }: { m: Memory; mem: Memories }) {
-  const [draft, setDraft] = useState(m.text);
-  if (mem.editId === m.id) {
-    return (
-      <div
-        className="flex h-8 w-96 max-w-full items-center rounded-full border border-(--ds-accent) px-2"
-        onBlur={mem.stopEdit}
-      >
-        <TextField
-          label="Edit memory"
-          inline="row"
-          autoFocus
-          value={draft}
-          onChange={setDraft}
-          onCommit={(v) => {
-            mem.save(m.id, v);
-          }}
-          onCancel={mem.stopEdit}
-        />
-      </div>
-    );
-  }
-  return (
-    <span className="ds-body inline-flex h-8 max-w-full items-center rounded-full border border-(--ds-border) text-(--ds-fg)">
-      <button
-        type="button"
-        title={m.source === 'ask' ? `${m.text} (saved from Ask)` : m.text}
-        onClick={() => {
-          mem.startEdit(m.id);
-        }}
-        className="inline-flex h-full min-w-0 items-center gap-1 rounded-l-full pr-1 pl-3 hover:bg-(--ds-hover)"
-      >
-        {m.source === 'ask' && (
-          <Sparkles
-            className="size-3 shrink-0 text-(--ds-fg-muted)"
-            aria-hidden
-          />
-        )}
-        <span className="min-w-0 truncate">{m.text}</span>
-      </button>
-      <button
-        type="button"
-        aria-label={`Delete “${m.text}”`}
-        onClick={() => {
-          mem.remove(m.id);
-        }}
-        className="inline-flex h-full shrink-0 items-center rounded-r-full pr-2 pl-1 text-(--ds-fg-muted) hover:bg-(--ds-hover) hover:text-(--ds-fg)"
-      >
-        <X className="size-4" aria-hidden />
-      </button>
-    </span>
-  );
-}
-
-function AddChip({ mem }: { mem: Memories }) {
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState('');
-  if (!open)
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          setOpen(true);
-        }}
-        className="ds-body inline-flex h-8 items-center rounded-full border border-dashed border-(--ds-border) px-3 text-(--ds-fg-muted) hover:bg-(--ds-hover) hover:text-(--ds-fg)"
-      >
-        + Add
-      </button>
-    );
-  const close = () => {
-    setOpen(false);
-    setText('');
-  };
-  return (
-    <div
-      className="flex h-8 w-96 max-w-full items-center rounded-full border border-(--ds-accent) px-2"
-      onBlur={close}
-    >
-      <TextField
-        label="Add a memory"
-        inline="row"
-        autoFocus
-        placeholder="Use V_0, V_1 for nodal voltages"
-        value={text}
-        onChange={setText}
-        onCommit={(v) => {
-          mem.add(v);
-          close();
-        }}
-        onCancel={close}
-      />
-    </div>
-  );
-}
-
-function Chips({
-  mem,
-  query,
-  setQuery,
-}: {
-  mem: Memories;
-  query: string;
-  setQuery: (v: string) => void;
-}) {
-  const part = (kind: 'you' | 'ask') =>
-    mem.items.filter((m) => m.source === kind && matches(m, query));
-  const yours = part('you');
-  const asked = part('ask');
-  const searching = query.trim() !== '';
-  return (
-    <div className="flex flex-col gap-4">
-      <Intro count={mem.items.length} />
-      <div className="max-w-80">
-        <SearchField value={query} onChange={setQuery} />
-      </div>
-      {searching && yours.length + asked.length === 0 && (
-        <p className="ds-small text-(--ds-fg-muted)">
-          No memory matches “{query.trim()}”
-        </p>
-      )}
-      <div className="flex flex-col gap-2">
-        <p className="ds-small text-(--ds-fg-muted)">Yours</p>
-        <div className="flex flex-wrap gap-2">
-          {yours.map((m) => (
-            <Chip key={m.id} m={m} mem={mem} />
-          ))}
-          <AddChip mem={mem} />
-        </div>
-      </div>
-      {asked.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <p className="ds-small text-(--ds-fg-muted)">Saved from Ask</p>
-          <div className="flex flex-wrap gap-2">
-            {asked.map((m) => (
-              <Chip key={m.id} m={m} mem={mem} />
-            ))}
-          </div>
-        </div>
-      )}
-      <UndoLine m={mem} />
-    </div>
-  );
-}
-
-/** Mocks of the memory area, one option per state (memory-d1). Sample
- *  data only: add, search, edit and delete work on it and nothing is kept. */
-export function MemoryArea({
-  option,
-  empty,
-  query: startQuery = '',
-  editing,
-  deleted,
-}: {
-  option: MemoryOption;
-  /** Nothing remembered yet. */
-  empty?: boolean;
-  /** What the search starts with. */
-  query?: string;
-  /** The id of the memory that starts being edited. */
-  editing?: string;
-  /** The id of the memory that starts deleted, with Undo showing. */
-  deleted?: string;
-}) {
-  const mem = useMemories(empty ? [] : SAMPLE, deleted, editing);
-  const [query, setQuery] = useState(startQuery);
-  const [filter, setFilter] = useState('all');
-  const frame = (body: ReactNode) => <div className="min-w-0">{body}</div>;
-  if (mem.items.length === 0 && mem.undo === null && !query)
-    return frame(<EmptyMemory mem={mem} />);
-  if (option === 'two-lists')
-    return frame(<TwoLists mem={mem} query={query} setQuery={setQuery} />);
-  if (option === 'chips')
-    return frame(<Chips mem={mem} query={query} setQuery={setQuery} />);
-  return frame(
-    <OneList
-      mem={mem}
-      query={query}
-      setQuery={setQuery}
-      review={option === 'review'}
-      filter={filter}
-      setFilter={setFilter}
-    />,
   );
 }

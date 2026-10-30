@@ -1,6 +1,6 @@
 import { defineSpec } from '@/design/spec';
 
-const MOCK = 'Mock for Jack to judge; not decided';
+const VERDICT = 'Jack, 2026-10-30';
 
 export default defineSpec({
   id: 'memory',
@@ -8,32 +8,20 @@ export default defineSpec({
   title: 'Memory',
   group: 'Mocks',
   purpose:
-    'The preferences PSet follows, of two kinds: typed by the student, and saved by Ask when they asked it to remember. Four layouts to choose from, on sample data.',
+    'The preferences PSet follows, of two kinds: typed by the student, and saved by Ask when they asked it to remember. Mocked on sample data.',
   exampleWidth: 1012,
   states: [
     {
-      id: 'a-one-list',
-      name: 'A: one list, filter',
-      when: 'One list under a search field, an add field and an All, Yours, From Ask filter; each row names its source.',
-      text: 'Use V_0, V_1 for nodal voltages',
-    },
-    {
-      id: 'b-two-lists',
-      name: 'B: two lists',
-      when: 'Yours, with its add field at the foot, and Saved from Ask, under one search that filters both.',
-      text: 'Saved from Ask',
-    },
-    {
-      id: 'c-chips',
-      name: 'C: compact chips',
-      when: 'Wrapping chips grouped by kind: click one to edit it in place, x deletes, a dashed chip adds.',
-      text: '+ Add',
-    },
-    {
-      id: 'd-review',
-      name: 'D: Ask saves, you keep',
-      when: 'Like A, but what Ask just saved is marked New with Keep and Edit until the student keeps it.',
+      id: 'ask-saves',
+      name: 'Ask saves, you keep',
+      when: 'What Ask just saved sits at the top marked New with Keep and Edit; the rest follow, five of them, then Show all.',
       text: 'Ask saved 2 preferences. Keep them or change them.',
+    },
+    {
+      id: 'show-all',
+      name: 'Show all',
+      when: 'Show all was pressed: every memory is listed, and the link reads Show fewer.',
+      text: 'Show fewer',
     },
     {
       id: 'empty',
@@ -42,26 +30,20 @@ export default defineSpec({
       text: 'PSet remembers how you like things explained',
     },
     {
-      id: 'no-results',
-      name: 'Search finds nothing',
-      when: 'The search matches no memory: the list says so, and the filter and add field stay.',
-      text: 'No memory matches “pspice2”',
-    },
-    {
       id: 'editing',
-      name: 'Editing a row (A)',
-      when: 'A row’s text is a field of the same height, with Save and Cancel at its right.',
+      name: 'Editing a row',
+      when: 'A row’s text becomes a field in the same place, as tall as the wrapped text and growing; Enter saves, Shift+Enter adds a line.',
       text: 'Save',
     },
     {
       id: 'deleted',
-      name: 'Deleted, with Undo (A)',
+      name: 'Deleted, with Undo',
       when: 'A row is gone at once, no question asked, and a line under the list offers Undo.',
       text: 'Deleted “Round to three significant figures”',
     },
   ],
   stress:
-    'A 190 character memory and a 60 character one: the title truncates on one line and its full text is on hover.',
+    'A 190 character memory among eleven: it wraps onto three lines, and its field grows with it.',
   actions: [
     {
       id: 'add',
@@ -71,7 +53,7 @@ export default defineSpec({
     {
       id: 'edit',
       label: 'Edit',
-      does: 'Turns the row’s text into a field; Enter or Save keeps the change, Escape or Cancel drops it.',
+      does: 'Turns the row’s text into a growing field; Enter or Save keeps the change, Shift+Enter adds a line, Escape or Cancel drops it.',
     },
     {
       id: 'delete',
@@ -84,9 +66,14 @@ export default defineSpec({
       does: 'Puts the deleted memory back where it was.',
     },
     {
+      id: 'show-all',
+      label: 'Show all',
+      does: 'Lists every memory past the first five; the link then reads Show fewer.',
+    },
+    {
       id: 'keep',
       label: 'Keep',
-      does: 'Option D: accepts what Ask saved, and the New mark goes.',
+      does: 'Accepts what Ask saved, and the New mark goes.',
     },
   ],
   data: [
@@ -97,9 +84,11 @@ export default defineSpec({
     },
   ],
   inputs: [
-    { name: 'option', does: 'Which layout is drawn: A, B, C or D.' },
     { name: 'empty', does: 'Starts with nothing remembered.' },
-    { name: 'query', does: 'What the search starts with.' },
+    {
+      name: 'showAll',
+      does: 'Starts with every memory shown, not the first five.',
+    },
     { name: 'editing', does: 'The id of the memory that starts being edited.' },
     {
       name: 'deleted',
@@ -111,25 +100,42 @@ export default defineSpec({
     main: 'add',
   },
   sizes: {
-    gives: ['A memory’s text truncates', 'Chips wrap to the next line'],
+    gives: ['Long text wraps, so a row grows'],
   },
   rules: {
     cite: ['student-decides', 'sentence-case', 'colour-has-a-word'],
   },
+  log: 'web/src/units/memory/log.md',
   decisions: [
     {
       id: 'memory-d1',
       decision:
-        'Four layouts are drawn as states so Jack can pick: one list with a filter, two lists, chips, and one where Ask’s saves need a Keep.',
-      why: `${MOCK}: Jack asked for easy add, search, delete and edit, and two kinds of memory.`,
-      beat: 'The fold of plain lines at the foot of the Course view',
+        'Memory is one list where what Ask saved arrives marked New with Keep and Edit, above the rest, until the student keeps it.',
+      why: `${VERDICT}: "lets go with D". The model never silently steers: a save from Ask waits for a look.`,
+      beat: 'One plain list; two lists; chips',
       date: '2026-10-30',
     },
     {
       id: 'memory-d2',
       decision: 'Delete asks nothing and offers Undo.',
-      why: `${MOCK}: a lost preference costs one sentence to type again (ideas/memory-preferences-only.md).`,
+      why: 'A lost preference costs one sentence to type again (ideas/memory-preferences-only.md).',
       beat: 'A confirm on every delete',
+      date: '2026-10-30',
+    },
+    {
+      id: 'memory-d3',
+      decision:
+        'There is no search. The list shows the five newest kept memories, and New ones always, then "Show all" in the heading, as Home’s lists do.',
+      why: `${VERDICT}: "drop the search bar. Make it hide past a certain amount with a button to expand like our other lists."`,
+      beat: 'A search field; showing every memory',
+      date: '2026-10-30',
+    },
+    {
+      id: 'memory-d4',
+      decision:
+        'A memory shows its full text, wrapped. Edit and Add are multi-line fields that grow with the text, in the same type and place as the text.',
+      why: 'Jack, 2026-10-30: "make these memories be multi line editable, editing a saved memory that wraps opens a super smalle inline textblock that sucks to edit".',
+      beat: 'A one-line title that truncates; a one-line input',
       date: '2026-10-30',
     },
   ],

@@ -15,6 +15,7 @@ export function ListRow({
   meta = [],
   aside,
   asideWidth = 120,
+  wrap,
 }: {
   title: string;
   /** Takes the title's place while it is being edited, so the row keeps its height. */
@@ -33,19 +34,21 @@ export function ListRow({
   /** The aside's width: a number is px, a string any CSS width, so asides
    *  align down a list. */
   asideWidth?: number | string;
+  /** Wraps the title onto as many lines as it needs, not one. */
+  wrap?: boolean;
 }) {
   return (
     <div className={`min-w-0 ${meta.length > 0 ? 'min-h-14' : ''}`}>
       <div className="flex min-w-0 items-center gap-4 px-4 py-2">
         <div className="min-w-0 flex-1">
           <div className="flex min-h-6 min-w-0 items-center gap-2">
-            <div className="min-w-0">
+            <div className={`min-w-0 ${wrap ? 'flex-1' : ''}`}>
               {titleField !== undefined ? (
                 titleField
               ) : href === undefined ? (
                 <span
                   title={title}
-                  className="ds-body block truncate font-medium text-(--ds-fg)"
+                  className={`ds-body block font-medium text-(--ds-fg) ${wrap ? 'whitespace-pre-wrap [overflow-wrap:anywhere]' : 'truncate'}`}
                 >
                   {title}
                 </span>

@@ -25,6 +25,13 @@ export default defineExamples(spec, TextField, {
         <Held start="Problem set 7" label="Name" inline="row" />
       </div>
     ),
+    multiline: () => (
+      <Held
+        start="When a problem has a figure, describe what you see in it before using it, and name every node and mesh the way the figure labels them."
+        label="Memory"
+        multiline
+      />
+    ),
     saved: () => <Held start="Jack" label="Name" note="Saved" />,
     key: () => (
       <Held
