@@ -76,6 +76,7 @@ const (
 	minWorkSpace = 180.0 // blank space kept under every question
 	figureH      = 130.0
 	figureGap    = 12.0
+	imageH       = 260.0 // an attached image is a handout's figure, wider than a book's crop
 )
 
 // Worksheet is the set as a PDF to print: each question's statement and
@@ -193,6 +194,12 @@ func (s *Service) drawFigures(ctx context.Context, sheet *pdf.Sheet, q row, y fl
 	if len(figs) == 0 {
 		return nil
 	}
+	h := figureH
+	for _, f := range figs {
+		if f.Image != "" {
+			h = imageH
+		}
+	}
 	w := (contentW - figureGap*float64(len(figs)-1)) / float64(len(figs))
 	x := margin
 	for _, f := range figs {
@@ -206,7 +213,7 @@ func (s *Service) drawFigures(ctx context.Context, sheet *pdf.Sheet, q row, y fl
 		if err != nil {
 			return err
 		}
-		if _, err := sheet.ImageFit(x, y, w, figureH, img); err != nil {
+		if _, err := sheet.ImageFit(x, y, w, h, img); err != nil {
 			return err
 		}
 		x += w + figureGap
