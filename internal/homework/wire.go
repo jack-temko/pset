@@ -114,6 +114,9 @@ type Figure struct {
 	// own height over width (Book.aspect).
 	W float64 `json:"w"`
 	H float64 `json:"h"`
+	// Ratio is the image's height over its width, for one the student
+	// attached (it has no page, so W and H are 0).
+	Ratio float64 `json:"ratio,omitempty"`
 }
 
 // Question is one problem in a set. Text is what the student typed;

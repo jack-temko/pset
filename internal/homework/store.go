@@ -139,6 +139,13 @@ ALTER TABLE questions ADD COLUMN failed_at TEXT NOT NULL DEFAULT ''`},
 		{Name: "homework/19", SQL: `
 ALTER TABLE questions DROP COLUMN reason;
 ALTER TABLE questions DROP COLUMN failure`},
+		// Images the student attached to a question, as JPEGs.
+		{Name: "homework/20", SQL: `CREATE TABLE question_images (
+	id          TEXT PRIMARY KEY,
+	question_id TEXT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+	data        BLOB NOT NULL
+);
+CREATE INDEX question_images_question ON question_images (question_id)`},
 	}
 }
 
@@ -356,6 +363,11 @@ type figure struct {
 	// Page is the PDF page the figure is on, when it isn't the
 	// question's own: a figure boxed on another page.
 	Page int `json:"page,omitempty"`
+	// Image is the id of an uploaded image in question_images, for a
+	// figure the student attached: it has no page and no rect, and Ratio
+	// is its height over its width.
+	Image string  `json:"image,omitempty"`
+	Ratio float64 `json:"ratio,omitempty"`
 }
 
 // on is the page a figure is on: its own, else the question's.
@@ -399,6 +411,10 @@ func scanQuestion(s interface{ Scan(...any) error }) (row, error) {
 	decodeColumn("figs", figs, &r.FigRect)
 	r.Figures = make([]Figure, len(r.FigRect))
 	for i, f := range r.FigRect {
+		if f.Image != "" {
+			r.Figures[i] = Figure{Label: f.Label, Ratio: f.Ratio}
+			continue
+		}
 		pad := padRect(f.Rect)
 		r.Figures[i] = Figure{Label: f.Label, W: pad.W, H: pad.H}
 	}

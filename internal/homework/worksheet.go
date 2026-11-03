@@ -55,7 +55,13 @@ func (s *Service) Figure(ctx context.Context, questionID string, n int) ([]byte,
 	if err != nil {
 		return nil, err
 	}
-	if q.Page == nil || n < 0 || n >= len(q.FigRect) {
+	if n < 0 || n >= len(q.FigRect) {
+		return nil, errs.Gone.New("thing", "figure")
+	}
+	if id := q.FigRect[n].Image; id != "" {
+		return s.imageOf(ctx, id)
+	}
+	if q.Page == nil {
 		return nil, errs.Gone.New("thing", "figure")
 	}
 	return s.crop(ctx, q.BookID, q.FigRect[n].on(q), q.FigRect[n].Rect, cropWidth)
@@ -141,8 +147,8 @@ func (s *Service) questionBlock(ctx context.Context, sheet *pdf.Sheet, book Book
 	y += 20
 
 	if q.Page == nil || q.Rect == nil {
-		wrap(sheet, y, 10.5, doc.Plain(q.Statement))
-		return nil
+		y = wrap(sheet, y, 10.5, doc.Plain(q.Statement)) + 6
+		return s.drawFigures(ctx, sheet, q, y)
 	}
 	figs := q.FigRect
 	figBlock := 0.0
@@ -178,13 +184,25 @@ func (s *Service) questionBlock(ctx context.Context, sheet *pdf.Sheet, book Book
 		}
 		y += used + 10
 	}
+	return s.drawFigures(ctx, sheet, q, y)
+}
+
+// drawFigures lays a question's figures side by side, from y down.
+func (s *Service) drawFigures(ctx context.Context, sheet *pdf.Sheet, q row, y float64) error {
+	figs := q.FigRect
 	if len(figs) == 0 {
 		return nil
 	}
 	w := (contentW - figureGap*float64(len(figs)-1)) / float64(len(figs))
 	x := margin
 	for _, f := range figs {
-		img, err := s.crop(ctx, q.BookID, f.on(q), f.Rect, cropWidth)
+		var img []byte
+		var err error
+		if f.Image != "" {
+			img, err = s.imageOf(ctx, f.Image)
+		} else {
+			img, err = s.crop(ctx, q.BookID, f.on(q), f.Rect, cropWidth)
+		}
 		if err != nil {
 			return err
 		}
