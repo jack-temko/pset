@@ -14,14 +14,14 @@ export default defineSpec({
     {
       id: 'normal',
       name: 'One set to do',
-      when: 'The usual course: a set to do, three materials, six finished sets folded under Done.',
-      text: 'Done (6)',
+      when: 'The usual course: a set to do, three materials, six finished sets one press away in Work’s header switch, "To do 1 · Done 6".',
+      text: 'Done',
     },
     {
       id: 'nothing-due',
       name: 'Nothing due',
-      when: 'Every set is finished: Work says so in one line, has no counter, and keeps the Done fold.',
-      text: 'Nothing due',
+      when: 'Every set is finished: Work stays on To do with one quiet line, "Nothing to do", and Done keeps its count in the switch.',
+      text: 'Nothing to do',
     },
     {
       id: 'empty',
@@ -182,6 +182,14 @@ export default defineSpec({
   log: 'web/src/units/course/log.md',
   decisions: [
     {
+      id: 'course-d25',
+      decision:
+        'Work’s Done fold is the list’s header switch, "To do 1 · Done 6". Work and Materials show 5 rows, then "Show all N"; Add stays under each (list-d3, d4).',
+      why: 'Jack: "Switch in header (Recommended)", "Cap 5, Show all page (Recommended)", "Foot, with a count (Recommended)" (L1 to L3). Reverses C3.',
+      beat: 'The Done fold; a separate Done list; expanding inline',
+      date: '2026-11-04',
+    },
+    {
       id: 'course-d1',
       supersededBy: 'course-d15',
       decision:
@@ -200,6 +208,7 @@ export default defineSpec({
     },
     {
       id: 'course-d3',
+      supersededBy: 'course-d25',
       decision:
         'Work is one list: sets to do by due date (undated last), the finished folded under "Done (6)" at its foot (C3).',
       why: `Confirmed by Jack: "One list, Done folded (Recommended)". one active set is the common case and old sets stay one click away.`,

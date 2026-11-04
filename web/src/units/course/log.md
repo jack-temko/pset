@@ -11,3 +11,5 @@ Built from `ideas/course-view-grill.md`, a reverse grill: Claude wrote the quest
 - G9 (Settings grill): "Three levels (Recommended)". Delete course asks for the course's name in a danger dialog.
 
 Decisions that say "assumed" are the ones he was not asked: the path and the heading both staying, Undo in place on a deleted row, the memories fold at the foot and files dropped on the page.
+
+2026-11-04, `ideas/list-pattern-grill.md` (L1 to L3, L8, L9): Jack picked "Switch in header (Recommended)" over the Done fold, "Cap 5, Show all page (Recommended)" and "Foot, with a count (Recommended)". Work's fold became the list's header switch and Work and Materials show 5 rows with "Show all N" at the foot (course-d25). C3 in `ideas/course-view-grill.md` is reversed.

@@ -18,7 +18,7 @@ import { ChangeText, Moved, RowSkeleton } from '@/units/home';
 import { Beside, Caption, Row } from '@/units/home/layouts';
 import { WEEKS } from '@/units/home/options';
 import { changeOf, homeStats } from '@/units/home/stats';
-import { List } from '@/units/list';
+import { List, LIST_CAP } from '@/units/list';
 import { ListRow } from '@/units/list-row';
 import { MoreMenu } from '@/units/menu';
 import { ProgressBar } from '@/units/progress-bar';
@@ -355,6 +355,7 @@ export function Course({
   const [sets, setSets] = useState(course.sets);
   const [materials, setMaterials] = useState(course.materials);
   const [memories, setMemories] = useState(course.memories);
+  const [side, setSide] = useState('todo');
   const [renaming, setRenaming] = useState<string>();
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState<Pending>();
@@ -415,6 +416,9 @@ export function Course({
   };
 
   const { todo, done } = split(sets);
+  // A list with no finished set has no switch and stays on To do; the list
+  // never switches by itself.
+  const shownSide = done.length > 0 ? side : 'todo';
 
   const addedMaterials = (files: readonly string[]) => {
     if (files.length === 0) return;
@@ -608,29 +612,43 @@ export function Course({
               <div className="mt-16 space-y-10">
                 <div>
                   <SectionHeading
-                    count={todo.length > 0 ? todo.length : undefined}
+                    count={
+                      done.length === 0 && todo.length > 0
+                        ? todo.length
+                        : undefined
+                    }
                   >
                     Work
                   </SectionHeading>
                   <div className="mt-3">
-                    <List empty="No work yet. Add an assignment sheet.">
-                      {[
-                        ...todo.map((s) => setRow(s, false)),
-                        ...(done.length > 0
+                    <List
+                      states={
+                        done.length > 0
                           ? [
-                              <div key="done" className="px-2">
-                                <Fold
-                                  label={`Done (${String(done.length)})`}
-                                  defaultOpen={unfolded}
-                                >
-                                  <div className="-mx-2 divide-y divide-(--ds-border-muted) border-t border-(--ds-border-muted)">
-                                    {done.map((s) => setRow(s, true))}
-                                  </div>
-                                </Fold>
-                              </div>,
+                              {
+                                id: 'todo',
+                                label: 'To do',
+                                count: todo.length,
+                              },
+                              { id: 'done', label: 'Done', count: done.length },
                             ]
-                          : []),
-                      ]}
+                          : undefined
+                      }
+                      state={shownSide}
+                      onState={setSide}
+                      cap={LIST_CAP}
+                      showAllHref="#"
+                      empty={
+                        sets.length === 0
+                          ? 'No work yet. Add an assignment sheet.'
+                          : shownSide === 'done'
+                            ? 'Nothing done yet'
+                            : 'Nothing to do'
+                      }
+                    >
+                      {shownSide === 'done'
+                        ? done.map((s) => setRow(s, true))
+                        : todo.map((s) => setRow(s, false))}
                     </List>
                     <AddButton
                       label="Add work"
@@ -646,7 +664,11 @@ export function Course({
                     Materials
                   </SectionHeading>
                   <div className="mt-3">
-                    <List empty="No materials yet. Add a textbook or slides.">
+                    <List
+                      cap={LIST_CAP}
+                      showAllHref="#"
+                      empty="No materials yet. Add a textbook or slides."
+                    >
                       {materials.map((m) =>
                         pending?.kind === 'material' && pending.id === m.id ? (
                           <DeletedRow
@@ -794,5 +816,7 @@ export function CourseSkeleton({
   );
 }
 
-/** Heights of the usual course's Work and Materials bodies, Add included. */
-const SECTIONS = [139, 228];
+/** Heights of the usual course's Work and Materials bodies, Add included.
+ *  Work's box has its switch band over one row (an estimate from the
+ *  layout: the Done fold's line it replaced was 7 shorter). */
+const SECTIONS = [146, 228];
