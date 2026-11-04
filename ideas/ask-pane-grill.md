@@ -1,6 +1,6 @@
 # Ask pane: grill
 
-- status: awaiting OK
+- status: In progress (branch `ask-pane`)
 - date: 2026-11-04
 - brief: the Ask pane in the workspace (a tab on either side), rebuilt in the new design, judged from a tired student stuck on one problem who wants a clear answer from their own course's materials
 - sources:
