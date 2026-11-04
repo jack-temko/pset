@@ -54,7 +54,10 @@ function CallLine({
     return (
       <p className={row}>
         <span className="size-4 shrink-0" aria-hidden />
-        <span className="min-w-0 truncate">{summary(turn.calls)}</span>
+        {/* Isolated: only a finished answer says it read nothing. */}
+        <span className="min-w-0 truncate">
+          {turn.status === 'done' ? summary(turn.calls) : ''}
+        </span>
       </p>
     );
   return (
@@ -155,24 +158,23 @@ function TurnView({
       <div className="space-y-3">
         <CallLine turn={turn} open={open} onToggle={onToggle} />
         {turn.remembered && (
-          <p className="ds-small flex max-w-[680px] flex-wrap items-center gap-x-3 text-(--ds-fg-muted)">
+          <p className="ds-small flex max-w-[680px] flex-wrap items-center gap-x-1 text-(--ds-fg-muted)">
             <span className="[overflow-wrap:anywhere]">
               {`Remembered: ${turn.remembered}`}
             </span>
-            <button
-              type="button"
-              onClick={() => onUndo?.(turn.id)}
-              className="cursor-pointer text-(--ds-accent) underline underline-offset-2"
-            >
+            <Button variant="quiet" onPress={() => onUndo?.(turn.id)}>
               Undo
-            </button>
-            <button
-              type="button"
-              onClick={() => onEdit?.(turn.id)}
-              className="cursor-pointer text-(--ds-accent) underline underline-offset-2"
-            >
-              Edit
-            </button>
+            </Button>
+            {onEdit && (
+              <Button
+                variant="quiet"
+                onPress={() => {
+                  onEdit(turn.id);
+                }}
+              >
+                Edit
+              </Button>
+            )}
           </p>
         )}
         <div ref={doc} className="space-y-3">
@@ -219,22 +221,20 @@ function Top({
   onClearing: (v: boolean) => void;
   onClear?: () => void;
 }) {
+  // Cancel takes the trigger's place at the right and the focus, so a second
+  // click on the same spot cancels; the destructive button sits beside it.
+  const cancel = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (clearing) cancel.current?.querySelector('button')?.focus();
+  }, [clearing]);
   return (
-    <div className="flex min-h-(--ds-control) flex-wrap items-center justify-between gap-x-3">
+    <div className="flex min-h-(--ds-control) items-center justify-between gap-3">
       {clearing ? (
         <>
-          <p className="ds-small min-w-0 flex-1">
-            {`Clear ${String(turns)} ${turns === 1 ? 'question' : 'questions'} and their answers? Memories stay.`}
+          <p className="ds-small min-w-0 flex-1 truncate">
+            {`Clear ${String(turns)} ${turns === 1 ? 'question' : 'questions'}? Memories stay.`}
           </p>
-          <div className="flex gap-2">
-            <Button
-              variant="quiet"
-              onPress={() => {
-                onClearing(false);
-              }}
-            >
-              Cancel
-            </Button>
+          <div className="flex shrink-0 gap-2">
             <Button
               variant="danger"
               onPress={() => {
@@ -244,6 +244,16 @@ function Top({
             >
               Clear
             </Button>
+            <span ref={cancel} className="inline-flex">
+              <Button
+                variant="quiet"
+                onPress={() => {
+                  onClearing(false);
+                }}
+              >
+                Cancel
+              </Button>
+            </span>
           </div>
         </>
       ) : (
@@ -283,7 +293,6 @@ function fileOf(files: FileList | null | undefined) {
  *  picture if you pasted or dropped one, the box and one button. While Ask
  *  answers the box stays yours and the button says Stop. */
 function Composer({
-  course,
   about,
   image,
   running,
@@ -293,7 +302,6 @@ function Composer({
   onSend,
   onStop,
 }: {
-  course: string;
   about?: string;
   image?: string;
   running: boolean;
@@ -332,7 +340,10 @@ function Composer({
         e.preventDefault();
       }}
       onDrop={(e: DragEvent) => {
-        if (take(fileOf(e.dataTransfer.files))) e.preventDefault();
+        const file = fileOf(e.dataTransfer.files);
+        // Anything else dropped is left alone, not opened in place of the pane.
+        e.preventDefault();
+        take(file);
       }}
     >
       {(about || image) && (
@@ -377,13 +388,17 @@ function Composer({
         <textarea
           ref={box}
           value={text}
-          placeholder={`Ask about ${course}`}
+          placeholder="Ask a question"
           aria-label="Your question"
           onChange={(e) => {
             setText(e.target.value);
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
+            if (
+              e.key === 'Enter' &&
+              !e.shiftKey &&
+              !e.nativeEvent.isComposing
+            ) {
               e.preventDefault();
               send();
             }
@@ -462,10 +477,26 @@ export function Ask({
   // the student scrolled back to read (ask-d12).
   const scroller = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
+  const inner = useRef<HTMLDivElement>(null);
+  const empty = turns.length === 0;
   useLayoutEffect(() => {
     const el = scroller.current;
     if (el && stick.current) el.scrollTop = el.scrollHeight;
   }, [turns]);
+  // Images, math and plots settle after the first paint: while the student
+  // is at the foot, the foot stays where they are.
+  useEffect(() => {
+    const el = scroller.current;
+    const body = inner.current;
+    if (!el || !body || typeof ResizeObserver === 'undefined') return;
+    const watch = new ResizeObserver(() => {
+      if (stick.current) el.scrollTop = el.scrollHeight;
+    });
+    watch.observe(body);
+    return () => {
+      watch.disconnect();
+    };
+  }, [empty]);
 
   const running = turns.some((t) => t.status === 'working');
 
@@ -480,14 +511,14 @@ export function Ask({
         }}
         className="min-h-0 flex-1 overflow-y-auto"
       >
-        {turns.length === 0 ? (
+        {empty ? (
           <div className="flex min-h-full flex-col justify-end px-6 py-4">
             <p className="ds-small text-(--ds-fg-muted)">
               {`Ask anything about ${course}. It reads your materials.`}
             </p>
           </div>
         ) : (
-          <div className="space-y-6 px-6 py-4">
+          <div ref={inner} className="space-y-6 px-6 py-4">
             <Top
               turns={turns.length}
               clearing={clearing}
@@ -522,7 +553,6 @@ export function Ask({
         )}
       </div>
       <Composer
-        course={course}
         about={chip}
         image={image}
         running={running}
@@ -561,15 +591,21 @@ export function AskSkeleton() {
             <Bar className="h-3 w-32" />
           </div>
           <div className="flex justify-end">
-            <Bar className="h-10 w-2/3" />
+            <Bar className="h-[38px] w-2/3" />
           </div>
           <div className="space-y-3">
             <div className="flex h-(--ds-small-line) items-center">
               <Bar className="h-3 w-48" />
             </div>
-            <Bar className="h-4 w-full max-w-[680px]" />
-            <Bar className="h-4 w-full max-w-[680px]" />
-            <Bar className="h-4 w-1/2" />
+            {['w-full', 'w-full', 'w-1/2'].map((w, i) => (
+              <div
+                key={i}
+                className="flex h-(--ds-reading-line) max-w-[680px] items-center"
+              >
+                <Bar className={`h-4 ${w}`} />
+              </div>
+            ))}
+            <div className="h-(--ds-control)" />
           </div>
         </div>
       </div>

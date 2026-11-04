@@ -48,6 +48,12 @@ export function SampleAsk({
     first.current = false;
     const last = start.at(-1);
     if (last) play(last.id);
+    // Under StrictMode the effect runs, is cleaned up and runs again: the
+    // cleanup stops the timers, so it must also arm the second run.
+    return () => {
+      stop();
+      first.current = running;
+    };
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- once, on show
   }, []);
 
@@ -95,7 +101,15 @@ export function SampleAsk({
         setTurns((all) =>
           all.map((t) =>
             t.id === id
-              ? { ...t, status: 'working', failure: undefined, calls: [] }
+              ? {
+                  ...t,
+                  status: 'working',
+                  failure: undefined,
+                  calls: [],
+                  inFlight: undefined,
+                  blocks: [],
+                  remembered: undefined,
+                }
               : t,
           ),
         );
