@@ -79,8 +79,14 @@ export default defineSpec({
     {
       id: 'follow-page-link',
       label: 'A page link in the work',
-      does: 'Turns the book’s showing tab, on either side; if none is showing, its tab opposite the work, or a new one there.',
+      does: 'Turns the book’s showing tab, on either side (or opens one opposite the work), to the page and flashes the problem’s box for 1.8 s.',
       target: { unit: 'workspace', state: 'followed' },
+    },
+    {
+      id: 'box-one',
+      label: 'Box one on the page, in the work’s menu',
+      does: 'Turns the book to the problem’s page and puts that material tab in boxing mode; Done keeps the boxes on the problem.',
+      target: { unit: 'material', state: 'boxing' },
     },
     {
       id: 'ask-about',
@@ -313,6 +319,22 @@ export default defineSpec({
         'The workspace has no failed state yet: the panes decide theirs in their own grills.',
       why: 'Not designed: noted when the spec format dropped the data waiting and failed fields (ideas/spec-format-grill.md, F9).',
       beat: 'A failed line in the data section',
+      date: '2026-10-22',
+    },
+    {
+      id: 'workspace-d17',
+      decision:
+        'A page link turns the material and flashes the problem’s box; the request is spent after 2 s, so a tab opened again does not flash.',
+      why: 'Jack: "the visible one, or the one on the other side" (W-page link) and "Page, problem outlined (Recommended)" (P11, work-d4).',
+      beat: 'Page only; a flash on every visit',
+      date: '2026-10-22',
+    },
+    {
+      id: 'workspace-d18',
+      decision:
+        '"Box one on the page" opens boxing mode on the material tab, at the problem’s page; boxes drawn survive a tab switch and Done keeps them on the problem.',
+      why: 'Jack picked "A boxing mode in the material pane (Recommended)" (M11); keeping them is the build’s sample until the server saves them.',
+      beat: 'A separate full-window boxing screen',
       date: '2026-10-22',
     },
   ],

@@ -238,24 +238,29 @@ function Stage({
       className="overflow-hidden rounded-md border bg-muted p-card text-foreground"
     >
       <div className="flex items-stretch">
-        <div
-          className={cn(
-            'ds shrink-0',
-            spec.kind !== 'pane' &&
-              'rounded-lg border border-(--ds-border-muted) p-6',
-          )}
-          style={{ width }}
-        >
-          {got?.ex ? (
-            <Render
-              key={`${spec.id}:${s.state}:${s.load}:${String(s.stress)}`}
-              ex={got.ex}
-              spec={spec}
-              s={s}
-            />
-          ) : (
-            <Message>{got?.error ?? 'Loading the example.'}</Message>
-          )}
+        <div className="min-w-0">
+          <div
+            className={cn(
+              'ds shrink-0',
+              spec.kind !== 'pane' &&
+                'rounded-lg border border-(--ds-border-muted) p-6',
+            )}
+            style={{ width }}
+          >
+            {got?.ex ? (
+              <Render
+                key={`${spec.id}:${s.state}:${s.load}:${String(s.stress)}`}
+                ex={got.ex}
+                spec={spec}
+                s={s}
+              />
+            ) : (
+              <Message>{got?.error ?? 'Loading the example.'}</Message>
+            )}
+          </div>
+          {/* An example may put a caption here (a readout of what it tells the
+            rest of the app) in the stage's own light text, outside its frame. */}
+          <div data-stage-caption className="text-xs text-muted-foreground" />
         </div>
         <ResizeHandle
           label="Resize the example"

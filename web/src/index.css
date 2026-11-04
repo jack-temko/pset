@@ -589,3 +589,17 @@
   overflow-y: hidden;
   padding-block: 0.25rem;
 }
+
+/* A page image arriving in the material pane (M9): it fades in over the
+   plain box that held its place, so nothing jumps. */
+@keyframes page-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@utility page-fade {
+  animation: page-fade 200ms ease-out;
+}

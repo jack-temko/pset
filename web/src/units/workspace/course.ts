@@ -44,3 +44,12 @@ export function aboutOf(c: Course, problem: string | undefined) {
   }
   return undefined;
 }
+
+/** A problem of any set in the course. */
+export function problemOf(c: Course, id: string) {
+  for (const s of c.sets) {
+    const p = s.problems.find((x) => x.id === id);
+    if (p) return p;
+  }
+  return undefined;
+}

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 
 import { defineExamples } from '@/design/examples';
-import { MaterialStub, MaterialStubSkeleton } from '@/units/pane-stub';
+import { Material, MaterialSkeleton } from '@/units/material';
+import { GRIFFITHS } from '@/units/material/sample';
 import type { TabItem } from '@/units/tabs';
 import { Side } from './index';
 import spec from './spec';
@@ -35,9 +36,9 @@ function Demo({
         dropping={dropping}
         body={
           loading ? (
-            <MaterialStubSkeleton />
+            <MaterialSkeleton />
           ) : (
-            <MaterialStub name={name} page={112} />
+            <Material name={name} book={GRIFFITHS} tabId={name} page={112} />
           )
         }
         onOpen={setOpen}

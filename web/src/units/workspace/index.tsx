@@ -1,13 +1,12 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Divider } from '@/units/divider';
 import type { MenuGroup } from '@/units/menu';
-import {
-  AskStub,
-  AskStubSkeleton,
-  MaterialStub,
-  MaterialStubSkeleton,
-} from '@/units/pane-stub';
+import { Material, MaterialSkeleton } from '@/units/material';
+import { pageMemory as materialMemory } from '@/units/material/memory';
+import { bookOf, boxOfProblem } from '@/units/material/sample';
+import { printedOf, type Box } from '@/units/material/types';
+import { AskStub, AskStubSkeleton } from '@/units/pane-stub';
 import { DropFill, Side } from '@/units/side';
 import { type TabAction } from '@/units/tabs';
 import { endDrag, useDraggedTab } from '@/units/tabs/drag';
@@ -16,7 +15,15 @@ import { Work, WorkSkeleton, type Marks } from '@/units/work';
 import { pageMemory } from '@/units/work/memory';
 import type { WorkSet } from '@/units/work/sets';
 
-import { aboutOf, materialOf, setOf, tabLabel, type Course } from './course';
+import {
+  aboutOf,
+  materialOf,
+  problemOf,
+  setOf,
+  tabLabel,
+  type Course,
+  type CourseSet,
+} from './course';
 import * as m from './model';
 
 /** The least width of a side; the divider stops here (workspace-d3). */
@@ -149,6 +156,31 @@ export function Workspace({
   const [marks, setMarks] = useState<Record<string, Marks>>({});
   /** The problem whose box the material outlines (P11), and which tab. */
   const [box, setBox] = useState<{ tab: string; problem: string; n: number }>();
+  /** Each material tab's place (M8), and the box being drawn, if any (M11). */
+  const [places] = useState(materialMemory);
+  const [boxing, setBoxing] = useState<{
+    tab: string;
+    problem: string;
+    label: string;
+    page: number;
+    /** Drawn so far; kept here so a tab switch mid-boxing loses nothing. */
+    boxes: readonly Box[];
+  }>();
+  /** The boxes Done kept, by problem. Sample only (A5): the server saves
+   *  them once the pane is wired, and a page link then flashes them. */
+  const [drawn, setDrawn] = useState<Record<string, readonly Box[]>>({});
+  // A flash is a moment: once it is over the request is spent, so a tab
+  // that is closed and opened again does not flash.
+  const flashN = box?.n;
+  useEffect(() => {
+    if (flashN === undefined) return;
+    const t = setTimeout(() => {
+      setBox(undefined);
+    }, 2000);
+    return () => {
+      clearTimeout(t);
+    };
+  }, [flashN]);
   const dragged = useDraggedTab();
   const apply = (f: (s: m.State) => m.State) => {
     const next = f(st);
@@ -182,6 +214,51 @@ export function Workspace({
     ...(current ? [{ label: current.name }] : []),
   ];
 
+  /** Turns the book's tab to a page, opening one if needed (workspace-d8),
+   *  and returns the tab that now shows it. */
+  const showMaterial = (side: m.Side, ref: string, page: number) => {
+    const next = m.follow(st, side, ref, page);
+    apply(() => next);
+    return [m.other(side), side]
+      .map((x) => m.openTab(next, x))
+      .find((t) => t?.kind === 'material' && t.ref === ref && t.page === page)
+      ?.id;
+  };
+
+  /** "Box one on the page" (M11): the material turns to the problem's page
+   *  and goes into boxing mode. */
+  const startBoxing = (side: m.Side, set: CourseSet, problem: string) => {
+    const p = set.problems.find((x) => x.id === problem);
+    if (!p) return;
+    const tab = showMaterial(side, set.material, p.page);
+    if (tab)
+      setBoxing({
+        tab,
+        problem,
+        label: p.label,
+        page: p.page,
+        boxes: drawn[problem] ?? [],
+      });
+  };
+
+  /** What the material flashes for a page link: the box the student drew for
+   *  the problem (the first one, if several), else the sample's. */
+  const flashOf = (
+    ref: string,
+    page: number,
+    shown: { problem: string; n: number },
+    boxes: readonly Box[] | undefined,
+  ) => {
+    const first = boxes?.[0];
+    return first
+      ? {
+          page: printedOf(bookOf(ref), first.pdf) ?? page,
+          box: first,
+          n: shown.n,
+        }
+      : { page, box: boxOfProblem(shown.problem), n: shown.n };
+  };
+
   const body = (side: m.Side) => {
     const tab = m.openTab(st, side);
     if (!tab) return null;
@@ -206,22 +283,19 @@ export function Workspace({
               setMarks((all) => ({ ...all, [set.id]: next }));
             }}
             onOpenPage={(page, problem) => {
-              const next = m.follow(st, side, set.material, page);
-              apply(() => next);
-              const shown = [m.other(side), side]
-                .map((x) => m.openTab(next, x))
-                .find(
-                  (t) =>
-                    t?.kind === 'material' &&
-                    t.ref === set.material &&
-                    t.page === page,
-                );
-              if (shown)
+              const tab = showMaterial(side, set.material, page);
+              if (tab)
                 setBox((b) => ({
-                  tab: shown.id,
+                  tab,
                   problem,
                   n: (b?.n ?? 0) + 1,
                 }));
+            }}
+            onSetMenu={(item, problem) => {
+              if (item === 'box' && problem) startBoxing(side, set, problem);
+            }}
+            onFix={(fix, problem) => {
+              if (fix === 'box') startBoxing(side, set, problem);
             }}
             onAsk={(problem) => {
               apply((s) => m.askAbout(s, side, problem));
@@ -234,12 +308,41 @@ export function Workspace({
       );
     }
     if (tab.kind === 'material') {
-      if (wait) return <MaterialStubSkeleton />;
+      if (wait) return <MaterialSkeleton />;
+      const shown = box?.tab === tab.id ? box : undefined;
+      const problem = shown && problemOf(course, shown.problem);
       return (
-        <MaterialStub
+        <Material
+          key={tab.id}
           name={materialOf(course, tab.ref)?.name ?? tab.ref}
+          book={bookOf(tab.ref)}
+          tabId={tab.id}
+          memory={places}
           page={tab.page ?? 1}
-          boxed={box?.tab === tab.id ? box : undefined}
+          flash={
+            shown && problem
+              ? flashOf(tab.ref, problem.page, shown, drawn[shown.problem])
+              : undefined
+          }
+          boxing={
+            boxing?.tab === tab.id
+              ? { label: boxing.label, page: boxing.page }
+              : undefined
+          }
+          startBoxes={boxing?.tab === tab.id ? boxing.boxes : undefined}
+          onBoxes={(boxes) => {
+            setBoxing((b) => b && { ...b, boxes });
+          }}
+          onPage={(page) => {
+            apply((s) => m.setPage(s, tab.id, page));
+          }}
+          onDone={(boxes) => {
+            if (boxing) setDrawn((d) => ({ ...d, [boxing.problem]: boxes }));
+            setBoxing(undefined);
+          }}
+          onCancel={() => {
+            setBoxing(undefined);
+          }}
         />
       );
     }
