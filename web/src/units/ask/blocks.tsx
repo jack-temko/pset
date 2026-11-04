@@ -67,7 +67,7 @@ function Plot({ title, series }: { title: string; series: readonly Series[] }) {
   const sy = (y: number) =>
     H - pad - ((y - y0) / (y1 - y0 || 1)) * (H - pad - 8);
   return (
-    <figure className="m-0">
+    <figure className="m-0 max-w-[680px]">
       <figcaption className="ds-label mb-2 text-(--ds-fg-muted)">
         {title}
       </figcaption>
@@ -115,7 +115,7 @@ function Plot({ title, series }: { title: string; series: readonly Series[] }) {
           <span key={s.name} className="inline-flex items-center gap-2">
             <span
               aria-hidden
-              className="inline-block h-0.5 w-4"
+              className="inline-block h-[2px] w-4"
               style={{ background: COLOURS[i % COLOURS.length] }}
             />
             {s.name}
@@ -226,6 +226,7 @@ export function BlockView({
           className={`${MEASURE} rounded-r-(--ds-radius-control) border-l-2 border-(--ds-success) bg-(--ds-success-soft) px-3 py-2`}
         >
           <p className="ds-body">
+            <strong className="ds-label mr-2 text-(--ds-success)">Check</strong>
             <Inlines runs={block.runs} onPage={onPage} />
           </p>
         </div>

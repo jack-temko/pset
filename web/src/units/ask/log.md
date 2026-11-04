@@ -7,3 +7,5 @@ Batch 1: a conversation is **"One per course (Recommended)"**; the calls while A
 Batch 2: the folded summary **"Top of the answer (Recommended)"**; what you can attach **"Chips + paste an image (Recommended)"**; history **"Endless, day dividers (Recommended)"**; answer controls **"None, say it in words (Recommended)"**.
 
 Batch 3: a page chip **"Material on the other side (Recommended)"**; answer width **"Capped, about 680 (Recommended)"**; typing while it answers **"Type, send when done (Recommended)"**; opening on a long history **"Bottom, chip in, focused (Recommended)"**.
+
+Built 2026-11-04: sample page chips carry no box, so K9's flash is not wired yet; the page opens (ask-d9).

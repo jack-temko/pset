@@ -88,7 +88,7 @@ export default defineSpec({
       id: 'clearing',
       name: 'Clear asks first',
       when: 'Clear pressed: the top row says how many turns go and that memories stay, with Cancel and Clear.',
-      text: 'Clear 4 questions and their answers? Memories stay.',
+      text: 'Clear 4 questions? Memories stay.',
     },
     {
       id: 'loading',
@@ -141,7 +141,7 @@ export default defineSpec({
     {
       id: 'page-chip',
       label: 'A page chip, "p. 142"',
-      does: 'Tells the workspace to open that material at that page on the other side.',
+      does: 'Tells the workspace to open that material at that page on the other side. Sample chips carry no box, so nothing flashes yet.',
       target: { unit: 'material', state: 'flash' },
     },
     {
@@ -242,6 +242,7 @@ export default defineSpec({
       'failure-says-what',
       'keep-the-place',
       'serif-to-read',
+      'colour-has-a-word',
       'student-decides',
       'one-primary',
       'sentence-case',
@@ -316,7 +317,7 @@ export default defineSpec({
     {
       id: 'ask-d9',
       decision:
-        'A page chip tells the workspace to open that material on the other side at that page.',
+        'A page chip tells the workspace to open that material on the other side at that page; flashing a box waits for chips that carry one.',
       why: 'Jack picked "Material on the other side (Recommended)" (K9): one behaviour for every page link.',
       beat: 'A preview popover',
       date: '2026-11-04',
