@@ -4,7 +4,7 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-123 entries.
+126 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
@@ -27,6 +27,7 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `errors.read_failed` | Couldn't read the list of errors. | PSet's database didn't answer. | Try again. If it keeps happening, check the database in Settings. | `retry` | inline | errlog |
 | `events.no_streaming` | PSet can't keep this page up to date. | The connection between the page and PSet can't carry live updates. | Reload the page. If it keeps happening, report it with the details. | `reload` | inline | events |
 | `homework.bad_due_date` | That isn't a date. |  |  |  | field | homework |
+| `homework.bad_image` | That isn't a PNG or JPEG image. |  |  |  | field | homework |
 | `homework.bad_position` | Position {to} is outside the set (1 to {n}). |  |  |  | field | homework |
 | `homework.bad_stage` | There's no stage called {stage}. |  |  |  | field | homework |
 | `homework.bad_url` | That isn't a web page's address. |  |  |  | field | homework |
@@ -40,6 +41,7 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `homework.figure_busy` | Its figure is still being read. |  |  |  | field | homework |
 | `homework.file_kind` | Send a PDF, a photo, or a text file. |  |  |  | field | homework |
 | `homework.file_too_big` | That file is too big for an assignment. |  |  |  | field | homework |
+| `homework.image_too_big` | Keep the image under {max} MB. |  |  |  | field | homework |
 | `homework.no_boxes` | Draw a box around the problem first. |  |  |  | field | homework |
 | `homework.no_drafts` | Write at least one question. |  |  |  | field | homework |
 | `homework.no_figure` | This question has no figure to read. |  |  |  | field | homework |
@@ -67,6 +69,7 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `homework.title_too_long` | Keep the title under {max} characters. |  |  |  | field | homework |
 | `homework.too_many_boxes` | That's more than {max} boxes for one problem. |  |  |  | field | homework |
 | `homework.too_many_drafts` | That's more than {max} questions at once. Add them in smaller batches. |  |  |  | field | homework |
+| `homework.too_many_images` | A question holds at most {max} images. |  |  |  | field | homework |
 | `homework.too_many_lines` | That's more than {max} lines at once. |  |  |  | field | homework |
 | `homework.too_many_notes` | Keep it to {max} notes. |  |  |  | field | homework |
 | `import.cancelled` | {title} was cancelled before it started. | You stopped it before PSet began. | Try again to start it. | `retry` | inline | library |
