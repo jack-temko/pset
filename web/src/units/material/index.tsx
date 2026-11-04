@@ -601,8 +601,9 @@ export function Material({
     const fingers = new Map<number, P>();
     let start: { dist: number; zoom: number } | undefined;
     const two = () => {
-      const [a, b]: (P | undefined)[] = [...fingers.values()];
-      if (!a || !b) return undefined;
+      const v = [...fingers.values()];
+      if (v.length !== 2) return undefined;
+      const [a, b] = v as [P, P];
       return {
         dist: Math.hypot(a.x - b.x, a.y - b.y),
         x: (a.x + b.x) / 2,
