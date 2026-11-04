@@ -15,7 +15,7 @@ import { Fold } from '@/units/fold';
 import { Heatmap, HeatmapSkeleton } from '@/units/heatmap';
 import { studyDay } from '@/units/heatmap/day';
 import { ChangeText, Moved, RowSkeleton } from '@/units/home';
-import { Beside, Caption, Row } from '@/units/home/layouts';
+import { Beside, Caption, Row, Rows } from '@/units/home/layouts';
 import { WEEKS } from '@/units/home/options';
 import { changeOf, homeStats } from '@/units/home/stats';
 import { List, LIST_CAP } from '@/units/list';
@@ -207,15 +207,12 @@ function MaterialRow({
   );
 }
 
-/** The Add at a list's foot: one line under the list, the same height
- *  whether the list is empty or full. */
+/** The Add at the right end of a list's heading line (course-d27). */
 function AddButton({ label, onPick }: { label: string; onPick: () => void }) {
   return (
-    <div className="mt-3">
-      <Button icon={Plus} onPress={onPick}>
-        {label}
-      </Button>
-    </div>
+    <Button icon={Plus} onPress={onPick}>
+      {label}
+    </Button>
   );
 }
 
@@ -286,34 +283,36 @@ function Stats({ course, today }: { course: CourseData; today: Date }) {
               }))}
             />
           </div>
-          <Row
-            first
-            figure={figureOf(String(s.questions.week))}
-            label={
-              <p className="ds-small flex items-center gap-x-2 text-(--ds-fg-muted)">
-                <span>Questions done</span>
-                {questionsChange && <ChangeText change={questionsChange} />}
-              </p>
-            }
-            caption={
-              <Moved text={`Last week by now: ${String(s.questions.last)}`} />
-            }
-            trailing={<Sparkline values={s.spark.questions} height={28} />}
-          />
-          <Row
-            figure={figureOf(money(course.cost))}
-            label={<p className={small}>Cost so far</p>}
-            caption={
-              <Moved
-                text={
-                  none
-                    ? 'Nothing spent yet'
-                    : `${money(course.monthCost)} this month`
-                }
-              />
-            }
-            trailing={<Sparkline values={course.costSpark} height={28} />}
-          />
+          <Rows>
+            <Row
+              first
+              figure={figureOf(String(s.questions.week))}
+              label={
+                <p className="ds-small flex items-center gap-x-2 text-(--ds-fg-muted)">
+                  <span>Questions done</span>
+                  {questionsChange && <ChangeText change={questionsChange} />}
+                </p>
+              }
+              caption={
+                <Moved text={`Last week by now: ${String(s.questions.last)}`} />
+              }
+              trailing={<Sparkline values={s.spark.questions} height={28} />}
+            />
+            <Row
+              figure={figureOf(money(course.cost))}
+              label={<p className={small}>Cost so far</p>}
+              caption={
+                <Moved
+                  text={
+                    none
+                      ? 'Nothing spent yet'
+                      : `${money(course.monthCost)} this month`
+                  }
+                />
+              }
+              trailing={<Sparkline values={course.costSpark} height={28} />}
+            />
+          </Rows>
         </>
       }
     />
@@ -632,6 +631,14 @@ export function Course({
                         ? todo.length
                         : undefined
                     }
+                    button={
+                      <AddButton
+                        label="Add work"
+                        onPick={() => {
+                          workPicker.current?.click();
+                        }}
+                      />
+                    }
                   >
                     Work
                   </SectionHeading>
@@ -654,17 +661,21 @@ export function Course({
                         ? done.map((s) => setRow(s, true))
                         : todo.map((s) => setRow(s, false))}
                     </List>
-                    <AddButton
-                      label="Add work"
-                      onPick={() => {
-                        workPicker.current?.click();
-                      }}
-                    />
                   </div>
                 </div>
 
                 <div>
-                  <SectionHeading count={materials.length}>
+                  <SectionHeading
+                    count={materials.length}
+                    button={
+                      <AddButton
+                        label="Add material"
+                        onPick={() => {
+                          materialPicker.current?.click();
+                        }}
+                      />
+                    }
+                  >
                     Materials
                   </SectionHeading>
                   <div className="mt-3">
@@ -704,12 +715,6 @@ export function Course({
                         ),
                       )}
                     </List>
-                    <AddButton
-                      label="Add material"
-                      onPick={() => {
-                        materialPicker.current?.click();
-                      }}
-                    />
                   </div>
                 </div>
 
@@ -792,8 +797,10 @@ export function CourseSkeleton({
                 <div className="min-h-0 flex-1">
                   <BarChartSkeleton />
                 </div>
-                <RowSkeleton first />
-                <RowSkeleton />
+                <Rows>
+                  <RowSkeleton first />
+                  <RowSkeleton />
+                </Rows>
               </>
             }
           />
@@ -820,6 +827,8 @@ export function CourseSkeleton({
   );
 }
 
-/** Heights of the usual course's Work and Materials bodies, Add included,
- *  measured from the loaded page. */
-const SECTIONS = [147, 228];
+/** Heights of the usual course's Work and Materials boxes, measured from the
+ *  loaded page: Work is 2 + 41 (switch band) + 60 (one row), Materials 2 + 3 rows
+ *  of 60 + 2 rules. Each Add is in the heading line, which the skeleton's bar
+ *  already holds. */
+const SECTIONS = [103, 184];

@@ -21,7 +21,7 @@ export default defineSpec({
     {
       id: 'empty',
       name: 'Empty',
-      when: 'No rows: one muted line.',
+      when: 'No rows: one muted line, centred in the box.',
       text: 'Nothing here yet',
     },
     {
@@ -38,7 +38,7 @@ export default defineSpec({
     {
       id: 'capped',
       name: 'Capped',
-      when: 'More rows than the cap: five show, and the last row of the box is "Show all 8", a link to the list page.',
+      when: 'More rows than the cap: five show, and the last row of the box is "Show all 8", centred, a link to the list page.',
       text: 'Show all 8',
     },
     {

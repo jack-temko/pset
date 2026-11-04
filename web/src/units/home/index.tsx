@@ -12,7 +12,7 @@ import { Sparkline } from '@/units/sparkline';
 import { minutesText } from '@/units/set-line/dates';
 import { TopBar } from '@/units/top-bar';
 
-import { Beside, Caption as Line, Row } from './layouts';
+import { Beside, Caption as Line, Row, Rows } from './layouts';
 import { WEEKS } from './options';
 import { changeOf, homeStats, leftToDo, type Change } from './stats';
 
@@ -153,34 +153,36 @@ export function Home({
               }))}
             />
           </div>
-          <Row
-            first
-            figure={figureOf(count(s.questions.week))}
-            label={
-              <p className="ds-small flex items-center gap-x-2 text-(--ds-fg-muted)">
-                <span>Questions done</span>
-                {questionsChange && <ChangeText change={questionsChange} />}
-              </p>
-            }
-            caption={
-              <Moved text={`Last week by now: ${count(s.questions.last)}`} />
-            }
-            trailing={<Sparkline values={s.spark.questions} height={28} />}
-          />
-          <Row
-            figure={figureOf(count(left.questions))}
-            label={<p className={small}>Questions left</p>}
-            caption={
-              <Moved
-                text={
-                  left.questions > 0
-                    ? `in ${plural(left.sets, 'set', 'sets')} due soon`
-                    : 'Nothing due in a week'
-                }
-              />
-            }
-            trailing={<Sparkline values={leftSpark} height={28} />}
-          />
+          <Rows>
+            <Row
+              first
+              figure={figureOf(count(s.questions.week))}
+              label={
+                <p className="ds-small flex items-center gap-x-2 text-(--ds-fg-muted)">
+                  <span>Questions done</span>
+                  {questionsChange && <ChangeText change={questionsChange} />}
+                </p>
+              }
+              caption={
+                <Moved text={`Last week by now: ${count(s.questions.last)}`} />
+              }
+              trailing={<Sparkline values={s.spark.questions} height={28} />}
+            />
+            <Row
+              figure={figureOf(count(left.questions))}
+              label={<p className={small}>Questions left</p>}
+              caption={
+                <Moved
+                  text={
+                    left.questions > 0
+                      ? `in ${plural(left.sets, 'set', 'sets')} due soon`
+                      : 'Nothing due in a week'
+                  }
+                />
+              }
+              trailing={<Sparkline values={leftSpark} height={28} />}
+            />
+          </Rows>
         </>
       }
     />
@@ -265,8 +267,10 @@ export function HomeSkeleton({
               <div className="min-h-0 flex-1">
                 <BarChartSkeleton />
               </div>
-              <RowSkeleton first />
-              <RowSkeleton />
+              <Rows>
+                <RowSkeleton first />
+                <RowSkeleton />
+              </Rows>
             </>
           }
         />

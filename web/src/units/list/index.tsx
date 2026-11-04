@@ -140,14 +140,14 @@ export function List({
         </div>
       )}
       {rows.length === 0 ? (
-        <div className="ds-small flex min-h-14 flex-wrap items-center gap-x-3 px-4 py-2 text-(--ds-fg-muted)">
+        <div className="ds-small flex min-h-14 flex-wrap items-center justify-center gap-x-3 px-4 py-2 text-center text-(--ds-fg-muted)">
           {empty}
         </div>
       ) : (
         <div className="divide-y divide-(--ds-border-muted)">{rows}</div>
       )}
       {rows.length < all.length && showAllHref !== undefined && (
-        <div className="flex min-h-10 items-center border-t border-(--ds-border-muted) px-4">
+        <div className="flex min-h-10 items-center justify-center border-t border-(--ds-border-muted) px-4">
           <Link href={showAllHref} size="small">
             Show all {all.length}
           </Link>

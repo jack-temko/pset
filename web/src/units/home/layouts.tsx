@@ -29,6 +29,16 @@ export function Caption({ children }: { children: ReactNode }) {
   );
 }
 
+/** The figure rows under the bars share one grid: the first column is as wide
+ *  as the widest figure, so every label starts at the same x. */
+export function Rows({ children }: { children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[auto_minmax(0,1fr)_6rem] gap-x-3 gap-y-2">
+      {children}
+    </div>
+  );
+}
+
 /** One figure under the bars, in a single compact row: the figure, what it
  *  counts and how it moved over two small lines, and a sparkline.
  *  A hairline sits above every row but the first. */
@@ -47,14 +57,14 @@ export function Row({
 }) {
   return (
     <div
-      className={`flex items-center gap-x-3 ${first ? '' : 'border-t border-(--ds-border-muted) pt-2'}`}
+      className={`col-span-3 grid grid-cols-subgrid items-center ${first ? '' : 'border-t border-(--ds-border-muted) pt-2'}`}
     >
-      <div className="min-w-8 shrink-0">{figure}</div>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-8">{figure}</div>
+      <div className="min-w-0">
         {label}
         {caption}
       </div>
-      <div className="w-24 flex-none">{trailing}</div>
+      <div>{trailing}</div>
     </div>
   );
 }

@@ -63,12 +63,12 @@ export default defineSpec({
     {
       id: 'add-work',
       label: 'Add work',
-      does: 'At the foot of Work: opens the file picker for an assignment sheet; each shows as a new set reading in.',
+      does: 'At the right of the Work heading: opens the file picker for an assignment sheet; each shows as a new set reading in.',
     },
     {
       id: 'add-material',
       label: 'Add material',
-      does: 'At the foot of Materials: opens the file picker; several files at once are fine, each shows as a new material reading in.',
+      does: 'At the right of the Materials heading: opens the file picker; several files at once are fine, each shows as a new material reading in.',
     },
     {
       id: 'drop-files',
@@ -183,6 +183,14 @@ export default defineSpec({
   },
   log: 'web/src/units/course/log.md',
   decisions: [
+    {
+      id: 'course-d27',
+      decision:
+        '"Add work" and "Add material" sit at the right end of their headings, across from "Work" and "Materials", centred with them; nothing sits under the lists.',
+      why: 'Jack: "Can we move these to be inline with the table headers, but across from them?" Supersedes where course-d20 put the Adds.',
+      beat: 'An Add under each list',
+      date: '2026-11-04',
+    },
     {
       id: 'course-d26',
       decision:
@@ -353,6 +361,7 @@ export default defineSpec({
     },
     {
       id: 'course-d20',
+      supersededBy: 'course-d27',
       decision:
         'No Add by the heading: Work has "Add work" at its foot and Materials "Add material". Dropping files on the page still adds them as materials.',
       why: 'Confirmed by Jack: "An Add on each list" (C6). The button words and the drop are assumed, not asked.',
