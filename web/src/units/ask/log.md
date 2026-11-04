@@ -1,0 +1,9 @@
+# Ask: log
+
+From the Ask pane grill of 2026-11-04 (`ideas/ask-pane-grill.md`), word for word.
+
+Batch 1: a conversation is **"One per course (Recommended)"**; the calls while Ask works, Jack: **"So I only want the current tool action to show, not a list of them as they come in. Then a summary folded to one line when its done."**; a saved preference **"A row with Undo (Recommended)"**; no history **"A quiet line + composer (Recommended)"**.
+
+Batch 2: the folded summary **"Top of the answer (Recommended)"**; what you can attach **"Chips + paste an image (Recommended)"**; history **"Endless, day dividers (Recommended)"**; answer controls **"None, say it in words (Recommended)"**.
+
+Batch 3: a page chip **"Material on the other side (Recommended)"**; answer width **"Capped, about 680 (Recommended)"**; typing while it answers **"Type, send when done (Recommended)"**; opening on a long history **"Bottom, chip in, focused (Recommended)"**.
