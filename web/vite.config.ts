@@ -21,6 +21,11 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // The suite runs on every core at once under `make check`, and a jsdom
+    // render of a whole screen then takes several times its solo time (the
+    // workspace tests: 0.5 s alone, seconds under load). The tests use fake
+    // time and wait on nothing; the default 5 s only measures a busy machine.
+    testTimeout: 30_000,
     // tokens.test.ts reads tokens.css as text, so vitest must not process it.
     css: { include: [/tokens\.css/] },
   },
