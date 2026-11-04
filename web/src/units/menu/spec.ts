@@ -52,10 +52,6 @@ export default defineSpec({
       does: 'The menu’s name.',
     },
     {
-      name: 'width',
-      does: 'Its width in pixels (240 by default).',
-    },
-    {
       name: 'onPick',
       does: 'Called with the id of the item picked.',
     },

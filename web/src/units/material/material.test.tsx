@@ -28,6 +28,12 @@ afterEach(() => {
   });
   document.body.replaceChildren();
 });
+function setValue(input: HTMLInputElement, value: string) {
+  // React tracks the value itself, so set it through the prototype's setter.
+  const proto = Object.getPrototypeOf(input) as HTMLInputElement;
+  Object.getOwnPropertyDescriptor(proto, 'value')?.set?.call(input, value);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
 const button = (el: Element, name: string) =>
   [...el.querySelectorAll('button')].find((b) => b.textContent === name);
 
@@ -46,23 +52,44 @@ describe('Material', () => {
 
   it('shows the printed page, and PDF 3 on an unnumbered one', () => {
     const a = render(<Material {...base} memory={pageMemory()} page={112} />);
-    expect(a.textContent).toContain('p.112');
-    expect(a.textContent).toContain('of 640');
+    expect(a.querySelector('input')?.value).toBe('112');
+    expect(a.textContent).toContain('/ 640');
     const b = render(<Material {...base} memory={pageMemory()} startPdf={3} />);
     expect(b.textContent).toContain('PDF 3');
-    expect(b.textContent).not.toContain('of 640');
+    expect(b.textContent).not.toContain('/ 640');
   });
 
-  it('says a missing page is not there and stays', () => {
-    const el = render(
-      <Material
-        {...base}
-        memory={pageMemory()}
-        page={112}
-        startGoTo={{ text: '900', entered: true }}
-      />,
-    );
-    expect(el.textContent).toContain('No p. 900, the book ends at 640');
+  it('goes to the nearest page for a number past either end', () => {
+    for (const [typed, want] of [
+      ['900', '640'],
+      ['0', '1'],
+      ['-4', '1'],
+    ] as const) {
+      const fired: number[] = [];
+      const el = render(
+        <Material
+          {...base}
+          memory={pageMemory()}
+          page={112}
+          onPage={(p) => fired.push(p)}
+        />,
+      );
+      const box = el.querySelector('input');
+      if (!box) throw new Error('no page box');
+      act(() => {
+        box.focus();
+      });
+      act(() => {
+        setValue(box, typed);
+      });
+      act(() => {
+        box.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+        );
+      });
+      expect(el.textContent).not.toContain('No p.');
+      expect(box.value).toBe(want);
+    }
   });
 
   it('hides Done until a box exists, and Cancel calls back', () => {

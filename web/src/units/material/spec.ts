@@ -6,12 +6,12 @@ export default defineSpec({
   title: 'Material',
   group: 'Material',
   purpose:
-    'One document with pages, read beside a problem set: a continuous scroll under a thin line of Contents, page and zoom, that keeps your exact spot and takes a box when a problem needs one.',
+    'One document with pages, read beside a problem set: a continuous scroll under a Contents line, with a pill for page and zoom, that keeps your exact spot and takes a box when a problem needs one.',
   states: [
     {
       id: 'reading',
       name: 'Reading',
-      when: 'The top line (Contents, "p. 112 of 640", zoom) and the pages scrolling under it, fitted to the width, no boxes drawn.',
+      when: 'Contents on the top line, the pages fitted to the width, and the pill ("112 / 640", zoom) at the bottom centre, fading 1.5 s after the last move.',
     },
     {
       id: 'contents',
@@ -26,57 +26,7 @@ export default defineSpec({
     {
       id: 'go-to-page',
       name: 'Go to page',
-      when: 'The page number turned into a box and typed into; Enter goes to that printed page.',
-    },
-    {
-      id: 'page-missing',
-      name: 'Go to a page that is not there',
-      when: 'A printed page past the end was entered: a line says so, the box stays, and the pages stay where they were.',
-      text: 'No p. 900, the book ends at 640',
-    },
-    {
-      id: 'controls-chrome',
-      name: 'Controls: Chrome',
-      when: 'A: the page is always a box "[112] / 640"; zoom is "- 100% +", the percent resets to fit, - and + step 50 to 400 percent.',
-    },
-    {
-      id: 'missing-chrome',
-      name: 'Controls: Chrome, a page that is not there',
-      when: 'Option Chrome: "No p. 900, the book ends at 640" shows in this option’s own place (over the pages, beside the control) and nothing moves.',
-      text: 'No p. 900, the book ends at 640',
-    },
-    {
-      id: 'controls-firefox',
-      name: 'Controls: Firefox',
-      when: 'B: "112 of 640" with an always-open number box; zoom is a dropdown (Fit width, Fit page, 50% to 400%, a tick on the current).',
-    },
-    {
-      id: 'missing-firefox',
-      name: 'Controls: Firefox, a page that is not there',
-      when: 'Option Firefox: "No p. 900, the book ends at 640" shows in this option’s own place (over the pages, beside the control) and nothing moves.',
-      text: 'No p. 900, the book ends at 640',
-    },
-    {
-      id: 'controls-pill',
-      name: 'Controls: Floating pill',
-      when: 'C: the top line keeps Contents; page and zoom sit in a pill at the bottom centre, shown on scroll or pointer move, fading after 1.5 s idle.',
-    },
-    {
-      id: 'missing-pill',
-      name: 'Controls: Floating pill, a page that is not there',
-      when: 'Option Floating pill: "No p. 900, the book ends at 640" shows in this option’s own place (over the pages, beside the control) and nothing moves.',
-      text: 'No p. 900, the book ends at 640',
-    },
-    {
-      id: 'controls-quiet',
-      name: 'Controls: Quiet',
-      when: 'D: "p. 112 of 640", the number a field with no box until hover or focus; nothing for zoom at fit, a chip "160% x" when zoomed.',
-    },
-    {
-      id: 'missing-quiet',
-      name: 'Controls: Quiet, a page that is not there',
-      when: 'Option Quiet: "No p. 900, the book ends at 640" shows in this option’s own place (over the pages, beside the control) and nothing moves.',
-      text: 'No p. 900, the book ends at 640',
+      when: 'The page number in the pill is a field, and it is being typed into; Enter goes to that printed page, or to the nearest one when it is past either end.',
     },
     {
       id: 'flash',
@@ -127,7 +77,7 @@ export default defineSpec({
   ],
   exampleWidth: 560,
   stress:
-    'A 3000 page book, a 90 character name, contents titles over 100 characters, three levels of them, and a place on page 1700 with Contents open.',
+    'A 3000 page book, a 90 character name, contents titles over 100 characters, three levels of them, and a place on page 1700 with Contents open beside the pill.',
   flows: [
     {
       id: 'find-by-contents',
@@ -165,15 +115,15 @@ export default defineSpec({
     },
     {
       id: 'open-go-to',
-      label: 'The page number',
-      does: 'Turns "p. 112" into a box to type a printed page into; Escape or a click away puts it back.',
+      label: 'The page number, in the pill',
+      does: 'Always a field: click it and type a printed page; Escape or a click away puts the current number back.',
       target: { unit: 'material', state: 'go-to-page' },
     },
     {
       id: 'enter-page',
       label: 'Enter, in the page box',
-      does: 'Goes to the printed page. A page that is not in the book says so and changes nothing.',
-      target: { unit: 'material', state: 'page-missing' },
+      does: 'Goes to that printed page, or the nearest one if past either end. Text or nothing puts the number back. The field shows the page landed on.',
+      target: { unit: 'material', state: 'go-to-page' },
     },
     {
       id: 'zoom',
@@ -182,8 +132,8 @@ export default defineSpec({
     },
     {
       id: 'reset-zoom',
-      label: 'The zoom percentage',
-      does: 'Goes back to fit width. At fit it is plain text.',
+      label: 'Fit width, in the pill',
+      does: 'Goes back to fit width. Off at fit; its tooltip says the zoom.',
     },
     {
       id: 'draw-box',
@@ -251,12 +201,8 @@ export default defineSpec({
       does: 'The pane width from which Contents sits beside the pages (720 by default).',
     },
     {
-      name: 'controls',
-      does: 'Which page and zoom controls the top line has: now (today’s), chrome, firefox, pill or quiet. Four alternatives on trial.',
-    },
-    {
       name: 'startGoTo',
-      does: 'Opens with the page number box in use: what is typed, and whether it was entered.',
+      does: 'Opens with the page number field in use: what is typed.',
     },
     {
       name: 'startBoxes',
@@ -296,7 +242,7 @@ export default defineSpec({
     { name: 'onRetry', does: 'Called when Read it again is pressed.' },
   ],
   priority: {
-    first: 'The page you are on, big, and where you are in the book.',
+    first: 'The page you are on, and where you are in the book.',
     main: 'scroll',
   },
   sizes: {
@@ -329,6 +275,7 @@ export default defineSpec({
       id: 'material-d2',
       decision:
         'A thin line on top: Contents left; the page and the zoom right. Pages scroll under it.',
+      supersededBy: 'material-d19',
       why: 'Jack picked "A thin line at the top (Recommended)": always in the same place, like the work pane’s set line (M2).',
       beat: 'A floating pill at the bottom',
       date: '2026-10-22',
@@ -346,6 +293,7 @@ export default defineSpec({
       id: 'material-d4',
       decision:
         'Clicking the page number turns it into a box; a printed page and Enter go there. A page that is not there says so and stays put.',
+      supersededBy: 'material-d19',
       why: 'Jack picked "Click the page number and type (Recommended)": usability finding #6; the missing page is assumed (A1).',
       beat: 'A page box in a toolbar',
       date: '2026-10-22',
@@ -458,8 +406,17 @@ export default defineSpec({
       id: 'material-d18',
       decision:
         'The page, go-to-page and zoom controls are on trial: today’s against four alternatives (chrome, firefox, pill, quiet). Not decided.',
+      supersededBy: 'material-d19',
       why: 'Jack: "I still do not love the look of the page display + selection box and the zoom reset." Options follow Chrome, Firefox, Preview/Maps, Kindle.',
       beat: 'Today’s page button that turns into a box',
+      date: '2026-11-03',
+    },
+    {
+      id: 'material-d19',
+      decision:
+        'Page and zoom are a floating pill at the bottom centre of the pages; the number is always a field. A page past either end goes to the nearest, with no error.',
+      why: 'Jack, 2026-11-03: "Floating pill is best. No errors for the page number, just clamp it if its over or not valid or something."',
+      beat: 'The thin line with page and zoom (M2, M4); chrome, firefox and quiet',
       date: '2026-11-03',
     },
   ],

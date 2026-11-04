@@ -1,4 +1,4 @@
-import { Check, Ellipsis } from 'lucide-react';
+import { Ellipsis } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 export interface MenuItem<Id extends string = string> {
@@ -6,8 +6,6 @@ export interface MenuItem<Id extends string = string> {
   label: string;
   /** Marks an item that takes something away. */
   danger?: boolean;
-  /** Ticks the item that is the current choice. */
-  checked?: boolean;
 }
 
 export interface MenuGroup {
@@ -27,7 +25,6 @@ export function Menu({
   at,
   groups,
   label,
-  width = MENU_WIDTH,
   onPick,
   onClose,
 }: {
@@ -36,8 +33,6 @@ export function Menu({
   groups: readonly MenuGroup[];
   /** The menu's name. */
   label: string;
-  /** Its width in pixels; 240 by default. */
-  width?: number;
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
@@ -99,7 +94,7 @@ export function Menu({
       popover="manual"
       onKeyDown={onKey}
       style={{
-        width,
+        width: MENU_WIDTH,
         left: pos.x,
         top: pos.y,
         right: 'auto',
@@ -129,10 +124,7 @@ export function Menu({
               }}
               className={`ds-body flex h-8 w-full focus-visible:outline-offset-[-2px] items-center px-3 text-left hover:bg-(--ds-hover) active:bg-(--ds-pressed) ${item.danger ? 'text-(--ds-danger)' : ''}`}
             >
-              <span className="min-w-0 flex-1 truncate">{item.label}</span>
-              {item.checked && (
-                <Check className="size-4 shrink-0" aria-hidden />
-              )}
+              <span className="min-w-0 truncate">{item.label}</span>
             </button>
           ))}
         </div>

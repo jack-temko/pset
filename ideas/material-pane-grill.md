@@ -54,7 +54,7 @@ problem needs one.
 
 ### Assumed
 
-- A1: typing a page that does not exist leaves you where you are, and the box says "No p. 900, the book ends at 640".
+- A1: (reversed 2026-11-03, see Reversals) typing a page that does not exist leaves you where you are, and the box says "No p. 900, the book ends at 640".
 - A2: Contents shows two levels and folds the rest, as today's rail does.
 - A3: Escape cancels boxing; Done with no box is not offered.
 - A4: the failed states follow the error catalog's what failed, why, fix.
@@ -66,7 +66,8 @@ problem needs one.
 
 ## Reversals
 
-None.
+- 2026-11-03: M2 (a thin line on top with Contents, the page and the zoom) and M4 (click the page number to turn it into a box) are reversed. The page and zoom are a floating pill at the bottom centre of the pages, and the number in it is always an input. Jack: "Floating pill is best." The top line keeps only Contents. See material-d19; material-d2, d4 and d18 are superseded.
+- 2026-11-03: A1 (a page that does not exist says "No p. 900, the book ends at 640") is reversed. A number past the end goes to the last page; below the first, 0 or negative goes to the first; text or empty puts the current number back; a gap in the printed numbering goes to the nearest printed page. Jack: "No errors for the page number, just clamp it if its over or not valid or something."
 
 ## Disagreements
 
@@ -102,3 +103,7 @@ Empty.
 ### Batch 4
 
 1. "Box one on the page" (from the work pane's menu, or a problem that couldn't be found): how does the material pane take the box? Options: A boxing mode in the material pane (Recommended); A separate boxing screen. Answer: "A boxing mode in the material pane (Recommended)"
+
+### Request of 2026-11-03
+
+Jack, on the page and zoom controls, after comparing four options: "Floating pill is best. No errors for the page number, just clamp it if its over or not valid or something."

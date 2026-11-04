@@ -9,14 +9,7 @@ import {
 } from 'react';
 
 import { Button } from '@/units/button';
-import {
-  ChromeControls,
-  FirefoxControls,
-  PillControls,
-  QuietControls,
-  type Api,
-  type Controls,
-} from './controls';
+import { Controls, type Api } from './controls';
 import { Contents } from './contents';
 import { sessionMemory, type Memory } from './memory';
 import { SamplePage } from './sample-page';
@@ -301,12 +294,9 @@ export interface MaterialProps {
   /** The pane width from which Contents opens beside the pages (M3, D16)
    *  instead of over them. */
   besideAt?: number;
-  /** Which page and zoom controls the top line has: today's, or one of the
-   *  alternatives to compare. */
-  controls?: Controls;
   /** Open with the page number box in use: what is typed, and whether it was
    *  entered already. */
-  startGoTo?: { text: string; entered?: boolean };
+  startGoTo?: { text: string };
   /** Open with these boxes drawn (boxing mode). */
   startBoxes?: readonly Box[];
   /** A book still being read in, one that could not be read, or ready. */
@@ -351,7 +341,6 @@ export function Material({
   startPdf,
   startContents,
   besideAt = BESIDE_AT,
-  controls = 'now',
   startGoTo,
   startBoxes,
   status = 'ready',
@@ -386,18 +375,8 @@ export function Material({
   const root = useRef<HTMLDivElement>(null);
 
   const printedMax = book.printedPages;
-  const tooFar = (n: number) =>
-    n > printedMax
-      ? `No p. ${String(n)}, the book ends at ${String(printedMax)}`
-      : `No p. ${String(n)}, the book starts at 1`;
-  const [goTo, setGoTo] = useState<{ text: string; error?: string } | null>(
-    () => {
-      if (!startGoTo) return null;
-      const n = Number(startGoTo.text);
-      const bad =
-        startGoTo.entered && Number.isInteger(n) && (n < 1 || n > printedMax);
-      return { text: startGoTo.text, error: bad ? tooFar(n) : undefined };
-    },
+  const [goTo, setGoTo] = useState<{ text: string } | null>(() =>
+    startGoTo ? { text: startGoTo.text } : null,
   );
 
   // Boxes belong to one boxing: they go when the mode ends.
@@ -652,10 +631,12 @@ export function Material({
     };
   }, [status, zoomTo]);
 
-  // The floating pill shows while the pane is scrolled or the pointer moves
-  // over it, and fades after 1.5 s idle.
+  // The pill shows for 1.5 s on load, while the pane is scrolled or the
+  // pointer moves over the pages, and while the pointer or focus is on the
+  // pill itself; it fades 1.5 s after the last of these.
   const [awake, setAwake] = useState(true);
   const [pillFocus, setPillFocus] = useState(false);
+  const [pillOver, setPillOver] = useState(false);
   const wake = useRef<ReturnType<typeof setTimeout>>(undefined);
   const stir = useCallback(() => {
     setAwake(true);
@@ -745,36 +726,22 @@ export function Material({
   const commitGo = () => {
     if (!goTo) return false;
     const text = goTo.text.trim();
-    if (text === '') {
+    // A number past either end goes to the nearest printed page; anything
+    // else puts the current number back and goes nowhere (material-d19).
+    if (text === '' || !/^-?\d+$/.test(text)) {
       setGoTo(null);
-      return false;
-    }
-    const n = Number(text);
-    if (!/^\d+$/.test(text) || n < 1 || n > printedMax) {
-      setGoTo({
-        text,
-        error: /^\d+$/.test(text)
-          ? tooFar(n)
-          : `Type a page from 1 to ${String(printedMax)}`,
-      });
-      return false;
+      return true;
     }
     setGoTo(null);
-    toPdf(pdfOf(book, n));
+    toPdf(pdfOf(book, clamp(Number(text), 1, printedMax)));
     return true;
   };
 
-  const fitPage = clamp(
-    (viewH - 2 * PAD) / (fitW / book.aspect || 1),
-    ZOOM_MIN,
-    ZOOM_MAX,
-  );
   const api: Api = {
     printed: printedHere,
     pdf: pdfHere,
     max: printedMax,
     zoom,
-    fitPage,
     goTo,
     edit: () => {
       setGoTo((g) => g ?? { text: String(printedHere ?? '') });
@@ -808,15 +775,6 @@ export function Material({
     pitch > PAD
       ? Array.from({ length: last - first + 1 }, (_, i) => first + i + 1)
       : [];
-
-  const pageButton =
-    'ds-small ds-tabular rounded-(--ds-radius-tag) px-1.5 py-0.5';
-  // The page number and its edit box are one control of one size (M4): the
-  // box only gains a field border and background in place.
-  const pageBox = `${pageButton} flex h-7 items-center gap-1`;
-  const numBox =
-    'ds-small ds-tabular box-border flex h-6 items-center justify-end rounded-(--ds-radius-tag) border px-1';
-  const numW = `calc(${String(String(printedMax).length)}ch + 10px)`;
 
   return (
     <div
@@ -862,105 +820,6 @@ export function Material({
             >
               Contents
             </Button>
-            {controls === 'chrome' && <ChromeControls api={api} />}
-            {controls === 'firefox' && <FirefoxControls api={api} />}
-            {controls === 'quiet' && <QuietControls api={api} />}
-            {controls === 'now' && (
-              <div className="ds-small flex shrink-0 items-center gap-2 text-(--ds-fg-muted)">
-                {goTo ? (
-                  <>
-                    <div className={`${pageBox} text-(--ds-fg)`}>
-                      <span>p.</span>
-                      <div
-                        className={`${numBox} border-(--ds-border) bg-(--ds-bg-inset) focus-within:border-(--ds-accent) focus-within:outline-(length:--ds-focus-width) focus-within:outline-(--ds-accent) focus-within:outline-solid focus-within:outline-offset-(--ds-focus-offset)`}
-                        style={{ width: numW }}
-                      >
-                        <input
-                          autoFocus
-                          inputMode="numeric"
-                          aria-label="Go to printed page"
-                          value={goTo.text}
-                          onChange={(e) => {
-                            setGoTo({ text: e.target.value });
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') commitGo();
-                            if (e.key === 'Escape') {
-                              e.stopPropagation();
-                              setGoTo(null);
-                            }
-                          }}
-                          onBlur={() => {
-                            setGoTo(null);
-                          }}
-                          className="ds-small ds-tabular size-full min-w-0 bg-transparent p-0 text-right text-(--ds-fg) outline-none!"
-                        />
-                      </div>
-                    </div>
-                    {goTo.error ? (
-                      <span role="alert" className="text-(--ds-danger)">
-                        {goTo.error}
-                      </span>
-                    ) : (
-                      <span className="ds-tabular inline-block min-w-14 text-(--ds-fg-muted)">{`of ${String(printedMax)}`}</span>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setContents(false);
-                        setGoTo({ text: '' });
-                      }}
-                      className={`${pageBox} hover:bg-(--ds-hover) ${printedHere === undefined ? '' : 'text-(--ds-fg)'}`}
-                    >
-                      {printedHere === undefined ? (
-                        `PDF ${String(pdfHere)}`
-                      ) : (
-                        <>
-                          <span>p.</span>
-                          <span
-                            className={`${numBox} border-transparent`}
-                            style={{ width: numW }}
-                          >
-                            {printedHere}
-                          </span>
-                        </>
-                      )}
-                    </button>
-                    {printedHere !== undefined && (
-                      <span className="ds-tabular inline-block min-w-14 text-(--ds-fg-muted)">{`of ${String(printedMax)}`}</span>
-                    )}
-                  </>
-                )}
-
-                {goTo?.error ? null : zoom === 1 ? (
-                  <span
-                    className={`${pageButton} inline-block min-w-14 text-center text-(--ds-fg-muted)`}
-                  >
-                    100%
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    title="Back to fit width"
-                    onClick={() => {
-                      anchor.current = {
-                        at: ((scroller.current?.scrollTop ?? 0) - PAD) / pitch,
-                        cy: 0,
-                        cx: 0,
-                        rx: undefined,
-                      };
-                      setZoom(1);
-                    }}
-                    className={`${pageButton} min-w-14 text-center text-(--ds-fg) hover:bg-(--ds-hover)`}
-                  >
-                    {`${String(Math.round(zoom * 100))}%`}
-                  </button>
-                )}
-              </div>
-            )}
           </>
         )}
       </div>
@@ -979,14 +838,14 @@ export function Material({
         )}
         <div
           className="relative flex min-h-0 min-w-0 flex-1"
-          onPointerMove={controls === 'pill' ? stir : undefined}
+          onPointerMove={stir}
         >
           <div
             ref={scroller}
             data-scroller
             style={{ touchAction: 'pan-x pan-y' }}
             onScroll={(e) => {
-              if (controls === 'pill') stir();
+              stir();
               const el = e.currentTarget;
               setLeft(el.scrollLeft);
               if (
@@ -1041,7 +900,7 @@ export function Material({
               ))}
             </div>
           </div>
-          {controls === 'pill' && !boxing && (
+          {!boxing && (
             <div
               onFocus={() => {
                 setPillFocus(true);
@@ -1051,9 +910,13 @@ export function Material({
                 stir();
               }}
             >
-              <PillControls
+              <Controls
                 api={api}
-                shown={awake || pillFocus || goTo !== null}
+                shown={awake || pillFocus || pillOver || goTo !== null}
+                onHover={(over) => {
+                  setPillOver(over);
+                  if (!over) stir();
+                }}
               />
             </div>
           )}
@@ -1063,8 +926,8 @@ export function Material({
   );
 }
 
-/** The pane while it loads (M9): the top line's place and one plain
- *  page-shaped box. */
+/** The pane while it loads (M9): the top line's place, one plain
+ *  page-shaped box and the pill's place. */
 export function MaterialSkeleton() {
   const bar = (w: string) => (
     <span
@@ -1076,13 +939,13 @@ export function MaterialSkeleton() {
     <div className="flex h-full min-h-0 min-w-0 flex-col bg-(--ds-bg)">
       <div className="flex h-11 shrink-0 items-center justify-between border-b border-(--ds-border-muted) px-3">
         {bar('w-24')}
-        <div className="flex items-center gap-2">
-          {bar('w-28')}
-          {bar('w-14')}
-        </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden bg-(--ds-bg-inset) p-3">
+      <div className="relative min-h-0 flex-1 overflow-hidden bg-(--ds-bg-inset) p-3">
         <div className="aspect-[8.5/11] w-full bg-(--ds-bg-raised)" />
+        <span
+          aria-hidden
+          className="absolute bottom-4 left-1/2 block h-9 w-56 -translate-x-1/2 animate-pulse rounded-full bg-(--ds-border-muted) motion-reduce:animate-none"
+        />
       </div>
     </div>
   );
