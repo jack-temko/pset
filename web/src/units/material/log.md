@@ -11,3 +11,5 @@ Batch 3: controls **"A thin line at the top (Recommended)"**; a page with no pri
 Batch 4: boxing **"A boxing mode in the material pane (Recommended)"**.
 
 Amendment of 2026-10-27, Jack, on Contents (amends M3): "When context is presset, if possible and there is width can we somehow shrink the preview so I can still see some of the page while I scroll and see the selected page in the contents bar highlight?" See material-d16.
+
+Request of 2026-11-03, Jack: "On the material pane I want to be able to pinch and zoom with my touchscreen. Make that work. Also I still do not love the look of the page display + selection box and the zoom reset. See how others do it and offer some alternatives." See material-d17 and material-d18.

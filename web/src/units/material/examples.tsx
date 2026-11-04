@@ -109,6 +109,22 @@ export default defineExamples(spec, Material, {
     'contents-beside': () => <Demo startContents besideAt={0} />,
     'go-to-page': () => <Demo startGoTo={{ text: '2' }} />,
     'page-missing': () => <Demo startGoTo={{ text: '900', entered: true }} />,
+    'controls-chrome': () => <Demo controls="chrome" />,
+    'missing-chrome': () => (
+      <Demo controls="chrome" startGoTo={{ text: '900', entered: true }} />
+    ),
+    'controls-firefox': () => <Demo controls="firefox" />,
+    'missing-firefox': () => (
+      <Demo controls="firefox" startGoTo={{ text: '900', entered: true }} />
+    ),
+    'controls-pill': () => <Demo controls="pill" />,
+    'missing-pill': () => (
+      <Demo controls="pill" startGoTo={{ text: '900', entered: true }} />
+    ),
+    'controls-quiet': () => <Demo controls="quiet" />,
+    'missing-quiet': () => (
+      <Demo controls="quiet" startGoTo={{ text: '900', entered: true }} />
+    ),
     flash: () => <Demo flash={{ page: 112, box: BOX, n: 1 }} />,
     unnumbered: () => <Demo page={undefined} startPdf={3} />,
     boxing: () => <Demo boxing={{ label: '4.62', page: 112 }} />,

@@ -35,6 +35,50 @@ export default defineSpec({
       text: 'No p. 900, the book ends at 640',
     },
     {
+      id: 'controls-chrome',
+      name: 'Controls: Chrome',
+      when: 'A: the page is always a box "[112] / 640"; zoom is "- 100% +", the percent resets to fit, - and + step 50 to 400 percent.',
+    },
+    {
+      id: 'missing-chrome',
+      name: 'Controls: Chrome, a page that is not there',
+      when: 'Option Chrome: "No p. 900, the book ends at 640" shows in this option’s own place (over the pages, beside the control) and nothing moves.',
+      text: 'No p. 900, the book ends at 640',
+    },
+    {
+      id: 'controls-firefox',
+      name: 'Controls: Firefox',
+      when: 'B: "112 of 640" with an always-open number box; zoom is a dropdown (Fit width, Fit page, 50% to 400%, a tick on the current).',
+    },
+    {
+      id: 'missing-firefox',
+      name: 'Controls: Firefox, a page that is not there',
+      when: 'Option Firefox: "No p. 900, the book ends at 640" shows in this option’s own place (over the pages, beside the control) and nothing moves.',
+      text: 'No p. 900, the book ends at 640',
+    },
+    {
+      id: 'controls-pill',
+      name: 'Controls: Floating pill',
+      when: 'C: the top line keeps Contents; page and zoom sit in a pill at the bottom centre, shown on scroll or pointer move, fading after 1.5 s idle.',
+    },
+    {
+      id: 'missing-pill',
+      name: 'Controls: Floating pill, a page that is not there',
+      when: 'Option Floating pill: "No p. 900, the book ends at 640" shows in this option’s own place (over the pages, beside the control) and nothing moves.',
+      text: 'No p. 900, the book ends at 640',
+    },
+    {
+      id: 'controls-quiet',
+      name: 'Controls: Quiet',
+      when: 'D: "p. 112 of 640", the number a field with no box until hover or focus; nothing for zoom at fit, a chip "160% x" when zoomed.',
+    },
+    {
+      id: 'missing-quiet',
+      name: 'Controls: Quiet, a page that is not there',
+      when: 'Option Quiet: "No p. 900, the book ends at 640" shows in this option’s own place (over the pages, beside the control) and nothing moves.',
+      text: 'No p. 900, the book ends at 640',
+    },
+    {
       id: 'flash',
       name: 'Flash',
       when: 'A page link from the work pane turned the pane to the page; the problem’s box is outlined and fades out over 1.8 s.',
@@ -205,6 +249,10 @@ export default defineSpec({
     {
       name: 'besideAt',
       does: 'The pane width from which Contents sits beside the pages (720 by default).',
+    },
+    {
+      name: 'controls',
+      does: 'Which page and zoom controls the top line has: now (today’s), chrome, firefox, pill or quiet. Four alternatives on trial.',
     },
     {
       name: 'startGoTo',
@@ -397,6 +445,22 @@ export default defineSpec({
       why: 'Jack: "if possible and there is width can we somehow shrink the preview so I can still see some of the page while I scroll" (amends M3; see log.md).',
       beat: 'Contents always over the pages',
       date: '2026-10-27',
+    },
+    {
+      id: 'material-d17',
+      decision:
+        'Two fingers pinch-zoom the pages by their distance ratio, anchored at their midpoint, 0.5x to 4x, snapping to fit; one finger scrolls natively.',
+      why: 'Jack, 2026-11-03: "I want to be able to pinch and zoom with my touchscreen." Same anchor as ctrl+wheel (M7).',
+      beat: 'Browser page zoom, or ctrl+wheel only',
+      date: '2026-11-03',
+    },
+    {
+      id: 'material-d18',
+      decision:
+        'The page, go-to-page and zoom controls are on trial: today’s against four alternatives (chrome, firefox, pill, quiet). Not decided.',
+      why: 'Jack: "I still do not love the look of the page display + selection box and the zoom reset." Options follow Chrome, Firefox, Preview/Maps, Kindle.',
+      beat: 'Today’s page button that turns into a box',
+      date: '2026-11-03',
     },
   ],
 });
