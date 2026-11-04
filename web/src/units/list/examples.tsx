@@ -41,6 +41,7 @@ function Switched({ todo = 1 }: { todo?: number }) {
       state={state}
       onState={setState}
       cap={LIST_CAP}
+      showAllHref="#"
       empty={state === 'todo' ? 'Nothing to do' : 'Nothing done yet'}
     >
       {rows(state === 'todo' ? todo : 6)}

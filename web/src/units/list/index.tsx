@@ -53,6 +53,46 @@ function StateSwitch({
   );
 }
 
+/** What heads the box: a title with a Counter, or the states as a switch
+ *  (a title and a count are not drawn beside a switch: the screen's heading
+ *  above the list names it). */
+type Header =
+  | {
+      title?: string;
+      count?: ReactNode;
+      states?: undefined;
+    }
+  | {
+      /** The list's states as a switch: two or more, each with its count. A
+       *  list with one state has none (list-d4). */
+      states: readonly ListState[];
+      title?: undefined;
+      count?: undefined;
+    };
+
+/** A cap and where "Show all" goes come together: a capped list always knows
+ *  its list page. */
+type Cap =
+  | { cap?: undefined; showAllHref?: undefined }
+  | {
+      /** Rows shown before "Show all"; the rest wait on the list page. */
+      cap: number;
+      /** Where "Show all" goes: the list page, filtered to this list. */
+      showAllHref: string;
+    };
+
+type ListProps = Header &
+  Cap & {
+    /** A Text link at the right of the header, for a list that is never capped. */
+    action?: ReactNode;
+    /** The chosen state's id. */
+    state?: string;
+    onState?: (id: string) => void;
+    /** The one quiet line shown when there are no rows; it may hold one action. */
+    empty?: ReactNode;
+    children?: ReactNode;
+  };
+
 /** The old Box, in `ds` tokens: a bordered box of rows, with an optional
  *  header band. The list draws the rules between its rows, so a row draws
  *  none (list-d1). A list with states shows them as a switch in the header
@@ -69,27 +109,7 @@ export function List({
   showAllHref,
   empty = 'Nothing here yet',
   children,
-}: {
-  /** The header's title; without it there is no header, unless the list has states. */
-  title?: string;
-  /** A Counter after the header's title, such as 8. */
-  count?: ReactNode;
-  /** A Text link at the right of the header, for a list that is never capped. */
-  action?: ReactNode;
-  /** The list's states as a switch: two or more, each with its count. A list
-   *  with one state has no switch (list-d4). */
-  states?: readonly ListState[];
-  /** The chosen state's id. */
-  state?: string;
-  onState?: (id: string) => void;
-  /** Rows shown before "Show all"; the rest wait on the list page. */
-  cap?: number;
-  /** Where "Show all" goes: the list page, filtered to this list. */
-  showAllHref?: string;
-  /** The one quiet line shown when there are no rows; it may hold one action. */
-  empty?: ReactNode;
-  children?: ReactNode;
-}) {
+}: ListProps) {
   const all = Children.toArray(children);
   const rows = cap === undefined ? all : all.slice(0, cap);
   const switched = states !== undefined && states.length > 1;
@@ -126,9 +146,9 @@ export function List({
       ) : (
         <div className="divide-y divide-(--ds-border-muted)">{rows}</div>
       )}
-      {rows.length < all.length && (
+      {rows.length < all.length && showAllHref !== undefined && (
         <div className="flex min-h-10 items-center border-t border-(--ds-border-muted) px-4">
-          <Link href={showAllHref ?? '#'} size="small">
+          <Link href={showAllHref} size="small">
             Show all {all.length}
           </Link>
         </div>

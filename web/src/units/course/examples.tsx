@@ -1,10 +1,17 @@
 import { defineExamples } from '@/design/examples';
+import { PLACEHOLDER } from '@/units/list-page/hrefs';
 import { Course, CourseSkeleton } from './index';
 import { ECE, EMPTY, NOTHING_DUE, READING_IN, STRESS, TODAY } from './sample';
 import spec from './spec';
 
 const view = (p: Partial<Parameters<typeof Course>[0]> = {}) => (
-  <Course course={ECE} today={TODAY} {...p} />
+  <Course
+    course={ECE}
+    today={TODAY}
+    workHref={PLACEHOLDER.courseWork}
+    materialsHref={PLACEHOLDER.courseWork}
+    {...p}
+  />
 );
 
 export default defineExamples(spec, Course, {

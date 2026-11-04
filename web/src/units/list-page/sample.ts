@@ -25,8 +25,19 @@ export interface PageMemory {
   added: Date;
 }
 
+export interface PageCourse {
+  id: string;
+  name: string;
+  /** Course and name in one: courses have no course to filter by. */
+  course: string;
+  todo: number;
+  materials: number;
+  weekMinutes: number;
+}
+
 export type PageData =
   | { kind: 'work'; items: readonly PageSet[] }
+  | { kind: 'courses'; items: readonly PageCourse[] }
   | { kind: 'memories'; items: readonly PageMemory[] };
 
 /** A calendar date this many days from the sample's today. */
@@ -80,7 +91,21 @@ function sets(scale: number): PageSet[] {
   );
 }
 
-export const WORK: PageData = { kind: 'work', items: sets(1) };
+/** Every course, as Home's Courses list shows them. */
+export const COURSE_LIST: PageData = {
+  kind: 'courses',
+  items: COURSES.map((c, i) => ({
+    id: `c${String(i)}`,
+    name: c.name,
+    course: c.name,
+    todo: c.todo,
+    materials: 4 + i * 3,
+    weekMinutes: i % 2 === 0 ? 45 * (i + 1) : 0,
+  })),
+};
+
+export const WORK_SETS = sets(1);
+export const WORK: PageData = { kind: 'work', items: WORK_SETS };
 
 /** About three hundred sets, for the scroll. */
 export const MANY_SETS = sets(6);

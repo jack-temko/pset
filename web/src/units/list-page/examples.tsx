@@ -1,10 +1,18 @@
 import { defineExamples } from '@/design/examples';
 import { ListPage, ListPageSkeleton } from './index';
-import { MANY, MANY_SETS, MEMORIES, TODAY, WORK } from './sample';
+import {
+  COURSE_LIST,
+  MANY,
+  MANY_SETS,
+  MEMORIES,
+  TODAY,
+  WORK,
+  WORK_SETS,
+} from './sample';
 import spec from './spec';
 
 const view = (p: Partial<Parameters<typeof ListPage>[0]> = {}) => (
-  <ListPage page={WORK} today={TODAY} {...p} />
+  <ListPage page={WORK} today={TODAY} courseHref={() => '#'} {...p} />
 );
 
 const LONG =
@@ -15,8 +23,16 @@ export default defineExamples(spec, ListPage, {
     filtered: () => view({ initial: { course: 'ECE 210', state: 'done' } }),
     'all-courses': () => view(),
     'no-matches': () => view({ initial: { query: 'thermal' } }),
+    'nothing-to-do': () =>
+      view({
+        page: {
+          kind: 'work',
+          items: WORK_SETS.filter((s) => s.finished !== undefined),
+        },
+      }),
     many: () => view({ page: MANY, initial: { state: 'done' } }),
     memories: () => view({ page: MEMORIES }),
+    courses: () => view({ page: COURSE_LIST }),
   },
   stress: () =>
     view({
@@ -39,7 +55,9 @@ export default defineExamples(spec, ListPage, {
     filtered: () => <ListPageSkeleton />,
     'all-courses': () => <ListPageSkeleton />,
     'no-matches': () => <ListPageSkeleton />,
+    'nothing-to-do': () => <ListPageSkeleton />,
     many: () => <ListPageSkeleton />,
+    courses: () => <ListPageSkeleton />,
     memories: () => <ListPageSkeleton />,
   },
 });

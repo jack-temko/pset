@@ -12,7 +12,8 @@ import { dueBadge } from '@/units/set-line/badge';
 import { timeLeft } from '@/units/set-line/dates';
 import { TextField } from '@/units/text-field';
 import { TopBar } from '@/units/top-bar';
-import type { PageData, PageMemory, PageSet } from './sample';
+import { CourseRow } from '@/units/course-row';
+import type { PageCourse, PageData, PageMemory, PageSet } from './sample';
 
 /** The aside is a fifth of the row, as on Home, so the bars align. */
 const ASIDE_WIDTH = 'clamp(160px, 20cqw, 320px)';
@@ -48,6 +49,10 @@ const SORTS: Record<PageData['kind'], readonly Option[]> = {
     { id: 'newest', label: 'Newest first' },
     { id: 'oldest', label: 'Oldest first' },
   ],
+  courses: [
+    { id: 'name', label: 'Name' },
+    { id: 'todo', label: 'Most to do' },
+  ],
 };
 
 const STATES: Record<PageData['kind'], readonly Option[]> = {
@@ -59,6 +64,7 @@ const STATES: Record<PageData['kind'], readonly Option[]> = {
     { id: 'yours', label: 'Yours' },
     { id: 'ask', label: 'From Ask' },
   ],
+  courses: [],
 };
 
 const WORDS = {
@@ -72,12 +78,18 @@ const WORDS = {
     search: 'Search memories',
     none: 'No memories match',
   },
+  courses: {
+    title: 'Courses',
+    search: 'Search courses',
+    none: 'No courses match',
+  },
 };
 
 /** Work by due date while to do and newest finished once done; memories
  *  newest first (A5 of the grill). */
 function defaultSort(kind: PageData['kind'], state: string) {
   if (kind === 'memories') return 'newest';
+  if (kind === 'courses') return 'name';
   return state === 'done' ? 'recent' : 'due';
 }
 
@@ -162,10 +174,12 @@ function SetRow({
   set,
   today,
   spanning,
+  courseHref,
 }: {
   set: PageSet;
   today: Date;
   spanning: boolean;
+  courseHref: (name: string) => string;
 }) {
   const finished = set.finished !== undefined;
   const time = set.minutesLeft === undefined ? '' : timeLeft(set.minutesLeft);
@@ -186,7 +200,7 @@ function SetRow({
           ? [
               <Link
                 key="course"
-                href="#"
+                href={courseHref(set.course)}
                 tone="muted"
                 size="small"
                 className="[overflow-wrap:normal]"
@@ -231,6 +245,7 @@ export function ListPage({
   page,
   initial,
   today,
+  courseHref,
   homeHref = '/',
   settingsHref = '/settings',
 }: {
@@ -239,6 +254,8 @@ export function ListPage({
   initial?: Partial<Filters>;
   /** The moment due dates count from. */
   today: Date;
+  /** Where a course's name goes (a placeholder until the course screen is wired). */
+  courseHref: (name: string) => string;
   homeHref?: string;
   settingsHref?: string;
 }) {
@@ -246,7 +263,7 @@ export function ListPage({
   const start: Filters = {
     query: '',
     course: 'all',
-    state: STATES[kind][0].id,
+    state: STATES[kind].at(0)?.id ?? '',
     ...initial,
   };
   const [seen, setSeen] = useState({ page, initial });
@@ -258,22 +275,23 @@ export function ListPage({
   }
 
   const words = WORDS[kind];
-  const courses = [...new Set(page.items.map((i) => i.course))];
+  const items: readonly (PageSet | PageMemory | PageCourse)[] = page.items;
+  const courses = [...new Set(items.map((i) => i.course))];
   const needle = f.query.trim().toLowerCase();
-  const names = (i: PageSet | PageMemory) =>
-    ('name' in i ? i.name : i.text).toLowerCase();
-  const narrowed = page.items.filter(
+  const narrowed = items.filter(
     (i) =>
       (f.course === 'all' || i.course === f.course) &&
-      names(i).includes(needle),
+      ('text' in i ? i.text : i.name).toLowerCase().includes(needle),
   );
   const side = (id: string) =>
     narrowed.filter((i) =>
       'source' in i
         ? i.source === id
-        : id === 'done'
-          ? i.finished !== undefined
-          : i.finished === undefined,
+        : 'total' in i
+          ? id === 'done'
+            ? i.finished !== undefined
+            : i.finished === undefined
+          : true,
     );
   const states = STATES[kind].map((s) => ({
     id: s.id,
@@ -284,32 +302,70 @@ export function ListPage({
   const sorts = SORTS[kind];
   const matches = side(f.state);
   const spanning = f.course === 'all';
-  const filtered = needle !== '' || f.course !== 'all';
   const set = (patch: Partial<Filters>) => {
     setF((v) => ({ ...v, ...patch }));
   };
 
-  const empty = filtered ? (
-    <>
-      <span>{words.none}</span>
-      <Button
-        variant="quiet"
-        onPress={() => {
-          set({ query: '', course: 'all' });
-        }}
-      >
-        Clear filters
-      </Button>
-    </>
-  ) : kind === 'work' ? (
-    f.state === 'done' ? (
-      'Nothing done yet'
+  // A search that matches nothing says so and offers Clear filters; an empty
+  // side with no search says its own quiet line, and the list stays on it (L8).
+  const empty =
+    needle !== '' ? (
+      <>
+        <span>{words.none}</span>
+        <Button
+          variant="quiet"
+          onPress={() => {
+            set({ query: '', course: 'all' });
+          }}
+        >
+          Clear filters
+        </Button>
+      </>
+    ) : kind === 'work' ? (
+      f.state === 'done' ? (
+        'Nothing done yet'
+      ) : (
+        'Nothing to do'
+      )
     ) : (
-      'Nothing to do'
-    )
-  ) : (
-    'Nothing here yet'
-  );
+      'Nothing here yet'
+    );
+
+  const header: { states: typeof states } | { states?: undefined } =
+    kind === 'courses' ? {} : { states };
+  const rows = () => {
+    if (kind === 'work')
+      return sortSets(matches as PageSet[], sort).map((s) => (
+        <SetRow
+          key={s.id}
+          set={s}
+          today={today}
+          spanning={spanning}
+          courseHref={courseHref}
+        />
+      ));
+    if (kind === 'courses')
+      return [...(matches as PageCourse[])]
+        .sort((a, b) =>
+          sort === 'todo'
+            ? b.todo - a.todo || a.name.localeCompare(b.name)
+            : a.name.localeCompare(b.name),
+        )
+        .map((c) => (
+          <CourseRow
+            key={c.id}
+            name={c.name}
+            href={courseHref(c.name)}
+            todo={c.todo}
+            materials={c.materials}
+            weekMinutes={c.weekMinutes}
+          />
+        ));
+    const memories = matches as PageMemory[];
+    return (sort === 'oldest' ? [...memories].reverse() : memories).map((m) => (
+      <MemoryRow key={m.id} memory={m} spanning={spanning} />
+    ));
+  };
 
   return (
     <div>
@@ -318,7 +374,9 @@ export function ListPage({
         settingsHref={settingsHref}
         path={[
           { label: 'Home', href: homeHref },
-          ...(spanning ? [] : [{ label: f.course, href: '#' }]),
+          ...(spanning
+            ? []
+            : [{ label: f.course, href: courseHref(f.course) }]),
           { label: words.title },
         ]}
       />
@@ -340,25 +398,29 @@ export function ListPage({
                 }}
               />
             </div>
-            <Choice
-              label="Course"
-              value={spanning ? 'All courses' : f.course}
-              options={[
-                { id: 'all', label: 'All courses' },
-                ...courses.map((c) => ({ id: c, label: c })),
-              ]}
-              onPick={(course) => {
-                set({ course });
-              }}
-            />
-            <Choice
-              label="State"
-              value={STATES[kind].find((s) => s.id === f.state)?.label ?? ''}
-              options={STATES[kind]}
-              onPick={(state) => {
-                set({ state, sort: undefined });
-              }}
-            />
+            {kind !== 'courses' && (
+              <Choice
+                label="Course"
+                value={spanning ? 'All courses' : f.course}
+                options={[
+                  { id: 'all', label: 'All courses' },
+                  ...courses.map((c) => ({ id: c, label: c })),
+                ]}
+                onPick={(course) => {
+                  set({ course });
+                }}
+              />
+            )}
+            {kind !== 'courses' && (
+              <Choice
+                label="State"
+                value={STATES[kind].find((s) => s.id === f.state)?.label ?? ''}
+                options={STATES[kind]}
+                onPick={(state) => {
+                  set({ state, sort: undefined });
+                }}
+              />
+            )}
             <Choice
               label="Sort"
               value={sorts.find((s) => s.id === sort)?.label ?? ''}
@@ -369,28 +431,14 @@ export function ListPage({
             />
           </div>
           <List
-            states={states}
+            {...header}
             state={f.state}
             onState={(state) => {
               set({ state, sort: undefined });
             }}
             empty={empty}
           >
-            {page.kind === 'work'
-              ? sortSets(matches as PageSet[], sort).map((s) => (
-                  <SetRow
-                    key={s.id}
-                    set={s}
-                    today={today}
-                    spanning={spanning}
-                  />
-                ))
-              : (sort === 'oldest'
-                  ? [...(matches as PageMemory[])].reverse()
-                  : (matches as PageMemory[])
-                ).map((m) => (
-                  <MemoryRow key={m.id} memory={m} spanning={spanning} />
-                ))}
+            {rows()}
           </List>
         </div>
       </div>
@@ -400,7 +448,7 @@ export function ListPage({
 
 /** The page while it loads: a bar where the heading, the filter bar and the
  *  list's rows will be, laid out as the page is. The list's height is that of
- *  a few rows: the real one depends on how many match. */
+ *  six rows, the fewest a Show all opens; the real one depends on how many match. */
 export function ListPageSkeleton({
   homeHref = '/',
   settingsHref = '/settings',
@@ -425,7 +473,7 @@ export function ListPageSkeleton({
           <div className="mb-4 flex h-(--ds-control) items-center">
             <Bar className="h-full w-full" />
           </div>
-          <div className="h-[383px]">
+          <div className="h-[408px]">
             <Bar className="h-full w-full" />
           </div>
         </div>

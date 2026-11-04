@@ -5,9 +5,6 @@ import { AssignmentRow } from './index';
 import { listAssignments } from './listed';
 import { SETS, TODAY } from './sample';
 
-/** Where "Show all" goes: the list page (on the design page, its view). */
-export const LIST_PAGE = '/design/view/list-page';
-
 const COURSES = [
   {
     name: 'Circuits I',
@@ -41,14 +38,22 @@ const COURSES = [
 
 /** Home as the design page shows it: Assignments, then Courses, 40 apart
  *  (the info area above them comes later). */
-export function HomeLists() {
-  const { all } = listAssignments(SETS, TODAY);
+export function HomeLists({
+  workHref,
+  coursesHref,
+}: {
+  /** Where Assignments' "Show all" goes. */
+  workHref: string;
+  /** Where Courses' "Show all" goes. */
+  coursesHref: string;
+}) {
+  const all = listAssignments(SETS, TODAY);
   return (
     <div className="space-y-10">
       <div>
         <SectionHeading count={all.length}>Assignments</SectionHeading>
         <div className="mt-3">
-          <List cap={LIST_CAP} showAllHref={LIST_PAGE}>
+          <List cap={LIST_CAP} showAllHref={workHref}>
             {all.map((a) => (
               <AssignmentRow
                 key={a.set}
@@ -64,7 +69,7 @@ export function HomeLists() {
       <div>
         <SectionHeading count={COURSES.length}>Courses</SectionHeading>
         <div className="mt-3">
-          <List cap={LIST_CAP} showAllHref={LIST_PAGE}>
+          <List cap={LIST_CAP} showAllHref={coursesHref}>
             {COURSES.map((c) => (
               <CourseRow key={c.name} {...c} href="#" />
             ))}

@@ -29,3 +29,5 @@ Jack, 2026-10-21: **"Lets go with spark lines, drop the other one, and anything 
 Coordinator, 2026-10-21 (home-d11, home-d12): changes compare this week so far with last week up to the same weekday and are muted text; the "Questions left" sparkline is questions left per day.
 
 2026-11-04, `ideas/list-pattern-grill.md` (L2, L3): Jack chose a cap of 5 with "Show all N" at the foot of the box, going to the list page, over the header link (home-d18).
+
+2026-11-04, review: the "Show all" hrefs (and the list page's course links) are props. On the design page they are placeholders from `list-page/hrefs.ts`, pointing at this view's states, until the list page is wired (A6 of `ideas/list-pattern-grill.md`).

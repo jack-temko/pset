@@ -337,6 +337,8 @@ export function Course({
   failed,
   today,
   unfolded,
+  workHref,
+  materialsHref,
   homeHref = '/',
   settingsHref = '/settings',
 }: {
@@ -347,6 +349,10 @@ export function Course({
   today: Date;
   /** Opens every fold (the design page only). */
   unfolded?: boolean;
+  /** Where Work's "Show all" goes. */
+  workHref: string;
+  /** Where Materials' "Show all" goes. */
+  materialsHref: string;
   homeHref?: string;
   settingsHref?: string;
 }) {
@@ -416,9 +422,19 @@ export function Course({
   };
 
   const { todo, done } = split(sets);
+  const switchProps =
+    done.length > 0
+      ? {
+          states: [
+            { id: 'todo', label: 'To do', count: todo.length },
+            { id: 'done', label: 'Done', count: done.length },
+          ],
+        }
+      : {};
   // A list with no finished set has no switch and stays on To do; the list
   // never switches by itself.
   const shownSide = done.length > 0 ? side : 'todo';
+  if (side !== shownSide) setSide(shownSide);
 
   const addedMaterials = (files: readonly string[]) => {
     if (files.length === 0) return;
@@ -622,22 +638,11 @@ export function Course({
                   </SectionHeading>
                   <div className="mt-3">
                     <List
-                      states={
-                        done.length > 0
-                          ? [
-                              {
-                                id: 'todo',
-                                label: 'To do',
-                                count: todo.length,
-                              },
-                              { id: 'done', label: 'Done', count: done.length },
-                            ]
-                          : undefined
-                      }
+                      {...switchProps}
                       state={shownSide}
                       onState={setSide}
                       cap={LIST_CAP}
-                      showAllHref="#"
+                      showAllHref={workHref}
                       empty={
                         sets.length === 0
                           ? 'No work yet. Add an assignment sheet.'
@@ -666,7 +671,7 @@ export function Course({
                   <div className="mt-3">
                     <List
                       cap={LIST_CAP}
-                      showAllHref="#"
+                      showAllHref={materialsHref}
                       empty="No materials yet. Add a textbook or slides."
                     >
                       {materials.map((m) =>
@@ -816,7 +821,6 @@ export function CourseSkeleton({
   );
 }
 
-/** Heights of the usual course's Work and Materials bodies, Add included.
- *  Work's box has its switch band over one row (an estimate from the
- *  layout: the Done fold's line it replaced was 7 shorter). */
-const SECTIONS = [146, 228];
+/** Heights of the usual course's Work and Materials bodies, Add included,
+ *  measured from the loaded page. */
+const SECTIONS = [147, 228];

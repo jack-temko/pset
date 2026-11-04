@@ -100,6 +100,8 @@ export function Home({
   pick,
   sets,
   study,
+  workHref,
+  coursesHref,
   homeHref = '/',
   settingsHref = '/settings',
 }: {
@@ -109,6 +111,10 @@ export function Home({
   pick?: number;
   sets: readonly GreetingSet[];
   study: readonly StudyDay[];
+  /** Where Assignments' "Show all" goes. */
+  workHref: string;
+  /** Where Courses' "Show all" goes. */
+  coursesHref: string;
   homeHref?: string;
   settingsHref?: string;
 }) {
@@ -195,7 +201,7 @@ export function Home({
       }
       info={info}
     >
-      <HomeLists />
+      <HomeLists workHref={workHref} coursesHref={coursesHref} />
     </HomeFrame>
   );
 }
@@ -272,7 +278,7 @@ export function HomeSkeleton({
             <div className="flex min-h-8 items-center">
               <Bar className="h-5 w-40" />
             </div>
-            <div className="mt-3 h-[322px]">
+            <div className="mt-3 h-[346px]">
               <Bar className="h-full w-full" />
             </div>
           </div>

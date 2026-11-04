@@ -81,6 +81,14 @@ export default defineSpec({
       name: 'study',
       does: 'Per-day study, with questions done and questions left.',
     },
+    {
+      name: 'workHref',
+      does: 'Where the Assignments list\u2019s "Show all" goes.',
+    },
+    {
+      name: 'coursesHref',
+      does: 'Where the Courses list\u2019s "Show all" goes.',
+    },
     { name: 'homeHref', does: 'Where the wordmark goes.' },
     { name: 'settingsHref', does: 'Where Settings goes.' },
   ],

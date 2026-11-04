@@ -149,6 +149,8 @@ export default defineSpec({
     { name: 'failed', does: 'The read failed: shows the failed page.' },
     { name: 'today', does: 'The moment due dates count from.' },
     { name: 'unfolded', does: 'Opens every fold (the design page only).' },
+    { name: 'workHref', does: 'Where Work\u2019s "Show all" goes.' },
+    { name: 'materialsHref', does: 'Where Materials\u2019 "Show all" goes.' },
     { name: 'homeHref', does: 'Where the wordmark and "Home" go.' },
     { name: 'settingsHref', does: 'Where Settings goes.' },
   ],

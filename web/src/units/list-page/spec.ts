@@ -26,8 +26,14 @@ export default defineSpec({
     {
       id: 'no-matches',
       name: 'No matches',
-      when: 'The search matches nothing: one quiet line with Clear filters; the switch still shows where the counts are.',
+      when: 'A search matches nothing: one quiet line with Clear filters; the switch still shows where the counts are.',
       text: 'No sets match',
+    },
+    {
+      id: 'nothing-to-do',
+      name: 'Nothing to do',
+      when: 'Every set is done and the search is empty: the list stays on To do with its one quiet line, and Done keeps its count.',
+      text: 'Nothing to do',
     },
     {
       id: 'many',
@@ -40,6 +46,12 @@ export default defineSpec({
       name: 'Memories',
       when: 'The same page for what PSet remembers: the header switch reads "Yours 12 · From Ask 8", rows are the text and when it was added.',
       text: 'From Ask',
+    },
+    {
+      id: 'courses',
+      name: 'Courses',
+      when: 'Opened from Home’s Courses: course rows, no switch, only search and Sort.',
+      text: 'Thermodynamics',
     },
   ],
   stress:
@@ -90,7 +102,7 @@ export default defineSpec({
     {
       id: 'clear-filters',
       label: 'Clear filters',
-      does: 'In the no-matches line: empties the search and sets the course back to All courses.',
+      does: 'In the no-matches line, which a non-empty search that matches nothing shows: empties the search and sets the course back to All courses.',
     },
     {
       id: 'open-set',
@@ -108,11 +120,15 @@ export default defineSpec({
   inputs: [
     {
       name: 'page',
-      does: 'The kind of list, work or memories, and every item in it.',
+      does: 'The kind of list (work, memories or courses) and every item in it.',
     },
     {
       name: 'initial',
       does: 'Where the filters start: what "Show all" came from.',
+    },
+    {
+      name: 'courseHref',
+      does: 'Where a course’s name goes: the path’s crumb and each row’s course. A placeholder until wired (A6).',
     },
     { name: 'today', does: 'The moment due dates count from.' },
     { name: 'homeHref', does: 'Where the wordmark and "Home" go.' },

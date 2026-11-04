@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Button, REASON_MS } from './button';
 import { Counter } from './counter';
 import { AssignmentRow } from './assignment-row';
-import { ASSIGNMENT_CAP, listAssignments } from './assignment-row/listed';
+import { listAssignments } from './assignment-row/listed';
 import { openedAgo } from './assignment-row/opened';
 import { CourseRow } from './course-row';
 import { Link } from './link';
@@ -1298,7 +1298,7 @@ describe('listAssignments', () => {
   });
 
   it('lists sets due within 7 days or opened in the last 7, due ones first', () => {
-    const { shown, more } = listAssignments(
+    const shown = listAssignments(
       [
         s('opened', { openedAt: ago(1) }),
         s('late', { due: due(20) }),
@@ -1316,16 +1316,13 @@ describe('listAssignments', () => {
       'opened:opened',
       'older:opened',
     ]);
-    expect(more).toBe(0);
   });
 
-  it('caps at five and counts the rest', () => {
+  it('keeps every qualifying set, for the list to cap', () => {
     const sets = Array.from({ length: 8 }, (_, i) =>
       s(String(i), { due: due(14 + (i % 4)) }),
     );
-    const { shown, more } = listAssignments(sets, today);
-    expect(shown).toHaveLength(ASSIGNMENT_CAP);
-    expect(more).toBe(3);
+    expect(listAssignments(sets, today)).toHaveLength(8);
   });
 });
 

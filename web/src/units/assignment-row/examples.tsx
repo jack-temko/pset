@@ -1,4 +1,5 @@
 import { defineExamples } from '@/design/examples';
+import { PLACEHOLDER } from '@/units/list-page/hrefs';
 import { parseDueDate } from '@/units/set-line/dates';
 import { HomeLists } from './home';
 import { AssignmentRow, type AssignmentRowProps } from './index';
@@ -42,7 +43,12 @@ export default defineExamples(spec, AssignmentRow, {
         openedAt: ago(2),
       }),
     'no-time': () => row({ minutesLeft: undefined }),
-    list: () => <HomeLists />,
+    list: () => (
+      <HomeLists
+        workHref={PLACEHOLDER.work}
+        coursesHref={PLACEHOLDER.courses}
+      />
+    ),
   },
   stress: () => (
     <div className="w-[320px] max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">

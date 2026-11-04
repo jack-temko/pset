@@ -10,3 +10,7 @@ Built from `ideas/list-pattern-grill.md`, whose word-for-word log is there. Jack
 - L11: "It becomes the header switch (Recommended)". Memories read "Yours 12 · From Ask 8".
 
 Not asked, so assumed: the sort defaults (A5), filters in the address (A2; the sample keeps them in state because the design page's own address holds its controls), and the State menu mirroring the header switch.
+
+2026-11-04, review: the "Show all" hrefs (and the list page's course links) are props. On the design page they are placeholders from `list-page/hrefs.ts`, pointing at this view's states, until the list page is wired (A6 of `ideas/list-pattern-grill.md`).
+
+2026-11-04, review: the page also lists courses (Home's Courses "Show all"): course rows, no switch, search and Sort only. An empty side with no search says its own line ("Nothing to do"), never "No sets match" (L8).

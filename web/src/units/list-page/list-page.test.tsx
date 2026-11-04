@@ -1,10 +1,18 @@
-import { act, type ReactNode } from 'react';
+import { act, useState, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { List, LIST_CAP } from '@/units/list';
 import { ListPage } from './index';
-import { MANY, MEMORIES, TODAY, WORK } from './sample';
+import {
+  COURSE_LIST,
+  MANY,
+  MANY_SETS,
+  MEMORIES,
+  TODAY,
+  WORK,
+  WORK_SETS,
+} from './sample';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -38,6 +46,7 @@ const radio = (el: HTMLElement, text: string) =>
   [...el.querySelectorAll('[role="radio"]')].find((b) =>
     b.textContent.startsWith(text),
   ) as HTMLElement;
+const course = () => '#';
 const links = (el: HTMLElement) =>
   el.querySelectorAll('a[href="#"]:not(header a)').length;
 
@@ -58,11 +67,46 @@ describe('List', () => {
   });
 
   it('has no foot at or under the cap', () => {
-    const el = render(<List cap={LIST_CAP}>{rows(5)}</List>);
+    const el = render(
+      <List cap={LIST_CAP} showAllHref="/all">
+        {rows(5)}
+      </List>,
+    );
     expect(el.querySelector('a')).toBeNull();
   });
 
-  it('shows the switch with both counts and swaps by choice only', () => {
+  it('shows both counts and swaps the rows when the other side is pressed', () => {
+    function Wrapper() {
+      const [state, setState] = useState('todo');
+      return (
+        <List
+          states={[
+            { id: 'todo', label: 'To do', count: 1 },
+            { id: 'done', label: 'Done', count: 2 },
+          ]}
+          state={state}
+          onState={setState}
+        >
+          {state === 'todo' ? (
+            <p>open row</p>
+          ) : (
+            [<p key="a">closed a</p>, <p key="b">closed b</p>]
+          )}
+        </List>
+      );
+    }
+    const el = render(<Wrapper />);
+    expect(radio(el, 'To do').textContent).toBe('To do1');
+    expect(radio(el, 'Done').textContent).toBe('Done2');
+    expect(el.textContent).toContain('open row');
+    press(radio(el, 'Done'));
+    expect(el.textContent).not.toContain('open row');
+    expect(el.textContent).toContain('closed a');
+    expect(radio(el, 'Done').getAttribute('aria-checked')).toBe('true');
+    expect(radio(el, 'To do').textContent).toBe('To do1');
+  });
+
+  it('stays on an empty side with one quiet line', () => {
     const el = render(
       <List
         states={[
@@ -73,8 +117,8 @@ describe('List', () => {
         empty="Nothing to do"
       />,
     );
-    expect(el.textContent).toContain('To do0');
-    expect(el.textContent).toContain('Done6');
+    expect(radio(el, 'Done').textContent).toBe('Done6');
+    expect(radio(el, 'To do').getAttribute('aria-checked')).toBe('true');
     expect(el.textContent).toContain('Nothing to do');
   });
 });
@@ -85,6 +129,7 @@ describe('ListPage', () => {
       <ListPage
         page={WORK}
         today={TODAY}
+        courseHref={course}
         initial={{ course: 'ECE 210', state: 'done' }}
       />,
     );
@@ -95,12 +140,16 @@ describe('ListPage', () => {
   });
 
   it('names the course in each row when it spans courses', () => {
-    const el = render(<ListPage page={WORK} today={TODAY} />);
+    const el = render(
+      <ListPage page={WORK} today={TODAY} courseHref={course} />,
+    );
     expect(el.textContent).toContain('Circuits I');
   });
 
   it('switches state by the header switch and keeps both counts', () => {
-    const el = render(<ListPage page={WORK} today={TODAY} />);
+    const el = render(
+      <ListPage page={WORK} today={TODAY} courseHref={course} />,
+    );
     expect(radio(el, 'To do').textContent).toBe('To do8');
     press(radio(el, 'Done'));
     expect(radio(el, 'Done').getAttribute('aria-checked')).toBe('true');
@@ -110,7 +159,12 @@ describe('ListPage', () => {
 
   it('says no sets match and Clear filters brings them back', () => {
     const el = render(
-      <ListPage page={WORK} today={TODAY} initial={{ query: 'zzz' }} />,
+      <ListPage
+        page={WORK}
+        today={TODAY}
+        courseHref={course}
+        initial={{ query: 'zzz' }}
+      />,
     );
     expect(el.textContent).toContain('No sets match');
     const clear = [...el.querySelectorAll('button')].find(
@@ -124,17 +178,45 @@ describe('ListPage', () => {
 
   it('shows every match with no cap', () => {
     const el = render(
-      <ListPage page={MANY} today={TODAY} initial={{ state: 'done' }} />,
+      <ListPage
+        page={MANY}
+        today={TODAY}
+        courseHref={course}
+        initial={{ state: 'done' }}
+      />,
     );
     expect(el.querySelectorAll('[role="radio"]')[1].textContent).toBe(
-      `Done${String(MANY.items.filter((s) => 'finished' in s && s.finished).length)}`,
+      `Done${String(MANY_SETS.filter((s) => s.finished !== undefined).length)}`,
     );
     expect(el.textContent).not.toContain('Show all');
     expect(links(el)).toBeGreaterThan(200);
   });
 
+  it('shows the side’s own line, not No sets match, when it is empty and nothing is searched', () => {
+    const done = WORK_SETS.filter((x) => x.finished !== undefined);
+    const el = render(
+      <ListPage
+        page={{ kind: 'work', items: done }}
+        today={TODAY}
+        courseHref={course}
+      />,
+    );
+    expect(el.textContent).toContain('Nothing to do');
+    expect(el.textContent).not.toContain('No sets match');
+  });
+
+  it('lists courses with no switch', () => {
+    const el = render(
+      <ListPage page={COURSE_LIST} today={TODAY} courseHref={course} />,
+    );
+    expect(el.querySelector('[role="radio"]')).toBeNull();
+    expect(el.textContent).toContain('Thermodynamics');
+  });
+
   it('puts memories behind "Yours 12" and "From Ask 8"', () => {
-    const el = render(<ListPage page={MEMORIES} today={TODAY} />);
+    const el = render(
+      <ListPage page={MEMORIES} today={TODAY} courseHref={course} />,
+    );
     expect(radio(el, 'Yours').textContent).toBe('Yours12');
     expect(radio(el, 'From Ask').textContent).toBe('From Ask8');
   });
