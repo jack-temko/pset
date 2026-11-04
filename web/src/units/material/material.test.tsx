@@ -7,6 +7,12 @@ import { pageMemory } from './memory';
 import { GRIFFITHS } from './sample';
 import { pdfOf, printedOf } from './types';
 
+// A whole screen in jsdom takes several times its solo time when the suite
+// runs on every core at once (0.5 s alone, seconds under `make check`). These
+// tests use fake time and wait on nothing; the default 5 s only measures a
+// busy machine. Other files keep the 5 s.
+vi.setConfig({ testTimeout: 15_000 });
+
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
