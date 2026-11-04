@@ -71,7 +71,9 @@ function Row({
       <div className="grid min-h-16 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 px-4 py-3">
         <p className="ds-body font-medium text-(--ds-fg)">{name}</p>
         <div>{children}</div>
-        <p className="ds-small min-w-0 self-start text-(--ds-fg-muted)">{hint}</p>
+        <p className="ds-small min-w-0 self-start text-(--ds-fg-muted)">
+          {hint}
+        </p>
         <p
           className={`ds-small min-h-5 self-start ${failed ? 'text-(--ds-danger)' : 'text-(--ds-fg-muted)'}`}
         >
