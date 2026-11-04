@@ -20,7 +20,7 @@ export default defineSpec({
     {
       id: 'nothing-due',
       name: 'Nothing due',
-      when: 'Every set is finished: Work stays on To do with one quiet line, "Nothing to do", and Done keeps its count in the switch.',
+      when: 'Every set is finished: the line under the name is empty (its room kept), Work stays on To do saying "Nothing to do", and Done keeps its count.',
       text: 'Nothing to do',
     },
     {
@@ -184,6 +184,14 @@ export default defineSpec({
   log: 'web/src/units/course/log.md',
   decisions: [
     {
+      id: 'course-d26',
+      decision:
+        'The muted line under the name says only "Next due Thu" (or "Was due Oct 9"); with nothing dated it is empty and keeps its height, and Work says "Nothing to do".',
+      why: 'Jack: "Line says only next due (Recommended)". "1 set to do" is the switch’s "To do 1" (say-it-once). Supersedes course-d19’s wording.',
+      beat: '"1 set to do · next due Thu" and "Nothing due"',
+      date: '2026-11-04',
+    },
+    {
       id: 'course-d25',
       decision:
         'Work’s Done fold is the list’s header switch, "To do 1 · Done 6". Work and Materials show 5 rows, then "Show all N"; Add stays under each (list-d3, d4).',
@@ -336,6 +344,7 @@ export default defineSpec({
     },
     {
       id: 'course-d19',
+      supersededBy: 'course-d26',
       decision:
         'Under the name sits the muted line, "1 set to do · next due Thu" or "Nothing due", then Home’s stats box. This puts back the line course-d15 removed.',
       why: 'Confirmed by Jack: "muted line + stats box" (C1). The Work list no longer says "Nothing due" itself, so it is said once (say-it-once).',

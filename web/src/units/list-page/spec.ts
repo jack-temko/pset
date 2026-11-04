@@ -85,11 +85,6 @@ export default defineSpec({
       does: 'Opens a menu of All courses and each course; the button shows the current one, and the path gains the course.',
     },
     {
-      id: 'pick-state',
-      label: 'State',
-      does: 'Opens a menu of the list’s states; it moves the header switch, and the switch moves it.',
-    },
-    {
       id: 'pick-sort',
       label: 'Sort',
       does: 'Opens a menu of orders; the button shows the current one.',
@@ -170,7 +165,7 @@ export default defineSpec({
     {
       id: 'list-page-d2',
       decision:
-        'The page narrows with a search field that matches names and menus for Course, State and Sort, each showing its current value. No typed filters.',
+        'A search field that matches names and menus for Course and Sort, each showing its current value. The state is the header switch alone.',
       why: 'Jack: "Search field + menus (Recommended)" (L5): readable at a glance, nothing to learn.',
       beat: 'Typed filters ("is:done course:ECE210"); search only',
       date: '2026-11-04',
@@ -210,8 +205,8 @@ export default defineSpec({
     {
       id: 'list-page-d7',
       decision:
-        'The State menu and the header switch are one setting shown twice. Memories use the same pair: "Yours 12 · From Ask 8".',
-      why: 'Jack: "It becomes the header switch (Recommended)" (L11), and L5’s menus. Both places is assumed; the menu may go.',
+        'The header switch is the only state control: no State menu in the filter bar (say-it-once). Memories use it too: "Yours 12 · From Ask 8".',
+      why: 'Jack: "It becomes the header switch (Recommended)" (L11) and, after review, "Drop the State menu (Recommended)" (L12).',
       beat: 'A kind menu on the page only',
       date: '2026-11-04',
     },

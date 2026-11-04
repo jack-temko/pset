@@ -33,6 +33,8 @@ pre-filtered to where you came from.
 | L9  | The cap applies to to-do rows too: 5, soonest due first, then "Show all 7"                                                                        | One rule; a heavy week is rare with one set per course                  | Never cap to-do                                      |
 | L10 | Rows on the page are the summary's own rows, plus the course name when the page spans courses                                                     | Cross-page uniformity                                                   | A table with sortable columns                        |
 | L11 | Memory's All / Yours / From Ask filter becomes the header switch, "Yours 12 · From Ask 8"                                                         | The same control in the same place on every list                        | A kind menu on the page only                         |
+| L12 | The list page has no State menu: the filter bar is search, Course and Sort, and the header switch alone sets the state (after review)             | The switch already says it, with both counts (say-it-once)              | A State menu beside the switch                       |
+| L13 | Course's muted line under the name says only "next due Thu"; with nothing due it is empty and Work's "Nothing to do" says it (after review)       | "1 set to do" is the switch's "To do 1"; nothing is said twice          | "1 set to do · next due Thu" and "Nothing due"       |
 
 ### The artifact(s)
 
@@ -94,3 +96,8 @@ After the research and recommendation: "start the grill on the details"
 - Does the 5-row cap also apply to to-do rows (say, 7 sets due on Home)? Options: Yes, one rule (Recommended); Never cap to-do. Answer: "Yes, one rule (Recommended)"
 - How do rows look on the list page? Options: Same rows as summaries (Recommended); A table with columns. Answer: "Same rows as summaries (Recommended)"
 - Memory D's All / Yours / From Ask filter: what becomes of it? Options: It becomes the header switch (Recommended); A menu on the page only. Answer: "It becomes the header switch (Recommended)"
+
+### Batch 4 (after review)
+
+- The list page has a State menu and the header switch: the same setting twice. What should the filter bar keep? Options: Drop the State menu (Recommended); Keep both. Answer: "Drop the State menu (Recommended)"
+- Course's muted line says "1 set to do · next due Thu" beside a switch that says "To do 1", and "Nothing due" beside "Nothing to do". What should the line say? Options: Line says only next due (Recommended); Keep as is. Answer: "Line says only next due (Recommended)"

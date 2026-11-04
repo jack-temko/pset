@@ -411,16 +411,6 @@ export function ListPage({
                 }}
               />
             )}
-            {kind !== 'courses' && (
-              <Choice
-                label="State"
-                value={STATES[kind].find((s) => s.id === f.state)?.label ?? ''}
-                options={STATES[kind]}
-                onPick={(state) => {
-                  set({ state, sort: undefined });
-                }}
-              />
-            )}
             <Choice
               label="Sort"
               value={sorts.find((s) => s.id === sort)?.label ?? ''}

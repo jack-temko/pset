@@ -139,6 +139,16 @@ describe('ListPage', () => {
     expect(links(el)).toBeGreaterThan(0);
   });
 
+  it('has no State menu: the header switch is the only state control', () => {
+    const el = render(
+      <ListPage page={WORK} today={TODAY} courseHref={course} />,
+    );
+    const menus = [...el.querySelectorAll('button[aria-haspopup]')].map((b) =>
+      b.textContent.slice(0, 4),
+    );
+    expect(menus).toEqual(['Cour', 'Sort']);
+  });
+
   it('names the course in each row when it spans courses', () => {
     const el = render(
       <ListPage page={WORK} today={TODAY} courseHref={course} />,

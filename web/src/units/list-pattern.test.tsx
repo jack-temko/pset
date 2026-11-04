@@ -63,6 +63,14 @@ describe('Course lists', () => {
     expect(el.textContent).not.toContain('Show all');
   });
 
+  it('says only the next due date under the name, and nothing when none is due', () => {
+    const h1 = (el: HTMLElement) =>
+      el.querySelector('h1')?.parentElement?.parentElement;
+    expect(h1(render(course()))?.textContent).toContain('Next due Thu');
+    expect(h1(render(course()))?.textContent).not.toContain('set to do');
+    expect(h1(render(course(NOTHING_DUE)))?.textContent).not.toContain('due');
+  });
+
   it('stays on To do when To do is empty, and Done keeps its count', () => {
     const el = render(course(NOTHING_DUE));
     expect(radio(el, 'To do')?.getAttribute('aria-checked')).toBe('true');

@@ -15,3 +15,5 @@ Decisions that say "assumed" are the ones he was not asked: the path and the hea
 2026-11-04, `ideas/list-pattern-grill.md` (L1 to L3, L8, L9): Jack picked "Switch in header (Recommended)" over the Done fold, "Cap 5, Show all page (Recommended)" and "Foot, with a count (Recommended)". Work's fold became the list's header switch and Work and Materials show 5 rows with "Show all N" at the foot (course-d25). C3 in `ideas/course-view-grill.md` is reversed.
 
 2026-11-04, review: the "Show all" hrefs (and the list page's course links) are props. On the design page they are placeholders from `list-page/hrefs.ts`, pointing at this view's states, until the list page is wired (A6 of `ideas/list-pattern-grill.md`).
+
+2026-11-04, after review (`ideas/list-pattern-grill.md` Batch 4): Jack, "Line says only next due (Recommended)": the muted line is only "Next due Thu", empty with nothing dated, its height kept so nothing jumps against the skeleton (L13, course-d26).

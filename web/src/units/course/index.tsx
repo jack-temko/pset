@@ -219,18 +219,17 @@ function AddButton({ label, onPick }: { label: string; onPick: () => void }) {
   );
 }
 
-/** The line under the name: how many sets are to do and when the next is
- *  due, or "Nothing due" (course-d15). */
+/** The line under the name says only what the list cannot: when the next set
+ *  is due, as "Next due Thu". With nothing dated it is empty, and the Work
+ *  list says "Nothing to do" (course-d26). */
 function standing(todo: readonly CourseSet[], today: Date): string {
-  if (todo.length === 0) return 'Nothing due';
   const dated = todo.flatMap((s) => (s.due ? [s.due] : []));
   const next = dated.sort((a, b) => a.getTime() - b.getTime())[0] as
     | Date
     | undefined;
-  const count = `${plural(todo.length, 'set', 'sets')} to do`;
-  if (!next) return count;
+  if (!next) return '';
   const due = dueClause(next, today);
-  return `${count} · ${due.overdue ? 'was' : 'next'} ${due.text}`;
+  return `${due.overdue ? 'Was' : 'Next'} ${due.text}`;
 }
 
 const figureOf = (value: string) => (
@@ -601,7 +600,7 @@ export function Course({
                     />
                   </div>
                 </div>
-                <p className="ds-body mt-2 text-(--ds-fg-muted) [overflow-wrap:anywhere]">
+                <p className="ds-body mt-2 min-h-(--ds-body-line) text-(--ds-fg-muted) [overflow-wrap:anywhere]">
                   {standing(todo, today)}
                 </p>
               </div>
