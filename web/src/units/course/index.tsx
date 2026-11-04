@@ -288,7 +288,7 @@ function Stats({ course, today }: { course: CourseData; today: Date }) {
               first
               figure={figureOf(String(s.questions.week))}
               label={
-                <p className="ds-small flex items-center gap-x-2 text-(--ds-fg-muted)">
+                <p className="ds-small flex items-center gap-x-2 whitespace-nowrap text-(--ds-fg-muted)">
                   <span>Questions done</span>
                   {questionsChange && <ChangeText change={questionsChange} />}
                 </p>

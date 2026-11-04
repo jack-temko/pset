@@ -158,7 +158,7 @@ export function Home({
               first
               figure={figureOf(count(s.questions.week))}
               label={
-                <p className="ds-small flex items-center gap-x-2 text-(--ds-fg-muted)">
+                <p className="ds-small flex items-center gap-x-2 whitespace-nowrap text-(--ds-fg-muted)">
                   <span>Questions done</span>
                   {questionsChange && <ChangeText change={questionsChange} />}
                 </p>

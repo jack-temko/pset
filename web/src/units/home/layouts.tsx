@@ -33,7 +33,7 @@ export function Caption({ children }: { children: ReactNode }) {
  *  as the widest figure, so every label starts at the same x. */
 export function Rows({ children }: { children: ReactNode }) {
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)_6rem] gap-x-3 gap-y-2">
+    <div className="grid grid-cols-[auto_minmax(max-content,1fr)_minmax(40px,6rem)] gap-x-3 gap-y-2">
       {children}
     </div>
   );
@@ -60,7 +60,7 @@ export function Row({
       className={`col-span-3 grid grid-cols-subgrid items-center ${first ? '' : 'border-t border-(--ds-border-muted) pt-2'}`}
     >
       <div className="min-w-8">{figure}</div>
-      <div className="min-w-0">
+      <div>
         {label}
         {caption}
       </div>
