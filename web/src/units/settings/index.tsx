@@ -48,23 +48,40 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 
 /** One setting: its name and a line saying what it does on the left, the
  *  control on the right, as GitHub and macOS settings are laid out. A row
- *  whose control is a field aligns to the top, so the field's note under it
- *  does not push the name off centre. */
+ *  whose control is a field passes the field's note here: the row becomes two
+ *  lines, the name beside the field and the note beside the hint, so the note
+ *  lines up with the hint and leaves no empty line at the foot of the row. */
 function Row({
   name,
   hint,
-  top,
+  note,
+  failed,
   children,
 }: {
   name: string;
   hint: ReactNode;
-  top?: boolean;
+  /** The field's note ("Saved", why it failed), on the hint's line under the control. */
+  note?: ReactNode;
+  /** Draws the note in the danger colour. */
+  failed?: boolean;
   children?: ReactNode;
 }) {
+  if (note !== undefined) {
+    return (
+      <div className="grid min-h-16 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 px-4 py-3">
+        <p className="ds-body font-medium text-(--ds-fg)">{name}</p>
+        <div>{children}</div>
+        <p className="ds-small min-w-0 self-start text-(--ds-fg-muted)">{hint}</p>
+        <p
+          className={`ds-small min-h-5 self-start ${failed ? 'text-(--ds-danger)' : 'text-(--ds-fg-muted)'}`}
+        >
+          {note}
+        </p>
+      </div>
+    );
+  }
   return (
-    <div
-      className={`flex min-h-16 min-w-0 justify-between gap-6 px-4 py-3 ${top ? 'items-start' : 'items-center'}`}
-    >
+    <div className="flex min-h-16 min-w-0 items-center justify-between gap-6 px-4 py-3">
       <div className="min-w-0 flex-1">
         <p className="ds-body font-medium text-(--ds-fg)">{name}</p>
         <p className="ds-small text-(--ds-fg-muted)">{hint}</p>
@@ -246,7 +263,11 @@ export function Settings({
           ) : (
             <div className="space-y-10">
               <Group title="You">
-                <Row name="Name" hint="What PSet calls you." top>
+                <Row
+                  name="Name"
+                  hint="What PSet calls you."
+                  note={saved ? 'Saved' : ''}
+                >
                   <div className="w-[280px]">
                     <TextField
                       label="Name"
@@ -255,7 +276,7 @@ export function Settings({
                       onChange={setName}
                       onCommit={commitName}
                       placeholder="Your first name"
-                      note={saved ? 'Saved' : ''}
+                      note={false}
                     />
                   </div>
                 </Row>
@@ -278,9 +299,10 @@ export function Settings({
                 <Row
                   name="OpenRouter key"
                   hint="Lets PSet read pages and guide you."
-                  top
+                  note={keyNote}
+                  failed={result === 'failed'}
                 >
-                  <div className="w-[520px]">
+                  <div className="w-[440px]">
                     <TextField
                       label="OpenRouter key"
                       labelHidden
@@ -293,7 +315,7 @@ export function Settings({
                       secret
                       placeholder="sk-or-v1-"
                       failed={result === 'failed'}
-                      note={keyNote}
+                      note={false}
                       action={
                         <div className="flex gap-2">
                           <Button
