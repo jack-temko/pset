@@ -35,11 +35,15 @@ export function reasonFor(
 
 /** The Home list: the sets that qualify, due ones first by date (the most
  *  overdue first), then opened ones, newest first; at most 5 shown, the rest
- *  counted for "Show all". */
+ *  counted for "Show all"; `all` is every one, for a list that caps itself. */
 export function listAssignments<T extends Listable>(
   sets: readonly T[],
   today: Date,
-): { shown: (T & { reason: Reason })[]; more: number } {
+): {
+  shown: (T & { reason: Reason })[];
+  more: number;
+  all: (T & { reason: Reason })[];
+} {
   const all = sets.flatMap((s) => {
     const r = reasonFor(s, today);
     return r ? [{ ...s, ...r }] : [];
@@ -57,6 +61,7 @@ export function listAssignments<T extends Listable>(
     );
   const ordered = [...due, ...opened];
   return {
+    all: ordered,
     shown: ordered.slice(0, ASSIGNMENT_CAP),
     more: Math.max(0, ordered.length - ASSIGNMENT_CAP),
   };

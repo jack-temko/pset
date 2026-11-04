@@ -272,7 +272,7 @@ export function HomeSkeleton({
             <div className="flex min-h-8 items-center">
               <Bar className="h-5 w-40" />
             </div>
-            <div className="mt-3 h-[282px]">
+            <div className="mt-3 h-[322px]">
               <Bar className="h-full w-full" />
             </div>
           </div>

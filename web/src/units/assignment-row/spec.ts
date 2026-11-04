@@ -139,7 +139,7 @@ export default defineSpec({
     {
       id: 'assignment-row-d4',
       decision:
-        'At most 5 assignments show, then "Show all"; the rule and the cap live in listAssignments.',
+        'At most 5 assignments show, then "Show all N" as the last row of the box (list-d3); the rule lives in listAssignments and the cap in the list.',
       why: 'Jack: "With a limit and gate to show more." He picked cap 5 over cap 3.',
       beat: 'A cap of 3',
       date: '2026-10-16',

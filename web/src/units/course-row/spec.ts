@@ -26,7 +26,7 @@ export default defineSpec({
     {
       id: 'list',
       name: 'Home: assignments and courses',
-      when: 'Home: an Assignments list of five rows, 40 below it a Courses list of five rows, each list under a section heading with a Counter and "Show all".',
+      when: 'Home: an Assignments list of five rows, 40 below it a Courses list of five rows, each list under a section heading with a Counter; Courses ends in "Show all 8".',
     },
   ],
   exampleWidth: 960,
@@ -88,7 +88,7 @@ export default defineSpec({
     {
       id: 'course-row-d2',
       decision:
-        'Home sorts courses by their nearest active due date, then courses with no dated active set, then courses with nothing active; at most five, then "Show all".',
+        'Home sorts courses by their nearest active due date, then courses with no dated active set, then courses with nothing active; at most five, then "Show all N".',
       why: 'Home stays short and the most urgent course comes first.',
       beat: 'All of them; three',
       date: '2026-10-13',

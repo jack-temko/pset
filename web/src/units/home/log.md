@@ -27,3 +27,5 @@ Jack, 2026-10-21: **"Go back to having all the stat stuff in one box, how it was
 Jack, 2026-10-21: **"Lets go with spark lines, drop the other one, and anything else not used anymore."** State A and the meter and stat tile units are removed (home-d10).
 
 Coordinator, 2026-10-21 (home-d11, home-d12): changes compare this week so far with last week up to the same weekday and are muted text; the "Questions left" sparkline is questions left per day.
+
+2026-11-04, `ideas/list-pattern-grill.md` (L2, L3): Jack chose a cap of 5 with "Show all N" at the foot of the box, going to the list page, over the header link (home-d18).

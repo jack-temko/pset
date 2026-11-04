@@ -1,16 +1,12 @@
 import { CourseRow } from '@/units/course-row';
-import { Link } from '@/units/link';
-import { List } from '@/units/list';
+import { List, LIST_CAP } from '@/units/list';
 import { SectionHeading } from '@/units/section-heading';
 import { AssignmentRow } from './index';
 import { listAssignments } from './listed';
 import { SETS, TODAY } from './sample';
 
-const showAll = (
-  <Link href="#" size="small">
-    Show all
-  </Link>
-);
+/** Where "Show all" goes: the list page (on the design page, its view). */
+export const LIST_PAGE = '/design/view/list-page';
 
 const COURSES = [
   {
@@ -38,21 +34,22 @@ const COURSES = [
     weekMinutes: 130,
   },
   { name: 'Linear algebra', todo: 0, materials: 0, weekMinutes: 0 },
+  { name: 'Statics', todo: 0, materials: 4, weekMinutes: 0 },
+  { name: 'Dynamics', todo: 3, materials: 6, weekMinutes: 20 },
+  { name: 'Materials science', todo: 0, materials: 2, weekMinutes: 0 },
 ];
 
 /** Home as the design page shows it: Assignments, then Courses, 40 apart
  *  (the info area above them comes later). */
 export function HomeLists() {
-  const { shown, more } = listAssignments(SETS, TODAY);
+  const { all } = listAssignments(SETS, TODAY);
   return (
     <div className="space-y-10">
       <div>
-        <SectionHeading count={shown.length + more} action={showAll}>
-          Assignments
-        </SectionHeading>
+        <SectionHeading count={all.length}>Assignments</SectionHeading>
         <div className="mt-3">
-          <List>
-            {shown.map((a) => (
+          <List cap={LIST_CAP} showAllHref={LIST_PAGE}>
+            {all.map((a) => (
               <AssignmentRow
                 key={a.set}
                 {...a}
@@ -65,11 +62,9 @@ export function HomeLists() {
         </div>
       </div>
       <div>
-        <SectionHeading count={8} action={showAll}>
-          Courses
-        </SectionHeading>
+        <SectionHeading count={COURSES.length}>Courses</SectionHeading>
         <div className="mt-3">
-          <List>
+          <List cap={LIST_CAP} showAllHref={LIST_PAGE}>
             {COURSES.map((c) => (
               <CourseRow key={c.name} {...c} href="#" />
             ))}

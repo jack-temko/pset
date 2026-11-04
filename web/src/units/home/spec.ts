@@ -48,8 +48,9 @@ export default defineSpec({
     },
     {
       id: 'show-all',
-      label: 'Show all',
-      does: 'Shows every set or every course. The list screens are not units yet, so it has no target.',
+      label: 'Show all 6',
+      does: 'The last row of a list that has more than five: opens the list page, filtered to that list.',
+      target: { unit: 'list-page', state: 'filtered' },
     },
   ],
   data: [
@@ -243,6 +244,14 @@ export default defineSpec({
       why: 'Not designed: noted when the spec format dropped the data waiting and failed fields (ideas/spec-format-grill.md, F9).',
       beat: 'A failed line in the data section',
       date: '2026-10-22',
+    },
+    {
+      id: 'home-d18',
+      decision:
+        'Assignments and Courses show five rows, then "Show all N" inside the box, linking to the list page; the heading has no link.',
+      why: 'Jack, in ideas/list-pattern-grill.md: "Cap 5, Show all page (Recommended)" and "Foot, with a count (Recommended)" (L2, L3).',
+      beat: '"Show all" at the heading’s right, going nowhere',
+      date: '2026-11-04',
     },
   ],
 });
