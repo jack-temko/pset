@@ -269,6 +269,7 @@ function Row({
 /** The list's two sides, as a switch in its header (L11 of
  *  ideas/list-pattern-grill.md): the student's own and what Ask saved. */
 const SIDES = [
+  { id: 'new', label: 'New' },
   { id: 'you', label: 'Yours' },
   { id: 'ask', label: 'From Ask' },
 ] as const;
@@ -287,16 +288,16 @@ function EmptyMemory({ mem }: { mem: Memories }) {
   );
 }
 
-/** The memory area (memory-d1, memory-d5): what Ask just saved waits in its
- *  own box with Keep and Edit, never hidden by the switch or the cap; then the
- *  add field and the list, with "Yours" and "From Ask" as its header switch,
- *  five rows and "Show all N" to the list page (the list pattern). Sample data
- *  only: add, edit, keep and forget work on it and nothing is kept. */
+/** The memory area (memory-d1, memory-d6): the add field, then one list with
+ *  New, Yours and From Ask as its header switch, five rows and "Show all N" to
+ *  the list page (the list pattern). New, what Ask just saved, with Keep and
+ *  Edit, shows only while it holds something, and the list opens on it. Sample
+ *  data only: add, edit, keep and forget work on it and nothing is kept. */
 export function MemoryArea({
   empty,
   editing,
   deleted,
-  side: startSide = 'you',
+  side: startSide,
   showAllHref,
 }: {
   /** Nothing remembered yet. */
@@ -305,42 +306,39 @@ export function MemoryArea({
   editing?: string;
   /** The id of the memory that starts forgotten, with Undo showing. */
   deleted?: string;
-  /** Which side of the switch starts chosen. */
-  side?: 'you' | 'ask';
+  /** Which side of the switch starts chosen; New when Ask saved something and none is given. */
+  side?: 'new' | 'you' | 'ask';
   /** Where "Show all" goes: the list page's memories. */
   showAllHref: string;
 }) {
   const mem = useMemories(empty ? [] : SAMPLE, deleted, editing);
-  const [side, setSide] = useState<string>(startSide);
+  const waiting = mem.items.some((m) => m.fresh === true);
+  const [picked, setPicked] = useState<string>(
+    startSide ?? (waiting ? 'new' : 'you'),
+  );
   if (mem.items.length === 0 && mem.undo === null)
     return (
       <div className="min-w-0">
         <EmptyMemory mem={mem} />
       </div>
     );
-  const fresh = mem.items.filter((m) => m.fresh === true);
-  const rest = mem.items.filter((m) => m.fresh !== true);
+  const sideOf = (m: Memory) => (m.fresh === true ? 'new' : m.source);
   const states = SIDES.map((s) => ({
     id: s.id,
     label: s.label,
-    count: rest.filter((m) => m.source === s.id).length,
-  }));
-  const shown = rest.filter((m) => m.source === side);
+    count: mem.items.filter((m) => sideOf(m) === s.id).length,
+  })).filter((s) => s.id !== 'new' || s.count > 0);
+  // New goes once its last memory is kept; the list falls back to Yours.
+  const side = states.some((s) => s.id === picked) ? picked : 'you';
+  const shown = mem.items.filter((m) => sideOf(m) === side);
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <Intro count={mem.items.length} />
-      {fresh.length > 0 && (
-        <List title="New from Ask" count={fresh.length}>
-          {fresh.map((m) => (
-            <Row key={m.id} m={m} mem={mem} label={false} review />
-          ))}
-        </List>
-      )}
       <AddField onAdd={mem.add} />
       <List
         states={states}
         state={side}
-        onState={setSide}
+        onState={setPicked}
         cap={LIST_CAP}
         showAllHref={showAllHref}
         empty={
@@ -350,7 +348,13 @@ export function MemoryArea({
         }
       >
         {shown.map((m) => (
-          <Row key={m.id} m={m} mem={mem} label={false} />
+          <Row
+            key={m.id}
+            m={m}
+            mem={mem}
+            label={false}
+            review={side === 'new'}
+          />
         ))}
       </List>
       <UndoLine m={mem} />

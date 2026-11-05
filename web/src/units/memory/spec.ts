@@ -14,8 +14,8 @@ export default defineSpec({
     {
       id: 'ask-saves',
       name: 'Ask saves, you keep',
-      when: 'What Ask just saved waits in its own box, New from Ask, with Keep and Edit; under it the list, on Yours, five rows and Show all.',
-      text: 'New from Ask',
+      when: 'Ask saved two: the switch reads New 2, Yours, From Ask, and the list opens on New, each row with Keep and Edit.',
+      text: 'Keep',
     },
     {
       id: 'from-ask',
@@ -67,8 +67,8 @@ export default defineSpec({
     },
     {
       id: 'switch-side',
-      label: 'Yours, From Ask',
-      does: 'The header switch: shows the student’s own memories or what Ask saved, each side with its count.',
+      label: 'New, Yours, From Ask',
+      does: 'The header switch: what Ask just saved (only while there is some), the student’s own, or what Ask saved and was kept.',
     },
     {
       id: 'show-all',
@@ -124,7 +124,7 @@ export default defineSpec({
     {
       id: 'memory-d1',
       decision:
-        'What Ask saved waits above the list, in its own New from Ask box with Keep and Edit, until the student keeps it.',
+        "What Ask saved waits on the list's New side with Keep and Edit, until the student keeps it.",
       why: `${VERDICT}: "lets go with D". The model never silently steers: a save from Ask waits for a look.`,
       beat: 'One plain list; two lists; chips',
       date: '2026-10-30',
@@ -155,9 +155,17 @@ export default defineSpec({
     {
       id: 'memory-d5',
       decision:
-        'The list pattern: Yours and From Ask are the header switch, five rows then Show all N to the list page; New from Ask is its own box above, never capped.',
+        'The list pattern: the header switch picks the side, five rows then Show all N to the list page.',
       why: 'Jack, 2026-11-04: "redo memory D with our new list changes and having the list page please".',
       beat: 'A segmented filter over the list; Show all expanding in place',
+      date: '2026-11-04',
+    },
+    {
+      id: 'memory-d6',
+      decision:
+        'New is a side of the switch, first, shown only while Ask has saved something not yet kept; the list opens on it. No second list.',
+      why: 'Jack, 2026-11-04: "i dont love having two separte lists when something is new. Either make that a cetegory that can be selected to filter".',
+      beat: 'A New from Ask box above the list; new rows at the top of every side',
       date: '2026-11-04',
     },
   ],

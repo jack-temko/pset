@@ -25,3 +25,8 @@ All, Yours and From Ask control becomes the list's header switch (Yours, From As
 page's memories, and what Ask just saved waits in its own "New from Ask" box above, never
 hidden by the switch or the cap (A1). Delete is Forget, with Undo, and the words follow the
 word list (memory, not preference). Decision memory-d5.
+
+Then, the same day: "On D, i dont love having two separte lists when something is new. Either
+make that a cetegory that can be selected to filter, or just have it show at the top or
+something." New became the first side of the switch, there only while Ask has saved something
+not yet kept, and the list opens on it (memory-d6).
