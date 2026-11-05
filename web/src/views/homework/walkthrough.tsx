@@ -1,8 +1,9 @@
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import {
   BookOpen,
   Check,
   Flag,
+  ImagePlus,
   ChevronLeft,
   ChevronDown,
   ChevronUp,
@@ -48,6 +49,8 @@ import {
   useRetryQuestion,
   useWriteGuide,
   useUpdateHomework,
+  useAddImage,
+  useRemoveFigure,
   useUpdateQuestion,
   worksheetURL,
   type Question,
@@ -474,6 +477,9 @@ function WalkthroughBody({
   const pages = usePages();
   const updateSet = useUpdateHomework(setId);
   const update = useUpdateQuestion(setId);
+  const addImage = useAddImage();
+  const removeFigure = useRemoveFigure();
+  const imageInput = useRef<HTMLInputElement>(null);
   const removeQ = useRemoveQuestion(setId);
   const retryQ = useRetryQuestion();
   const writeGuide = useWriteGuide();
@@ -904,6 +910,16 @@ function WalkthroughBody({
                   This isn&apos;t the right problem
                 </MenuItem>
               )}
+              {/* A figure the book doesn't have: a handout's circuit, a
+                  graph. It joins the question and its worksheet. */}
+              <MenuItem
+                icon={<ImagePlus />}
+                onSelect={() => {
+                  imageInput.current?.click();
+                }}
+              >
+                Add an image
+              </MenuItem>
               <MenuItem
                 icon={<Pencil />}
                 onSelect={() => {
@@ -967,22 +983,47 @@ function WalkthroughBody({
                 // (and on a page of another size than the book's first, more):
                 // contain keeps the box and never stretches the image.
                 style={
-                  pageAspect && f.w > 0 && f.h > 0
-                    ? {
-                        aspectRatio: `${f.w} / ${f.h * pageAspect}`,
-                        objectFit: 'contain',
-                      }
-                    : undefined
+                  f.ratio
+                    ? { aspectRatio: `1 / ${f.ratio}`, objectFit: 'contain' }
+                    : pageAspect && f.w > 0 && f.h > 0
+                      ? {
+                          aspectRatio: `${f.w} / ${f.h * pageAspect}`,
+                          objectFit: 'contain',
+                        }
+                      : undefined
                 }
                 className="w-full rounded-md border bg-card"
               />
-              {f.label && (
-                <figcaption className="text-xs text-muted-foreground">
+              {(f.label || f.ratio) && (
+                <figcaption className="flex items-center gap-2 text-xs text-muted-foreground">
                   {f.label}
+                  {f.ratio ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        removeFigure.mutate({ id: q.id, n: i });
+                      }}
+                    >
+                      <Trash2 />
+                      Remove image
+                    </Button>
+                  ) : null}
                 </figcaption>
               )}
             </figure>
           ))}
+          <input
+            ref={imageInput}
+            type="file"
+            accept="image/png,image/jpeg"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (file) addImage.mutate({ id: q.id, file });
+            }}
+          />
 
           {/* The professor's say on the problem, over the book's. Read-only:
               the question's menu is the one way to change it. */}

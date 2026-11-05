@@ -146,6 +146,11 @@ export interface Figure {
    */
   w: number /* float64 */;
   h: number /* float64 */;
+  /**
+   * Ratio is the image's height over its width, for one the student
+   * attached (it has no page, so W and H are 0).
+   */
+  ratio?: number /* float64 */;
 }
 /**
  * Question is one problem in a set. Text is what the student typed;

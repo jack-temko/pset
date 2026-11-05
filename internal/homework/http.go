@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/usage"
@@ -116,6 +117,34 @@ func (s *Service) Routes(mux *http.ServeMux) {
 	}))
 	mux.HandleFunc("POST /api/questions/{id}/retry", httpx.Send(http.StatusOK, func(r *http.Request, in Retry) (Question, error) {
 		return s.RetryQuestion(r.Context(), r.PathValue("id"), in)
+	}))
+	mux.HandleFunc("POST /api/questions/{id}/images", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
+		r.Body = http.MaxBytesReader(w, r.Body, maxImageBytes+1<<20)
+		if err := r.ParseMultipartForm(maxImageBytes); err != nil {
+			return httpx.NotMultipart.Wrap(err).OnField("file")
+		}
+		f, _, err := r.FormFile("file")
+		if err != nil {
+			return httpx.NoFile.Wrap(err).OnField("file")
+		}
+		defer cleanup.Close(f)
+		data, err := io.ReadAll(f)
+		if err != nil {
+			return httpx.UploadCut.Wrap(err).OnField("file")
+		}
+		q, err := s.AddImage(r.Context(), r.PathValue("id"), r.FormValue("label"), data)
+		if err != nil {
+			return err
+		}
+		httpx.JSON(w, http.StatusCreated, q)
+		return nil
+	}))
+	mux.HandleFunc("DELETE /api/questions/{id}/figures/{n}", httpx.Reply(func(r *http.Request) (Question, error) {
+		n, err := strconv.Atoi(r.PathValue("n"))
+		if err != nil {
+			return Question{}, errs.Gone.New("thing", "figure")
+		}
+		return s.RemoveFigure(r.Context(), r.PathValue("id"), n)
 	}))
 	mux.HandleFunc("GET /api/questions/{id}/figures/{n}", httpx.H(func(w http.ResponseWriter, r *http.Request) error {
 		n, err := strconv.Atoi(r.PathValue("n"))

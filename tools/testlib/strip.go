@@ -28,7 +28,7 @@ var dropped = []string{
 // with them). Check refuses any table in neither list, so a table a new
 // migration adds stops the snapshot until someone decides what to do with it.
 var kept = []string{
-	"books", "pages", "sections", "embeddings", "homework", "questions",
+	"books", "pages", "sections", "embeddings", "homework", "questions", "question_images",
 	"settings", "schema_migrations", "turns", "calls",
 }
 
