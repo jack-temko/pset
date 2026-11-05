@@ -2,9 +2,8 @@ name: Jumps nightly
 
 # The full jump audit (discovery, 3 runs) on dev, too long for every pull
 # request. One issue stays open while it fails. Spec: ideas/jumps-guard.md.
+# Off for now (2026-11-04, AGENTS.md): only by hand until it is revisited.
 on:
-  schedule:
-    - cron: '0 7 * * *'
   workflow_dispatch:
 
 permissions:
