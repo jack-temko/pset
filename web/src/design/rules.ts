@@ -139,7 +139,7 @@ export const RULES: readonly Rule[] = [
     id: 'quiet-when-repeated',
     rule: 'Make a control repeated on every row, or a menu beside a heading, quiet: no outline, a tint on hover; an outline is for a standalone action',
     check:
-      'No row button or "..." menu has an outline; outlines are on standalone actions (Add work, Test)',
+      'No row button or "..." menu has an outline; outlines are on standalone actions (Add assignment, Test)',
     scope: 'all',
   },
   {

@@ -62,7 +62,7 @@ export default defineSpec({
   actions: [
     {
       id: 'add-work',
-      label: 'Add work',
+      label: 'Add assignment',
       does: 'At the right of the Work heading: opens the file picker for an assignment sheet; each shows as a new set reading in.',
     },
     {

@@ -143,10 +143,20 @@ describe('ListPage', () => {
     const el = render(
       <ListPage page={WORK} today={TODAY} courseHref={course} />,
     );
-    const menus = [...el.querySelectorAll('button[aria-haspopup]')].map((b) =>
-      b.textContent.slice(0, 4),
-    );
+    // The filter bar's menus: the rows' own "..." menus are not filters.
+    const menus = [...el.querySelectorAll('button[aria-haspopup]')]
+      .filter((b) => !b.getAttribute('aria-label')?.startsWith('More for'))
+      .map((b) => b.textContent.slice(0, 4));
     expect(menus).toEqual(['Cour', 'Sort']);
+  });
+
+  it('gives every assignment and memory row its own menu, as Course does', () => {
+    const work = render(
+      <ListPage page={WORK} today={TODAY} courseHref={course} />,
+    );
+    expect(
+      work.querySelectorAll('[aria-label^="More for"]').length,
+    ).toBeGreaterThan(0);
   });
 
   it('names the course in each row when it spans courses', () => {
@@ -176,13 +186,13 @@ describe('ListPage', () => {
         initial={{ query: 'zzz' }}
       />,
     );
-    expect(el.textContent).toContain('No sets match');
+    expect(el.textContent).toContain('No assignments match');
     const clear = [...el.querySelectorAll('button')].find(
       (b) => b.textContent === 'Clear filters',
     );
     if (!clear) throw new Error('no Clear filters');
     press(clear);
-    expect(el.textContent).not.toContain('No sets match');
+    expect(el.textContent).not.toContain('No assignments match');
     expect(el.textContent).toContain('Problem set');
   });
 
@@ -202,7 +212,7 @@ describe('ListPage', () => {
     expect(links(el)).toBeGreaterThan(200);
   });
 
-  it('shows the side’s own line, not No sets match, when it is empty and nothing is searched', () => {
+  it('shows the side’s own line, not No assignments match, when it is empty and nothing is searched', () => {
     const done = WORK_SETS.filter((x) => x.finished !== undefined);
     const el = render(
       <ListPage
@@ -212,7 +222,7 @@ describe('ListPage', () => {
       />,
     );
     expect(el.textContent).toContain('Nothing to do');
-    expect(el.textContent).not.toContain('No sets match');
+    expect(el.textContent).not.toContain('No assignments match');
   });
 
   it('lists courses with no switch', () => {

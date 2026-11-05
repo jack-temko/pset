@@ -27,7 +27,7 @@ export default defineSpec({
       id: 'no-matches',
       name: 'No matches',
       when: 'A search matches nothing: one quiet line with Clear filters; the switch still shows where the counts are.',
-      text: 'No sets match',
+      text: 'No assignments match',
     },
     {
       id: 'nothing-to-do',
@@ -76,7 +76,7 @@ export default defineSpec({
   actions: [
     {
       id: 'search',
-      label: 'Search sets',
+      label: 'Search assignments',
       does: 'Narrows the list to names that contain what is typed, as it is typed.',
     },
     {

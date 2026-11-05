@@ -89,7 +89,7 @@ describe('the workspace and its material', () => {
     const el = open('opening');
     wait(300);
     const more = [...el.querySelectorAll('button')].find(
-      (b) => b.getAttribute('aria-label') === 'More for this set',
+      (b) => b.getAttribute('aria-label') === 'More for this assignment',
     );
     press(more);
     const item = [...document.querySelectorAll('button')].find(
@@ -103,7 +103,7 @@ describe('the workspace and its material', () => {
     const el = open('opening');
     wait(300);
     const more = [...el.querySelectorAll('button')].find(
-      (b) => b.getAttribute('aria-label') === 'More for this set',
+      (b) => b.getAttribute('aria-label') === 'More for this assignment',
     );
     press(more);
     press(

@@ -5,7 +5,7 @@ import { Button } from '@/units/button';
 import { Link } from '@/units/link';
 import { List } from '@/units/list';
 import { ListRow } from '@/units/list-row';
-import { Menu } from '@/units/menu';
+import { Menu, MoreMenu } from '@/units/menu';
 import { ProgressBar } from '@/units/progress-bar';
 import { DueStatus } from '@/units/set-line';
 import { dueBadge } from '@/units/set-line/badge';
@@ -15,8 +15,11 @@ import { TopBar } from '@/units/top-bar';
 import { CourseRow } from '@/units/course-row';
 import type { PageCourse, PageData, PageMemory, PageSet } from './sample';
 
-/** The aside is a fifth of the row, as on Home, so the bars align. */
-const ASIDE_WIDTH = 'clamp(160px, 20cqw, 320px)';
+/** The "..." menu's slot at a row's end, as on Course: its 32px button and the gap. */
+const MENU_SLOT = 44;
+
+/** With the "..." menu, as Course's Work rows are, so the two pages match. */
+const MENU_ASIDE_WIDTH = 'clamp(200px, 24cqw, 360px)';
 
 const DAY = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -69,9 +72,9 @@ const STATES: Record<PageData['kind'], readonly Option[]> = {
 
 const WORDS = {
   work: {
-    title: 'Work',
-    search: 'Search sets',
-    none: 'No sets match',
+    title: 'Assignments',
+    search: 'Search assignments',
+    none: 'No assignments match',
   },
   memories: {
     title: 'Memories',
@@ -212,8 +215,26 @@ function SetRow({
         ...(time ? [time] : []),
         ...(!spanning && !time ? [`${String(set.total)} questions`] : []),
       ]}
-      aside={<ProgressBar done={set.done} total={set.total} />}
-      asideWidth={ASIDE_WIDTH}
+      aside={
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <ProgressBar done={set.done} total={set.total} />
+          </div>
+          <MoreMenu
+            label={`More for ${set.name}`}
+            items={
+              finished
+                ? [{ id: 'delete', label: 'Delete', danger: true }]
+                : [
+                    { id: 'open', label: 'Open' },
+                    { id: 'rename', label: 'Rename' },
+                    { id: 'delete', label: 'Delete', danger: true },
+                  ]
+            }
+          />
+        </div>
+      }
+      asideWidth={MENU_ASIDE_WIDTH}
     />
   );
 }
@@ -232,6 +253,18 @@ function MemoryRow({
         ...(spanning ? [memory.course] : []),
         `Added ${DAY.format(memory.added)}`,
       ]}
+      aside={
+        <div className="flex justify-end">
+          <MoreMenu
+            label={`More for ${memory.text}`}
+            items={[
+              { id: 'edit', label: 'Edit' },
+              { id: 'forget', label: 'Forget', danger: true },
+            ]}
+          />
+        </div>
+      }
+      asideWidth={MENU_SLOT}
     />
   );
 }
@@ -451,7 +484,7 @@ export function ListPageSkeleton({
       <TopBar
         homeHref={homeHref}
         settingsHref={settingsHref}
-        path={[{ label: 'Home', href: homeHref }, { label: 'Work' }]}
+        path={[{ label: 'Home', href: homeHref }, { label: 'Assignments' }]}
       />
       <div className="px-(--ds-gutter) pb-16">
         <div className="@container mx-auto max-w-(--ds-page-width)">

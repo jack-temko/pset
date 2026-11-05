@@ -18,7 +18,10 @@ export default defineExamples(spec, SectionHeading, {
     count: () => <SectionHeading count={3}>In progress</SectionHeading>,
     action: () => <SectionHeading action={showAll}>In progress</SectionHeading>,
     button: () => (
-      <SectionHeading count={1} button={<Button icon={Plus}>Add work</Button>}>
+      <SectionHeading
+        count={1}
+        button={<Button icon={Plus}>Add assignment</Button>}
+      >
         Work
       </SectionHeading>
     ),

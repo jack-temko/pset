@@ -16,7 +16,7 @@ export default defineSpec({
     {
       id: 'default',
       name: 'Default',
-      when: 'A standalone action, outlined: Add work, Test, Check for updates.',
+      when: 'A standalone action, outlined: Add assignment, Test, Check for updates.',
     },
     {
       id: 'quiet',

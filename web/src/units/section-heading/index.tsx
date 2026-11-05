@@ -17,7 +17,7 @@ export function SectionHeading({
   count?: ReactNode;
   /** A text link, such as "Show all". */
   action?: ReactNode;
-  /** A small button, such as "Add work", at the right, centred with the title. */
+  /** A small button, such as "Add assignment", at the right, centred with the title. */
   button?: ReactNode;
 }) {
   return (

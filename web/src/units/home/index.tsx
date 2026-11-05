@@ -175,7 +175,7 @@ export function Home({
                 <Moved
                   text={
                     left.questions > 0
-                      ? `in ${plural(left.sets, 'set', 'sets')} due soon`
+                      ? `in ${plural(left.sets, 'assignment', 'assignments')} due soon`
                       : 'Nothing due in a week'
                   }
                 />

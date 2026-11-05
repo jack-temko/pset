@@ -606,7 +606,7 @@ export function Course({
               {confirming && (
                 <DangerDialog
                   title={`Delete ${name}`}
-                  message={`This deletes ${plural(sets.length, 'set', 'sets')} and ${plural(materials.length, 'material', 'materials')}.`}
+                  message={`This deletes ${plural(sets.length, 'assignment', 'assignments')} and ${plural(materials.length, 'material', 'materials')}.`}
                   word={name}
                   confirmLabel="Delete course"
                   onConfirm={() => {
@@ -633,14 +633,14 @@ export function Course({
                     }
                     button={
                       <AddButton
-                        label="Add work"
+                        label="Add assignment"
                         onPick={() => {
                           workPicker.current?.click();
                         }}
                       />
                     }
                   >
-                    Work
+                    Assignments
                   </SectionHeading>
                   <div className="mt-3">
                     <List
@@ -651,7 +651,7 @@ export function Course({
                       showAllHref={workHref}
                       empty={
                         sets.length === 0
-                          ? 'No work yet. Add an assignment sheet.'
+                          ? 'No assignments yet. Add an assignment sheet.'
                           : shownSide === 'done'
                             ? 'Nothing done yet'
                             : 'Nothing to do'

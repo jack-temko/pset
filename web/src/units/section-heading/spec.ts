@@ -26,8 +26,8 @@ export default defineSpec({
     {
       id: 'button',
       name: 'With a button',
-      when: 'The list has one thing to add: a small button such as "Add work", centred with the title.',
-      text: 'Add work',
+      when: 'The list has one thing to add: a small button such as "Add assignment", centred with the title.',
+      text: 'Add assignment',
     },
     {
       id: 'both',
@@ -47,7 +47,7 @@ export default defineSpec({
     { name: 'action', does: 'A text link, such as "Show all", at the right.' },
     {
       name: 'button',
-      does: 'A small button, such as "Add work", at the right, centred with the title.',
+      does: 'A small button, such as "Add assignment", at the right, centred with the title.',
     },
   ],
   priority: {
