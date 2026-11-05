@@ -13,6 +13,7 @@ import { SegmentedControl } from '@/units/segmented-control';
 import { Tag } from '@/units/tag';
 import { TextField } from '@/units/text-field';
 import { TopBar } from '@/units/top-bar';
+import { ErrorNotice } from '@/units/error-notice';
 import type { Appearance, SettingsData } from './sample';
 
 /** How long a "Saved" stays under a field. */
@@ -68,16 +69,18 @@ function Row({
 }) {
   const shown = note !== undefined && note !== '' && note !== false;
   const colour =
-    shown && tone === 'danger'
-      ? 'text-(--ds-danger)'
-      : shown && tone === 'success'
-        ? 'text-(--ds-success)'
-        : 'text-(--ds-fg-muted)';
+    shown && tone === 'success'
+      ? 'text-(--ds-success)'
+      : 'text-(--ds-fg-muted)';
   return (
     <div className="flex min-h-16 min-w-0 items-center justify-between gap-6 px-4 py-3">
       <div className="min-w-0 flex-1">
         <p className="ds-body font-medium text-(--ds-fg)">{name}</p>
-        <p className={`ds-small ${colour}`}>{shown ? note : hint}</p>
+        {shown && tone === 'danger' && typeof note === 'string' ? (
+          <ErrorNotice variant="line" error={{ what: note }} />
+        ) : (
+          <p className={`ds-small ${colour}`}>{shown ? note : hint}</p>
+        )}
       </div>
       {children !== undefined && <div className="shrink-0">{children}</div>}
     </div>
@@ -222,11 +225,12 @@ export function Settings({
       aside={
         anyFix ? (
           <div className="flex justify-end">
-            {c.fix && <Button variant="quiet">{c.fix}</Button>}
+            {c.fix && <Button>{c.fix}</Button>}
           </div>
         ) : undefined
       }
       asideWidth={140}
+      statusWidth={64}
     />
   ));
 
@@ -385,7 +389,9 @@ export function Settings({
                       ? upToDate
                         ? 'You have the latest version.'
                         : 'Up to date.'
-                      : `${settings.update.latest ?? ''} is available.`
+                      : update === 'updating'
+                        ? 'Updating in place. PSet restarts when it is done.'
+                        : `${settings.update.latest ?? ''} is available.`
                   }
                 >
                   <Button busy={checking} onPress={check}>
@@ -393,41 +399,26 @@ export function Settings({
                   </Button>
                 </Row>
                 {update !== 'current' && (
-                  <div className="grid px-4 py-3">
-                    {/* Both faces stack in one cell, so the row keeps its height. */}
-                    <div
-                      className={`flex min-w-0 items-start justify-between gap-4 [grid-area:1/1] ${update === 'updating' ? 'invisible' : ''}`}
-                      aria-hidden={update === 'updating'}
-                      inert={update === 'updating'}
+                  // The notes stay while it updates; only the button turns busy
+                  // and the hint above says what is happening (settings-d19).
+                  <div className="flex min-w-0 items-center justify-between gap-4 px-4 py-3">
+                    <ul className="ds-small min-w-0 list-disc space-y-1 pl-5 text-(--ds-fg-muted)">
+                      {(settings.update.notes ?? []).map((n) => (
+                        <li key={n} className="[overflow-wrap:anywhere]">
+                          {n}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      variant="primary"
+                      busy={update === 'updating'}
+                      busyLabel="Updating"
+                      onPress={() => {
+                        setUpdate('updating');
+                      }}
                     >
-                      <ul className="ds-small min-w-0 list-disc space-y-1 pl-5 text-(--ds-fg-muted)">
-                        {(settings.update.notes ?? []).map((n) => (
-                          <li key={n} className="[overflow-wrap:anywhere]">
-                            {n}
-                          </li>
-                        ))}
-                      </ul>
-                      <Button
-                        variant="primary"
-                        onPress={() => {
-                          setUpdate('updating');
-                        }}
-                      >
-                        {`Update to ${settings.update.latest ?? ''}`}
-                      </Button>
-                    </div>
-                    <div
-                      className={`flex min-w-0 items-start justify-between gap-4 [grid-area:1/1] ${update === 'updating' ? '' : 'invisible'}`}
-                      aria-hidden={update !== 'updating'}
-                      inert={update !== 'updating'}
-                    >
-                      <p className="ds-small text-(--ds-fg)">
-                        Updating in place. PSet restarts when it is done.
-                      </p>
-                      <Button variant="primary" busy>
-                        {`Update to ${settings.update.latest ?? ''}`}
-                      </Button>
-                    </div>
+                      {`Update to ${settings.update.latest ?? ''}`}
+                    </Button>
                   </div>
                 )}
                 <Row

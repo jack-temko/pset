@@ -6,6 +6,8 @@ import {
   type ReactNode,
 } from 'react';
 
+import { ErrorNotice } from '@/units/error-notice';
+
 /** A labelled one-line input (text-field-d1). It tells the parent when the
  *  student commits (Enter, or leaving the field with a changed value), so a
  *  field can save without a button. The line under it holds its height unless
@@ -40,7 +42,7 @@ export function TextField({
   mono?: boolean;
   /** Hides what is typed, as a password field does. */
   secret?: boolean;
-  /** Draws the field and its note in the danger colour. */
+  /** Draws the border in the danger colour and the note as an error line. */
   failed?: boolean;
   /** The line under the field: "Saved", or why it failed. `false` leaves the line out. */
   note?: ReactNode;
@@ -178,13 +180,15 @@ export function TextField({
         )}
         {action !== undefined && <div className="shrink-0">{action}</div>}
       </div>
-      {!bare && note !== false && (
-        <p
-          className={`ds-small min-h-5 pt-1 ${failed ? 'text-(--ds-danger)' : 'text-(--ds-fg-muted)'}`}
-        >
-          {note}
-        </p>
-      )}
+      {!bare &&
+        note !== false &&
+        (failed && typeof note === 'string' && note !== '' ? (
+          <div className="min-h-5 pt-1">
+            <ErrorNotice variant="line" error={{ what: note }} />
+          </div>
+        ) : (
+          <p className="ds-small min-h-5 pt-1 text-(--ds-fg-muted)">{note}</p>
+        ))}
     </div>
   );
 }

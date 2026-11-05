@@ -26,7 +26,7 @@ export default defineSpec({
     {
       id: 'key-failed',
       name: 'Key failed its test',
-      when: 'The pasted key was refused: the field and its note take the danger colour.',
+      when: "The pasted key was refused: the field's edge turns red and an error line takes the hint's place.",
       text: 'OpenRouter refused this key. Check it and paste it again.',
     },
     {
@@ -38,7 +38,7 @@ export default defineSpec({
     {
       id: 'updating',
       name: 'Updating',
-      when: 'The update button is busy and a line says it is updating in place.',
+      when: 'The notes stay; the update button turns busy and the hint above says it is updating in place.',
       text: 'Updating in place. PSet restarts when it is done.',
     },
     {
@@ -332,6 +332,30 @@ export default defineSpec({
       why: 'Jack: "I\'d rather center this vertically and find a different way to show the state." Chose "In the hint line (Recommended)".',
       beat: 'The state under the field; inside the field; a toast',
       date: '2026-11-04',
+    },
+    {
+      id: 'settings-d19',
+      decision:
+        'Updating keeps the notes; the button, centred on its row, turns busy and the hint above says PSet restarts.',
+      why: 'Jack: "Button should be centered verticlly" and "Too much empty space here" on Updating.',
+      beat: 'A second face with a line and a busy button',
+      date: '2026-11-05',
+    },
+    {
+      id: 'settings-d20',
+      decision:
+        "A failed field or key shows its reason with Error notice, as a line in the hint's place.",
+      why: 'error-one-look: every error has one look.',
+      beat: 'A red hint line of its own',
+      date: '2026-11-05',
+    },
+    {
+      id: 'settings-d21',
+      decision:
+        "A check's fix (Start Ollama) is outlined like every single action here; the checks' tags start on one line.",
+      why: 'Jack: "we need to stick to some sort of consistant outline or no outline" and "The failing tag is not aligned".',
+      beat: 'A quiet fix beside outlined actions',
+      date: '2026-11-05',
     },
   ],
 });

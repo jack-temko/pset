@@ -15,6 +15,7 @@ export function ListRow({
   meta = [],
   aside,
   asideWidth = 120,
+  statusWidth,
   wrap,
 }: {
   title: string;
@@ -34,6 +35,9 @@ export function ListRow({
   /** The aside's width: a number is px, a string any CSS width, so asides
    *  align down a list. */
   asideWidth?: number | string;
+  /** The status's width, so tags of different lengths start on one line down
+   *  a list; without it the status takes its own width. */
+  statusWidth?: number | string;
   /** Wraps the title onto as many lines as it needs, not one. */
   wrap?: boolean;
 }) {
@@ -78,7 +82,10 @@ export function ListRow({
           )}
         </div>
         {status !== undefined && (
-          <div className="ds-small ds-tabular flex h-6 shrink-0 items-center whitespace-nowrap text-(--ds-fg-muted)">
+          <div
+            style={{ width: statusWidth }}
+            className="ds-small ds-tabular flex h-6 shrink-0 items-center whitespace-nowrap text-(--ds-fg-muted)"
+          >
             {status}
           </div>
         )}

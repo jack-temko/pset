@@ -73,6 +73,10 @@ export default defineSpec({
       name: 'asideWidth',
       does: 'The aside’s width: a number is px, a string any CSS width, so asides align down a list.',
     },
+    {
+      name: 'statusWidth',
+      does: 'The status width, so tags of different lengths line up down a list.',
+    },
   ],
   priority: { first: 'The title.', main: 'open' },
   sizes: {

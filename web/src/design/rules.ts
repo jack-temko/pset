@@ -137,9 +137,9 @@ export const RULES: readonly Rule[] = [
   // Jack, 2026-11-04: "Rows and heading quiet (Recommended)".
   {
     id: 'quiet-when-repeated',
-    rule: 'Make a control repeated on every row, or a menu beside a heading, quiet: no outline, a tint on hover; an outline is for a standalone action',
+    rule: 'Make a control that every row of a list repeats, or a menu beside a heading, quiet; a single action, even in a row, keeps its outline',
     check:
-      'No row button or "..." menu has an outline; outlines are on standalone actions (Add assignment, Test)',
+      'No repeated row button or "..." menu has an outline; single actions (Test, Start Ollama, Add assignment) all do',
     scope: 'all',
   },
   {

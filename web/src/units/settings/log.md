@@ -14,3 +14,9 @@ Decisions that say "assumed" are the ones he was not asked (the words, loading).
 Jack's annotations: "The way the button and the text on the left is aligned is the way I want, how can we make this text box in the middle vertically of the two lines of text?" and, on the key, "I'd rather center this vertically and find a different way to show the state. Same issue as the Name." Asked where the state goes, he chose "In the hint line (Recommended)". The Name and key fields now sit centred like Check for updates; "Saved" and "The key works." replace the hint for 2 s in green, and a failure replaces it in red until the key is edited (settings-d18).
 
 2026-11-04, Jack asked what the rules were for outlined buttons (the Remove buttons, the row menus and the menu beside the course name) and chose "Rows and heading quiet (Recommended)": a control repeated on every row, or a menu beside a heading, is quiet (no outline, a hover tint); an outline stays on standalone actions. New rule quiet-when-repeated.
+
+## 2026-11-05: updating in one row; errors through Error notice
+
+- Jack on Updating: "Button should be centered verticlly" and "Too much empty space here". The second face is gone: the notes stay, the button is centred and busy, and the PSet row's hint says it is updating (settings-d19).
+- A failed key or field says why with Error notice's line (settings-d20).
+- Jack on the checks: "The failing tag is not aligned with the other." and "we need to stick to some sort of consistant outline or no outline". Tags get a fixed width (ListRow `statusWidth`); Start Ollama is outlined, and quiet-when-repeated now says plainly that a single action keeps its outline (settings-d21).
