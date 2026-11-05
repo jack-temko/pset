@@ -702,7 +702,7 @@ export function Material({
           className="min-w-0 max-w-md space-y-3 rounded-(--ds-radius-control) border border-(--ds-danger) px-4 py-3"
         >
           <p className="ds-body flex min-w-0 items-start gap-2 font-medium text-(--ds-danger)">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <TriangleAlert className="mt-[2px] size-4 shrink-0" aria-hidden />
             <span className="min-w-0 [overflow-wrap:anywhere]">
               {`Couldn't read ${name}`}
             </span>
@@ -944,7 +944,7 @@ export function MaterialSkeleton() {
         <div className="aspect-[8.5/11] w-full bg-(--ds-bg-raised)" />
         <span
           aria-hidden
-          className="absolute bottom-4 left-1/2 block h-9 w-56 -translate-x-1/2 animate-pulse rounded-full bg-(--ds-border-muted) motion-reduce:animate-none"
+          className="absolute bottom-4 left-1/2 block h-9 w-[224px] -translate-x-1/2 animate-pulse rounded-full bg-(--ds-border-muted) motion-reduce:animate-none"
         />
       </div>
     </div>

@@ -184,7 +184,7 @@ function Failed({
       className="min-w-0 space-y-3 rounded-(--ds-radius-control) border border-(--ds-danger) px-4 py-3 text-left"
     >
       <p className="ds-body flex min-w-0 items-start gap-2 font-medium text-(--ds-danger)">
-        <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <TriangleAlert className="mt-[2px] size-4 shrink-0" aria-hidden />
         <span className="min-w-0 [overflow-wrap:anywhere]">
           {again
             ? `Still couldn't find ${problem.label} (2nd try)`
@@ -432,8 +432,8 @@ export function ProblemSkeleton() {
         ))}
       </div>
       <div className="flex h-(--ds-control) items-center gap-2">
-        <Bar className="h-(--ds-control) w-28" />
-        <Bar className="h-(--ds-control) w-36" />
+        <Bar className="h-(--ds-control) w-[112px]" />
+        <Bar className="h-(--ds-control) w-[144px]" />
         <Bar className="h-(--ds-control) w-20" />
       </div>
     </div>

@@ -49,7 +49,7 @@ export function GreetingSkeleton() {
   return (
     <div className="min-w-0">
       <div className="flex h-(--ds-display-line) items-center">
-        <Bar className="h-9 w-3/4 max-w-120" />
+        <Bar className="h-9 w-3/4 max-w-[480px]" />
       </div>
       <div className="mt-2 flex h-(--ds-body-line) items-center">
         <Bar className="h-4 w-1/2 max-w-80" />

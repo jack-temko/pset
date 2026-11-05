@@ -86,7 +86,7 @@ function UnitList({ tab }: { tab: Tab }) {
   return (
     <nav
       aria-label={tab.label}
-      className="sticky top-12 h-[calc(100dvh-3rem)] w-56 shrink-0 space-y-4 overflow-auto border-r bg-rail p-3"
+      className="sticky top-12 h-[calc(100dvh-3rem)] w-[224px] shrink-0 space-y-4 overflow-auto border-r bg-rail p-3"
     >
       <Input
         placeholder="Filter"

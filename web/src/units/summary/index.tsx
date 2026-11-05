@@ -235,12 +235,12 @@ export function SummarySkeleton({
           ))}
         </div>
         <div className="flex h-(--ds-small-line) items-center justify-center">
-          <Bar className="h-3 w-56" />
+          <Bar className="h-3 w-[224px]" />
         </div>
       </div>
       <div className="flex h-(--ds-control) items-center justify-center gap-4">
         <Bar className="h-(--ds-control) w-24" />
-        <Bar className="h-4 w-36" />
+        <Bar className="h-4 w-[144px]" />
       </div>
     </div>
   );

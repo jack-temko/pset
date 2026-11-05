@@ -141,7 +141,7 @@ export function Contents({
       ref={panel}
       className={
         beside
-          ? 'relative w-72 shrink-0 overflow-y-auto border-r border-(--ds-border-muted) bg-(--ds-bg) py-2'
+          ? 'relative w-[288px] shrink-0 overflow-y-auto border-r border-(--ds-border-muted) bg-(--ds-bg) py-2'
           : 'absolute inset-0 z-10 overflow-y-auto border-b border-(--ds-border-muted) bg-(--ds-bg) py-2'
       }
     >

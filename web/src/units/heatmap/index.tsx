@@ -223,7 +223,7 @@ export function HeatmapSkeleton({
         className="ds-body flex items-center"
         style={{ height: width > 0 && width < 340 ? 44 : 22 }}
       >
-        <Bar className="h-4 w-2/5 max-w-60" />
+        <Bar className="h-4 w-2/5 max-w-[240px]" />
       </p>
       <div className={BOX}>
         <div ref={box} style={{ height: LABELS_H + gridHeight(size, gap) }}>

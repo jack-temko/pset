@@ -222,7 +222,7 @@ export function Tabs({
                 e.preventDefault();
                 setMenu({ kind: 'tab', tab: t.id, x: e.clientX, y: e.clientY });
               }}
-              className={`group/tab relative flex min-w-28 max-w-60 shrink cursor-default items-center gap-1 border-b-2 pr-1.5 pl-3 select-none ${
+              className={`group/tab relative flex min-w-[112px] max-w-[240px] shrink cursor-default items-center gap-1 border-b-2 pr-[6px] pl-3 select-none ${
                 active
                   ? 'border-(--ds-accent) text-(--ds-fg)'
                   : `border-transparent hover:text-(--ds-fg) ${forceHover === t.id ? 'text-(--ds-fg)' : 'text-(--ds-fg-muted)'}`

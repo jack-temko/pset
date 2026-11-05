@@ -39,7 +39,7 @@ function Bar({ className }: { className: string }) {
 /** A change as a glyph and its words, muted: being behind is not a warning. */
 function ChangeText({ change }: { change: Change }) {
   return (
-    <span className="inline-flex items-center gap-0.5 text-(--ds-fg-muted)">
+    <span className="inline-flex items-center gap-[2px] text-(--ds-fg-muted)">
       {change.direction === 'up' ? (
         <ArrowUp size={14} aria-hidden />
       ) : (
@@ -250,10 +250,10 @@ export function HomeSkeleton({
             <>
               <Line>
                 <p className="ds-body flex h-(--ds-body-line) items-center">
-                  <Bar className="h-4 w-28" />
+                  <Bar className="h-4 w-[112px]" />
                 </p>
                 <p className="ds-small flex h-(--ds-small-line) items-center">
-                  <Bar className="h-3 w-28" />
+                  <Bar className="h-3 w-[112px]" />
                 </p>
               </Line>
               <div className="min-h-0 flex-1">
