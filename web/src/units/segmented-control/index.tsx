@@ -21,7 +21,7 @@ export function SegmentedControl({
     <div
       role="radiogroup"
       aria-label={label}
-      className="inline-flex h-(--ds-control) rounded-(--ds-radius-control) border border-(--ds-border) p-0.5"
+      className="inline-flex h-(--ds-control) rounded-(--ds-radius-control) border border-(--ds-border) p-[2px]"
     >
       {options.map((o) => {
         const on = o.id === value;

@@ -757,10 +757,10 @@ export function CourseSkeleton({
               <>
                 <Caption>
                   <p className="ds-body flex h-(--ds-body-line) items-center">
-                    <Bar className="h-4 w-28" />
+                    <Bar className="h-4 w-[112px]" />
                   </p>
                   <p className="ds-small flex h-(--ds-small-line) items-center">
-                    <Bar className="h-3 w-28" />
+                    <Bar className="h-3 w-[112px]" />
                   </p>
                 </Caption>
                 <div className="min-h-0 flex-1">
