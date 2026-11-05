@@ -346,6 +346,33 @@ export function useRemoveQuestion(homeworkId: string) {
   });
 }
 
+/** Attach a PNG or JPEG to a question as one more figure, or take an
+ *  attached one off. The server answers with the question. */
+export function useAddImage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) => {
+      const body = new FormData();
+      body.append('file', file);
+      return postForm<Question>(`/api/questions/${id}/images`, body);
+    },
+    onSuccess: (q) => {
+      putQuestion(qc, q);
+    },
+  });
+}
+
+export function useRemoveFigure() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, n }: { id: string; n: number }) =>
+      del<Question>(`/api/questions/${id}/figures/${n}`),
+    onSuccess: (q) => {
+      putQuestion(qc, q);
+    },
+  });
+}
+
 /** "Write the guide" for a question that has none: the guides deleted when
  *  documents arrived, and nothing writes one until it's asked for. */
 export function useWriteGuide() {

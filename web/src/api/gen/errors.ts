@@ -21,6 +21,7 @@ export type ErrorId =
   | "errors.read_failed"
   | "events.no_streaming"
   | "homework.bad_due_date"
+  | "homework.bad_image"
   | "homework.bad_position"
   | "homework.bad_stage"
   | "homework.bad_url"
@@ -34,6 +35,7 @@ export type ErrorId =
   | "homework.figure_busy"
   | "homework.file_kind"
   | "homework.file_too_big"
+  | "homework.image_too_big"
   | "homework.no_boxes"
   | "homework.no_drafts"
   | "homework.no_figure"
@@ -61,6 +63,7 @@ export type ErrorId =
   | "homework.title_too_long"
   | "homework.too_many_boxes"
   | "homework.too_many_drafts"
+  | "homework.too_many_images"
   | "homework.too_many_lines"
   | "homework.too_many_notes"
   | "import.cancelled"
@@ -278,6 +281,12 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 422,
     owner: "homework",
   },
+  "homework.bad_image": {
+    what: "That isn't a PNG or JPEG image.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
   "homework.bad_position": {
     what: "Position {to} is outside the set (1 to {n}).",
     scope: "field",
@@ -356,6 +365,12 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
   },
   "homework.file_too_big": {
     what: "That file is too big for an assignment.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.image_too_big": {
+    what: "Keep the image under {max} MB.",
     scope: "field",
     status: 422,
     owner: "homework",
@@ -541,6 +556,12 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
   },
   "homework.too_many_drafts": {
     what: "That's more than {max} questions at once. Add them in smaller batches.",
+    scope: "field",
+    status: 422,
+    owner: "homework",
+  },
+  "homework.too_many_images": {
+    what: "A question holds at most {max} images.",
     scope: "field",
     status: 422,
     owner: "homework",
