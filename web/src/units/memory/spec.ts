@@ -116,6 +116,7 @@ export default defineSpec({
       'colour-has-a-word',
       'one-word-per-thing',
       'friction-matches-loss',
+      'quiet-when-repeated',
     ],
   },
   log: 'web/src/units/memory/log.md',
@@ -123,7 +124,7 @@ export default defineSpec({
     {
       id: 'memory-d1',
       decision:
-        'Memory is one list where what Ask saved arrives marked New with Keep and Edit, above the rest, until the student keeps it.',
+        'What Ask saved waits above the list, in its own New from Ask box with Keep and Edit, until the student keeps it.',
       why: `${VERDICT}: "lets go with D". The model never silently steers: a save from Ask waits for a look.`,
       beat: 'One plain list; two lists; chips',
       date: '2026-10-30',

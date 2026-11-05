@@ -6,7 +6,6 @@ import { List, LIST_CAP } from '@/units/list';
 import { ListRow } from '@/units/list-row';
 import { MoreMenu } from '@/units/menu';
 import { SectionHeading } from '@/units/section-heading';
-import { Tag } from '@/units/tag';
 import { TextField } from '@/units/text-field';
 import { SAMPLE, TODAY, when, type Memory } from './sample';
 
@@ -236,13 +235,13 @@ function Row({
     <ListRow
       title={m.text}
       wrap
-      label={fresh ? <Tag tone="attention">New</Tag> : undefined}
       meta={source(m, label)}
       asideWidth="auto"
       aside={
         fresh ? (
           <div className="flex gap-2">
             <Button
+              variant="quiet"
               onPress={() => {
                 mem.keep(m.id);
               }}
