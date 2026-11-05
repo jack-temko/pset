@@ -10,12 +10,15 @@ const t = (text: string) => ({ t: text });
 const m = (tex: string) => ({ m: tex });
 const ref = (page: number) => ({ ref: { material: 'griffiths', page } });
 
-export const READ: Call = { kind: 'read', what: 'Griffiths p. 142', pages: 2 };
+export const READ: Call = { kind: 'read', what: 'Griffiths p. 142', pages: 3 };
 export const SEARCH: Call = { kind: 'search', what: 'eigenvalue' };
+/** A run of finished steps, where they happened in the answer. */
+export const run = (...calls: Call[]): Block => ({ k: 'run', calls });
+
+const SUM: Call = { kind: 'compute', what: 'V_0 at t = τ' };
 export const CALLS: readonly Call[] = [
   SEARCH,
   READ,
-  { kind: 'read', what: 'Lecture notes p. 6' },
   { kind: 'search', what: 'node voltage' },
 ];
 
@@ -28,6 +31,7 @@ const decay = (tau: number, scale: number) =>
 /** A whole answer: prose with page chips, a statement, a derivation, a plot,
  *  a table, a callout and code, in the order it streams. */
 export const ANSWER: readonly Block[] = [
+  run(...CALLS),
   {
     k: 'p',
     runs: [
@@ -49,6 +53,7 @@ export const ANSWER: readonly Block[] = [
       m('\\sum_k i_k = 0'),
     ],
   },
+  run(SUM),
   {
     k: 'steps',
     steps: [
@@ -76,6 +81,7 @@ export const ANSWER: readonly Block[] = [
   },
   {
     k: 'table',
+    own: true,
     head: ['Time', 'V_0 (V)', 'Share of final'],
     rows: [
       ['1 τ', '2.53', '63%'],
@@ -94,24 +100,29 @@ export const ANSWER: readonly Block[] = [
   { k: 'code', code: 'v0 = vs * r2 / (r1 + r2)  # the final value, 4.0' },
 ];
 
-const short: readonly Block[] = ANSWER.slice(0, 2);
+const short: readonly Block[] = ANSWER.slice(1, 3);
 
 const turn = (over: Partial<Turn> & Pick<Turn, 'id' | 'question'>): Turn => ({
   day: 'Today',
   status: 'done',
-  calls: [],
   blocks: [],
   ...over,
 });
 
-/** A question asked, an answer done, with the calls it made. */
+/** A question asked, an answer done, with the steps where they happened. */
 export const DONE: Turn = turn({
   id: 'd',
   question: 'Why does V_0 start at zero here?',
   about: ABOUT,
-  calls: CALLS,
   blocks: ANSWER,
 });
+
+/** Two runs of steps with text between them, short enough to see both. */
+export const MID: Turn = {
+  ...DONE,
+  id: 'm',
+  blocks: ANSWER.slice(0, 5),
+};
 
 export const THINKING: Turn = turn({
   id: 'k',
@@ -123,15 +134,13 @@ export const THINKING: Turn = turn({
 export const IN_FLIGHT: Turn = {
   ...THINKING,
   id: 'f',
-  calls: [SEARCH],
-  inFlight: READ,
+  blocks: [{ k: 'run', calls: [], current: SEARCH }],
 };
 
 export const STREAMING: Turn = {
   ...THINKING,
   id: 's',
-  calls: [SEARCH, READ],
-  blocks: short.slice(0, 1),
+  blocks: [run(SEARCH, READ), ...short.slice(0, 1)],
 };
 
 export const REMEMBERED: Turn = {
@@ -139,7 +148,6 @@ export const REMEMBERED: Turn = {
   id: 'r',
   question: 'I always call the node voltages V_0, V_1 and so on.',
   about: undefined,
-  calls: [],
   remembered: 'you use V_0 for node voltages',
   blocks: [
     {
@@ -157,23 +165,21 @@ export const STOPPED: Turn = {
   ...DONE,
   id: 'x',
   status: 'stopped',
-  calls: [SEARCH, READ],
-  blocks: short,
+  blocks: [run(SEARCH, READ), ...short],
 };
 
 export const FAILED: Turn = {
   ...DONE,
   id: 'e',
   status: 'failed',
-  calls: [SEARCH],
-  blocks: [],
+  blocks: [run(SEARCH)],
   failure: { why: 'the model took too long to reply.' },
 };
 
 export const FAILED_SETUP: Turn = {
   ...FAILED,
   id: 'g',
-  calls: [],
+  blocks: [],
   failure: { why: 'no OpenRouter key is saved.', setup: true },
 };
 
@@ -184,8 +190,7 @@ export const WITH_IMAGE: Turn = {
   image: `data:image/svg+xml;utf8,${encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="96" viewBox="0 0 160 96"><rect width="160" height="96" fill="#fff"/><text x="10" y="40" font-size="18" font-family="serif" fill="#222">V0 = Vs R2/(R1+R2)</text><path d="M10 56H150" stroke="#222"/></svg>',
   )}`,
-  blocks: short,
-  calls: [READ],
+  blocks: [run(READ), ...short],
 };
 
 /** A conversation over days: older questions, one of them with a picture. */
@@ -194,15 +199,13 @@ export const HISTORY: readonly Turn[] = [
     id: 'h1',
     day: 'Sep 12',
     question: 'What is an eigenvalue, in one line?',
-    calls: [SEARCH, READ],
-    blocks: short,
+    blocks: [run(SEARCH, READ), ...short],
   }),
   turn({
     id: 'h2',
     day: 'Sep 12',
     question: 'And for a 2 by 2 matrix?',
-    calls: [READ],
-    blocks: short,
+    blocks: [run(READ), ...short],
   }),
   turn({
     id: 'h3',
@@ -210,7 +213,6 @@ export const HISTORY: readonly Turn[] = [
     question: 'Check my sketch of the step response.',
     about: '3.A.2',
     image: WITH_IMAGE.image,
-    calls: CALLS,
     blocks: ANSWER,
   }),
   turn({
@@ -230,8 +232,7 @@ export const LONG_HISTORY: readonly Turn[] = Array.from(
       id: `l${String(i)}`,
       day: i < 20 ? 'Sep 12' : i < 40 ? 'Oct 3' : 'Today',
       question: `Question ${String(i + 1)}: what does the book say about the time constant on page ${String(100 + i)}?`,
-      calls: i % 2 ? CALLS : [READ],
-      blocks: i % 5 === 0 ? ANSWER : short,
+      blocks: i % 5 === 0 ? ANSWER : [run(READ), ...short],
     }),
 );
 

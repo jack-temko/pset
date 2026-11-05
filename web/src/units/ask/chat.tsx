@@ -69,7 +69,6 @@ export function SampleAsk({
         about: q.about,
         image: q.image,
         status: 'working',
-        calls: [],
         blocks: [],
       },
     ]);
@@ -90,8 +89,16 @@ export function SampleAsk({
               ? {
                   ...t,
                   status: 'stopped',
-                  calls: t.inFlight ? [...t.calls, t.inFlight] : t.calls,
-                  inFlight: undefined,
+                  // The step in flight is as far as it got: done.
+                  blocks: t.blocks.map((b) =>
+                    b.k === 'run' && b.current
+                      ? {
+                          ...b,
+                          calls: [...b.calls, b.current],
+                          current: undefined,
+                        }
+                      : b,
+                  ),
                 }
               : t,
           ),
@@ -105,8 +112,6 @@ export function SampleAsk({
                   ...t,
                   status: 'working',
                   failure: undefined,
-                  calls: [],
-                  inFlight: undefined,
                   blocks: [],
                   remembered: undefined,
                 }

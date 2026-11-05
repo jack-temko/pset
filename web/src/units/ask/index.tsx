@@ -1,4 +1,4 @@
-import { Check, ChevronRight, Copy, LoaderCircle, X } from 'lucide-react';
+import { Check, Copy, X } from 'lucide-react';
 import {
   useEffect,
   useLayoutEffect,
@@ -11,81 +11,14 @@ import {
 import { Button } from '@/units/button';
 import { Tag } from '@/units/tag';
 import { Document } from './blocks';
-import { doneLine, liveLine, summary, type Question, type Turn } from './types';
+import { ThinkingRow } from './steps';
+import type { Question, Turn } from './types';
 
 export type { Question, Turn } from './types';
 
 /** Past this far from the foot, a growing answer stops pulling the
  *  conversation down: the student scrolled back to read. */
 const STICK_PX = 48;
-
-/** The one line at the top of an answer (ask-d2, ask-d3). While Ask works it
- *  names only the call in flight, replacing itself; when the answer ends it
- *  turns, in the same place and the same height, into the folded summary,
- *  which opens to the calls. */
-function CallLine({
-  turn,
-  open,
-  onToggle,
-}: {
-  turn: Turn;
-  open: boolean;
-  onToggle: () => void;
-}) {
-  const row =
-    'ds-small flex h-(--ds-small-line) max-w-full items-center gap-2 text-(--ds-fg-muted)';
-  if (turn.status === 'working') {
-    const text = turn.inFlight
-      ? liveLine(turn.inFlight)
-      : turn.blocks.length > 0
-        ? 'Writing'
-        : 'Thinking';
-    return (
-      <p className={row}>
-        <LoaderCircle
-          className="size-4 shrink-0 animate-spin motion-reduce:animate-none"
-          aria-hidden
-        />
-        <span className="min-w-0 truncate">{text}</span>
-      </p>
-    );
-  }
-  if (turn.calls.length === 0)
-    return (
-      <p className={row}>
-        <span className="size-4 shrink-0" aria-hidden />
-        {/* Isolated: only a finished answer says it read nothing. */}
-        <span className="min-w-0 truncate">
-          {turn.status === 'done' ? summary(turn.calls) : ''}
-        </span>
-      </p>
-    );
-  return (
-    <div>
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={onToggle}
-        className={`${row} cursor-pointer hover:text-(--ds-fg)`}
-      >
-        <ChevronRight
-          className={`size-4 shrink-0 ${open ? 'rotate-90' : ''}`}
-          aria-hidden
-        />
-        <span className="min-w-0 truncate">{summary(turn.calls)}</span>
-      </button>
-      {open && (
-        <ul className="ds-small mt-1 space-y-1 pl-6 text-(--ds-fg-muted)">
-          {turn.calls.map((c, i) => (
-            <li key={i} className="[overflow-wrap:anywhere]">
-              {doneLine(c)}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
 
 function Copier({ from }: { from: React.RefObject<HTMLDivElement | null> }) {
   const [copied, setCopied] = useState(false);
@@ -103,7 +36,10 @@ function Copier({ from }: { from: React.RefObject<HTMLDivElement | null> }) {
       variant="quiet"
       icon={copied ? Check : Copy}
       onPress={() => {
-        const text = from.current?.innerText ?? '';
+        const text = [...(from.current?.children ?? [])]
+          .filter((el) => !el.hasAttribute('data-copy-skip'))
+          .map((el) => (el as HTMLElement).innerText)
+          .join('\n\n');
         navigator.clipboard.writeText(text).then(
           () => {
             setCopied(true);
@@ -121,6 +57,7 @@ function Copier({ from }: { from: React.RefObject<HTMLDivElement | null> }) {
 
 function TurnView({
   turn,
+  latest,
   open,
   onToggle,
   onRetry,
@@ -130,8 +67,10 @@ function TurnView({
   onSettings,
 }: {
   turn: Turn;
-  open: boolean;
-  onToggle: () => void;
+  /** The newest answer shows its Copy without a hover. */
+  latest: boolean;
+  open: (i: number) => boolean;
+  onToggle: (i: number) => void;
   onRetry?: (id: string) => void;
   onUndo?: (id: string) => void;
   onEdit?: (id: string) => void;
@@ -140,8 +79,11 @@ function TurnView({
 }) {
   const doc = useRef<HTMLDivElement>(null);
   const finished = turn.status === 'done' || turn.status === 'stopped';
+  const working = turn.status === 'working';
+  const writing =
+    working && turn.blocks.length > 0 && turn.blocks.at(-1)?.k !== 'run';
   return (
-    <section className="space-y-3">
+    <section className="group/turn space-y-3">
       <div className="flex flex-col items-end gap-2">
         {turn.about && <Tag>{`About ${turn.about}`}</Tag>}
         {turn.image && (
@@ -156,7 +98,7 @@ function TurnView({
         </p>
       </div>
       <div className="space-y-3">
-        <CallLine turn={turn} open={open} onToggle={onToggle} />
+        {working && turn.blocks.length === 0 && <ThinkingRow />}
         {turn.remembered && (
           <p className="ds-small flex max-w-[680px] flex-wrap items-center gap-x-1 text-(--ds-fg-muted)">
             <span className="[overflow-wrap:anywhere]">
@@ -178,7 +120,13 @@ function TurnView({
           </p>
         )}
         <div ref={doc} className="space-y-3">
-          <Document blocks={turn.blocks} onPage={onPage} />
+          <Document
+            blocks={turn.blocks}
+            working={working}
+            open={open}
+            onToggle={onToggle}
+            onPage={onPage}
+          />
         </div>
         {turn.status === 'stopped' && (
           <p className="ds-small text-(--ds-fg-muted)">Stopped</p>
@@ -198,10 +146,22 @@ function TurnView({
             )}
           </div>
         )}
-        {/* The slot is there while the answer is written, so Copy arriving
-            moves nothing. */}
+        {/* The slot is always here: the mark while text streams, then Copy,
+            so neither arriving nor leaving moves anything (ask-d18, ask-d20). */}
         <div className="flex h-(--ds-control) items-center">
-          {finished && turn.blocks.length > 0 && <Copier from={doc} />}
+          {writing && (
+            <span
+              aria-label="Writing"
+              className="size-2 animate-pulse rounded-full bg-(--ds-accent) motion-reduce:animate-none"
+            />
+          )}
+          {finished && turn.blocks.some((b) => b.k !== 'run') && (
+            <div
+              className={`focus-within:opacity-100 group-hover/turn:opacity-100 ${latest ? '' : 'opacity-0'}`}
+            >
+              <Copier from={doc} />
+            </div>
+          )}
         </div>
       </div>
     </section>
@@ -461,8 +421,18 @@ export function Ask({
 }) {
   const [chip, setChip] = useState(about);
   const [image, setImage] = useState(startImage);
+  /** The runs of steps that are open, by turn and place in the answer. */
   const [open, setOpen] = useState<ReadonlySet<string>>(
-    () => new Set(startOpen),
+    () =>
+      new Set(
+        turns
+          .filter((t) => startOpen?.includes(t.id))
+          .flatMap((t) =>
+            t.blocks.flatMap((b, i) =>
+              b.k === 'run' ? [`${t.id}:${String(i)}`] : [],
+            ),
+          ),
+      ),
   );
   const [clearing, setClearing] = useState(startClearing ?? false);
 
@@ -532,11 +502,13 @@ export function Ask({
                   {label && <Day label={label} />}
                   <TurnView
                     turn={t}
-                    open={open.has(t.id)}
-                    onToggle={() => {
+                    latest={i === turns.length - 1}
+                    open={(n) => open.has(`${t.id}:${String(n)}`)}
+                    onToggle={(n) => {
+                      const key = `${t.id}:${String(n)}`;
                       setOpen((o) => {
                         const next = new Set(o);
-                        if (!next.delete(t.id)) next.add(t.id);
+                        if (!next.delete(key)) next.add(key);
                         return next;
                       });
                     }}

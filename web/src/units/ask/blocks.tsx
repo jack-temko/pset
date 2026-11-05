@@ -1,7 +1,9 @@
-import { Fragment, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { Runs } from '@/units/problem/math';
 import type { Run } from '@/units/problem/types';
+import { StepRow } from './steps';
+import { Tag } from '@/units/tag';
 import type { Block, Inline, PageRef, Series } from './types';
 
 /** A page chip: "p. 142", pressed to open the material at that page
@@ -220,6 +222,8 @@ export function BlockView({
           {block.code}
         </pre>
       );
+    case 'run':
+      return null;
     case 'callout':
       return (
         <div
@@ -234,20 +238,45 @@ export function BlockView({
   }
 }
 
+/** The answer in order. Steps are the app talking, not the answer: Copy
+ *  skips them. A part the model added on its own says it is not from the
+ *  course (ask-d21). */
 export function Document({
   blocks,
+  working,
+  open,
+  onToggle,
   onPage,
 }: {
   blocks: readonly Block[];
+  /** The answer is still being written. */
+  working: boolean;
+  /** Which runs are open, by their place in the answer. */
+  open: (i: number) => boolean;
+  onToggle: (i: number) => void;
   onPage?: OnPage;
 }) {
   return (
     <>
-      {blocks.map((b, i) => (
-        <Fragment key={i}>
-          <BlockView block={b} onPage={onPage} />
-        </Fragment>
-      ))}
+      {blocks.map((b, i) =>
+        b.k === 'run' ? (
+          <div key={i} data-copy-skip="">
+            <StepRow
+              run={b}
+              live={working && i === blocks.length - 1}
+              open={open(i)}
+              onToggle={() => {
+                onToggle(i);
+              }}
+            />
+          </div>
+        ) : (
+          <div key={i} className="space-y-2">
+            {b.own && <Tag>Not from your course</Tag>}
+            <BlockView block={b} onPage={onPage} />
+          </div>
+        ),
+      )}
     </>
   );
 }

@@ -37,13 +37,13 @@ const button = (el: Element, name: string) =>
 
 describe('summary', () => {
   it('folds the calls into one line', () => {
-    expect(summary(sample.CALLS)).toBe('Read 3 pages, searched twice');
-    expect(summary([])).toBe('Answered without looking anything up');
+    expect(summary(sample.CALLS)).toBe('Searched twice, read 3 pages');
+    expect(summary([])).toBe('');
   });
 });
 
 describe('Ask', () => {
-  it('turns the live line into the folded summary in the same place', () => {
+  it('shows Thinking, then the first step in its place', () => {
     const turns = [sample.THINKING];
     const { el } = render(<Ask course="ECE 210" turns={turns} />);
     expect(el.textContent).toContain('Thinking');
@@ -52,7 +52,7 @@ describe('Ask', () => {
     act(() => {
       render(<Ask course="ECE 210" turns={[sample.DONE]} />);
     });
-    expect(document.body.textContent).toContain('Read 3 pages, searched twice');
+    expect(document.body.textContent).toContain('Searched twice, read 3 pages');
   });
 
   it('opens the calls and tells the workspace of a page chip', () => {
@@ -61,7 +61,7 @@ describe('Ask', () => {
       <Ask course="ECE 210" turns={[sample.DONE]} onPage={onPage} />,
     );
     expect(el.textContent).not.toContain("Searched 'eigenvalue'");
-    press(button(el, 'Read 3 pages, searched twice'));
+    press(button(el, 'Searched twice, read 3 pages'));
     expect(el.textContent).toContain("Searched 'eigenvalue'");
     press(button(el, 'p. 142'));
     expect(onPage).toHaveBeenCalledWith('griffiths', 142);
@@ -108,29 +108,35 @@ describe('Ask', () => {
       (n) => n.textContent === text && n.className.includes('ds-small-line'),
     );
 
-  it('keeps the live line and its folded summary the same height', () => {
+  it('keeps a step row the same height running, done and with nothing before it', () => {
     const live = render(<Ask course="ECE 210" turns={[sample.IN_FLIGHT]} />);
-    expect(lineOf(live.el, 'Reading Griffiths p. 142')).toBeDefined();
-    const done = render(<Ask course="ECE 210" turns={[sample.DONE]} />);
-    expect(lineOf(done.el, 'Read 3 pages, searched twice')).toBeDefined();
-    const none = render(
-      <Ask course="ECE 210" turns={[{ ...sample.DONE, id: 'n', calls: [] }]} />,
-    );
-    expect(
-      lineOf(none.el, 'Answered without looking anything up'),
-    ).toBeDefined();
+    expect(lineOf(live.el, "Searching 'eigenvalue'")).toBeDefined();
+    const think = render(<Ask course="ECE 210" turns={[sample.THINKING]} />);
+    expect(lineOf(think.el, 'Thinking')).toBeDefined();
+    const done = render(<Ask course="ECE 210" turns={[sample.MID]} />);
+    expect(lineOf(done.el, 'Searched twice, read 3 pages')).toBeDefined();
   });
 
-  it('says nothing was looked up only for a finished answer', () => {
-    const stopped = render(
-      <Ask
-        course="ECE 210"
-        turns={[{ ...sample.STOPPED, calls: [] }, sample.FAILED_SETUP]}
-      />,
+  it('has no step row for an answer with no steps, and only a mark while writing', () => {
+    const none = render(
+      <Ask course="ECE 210" turns={[sample.REMEMBERED, sample.FAILED_SETUP]} />,
     );
-    expect(stopped.el.textContent).not.toContain('Answered without');
+    expect(none.el.textContent).not.toContain('Answered without');
+    expect(none.el.textContent).toContain('Open Settings');
+    const writing = render(<Ask course="ECE 210" turns={[sample.STREAMING]} />);
+    expect(writing.el.textContent).not.toContain('Writing');
+    expect(writing.el.querySelector('[aria-label="Writing"]')).not.toBeNull();
+    const stopped = render(<Ask course="ECE 210" turns={[sample.STOPPED]} />);
     expect(stopped.el.textContent).toContain('Stopped');
-    expect(stopped.el.textContent).toContain('Open Settings');
+    expect(stopped.el.querySelector('[aria-label="Writing"]')).toBeNull();
+  });
+
+  it('puts steps where they happened and tags what is not from the course', () => {
+    const { el } = render(<Ask course="ECE 210" turns={[sample.DONE]} />);
+    const rows = [...el.querySelectorAll('[data-copy-skip]')];
+    expect(rows).toHaveLength(2);
+    expect(rows[0].nextElementSibling?.textContent).toContain('The voltage');
+    expect(el.textContent).toContain('Not from your course');
   });
 
   it('keeps the box editable while answering, and Stop stops', () => {

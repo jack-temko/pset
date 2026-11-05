@@ -103,22 +103,16 @@ export default defineExamples(spec, Ask, {
     empty: () => <Demo turns={[]} />,
     opened: () => <Demo turns={earlier} about={sample.ABOUT} focusBox />,
     thinking: () => <Demo fixed turns={[...earlier, sample.THINKING]} />,
-    call: () => (
-      <Demo
-        fixed
-        turns={[
-          ...earlier,
-          { ...sample.THINKING, id: 'c', inFlight: sample.SEARCH },
-        ]}
-      />
-    ),
+    'step-running': () => <Demo fixed turns={[...earlier, sample.IN_FLIGHT]} />,
+    writing: () => <Demo fixed turns={[...earlier, sample.STREAMING]} />,
     streaming: () => (
       <Demo start turns={[...earlier, { ...sample.THINKING, id: 'st' }]} />
     ),
-    done: () => <Demo turns={[...earlier, sample.DONE]} />,
-    'done-open': () => (
-      <Demo turns={[...earlier, sample.DONE]} startOpen={['d']} />
+    'steps-folded': () => <Demo turns={[...earlier, sample.MID]} />,
+    'steps-open': () => (
+      <Demo turns={[...earlier, sample.MID]} startOpen={['m']} />
     ),
+    'not-ours': () => <Demo turns={[...earlier, sample.DONE]} />,
     remembered: () => <Demo turns={[...earlier, sample.REMEMBERED]} />,
     stopped: () => <Demo turns={[...earlier, sample.STOPPED]} />,
     failed: () => <Demo fixed turns={[...earlier, sample.FAILED]} />,
@@ -140,10 +134,12 @@ export default defineExamples(spec, Ask, {
     empty: () => <Loading />,
     opened: () => <Loading />,
     thinking: () => <Loading />,
-    call: () => <Loading />,
+    'step-running': () => <Loading />,
+    writing: () => <Loading />,
     streaming: () => <Loading />,
-    done: () => <Loading />,
-    'done-open': () => <Loading />,
+    'steps-folded': () => <Loading />,
+    'steps-open': () => <Loading />,
+    'not-ours': () => <Loading />,
     remembered: () => <Loading />,
     stopped: () => <Loading />,
     failed: () => <Loading />,
