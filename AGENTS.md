@@ -31,14 +31,17 @@
 3. A red check is fixed, never re-run until it goes green. A flaky test is
    fixed in its own change before the next merge. If `dev` itself goes red,
    revert the change that did it first, then fix on a branch.
-4. **Jack tries it and approves before anything merges.** Start the
-   branch's own app for him (`.agents/skills/change/references/try.sh start
+4. **A UI change waits for Jack to try it and approve.** Use judgment on
+   the rest: a change he would not want to look at (tests, tooling, CI,
+   backend without a visible effect, rules, docs) merges once it is green and
+   reviewed; tell him what landed. When unsure, show him.
+   For a UI change, start the branch's own app for him (`.agents/skills/change/references/try.sh start
    <worktree>`: private ports, the worktree's own data, never 8420), tell him
    what changed and what to try, and ask. His changes go back into the
    branch and he tries it again. Only his approval, in his own words, for
    this change, lets it merge: never a reviewer's, a subagent's, or an
    earlier one.
-5. When he has approved and it is green, squash-merge it
+5. When it is green (and approved, for a UI change), squash-merge it
    (`gh pr merge --squash --delete-branch`), tell him what landed, and
    remove the worktree. Never merge into `main`.
 
@@ -71,8 +74,9 @@ app before calling it done:
   that shows every component and variant: a section in a group file under
   `web/src/pages/components/sections/`, with the component's README as its
   Docs.
-- `make jumps-check` must pass before the pull request: nothing may jump (see
-  "Nothing jumps" in `design/design-system.md`).
+- `make jumps-check` is off for now (2026-11-04, until it is revisited): CI
+  does not run it. Nothing jumping is still the rule ("Nothing jumps" in
+  `design/design-system.md`); check it by eye in the states you changed.
 - The rules are in `design/design-system.md`, and each screen's spec is
   in `design/`. Where a change would contradict a spec, raise it rather
   than quietly diverging.
@@ -135,37 +139,28 @@ Three skills:
   builds, verifies, photographs and documents), `tweak` (a bug or one friction row) and
   `extract` (put a view still inside its screen onto `/views`). Its design is
   `ideas/views-gallery.md` and `ideas/grill-skill.md`.
-- `change` takes one change from ask to merged on `dev`, splitting the work by model
-  (below), with a gate where Jack tries the change and approves it before it merges. Jack starts it with `/change`; it uses the other two when a change needs a
-  grill.
+- `change` takes one change from ask to merged on `dev`: the session builds it in the
+  change's worktree, and a UI change waits for Jack to try it and approve. Jack starts it
+  with `/change`; it uses the other two when a change needs a grill.
 
 ## Models and agents
 
-The judge tier judges, the build tier builds, the mechanical tier does the
-mechanical work, so no model pays twice to read the same code. Which model each
-tier runs on is the model map in
-`.agents/skills/change/references/roles/README.md`; the role briefs live beside
-it, and each harness's agent files are shims pointing at them (Claude Code's
-are committed in `.claude/agents/`; ZCode's are per machine, in
-`~/.zcode/agents/`). The shims stay pointers: role instructions change only in
-`references/roles/`, and only a model id can drift, by hand. `/change` runs in
-a judge-tier session: it sizes the change, proposes a tier (quick, planned,
-grilled) for Jack to confirm, plans, and judges the result.
+The session builds each change itself, in its worktree, reading only what the
+change touches: a plan detailed enough for another agent to build is most of the
+work of building it. Subagents do only work that needs none of the session's
+context:
 
-| Role              | Tier       | Job                                                                           |
-| ----------------- | ---------- | ----------------------------------------------------------------------------- |
-| `Explore`         | mechanical | every codebase search (replaces the built-in one)                             |
-| `builder`         | build      | builds the plan in the worktree; stops and reports when stuck                 |
-| `checker`         | mechanical | `make check`, returning only the failures                                     |
-| `reviewer`        | build      | reads the plan and the diff; escalates risky or unsure changes                |
-| `second-reviewer` | judge      | the second review, for escalated changes                                      |
-| `shooter`         | mechanical | screenshots of changed UI states, Paper and Night                             |
-| `lander`          | mechanical | push and open the PR; after Jack approves, CI, squash-merge, worktree removal |
+| Role              | Job                                                       |
+| ----------------- | --------------------------------------------------------- |
+| `Explore`         | broad codebase searches                                   |
+| `shooter`         | screenshots of changed UI states, Paper and Night         |
+| `reviewer`        | fresh eyes on a risky change (the risk list in `/change`) |
+| `second-reviewer` | the second review, when the first escalates               |
 
-Outside `/change`, the same split holds: search with `Explore`, and hand mechanical
-work to `checker` or `lander` instead of doing it on the judge tier. Model keys
+`/change` runs the whole path (`.agents/skills/change/SKILL.md`); the role briefs
+and the model map are in `.agents/skills/change/references/roles/`. Model keys
 stay on the openrouter-keys mod, Claude Code only; from another harness, ask Jack
-in chat. Spec and reasons: `ideas/agent-workflow-grill.md` and
+in chat. Spec and reasons: `ideas/agent-workflow-grill.md` (its Reversals) and
 `ideas/harness-agnostic-grill.md`.
 
 This file is the one set of agent instructions. `CLAUDE.md` only imports

@@ -1,6 +1,6 @@
 # Roles
 
-The `/change` workers: one brief per role in this folder, one model map, one set of
+The `/change` helpers: one brief per role in this folder, one model map, one set of
 setup steps per harness. Each harness's agent files are shims whose body is a pointer
 at a brief here, so the role instructions exist in exactly one place. Spec and
 reasons: `ideas/harness-agnostic-grill.md`.
@@ -22,36 +22,36 @@ own model, so Codex waits for that to settle.
 
 ## The roles
 
-| Role              | Tier       | Job                                                                           |
-| ----------------- | ---------- | ----------------------------------------------------------------------------- |
-| `Explore`         | mechanical | every codebase search (replaces the harness's built-in one)                   |
-| `builder`         | build      | builds the plan in the worktree; stops and reports when stuck                 |
-| `checker`         | mechanical | `make check`, returning only the failures                                     |
-| `reviewer`        | build      | reads the plan and the diff; escalates risky or unsure changes                |
-| `second-reviewer` | judge      | the second review, for escalated changes                                      |
-| `shooter`         | mechanical | screenshots of changed UI states, Paper and Night                             |
-| `lander`          | mechanical | push and open the PR; after Jack approves, CI, squash-merge, worktree removal |
+The session builds, checks and lands each change itself (`../../SKILL.md`); these roles
+only do work that needs none of its context.
+
+| Role              | Tier       | Job                                                            |
+| ----------------- | ---------- | -------------------------------------------------------------- |
+| `Explore`         | mechanical | every codebase search (replaces the harness's built-in one)    |
+| `reviewer`        | build      | reads the plan and the diff; escalates risky or unsure changes |
+| `second-reviewer` | judge      | the second review, for escalated changes                       |
+| `shooter`         | mechanical | screenshots of changed UI states, Paper and Night              |
 
 ## Setup, per harness
 
-- **Claude Code**: nothing to do. The seven shims are committed in `.claude/agents/`
+- **Claude Code**: nothing to do. The four shims are committed in `.claude/agents/`
   and pick up these briefs through their pointer line. The explore shim keeps
   `name: Explore`, capital E, so it overrides Claude's built-in Explore.
 - **ZCode**: ZCode reads agents from `~/.zcode/agents/`, per machine (it has no
-  workspace agents directory yet). Create the seven shims there, one file per role,
+  workspace agents directory yet). Create the four shims there, one file per role,
   with this frontmatter (shown for the build tier; the mechanical roles take
   `account:zai-individual-coding-plan/GLM-5.3-Flash`), then restart the session:
 
   ```markdown
   ---
-  name: 'builder'
-  description: 'PSet build-tier role: builds one planned change in the worktree the caller names, from a plan file in ideas/ or a short brief. Stops and reports when stuck instead of guessing.'
+  name: 'reviewer'
+  description: 'PSet build-tier role: read-only review of one risky change, from its spec and its diff against dev.'
   color: green
   model: 'account:zai-individual-coding-plan/GLM-5.3'
   injectAgentsMd: true
   ---
 
-  Follow `.agents/skills/change/references/roles/builder.md` from the repository root of the worktree you were named. That file is your whole brief.
+  Follow `.agents/skills/change/references/roles/reviewer.md` from the repository root of the worktree you were named. That file is your whole brief.
   ```
 
 - **A new harness**: add a column to the map above, then create shims as pointers:

@@ -85,6 +85,8 @@ Flow: `/change <ask>` → triage → tier proposed → you confirm → (planned:
 - Q15 Scope: Every merge into dev (Recommended) / Only changes through /change. Answer: "Every merge into dev (Recommended)"
 - Q16 Test env: App from the worktree (Recommended) / You run it yourself / Screenshots and PR only. Answer: "App from the worktree (Recommended)"
 
+- **2026-11-04: the session builds; no builder, checker or lander.** Jack: "Don't love the current fan out. Research shows it just doesn't work. Its better to just have tight context control and not use fan out for implementing because writing out a plan detailed enough for a dumber agent to implement is over half the work of just doing it." And: "for cahnges that do not affect the UI you do not need my approval. I want to streamline the changes process. Also drop the jumps check for now until we can revisit it." So the session builds, checks once and lands each change in its worktree; subagents only search (`Explore`), photograph (`shooter`) and review risky changes (`reviewer`, `second-reviewer`); only a UI change waits for Jack's try; `make jumps-check` is off in CI and the nightly until it is revisited. Then: "just use sensible decisions on when to skip my approval. But mostley when we ave a ui change I will want to see it before merging." Seen in practice: each builder round took 10 to 20 minutes, mostly re-reading what the session already knew, and every annotation round was a full trip.
+
 ## Disagreements
 
 ## Frontier
