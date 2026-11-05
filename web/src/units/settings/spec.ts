@@ -327,8 +327,8 @@ export default defineSpec({
     {
       id: 'settings-d18',
       decision:
-        'A field sits centred on its row like any other control; its state ("Saved", "The key works.", why the key failed) takes the hint line\'s place, green for a moment or red until the field is edited.',
-      why: 'Jack: "how can we make this text box in the middle vertically of the two lines of text?" and "I\'d rather center this vertically and find a different way to show the state." He chose "In the hint line (Recommended)".',
+        'A field sits centred on its row; its state ("Saved", why the key failed) takes the hint line\'s place: green for a moment, red until edited.',
+      why: 'Jack: "I\'d rather center this vertically and find a different way to show the state." Chose "In the hint line (Recommended)".',
       beat: 'The state under the field; inside the field; a toast',
       date: '2026-11-04',
     },
