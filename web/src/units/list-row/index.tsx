@@ -8,6 +8,7 @@ import { Link } from '@/units/link';
  *  never sits inside another. */
 export function ListRow({
   title,
+  titleField,
   href,
   label,
   status,
@@ -16,6 +17,8 @@ export function ListRow({
   asideWidth = 120,
 }: {
   title: string;
+  /** Takes the title's place while it is being edited, so the row keeps its height. */
+  titleField?: ReactNode;
   /** Makes the title a link. */
   href?: string;
   /** A Tag right after the title on line one, like a GitHub label. The title
@@ -32,13 +35,18 @@ export function ListRow({
   asideWidth?: number | string;
 }) {
   return (
-    <div className="min-h-14 min-w-0">
+    <div className={`min-w-0 ${meta.length > 0 ? 'min-h-14' : ''}`}>
       <div className="flex min-w-0 items-center gap-4 px-4 py-2">
         <div className="min-w-0 flex-1">
           <div className="flex min-h-6 min-w-0 items-center gap-2">
             <div className="min-w-0">
-              {href === undefined ? (
-                <span className="ds-body block truncate font-medium text-(--ds-fg)">
+              {titleField !== undefined ? (
+                titleField
+              ) : href === undefined ? (
+                <span
+                  title={title}
+                  className="ds-body block truncate font-medium text-(--ds-fg)"
+                >
                   {title}
                 </span>
               ) : (
@@ -55,14 +63,16 @@ export function ListRow({
             </div>
             {label !== undefined && <div className="shrink-0">{label}</div>}
           </div>
-          <p className="ds-small ds-tabular min-h-5 truncate text-(--ds-fg-muted)">
-            {meta.map((item, i) => (
-              <span key={i}>
-                {i > 0 && <Fragment> · </Fragment>}
-                {item}
-              </span>
-            ))}
-          </p>
+          {meta.length > 0 && (
+            <p className="ds-small ds-tabular min-h-5 truncate text-(--ds-fg-muted)">
+              {meta.map((item, i) => (
+                <span key={i}>
+                  {i > 0 && <Fragment> · </Fragment>}
+                  {item}
+                </span>
+              ))}
+            </p>
+          )}
         </div>
         {status !== undefined && (
           <div className="ds-small ds-tabular flex h-6 shrink-0 items-center whitespace-nowrap text-(--ds-fg-muted)">

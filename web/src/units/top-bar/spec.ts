@@ -50,6 +50,10 @@ export default defineSpec({
       does: 'Where you are, outermost first. The last item is not a link.',
     },
     { name: 'settingsHref', does: 'Where Settings goes.' },
+    {
+      name: 'onSettings',
+      does: 'On Settings itself: the word shows plain and muted, not a link.',
+    },
   ],
   priority: {
     first: 'Where you are, the last item of the path.',
