@@ -176,7 +176,8 @@ export function BlockView({
                 {i + 1}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="ds-reading overflow-x-auto">
+                {/* Wide math scrolls sideways; tall fractions never raise a vertical bar. */}
+                <div className="ds-reading overflow-x-auto overflow-y-hidden py-1">
                   <Runs runs={[{ m: s.tex }]} />
                 </div>
                 {s.why && (

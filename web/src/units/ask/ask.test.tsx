@@ -32,8 +32,11 @@ const press = (el: Element | null | undefined) => {
     el?.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
   });
 };
+/** A button by its text, or by its name when it is only an icon. */
 const button = (el: Element, name: string) =>
-  [...el.querySelectorAll('button')].find((b) => b.textContent === name);
+  [...el.querySelectorAll('button')].find(
+    (b) => b.textContent === name || b.getAttribute('aria-label') === name,
+  );
 
 describe('summary', () => {
   it('folds the calls into one line', () => {

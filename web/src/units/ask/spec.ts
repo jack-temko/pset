@@ -465,5 +465,13 @@ export default defineSpec({
       beat: 'A fixed four-line box with Send beside it',
       date: '2026-11-05',
     },
+    {
+      id: 'ask-d26',
+      decision:
+        'Send (an up arrow), Stop (a square) and Copy are icon buttons, named in a tooltip. No empty row is kept under a failure.',
+      why: 'Jack: "Can we make the stop/send icons?", "Can we make this just an icon too?", and the gap below the error.',
+      beat: 'Labelled buttons',
+      date: '2026-11-05',
+    },
   ],
 });

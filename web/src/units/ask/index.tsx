@@ -1,4 +1,4 @@
-import { Check, Copy, X } from 'lucide-react';
+import { ArrowUp, Check, Copy, Square, X } from 'lucide-react';
 import {
   useEffect,
   useLayoutEffect,
@@ -9,6 +9,7 @@ import {
 } from 'react';
 
 import { Button } from '@/units/button';
+import { IconButton } from '@/units/icon-button';
 import { Tag } from '@/units/tag';
 import { Document } from './blocks';
 import { ThinkingRow } from './steps';
@@ -32,9 +33,9 @@ function Copier({ from }: { from: React.RefObject<HTMLDivElement | null> }) {
     };
   }, [copied]);
   return (
-    <Button
-      variant="quiet"
+    <IconButton
       icon={copied ? Check : Copy}
+      label={copied ? 'Copied' : 'Copy'}
       onPress={() => {
         const text = [...(from.current?.children ?? [])]
           .filter((el) => !el.hasAttribute('data-copy-skip'))
@@ -49,9 +50,7 @@ function Copier({ from }: { from: React.RefObject<HTMLDivElement | null> }) {
           },
         );
       }}
-    >
-      {copied ? 'Copied' : 'Copy'}
-    </Button>
+    />
   );
 }
 
@@ -150,21 +149,23 @@ function TurnView({
         )}
         {/* The slot is always here: the mark while text streams, then Copy,
             so neither arriving nor leaving moves anything (ask-d18, ask-d20). */}
-        <div className="flex h-(--ds-control) items-center">
-          {writing && (
-            <span
-              aria-label="Writing"
-              className="size-2 animate-pulse rounded-full bg-(--ds-accent) motion-reduce:animate-none"
-            />
-          )}
-          {finished && turn.blocks.some((b) => b.k !== 'run') && (
-            <div
-              className={`focus-within:opacity-100 group-hover/turn:opacity-100 ${latest ? '' : 'opacity-0'}`}
-            >
-              <Copier from={doc} />
-            </div>
-          )}
-        </div>
+        {turn.status !== 'failed' && (
+          <div className="flex h-(--ds-control) items-center">
+            {writing && (
+              <span
+                aria-label="Writing"
+                className="size-2 animate-pulse rounded-full bg-(--ds-accent) motion-reduce:animate-none"
+              />
+            )}
+            {finished && turn.blocks.some((b) => b.k !== 'run') && (
+              <div
+                className={`focus-within:opacity-100 group-hover/turn:opacity-100 ${latest ? '' : 'opacity-0'}`}
+              >
+                <Copier from={doc} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -390,15 +391,20 @@ function Composer({
           className="ds-body block min-h-[32px] min-w-0 flex-1 resize-none bg-transparent py-[5px] text-(--ds-fg) placeholder:text-(--ds-fg-muted) focus-visible:outline-none!"
         />
         {running ? (
-          <Button onPress={onStop}>Stop</Button>
+          <IconButton
+            icon={Square}
+            label="Stop"
+            variant="default"
+            onPress={onStop}
+          />
         ) : (
-          <Button
+          <IconButton
+            icon={ArrowUp}
+            label="Send"
             variant="primary"
             notReady={ready ? undefined : 'Write a message first'}
             onPress={send}
-          >
-            Send
-          </Button>
+          />
         )}
       </div>
     </div>

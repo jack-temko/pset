@@ -16,3 +16,8 @@ const LOOKS: Record<ButtonVariant, string> = {
 export function buttonLook(variant: ButtonVariant): string {
   return LOOKS[variant];
 }
+
+/** A button that cannot act yet, whatever its variant: muted text does not
+ *  reach its contrast on a solid ground. */
+export const NOT_READY =
+  'border-(--ds-border) bg-transparent text-(--ds-fg-muted) cursor-default';
