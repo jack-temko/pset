@@ -3,9 +3,9 @@ import spec from './spec';
 import { SampleScreen, SampleScreenSkeleton } from './screen';
 
 const ITEMS = [
-  { title: 'Problem set 4', detail: 'Due Friday, 6 questions' },
-  { title: 'Problem set 5', detail: 'Due next week, 8 questions' },
-  { title: 'Midterm review', detail: 'No date, 20 questions' },
+  { title: 'Problem set 4', detail: 'Due Friday, 6 problems' },
+  { title: 'Problem set 5', detail: 'Due next week, 8 problems' },
+  { title: 'Midterm review', detail: 'No date, 20 problems' },
 ];
 
 export default defineExamples(spec, SampleScreen, {

@@ -6,12 +6,12 @@ export default defineSpec({
   title: 'Workspace',
   group: 'Screens',
   purpose:
-    'Where a set is done: a top bar with the path, then two sides of tabs split by a divider. Any of a set, a material or Ask sits in either side, and a side with no tabs folds away.',
+    'Where an assignment is done: a top bar with the path, then two sides of tabs split by a divider. Any of an assignment, a material or Ask sits in either side, and a side with no tabs folds away.',
   states: [
     {
       id: 'opening',
-      name: 'Opening a set',
-      when: 'A set was opened: its material on the left at the current problem’s page, the set on the right, half and half.',
+      name: 'Opening an assignment',
+      when: 'An assignment was opened: its material on the left at the current problem’s page, the assignment on the right, half and half.',
     },
     {
       id: 'followed',
@@ -20,13 +20,13 @@ export default defineSpec({
     },
     {
       id: 'two-materials',
-      name: 'Two materials and a set',
-      when: 'The left side has Griffiths and the lecture notes as tabs, the set on the right.',
+      name: 'Two materials and an assignment',
+      when: 'The left side has Griffiths and the lecture notes as tabs, the assignment on the right.',
     },
     {
       id: 'folded',
       name: 'One side folded',
-      when: 'The material’s last tab was closed: the set takes the full width.',
+      when: 'The material’s last tab was closed: the assignment takes the full width.',
     },
     {
       id: 'returned',
@@ -35,8 +35,8 @@ export default defineSpec({
     },
     {
       id: 'twice',
-      name: 'The same book twice',
-      when: 'Griffiths is open at p. 111 on the left and p. 45 on the right, each at its own page, the set beside the second.',
+      name: 'The same material twice',
+      when: 'Griffiths is open at p. 111 on the left and p. 45 on the right, each at its own page, the assignment beside the second.',
     },
     {
       id: 'ask',
@@ -59,7 +59,7 @@ export default defineSpec({
   flows: [
     {
       id: 'work-a-set',
-      name: 'Work a set',
+      name: 'Work an assignment',
       steps: [
         'open-set',
         'follow-page-link',
@@ -72,8 +72,8 @@ export default defineSpec({
   actions: [
     {
       id: 'open-set',
-      label: 'A set, from Home or the course',
-      does: 'Opens the workspace: the set’s material on the left at the current problem’s page, the set on the right.',
+      label: 'An assignment, from Home or the course',
+      does: 'Opens the workspace: the assignment’s material on the left at the current problem’s page, the assignment on the right.',
       target: { unit: 'workspace', state: 'opening' },
     },
     {
@@ -119,13 +119,13 @@ export default defineSpec({
     {
       id: 'open-from-plus',
       label: '+ on a side',
-      does: 'Opens a material (a new tab, so it can be open twice), another set, or Ask, as a tab on that side.',
+      does: 'Opens a material (a new tab, so it can be open twice), another assignment, or Ask, as a tab on that side.',
     },
   ],
   data: [
     {
       reads:
-        'The course’s name, materials and sets with their problems; which tabs are open',
+        'The course’s name, materials and assignments with their problems; which tabs are open',
       call: 'sample',
     },
   ],
@@ -293,7 +293,7 @@ export default defineSpec({
     {
       id: 'workspace-d10',
       decision:
-        'A side’s + menu offers the course’s materials, its other sets, and Ask.',
+        'A side’s + menu offers the course’s materials, its other assignments, and Ask.',
       why: 'Jack’s pick, W10: one place to open anything.',
       beat: 'Materials and Ask only',
       date: '2026-10-21',
@@ -301,7 +301,7 @@ export default defineSpec({
     {
       id: 'workspace-d11',
       decision:
-        'Opening a set puts its material on the left at the current problem’s page and the set on the right.',
+        'Opening an assignment puts its material on the left at the current problem’s page and the assignment on the right.',
       why: 'Jack’s pick, W9: nothing to set up. Reaffirms S7.',
       beat: 'As you left it; the set alone',
       date: '2026-10-21',

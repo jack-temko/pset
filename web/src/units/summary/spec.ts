@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Summary',
   group: 'Work',
   purpose:
-    'The last stop of a set, plain with no box: how far it is, total time and finish, the bars, the longest, Turn in or Take back and Back to the course.',
+    'The last stop of an assignment, plain with no box: how far it is, total time and finish, the bars, the longest, Turn in or Take back and Back to the course.',
   states: [
     {
       id: 'finished',
@@ -39,12 +39,12 @@ export default defineSpec({
     {
       id: 'turn-in',
       label: 'Turn in',
-      does: 'Hands the set in; the pane asks first when problems are left.',
+      does: 'Hands the assignment in; the pane asks first when problems are left.',
     },
     {
       id: 'take-back',
       label: 'Take back',
-      does: 'Takes a turned-in set back, so it can be worked on again.',
+      does: 'Takes a turned-in assignment back, so it can be worked on again.',
     },
     {
       id: 'back',
@@ -67,7 +67,7 @@ export default defineSpec({
     },
     {
       name: 'turnedIn',
-      does: 'When the set was turned in.',
+      does: 'When the assignment was turned in.',
     },
     { name: 'onTurnIn', does: 'Called when Turn in is pressed.' },
     { name: 'onTakeBack', does: 'Called when Take back is pressed.' },
@@ -98,7 +98,7 @@ export default defineSpec({
     {
       id: 'summary-d1',
       decision:
-        'The finish card becomes a summary for unfinished, finished and turned-in sets alike.',
+        'The finish card becomes a summary for unfinished, finished and turned-in assignments alike.',
       why: 'Jack: "Also the finished page doesnt look the best. Can we include some light stats?"',
       beat: 'The finish card',
       date: '2026-10-21',
@@ -139,7 +139,7 @@ export default defineSpec({
     {
       id: 'summary-d6',
       decision:
-        'The summary shows no due date: the set line has it. Each fact is shown once on a screen.',
+        'The summary shows no due date: the assignment line has it. Each fact is shown once on a screen.',
       why: 'Jack: "Shown in two spots. This should be a rule, avoid duplication where possible"',
       beat: 'Due on the summary and in the set line',
       date: '2026-10-21',

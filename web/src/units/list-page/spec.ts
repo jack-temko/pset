@@ -8,7 +8,7 @@ export default defineSpec({
   title: 'List page',
   group: 'Screens',
   purpose:
-    'The one page every list that passes five rows opens: a heading, a filter bar and the same list box holding every match, for a student looking for an old set or a thing PSet remembers.',
+    'The one page every list that passes five rows opens: a heading, a filter bar and the same list box holding every match, for a student looking for an old assignment or a thing PSet remembers.',
   exampleWidth: 'full',
   states: [
     {
@@ -32,13 +32,13 @@ export default defineSpec({
     {
       id: 'nothing-to-do',
       name: 'Nothing to do',
-      when: 'Every set is done and the search is empty: the list stays on To do with its one quiet line, and Done keeps its count.',
+      when: 'Every assignment is done and the search is empty: the list stays on To do with its one quiet line, and Done keeps its count.',
       text: 'Nothing to do',
     },
     {
       id: 'many',
-      name: 'Hundreds of sets',
-      when: 'Nearly three hundred finished sets: every one in one scroll, no pages and no Load more.',
+      name: 'Hundreds of assignments',
+      when: 'Nearly three hundred finished assignments: every one in one scroll, no pages and no Load more.',
       text: 'Done',
     },
     {
@@ -59,7 +59,7 @@ export default defineSpec({
   flows: [
     {
       id: 'find-an-old-set',
-      name: 'Find an old set',
+      name: 'Find an old assignment',
       steps: ['search', 'open-set'],
     },
     {
@@ -97,18 +97,18 @@ export default defineSpec({
     {
       id: 'clear-filters',
       label: 'Clear filters',
-      does: 'In the no-matches line, which a non-empty search that matches nothing shows: empties the search and sets the course back to All courses.',
+      does: 'In the no-matches line, which a non-empty search that matches nothing shows: empties the search and assignments the course back to All courses.',
     },
     {
       id: 'open-set',
-      label: 'A set’s name',
-      does: 'Opens the set in the workspace. The workspace is not wired to this view yet, so it has no target.',
+      label: 'An assignment’s name',
+      does: 'Opens the assignment in the workspace. The workspace is not wired to this view yet, so it has no target.',
     },
   ],
   data: [
     {
       reads:
-        'Every set (name, course, due, questions done and total, time left, when finished) or every memory (text, course, source, when added)',
+        'Every assignment (name, course, due, problems done and total, time left, when finished) or every memory (text, course, source, when added)',
       call: 'sample',
     },
   ],
@@ -181,7 +181,7 @@ export default defineSpec({
     {
       id: 'list-page-d4',
       decision:
-        'A row is the summary’s own row (set, due tag, due date, progress bar), plus the course name on line two when the page spans courses.',
+        'A row is the summary’s own row (assignment, due tag, due date, progress bar), plus the course name on line two when the page spans courses.',
       why: 'Jack: "Same rows as summaries (Recommended)" (L10): cross-page uniformity.',
       beat: 'A table with sortable columns',
       date: '2026-11-04',

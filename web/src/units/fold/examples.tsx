@@ -19,7 +19,7 @@ export default defineExamples(spec, Fold, {
   },
   stress: () => (
     <div className="w-[240px] max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">
-      <Fold label="Electromagnetics and the physics of electrical machines, finished sets (12)">
+      <Fold label="Electromagnetics and the physics of electrical machines, finished assignments (12)">
         {body}
       </Fold>
     </div>

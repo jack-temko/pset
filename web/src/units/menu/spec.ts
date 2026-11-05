@@ -11,7 +11,7 @@ export default defineSpec({
     {
       id: 'add',
       name: 'Grouped, with headings',
-      when: 'The + menu: Materials and Sets under headings, then Ask on its own after a hairline.',
+      when: 'The + menu: Materials and Assignments under headings, then Ask on its own after a hairline.',
     },
     {
       id: 'tab',

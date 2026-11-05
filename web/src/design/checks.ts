@@ -1,3 +1,4 @@
+import { offList } from './words';
 import type { AnyExamples } from './examples';
 import { LINE_MAX, PURPOSE_MAX } from './limits';
 import type { Rule } from './rules';
@@ -169,6 +170,26 @@ export function checkUnit(u: Subject, ctx: Context): string[] {
         `${path} is ${String(s.length)} characters, over the ${String(max)} limit`,
       );
   }
+
+  // One word per thing: the spec's screen text uses the word list.
+  const screen: [string, string][] = [
+    ...spec.states.flatMap((st, i): [string, string][] => [
+      [`states[${String(i)}].name`, st.name],
+      ...(st.text === undefined
+        ? []
+        : ([[`states[${String(i)}].text`, st.text]] as [string, string][])),
+    ]),
+    ...spec.actions.map((a, i): [string, string] => [
+      `actions[${String(i)}].label`,
+      a.label,
+    ]),
+    ...(spec.flows ?? []).map((f, i): [string, string] => [
+      `flows[${String(i)}].name`,
+      f.name,
+    ]),
+  ];
+  for (const [path, line] of screen)
+    for (const w of offList(line)) fail(`spec.${path} says ${w}`);
 
   // Unique ids.
   const local = spec.rules.local ?? [];

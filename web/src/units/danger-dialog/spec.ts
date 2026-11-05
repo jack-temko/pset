@@ -11,8 +11,8 @@ export default defineSpec({
     {
       id: 'course',
       name: 'Delete a course',
-      when: 'Counts the sets and materials that go; the student types the course name.',
-      text: 'This deletes 12 sets and 9 materials.',
+      when: 'Counts the assignments and materials that go; the student types the course name.',
+      text: 'This deletes 12 assignments and 9 materials.',
     },
     {
       id: 'reset',

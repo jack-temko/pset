@@ -213,7 +213,7 @@ function SetRow({
             ]
           : []),
         ...(time ? [time] : []),
-        ...(!spanning && !time ? [`${String(set.total)} questions`] : []),
+        ...(!spanning && !time ? [`${String(set.total)} problems`] : []),
       ]}
       aside={
         <div className="flex items-center gap-3">

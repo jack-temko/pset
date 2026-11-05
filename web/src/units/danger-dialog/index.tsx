@@ -22,7 +22,7 @@ export function DangerDialog({
 }: {
   /** What is being done: "Delete ECE 210". */
   title: string;
-  /** What goes, with counts: "This deletes 12 sets and 9 materials." */
+  /** What goes, with counts: "This deletes 12 assignments and 9 materials." */
   message: string;
   /** What the student types to unlock the button: a course's name, or "reset". */
   word: string;

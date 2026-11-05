@@ -159,7 +159,7 @@ export function Home({
               figure={figureOf(count(s.questions.week))}
               label={
                 <p className="ds-small flex items-center gap-x-2 whitespace-nowrap text-(--ds-fg-muted)">
-                  <span>Questions done</span>
+                  <span>Problems done</span>
                   {questionsChange && <ChangeText change={questionsChange} />}
                 </p>
               }
@@ -170,7 +170,7 @@ export function Home({
             />
             <Row
               figure={figureOf(count(left.questions))}
-              label={<p className={small}>Questions left</p>}
+              label={<p className={small}>Problems left</p>}
               caption={
                 <Moved
                   text={

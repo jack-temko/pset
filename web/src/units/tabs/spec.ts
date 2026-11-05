@@ -11,7 +11,7 @@ export default defineSpec({
     {
       id: 'rest',
       name: 'Three tabs',
-      when: 'A set, a material with its page and Ask; the first is open, with its accent underline and a full-colour close x; the others’ x is dim.',
+      when: 'An assignment, a material with its page and Ask; the first is open, with its accent underline and a full-colour close x; the others’ x is dim.',
     },
     {
       id: 'hover',
@@ -21,7 +21,7 @@ export default defineSpec({
     {
       id: 'add-menu',
       name: 'The + menu open',
-      when: 'The + was pressed: Materials, Sets and Ask, under the row.',
+      when: 'The + was pressed: Materials, Assignments and Ask, under the row.',
     },
     {
       id: 'tab-menu',

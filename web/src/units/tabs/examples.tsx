@@ -13,7 +13,7 @@ const ADD: MenuGroup[] = [
       { id: 'm:notes', label: 'Lecture notes, week 6' },
     ],
   },
-  { label: 'Sets', items: [{ id: 's:ps5', label: 'Problem set 5' }] },
+  { label: 'Assignments', items: [{ id: 's:ps5', label: 'Problem set 5' }] },
   { items: [{ id: 'a', label: 'Ask' }] },
 ];
 

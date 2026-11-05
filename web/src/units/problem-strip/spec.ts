@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Problem strip',
   group: 'Work',
   purpose:
-    'The whole set as one rounded 8px bar, a segment per problem, coloured by its state. One click jumps; hover names the problem and its state.',
+    'The whole assignment as one rounded 8px bar, a segment per problem, coloured by its state. One click jumps; hover names the problem and its state.',
   states: [
     {
       id: 'in-progress',
@@ -63,7 +63,7 @@ export default defineSpec({
     },
   ],
   priority: {
-    first: 'How far through the set, then which one is current.',
+    first: 'How far through the assignment, then which one is current.',
     main: 'jump',
   },
   sizes: {
@@ -176,7 +176,7 @@ export default defineSpec({
       id: 'problem-strip-d12',
       supersededBy: 'problem-strip-d13',
       decision:
-        'Four ways to the summary to compare: the flag, a label after the bar, a link in the set line, one more segment; each underlined while it shows.',
+        'Four ways to the summary to compare: the flag, a label after the bar, a link in the assignment line, one more segment; each underlined while it shows.',
       why: 'Jack: "Still dont like the summary as that icon at the end, lets A/B that now".',
       beat: 'Only the flag',
       date: '2026-10-21',

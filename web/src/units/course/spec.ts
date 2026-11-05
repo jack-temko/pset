@@ -13,7 +13,7 @@ export default defineSpec({
   states: [
     {
       id: 'normal',
-      name: 'One set to do',
+      name: 'One assignment to do',
       when: 'The usual course: a set to do, three materials, six finished sets one press away in Work’s header switch, "To do 1 · Done 6".',
       text: 'Done',
     },
@@ -50,7 +50,7 @@ export default defineSpec({
     { id: 'add-material', name: 'Add a material', steps: ['add-material'] },
     {
       id: 'delete-and-undo',
-      name: 'Delete a set, then undo',
+      name: 'Delete an assignment, then undo',
       steps: ['row-menu', 'delete-set', 'undo'],
     },
     {
@@ -63,7 +63,7 @@ export default defineSpec({
     {
       id: 'add-work',
       label: 'Add assignment',
-      does: 'At the right of the Work heading: opens the file picker for an assignment sheet; each shows as a new set reading in.',
+      does: 'At the right of the Work heading: opens the file picker for an assignment sheet; each shows as a new assignment reading in.',
     },
     {
       id: 'add-material',
@@ -77,8 +77,8 @@ export default defineSpec({
     },
     {
       id: 'open-set',
-      label: 'A set’s name',
-      does: 'Opens the set in the workspace. The workspace is not wired to this view yet, so it has no target.',
+      label: 'An assignment’s name',
+      does: 'Opens the assignment in the workspace. The workspace is not wired to this view yet, so it has no target.',
     },
     {
       id: 'open-material',
@@ -115,7 +115,7 @@ export default defineSpec({
     {
       id: 'delete-course',
       label: 'Delete course',
-      does: 'Opens a dialog counting the sets and materials that go; the red button waits until the course name is typed.',
+      does: 'Opens a dialog counting the assignments and materials that go; the red button waits until the course name is typed.',
       target: { unit: 'danger-dialog', state: 'course' },
     },
     {
@@ -137,14 +137,14 @@ export default defineSpec({
   data: [
     {
       reads:
-        'The course: its name, its sets (due, questions done and total, time left), its materials (kind, pages, reading in), time studied, cost, memories',
+        'The course: its name, its assignments (due, problems done and total, time left), its materials (kind, pages, reading in), time studied, cost, memories',
       call: 'sample',
     },
   ],
   inputs: [
     {
       name: 'course',
-      does: 'The course: name, sets, materials, time, cost and memories.',
+      does: 'The course: name, assignments, materials, time, cost and memories.',
     },
     { name: 'failed', does: 'The read failed: shows the failed page.' },
     { name: 'today', does: 'The moment due dates count from.' },
@@ -237,7 +237,7 @@ export default defineSpec({
     {
       id: 'course-d4',
       decision:
-        'A work row is Home’s assignment row without the course name: set, due tag, time left, due date, progress, then its ... menu (C4).',
+        'A work row is Home’s assignment row without the course name: assignment, due tag, time left, due date, progress, then its ... menu (C4).',
       why: `Confirmed by Jack: "same as home, we need to keep cross page uniformity where possible." reuse; the course is the page.`,
       beat: 'A bigger card per set',
       date: '2026-10-22',
@@ -388,7 +388,7 @@ export default defineSpec({
     {
       id: 'course-d23',
       decision:
-        'The stats box is Home’s own: the heatmap beside this week’s bars, then questions done and cost so far, each with a sparkline, built from Home’s parts.',
+        'The stats box is Home’s own: the heatmap beside this week’s bars, then problems done and cost so far, each with a sparkline, built from Home’s parts.',
       why: 'Confirmed by Jack: "same as home, we need to keep cross page uniformity where possible." (C2, C4)',
       beat: 'A different box for the course',
       date: '2026-10-30',
@@ -396,7 +396,7 @@ export default defineSpec({
     {
       id: 'course-d24',
       decision:
-        'Delete course is the third level of asking: the danger dialog. Deleting a set or removing a material stays the first: at once, with Undo.',
+        'Delete course is the third level of asking: the danger dialog. Deleting an assignment or removing a material stays the first: at once, with Undo.',
       why: 'Confirmed by Jack: "Three levels (Recommended)" (settings-view-grill G9); rule friction-matches-loss.',
       beat: 'A small confirm for deleting a course',
       date: '2026-10-30',

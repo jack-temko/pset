@@ -163,4 +163,13 @@ export const RULES: readonly Rule[] = [
       'No undoable action asks first, and no action that deletes a course or everything lacks the typed name',
     scope: 'all',
   },
+  // Jack, 2026-11-04: "Fix all the wording uniformity issues, add a rule."
+  {
+    id: 'one-word-per-thing',
+    rule: 'Call each thing by one word on every screen and on this page, the word in the word list: assignment, problem, material, course, memory, pane',
+    check:
+      "No screen text or spec name uses a word the list rules out (set, question, book, homework, panel); a student's own names are theirs",
+    scope: 'all',
+    enforcedBy: 'checkUnit, from web/src/design/words.ts',
+  },
 ];

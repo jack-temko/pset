@@ -6,17 +6,17 @@ export default defineSpec({
   title: 'Set line',
   group: 'Lists',
   purpose:
-    'One active set as a list row, for the window pane: its name, when it is due, the count, the time left and a progress bar. The title opens the set.',
+    'One active assignment as a list row, for the window pane: its name, when it is due, the count, the time left and a progress bar. The title opens the assignment.',
   states: [
     {
       id: 'with-time',
       name: 'In progress, with time left',
-      when: 'A started set whose time left PSet knows.',
+      when: 'A started assignment whose time left PSet knows.',
     },
     {
       id: 'without-time',
       name: 'In progress, without time left',
-      when: 'A started set whose time left PSet does not know yet: the column stays empty.',
+      when: 'A started assignment whose time left PSet does not know yet: the column stays empty.',
     },
     {
       id: 'due-soon',
@@ -26,7 +26,7 @@ export default defineSpec({
     {
       id: 'later',
       name: 'Due later',
-      when: 'A set due more than 6 days away: month and day, plain, with no badge.',
+      when: 'An assignment due more than 6 days away: month and day, plain, with no badge.',
     },
     {
       id: 'overdue',
@@ -37,7 +37,7 @@ export default defineSpec({
     {
       id: 'no-date',
       name: 'No date',
-      when: 'A started set the course gave no date: no badge and no date are shown, and it sorts after the dated ones.',
+      when: 'A started assignment the course gave no date: no badge and no date are shown, and it sorts after the dated ones.',
     },
   ],
   stress:
@@ -46,7 +46,7 @@ export default defineSpec({
     {
       id: 'open-set',
       label: 'The title',
-      does: 'Opens the set in the workspace. The workspace is not a unit yet, so it has no target.',
+      does: 'Opens the assignment in the workspace. The workspace is not a unit yet, so it has no target.',
     },
   ],
   inputs: [
@@ -57,7 +57,7 @@ export default defineSpec({
     },
     {
       name: 'total',
-      does: 'Problems in the set.',
+      does: 'Problems in the assignment.',
     },
     {
       name: 'minutesLeft',
@@ -74,7 +74,7 @@ export default defineSpec({
     },
   ],
   priority: {
-    first: 'The set’s name, then when it is due.',
+    first: 'The assignment’s name, then when it is due.',
     main: 'open-set',
   },
   sizes: {
@@ -99,7 +99,7 @@ export default defineSpec({
     {
       id: 'set-line-d1',
       decision:
-        'A set is active if it is in progress, or due within 2 days even if not started.',
+        'An assignment is active if it is in progress, or due within 2 days even if not started.',
       why: 'Jack; nothing urgent can hide.',
       beat: 'Up to 5 dated sets; only started sets (first said)',
       date: '2026-10-13',
@@ -107,7 +107,7 @@ export default defineSpec({
     {
       id: 'set-line-d2',
       decision:
-        'A line shows the set, its progress, the time left when known, and when it is due; a set due within 2 days carries an attention badge. No course name.',
+        'A line shows the assignment, its progress, the time left when known, and when it is due; one due within 2 days carries an attention badge. No course name.',
       why: 'Everything needed to pick tonight’s work; the course row around it names the course.',
       beat: 'Without the time; with the course name',
       date: '2026-10-13',
@@ -115,7 +115,7 @@ export default defineSpec({
     },
     {
       id: 'set-line-d3',
-      decision: 'The whole line opens the set in the workspace.',
+      decision: 'The whole line opens the assignment in the workspace.',
       why: 'The work comes first.',
       beat: 'Two small links',
       date: '2026-10-13',
@@ -140,7 +140,7 @@ export default defineSpec({
     {
       id: 'set-line-d6',
       decision:
-        'A set line is a two-line list row: title and due, then count and time left, the bar at the right. Narrow, the bar goes first.',
+        'An assignment line is a two-line list row: title and due, then count and time left, the bar at the right. Narrow, the bar goes first.',
       why: 'Jack: "We need to package as tightly as possible, this will be used in the window pane for sets likely too."',
       beat: 'A one-line grid of columns',
       date: '2026-10-14',
@@ -157,7 +157,7 @@ export default defineSpec({
     {
       id: 'set-line-d8',
       decision:
-        'A set line is a two-line list row: title and due, then time left, the bar at the right. The count is the bar; it is not repeated.',
+        'An assignment line is a two-line list row: title and due, then time left, the bar at the right. The count is the bar; it is not repeated.',
       why: 'Desktop only: the bar never goes first, so the count has no place to stay (ideas/spec-format-grill.md, F10).',
       beat: 'The bar going first when narrow, with the count in the meta (set-line-d6)',
       date: '2026-10-22',
