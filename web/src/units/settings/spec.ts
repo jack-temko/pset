@@ -349,5 +349,13 @@ export default defineSpec({
       beat: 'A red hint line of its own',
       date: '2026-11-05',
     },
+    {
+      id: 'settings-d21',
+      decision:
+        "A check's fix (Start Ollama) is outlined like every single action here; the checks' tags start on one line.",
+      why: 'Jack: "we need to stick to some sort of consistant outline or no outline" and "The failing tag is not aligned".',
+      beat: 'A quiet fix beside outlined actions',
+      date: '2026-11-05',
+    },
   ],
 });

@@ -19,3 +19,4 @@ Jack's annotations: "The way the button and the text on the left is aligned is t
 
 - Jack on Updating: "Button should be centered verticlly" and "Too much empty space here". The second face is gone: the notes stay, the button is centred and busy, and the PSet row's hint says it is updating (settings-d19).
 - A failed key or field says why with Error notice's line (settings-d20).
+- Jack on the checks: "The failing tag is not aligned with the other." and "we need to stick to some sort of consistant outline or no outline". Tags get a fixed width (ListRow `statusWidth`); Start Ollama is outlined, and quiet-when-repeated now says plainly that a single action keeps its outline (settings-d21).

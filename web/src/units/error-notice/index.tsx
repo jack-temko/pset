@@ -41,7 +41,7 @@ export function ErrorNotice({
   actions?: readonly ErrorAction[];
 }) {
   if (variant === 'line') {
-    const action = actions[0];
+    const action = actions.at(0);
     const text = error.fix ? `${error.what} ${error.fix}` : error.what;
     return (
       <div
