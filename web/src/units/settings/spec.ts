@@ -26,7 +26,7 @@ export default defineSpec({
     {
       id: 'key-failed',
       name: 'Key failed its test',
-      when: 'The pasted key was refused: the field and its note take the danger colour.',
+      when: "The pasted key was refused: the field's edge turns red and an error line takes the hint's place.",
       text: 'OpenRouter refused this key. Check it and paste it again.',
     },
     {

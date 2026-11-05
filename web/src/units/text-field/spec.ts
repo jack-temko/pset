@@ -42,7 +42,7 @@ export default defineSpec({
     {
       id: 'failed',
       name: 'Failed',
-      when: 'The value was refused: the border and the note take the danger colour.',
+      when: 'The value was refused: the border takes the danger colour and the note is an error line.',
       text: 'The key was refused',
     },
   ],
@@ -78,7 +78,7 @@ export default defineSpec({
     { name: 'secret', does: 'Hides what is typed.' },
     {
       name: 'failed',
-      does: 'Draws the field and its note in the danger colour.',
+      does: 'Draws the border in the danger colour and the note as an error line.',
     },
     {
       name: 'note',

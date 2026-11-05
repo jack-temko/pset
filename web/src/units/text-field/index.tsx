@@ -42,7 +42,7 @@ export function TextField({
   mono?: boolean;
   /** Hides what is typed, as a password field does. */
   secret?: boolean;
-  /** Draws the field and its note in the danger colour. */
+  /** Draws the border in the danger colour and the note as an error line. */
   failed?: boolean;
   /** The line under the field: "Saved", or why it failed. `false` leaves the line out. */
   note?: ReactNode;

@@ -70,7 +70,7 @@ export default defineExamples(spec, ErrorNotice, {
       />
     ),
     pane: () => (
-      <div className="flex h-[320px] w-[560px] items-center justify-center bg-(--ds-bg) p-8 outline-[1px] outline-(--ds-border-muted)">
+      <div className="flex h-[320px] w-full items-center justify-center bg-(--ds-bg) p-8 outline-[1px] outline-(--ds-border-muted)">
         <ErrorNotice error={DAMAGED} actions={[{ label: 'Read it again' }]} />
       </div>
     ),
