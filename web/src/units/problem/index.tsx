@@ -398,6 +398,7 @@ export function Problem({
         </Button>
         <span className={stands ? '' : 'ml-auto'}>
           <MoreMenu
+            variant="default"
             label="More for this problem"
             items={items}
             onSelect={onMenu}

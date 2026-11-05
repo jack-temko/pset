@@ -1,5 +1,6 @@
 import { defineExamples } from '@/design/examples';
 import { sampleStudy } from '@/design/study-sample';
+import { PLACEHOLDER } from '@/units/list-page/hrefs';
 import { SETS, TODAY } from '@/units/assignment-row/sample';
 import { Home, HomeSkeleton } from './index';
 import spec from './spec';
@@ -15,7 +16,16 @@ const NOW = new Date(
 const STUDY = sampleStudy();
 
 const home = (p: Partial<Parameters<typeof Home>[0]> = {}) => (
-  <Home name="Jack" now={NOW} pick={0} sets={SETS} study={STUDY} {...p} />
+  <Home
+    name="Jack"
+    now={NOW}
+    pick={0}
+    sets={SETS}
+    study={STUDY}
+    workHref={PLACEHOLDER.work}
+    coursesHref={PLACEHOLDER.courses}
+    {...p}
+  />
 );
 
 export default defineExamples(spec, Home, {

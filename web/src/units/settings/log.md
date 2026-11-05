@@ -12,3 +12,5 @@ Decisions that say "assumed" are the ones he was not asked (the words, loading).
 ## 2026-11-04: fields centred, their state in the hint line
 
 Jack's annotations: "The way the button and the text on the left is aligned is the way I want, how can we make this text box in the middle vertically of the two lines of text?" and, on the key, "I'd rather center this vertically and find a different way to show the state. Same issue as the Name." Asked where the state goes, he chose "In the hint line (Recommended)". The Name and key fields now sit centred like Check for updates; "Saved" and "The key works." replace the hint for 2 s in green, and a failure replaces it in red until the key is edited (settings-d18).
+
+2026-11-04, Jack asked what the rules were for outlined buttons (the Remove buttons, the row menus and the menu beside the course name) and chose "Rows and heading quiet (Recommended)": a control repeated on every row, or a menu beside a heading, is quiet (no outline, a hover tint); an outline stays on standalone actions. New rule quiet-when-repeated.

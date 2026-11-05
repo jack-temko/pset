@@ -6,17 +6,17 @@ export default defineSpec({
   title: 'Progress bar',
   group: 'Basics',
   purpose:
-    'How far a set is done: one continuous bar, the done share in blue, with the count in words beside it.',
+    'How far an assignment is done: one continuous bar, the done share in blue, with the count in words beside it.',
   states: [
     {
       id: 'none-done',
       name: 'None done',
-      when: 'A set not started: the bar is empty.',
+      when: 'An assignment not started: the bar is empty.',
     },
     {
       id: 'some-done',
       name: 'Some done',
-      when: 'A set in progress: the done share of the bar is blue.',
+      when: 'An assignment in progress: the done share of the bar is blue.',
     },
     {
       id: 'all-done',
@@ -26,7 +26,7 @@ export default defineSpec({
     {
       id: 'one-problem',
       name: 'One problem',
-      when: 'A set of one problem: the bar fills as it is done.',
+      when: 'An assignment of one problem: the bar fills as it is done.',
     },
     {
       id: 'twelve',
@@ -96,7 +96,8 @@ export default defineSpec({
     },
     {
       id: 'progress-bar-d4',
-      decision: 'The count is set in the body step, one step up from small.',
+      decision:
+        'The count is assignment in the body step, one step up from small.',
       why: 'Jack: "This needs to be larger".',
       beat: 'The count in the small step',
       date: '2026-10-14',

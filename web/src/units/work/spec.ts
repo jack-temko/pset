@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Work',
   group: 'Work',
   purpose:
-    'One problem set being worked: the set line, a strip of every problem, the one you are on with its help, and a summary as the last stop.',
+    'One problem set being worked: the assignment line, a strip of every problem, the one you are on with its help, and a summary as the last stop.',
   states: [
     {
       id: 'current-underline',
@@ -45,7 +45,7 @@ export default defineSpec({
     {
       id: 'finding',
       name: 'A problem still being found',
-      when: 'The fifth problem is being found: its place and the wait, a dashed chip, and the rest of the set works.',
+      when: 'The fifth problem is being found: its place and the wait, a dashed chip, and the rest of the assignment works.',
       text: 'Finding 4.62 on page 112 · about 10 s',
     },
     {
@@ -61,7 +61,7 @@ export default defineSpec({
   flows: [
     {
       id: 'work-the-set',
-      name: 'Work the set to the end',
+      name: 'Work the assignment to the end',
       steps: [
         'open-set',
         'read-hint',
@@ -76,8 +76,8 @@ export default defineSpec({
   actions: [
     {
       id: 'open-set',
-      label: 'A set in Assignments',
-      does: 'Opens the set at the problem the student left, or the first one to do.',
+      label: 'An assignment in Assignments',
+      does: 'Opens the assignment at the problem the student left, or the first one to do.',
       target: { unit: 'work', state: 'current-underline' },
     },
     {
@@ -115,13 +115,13 @@ export default defineSpec({
     {
       id: 'turn-in',
       label: 'Turn in',
-      does: 'Hands the set in; with problems left it asks first.',
+      does: 'Hands the assignment in; with problems left it asks first.',
       target: { unit: 'work', state: 'summary-turned-in' },
     },
     {
       id: 'take-back',
       label: 'Take back',
-      does: 'Takes the set back so it can be worked on again.',
+      does: 'Takes the assignment back so it can be worked on again.',
     },
     {
       id: 'open-page',
@@ -140,14 +140,14 @@ export default defineSpec({
     },
     {
       id: 'set-menu',
-      label: 'The set menu',
+      label: 'The assignment menu',
       does: 'Add problems, Box one on the page, Edit, Print worksheet, Turn in or Take back, Delete (with Undo).',
     },
   ],
   data: [
     {
       reads:
-        'The set (name, due, time left, time spent) and its problems with their labels, pages, statements, figures, parts and help',
+        'The assignment (name, due, time left, time spent) and its problems with their labels, pages, statements, figures, parts and help',
       call: 'sample',
     },
   ],
@@ -172,7 +172,7 @@ export default defineSpec({
     },
     {
       name: 'memory',
-      does: 'Where the current problem of each set is remembered.',
+      does: 'Where the current problem of each assignment is remembered.',
     },
     {
       name: 'today',
@@ -192,7 +192,7 @@ export default defineSpec({
     },
     {
       name: 'onSetMenu',
-      does: 'Called with the set menu item picked.',
+      does: 'Called with the assignment menu item picked.',
     },
     {
       name: 'onProblemMenu',
@@ -208,7 +208,8 @@ export default defineSpec({
     },
   ],
   priority: {
-    first: 'The problem you are on, then how far through the set you are.',
+    first:
+      'The problem you are on, then how far through the assignment you are.',
     main: 'mark-done',
   },
   sizes: {
@@ -235,7 +236,7 @@ export default defineSpec({
       id: 'work-d1',
       supersededBy: 'work-d8',
       decision:
-        'The header is the set line (name, badge, due date, time left) without a progress bar or count, then the strip, which is the progress.',
+        'The header is the assignment line (name, badge, due date, time left) without a progress bar or count, then the strip, which is the progress.',
       why: 'Jack picked "Set line + strip (Recommended)": the tab already names the set (P5).',
       beat: 'Strip only; a big title',
       date: '2026-10-21',
@@ -267,7 +268,7 @@ export default defineSpec({
     {
       id: 'work-d5',
       decision:
-        'The current problem of each set is remembered, so reopening lands where the student left. The pane keeps it while the page is open, until the workspace does.',
+        'The current problem of each assignment is remembered, so reopening lands where the student left; the pane keeps it while open, until the workspace does.',
       why: 'Assumed in the work pane grill (S8); keep-the-place.',
       beat: 'Always the first problem',
       date: '2026-10-21',
@@ -323,7 +324,7 @@ export default defineSpec({
     {
       id: 'work-d12',
       decision:
-        'The summary replaces the finish card. A finished or turned-in set opens on it; an unfinished one on its remembered problem.',
+        'The summary replaces the finish card. A finished or turned-in assignment opens on it; an unfinished one on its remembered problem.',
       why: 'Jack: "how to get to it and see it, and switch to and from it"; reopen: "The summary".',
       beat: 'Reopening on the last problem',
       date: '2026-10-21',
@@ -331,7 +332,7 @@ export default defineSpec({
     {
       id: 'work-d13',
       decision:
-        'Turn in is on the summary and in the set menu; an unfinished set still asks first. Take back is in both places.',
+        'Turn in is on the summary and in the assignment menu; an unfinished assignment still asks first. Take back is in both places.',
       why: 'Jack: "On the summary, plus the set menu".',
       beat: 'Turn in only in the menu',
       date: '2026-10-21',
@@ -339,7 +340,7 @@ export default defineSpec({
     {
       id: 'work-d14',
       decision:
-        'Anything that stands alone in the pane (the summary, a set with no problems, a problem being found or not found) is centred, across and down.',
+        'Anything that stands alone in the pane (the summary, an assignment with no problems, a problem being found or not found) is centred, across and down.',
       why: 'Jack: "Make sure every part of the panel looks good when not expanded or empty. For example we should center what we can vertically and horizontally."',
       beat: 'Standing at the top with empty space under',
       date: '2026-10-21',
@@ -355,7 +356,7 @@ export default defineSpec({
     {
       id: 'work-d16',
       decision:
-        'The summary is a box like a list, and shows no due date; the set line keeps it. The rulebook gets say-it-once.',
+        'The summary is a box like a list, and shows no due date; the assignment line keeps it. The rulebook gets say-it-once.',
       why: 'Jack: "Can we show these a bit more github-y" and "Shown in two spots. This should be a rule, avoid duplication where possible".',
       beat: 'Due on both the summary and the set line',
       date: '2026-10-21',
@@ -373,7 +374,7 @@ export default defineSpec({
       id: 'work-d18',
       supersededBy: 'work-d19',
       decision:
-        'The summary is the plain look only. Four ways to reach it are compared: the flag, a label after the bar, a link in the set line, one more segment.',
+        'The summary is the plain look only. Four ways to reach it are compared: the flag, a label after the bar, a link in the assignment line, one more segment.',
       why: 'Jack: "lets go with C. Still dont like the summary as that icon at the end, lets A/B that now".',
       beat: 'Four summary looks; only the flag',
       date: '2026-10-21',

@@ -1,4 +1,5 @@
 import { defineExamples } from '@/design/examples';
+import { PLACEHOLDER } from '@/units/list-page/hrefs';
 import { HomeLists } from '@/units/assignment-row/home';
 import { CourseRow } from './index';
 import spec from './spec';
@@ -32,7 +33,12 @@ export default defineExamples(spec, CourseRow, {
         weekMinutes={0}
       />
     ),
-    list: () => <HomeLists />,
+    list: () => (
+      <HomeLists
+        workHref={PLACEHOLDER.work}
+        coursesHref={PLACEHOLDER.courses}
+      />
+    ),
   },
   stress: () => (
     <div className="w-[320px] max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">

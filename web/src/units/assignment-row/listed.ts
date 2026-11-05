@@ -1,8 +1,5 @@
 import { daysUntil } from '@/units/set-line/dates';
 
-/** How many assignments Home lists before "Show all" (assignment-row-d4). */
-export const ASSIGNMENT_CAP = 5;
-
 /** The window, in days, for both "due within" and "opened in the last". */
 export const ASSIGNMENT_DAYS = 7;
 
@@ -34,12 +31,11 @@ export function reasonFor(
 }
 
 /** The Home list: the sets that qualify, due ones first by date (the most
- *  overdue first), then opened ones, newest first; at most 5 shown, the rest
- *  counted for "Show all". */
+ *  overdue first), then opened ones, newest first. The list caps itself. */
 export function listAssignments<T extends Listable>(
   sets: readonly T[],
   today: Date,
-): { shown: (T & { reason: Reason })[]; more: number } {
+): (T & { reason: Reason })[] {
   const all = sets.flatMap((s) => {
     const r = reasonFor(s, today);
     return r ? [{ ...s, ...r }] : [];
@@ -55,9 +51,5 @@ export function listAssignments<T extends Listable>(
     .sort(
       (a, b) => (b.openedAt?.getTime() ?? 0) - (a.openedAt?.getTime() ?? 0),
     );
-  const ordered = [...due, ...opened];
-  return {
-    shown: ordered.slice(0, ASSIGNMENT_CAP),
-    more: Math.max(0, ordered.length - ASSIGNMENT_CAP),
-  };
+  return [...due, ...opened];
 }

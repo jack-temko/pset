@@ -24,6 +24,12 @@ export default defineSpec({
       when: 'The list has one place to go, such as "Show all".',
     },
     {
+      id: 'button',
+      name: 'With a button',
+      when: 'The list has one thing to add: a small button such as "Add assignment", centred with the title.',
+      text: 'Add assignment',
+    },
+    {
       id: 'both',
       name: 'With both',
       when: 'A count and an action.',
@@ -39,6 +45,10 @@ export default defineSpec({
       does: 'How many things follow, in a Counter right after the title.',
     },
     { name: 'action', does: 'A text link, such as "Show all", at the right.' },
+    {
+      name: 'button',
+      does: 'A small button, such as "Add assignment", at the right, centred with the title.',
+    },
   ],
   priority: {
     first: 'The title, in the heading size.',
@@ -77,6 +87,14 @@ export default defineSpec({
       why: 'Jack: "Need to be vertically aligned center".',
       beat: 'A count that read as floating off the line',
       date: '2026-10-14',
+    },
+    {
+      id: 'section-heading-d5',
+      decision:
+        'A button sits at the right end of the heading line, centred with the title; the row is 32 high, as a Button is.',
+      why: 'Jack: "move these to be inline with the table headers, but across from them" (Add work, Add material).',
+      beat: 'The button under its list',
+      date: '2026-11-04',
     },
     {
       id: 'section-heading-d4',

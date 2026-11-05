@@ -21,7 +21,7 @@ export default defineSpec({
     {
       id: 'workspace',
       name: 'Workspace',
-      when: 'On a set in the workspace: the course links back, the set is where you are.',
+      when: 'On an assignment in the workspace: the course links back, the assignment is where you are.',
     },
   ],
   stress:

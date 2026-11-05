@@ -10,15 +10,20 @@ export function SectionHeading({
   children,
   count,
   action,
+  button,
 }: {
   children: ReactNode;
   /** How many things follow, such as 8, shown as a Counter. */
   count?: ReactNode;
   /** A text link, such as "Show all". */
   action?: ReactNode;
+  /** A small button, such as "Add assignment", at the right, centred with the title. */
+  button?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-8 min-w-0 items-start justify-between gap-3">
+    <div
+      className={`flex min-h-8 min-w-0 justify-between gap-3 ${button === undefined ? 'items-start' : 'items-center'}`}
+    >
       <div className="flex min-w-0 items-center gap-2">
         <h2 className="ds-heading min-w-0 text-(--ds-fg) [overflow-wrap:anywhere]">
           {children}
@@ -29,6 +34,7 @@ export function SectionHeading({
           </span>
         )}
       </div>
+      {button !== undefined && <div className="shrink-0">{button}</div>}
       {action !== undefined && (
         <div className="ds-small flex h-7 shrink-0 items-center whitespace-nowrap">
           {action}

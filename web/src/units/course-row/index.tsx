@@ -17,7 +17,7 @@ export function CourseRow({
 }: {
   name: string;
   href: string;
-  /** Sets still to do; zero shows as "0 sets to do". */
+  /** Assignments still to do; zero shows as "0 assignments to do". */
   todo: number;
   /** Materials in the course; zero shows as "0 materials". */
   materials: number;
@@ -29,7 +29,7 @@ export function CourseRow({
       title={name}
       href={href}
       meta={[
-        `${String(todo)} set${todo === 1 ? '' : 's'} to do`,
+        `${String(todo)} assignment${todo === 1 ? '' : 's'} to do`,
         `${String(materials)} material${materials === 1 ? '' : 's'}`,
       ]}
       aside={

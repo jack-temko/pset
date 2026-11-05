@@ -16,12 +16,12 @@ export default defineSpec({
     {
       id: 'default',
       name: 'Default',
-      when: 'An ordinary action.',
+      when: 'A standalone action, outlined: Add assignment, Test, Check for updates.',
     },
     {
       id: 'quiet',
       name: 'Quiet',
-      when: 'A low-key action that sits beside material.',
+      when: 'Repeated on every row, or a menu beside a heading: no outline, a tint on hover.',
     },
     {
       id: 'danger',
@@ -93,6 +93,7 @@ export default defineSpec({
   rules: {
     cite: [
       'one-primary',
+      'quiet-when-repeated',
       'links-go-buttons-do',
       'student-decides',
       'honest-waits',

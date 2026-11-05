@@ -49,7 +49,7 @@ function offer(course: Course, st: m.State): MenuGroup[] {
     ...(sets.length > 0
       ? [
           {
-            label: 'Sets',
+            label: 'Assignments',
             items: sets.map((s) => ({ id: `s:${s.id}`, label: s.name })),
           },
         ]

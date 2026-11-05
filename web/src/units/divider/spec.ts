@@ -30,7 +30,7 @@ export default defineSpec({
     {
       id: 'drag',
       label: 'Dragging the line',
-      does: 'Reports the pointer’s x; the parent sets the split and stops each side at 360px.',
+      does: 'Reports the pointer’s x; the parent assignments the split and stops each side at 360px.',
     },
     {
       id: 'reset',

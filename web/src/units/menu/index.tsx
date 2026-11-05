@@ -1,6 +1,9 @@
 import { Ellipsis } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
+import { buttonLook } from '@/units/button/looks';
+import type { ButtonVariant } from '@/units/button';
+
 export interface MenuItem<Id extends string = string> {
   id: Id;
   label: string;
@@ -140,6 +143,7 @@ export function MoreMenu<Id extends string>({
   items,
   onSelect,
   forceOpen,
+  variant = 'quiet',
 }: {
   /** The button's name: "More for this problem". */
   label: string;
@@ -147,6 +151,9 @@ export function MoreMenu<Id extends string>({
   onSelect?: (id: Id) => void;
   /** Opens it from outside (the design page only). */
   forceOpen?: boolean;
+  /** Quiet by default: a menu repeated on every row, or beside a heading, has
+   *  no outline (quiet-when-repeated). */
+  variant?: ButtonVariant;
 }) {
   const [button, setButton] = useState<HTMLButtonElement | null>(null);
   const [shown, setShown] = useState(Boolean(forceOpen));
@@ -167,7 +174,7 @@ export function MoreMenu<Id extends string>({
         onClick={() => {
           setShown((v) => !v);
         }}
-        className="inline-flex h-(--ds-control) w-(--ds-control) shrink-0 items-center justify-center rounded-(--ds-radius-control) border border-(--ds-border) text-(--ds-fg) hover:bg-(--ds-hover) active:bg-(--ds-pressed)"
+        className={`inline-flex h-(--ds-control) w-(--ds-control) shrink-0 items-center justify-center rounded-(--ds-radius-control) border ${buttonLook(variant)}`}
       >
         <Ellipsis className="size-4" aria-hidden />
       </button>

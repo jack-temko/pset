@@ -51,7 +51,7 @@ export default defineSpec({
     {
       id: 'nothing-due',
       name: 'Nothing due',
-      when: 'No unfinished set is due within 7 days, or none has a date.',
+      when: 'No unfinished assignment is due within 7 days, or none has a date.',
       text: 'Nothing due this week.',
     },
     {
@@ -64,7 +64,7 @@ export default defineSpec({
     'A 40 character name and a 70 character set title at 320px: both lines wrap and nothing overflows.',
   data: [
     {
-      reads: 'The student’s name and sets with their due dates',
+      reads: 'The student’s name and assignments with their due dates',
       call: 'sample',
     },
   ],
@@ -81,7 +81,7 @@ export default defineSpec({
     },
     {
       name: 'sets',
-      does: 'The sets the muted line chooses from; a finished set or one without a date is skipped.',
+      does: 'The assignments the muted line chooses from; a finished assignment or one without a date is skipped.',
     },
     { name: 'today', does: 'The day "due Thu" and "this week" count from.' },
   ],

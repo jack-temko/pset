@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Fold',
   group: 'Basics',
   purpose:
-    'A quiet line with a chevron that unfolds what is under it, for the part most visits do not need: finished sets, the checks, the kept errors.',
+    'A quiet line with a chevron that unfolds what is under it, for the part most visits do not need: finished assignments, the checks, the kept errors.',
   states: [
     {
       id: 'closed',

@@ -28,7 +28,7 @@ function Recorded(props: WorkProps) {
           say('Back to the course');
         }}
         onSetMenu={(item) => {
-          say(`Set menu: ${item}`);
+          say(`Assignment menu: ${item}`);
         }}
         onProblemMenu={(item, id) => {
           say(`Problem menu: ${item} on ${id}`);

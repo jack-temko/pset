@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Assignment row',
   group: 'Lists',
   purpose:
-    'One assignment as a two-line list row, for Home: the set and its due label, the course, time left and when it was last opened, the due date and a progress bar.',
+    'One assignment as a two-line list row, for Home: the assignment and its due label, the course, time left and when it was last opened, the due date and a progress bar.',
   states: [
     {
       id: 'due-soon',
@@ -45,8 +45,8 @@ export default defineSpec({
   actions: [
     {
       id: 'open-set',
-      label: 'The set name',
-      does: 'Opens the set in the workspace, where the student left off. The workspace is not a unit yet, so it has no target.',
+      label: 'The assignment name',
+      does: 'Opens the assignment in the workspace, where the student left off. The workspace is not a unit yet, so it has no target.',
     },
     {
       id: 'open-course',
@@ -65,7 +65,7 @@ export default defineSpec({
     },
     {
       name: 'total',
-      does: 'Problems in the set.',
+      does: 'Problems in the assignment.',
     },
     {
       name: 'minutesLeft',
@@ -89,7 +89,7 @@ export default defineSpec({
     },
   ],
   priority: {
-    first: 'The set\u2019s name, then when it is due.',
+    first: 'The assignment\u2019s name, then when it is due.',
     main: 'open-set',
   },
   sizes: {
@@ -115,7 +115,7 @@ export default defineSpec({
     {
       id: 'assignment-row-d1',
       decision:
-        'Home has two lists: Assignments, then Courses, with an info area above them later. An assignment names its set, course, due, progress and time left.',
+        'Home has two lists: Assignments, then Courses, with an info area above them later. An assignment names its assignment, course, due, progress and time left.',
       why: 'Jack: "I want two lists on my home screen ... The two lists are for assignments and courses." He said yes to reversing S13.',
       beat: 'One list of courses, each holding its active set (S13)',
       date: '2026-10-16',
@@ -131,7 +131,7 @@ export default defineSpec({
     {
       id: 'assignment-row-d3',
       decision:
-        'The list holds sets due within 7 days (past ones too) or opened in the last 7 days, due soon at the top, then the recently opened.',
+        'The list holds assignments due within 7 days (past ones too) or opened in the last 7 days, due soon at the top, then the recently opened.',
       why: 'Jack picked "Due within 7 days or opened in the last 7, cap 5" and asked for due soon at the top.',
       beat: 'Every unfinished set',
       date: '2026-10-16',
@@ -139,7 +139,7 @@ export default defineSpec({
     {
       id: 'assignment-row-d4',
       decision:
-        'At most 5 assignments show, then "Show all"; the rule and the cap live in listAssignments.',
+        'At most 5 assignments show, then "Show all N" as the last row of the box (list-d3); the rule is listAssignments, the cap is the list’s.',
       why: 'Jack: "With a limit and gate to show more." He picked cap 5 over cap 3.',
       beat: 'A cap of 3',
       date: '2026-10-16',

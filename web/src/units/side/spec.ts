@@ -52,7 +52,7 @@ export default defineSpec({
   ],
   data: [
     {
-      reads: 'The open tab’s pane: a set, a material or Ask',
+      reads: 'The open tab’s pane: an assignment, a material or Ask',
       call: 'sample',
     },
   ],
@@ -134,7 +134,7 @@ export default defineSpec({
     {
       id: 'side-d2',
       decision:
-        'A side holds any of a set, a material or Ask, as tabs; the pane is given, not chosen here.',
+        'A side holds any of an assignment, a material or Ask, as tabs; the pane is given, not chosen here.',
       why: 'Jack’s pick, W2 and W5: the same tabs as everything else.',
       beat: 'Fixed roles for the sides',
       date: '2026-10-21',

@@ -11,7 +11,7 @@ export default defineSpec({
     {
       id: 'default',
       name: 'This week with sparklines',
-      when: 'The one box: the heatmap left; right, this week as seven bars with last week muted, then questions done and what is left, a 14-day sparkline beside each.',
+      when: 'The one box: the heatmap left; right, this week as seven bars with last week muted, then problems done and what is left, a 14-day sparkline beside each.',
     },
     {
       id: 'no-time',
@@ -33,13 +33,13 @@ export default defineSpec({
       name: 'By way of the course',
       steps: ['open-course'],
     },
-    { id: 'see-every-set', name: 'See every set', steps: ['show-all'] },
+    { id: 'see-every-set', name: 'See every assignment', steps: ['show-all'] },
   ],
   actions: [
     {
       id: 'open-set',
-      label: 'A set in Assignments',
-      does: 'Opens the set in the workspace. The workspace is not a unit yet, so it has no target.',
+      label: 'An assignment in Assignments',
+      does: 'Opens the assignment in the workspace. The workspace is not a unit yet, so it has no target.',
     },
     {
       id: 'open-course',
@@ -48,14 +48,15 @@ export default defineSpec({
     },
     {
       id: 'show-all',
-      label: 'Show all',
-      does: 'Shows every set or every course. The list screens are not units yet, so it has no target.',
+      label: 'Show all 6',
+      does: 'The last row of a list that has more than five: opens the list page, filtered to that list.',
+      target: { unit: 'list-page', state: 'filtered' },
     },
   ],
   data: [
     {
       reads:
-        'The name, the sets (with questions done and total), and per day: minutes by course, questions done, questions left',
+        'The name, the assignments (with problems done and total), and per day: minutes by course, problems done, problems left',
       call: 'sample',
     },
   ],
@@ -74,11 +75,19 @@ export default defineSpec({
     },
     {
       name: 'sets',
-      does: 'The sets for the greeting’s line and what is left.',
+      does: 'The assignments for the greeting’s line and what is left.',
     },
     {
       name: 'study',
-      does: 'Per-day study, with questions done and questions left.',
+      does: 'Per-day study, with problems done and problems left.',
+    },
+    {
+      name: 'workHref',
+      does: 'Where the Assignments list\u2019s "Show all" goes.',
+    },
+    {
+      name: 'coursesHref',
+      does: 'Where the Courses list\u2019s "Show all" goes.',
     },
     { name: 'homeHref', does: 'Where the wordmark goes.' },
     { name: 'settingsHref', does: 'Where Settings goes.' },
@@ -159,7 +168,7 @@ export default defineSpec({
     {
       id: 'home-d7',
       decision:
-        'Show time this week (bars, heading), questions done with last week by now, and what is left in sets due within 7 days. No month total, active days or course.',
+        'Show time this week (bars, heading), problems done with last week by now, and what is left in assignments due in 7 days. No month total, active days, course.',
       why: 'Jack, 2026-10-21: "the most important ones to display and most useful." What is left is what a student can act on tonight.',
       beat: 'Most time this week, time this month, active days, sets finished',
       date: '2026-10-21',
@@ -199,7 +208,7 @@ export default defineSpec({
     {
       id: 'home-d12',
       decision:
-        'A change is muted: arrow and percent in the muted colour, never yellow or red. The Questions left sparkline is questions left per day over 14 days.',
+        'A change is muted: arrow and percent in the muted colour, never yellow or red. The Problems left sparkline is problems left per day over 14 days.',
       why: 'Coordinator, 2026-10-21: being behind on a Tuesday is not a warning; sets finished per day read as a flat line beside the figure and said nothing.',
       beat: 'Green and amber changes; sets finished per day',
       date: '2026-10-21',
@@ -231,7 +240,7 @@ export default defineSpec({
     {
       id: 'home-d16',
       decision:
-        'A row keeps the due tag beside the set name and the due date at the right (say-it-once).',
+        'A row keeps the due tag beside the assignment name and the due date at the right (say-it-once).',
       why: 'Assumed, not asked: the tag gives urgency at a glance and the date gives the exact day.',
       beat: 'The tag in place of the date (set-line-d7)',
       date: '2026-10-22',
@@ -243,6 +252,14 @@ export default defineSpec({
       why: 'Not designed: noted when the spec format dropped the data waiting and failed fields (ideas/spec-format-grill.md, F9).',
       beat: 'A failed line in the data section',
       date: '2026-10-22',
+    },
+    {
+      id: 'home-d18',
+      decision:
+        'Assignments and Courses show five rows, then "Show all N" inside the box, linking to the list page; the heading has no link.',
+      why: 'Jack, in ideas/list-pattern-grill.md: "Cap 5, Show all page (Recommended)" and "Foot, with a count (Recommended)" (L2, L3).',
+      beat: '"Show all" at the heading’s right, going nowhere',
+      date: '2026-11-04',
     },
   ],
 });

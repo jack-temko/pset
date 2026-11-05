@@ -134,6 +134,14 @@ export const RULES: readonly Rule[] = [
     check: 'No link runs an action, and no button only navigates',
     scope: 'all',
   },
+  // Jack, 2026-11-04: "Rows and heading quiet (Recommended)".
+  {
+    id: 'quiet-when-repeated',
+    rule: 'Make a control repeated on every row, or a menu beside a heading, quiet: no outline, a tint on hover; an outline is for a standalone action',
+    check:
+      'No row button or "..." menu has an outline; outlines are on standalone actions (Add assignment, Test)',
+    scope: 'all',
+  },
   {
     id: 'sentence-case',
     rule: 'Write every label in sentence case: headings, buttons, tabs, tags, menu items and table headers',
@@ -154,5 +162,14 @@ export const RULES: readonly Rule[] = [
     check:
       'No undoable action asks first, and no action that deletes a course or everything lacks the typed name',
     scope: 'all',
+  },
+  // Jack, 2026-11-04: "Fix all the wording uniformity issues, add a rule."
+  {
+    id: 'one-word-per-thing',
+    rule: 'Call each thing by one word on every screen and on this page, the word in the word list: assignment, problem, material, course, memory, pane',
+    check:
+      "No screen text or spec name uses a word the list rules out (set, question, book, homework, panel); a student's own names are theirs",
+    scope: 'all',
+    enforcedBy: 'checkUnit, from web/src/design/words.ts',
   },
 ];

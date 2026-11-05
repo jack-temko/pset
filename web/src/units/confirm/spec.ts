@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Confirm',
   group: 'Basics',
   purpose:
-    'A question before something is taken away: what goes with counts, then a danger button and Cancel. The middle level of asking; it floats under its button.',
+    'A problem before something is taken away: what goes with counts, then a danger button and Cancel. The middle level of asking; it floats under its button.',
   states: [
     {
       id: 'history',
@@ -45,7 +45,7 @@ export default defineSpec({
     },
     {
       name: 'anchor',
-      does: 'The element that began it: the question floats under it. None puts it in the flow (the design page).',
+      does: 'The element that began it: the problem floats under it. None puts it in the flow (the design page).',
     },
   ],
   priority: { first: 'What goes.', main: 'cancel' },
@@ -63,7 +63,7 @@ export default defineSpec({
       id: 'confirm-d1',
       supersededBy: 'confirm-d2',
       decision:
-        'A destructive action asks in place, not in a modal: the line swaps for the question, with counts, a danger button and Cancel.',
+        'A destructive action asks in place, not in a modal: the line swaps for the problem, with counts, a danger button and Cancel.',
       why: 'Assumed, to confirm with Jack (course-view-grill C7, settings-view-grill G9): both views confirm with counts of what goes.',
       beat: 'A modal; an Undo only',
       date: '2026-10-22',
@@ -71,7 +71,7 @@ export default defineSpec({
     {
       id: 'confirm-d2',
       decision:
-        'The question is a popover anchored under the button that began it, not a block in the page: nothing is pushed down.',
+        'The problem is a popover anchored under the button that began it, not a block in the page: nothing is pushed down.',
       why: 'Review of the Course and Settings builds: an in-place block moved the content below it. Assumed, to confirm with Jack.',
       beat: 'A block that replaces the button or opens above the lists',
       date: '2026-10-22',

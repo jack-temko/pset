@@ -17,7 +17,7 @@ export function Confirm({
   onCancel,
   anchor,
 }: {
-  /** What goes, with counts: "This deletes 12 sets and 9 materials." */
+  /** What goes, with counts: "This deletes 12 assignments and 9 materials." */
   message: string;
   /** The danger button's words: "Delete course". */
   confirmLabel: string;

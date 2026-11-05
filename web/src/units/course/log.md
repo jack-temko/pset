@@ -11,3 +11,13 @@ Built from `ideas/course-view-grill.md`, a reverse grill: Claude wrote the quest
 - G9 (Settings grill): "Three levels (Recommended)". Delete course asks for the course's name in a danger dialog.
 
 Decisions that say "assumed" are the ones he was not asked: the path and the heading both staying, Undo in place on a deleted row, the memories fold at the foot and files dropped on the page.
+
+2026-11-04, `ideas/list-pattern-grill.md` (L1 to L3, L8, L9): Jack picked "Switch in header (Recommended)" over the Done fold, "Cap 5, Show all page (Recommended)" and "Foot, with a count (Recommended)". Work's fold became the list's header switch and Work and Materials show 5 rows with "Show all N" at the foot (course-d25). C3 in `ideas/course-view-grill.md` is reversed.
+
+2026-11-04, review: the "Show all" hrefs (and the list page's course links) are props. On the design page they are placeholders from `list-page/hrefs.ts`, pointing at this view's states, until the list page is wired (A6 of `ideas/list-pattern-grill.md`).
+
+2026-11-04, after review (`ideas/list-pattern-grill.md` Batch 4): Jack, "Line says only next due (Recommended)": the muted line is only "Next due Thu", empty with nothing dated, its height kept so nothing jumps against the skeleton (L13, course-d26).
+
+2026-11-04, Jack on the app: "Can we move these to be inline with the table headers, but across from them?" The Adds moved into their headings (course-d27); the skeleton bodies are now 103 (Work) and 184 (Materials).
+
+2026-11-04, Jack asked what the rules were for outlined buttons (the Remove buttons, the row menus and the menu beside the course name) and chose "Rows and heading quiet (Recommended)": a control repeated on every row, or a menu beside a heading, is quiet (no outline, a hover tint); an outline stays on standalone actions. New rule quiet-when-repeated.

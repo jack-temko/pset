@@ -222,7 +222,7 @@ export function Settings({
       aside={
         anyFix ? (
           <div className="flex justify-end">
-            {c.fix && <Button>{c.fix}</Button>}
+            {c.fix && <Button variant="quiet">{c.fix}</Button>}
           </div>
         ) : undefined
       }
@@ -494,7 +494,7 @@ export function Settings({
                 </Row>
                 <Row
                   name="Reset everything"
-                  hint="Removes every course, set, material and memory."
+                  hint="Removes every course, assignment, material and memory."
                 >
                   <Button
                     variant="danger"
@@ -532,7 +532,7 @@ export function Settings({
               {confirming === 'all' && (
                 <DangerDialog
                   title="Reset everything"
-                  message={`This deletes ${plural(counts.courses, 'course', 'courses')}, ${plural(counts.sets, 'set', 'sets')}, ${plural(counts.materials, 'material', 'materials')} and ${plural(counts.memories, 'memory', 'memories')}.`}
+                  message={`This deletes ${plural(counts.courses, 'course', 'courses')}, ${plural(counts.sets, 'assignment', 'assignments')}, ${plural(counts.materials, 'material', 'materials')} and ${plural(counts.memories, 'memory', 'memories')}.`}
                   word="reset"
                   confirmLabel="Reset everything"
                   onConfirm={() => {

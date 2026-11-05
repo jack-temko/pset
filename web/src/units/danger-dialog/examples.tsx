@@ -10,7 +10,7 @@ export default defineExamples(spec, DangerDialog, {
       <DangerDialog
         inline
         title="Delete ECE 210"
-        message="This deletes 12 sets and 9 materials."
+        message="This deletes 12 assignments and 9 materials."
         word="ECE 210"
         confirmLabel="Delete course"
         onConfirm={noop}
@@ -21,7 +21,7 @@ export default defineExamples(spec, DangerDialog, {
       <DangerDialog
         inline
         title="Reset everything"
-        message="This deletes 4 courses, 31 sets, 52 materials and 24 memories."
+        message="This deletes 4 courses, 31 assignments, 52 materials and 24 memories."
         word="reset"
         confirmLabel="Reset everything"
         onConfirm={noop}
@@ -34,7 +34,7 @@ export default defineExamples(spec, DangerDialog, {
       <DangerDialog
         inline
         title="Delete Electromagnetics and the physics of electrical machines"
-        message="This deletes 12 sets, 9 materials, 8 memories and 41 hours of study time from Electromagnetics and the physics of electrical machines."
+        message="This deletes 12 assignments, 9 materials, 8 memories and 41 hours of study time from Electromagnetics and the physics of electrical machines."
         word="Electromagnetics and the physics of electrical machines"
         confirmLabel="Delete course"
         onConfirm={noop}

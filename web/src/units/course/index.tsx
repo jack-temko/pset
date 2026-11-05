@@ -15,10 +15,10 @@ import { Fold } from '@/units/fold';
 import { Heatmap, HeatmapSkeleton } from '@/units/heatmap';
 import { studyDay } from '@/units/heatmap/day';
 import { ChangeText, Moved, RowSkeleton } from '@/units/home';
-import { Beside, Caption, Row } from '@/units/home/layouts';
+import { Beside, Caption, Row, Rows } from '@/units/home/layouts';
 import { WEEKS } from '@/units/home/options';
 import { changeOf, homeStats } from '@/units/home/stats';
-import { List } from '@/units/list';
+import { List, LIST_CAP } from '@/units/list';
 import { ListRow } from '@/units/list-row';
 import { MoreMenu } from '@/units/menu';
 import { ProgressBar } from '@/units/progress-bar';
@@ -207,30 +207,26 @@ function MaterialRow({
   );
 }
 
-/** The Add at a list's foot: one line under the list, the same height
- *  whether the list is empty or full. */
+/** The Add at the right end of a list's heading line (course-d27). */
 function AddButton({ label, onPick }: { label: string; onPick: () => void }) {
   return (
-    <div className="mt-3">
-      <Button icon={Plus} onPress={onPick}>
-        {label}
-      </Button>
-    </div>
+    <Button icon={Plus} onPress={onPick}>
+      {label}
+    </Button>
   );
 }
 
-/** The line under the name: how many sets are to do and when the next is
- *  due, or "Nothing due" (course-d15). */
+/** The line under the name says only what the list cannot: when the next set
+ *  is due, as "Next due Thu". With nothing dated it is empty, and the Work
+ *  list says "Nothing to do" (course-d26). */
 function standing(todo: readonly CourseSet[], today: Date): string {
-  if (todo.length === 0) return 'Nothing due';
   const dated = todo.flatMap((s) => (s.due ? [s.due] : []));
   const next = dated.sort((a, b) => a.getTime() - b.getTime())[0] as
     | Date
     | undefined;
-  const count = `${plural(todo.length, 'set', 'sets')} to do`;
-  if (!next) return count;
+  if (!next) return '';
   const due = dueClause(next, today);
-  return `${count} · ${due.overdue ? 'was' : 'next'} ${due.text}`;
+  return `${due.overdue ? 'Was' : 'Next'} ${due.text}`;
 }
 
 const figureOf = (value: string) => (
@@ -287,34 +283,36 @@ function Stats({ course, today }: { course: CourseData; today: Date }) {
               }))}
             />
           </div>
-          <Row
-            first
-            figure={figureOf(String(s.questions.week))}
-            label={
-              <p className="ds-small flex items-center gap-x-2 text-(--ds-fg-muted)">
-                <span>Questions done</span>
-                {questionsChange && <ChangeText change={questionsChange} />}
-              </p>
-            }
-            caption={
-              <Moved text={`Last week by now: ${String(s.questions.last)}`} />
-            }
-            trailing={<Sparkline values={s.spark.questions} height={28} />}
-          />
-          <Row
-            figure={figureOf(money(course.cost))}
-            label={<p className={small}>Cost so far</p>}
-            caption={
-              <Moved
-                text={
-                  none
-                    ? 'Nothing spent yet'
-                    : `${money(course.monthCost)} this month`
-                }
-              />
-            }
-            trailing={<Sparkline values={course.costSpark} height={28} />}
-          />
+          <Rows>
+            <Row
+              first
+              figure={figureOf(String(s.questions.week))}
+              label={
+                <p className="ds-small flex items-center gap-x-2 whitespace-nowrap text-(--ds-fg-muted)">
+                  <span>Problems done</span>
+                  {questionsChange && <ChangeText change={questionsChange} />}
+                </p>
+              }
+              caption={
+                <Moved text={`Last week by now: ${String(s.questions.last)}`} />
+              }
+              trailing={<Sparkline values={s.spark.questions} height={28} />}
+            />
+            <Row
+              figure={figureOf(money(course.cost))}
+              label={<p className={small}>Cost so far</p>}
+              caption={
+                <Moved
+                  text={
+                    none
+                      ? 'Nothing spent yet'
+                      : `${money(course.monthCost)} this month`
+                  }
+                />
+              }
+              trailing={<Sparkline values={course.costSpark} height={28} />}
+            />
+          </Rows>
         </>
       }
     />
@@ -337,6 +335,8 @@ export function Course({
   failed,
   today,
   unfolded,
+  workHref,
+  materialsHref,
   homeHref = '/',
   settingsHref = '/settings',
 }: {
@@ -347,6 +347,10 @@ export function Course({
   today: Date;
   /** Opens every fold (the design page only). */
   unfolded?: boolean;
+  /** Where Work's "Show all" goes. */
+  workHref: string;
+  /** Where Materials' "Show all" goes. */
+  materialsHref: string;
   homeHref?: string;
   settingsHref?: string;
 }) {
@@ -355,6 +359,7 @@ export function Course({
   const [sets, setSets] = useState(course.sets);
   const [materials, setMaterials] = useState(course.materials);
   const [memories, setMemories] = useState(course.memories);
+  const [side, setSide] = useState('todo');
   const [renaming, setRenaming] = useState<string>();
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState<Pending>();
@@ -415,6 +420,19 @@ export function Course({
   };
 
   const { todo, done } = split(sets);
+  const switchProps =
+    done.length > 0
+      ? {
+          states: [
+            { id: 'todo', label: 'To do', count: todo.length },
+            { id: 'done', label: 'Done', count: done.length },
+          ],
+        }
+      : {};
+  // A list with no finished set has no switch and stays on To do; the list
+  // never switches by itself.
+  const shownSide = done.length > 0 ? side : 'todo';
+  if (side !== shownSide) setSide(shownSide);
 
   const addedMaterials = (files: readonly string[]) => {
     if (files.length === 0) return;
@@ -581,14 +599,14 @@ export function Course({
                     />
                   </div>
                 </div>
-                <p className="ds-body mt-2 text-(--ds-fg-muted) [overflow-wrap:anywhere]">
+                <p className="ds-body mt-2 min-h-(--ds-body-line) text-(--ds-fg-muted) [overflow-wrap:anywhere]">
                   {standing(todo, today)}
                 </p>
               </div>
               {confirming && (
                 <DangerDialog
                   title={`Delete ${name}`}
-                  message={`This deletes ${plural(sets.length, 'set', 'sets')} and ${plural(materials.length, 'material', 'materials')}.`}
+                  message={`This deletes ${plural(sets.length, 'assignment', 'assignments')} and ${plural(materials.length, 'material', 'materials')}.`}
                   word={name}
                   confirmLabel="Delete course"
                   onConfirm={() => {
@@ -608,45 +626,64 @@ export function Course({
               <div className="mt-16 space-y-10">
                 <div>
                   <SectionHeading
-                    count={todo.length > 0 ? todo.length : undefined}
+                    count={
+                      done.length === 0 && todo.length > 0
+                        ? todo.length
+                        : undefined
+                    }
+                    button={
+                      <AddButton
+                        label="Add assignment"
+                        onPick={() => {
+                          workPicker.current?.click();
+                        }}
+                      />
+                    }
                   >
-                    Work
+                    Assignments
                   </SectionHeading>
                   <div className="mt-3">
-                    <List empty="No work yet. Add an assignment sheet.">
-                      {[
-                        ...todo.map((s) => setRow(s, false)),
-                        ...(done.length > 0
-                          ? [
-                              <div key="done" className="px-2">
-                                <Fold
-                                  label={`Done (${String(done.length)})`}
-                                  defaultOpen={unfolded}
-                                >
-                                  <div className="-mx-2 divide-y divide-(--ds-border-muted) border-t border-(--ds-border-muted)">
-                                    {done.map((s) => setRow(s, true))}
-                                  </div>
-                                </Fold>
-                              </div>,
-                            ]
-                          : []),
-                      ]}
+                    <List
+                      {...switchProps}
+                      state={shownSide}
+                      onState={setSide}
+                      cap={LIST_CAP}
+                      showAllHref={workHref}
+                      empty={
+                        sets.length === 0
+                          ? 'No assignments yet. Add an assignment sheet.'
+                          : shownSide === 'done'
+                            ? 'Nothing done yet'
+                            : 'Nothing to do'
+                      }
+                    >
+                      {shownSide === 'done'
+                        ? done.map((s) => setRow(s, true))
+                        : todo.map((s) => setRow(s, false))}
                     </List>
-                    <AddButton
-                      label="Add work"
-                      onPick={() => {
-                        workPicker.current?.click();
-                      }}
-                    />
                   </div>
                 </div>
 
                 <div>
-                  <SectionHeading count={materials.length}>
+                  <SectionHeading
+                    count={materials.length}
+                    button={
+                      <AddButton
+                        label="Add material"
+                        onPick={() => {
+                          materialPicker.current?.click();
+                        }}
+                      />
+                    }
+                  >
                     Materials
                   </SectionHeading>
                   <div className="mt-3">
-                    <List empty="No materials yet. Add a textbook or slides.">
+                    <List
+                      cap={LIST_CAP}
+                      showAllHref={materialsHref}
+                      empty="No materials yet. Add a textbook or slides."
+                    >
                       {materials.map((m) =>
                         pending?.kind === 'material' && pending.id === m.id ? (
                           <DeletedRow
@@ -678,12 +715,6 @@ export function Course({
                         ),
                       )}
                     </List>
-                    <AddButton
-                      label="Add material"
-                      onPick={() => {
-                        materialPicker.current?.click();
-                      }}
-                    />
                   </div>
                 </div>
 
@@ -766,8 +797,10 @@ export function CourseSkeleton({
                 <div className="min-h-0 flex-1">
                   <BarChartSkeleton />
                 </div>
-                <RowSkeleton first />
-                <RowSkeleton />
+                <Rows>
+                  <RowSkeleton first />
+                  <RowSkeleton />
+                </Rows>
               </>
             }
           />
@@ -794,5 +827,8 @@ export function CourseSkeleton({
   );
 }
 
-/** Heights of the usual course's Work and Materials bodies, Add included. */
-const SECTIONS = [139, 228];
+/** Heights of the usual course's Work and Materials boxes, measured from the
+ *  loaded page: Work is 2 + 41 (switch band) + 60 (one row), Materials 2 + 3 rows
+ *  of 60 + 2 rules. Each Add is in the heading line, which the skeleton's bar
+ *  already holds. */
+const SECTIONS = [103, 184];

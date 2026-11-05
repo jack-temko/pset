@@ -70,7 +70,7 @@ export default defineSpec({
     },
     {
       id: 'book-failed',
-      name: 'The book could not be read',
+      name: 'The material could not be read',
       when: 'The whole material failed to read: what failed, why, and Read it again; nothing else is shown.',
       text: "Couldn't read Griffiths",
     },

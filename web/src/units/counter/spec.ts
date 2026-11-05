@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Counter',
   group: 'Basics',
   purpose:
-    'A small pill holding a number, set beside a title: how many things follow. Never clickable.',
+    'A small pill holding a number, assignment beside a title: how many things follow. Never clickable.',
   states: [
     { id: 'one-digit', name: 'One digit', when: 'A few things, such as 8.' },
     {

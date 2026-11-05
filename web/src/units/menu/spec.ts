@@ -11,7 +11,7 @@ export default defineSpec({
     {
       id: 'add',
       name: 'Grouped, with headings',
-      when: 'The + menu: Materials and Sets under headings, then Ask on its own after a hairline.',
+      when: 'The + menu: Materials and Assignments under headings, then Ask on its own after a hairline.',
     },
     {
       id: 'tab',
@@ -65,7 +65,7 @@ export default defineSpec({
     gives: ['Long labels truncate', 'A long list scrolls inside the menu'],
   },
   rules: {
-    cite: ['links-go-buttons-do', 'sentence-case'],
+    cite: ['links-go-buttons-do', 'sentence-case', 'quiet-when-repeated'],
   },
   log: 'web/src/units/menu/log.md',
   decisions: [
@@ -84,6 +84,14 @@ export default defineSpec({
       why: 'Both did one job. Menu already has the top layer, window clamping, truncation and groups; the action menu was a button and a plain list.',
       beat: 'Keeping the action menu and widening it to open at a point',
       date: '2026-10-21',
+    },
+    {
+      id: 'menu-d3',
+      decision:
+        'The "..." button is quiet by default (no outline, a hover tint), in the Button’s own colours; a standalone one passes `variant="default"`.',
+      why: 'Jack: "Rows and heading quiet (Recommended)" (quiet-when-repeated).',
+      beat: 'An outlined "..." on every row and beside the heading',
+      date: '2026-11-04',
     },
   ],
 });

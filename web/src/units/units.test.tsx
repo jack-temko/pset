@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Button, REASON_MS } from './button';
 import { Counter } from './counter';
 import { AssignmentRow } from './assignment-row';
-import { ASSIGNMENT_CAP, listAssignments } from './assignment-row/listed';
+import { listAssignments } from './assignment-row/listed';
 import { openedAgo } from './assignment-row/opened';
 import { CourseRow } from './course-row';
 import { Link } from './link';
@@ -1195,7 +1195,7 @@ describe('CourseRow', () => {
     expect(a[0]?.getAttribute('href')).toBe('/c/1');
     expect(el.querySelector('.min-h-6')?.textContent).toBe('Circuits I');
     const p = el.querySelector('p');
-    expect(p?.textContent).toBe('3 sets to do \u00b7 7 materials');
+    expect(p?.textContent).toBe('3 assignments to do \u00b7 7 materials');
     expect(p?.querySelector('svg')).toBeNull();
     expect(el.textContent).not.toContain('Opened');
     expect(el.firstElementChild?.className).toContain('min-h-14');
@@ -1204,8 +1204,8 @@ describe('CourseRow', () => {
   it('writes the singular at 1 and zero as 0', () => {
     const meta = (todo: number, materials: number) =>
       row({ todo, materials }).querySelector('p')?.textContent;
-    expect(meta(1, 1)).toBe('1 set to do \u00b7 1 material');
-    expect(meta(0, 0)).toBe('0 sets to do \u00b7 0 materials');
+    expect(meta(1, 1)).toBe('1 assignment to do \u00b7 1 material');
+    expect(meta(0, 0)).toBe('0 assignments to do \u00b7 0 materials');
   });
 
   it('shows the time this week in the aside, rounded, 0 m for none', () => {
@@ -1298,7 +1298,7 @@ describe('listAssignments', () => {
   });
 
   it('lists sets due within 7 days or opened in the last 7, due ones first', () => {
-    const { shown, more } = listAssignments(
+    const shown = listAssignments(
       [
         s('opened', { openedAt: ago(1) }),
         s('late', { due: due(20) }),
@@ -1316,16 +1316,13 @@ describe('listAssignments', () => {
       'opened:opened',
       'older:opened',
     ]);
-    expect(more).toBe(0);
   });
 
-  it('caps at five and counts the rest', () => {
+  it('keeps every qualifying set, for the list to cap', () => {
     const sets = Array.from({ length: 8 }, (_, i) =>
       s(String(i), { due: due(14 + (i % 4)) }),
     );
-    const { shown, more } = listAssignments(sets, today);
-    expect(shown).toHaveLength(ASSIGNMENT_CAP);
-    expect(more).toBe(3);
+    expect(listAssignments(sets, today)).toHaveLength(8);
   });
 });
 

@@ -14,6 +14,7 @@ import {
 import { LINE_MAX, PURPOSE_MAX } from './limits';
 import { fixture, FIXTURES, UNITS } from './registry';
 import { RULES } from './rules';
+import { offList } from './words';
 import { VISION } from './vision';
 import { defineExamples } from './examples';
 import { defineSpec, type AnySpec } from './spec';
@@ -443,7 +444,7 @@ describe('the checks', () => {
 describe('the rulebook and the vision', () => {
   it('the rulebook is sound', () => {
     expect(checkRulebook(RULES)).toEqual([]);
-    expect(RULES).toHaveLength(22);
+    expect(RULES).toHaveLength(24);
   });
 
   it('fails on a duplicate or a badly spelled rule id', () => {
@@ -464,5 +465,14 @@ describe('the rulebook and the vision', () => {
   it('fails on a vision line over the limit', () => {
     const long = 'x'.repeat(LINE_MAX + 1);
     expect(checkVision({ line: long, facts: [] })).toHaveLength(1);
+  });
+});
+
+describe('the word list', () => {
+  it('rules out the other names for a thing, but not a student’s own names', () => {
+    expect(offList('One set to do')).toEqual(['set (say assignment)']);
+    expect(offList('3 questions left')).toEqual(['questions (say problem)']);
+    expect(offList('Open Problem set 4')).toEqual([]);
+    expect(offList('Search assignments')).toEqual([]);
   });
 });
