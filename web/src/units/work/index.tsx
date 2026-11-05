@@ -285,6 +285,7 @@ export function Work({
             />
           </div>
           <MoreMenu
+            variant="default"
             label="More for this set"
             items={menu}
             onSelect={onSetItem}

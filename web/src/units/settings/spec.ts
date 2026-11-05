@@ -171,6 +171,7 @@ export default defineSpec({
   },
   rules: {
     cite: [
+      'quiet-when-repeated',
       'check-before-cost',
       'honest-waits',
       'failure-says-what',

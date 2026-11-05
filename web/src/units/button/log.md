@@ -51,3 +51,5 @@ The builder found the first plan broke the contrast floors, and these were settl
   colour in.
 - A not-ready button has no hover or pressed fill, and keeps the default shape whatever
   its variant (muted text does not reach its contrast on a solid ground).
+
+2026-11-04, Jack asked what the rules were for outlined buttons (the Remove buttons, the row menus and the menu beside the course name) and chose "Rows and heading quiet (Recommended)": a control repeated on every row, or a menu beside a heading, is quiet (no outline, a hover tint); an outline stays on standalone actions. New rule quiet-when-repeated.

@@ -166,6 +166,7 @@ export default defineSpec({
   },
   rules: {
     cite: [
+      'quiet-when-repeated',
       'course-first',
       'work-first',
       'material-is-main',

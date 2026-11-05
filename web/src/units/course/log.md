@@ -19,3 +19,5 @@ Decisions that say "assumed" are the ones he was not asked: the path and the hea
 2026-11-04, after review (`ideas/list-pattern-grill.md` Batch 4): Jack, "Line says only next due (Recommended)": the muted line is only "Next due Thu", empty with nothing dated, its height kept so nothing jumps against the skeleton (L13, course-d26).
 
 2026-11-04, Jack on the app: "Can we move these to be inline with the table headers, but across from them?" The Adds moved into their headings (course-d27); the skeleton bodies are now 103 (Work) and 184 (Materials).
+
+2026-11-04, Jack asked what the rules were for outlined buttons (the Remove buttons, the row menus and the menu beside the course name) and chose "Rows and heading quiet (Recommended)": a control repeated on every row, or a menu beside a heading, is quiet (no outline, a hover tint); an outline stays on standalone actions. New rule quiet-when-repeated.

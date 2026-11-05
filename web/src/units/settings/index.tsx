@@ -222,7 +222,7 @@ export function Settings({
       aside={
         anyFix ? (
           <div className="flex justify-end">
-            {c.fix && <Button>{c.fix}</Button>}
+            {c.fix && <Button variant="quiet">{c.fix}</Button>}
           </div>
         ) : undefined
       }

@@ -2,19 +2,9 @@ import { LoaderCircle, type LucideIcon } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { Tooltip } from '@/units/tooltip';
+import { buttonLook, type ButtonVariant } from './looks';
 
-export type ButtonVariant = 'primary' | 'default' | 'quiet' | 'danger';
-
-const LOOKS: Record<ButtonVariant, string> = {
-  primary:
-    'border-transparent bg-(--ds-accent-solid) text-(--ds-on-accent) hover:bg-(--ds-accent-solid-hover) active:bg-(--ds-accent-solid-pressed)',
-  default:
-    'border-(--ds-border) bg-transparent text-(--ds-fg) hover:bg-(--ds-hover) active:bg-(--ds-pressed)',
-  quiet:
-    'border-transparent bg-transparent text-(--ds-fg) hover:bg-(--ds-hover) active:bg-(--ds-pressed)',
-  danger:
-    'border-transparent bg-(--ds-danger-solid) text-(--ds-on-danger) hover:bg-(--ds-danger-solid-hover) active:bg-(--ds-danger-solid-pressed)',
-};
+export type { ButtonVariant };
 
 /** A not-ready button has no fill and no hover: muted text and its reason
  *  (a tooltip) mark it. Its look is the default shape whatever its variant, since muted
@@ -76,7 +66,7 @@ export function Button({
     };
   }, [pressed]);
 
-  const look = notReady ? NOT_READY : LOOKS[variant];
+  const look = notReady ? NOT_READY : buttonLook(variant);
   // Busy with no icon: the label keeps its box but is not drawn, and the
   // spinner sits over it, so the button cannot change size (button-d3).
   const covered = busy && !Icon;

@@ -134,6 +134,14 @@ export const RULES: readonly Rule[] = [
     check: 'No link runs an action, and no button only navigates',
     scope: 'all',
   },
+  // Jack, 2026-11-04: "Rows and heading quiet (Recommended)".
+  {
+    id: 'quiet-when-repeated',
+    rule: 'Make a control repeated on every row, or a menu beside a heading, quiet: no outline, a tint on hover; an outline is for a standalone action',
+    check:
+      'No row button or "..." menu has an outline; outlines are on standalone actions (Add work, Test)',
+    scope: 'all',
+  },
   {
     id: 'sentence-case',
     rule: 'Write every label in sentence case: headings, buttons, tabs, tags, menu items and table headers',
