@@ -738,7 +738,7 @@ export function Course({
                                 );
                               }}
                             >
-                              Remove
+                              Forget
                             </Button>
                           </div>
                         }
