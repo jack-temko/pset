@@ -1,0 +1,141 @@
+name: Release
+
+# A v* tag on main builds the Linux and macOS files from the tagged commit,
+# starts each one to check it is alive, signs the checksums and publishes a
+# release. A tag with a hyphen (v0.1.0-rc.1) is published as a pre-release,
+# which the installer's "latest" skips. A manual run on any branch builds and
+# checks the same files and publishes nothing: that is how this file is tried.
+# Spec: ideas/release-runner-grill.md.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: v
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            v=${GITHUB_REF_NAME#v}
+          else
+            v=0.0.0-dev.$GITHUB_RUN_NUMBER
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      # A release comes from main: a tag on a commit that is not on it is a mistake.
+      - if: github.ref_type == 'tag'
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "::error::$GITHUB_REF_NAME is not on main. Releases are tagged on main."
+            exit 1
+          }
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: tools/release/build.sh "$V"
+        env:
+          V: ${{ steps.v.outputs.version }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-files
+          path: dist/*
+          if-no-files-found: error
+
+  # Each program is started and asked for its page and an API answer. Linux
+  # runs the amd64 build; the Mac job runs the Apple Silicon one (the Intel
+  # one is built the same way and not run).
+  smoke-linux:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-files
+          path: dist
+      - env:
+          V: ${{ needs.build.outputs.version }}
+        run: |
+          tar -xzf "dist/pset-$V-linux-amd64.tar.gz" -C dist
+          tools/release/smoke.sh "dist/pset-$V-linux-amd64/pset" "$V"
+
+  smoke-macos:
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-files
+          path: dist
+      - env:
+          V: ${{ needs.build.outputs.version }}
+        run: |
+          tar -xzf "dist/pset-$V-macos.tar.gz" -C dist
+          file "dist/pset-$V-macos/bin/pset-arm64" "dist/pset-$V-macos/bin/pset-amd64"
+          tools/release/smoke.sh "dist/pset-$V-macos/bin/pset-arm64" "$V"
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: [build, smoke-linux, smoke-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-files
+          path: dist
+      - name: Sign the checksums
+        run: |
+          [ -n "$RELEASE_SIGNING_KEY" ] || { echo "::error::The RELEASE_SIGNING_KEY secret isn't set. Make a key with: go run ./tools/release/sign -generate"; exit 1; }
+          go run ./tools/release/sign -in dist/SHA256SUMS -out dist/SHA256SUMS.sig
+      - name: Write the notes
+        run: |
+          prev=$(git describe --tags --abbrev=0 --match 'v*' "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          {
+            if [ -n "$prev" ]; then
+              echo "Changes since $prev:"
+              echo
+              git log --no-merges --pretty='- %s' "$prev..$GITHUB_REF_NAME"
+            else
+              echo "First release."
+            fi
+            echo
+            echo 'Install or update on macOS, Linux or WSL (Debian and Ubuntu):'
+            echo
+            echo '```'
+            echo 'curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/install.sh | sh'
+            echo '```'
+          } > notes.md
+      - name: Publish
+        run: |
+          flags=
+          case "$GITHUB_REF_NAME" in *-*) flags=--prerelease ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "PSet ${GITHUB_REF_NAME#v}" --notes-file notes.md $flags

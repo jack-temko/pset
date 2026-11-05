@@ -1,0 +1,6 @@
+# Commits that only reflow or reformat, skipped by git blame:
+#   git blame --ignore-revs-file .git-blame-ignore-revs <file>
+# or once: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Format the whole repo: oxfmt, gofmt, goimports, shfmt (#31)
+0ad7f25eca6cc098f05da4283514436cea58640c
