@@ -22,3 +22,4 @@ Batch 5: thinking **""Thinking" shimmer, then gone (Recommended)"**; actions **"
 - A key failure shows **Open Settings** alone (ask-d24).
 - Clear keeps the pane at the top while it asks.
 - The sample answer says "your textbook", and its search matches its question.
+- Send sits **inside the box**, which starts at one line and grows to eight, then scrolls; Shift and Enter start a line (ask-d25).

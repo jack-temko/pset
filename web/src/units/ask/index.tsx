@@ -251,6 +251,9 @@ function fileOf(files: FileList | null | undefined) {
   return [...(files ?? [])].find((f) => f.type.startsWith('image/'));
 }
 
+/** Eight lines of body text and the box's own padding. */
+const BOX_MAX_PX = 186;
+
 /** The composer (ask-d6, ask-d8, ask-d11): what the message is about, a
  *  picture if you pasted or dropped one, the box and one button. While Ask
  *  answers the box stays yours and the button says Stop. */
@@ -288,6 +291,14 @@ function Composer({
     read.readAsDataURL(file);
     return true;
   };
+  // The box fits what is written, from one line to BOX_MAX_PX.
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${String(Math.min(el.scrollHeight, BOX_MAX_PX))}px`;
+    el.style.overflowY = el.scrollHeight > BOX_MAX_PX ? 'auto' : 'hidden';
+  }, [text]);
   const ready = text.trim() !== '' || image !== undefined;
   const send = () => {
     if (running || !ready) return;
@@ -346,9 +357,17 @@ function Composer({
           )}
         </div>
       )}
-      <div className="flex items-end gap-2">
+      {/* One box holds the text and the button (ask-d25): it starts at one
+          line and grows with what is written, up to BOX_MAX_PX, then scrolls. */}
+      <div
+        onClick={(e) => {
+          if (e.target === e.currentTarget) box.current?.focus();
+        }}
+        className="flex cursor-text items-end gap-2 rounded-(--ds-radius-control) border border-(--ds-border) p-1 pl-3 has-[textarea:focus-visible]:outline-(length:--ds-focus-width) has-[textarea:focus-visible]:outline-(color:--ds-accent) has-[textarea:focus-visible]:outline-offset-(length:--ds-focus-offset) has-[textarea:focus-visible]:outline-solid"
+      >
         <textarea
           ref={box}
+          rows={1}
           value={text}
           placeholder="Ask anything"
           aria-label="Your message"
@@ -368,7 +387,7 @@ function Composer({
           onPaste={(e: ClipboardEvent) => {
             if (take(fileOf(e.clipboardData.files))) e.preventDefault();
           }}
-          className="ds-body block h-[84px] min-w-0 flex-1 resize-none rounded-(--ds-radius-control) border border-(--ds-border) bg-transparent px-3 py-2 text-(--ds-fg) placeholder:text-(--ds-fg-muted)"
+          className="ds-body block min-h-[32px] min-w-0 flex-1 resize-none bg-transparent py-[5px] text-(--ds-fg) placeholder:text-(--ds-fg-muted) focus-visible:outline-none!"
         />
         {running ? (
           <Button onPress={onStop}>Stop</Button>
@@ -472,6 +491,8 @@ export function Ask({
       if (stick.current) el.scrollTop = el.scrollHeight;
     });
     watch.observe(body);
+    // A growing box shrinks the conversation: its foot stays in view.
+    watch.observe(el);
     return () => {
       watch.disconnect();
     };
@@ -591,10 +612,8 @@ export function AskSkeleton() {
         </div>
       </div>
       <div className="shrink-0 border-t border-(--ds-border-muted) px-6 py-3">
-        <div className="flex items-end gap-2">
-          <Bar className="h-[84px] min-w-0 flex-1" />
-          <Bar className="h-(--ds-control) w-16" />
-        </div>
+        {/* The box at one line: the button's height, its padding and border. */}
+        <Bar className="h-[42px] w-full" />
       </div>
     </div>
   );
