@@ -225,3 +225,37 @@
     animation: none;
   }
 }
+
+/* A label for work in progress: a light sweeps across the muted text. Still
+   muted text when motion is reduced. */
+@keyframes ds-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.ds .ds-shimmer {
+  color: var(--ds-fg-muted);
+  background-image: linear-gradient(
+    90deg,
+    var(--ds-fg-muted) 40%,
+    var(--ds-fg) 50%,
+    var(--ds-fg-muted) 60%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: ds-shimmer 1.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds .ds-shimmer {
+    animation: none;
+    background-image: none;
+    -webkit-text-fill-color: currentcolor;
+  }
+}

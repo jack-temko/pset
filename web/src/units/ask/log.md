@@ -9,3 +9,9 @@ Batch 2: the folded summary **"Top of the answer (Recommended)"**; what you can 
 Batch 3: a page chip **"Material on the other side (Recommended)"**; answer width **"Capped, about 680 (Recommended)"**; typing while it answers **"Type, send when done (Recommended)"**; opening on a long history **"Bottom, chip in, focused (Recommended)"**.
 
 Built 2026-11-04: sample page chips carry no box, so K9's flash is not wired yet; the page opens (ask-d9).
+
+Request of 2026-11-04, Jack: "So I want this to look like Claude desktop desktop app when talking. So do some research on how tool calls, responses, ect, are shown, streamed, and compacted on the UI. Then restart those particular gril questions"
+
+Batch 4: order **"In order, like Claude (Recommended)"**; running **"Shimmering label (Recommended)"**; done **"Each group to one row (Recommended)"**; writing **"A small mark at the end (Recommended)"**.
+
+Batch 5: thinking **""Thinking" shimmer, then gone (Recommended)"**; actions **"Copy, on hover (Recommended)"**; marks **"Mark only off-course parts (Recommended)"**; selections **"Later, with the work pane's (Recommended)"**.
