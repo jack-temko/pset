@@ -65,7 +65,7 @@ export default defineSpec({
     {
       id: 'page-failed',
       name: 'A page could not be drawn',
-      when: 'One page’s image failed: that page says what failed, why and Try again; the rest of the book reads on.',
+      when: 'One page’s image failed: that page says what failed, why and Try again; the rest of the material reads on.',
       text: "Couldn't draw p. 112",
     },
     {

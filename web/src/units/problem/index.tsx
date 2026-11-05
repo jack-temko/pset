@@ -1,13 +1,9 @@
-import {
-  Check,
-  LoaderCircle,
-  MessageCircle,
-  TriangleAlert,
-} from 'lucide-react';
+import { Check, LoaderCircle, MessageCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { MoreMenu, type MenuItem } from '@/units/menu';
 import { Button } from '@/units/button';
+import { ErrorNotice } from '@/units/error-notice';
 import { HelpRow } from '@/units/help-row';
 import { waitText } from '@/units/help-row/wait';
 import { Link } from '@/units/link';
@@ -179,39 +175,20 @@ function Failed({
   ];
   const ordered = again ? fixes : [fixes[2], fixes[0], fixes[1]];
   return (
-    <div
-      role="alert"
-      className="min-w-0 space-y-3 rounded-(--ds-radius-control) border border-(--ds-danger) px-4 py-3 text-left"
-    >
-      <p className="ds-body flex min-w-0 items-start gap-2 font-medium text-(--ds-danger)">
-        <TriangleAlert className="mt-[2px] size-4 shrink-0" aria-hidden />
-        <span className="min-w-0 [overflow-wrap:anywhere]">
-          {again
-            ? `Still couldn't find ${problem.label} (2nd try)`
-            : `Couldn't find ${problem.label}`}
-        </span>
-      </p>
-      <ul className="ds-small list-disc space-y-1 pl-9 text-(--ds-fg-muted)">
-        {tried.map((t) => (
-          <li key={t} className="[overflow-wrap:anywhere]">
-            {t}
-          </li>
-        ))}
-      </ul>
-      <div className="flex flex-wrap gap-2 pl-6">
-        {ordered.map((f, i) => (
-          <Button
-            key={f.fix}
-            variant={i === 0 ? 'primary' : 'default'}
-            onPress={() => {
-              onFix?.(f.fix);
-            }}
-          >
-            {f.label}
-          </Button>
-        ))}
-      </div>
-    </div>
+    <ErrorNotice
+      error={{
+        what: again
+          ? `Still couldn't find ${problem.label} (2nd try)`
+          : `Couldn't find ${problem.label}`,
+        why: tried,
+      }}
+      actions={ordered.map((f) => ({
+        label: f.label,
+        onPress: () => {
+          onFix?.(f.fix);
+        },
+      }))}
+    />
   );
 }
 
