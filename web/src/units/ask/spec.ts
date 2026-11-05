@@ -131,7 +131,7 @@ export default defineSpec({
     {
       id: 'type',
       label: 'The box',
-      does: 'Takes the message, several lines; Enter sends, Shift and Enter start a line. A pasted or dropped image joins it.',
+      does: 'Takes the message: one line that grows to eight, then scrolls. Enter sends, Shift and Enter start a line. Pasted or dropped images join it.',
     },
     {
       id: 'send',
@@ -455,6 +455,14 @@ export default defineSpec({
         'A failure caused by the key offers Open Settings alone; Try again cannot work until the key is fixed.',
       why: 'An action that is sure to fail again only wastes the student a turn.',
       beat: 'Open Settings beside Try again',
+      date: '2026-11-05',
+    },
+    {
+      id: 'ask-d25',
+      decision:
+        'Send sits inside the box, which starts at one line and grows with the text to eight lines, then scrolls.',
+      why: 'Jack asked for it: "put the send button in the box, start it at one line, make it grow".',
+      beat: 'A fixed four-line box with Send beside it',
       date: '2026-11-05',
     },
   ],
