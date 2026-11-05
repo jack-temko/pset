@@ -143,7 +143,7 @@ function Shape() {
         {RADII.map((r) => (
           <div key={r.name} data-radius={r.name} className="space-y-2">
             <div
-              className="h-16 w-28 border border-(--ds-border) bg-(--ds-bg-raised)"
+              className="h-16 w-[112px] border border-(--ds-border) bg-(--ds-bg-raised)"
               style={{ borderRadius: r.px }}
             />
             <p className="ds-small ds-tabular text-(--ds-fg-muted)">

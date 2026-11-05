@@ -82,7 +82,7 @@ function Demo({
 
 /** The + and tab menus are in the top layer; the box holds their room. */
 const Room = ({ children }: { children: React.ReactNode }) => (
-  <div className="h-60">{children}</div>
+  <div className="h-[240px]">{children}</div>
 );
 
 export default defineExamples(spec, Tabs, {

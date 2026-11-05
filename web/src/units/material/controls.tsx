@@ -34,7 +34,7 @@ const focusRing =
 function PageField({ api }: { api: Api }) {
   if (api.printed === undefined)
     return (
-      <span className="ds-small ds-tabular px-1.5">{`PDF ${String(api.pdf)}`}</span>
+      <span className="ds-small ds-tabular px-[6px]">{`PDF ${String(api.pdf)}`}</span>
     );
   return (
     <input
@@ -94,7 +94,10 @@ export function Controls({
       <div className="relative flex items-center gap-1 rounded-full border border-(--ds-border) bg-(--ds-bg-raised) p-1 pl-3 text-(--ds-fg-muted) shadow-sm">
         <PageField api={api} />
         {api.printed !== undefined && total(api.max, '/')}
-        <span aria-hidden className="mx-1.5 h-4 w-px bg-(--ds-border-muted)" />
+        <span
+          aria-hidden
+          className="mx-[6px] h-4 w-px bg-(--ds-border-muted)"
+        />
         <button
           type="button"
           aria-label="Zoom out"

@@ -3,24 +3,30 @@
 // explicit --text-* steps) makes unsanctioned classes fail silently at
 // build time; this checker makes them loud.
 //
-// Usage: node tools/verify-classes.mjs [web/]
+// Usage: node tools/verify-classes.mjs [web/] [--source]
+// --source skips the built CSS: it checks only that every class is on the
+// theme's scale and not fractional, which needs no build (make lint runs it).
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-const web = process.argv[2] ?? 'web';
-const cssFile = readdirSync(join(web, 'dist/assets')).find((f) =>
-  f.endsWith('.css'),
-);
-if (!cssFile) {
-  console.error('no built CSS found — run `npm run build` first');
+const args = process.argv.slice(2);
+const sourceOnly = args.includes('--source');
+const web = args.find((a) => !a.startsWith('--')) ?? 'web';
+// Every stylesheet the build wrote: the app and the design page are separate
+// entries, each with its own CSS, and a class may live in either.
+const cssFiles = sourceOnly
+  ? []
+  : readdirSync(join(web, 'dist/assets')).filter((f) => f.endsWith('.css'));
+if (!sourceOnly && cssFiles.length === 0) {
+  console.error('no built CSS found, run `npm run build` first');
   process.exit(1);
 }
 // Comparisons run backslash-stripped: built CSS escapes variants
 // (`sm\:max-w-sm`), source tokens do not.
-const css = readFileSync(join(web, 'dist/assets', cssFile), 'utf8').replace(
-  /\\/g,
-  '',
-);
+const css = cssFiles
+  .map((f) => readFileSync(join(web, 'dist/assets', f), 'utf8'))
+  .join('\n')
+  .replace(/\\/g, '');
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
@@ -90,9 +96,11 @@ const arbitraryHits = [
 // Present means a rule for exactly this class: a selector ending in it,
 // after the dot or a variant's colon. A bare substring passes on anything.
 const esc = (c) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const missing = [...used.keys()].filter(
-  (c) => !new RegExp(String.raw`[.:]${esc(c)}(?![\w-])`).test(css),
-);
+const missing = sourceOnly
+  ? []
+  : [...used.keys()].filter(
+      (c) => !new RegExp(String.raw`[.:]${esc(c)}(?![\w-])`).test(css),
+    );
 
 console.log(`checked ${used.size} distinct theme-dependent utilities`);
 console.log(

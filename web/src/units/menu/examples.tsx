@@ -43,7 +43,7 @@ function Open({ groups, label }: { groups: MenuGroup[]; label: string }) {
     if (r) setAt({ x: r.left, y: r.top });
   }, []);
   return (
-    <div ref={ref} className="h-60">
+    <div ref={ref} className="h-[240px]">
       {at && (
         <Menu
           at={at}
@@ -62,7 +62,7 @@ export default defineExamples(spec, Menu, {
     add: () => <Open groups={ADD} label="Open" />,
     tab: () => <Open groups={TAB} label="Tab" />,
     more: () => (
-      <div className="flex h-60 justify-end">
+      <div className="flex h-[240px] justify-end">
         <MoreMenu
           label="More"
           forceOpen

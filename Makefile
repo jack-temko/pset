@@ -54,6 +54,7 @@ fmt-check:
 lint:
 	go tool golangci-lint run
 	cd web && npx oxlint --type-aware
+	node tools/verify-classes.mjs web --source
 	tools/shellcheck.sh $(SH_FILES)
 	go tool actionlint
 
