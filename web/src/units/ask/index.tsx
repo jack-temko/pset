@@ -89,7 +89,7 @@ function TurnView({
         {turn.image && (
           <img
             src={turn.image}
-            alt="Attached to the question"
+            alt="Attached to the message"
             className="max-h-24 max-w-[60%] rounded-(--ds-radius-control) border border-(--ds-border-muted)"
           />
         )}
@@ -136,12 +136,14 @@ function TurnView({
             <p className="ds-small max-w-[680px] text-(--ds-danger) [overflow-wrap:anywhere]">
               {`Couldn't answer: ${turn.failure.why}`}
             </p>
-            <Button variant="quiet" onPress={() => onRetry?.(turn.id)}>
-              Try again
-            </Button>
-            {turn.failure.setup && (
+            {/* Without a key, trying again cannot work: the fix is Settings. */}
+            {turn.failure.setup ? (
               <Button variant="quiet" onPress={onSettings}>
                 Open Settings
+              </Button>
+            ) : (
+              <Button variant="quiet" onPress={() => onRetry?.(turn.id)}>
+                Try again
               </Button>
             )}
           </div>
@@ -192,7 +194,7 @@ function Top({
       {clearing ? (
         <>
           <p className="ds-small min-w-0 flex-1 truncate">
-            {`Clear ${String(turns)} ${turns === 1 ? 'question' : 'questions'}? Memories stay.`}
+            {`Clear ${String(turns)} ${turns === 1 ? 'message' : 'messages'}? Memories stay.`}
           </p>
           <div className="flex shrink-0 gap-2">
             <Button
@@ -249,7 +251,7 @@ function fileOf(files: FileList | null | undefined) {
   return [...(files ?? [])].find((f) => f.type.startsWith('image/'));
 }
 
-/** The composer (ask-d6, ask-d8, ask-d11): what the question is about, a
+/** The composer (ask-d6, ask-d8, ask-d11): what the message is about, a
  *  picture if you pasted or dropped one, the box and one button. While Ask
  *  answers the box stays yours and the button says Stop. */
 function Composer({
@@ -348,8 +350,8 @@ function Composer({
         <textarea
           ref={box}
           value={text}
-          placeholder="Ask a question"
-          aria-label="Your question"
+          placeholder="Ask anything"
+          aria-label="Your message"
           onChange={(e) => {
             setText(e.target.value);
           }}
@@ -373,7 +375,7 @@ function Composer({
         ) : (
           <Button
             variant="primary"
-            notReady={ready ? undefined : 'Write a question first'}
+            notReady={ready ? undefined : 'Write a message first'}
             onPress={send}
           >
             Send
@@ -453,6 +455,13 @@ export function Ask({
     const el = scroller.current;
     if (el && stick.current) el.scrollTop = el.scrollHeight;
   }, [turns]);
+  // Clear is at the very top: while it asks, the pane stays there.
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (!el || !clearing) return;
+    stick.current = false;
+    el.scrollTop = 0;
+  }, [clearing]);
   // Images, math and plots settle after the first paint: while the student
   // is at the foot, the foot stays where they are.
   useEffect(() => {
@@ -552,7 +561,7 @@ function Bar({ className }: { className: string }) {
   );
 }
 
-/** The pane while it loads: the top row, a question and the lines of an
+/** The pane while it loads: the top row, a message and the lines of an
  *  answer as quiet bars, and the composer at its own size. */
 export function AskSkeleton() {
   return (

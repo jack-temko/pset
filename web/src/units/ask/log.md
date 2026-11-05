@@ -15,3 +15,10 @@ Request of 2026-11-04, Jack: "So I want this to look like Claude desktop desktop
 Batch 4: order **"In order, like Claude (Recommended)"**; running **"Shimmering label (Recommended)"**; done **"Each group to one row (Recommended)"**; writing **"A small mark at the end (Recommended)"**.
 
 Batch 5: thinking **""Thinking" shimmer, then gone (Recommended)"**; actions **"Copy, on hover (Recommended)"**; marks **"Mark only off-course parts (Recommended)"**; selections **"Later, with the work pane's (Recommended)"**.
+
+## 2026-11-05: rebased onto the list pattern
+
+- What the student sends is a **message** (ask-d23): the word list gives "question" to problem. "Clear 4 messages?", "Ask anything", "Check the material".
+- A key failure shows **Open Settings** alone (ask-d24).
+- Clear keeps the pane at the top while it asks.
+- The sample answer says "your textbook", and its search matches its question.

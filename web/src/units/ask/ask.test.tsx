@@ -60,9 +60,9 @@ describe('Ask', () => {
     const { el } = render(
       <Ask course="ECE 210" turns={[sample.DONE]} onPage={onPage} />,
     );
-    expect(el.textContent).not.toContain("Searched 'eigenvalue'");
+    expect(el.textContent).not.toContain("Searched 'time constant'");
     press(button(el, 'Searched twice, read 3 pages'));
-    expect(el.textContent).toContain("Searched 'eigenvalue'");
+    expect(el.textContent).toContain("Searched 'time constant'");
     press(button(el, 'p. 142'));
     expect(onPage).toHaveBeenCalledWith('griffiths', 142);
   });
@@ -95,7 +95,7 @@ describe('Ask', () => {
       <Ask course="ECE 210" turns={sample.HISTORY} onClear={onClear} />,
     );
     press(button(el, 'Clear'));
-    expect(el.textContent).toContain('Clear 4 questions? Memories stay.');
+    expect(el.textContent).toContain('Clear 4 messages? Memories stay.');
     expect(onClear).not.toHaveBeenCalled();
     press(
       [...el.querySelectorAll('button')].find((b) => b.textContent === 'Clear'),
@@ -110,7 +110,7 @@ describe('Ask', () => {
 
   it('keeps a step row the same height running, done and with nothing before it', () => {
     const live = render(<Ask course="ECE 210" turns={[sample.IN_FLIGHT]} />);
-    expect(lineOf(live.el, "Searching 'eigenvalue'")).toBeDefined();
+    expect(lineOf(live.el, "Searching 'time constant'")).toBeDefined();
     const think = render(<Ask course="ECE 210" turns={[sample.THINKING]} />);
     expect(lineOf(think.el, 'Thinking')).toBeDefined();
     const done = render(<Ask course="ECE 210" turns={[sample.MID]} />);

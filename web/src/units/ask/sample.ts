@@ -11,7 +11,7 @@ const m = (tex: string) => ({ m: tex });
 const ref = (page: number) => ({ ref: { material: 'griffiths', page } });
 
 export const READ: Call = { kind: 'read', what: 'Griffiths p. 142', pages: 3 };
-export const SEARCH: Call = { kind: 'search', what: 'eigenvalue' };
+export const SEARCH: Call = { kind: 'search', what: 'time constant' };
 /** A run of finished steps, where they happened in the answer. */
 export const run = (...calls: Call[]): Block => ({ k: 'run', calls });
 
@@ -38,7 +38,7 @@ export const ANSWER: readonly Block[] = [
       t('The voltage '),
       m('V_0'),
       t(
-        ' at the node comes from the current law written there, as the book does on ',
+        ' at the node comes from the current law written there, as your textbook does on ',
       ),
       ref(142),
       t('. Start from what the law says.'),
@@ -231,7 +231,7 @@ export const LONG_HISTORY: readonly Turn[] = Array.from(
     turn({
       id: `l${String(i)}`,
       day: i < 20 ? 'Sep 12' : i < 40 ? 'Oct 3' : 'Today',
-      question: `Question ${String(i + 1)}: what does the book say about the time constant on page ${String(100 + i)}?`,
+      question: `Question ${String(i + 1)}: what does the textbook say about the time constant on page ${String(100 + i)}?`,
       blocks: i % 5 === 0 ? ANSWER : [run(READ), ...short],
     }),
 );
