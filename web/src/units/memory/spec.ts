@@ -8,20 +8,20 @@ export default defineSpec({
   title: 'Memory',
   group: 'Mocks',
   purpose:
-    'The preferences PSet follows, of two kinds: typed by the student, and saved by Ask when they asked it to remember. Mocked on sample data.',
+    'The memories PSet follows, of two kinds: typed by the student, and saved by Ask when asked to remember. Mocked on sample data.',
   exampleWidth: 1012,
   states: [
     {
       id: 'ask-saves',
       name: 'Ask saves, you keep',
-      when: 'What Ask just saved sits at the top marked New with Keep and Edit; the rest follow, five of them, then Show all.',
-      text: 'Ask saved 2 preferences. Keep them or change them.',
+      when: 'What Ask just saved waits in its own box, New from Ask, with Keep and Edit; under it the list, on Yours, five rows and Show all.',
+      text: 'New from Ask',
     },
     {
-      id: 'show-all',
-      name: 'Show all',
-      when: 'Show all was pressed: every memory is listed, and the link reads Show fewer.',
-      text: 'Show fewer',
+      id: 'from-ask',
+      name: 'From Ask',
+      when: 'The header switch on From Ask: what Ask saved and the student kept, each with a link to its chat.',
+      text: 'Open the chat',
     },
     {
       id: 'empty',
@@ -37,9 +37,9 @@ export default defineSpec({
     },
     {
       id: 'deleted',
-      name: 'Deleted, with Undo',
+      name: 'Forgotten, with Undo',
       when: 'A row is gone at once, no question asked, and a line under the list offers Undo.',
-      text: 'Deleted “Round to three significant figures”',
+      text: 'Forgot “Round to three significant figures”',
     },
   ],
   stress:
@@ -56,19 +56,25 @@ export default defineSpec({
       does: 'Turns the row’s text into a growing field; Enter or Save keeps the change, Shift+Enter adds a line, Escape or Cancel drops it.',
     },
     {
-      id: 'delete',
-      label: 'Delete',
+      id: 'forget',
+      label: 'Forget',
       does: 'Removes the memory at once and offers Undo, with no question first.',
     },
     {
       id: 'undo',
       label: 'Undo',
-      does: 'Puts the deleted memory back where it was.',
+      does: 'Puts the forgotten memory back where it was.',
+    },
+    {
+      id: 'switch-side',
+      label: 'Yours, From Ask',
+      does: 'The header switch: shows the student’s own memories or what Ask saved, each side with its count.',
     },
     {
       id: 'show-all',
       label: 'Show all',
-      does: 'Lists every memory past the first five; the link then reads Show fewer.',
+      does: 'At the list’s foot past five rows: opens the list page’s memories.',
+      target: { unit: 'list-page', state: 'memories' },
     },
     {
       id: 'keep',
@@ -85,14 +91,15 @@ export default defineSpec({
   ],
   inputs: [
     { name: 'empty', does: 'Starts with nothing remembered.' },
+    { name: 'side', does: 'Which side of the switch starts chosen.' },
     {
-      name: 'showAll',
-      does: 'Starts with every memory shown, not the first five.',
+      name: 'showAllHref',
+      does: 'Where Show all goes: the list page’s memories.',
     },
     { name: 'editing', does: 'The id of the memory that starts being edited.' },
     {
       name: 'deleted',
-      does: 'The id of the memory that starts deleted, with Undo showing.',
+      does: 'The id of the memory that starts forgotten, with Undo showing.',
     },
   ],
   priority: {
@@ -103,7 +110,13 @@ export default defineSpec({
     gives: ['Long text wraps, so a row grows'],
   },
   rules: {
-    cite: ['student-decides', 'sentence-case', 'colour-has-a-word'],
+    cite: [
+      'student-decides',
+      'sentence-case',
+      'colour-has-a-word',
+      'one-word-per-thing',
+      'friction-matches-loss',
+    ],
   },
   log: 'web/src/units/memory/log.md',
   decisions: [
@@ -117,8 +130,8 @@ export default defineSpec({
     },
     {
       id: 'memory-d2',
-      decision: 'Delete asks nothing and offers Undo.',
-      why: 'A lost preference costs one sentence to type again (ideas/memory-preferences-only.md).',
+      decision: 'Forget asks nothing and offers Undo.',
+      why: 'A lost memory costs one sentence to type again (ideas/memory-preferences-only.md).',
       beat: 'A confirm on every delete',
       date: '2026-10-30',
     },
@@ -137,6 +150,14 @@ export default defineSpec({
       why: 'Jack, 2026-10-30: "make these memories be multi line editable, editing a saved memory that wraps opens a super smalle inline textblock that sucks to edit".',
       beat: 'A one-line title that truncates; a one-line input',
       date: '2026-10-30',
+    },
+    {
+      id: 'memory-d5',
+      decision:
+        'The list pattern: Yours and From Ask are the header switch, five rows then Show all N to the list page; New from Ask is its own box above, never capped.',
+      why: 'Jack, 2026-11-04: "redo memory D with our new list changes and having the list page please".',
+      beat: 'A segmented filter over the list; Show all expanding in place',
+      date: '2026-11-04',
     },
   ],
 });

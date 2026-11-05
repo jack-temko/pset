@@ -5,4 +5,5 @@ export const PLACEHOLDER = {
   work: '/design/view/list-page?state=all-courses',
   courseWork: '/design/view/list-page?state=filtered',
   courses: '/design/view/list-page?state=courses',
+  memories: '/design/view/list-page?state=memories',
 };

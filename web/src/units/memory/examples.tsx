@@ -1,19 +1,22 @@
 import { defineExamples } from '@/design/examples';
+import { PLACEHOLDER } from '@/units/list-page/hrefs';
 import { MemoryArea } from './index';
 import spec from './spec';
 
+const all = PLACEHOLDER.memories;
+
 export default defineExamples(spec, MemoryArea, {
   states: {
-    'ask-saves': () => <MemoryArea />,
-    'show-all': () => <MemoryArea showAll />,
-    empty: () => <MemoryArea empty />,
-    editing: () => <MemoryArea editing="m7" showAll />,
-    deleted: () => <MemoryArea deleted="m7" />,
+    'ask-saves': () => <MemoryArea showAllHref={all} />,
+    'from-ask': () => <MemoryArea side="ask" showAllHref={all} />,
+    empty: () => <MemoryArea empty showAllHref={all} />,
+    editing: () => <MemoryArea editing="m7" showAllHref={all} />,
+    deleted: () => <MemoryArea deleted="m7" showAllHref={all} />,
   },
-  stress: () => <MemoryArea showAll />,
+  stress: () => <MemoryArea showAllHref={all} />,
   skeletons: {
     'ask-saves': () => null,
-    'show-all': () => null,
+    'from-ask': () => null,
     empty: () => null,
     editing: () => null,
     deleted: () => null,

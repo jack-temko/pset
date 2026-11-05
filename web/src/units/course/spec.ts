@@ -88,7 +88,7 @@ export default defineSpec({
     {
       id: 'row-menu',
       label: 'A row’s ... menu',
-      does: 'Opens the row’s menu: Open, Rename and Delete for work; Open, Rename and Remove for a material.',
+      does: 'Opens the row’s menu: Open, Rename and Delete for an assignment; Open, Rename and Remove for a material.',
       target: { unit: 'menu', state: 'more' },
     },
     {
@@ -99,7 +99,7 @@ export default defineSpec({
     {
       id: 'remove-material',
       label: 'Remove',
-      does: 'Removes the material and keeps the work made from it, with Undo.',
+      does: 'Removes the material and keeps the assignments made from it, with Undo.',
     },
     {
       id: 'undo',
@@ -125,8 +125,8 @@ export default defineSpec({
     },
     {
       id: 'forget-memory',
-      label: 'Remove',
-      does: 'Removes one thing PSet remembers about the course.',
+      label: 'Forget',
+      does: 'Forgets one memory of the course, at once.',
     },
     {
       id: 'retry',
@@ -270,7 +270,7 @@ export default defineSpec({
     {
       id: 'course-d8',
       decision:
-        'A row’s ... menu: work has Open, Rename and Delete with Undo; a material has Open, Rename and Remove, which keeps the work (C8).',
+        'A row’s ... menu: an assignment has Open, Rename and Delete with Undo; a material has Open, Rename and Remove, which keeps the assignments (C8).',
       why: `Confirmed by Jack: "In ... menus (Recommended)". the same Menu as the work pane.`,
       beat: 'Hover buttons on the row',
       date: '2026-10-22',

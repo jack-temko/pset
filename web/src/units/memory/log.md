@@ -16,3 +16,12 @@ Then, on the same day, word for word:
 
 Built from it (`memory-d4`): rows wrap, and Edit and Add are multi-line text fields (a new
 `multiline` mode of the text-field unit) that grow with their text.
+
+## 2026-11-04: on the list pattern
+
+Jack: "also redo memory D with our new list changes and having the list page please". The
+All, Yours and From Ask control becomes the list's header switch (Yours, From Ask; L11 of
+`ideas/list-pattern-grill.md`), the list shows five rows and a "Show all N" foot to the list
+page's memories, and what Ask just saved waits in its own "New from Ask" box above, never
+hidden by the switch or the cap (A1). Delete is Forget, with Undo, and the words follow the
+word list (memory, not preference). Decision memory-d5.

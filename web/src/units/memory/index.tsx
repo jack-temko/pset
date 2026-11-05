@@ -2,18 +2,17 @@ import { useState, type ReactNode } from 'react';
 
 import { Button } from '@/units/button';
 import { Link } from '@/units/link';
-import { List } from '@/units/list';
+import { List, LIST_CAP } from '@/units/list';
 import { ListRow } from '@/units/list-row';
 import { MoreMenu } from '@/units/menu';
 import { SectionHeading } from '@/units/section-heading';
-import { SegmentedControl } from '@/units/segmented-control';
 import { Tag } from '@/units/tag';
 import { TextField } from '@/units/text-field';
 import { SAMPLE, TODAY, when, type Memory } from './sample';
 
 const ROW_MENU = [
   { id: 'edit', label: 'Edit' },
-  { id: 'delete', label: 'Delete', danger: true },
+  { id: 'forget', label: 'Forget', danger: true },
 ] as const;
 
 interface Undo {
@@ -147,7 +146,7 @@ function UndoLine({ m }: { m: Memories }) {
       {m.undo && (
         <>
           <span className="min-w-0 truncate">
-            Deleted “{m.undo.memory.text}”
+            Forgot “{m.undo.memory.text}”
           </span>
           <Button variant="quiet" onPress={m.restore}>
             Undo
@@ -163,7 +162,7 @@ function source(m: Memory, label: boolean): ReactNode[] {
   if (m.source === 'you') return label ? ['You', date] : [date];
   return [
     <Link key="s" href={m.chat ?? '#'} tone="muted" size="small">
-      {label ? 'Saved from Ask' : 'From Ask'}
+      {label ? 'Saved from Ask' : 'Open the chat'}
     </Link>,
     date,
   ];
@@ -268,11 +267,12 @@ function Row({
   );
 }
 
-const FILTERS = [
-  { id: 'all', label: 'All' },
+/** The list's two sides, as a switch in its header (L11 of
+ *  ideas/list-pattern-grill.md): the student's own and what Ask saved. */
+const SIDES = [
   { id: 'you', label: 'Yours' },
   { id: 'ask', label: 'From Ask' },
-];
+] as const;
 
 function EmptyMemory({ mem }: { mem: Memories }) {
   return (
@@ -280,88 +280,78 @@ function EmptyMemory({ mem }: { mem: Memories }) {
       <Intro count={0} />
       <p className="ds-body text-(--ds-fg)">
         PSet remembers how you like things explained, such as “use V_0, V_1 for
-        nodal voltages” or “no PSpice”. Add one below, or ask in a chat to
-        remember a preference.
+        nodal voltages” or “no PSpice”. Add one below, or ask Ask to remember
+        something.
       </p>
       <AddField onAdd={mem.add} />
     </div>
   );
 }
 
-/** How many of Ask's older and the student's own memories show before
- *  "Show all", as Home's lists show five (memory-d3). */
-export const MEMORY_CAP = 5;
-
-/** The memory area (memory-d1): Ask's new saves wait above the rest with Keep
- *  and Edit, then the list, capped, with the add field over it. Sample data
- *  only: add, edit, keep and delete work on it and nothing is kept. */
+/** The memory area (memory-d1, memory-d5): what Ask just saved waits in its
+ *  own box with Keep and Edit, never hidden by the switch or the cap; then the
+ *  add field and the list, with "Yours" and "From Ask" as its header switch,
+ *  five rows and "Show all N" to the list page (the list pattern). Sample data
+ *  only: add, edit, keep and forget work on it and nothing is kept. */
 export function MemoryArea({
   empty,
   editing,
   deleted,
-  showAll: startShowAll = false,
+  side: startSide = 'you',
+  showAllHref,
 }: {
   /** Nothing remembered yet. */
   empty?: boolean;
   /** The id of the memory that starts being edited. */
   editing?: string;
-  /** The id of the memory that starts deleted, with Undo showing. */
+  /** The id of the memory that starts forgotten, with Undo showing. */
   deleted?: string;
-  /** Starts with every memory shown, not the first five. */
-  showAll?: boolean;
+  /** Which side of the switch starts chosen. */
+  side?: 'you' | 'ask';
+  /** Where "Show all" goes: the list page's memories. */
+  showAllHref: string;
 }) {
   const mem = useMemories(empty ? [] : SAMPLE, deleted, editing);
-  const [filter, setFilter] = useState('all');
-  const [all, setAll] = useState(startShowAll);
+  const [side, setSide] = useState<string>(startSide);
   if (mem.items.length === 0 && mem.undo === null)
     return (
       <div className="min-w-0">
         <EmptyMemory mem={mem} />
       </div>
     );
-  const kept = mem.items.filter((m) => filter === 'all' || m.source === filter);
-  const fresh = kept.filter((m) => m.fresh === true);
-  const rest = kept.filter((m) => m.fresh !== true);
-  const shown = [...fresh, ...(all ? rest : rest.slice(0, MEMORY_CAP))];
-  const waiting = mem.items.filter((m) => m.fresh === true).length;
+  const fresh = mem.items.filter((m) => m.fresh === true);
+  const rest = mem.items.filter((m) => m.fresh !== true);
+  const states = SIDES.map((s) => ({
+    id: s.id,
+    label: s.label,
+    count: rest.filter((m) => m.source === s.id).length,
+  }));
+  const shown = rest.filter((m) => m.source === side);
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <Intro
-        count={mem.items.length}
-        action={
-          rest.length > MEMORY_CAP ? (
-            <Link
-              href="#"
-              size="small"
-              onClick={(e) => {
-                e.preventDefault();
-                setAll(!all);
-              }}
-            >
-              {all ? 'Show fewer' : 'Show all'}
-            </Link>
-          ) : undefined
-        }
-      />
-      {waiting > 0 && (
-        <p className="ds-small text-(--ds-attention)">
-          {waiting === 1
-            ? 'Ask saved 1 preference. Keep it or change it.'
-            : `Ask saved ${String(waiting)} preferences. Keep them or change them.`}
-        </p>
+      <Intro count={mem.items.length} />
+      {fresh.length > 0 && (
+        <List title="New from Ask" count={fresh.length}>
+          {fresh.map((m) => (
+            <Row key={m.id} m={m} mem={mem} label={false} review />
+          ))}
+        </List>
       )}
       <AddField onAdd={mem.add} />
-      <div className="flex justify-end">
-        <SegmentedControl
-          label="Show"
-          options={FILTERS}
-          value={filter}
-          onChange={setFilter}
-        />
-      </div>
-      <List empty="Nothing here yet">
+      <List
+        states={states}
+        state={side}
+        onState={setSide}
+        cap={LIST_CAP}
+        showAllHref={showAllHref}
+        empty={
+          side === 'you'
+            ? 'You have not added any yet'
+            : 'Ask has not saved any yet'
+        }
+      >
         {shown.map((m) => (
-          <Row key={m.id} m={m} mem={mem} label review />
+          <Row key={m.id} m={m} mem={mem} label={false} />
         ))}
       </List>
       <UndoLine m={mem} />
