@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { AskSkeleton } from '@/units/ask';
+import { SampleAsk } from '@/units/ask/chat';
+import { HISTORY } from '@/units/ask/sample';
 import { Divider } from '@/units/divider';
 import type { MenuGroup } from '@/units/menu';
 import { Material, MaterialSkeleton } from '@/units/material';
 import { pageMemory as materialMemory } from '@/units/material/memory';
 import { bookOf, boxOfProblem } from '@/units/material/sample';
 import { printedOf, type Box } from '@/units/material/types';
-import { AskStub, AskStubSkeleton } from '@/units/pane-stub';
 import { DropFill, Side } from '@/units/side';
 import { type TabAction } from '@/units/tabs';
 import { endDrag, useDraggedTab } from '@/units/tabs/drag';
@@ -346,8 +348,19 @@ export function Workspace({
         />
       );
     }
-    if (wait) return <AskStubSkeleton />;
-    return <AskStub about={aboutOf(course, tab.problem)} />;
+    if (wait) return <AskSkeleton />;
+    return (
+      <SampleAsk
+        key={tab.id}
+        course={course.name}
+        turns={HISTORY}
+        about={aboutOf(course, tab.problem)}
+        focusBox={tab.problem !== undefined}
+        onPage={(ref, page) => {
+          showMaterial(side, ref, page);
+        }}
+      />
+    );
   };
 
   const sideView = (side: m.Side) => (
