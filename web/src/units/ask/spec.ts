@@ -23,14 +23,14 @@ export default defineSpec({
     {
       id: 'thinking',
       name: 'Thinking',
-      when: 'The question is sent and nothing has come back: a shimmering "Thinking" row under the question, replaced by the first step or the first words.',
+      when: 'The message is sent and nothing has come back: a shimmering "Thinking" row under it, replaced by the first step or the first words.',
       text: 'Thinking',
     },
     {
       id: 'step-running',
       name: 'A step running',
       when: 'Ask is searching or reading: one row names the current step with a light sweeping over it, no spinner; consecutive steps share the row.',
-      text: "Searching 'eigenvalue'",
+      text: "Searching 'time constant'",
     },
     {
       id: 'writing',
@@ -52,7 +52,7 @@ export default defineSpec({
       id: 'steps-open',
       name: 'Steps done, opened',
       when: 'A folded row pressed: its steps are a small timeline under it, an icon per step on a thin vertical line.',
-      text: "Searched 'eigenvalue'",
+      text: "Searched 'time constant'",
     },
     {
       id: 'not-ours',
@@ -63,7 +63,7 @@ export default defineSpec({
     {
       id: 'remembered',
       name: 'Remembered',
-      when: 'Ask saved a preference: a quiet row in the answer with Undo and Edit; the memory list shows it as New.',
+      when: 'Ask saved a memory: a quiet row in the answer with Undo and Edit; the memory list shows it as New.',
       text: 'Remembered: you use V_0 for node voltages',
     },
     {
@@ -81,7 +81,7 @@ export default defineSpec({
     {
       id: 'failed-setup',
       name: 'Failed, setup',
-      when: 'The key is the cause: the same line, and Open Settings beside Try again.',
+      when: 'The key is the cause: the same line, with Open Settings in place of Try again, which cannot work without a key.',
       text: 'Open Settings',
     },
     {
@@ -92,24 +92,24 @@ export default defineSpec({
     {
       id: 'history',
       name: 'Long history',
-      when: 'Days of questions: quiet dividers ("Sep 12", "Yesterday", "Today") where the day changes, Clear at the very top.',
+      when: 'Days of messages: quiet dividers ("Sep 12", "Yesterday", "Today") where the day changes, Clear at the very top.',
       text: 'Yesterday',
     },
     {
       id: 'clearing',
       name: 'Clear asks first',
       when: 'Clear pressed: the top row says how many turns go and that memories stay, with Cancel and Clear.',
-      text: 'Clear 4 questions? Memories stay.',
+      text: 'Clear 4 messages? Memories stay.',
     },
     {
       id: 'loading',
       name: 'Loading',
-      when: 'The conversation is on its way: the top row, a question and an answer as quiet bars, and the composer at its own size.',
+      when: 'The conversation is on its way: the top row, a message and an answer as quiet bars, and the composer at its own size.',
     },
   ],
   exampleWidth: 560,
   stress:
-    'Fifty turns over three days, a 90 character chip, a 400 character question, and an answer with a plot, a table and code.',
+    'Fifty turns over three days, a 90 character chip, a 400 character message, and an answer with a plot, a table and code.',
   flows: [
     {
       id: 'ask-about-this',
@@ -118,7 +118,7 @@ export default defineSpec({
     },
     {
       id: 'follow-a-page',
-      name: 'Check the book',
+      name: 'Check the material',
       steps: ['page-chip'],
     },
     {
@@ -131,7 +131,7 @@ export default defineSpec({
     {
       id: 'type',
       label: 'The box',
-      does: 'Takes the question, several lines; Enter sends, Shift and Enter start a line. A pasted or dropped image joins it.',
+      does: 'Takes the message, several lines; Enter sends, Shift and Enter start a line. A pasted or dropped image joins it.',
     },
     {
       id: 'send',
@@ -173,7 +173,7 @@ export default defineSpec({
     {
       id: 'retry',
       label: 'Try again',
-      does: 'Asks the failed question again.',
+      does: 'Sends the failed message again.',
     },
     {
       id: 'settings',
@@ -183,7 +183,7 @@ export default defineSpec({
     {
       id: 'remove-chip',
       label: 'The cross on a chip or image',
-      does: 'Drops the problem or the picture from the question being written.',
+      does: 'Drops the problem or the picture from the message being written.',
     },
     {
       id: 'clear',
@@ -199,9 +199,9 @@ export default defineSpec({
   ],
   remembers: [
     {
-      what: 'The conversation itself, to the first question',
+      what: 'The conversation itself, to the first message',
       per: 'Course',
-      for: 'Until Clear; today only until the page closes (the server keeps it per book).',
+      for: 'Until Clear; today only until the page closes (the server keeps it per course).',
     },
   ],
   inputs: [
@@ -215,7 +215,7 @@ export default defineSpec({
     },
     {
       name: 'about',
-      does: 'The problem the question is about: the chip in the box. A new one brings its chip in.',
+      does: 'The problem the message is about: the chip in the box. A new one brings its chip in.',
     },
     { name: 'startImage', does: 'Opens with this picture pasted in the box.' },
     {
@@ -237,13 +237,13 @@ export default defineSpec({
     { name: 'onSettings', does: 'Called when Open Settings is pressed.' },
   ],
   priority: {
-    first: 'The latest answer, and the box to ask the next question.',
+    first: 'The latest answer, and the box for the next message.',
     main: 'send',
   },
   sizes: {
     gives: [
       'The answer’s text stops at 680 and sits left; a plot, table or code may use the width',
-      'A long chip or question wraps or is cut with an ellipsis',
+      'A long chip or message wraps or is cut with an ellipsis',
       'The conversation scrolls; the box stays at the foot',
     ],
   },
@@ -282,7 +282,7 @@ export default defineSpec({
     {
       id: 'ask-d3',
       decision:
-        'The live line and its folded summary are the same line, at the top of the answer under the question, the same height.',
+        'The live line and its folded summary are the same line, at the top of the answer under the message, the same height.',
       why: 'Jack picked "Top of the answer (Recommended)" (K3): nothing moves when the answer starts or ends.',
       supersededBy: 'ask-d15',
       beat: 'The foot of the answer',
@@ -291,7 +291,7 @@ export default defineSpec({
     {
       id: 'ask-d4',
       decision:
-        'A saved preference is a quiet row in the answer, "Remembered: ...", with Undo and Edit.',
+        'A saved memory is a quiet row in the answer, "Remembered: ...", with Undo and Edit.',
       why: 'Jack picked "A row with Undo (Recommended)" (K4): you see what was kept.',
       beat: 'Ask first with Keep; save silently',
       date: '2026-11-04',
@@ -301,14 +301,14 @@ export default defineSpec({
       decision:
         'With no history and nothing attached, one quiet line sits above the composer.',
       why: 'Jack picked "A quiet line + composer (Recommended)" (K5).',
-      beat: 'Suggested questions',
+      beat: 'Suggested prompts',
       date: '2026-11-04',
     },
     {
       id: 'ask-d6',
       decision:
         'The composer takes the problem chip and a pasted or dropped image.',
-      why: 'Jack picked "Chips + paste an image (Recommended)" (K6): questions hold images since #53.',
+      why: 'Jack picked "Chips + paste an image (Recommended)" (K6): problems hold images since #53.',
       beat: 'Chips only; any page from a picker',
       date: '2026-11-04',
     },
@@ -340,7 +340,7 @@ export default defineSpec({
       id: 'ask-d10',
       decision:
         'Answer text stops at about 680 wide, left-aligned; plots, tables and code may use the width.',
-      why: 'Jack picked "Capped, about 680 (Recommended)" (K10); the question is a compact block on the right (A2).',
+      why: 'Jack picked "Capped, about 680 (Recommended)" (K10); the message is a compact block on the right (A2).',
       beat: 'Full pane width',
       date: '2026-11-04',
     },
@@ -363,7 +363,7 @@ export default defineSpec({
     {
       id: 'ask-d13',
       decision:
-        'Stop keeps the partial answer with "Stopped"; a failure says why with Try again, plus Open Settings for a setup cause. Past turns offer Copy only.',
+        'Stop keeps the partial answer with "Stopped"; a failure says why with Try again, or Open Settings when the key is the cause. Past turns offer Copy only.',
       why: 'Assumed in the grill (A3, A4).',
       beat: 'Dropping the partial answer; editing old turns',
       date: '2026-11-04',
@@ -440,6 +440,22 @@ export default defineSpec({
       why: 'Jack picked "Later, with the work pane’s (Recommended)" (K20); it defers A3’s selection-asking.',
       beat: 'Building it for Ask alone',
       date: '2026-11-04',
+    },
+    {
+      id: 'ask-d23',
+      decision:
+        'What the student sends is a message, never a question: problem is the word for a question in an assignment.',
+      why: 'one-word-per-thing: "question" names a problem, so the chat needs its own word.',
+      beat: 'Question, which the word list gives to problem',
+      date: '2026-11-05',
+    },
+    {
+      id: 'ask-d24',
+      decision:
+        'A failure caused by the key offers Open Settings alone; Try again cannot work until the key is fixed.',
+      why: 'An action that is sure to fail again only wastes the student a turn.',
+      beat: 'Open Settings beside Try again',
+      date: '2026-11-05',
     },
   ],
 });

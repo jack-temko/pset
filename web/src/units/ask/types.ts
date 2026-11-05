@@ -97,7 +97,7 @@ const doneText: Record<CallKind, string> = {
 
 const quote = (c: Call) => (c.kind === 'search' ? `'${c.what}'` : c.what);
 
-/** The call in flight, as the live line says it: "Searching 'eigenvalue'". */
+/** The call in flight, as the live line says it: "Searching 'time constant'". */
 export const liveLine = (c: Call) => `${liveText[c.kind]} ${quote(c)}`;
 
 /** A finished call, as the opened list says it. */
