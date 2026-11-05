@@ -9,6 +9,7 @@ import {
 } from 'react';
 
 import { Button } from '@/units/button';
+import { ErrorNotice } from '@/units/error-notice';
 import { IconButton } from '@/units/icon-button';
 import { Tag } from '@/units/tag';
 import { Document } from './blocks';
@@ -131,20 +132,20 @@ function TurnView({
           <p className="ds-small text-(--ds-fg-muted)">Stopped</p>
         )}
         {turn.status === 'failed' && turn.failure && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <p className="ds-small max-w-[680px] text-(--ds-danger) [overflow-wrap:anywhere]">
-              {`Couldn't answer: ${turn.failure.why}`}
-            </p>
+          <div className="max-w-[680px]">
             {/* Without a key, trying again cannot work: the fix is Settings. */}
-            {turn.failure.setup ? (
-              <Button variant="quiet" onPress={onSettings}>
-                Open Settings
-              </Button>
-            ) : (
-              <Button variant="quiet" onPress={() => onRetry?.(turn.id)}>
-                Try again
-              </Button>
-            )}
+            <ErrorNotice
+              variant="line"
+              error={{ what: `Couldn't answer: ${turn.failure.why}` }}
+              actions={[
+                turn.failure.setup
+                  ? { label: 'Open Settings', onPress: onSettings }
+                  : {
+                      label: 'Try again',
+                      onPress: () => onRetry?.(turn.id),
+                    },
+              ]}
+            />
           </div>
         )}
         {/* The slot is always here: the mark while text streams, then Copy,
