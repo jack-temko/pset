@@ -47,46 +47,37 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** One setting: its name and a line saying what it does on the left, the
- *  control on the right, as GitHub and macOS settings are laid out. A row
- *  whose control is a field passes the field's note here: the row becomes two
- *  lines, the name beside the field and the note beside the hint, so the note
- *  lines up with the hint and leaves no empty line at the foot of the row. */
+ *  control on the right and centred on both lines, as GitHub and macOS
+ *  settings are laid out. A field's state ("Saved", why it failed) takes the
+ *  hint's place while it lasts, so it reads where the student already looks
+ *  and nothing moves. */
 function Row({
   name,
   hint,
   note,
-  failed,
+  tone,
   children,
 }: {
   name: string;
   hint: ReactNode;
-  /** The field's note ("Saved", why it failed), on the hint's line under the control. */
+  /** The field's state, shown in the hint's place while it lasts. */
   note?: ReactNode;
-  /** Draws the note in the danger colour. */
-  failed?: boolean;
+  /** The state's colour: success for done, danger for failed. */
+  tone?: 'success' | 'danger';
   children?: ReactNode;
 }) {
-  if (note !== undefined) {
-    return (
-      <div className="grid min-h-16 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 px-4 py-3">
-        <p className="ds-body font-medium text-(--ds-fg)">{name}</p>
-        <div>{children}</div>
-        <p className="ds-small min-w-0 self-start text-(--ds-fg-muted)">
-          {hint}
-        </p>
-        <p
-          className={`ds-small min-h-5 self-start ${failed ? 'text-(--ds-danger)' : 'text-(--ds-fg-muted)'}`}
-        >
-          {note}
-        </p>
-      </div>
-    );
-  }
+  const shown = note !== undefined && note !== '' && note !== false;
+  const colour =
+    shown && tone === 'danger'
+      ? 'text-(--ds-danger)'
+      : shown && tone === 'success'
+        ? 'text-(--ds-success)'
+        : 'text-(--ds-fg-muted)';
   return (
     <div className="flex min-h-16 min-w-0 items-center justify-between gap-6 px-4 py-3">
       <div className="min-w-0 flex-1">
         <p className="ds-body font-medium text-(--ds-fg)">{name}</p>
-        <p className="ds-small text-(--ds-fg-muted)">{hint}</p>
+        <p className={`ds-small ${colour}`}>{shown ? note : hint}</p>
       </div>
       {children !== undefined && <div className="shrink-0">{children}</div>}
     </div>
@@ -152,13 +143,9 @@ export function Settings({
   const [name, setName] = useState(settings.name);
   const [saved, setSaved] = useState(false);
   const [key, setKey] = useState(settings.key.value);
-  /** What the last Test said; editing the key clears it. */
+  /** What the last Test said, for a moment; a failure stays until the key is edited. */
   const [result, setResult] = useState<'ok' | 'failed' | 'saved' | undefined>(
-    settings.key.status === 'none'
-      ? undefined
-      : settings.key.status === 'ok'
-        ? 'ok'
-        : 'failed',
+    settings.key.status === 'failed' ? 'failed' : undefined,
   );
   const [failure, setFailure] = useState(settings.key.failure);
   const [testing, setTesting] = useState(false);
@@ -186,8 +173,12 @@ export function Settings({
     setTesting(true);
     later(() => {
       setTesting(false);
-      if (key.trim().startsWith('sk-or-')) setResult(save ? 'saved' : 'ok');
-      else {
+      if (key.trim().startsWith('sk-or-')) {
+        setResult(save ? 'saved' : 'ok');
+        later(() => {
+          setResult((r) => (r === 'failed' ? r : undefined));
+        }, SAVED_MS);
+      } else {
         setResult('failed');
         setFailure('OpenRouter refused this key. Check it and paste it again.');
       }
@@ -268,7 +259,8 @@ export function Settings({
                 <Row
                   name="Name"
                   hint="What PSet calls you."
-                  note={saved ? 'Saved' : ''}
+                  note={saved ? 'Saved' : undefined}
+                  tone="success"
                 >
                   <div className="w-[280px]">
                     <TextField
@@ -302,7 +294,13 @@ export function Settings({
                   name="OpenRouter key"
                   hint="Lets PSet read pages and guide you."
                   note={keyNote}
-                  failed={result === 'failed'}
+                  tone={
+                    result === 'failed'
+                      ? 'danger'
+                      : result === 'ok' || result === 'saved'
+                        ? 'success'
+                        : undefined
+                  }
                 >
                   <div className="w-[440px]">
                     <TextField
