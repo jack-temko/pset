@@ -202,21 +202,25 @@ function PageSlot({
         <div data-loading className="size-full bg-(--ds-bg-raised)" />
       )}
       {load === 'failed' && (
-        <div className="flex size-full items-center justify-center overflow-hidden bg-(--ds-bg-raised) p-6">
-          <ErrorNotice
-            error={{
-              what: `Couldn't draw ${label(book, pdf)}`,
-              why: "The picture of this page did not arrive, so it can't be shown. The rest of the material is fine.",
-            }}
-            actions={[
-              {
-                label: 'Try again',
-                onPress: () => {
-                  setLoad('loading');
+        // Near the top of the page, and kept in view while the page scrolls by:
+        // a page can be taller than the pane, so centred it sat out of sight.
+        <div className="flex size-full items-start justify-center bg-(--ds-bg-raised) px-6 pt-16">
+          <div className="sticky top-16 w-full max-w-[560px]">
+            <ErrorNotice
+              error={{
+                what: `Couldn't draw ${label(book, pdf)}`,
+                why: "The picture of this page did not arrive, so it can't be shown. The rest of the material is fine.",
+              }}
+              actions={[
+                {
+                  label: 'Try again',
+                  onPress: () => {
+                    setLoad('loading');
+                  },
                 },
-              },
-            ]}
-          />
+              ]}
+            />
+          </div>
         </div>
       )}
       {flash && (
