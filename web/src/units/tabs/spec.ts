@@ -31,7 +31,7 @@ export default defineSpec({
     {
       id: 'overflow',
       name: 'Too many tabs',
-      when: 'Twelve tabs: they shrink to 112px, then the row scrolls sideways with a fade at each edge that has more.',
+      when: 'Twelve tabs: they shrink to 72px, then the row scrolls sideways with a fade at each edge that has more.',
     },
     {
       id: 'dropping',
@@ -118,7 +118,7 @@ export default defineSpec({
   priority: { first: 'The open tab.', main: 'open-tab' },
   sizes: {
     gives: [
-      'Tabs shrink from their text’s width to 112px',
+      'Tabs shrink from their text’s width to 72px',
       'Then the row scrolls sideways with a fade at the edge',
       'The + and what follows it never move',
     ],
@@ -183,6 +183,14 @@ export default defineSpec({
       why: 'Jack’s pick, W7; the menu’s items are Assumed in workspace-grill.',
       beat: 'A menu only',
       date: '2026-10-21',
+    },
+    {
+      id: 'tabs-d7',
+      decision:
+        "A tab is its label and its x, down to 72px; the row starts 12px in, so the first label sits on the workspace's 24px edge. The rest of tabs-d3 stands.",
+      why: 'Jack: "One 24px edge, tabs fit (Recommended)": "Ask" had a 60px gap before its x (ideas/fable-review-grill.md D10).',
+      beat: 'A 112px minimum (tabs-d3)',
+      date: '2026-11-09',
     },
   ],
 });

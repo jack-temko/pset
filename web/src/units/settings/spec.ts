@@ -356,6 +356,39 @@ export default defineSpec({
       why: 'Jack: "we need to stick to some sort of consistant outline or no outline" and "The failing tag is not aligned".',
       beat: 'A quiet fix beside outlined actions',
       date: '2026-11-05',
+      supersededBy: 'settings-d22',
+    },
+    {
+      id: 'settings-d22',
+      decision:
+        '"Working" is quiet text; only "Failing" is a tag, at the row\'s right edge with its fix to the left. Health says a failure with the error line.',
+      why: 'Jack: "Working as plain text, Failing loud (Recommended)" (ideas/fable-review-grill.md D6).',
+      beat: 'A pill on every check, in a left-aligned column (settings-d21)',
+      date: '2026-11-09',
+    },
+    {
+      id: 'settings-d23',
+      decision:
+        'The "Reset everything" row\'s button is outlined; the solid red is the danger dialog\'s final button only.',
+      why: 'Jack: "Plain button, red in the dialog (Recommended)" (ideas/fable-review-grill.md D8).',
+      beat: 'A solid red button on the row',
+      date: '2026-11-09',
+    },
+    {
+      id: 'settings-d24',
+      decision:
+        'Save is primary only while the key field holds an edit not yet saved; otherwise it is outlined.',
+      why: 'Jack: "Blue only with an edit (Recommended)": the one blue thing is the next thing to do (D7).',
+      beat: 'Always primary',
+      date: '2026-11-09',
+    },
+    {
+      id: 'settings-d25',
+      decision:
+        '"Clear all" sits at the right end of the "Recent errors (3)" line while it is open; the version reads "PSet 0.2.1".',
+      why: 'Jack: "Take both (Recommended)", as the Adds sit across from their headings (D9).',
+      beat: 'Clear all under the list; "pset 0.2.1"',
+      date: '2026-11-09',
     },
   ],
 });

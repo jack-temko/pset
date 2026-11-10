@@ -42,5 +42,5 @@ export function nextToDo(
   return problems.slice(at + 1).find((p) => !p.done)?.id;
 }
 
-/** How long "Removed 4.62 · Undo" stays (P8). */
-export const UNDO_MS = 6000;
+/** How long "Removed 4.62 · Undo" stays: 10 s, as every Undo (work-d22). */
+export const UNDO_MS = 10_000;

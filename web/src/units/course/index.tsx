@@ -20,7 +20,7 @@ import { WEEKS } from '@/units/home/options';
 import { changeOf, homeStats } from '@/units/home/stats';
 import { List, LIST_CAP } from '@/units/list';
 import { countBeside } from '@/units/list/count';
-import { ListRow } from '@/units/list-row';
+import { ListRow, UndoRow, UNDO_ROW_MS } from '@/units/list-row';
 import { MoreMenu } from '@/units/menu';
 import { ProgressBar } from '@/units/progress-bar';
 import { SectionHeading } from '@/units/section-heading';
@@ -44,7 +44,6 @@ const WORK_ASIDE = 'clamp(200px, 24cqw, 360px)';
 let nextId = 0;
 
 /** How long a deleted row waits for Undo. */
-const UNDO_MS = 10_000;
 
 /** To do by due date, undated last; the finished apart. */
 function split(sets: readonly CourseSet[]) {
@@ -98,19 +97,6 @@ function NameField({
       inline={inline}
       autoFocus
     />
-  );
-}
-
-/** A deleted row, kept one line long until the next action or 10 seconds. */
-function DeletedRow({ name, onUndo }: { name: string; onUndo: () => void }) {
-  return (
-    <div className="ds-small flex min-h-10 items-center gap-2 px-4 text-(--ds-fg-muted)">
-      <span className="min-w-0 truncate">Deleted {name}</span>
-      <span aria-hidden>·</span>
-      <Button variant="quiet" onPress={onUndo}>
-        Undo
-      </Button>
-    </div>
   );
 }
 
@@ -420,7 +406,7 @@ export function Course({
     settle();
     pendingRef.current = p;
     setPending(p);
-    timer.current = window.setTimeout(settle, UNDO_MS);
+    timer.current = window.setTimeout(settle, UNDO_ROW_MS);
   };
   const undo = () => {
     window.clearTimeout(timer.current);
@@ -500,7 +486,7 @@ export function Course({
 
   const setRow = (s: CourseSet, finished: boolean) =>
     pending?.kind === 'set' && pending.id === s.id ? (
-      <DeletedRow key={s.id} name={s.name} onUndo={undo} />
+      <UndoRow key={s.id} text={`Deleted ${s.name}`} onUndo={undo} />
     ) : (
       <WorkRow
         key={s.id}
@@ -632,9 +618,9 @@ export function Course({
                 />
               )}
 
-              <Stats course={course} today={today} />
-
-              <div className="mt-16 space-y-10">
+              {/* The work first, then the stats box, then memories
+                  (course-d31): the assignment is above the fold. */}
+              <div className="space-y-10">
                 <div>
                   <SectionHeading
                     count={
@@ -697,9 +683,9 @@ export function Course({
                     >
                       {materials.map((m) =>
                         pending?.kind === 'material' && pending.id === m.id ? (
-                          <DeletedRow
+                          <UndoRow
                             key={m.id}
-                            name={`${m.name}. Its work stays.`}
+                            text={`Deleted ${m.name}. Its work stays.`}
                             onUndo={undo}
                           />
                         ) : (
@@ -728,7 +714,13 @@ export function Course({
                     </List>
                   </div>
                 </div>
+              </div>
 
+              <div className="mt-16">
+                <Stats course={course} today={today} />
+              </div>
+
+              <div className="mt-10">
                 {/* Hidden with nothing to show (a zero says nothing); the rows
                     are the Memory unit's own (course-d29). */}
                 {memories.length > 0 && (
@@ -782,29 +774,7 @@ export function CourseSkeleton({
               <Bar className="h-4 w-48" />
             </div>
           </div>
-          <Beside
-            heatmap={<HeatmapSkeleton weeks={WEEKS} grow />}
-            week={
-              <>
-                <Caption>
-                  <p className="ds-body flex h-(--ds-body-line) items-center">
-                    <Bar className="h-4 w-[112px]" />
-                  </p>
-                  <p className="ds-small flex h-(--ds-small-line) items-center">
-                    <Bar className="h-3 w-[112px]" />
-                  </p>
-                </Caption>
-                <div className="min-h-0 flex-1">
-                  <BarChartSkeleton />
-                </div>
-                <Rows>
-                  <RowSkeleton first />
-                  <RowSkeleton />
-                </Rows>
-              </>
-            }
-          />
-          <div className="mt-16 space-y-10">
+          <div className="space-y-10">
             {SECTIONS.map((h, i) => (
               <div key={i}>
                 <div className="flex min-h-8 items-center">
@@ -817,9 +787,33 @@ export function CourseSkeleton({
                 </div>
               </div>
             ))}
-            <div className="flex h-8 items-center">
-              <Bar className="h-3 w-40" />
-            </div>
+          </div>
+          <div className="mt-16">
+            <Beside
+              heatmap={<HeatmapSkeleton weeks={WEEKS} grow />}
+              week={
+                <>
+                  <Caption>
+                    <p className="ds-body flex h-(--ds-body-line) items-center">
+                      <Bar className="h-4 w-[112px]" />
+                    </p>
+                    <p className="ds-small flex h-(--ds-small-line) items-center">
+                      <Bar className="h-3 w-[112px]" />
+                    </p>
+                  </Caption>
+                  <div className="min-h-0 flex-1">
+                    <BarChartSkeleton />
+                  </div>
+                  <Rows>
+                    <RowSkeleton first />
+                    <RowSkeleton />
+                  </Rows>
+                </>
+              }
+            />
+          </div>
+          <div className="mt-10 flex h-8 items-center">
+            <Bar className="h-3 w-40" />
           </div>
         </div>
       </div>

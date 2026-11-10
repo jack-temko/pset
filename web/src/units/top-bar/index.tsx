@@ -14,6 +14,7 @@ export function TopBar({
   path = [],
   settingsHref,
   onSettings,
+  edge = 'page',
 }: {
   /** Where the wordmark goes: Home. A router can intercept it like any link. */
   homeHref: string;
@@ -21,9 +22,14 @@ export function TopBar({
   settingsHref: string;
   /** On the Settings screen itself: Settings shows as where you are, not a link. */
   onSettings?: boolean;
+  /** Its side padding: the page gutter (40px), or 24px in the workspace, so
+   *  the wordmark lines up with the tabs and the pane (top-bar-d2). */
+  edge?: 'page' | 'workspace';
 }) {
   return (
-    <header className="sticky top-0 z-10 flex h-(--ds-topbar) items-center justify-between gap-4 border-b border-(--ds-border-muted) bg-(--ds-bg) px-(--ds-gutter)">
+    <header
+      className={`sticky top-0 z-10 flex h-(--ds-topbar) items-center justify-between gap-4 border-b border-(--ds-border-muted) bg-(--ds-bg) ${edge === 'workspace' ? 'px-6' : 'px-(--ds-gutter)'}`}
+    >
       <nav className="flex min-w-0 items-center gap-2">
         <Link href={homeHref} tone="fg" size="brand" className="shrink-0">
           PSet
