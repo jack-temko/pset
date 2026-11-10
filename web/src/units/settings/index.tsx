@@ -91,15 +91,17 @@ function Row({
 function FoldRow({
   label,
   open,
+  action,
   children,
 }: {
   label: string;
   open?: boolean;
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="px-2">
-      <Fold label={label} defaultOpen={open}>
+      <Fold label={label} defaultOpen={open} action={action}>
         <div className="-mx-2 divide-y divide-(--ds-border-muted) border-t border-(--ds-border-muted)">
           {children}
         </div>
@@ -146,6 +148,7 @@ export function Settings({
   const [name, setName] = useState(settings.name);
   const [saved, setSaved] = useState(false);
   const [key, setKey] = useState(settings.key.value);
+  const [savedKey, setSavedKey] = useState(settings.key.value);
   /** What the last Test said, for a moment; a failure stays until the key is edited. */
   const [result, setResult] = useState<'ok' | 'failed' | 'saved' | undefined>(
     settings.key.status === 'failed' ? 'failed' : undefined,
@@ -178,6 +181,7 @@ export function Settings({
       setTesting(false);
       if (key.trim().startsWith('sk-or-')) {
         setResult(save ? 'saved' : 'ok');
+        if (save) setSavedKey(key);
         later(() => {
           setResult((r) => (r === 'failed' ? r : undefined));
         }, SAVED_MS);
@@ -215,22 +219,24 @@ export function Settings({
   const keyReady = key.trim() === '' ? 'Paste a key first.' : undefined;
   const failing = settings.checks.filter((c) => !c.ok);
 
-  const anyFix = settings.checks.some((c) => c.fix);
+  // "Working" is quiet text and only "Failing" is a tag, at the row's right
+  // edge with its fix to the left (settings-d22).
   const rows = settings.checks.map((c) => (
     <ListRow
       key={c.id}
       title={c.name}
       meta={[c.detail]}
-      status={c.ok ? <Tag>Working</Tag> : <Tag tone="danger">Failing</Tag>}
       aside={
-        anyFix ? (
-          <div className="flex justify-end">
-            {c.fix && <Button>{c.fix}</Button>}
-          </div>
-        ) : undefined
+        <div className="flex items-center justify-end gap-3">
+          {c.fix && <Button>{c.fix}</Button>}
+          {c.ok ? (
+            <span className="ds-small text-(--ds-fg-muted)">Working</span>
+          ) : (
+            <Tag tone="danger">Failing</Tag>
+          )}
+        </div>
       }
-      asideWidth={140}
-      statusWidth={64}
+      asideWidth={240}
     />
   ));
 
@@ -332,8 +338,10 @@ export function Settings({
                           >
                             Test
                           </Button>
+                          {/* Primary only while there is an edit to keep
+                              (settings-d24). */}
                           <Button
-                            variant="primary"
+                            variant={key === savedKey ? 'default' : 'primary'}
                             busy={testing}
                             notReady={keyReady}
                             onPress={() => {
@@ -384,7 +392,7 @@ export function Settings({
 
               <Group title="PSet">
                 <Row
-                  name={`pset ${settings.version}`}
+                  name={`PSet ${settings.version}`}
                   hint={
                     update === 'current'
                       ? upToDate
@@ -424,11 +432,13 @@ export function Settings({
                 )}
                 <Row
                   name="Health"
-                  hint={
+                  hint="Everything is working"
+                  note={
                     failing.length === 0
-                      ? 'Everything is working'
+                      ? undefined
                       : `${plural(failing.length, 'check is', 'checks are')} failing.`
                   }
+                  tone="danger"
                 />
                 <FoldRow label="Checks" open={unfolded || failing.length > 0}>
                   {rows}
@@ -437,6 +447,17 @@ export function Settings({
                   <FoldRow
                     label={`Recent errors (${String(errors.length)})`}
                     open={unfolded}
+                    action={
+                      <div ref={setErrorsEl} className="pr-2">
+                        <Button
+                          onPress={() => {
+                            setConfirming('errors');
+                          }}
+                        >
+                          Clear all
+                        </Button>
+                      </div>
+                    }
                   >
                     {errors.map((e) => (
                       <ListRow
@@ -446,17 +467,6 @@ export function Settings({
                         status={<span className="ds-code">{e.id}</span>}
                       />
                     ))}
-                    <div className="px-4 py-3">
-                      <div ref={setErrorsEl} className="inline-block">
-                        <Button
-                          onPress={() => {
-                            setConfirming('errors');
-                          }}
-                        >
-                          Clear all
-                        </Button>
-                      </div>
-                    </div>
                   </FoldRow>
                 )}
                 <Row
@@ -488,8 +498,9 @@ export function Settings({
                   name="Reset everything"
                   hint="Removes every course, assignment, material and memory."
                 >
+                  {/* Outlined: the solid red is the dialog's final button only
+                      (settings-d23). */}
                   <Button
-                    variant="danger"
                     onPress={() => {
                       setConfirming('all');
                     }}

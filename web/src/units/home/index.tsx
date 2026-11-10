@@ -229,8 +229,12 @@ function HomeFrame({
       <div className="px-(--ds-gutter) pb-16">
         <div className="@container mx-auto max-w-(--ds-page-width)">
           <div className="ds-room-display">{greeting}</div>
-          <div data-info>{info}</div>
-          <div className="mt-16">{children}</div>
+          {/* The lists first, then the stats box (home-d19): the next
+              assignment is above the fold, in Course's order. */}
+          <div>{children}</div>
+          <div data-info className="mt-16">
+            {info}
+          </div>
         </div>
       </div>
     </div>

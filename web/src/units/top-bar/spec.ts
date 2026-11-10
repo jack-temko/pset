@@ -44,6 +44,10 @@ export default defineSpec({
     },
   ],
   inputs: [
+    {
+      name: 'edge',
+      does: 'The side padding: the page gutter, or 24px in the workspace.',
+    },
     { name: 'homeHref', does: 'Where the wordmark goes: Home.' },
     {
       name: 'path',
@@ -83,6 +87,14 @@ export default defineSpec({
       why: 'Enough to know where you are and go up.',
       beat: 'An activity indicator; wordmark and Settings only',
       date: '2026-10-13',
+    },
+    {
+      id: 'top-bar-d2',
+      decision:
+        "In the workspace the bar's side padding is 24px, so the wordmark, the first tab's label and the pane's content share one left edge.",
+      why: 'Jack: "One 24px edge, tabs fit (Recommended)": three edges at 40, 12 and 24 (ideas/fable-review-grill.md D10).',
+      beat: 'The page gutter everywhere',
+      date: '2026-11-09',
     },
   ],
 });

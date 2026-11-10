@@ -781,10 +781,9 @@ export function Material({
             <p className="ds-body min-w-0 truncate font-medium">
               {`Draw a box around ${boxing.label}`}
             </p>
+            {/* The action first, Cancel rightmost, as every confirm
+                (material-d20). */}
             <div className="flex shrink-0 items-center gap-2">
-              <Button variant="quiet" onPress={onCancel}>
-                Cancel
-              </Button>
               <span className={boxes.length === 0 ? 'invisible' : undefined}>
                 <Button
                   variant="primary"
@@ -795,6 +794,7 @@ export function Material({
                   Done
                 </Button>
               </span>
+              <Button onPress={onCancel}>Cancel</Button>
             </div>
           </>
         ) : (

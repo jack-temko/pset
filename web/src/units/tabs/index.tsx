@@ -185,7 +185,7 @@ export function Tabs({
         aria-label={label}
         onScroll={measure}
         style={fade(edges.left, edges.right)}
-        className="-mb-px flex h-[45px] min-w-0 items-stretch overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mb-px flex h-[45px] min-w-0 items-stretch overflow-x-auto pl-3 overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {tabs.map((t, i) => {
           const active = t.id === open;
@@ -222,7 +222,7 @@ export function Tabs({
                 e.preventDefault();
                 setMenu({ kind: 'tab', tab: t.id, x: e.clientX, y: e.clientY });
               }}
-              className={`group/tab relative flex min-w-[112px] max-w-[240px] shrink cursor-default items-center gap-1 border-b-2 pr-[6px] pl-3 select-none ${
+              className={`group/tab relative flex min-w-[72px] max-w-[240px] shrink cursor-default items-center gap-1 border-b-2 pr-[6px] pl-3 select-none ${
                 active
                   ? 'border-(--ds-accent) text-(--ds-fg)'
                   : `border-transparent hover:text-(--ds-fg) ${forceHover === t.id ? 'text-(--ds-fg)' : 'text-(--ds-fg-muted)'}`

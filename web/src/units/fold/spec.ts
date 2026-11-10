@@ -24,6 +24,10 @@ export default defineSpec({
     'A 90 character label in a 240px container: the label truncates; the chevron stays.',
   actions: [],
   inputs: [
+    {
+      name: 'action',
+      does: 'One button at the right end of the line, shown while open.',
+    },
     { name: 'label', does: 'The line: what is inside, and how many.' },
     { name: 'defaultOpen', does: 'Opens it at first.' },
     { name: 'children', does: 'What unfolds.' },
@@ -39,6 +43,14 @@ export default defineSpec({
       why: 'Confirmed by Jack: "One list, Done folded (Recommended)" (C3), and the same for the models (G3) and health (G4, G11). The memories fold is assumed.',
       beat: 'A "Show" link; a separate page',
       date: '2026-10-22',
+    },
+    {
+      id: 'fold-d2',
+      decision:
+        'A fold may hold one button at the right end of its line, shown while open, as the Adds sit across from their headings.',
+      why: 'Jack: "Take both (Recommended)": Clear all beside "Recent errors (3)" (ideas/fable-review-grill.md D9).',
+      beat: 'The button under the list',
+      date: '2026-11-09',
     },
   ],
 });

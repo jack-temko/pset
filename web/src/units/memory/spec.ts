@@ -38,7 +38,7 @@ export default defineSpec({
     {
       id: 'deleted',
       name: 'Forgotten, with Undo',
-      when: 'A row is gone at once, no question asked, and a line under the list offers Undo.',
+      when: 'A row is forgotten at once, no question asked, and stays in its place as one line with Undo for 10 s.',
       text: 'Forgot “Round to three significant figures”',
     },
   ],
@@ -174,6 +174,14 @@ export default defineSpec({
         'MemoryList is the list alone (same rows, cap, Show all, Undo) for a fold on another screen, such as Course.',
       why: 'Fable review, item 15: Course drew memories its own way. Jack took it in the review batch.',
       beat: 'Each screen drawing its own memory rows',
+      date: '2026-11-09',
+    },
+    {
+      id: 'memory-d8',
+      decision:
+        'A forgotten memory stays in its place as "Forgot “...” · Undo" for 10 s or until the next is forgotten: the one Undo shape in a list.',
+      why: 'Jack: "Row in place, 10 s (Recommended)" (ideas/fable-review-grill.md D4).',
+      beat: 'A muted Undo line under the list',
       date: '2026-11-09',
     },
   ],

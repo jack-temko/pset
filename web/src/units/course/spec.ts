@@ -8,7 +8,7 @@ export default defineSpec({
   title: 'Course',
   group: 'Screens',
   purpose:
-    'One course as a student checks on it: its name and where it stands, a stats box like Home’s, then its Work and its Materials, each with its own Add.',
+    'One course as a student checks on it: its name and where it stands, its Assignments and Materials, each with its own Add, then a stats box like Home’s.',
   exampleWidth: 'full',
   states: [
     {
@@ -425,6 +425,14 @@ export default defineSpec({
         'With one assignment to do, the line under the name stays empty (its height kept): the row already says the date twice.',
       why: 'Fable review, item 20: "Next due Thu", the Due soon tag and "Due Thu" said one date three times. Jack took it in the batch.',
       beat: '"Next due Thu" above a list of one',
+      date: '2026-11-09',
+    },
+    {
+      id: 'course-d31',
+      decision:
+        "Course reads name and line, Assignments, Materials, the stats box, memories. The box is still Home's own, in the same place as on Home.",
+      why: 'Jack: "Assignments first (Recommended)": the one active assignment was below the fold (ideas/fable-review-grill.md D1).',
+      beat: "The stats box first (course-d23's order)",
       date: '2026-11-09',
     },
   ],

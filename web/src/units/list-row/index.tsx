@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
 
+import { Button } from '@/units/button';
 import { Link } from '@/units/link';
 
 /** The one row shape: a title on line one, small meta on line two, the
@@ -108,3 +109,27 @@ export function ListRow({
     </div>
   );
 }
+
+/** A removed row, kept in its place as one line ("Forgot ... · Undo") until
+ *  the next action or 10 seconds (list-row-d12): the one shape of Undo in a
+ *  list. */
+export function UndoRow({
+  text,
+  onUndo,
+}: {
+  text: string;
+  onUndo: () => void;
+}) {
+  return (
+    <div className="ds-small flex min-h-10 items-center gap-2 px-4 text-(--ds-fg-muted)">
+      <span className="min-w-0 truncate">{text}</span>
+      <span aria-hidden>·</span>
+      <Button variant="quiet" onPress={onUndo}>
+        Undo
+      </Button>
+    </div>
+  );
+}
+
+/** How long an Undo row waits before the removal is final. */
+export const UNDO_ROW_MS = 10_000;

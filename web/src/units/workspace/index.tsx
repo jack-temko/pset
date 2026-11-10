@@ -397,7 +397,12 @@ export function Workspace({
 
   return (
     <div className="flex h-full min-w-0 flex-col bg-(--ds-bg)">
-      <TopBar homeHref={homeHref} path={path} settingsHref={settingsHref} />
+      <TopBar
+        homeHref={homeHref}
+        path={path}
+        settingsHref={settingsHref}
+        edge="workspace"
+      />
       <div ref={row} className="relative flex min-h-0 flex-1">
         {shown.map((side, i) => (
           <div
