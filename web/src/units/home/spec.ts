@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Home',
   group: 'Screens',
   purpose:
-    'The first screen: a greeting, the Assignments list and the Courses list, then a heatmap of 6 months of study with this week and its sparklines beside it.',
+    'The first screen: a greeting, a heatmap of 6 months of study with this week and its sparklines beside it, then the Assignments list and the Courses list.',
   states: [
     {
       id: 'default',
@@ -260,14 +260,6 @@ export default defineSpec({
       why: 'Jack, in ideas/list-pattern-grill.md: "Cap 5, Show all page (Recommended)" and "Foot, with a count (Recommended)" (L2, L3).',
       beat: '"Show all" at the heading’s right, going nowhere',
       date: '2026-11-04',
-    },
-    {
-      id: 'home-d19',
-      decision:
-        "Home reads greeting, Assignments, Courses, then the stats box: the next assignment is above the fold, in Course's order.",
-      why: 'Jack: "Assignments first on Home too (Recommended)" (ideas/fable-review-grill.md D2).',
-      beat: 'The stats box under the greeting',
-      date: '2026-11-09',
     },
   ],
 });
