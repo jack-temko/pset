@@ -33,6 +33,8 @@ import {
 
 /** The gap round and between pages. */
 const PAD = 12;
+/** Room under the last page, so the floating page pill never covers its end. */
+const PILL_CLEAR = 64;
 /** Where in the view the "current page" is read: a share of its height. */
 const PROBE = 0.3;
 /** The pane width from which Contents sits beside the pages: the pages keep
@@ -392,7 +394,7 @@ export function Material({
   const pageH = Math.round(pageW / book.aspect);
   const pitch = pageH + PAD;
   const innerW = Math.max(width, pageW);
-  const total = PAD + book.pdfPages * pitch;
+  const total = PAD + book.pdfPages * pitch + PILL_CLEAR;
 
   /** The spot at the top of the view, in pages scrolled, and how far down the
    *  view a zoom keeps its focus. It survives any change of size. */

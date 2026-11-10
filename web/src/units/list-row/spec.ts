@@ -77,6 +77,10 @@ export default defineSpec({
       name: 'statusWidth',
       does: 'The status width, so tags of different lengths line up down a list.',
     },
+    {
+      name: 'rowLink',
+      does: 'The whole row opens href, with a hover ground; only for a row with one destination.',
+    },
   ],
   priority: { first: 'The title.', main: 'open' },
   sizes: {
@@ -175,6 +179,14 @@ export default defineSpec({
       why: 'Desktop only; the spec format change (ideas/spec-format-grill.md, F10) strips the narrow code.',
       beat: 'The aside going first when the row is narrow (list-row-d3)',
       date: '2026-10-22',
+    },
+    {
+      id: 'list-row-d11',
+      decision:
+        'A row with one destination is one target: the hover ground spans it and the title underlines. A row with two links keeps list-row-d7.',
+      why: 'Fable review: a tired student aims at a 95px title in a 1004px row. Jack took it in the review batch, to judge from photos.',
+      beat: 'Only the title is the target (list-row-d7), for every row',
+      date: '2026-11-09',
     },
   ],
 });

@@ -168,5 +168,13 @@ export default defineSpec({
       beat: 'A New from Ask box above the list; new rows at the top of every side',
       date: '2026-11-04',
     },
+    {
+      id: 'memory-d7',
+      decision:
+        'MemoryList is the list alone (same rows, cap, Show all, Undo) for a fold on another screen, such as Course.',
+      why: 'Fable review, item 15: Course drew memories its own way. Jack took it in the review batch.',
+      beat: 'Each screen drawing its own memory rows',
+      date: '2026-11-09',
+    },
   ],
 });

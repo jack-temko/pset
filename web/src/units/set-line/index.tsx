@@ -52,6 +52,7 @@ export function SetLine({
 }: SetLineProps) {
   return (
     <ListRow
+      rowLink
       title={set}
       href={href}
       label={dueBadge(due, today)}

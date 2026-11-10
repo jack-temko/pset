@@ -240,7 +240,7 @@ export function Settings({
         homeHref={homeHref}
         settingsHref={settingsHref}
         onSettings
-        path={[{ label: 'Home', href: homeHref }, { label: 'Settings' }]}
+        path={[{ label: 'Settings' }]}
       />
       <div className="px-(--ds-gutter) pb-16">
         <div className="@container mx-auto max-w-(--ds-page-width)">
@@ -248,14 +248,15 @@ export function Settings({
             <h1 className="ds-display text-(--ds-fg)">Settings</h1>
           </div>
           {failed ? (
-            <div className="flex flex-col items-center py-24 text-center">
-              <p className="ds-heading text-(--ds-fg)">
-                Could not load Settings
-              </p>
-              <p className="ds-body mt-2 mb-6 text-(--ds-fg-muted)">
-                PSet could not read them. Try again in a moment.
-              </p>
-              <Button>Try again</Button>
+            <div className="flex justify-center py-24">
+              <ErrorNotice
+                error={{
+                  what: "Couldn't load Settings",
+                  why: "PSet couldn't read your settings. Nothing was changed.",
+                  chain: ['settings.load'],
+                }}
+                actions={[{ label: 'Try again' }]}
+              />
             </div>
           ) : (
             <div className="space-y-10">
@@ -557,7 +558,7 @@ export function SettingsSkeleton({
         homeHref={homeHref}
         settingsHref={settingsHref}
         onSettings
-        path={[{ label: 'Home', href: homeHref }, { label: 'Settings' }]}
+        path={[{ label: 'Settings' }]}
       />
       <div className="px-(--ds-gutter) pb-16">
         <div className="@container mx-auto max-w-(--ds-page-width)">

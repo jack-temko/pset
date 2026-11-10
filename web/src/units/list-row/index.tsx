@@ -16,6 +16,7 @@ export function ListRow({
   aside,
   asideWidth = 120,
   statusWidth,
+  rowLink,
   wrap,
 }: {
   title: string;
@@ -38,11 +39,19 @@ export function ListRow({
   /** The status's width, so tags of different lengths start on one line down
    *  a list; without it the status takes its own width. */
   statusWidth?: number | string;
+  /** The whole row opens `href`: a hover ground across it and the title
+   *  underlined (list-row-d11). Only for a row with one destination; its
+   *  buttons and other links stay their own targets. */
+  rowLink?: boolean;
   /** Wraps the title onto as many lines as it needs, not one. */
   wrap?: boolean;
 }) {
+  const whole =
+    rowLink === true && href !== undefined && titleField === undefined;
   return (
-    <div className={`min-w-0 ${meta.length > 0 ? 'min-h-14' : ''}`}>
+    <div
+      className={`min-w-0 ${meta.length > 0 ? 'min-h-14' : ''} ${whole ? 'group/row relative hover:bg-(--ds-hover) [&_a:not([data-row-link])]:relative [&_a:not([data-row-link])]:z-[1] [&_button]:relative [&_button]:z-[1]' : ''}`}
+    >
       <div className="flex min-w-0 items-center gap-4 px-4 py-2">
         <div className="min-w-0 flex-1">
           <div className="flex min-h-6 min-w-0 items-center gap-2">
@@ -62,7 +71,8 @@ export function ListRow({
                   title={title}
                   tone="fg"
                   weight="medium"
-                  className="block w-fit max-w-full truncate"
+                  data-row-link={whole || undefined}
+                  className={`block w-fit max-w-full truncate ${whole ? "group-hover/row:underline after:absolute after:inset-0 after:content-['']" : ''}`}
                 >
                   {title}
                 </Link>

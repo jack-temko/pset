@@ -38,8 +38,8 @@ export default defineSpec({
     {
       id: 'failed',
       name: 'Failed to load',
-      when: 'The course could not be read: the page says so and offers Try again.',
-      text: 'Could not load this course',
+      when: 'The course could not be read: an Error notice block, centred, with Try again and Details.',
+      text: "Couldn't load",
     },
   ],
   stress:
@@ -151,6 +151,7 @@ export default defineSpec({
     { name: 'unfolded', does: 'Opens every fold (the design page only).' },
     { name: 'workHref', does: 'Where Work\u2019s "Show all" goes.' },
     { name: 'materialsHref', does: 'Where Materials\u2019 "Show all" goes.' },
+    { name: 'memoriesHref', does: "Where the memories' Show all goes." },
     { name: 'homeHref', does: 'Where the wordmark and "Home" go.' },
     { name: 'settingsHref', does: 'Where Settings goes.' },
   ],
@@ -221,6 +222,7 @@ export default defineSpec({
       id: 'course-d2',
       decision:
         'The page is Home’s width (1012) and top bar, with the path "Home / ECE 210" (C2).',
+      supersededBy: 'course-d28',
       why: `Confirmed by Jack: "same as home, we need to keep cross page uniformity where possible." one look across views.`,
       beat: 'A narrower page',
       date: '2026-10-22',
@@ -400,6 +402,30 @@ export default defineSpec({
       why: 'Confirmed by Jack: "Three levels (Recommended)" (settings-view-grill G9); rule friction-matches-loss.',
       beat: 'A small confirm for deleting a course',
       date: '2026-10-30',
+    },
+    {
+      id: 'course-d28',
+      decision:
+        'The path starts at the course: "PSet / ECE 210". The wordmark is Home on every page (top-bar-d1), so a Home crumb said it twice.',
+      why: 'Fable review, item 9; it matches the workspace path. Jack took it in the review batch.',
+      beat: 'A Home crumb after the wordmark (course-d2)',
+      date: '2026-11-09',
+    },
+    {
+      id: 'course-d29',
+      decision:
+        'The memories fold holds the Memory unit\'s list (whole text, the "..." menu, cap 5, Show all) and is hidden when there are none.',
+      why: 'Fable review, items 13 and 15: one shape for a memory, and a zero says nothing. Jack took them in the review batch.',
+      beat: 'Its own one-line rows with Forget, all shown; "PSet remembers 0 things"',
+      date: '2026-11-09',
+    },
+    {
+      id: 'course-d30',
+      decision:
+        'With one assignment to do, the line under the name stays empty (its height kept): the row already says the date twice.',
+      why: 'Fable review, item 20: "Next due Thu", the Due soon tag and "Due Thu" said one date three times. Jack took it in the batch.',
+      beat: '"Next due Thu" above a list of one',
+      date: '2026-11-09',
     },
   ],
 });

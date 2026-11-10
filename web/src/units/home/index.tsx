@@ -138,7 +138,7 @@ export function Home({
               <span className="text-(--ds-fg-muted)">this week</span>
             </p>
             <p className="ds-small ds-tabular flex flex-wrap items-center gap-x-2 text-(--ds-fg-muted)">
-              {minutesText(s.time.last)} by this time last week
+              {`Last week by now: ${minutesText(s.time.last)}`}
               {timeChange && <ChangeText change={timeChange} />}
             </p>
           </Line>

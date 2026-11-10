@@ -1202,20 +1202,21 @@ describe('CourseRow', () => {
     expect(el.firstElementChild?.className).toContain('min-h-14');
   });
 
-  it('writes the singular at 1 and zero as 0', () => {
+  it('writes the singular at 1 and says a zero in words or not at all', () => {
     const meta = (todo: number, materials: number) =>
       row({ todo, materials }).querySelector('p')?.textContent;
     expect(meta(1, 1)).toBe('1 assignment to do \u00b7 1 material');
-    expect(meta(0, 0)).toBe('0 assignments to do \u00b7 0 materials');
+    expect(meta(0, 0)).toBe('Nothing to do');
+    expect(meta(2, 0)).toBe('2 assignments to do');
   });
 
-  it('shows the time this week in the aside, rounded, 0 m for none', () => {
+  it('shows the time this week in the aside, rounded, nothing for none', () => {
     const aside = (m: number) =>
       row({ weekMinutes: m }).querySelector('[data-aside]')?.textContent;
     expect(aside(130)).toBe('2 h 10 m this week');
     expect(aside(45)).toBe('45 m this week');
     expect(aside(59.7)).toBe('1 h this week');
-    expect(aside(0)).toBe('0 m this week');
+    expect(aside(0)).toBe('');
     expect(row().querySelector<HTMLElement>('[data-aside]')?.style.width).toBe(
       'clamp(160px, 20cqw, 320px)',
     );
