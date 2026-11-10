@@ -85,10 +85,6 @@ function ex(s: Subject) {
   return s.examples;
 }
 
-function never(): never {
-  throw new Error('missing');
-}
-
 async function broken(
   base: typeof ROW,
   change: (s: AnySpec) => Partial<AnySpec>,
@@ -247,24 +243,24 @@ describe('the checks', () => {
     expect(noStress.join()).toContain('no stress render');
   });
 
-  it('requires a skeleton per state when the unit reads data', async () => {
-    const noRender = await broken(
-      ROW,
-      () => ({}),
-      (s) => ({
-        examples: {
-          ...ex(s),
-          skeletons: { rest: ex(s).skeletons?.rest ?? never() },
-        },
-      }),
+  it('requires a loading form per state that loads, when the unit reads data', async () => {
+    // Off the contract (no waits in its sources), a state without a skeleton fails.
+    const off = (sub: Subject) => ({
+      sources: Object.fromEntries(
+        Object.keys(sub.sources ?? {}).map((k) => [k, '']),
+      ),
+    });
+    const noRender = await broken(SCREEN, () => ({}), off);
+    expect(noRender.join()).toContain('no loading form for state list');
+    // A state reached only by acting needs none.
+    const acting = await broken(
+      SCREEN,
+      (s) => ({ states: s.states.map((x) => ({ ...x, loads: false })) }),
+      off,
     );
-    expect(noRender.join()).toContain('no skeleton render for state menu');
-    const noData = await broken(
-      ROW,
-      () => ({ data: [] }),
-      (s) => ({ examples: { ...ex(s), skeletons: undefined } }),
-    );
-    expect(noData).toEqual([]);
+    expect(acting.join()).not.toContain('no loading form');
+    // On the contract, none is written: it is derived.
+    expect(await broken(SCREEN, () => ({}))).toEqual([]);
   });
 
   it('fails on a duplicate flow, decision or input', async () => {

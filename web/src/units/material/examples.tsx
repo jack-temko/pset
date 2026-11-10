@@ -133,5 +133,5 @@ export default defineExamples(spec, Material, {
   ),
   skeletons: Object.fromEntries(
     spec.states.map((s) => [s.id, () => <Loading />]),
-  ) as Record<(typeof spec.states)[number]['id'], () => React.ReactNode>,
+  ),
 });

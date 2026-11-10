@@ -17,6 +17,10 @@ export interface UnitState<S extends string = string> {
   /** The exact text it shows, for a state that is empty or failed. A test
    *  renders the state and fails when this text is not on screen. */
   text?: string;
+  /** False for a state reached only by acting (a menu open, a hover, an
+   *  edit): the page never loads into it, so its loading form is not drawn
+   *  or proven (skeleton-grill S7). */
+  loads?: boolean;
 }
 
 export interface Action<A extends string = string> {
@@ -42,6 +46,10 @@ export interface DataRead {
    *  `web/src/api/gen`, so an endpoint without such a comment fails until
    *  its comment is added. */
   call: string;
+  /** What is known before this read answers, and from where: "the course's
+   *  name and counts, from the row that was clicked". It is where real data
+   *  plugs into the loading form (skeleton-grill S7). */
+  before?: string;
 }
 
 /** What a unit keeps for the student between visits (keep-the-place). */

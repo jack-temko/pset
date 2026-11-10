@@ -1,6 +1,6 @@
 import { defineExamples } from '@/design/examples';
 import spec from './spec';
-import { SampleRow, SampleRowSkeleton } from './row';
+import { SampleRow } from './row';
 
 const LONG_TITLE =
   'The title of an item that goes on and on until it cannot fit in any column at all';
@@ -28,9 +28,4 @@ export default defineExamples(spec, SampleRow, {
     ),
   },
   stress: () => <SampleRow title={LONG_TITLE} detail={LONG_DETAIL} menuOpen />,
-  skeletons: {
-    rest: () => <SampleRowSkeleton />,
-    menu: () => <SampleRowSkeleton />,
-    failed: () => <SampleRowSkeleton />,
-  },
 });

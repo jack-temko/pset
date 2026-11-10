@@ -23,6 +23,7 @@ import {
   type Load,
   type StageState,
 } from './url-state';
+import { ForceLoading } from '@/design/loading';
 
 function Group({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -72,6 +73,7 @@ function Toolbar({
             { value: 'loaded', label: 'Loaded' },
             { value: 'loading', label: 'Loading' },
             { value: 'both', label: 'Both' },
+            { value: 'first', label: 'First visit' },
           ]}
           onChange={(load) => {
             change({ load });
@@ -181,7 +183,9 @@ function Message({ children }: { children: ReactNode }) {
   return <p className="text-xs text-muted-foreground">{children}</p>;
 }
 
-/** One state of the unit, in the chosen load mode. Both lays the skeleton
+/** One state of the unit, in the chosen load mode. A unit on the loading
+ *  contract draws its loading form from the same example, forced; one not
+ *  yet converted shows its hand-written skeleton. Both lays the loading form
  *  over the loaded content at half strength, so a layout jump shows as a
  *  doubled edge. */
 function Render({
@@ -194,13 +198,29 @@ function Render({
   s: StageState;
 }) {
   const loaded = s.stress ? ex.stress : ex.states[s.state];
-  const skeleton = ex.skeletons?.[s.state];
   if (s.load === 'loaded') return <>{loaded()}</>;
-  if (!skeleton)
+  const state = spec.states.find((x) => x.id === s.state);
+  if (state?.loads === false && !s.stress)
     return (
-      <Message>{spec.title} has no skeleton: it waits on nothing.</Message>
+      <Message>
+        {`${state.name} is reached only by acting, so the page never loads into it.`}
+      </Message>
     );
-  if (s.load === 'loading') return <>{skeleton()}</>;
+  const written = ex.skeletons?.[s.state];
+  const waits = written !== undefined || (spec.data?.length ?? 0) > 0;
+  if (!waits)
+    return (
+      <Message>{spec.title} has no loading form: it waits on nothing.</Message>
+    );
+  const loading = (): ReactNode =>
+    written ? (
+      written()
+    ) : (
+      <ForceLoading.Provider value={s.load === 'first' ? 'unknown' : 'shape'}>
+        {loaded()}
+      </ForceLoading.Provider>
+    );
+  if (s.load === 'loading' || s.load === 'first') return <>{loading()}</>;
   return (
     <div className="relative">
       <div>{loaded()}</div>
@@ -208,7 +228,7 @@ function Render({
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-50"
       >
-        {skeleton()}
+        {loading()}
       </div>
     </div>
   );

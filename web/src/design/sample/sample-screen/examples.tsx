@@ -1,6 +1,6 @@
 import { defineExamples } from '@/design/examples';
 import spec from './spec';
-import { SampleScreen, SampleScreenSkeleton } from './screen';
+import { SampleScreen } from './screen';
 
 const ITEMS = [
   { title: 'Problem set 4', detail: 'Due Friday, 6 problems' },
@@ -21,8 +21,4 @@ export default defineExamples(spec, SampleScreen, {
       }))}
     />
   ),
-  skeletons: {
-    list: () => <SampleScreenSkeleton />,
-    detail: () => <SampleScreenSkeleton />,
-  },
 });

@@ -1,7 +1,9 @@
 import type { AnySpec } from '@/design/spec';
 
-export type Load = 'loaded' | 'loading' | 'both';
-export const LOADS: readonly Load[] = ['loaded', 'loading', 'both'];
+/** Loaded; loading at the example's own shape; both laid over each other;
+ *  or a first visit, with nothing known (skeleton-grill S2). */
+export type Load = 'loaded' | 'loading' | 'both' | 'first';
+export const LOADS: readonly Load[] = ['loaded', 'loading', 'both', 'first'];
 
 /** How wide a unit's example opens: a component and a pane at their own
  *  width, a view across the page. */

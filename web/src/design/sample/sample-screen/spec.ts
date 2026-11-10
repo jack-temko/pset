@@ -50,6 +50,7 @@ export default defineSpec({
     {
       reads: 'The items',
       call: 'sample',
+      before: 'How many there were last time: the shape, never printed (S1).',
     },
   ],
   remembers: [
@@ -62,6 +63,10 @@ export default defineSpec({
   inputs: [
     { name: 'items', does: 'The list: a title and a second line each.' },
     { name: 'open', does: 'The title of the row to open.' },
+    {
+      name: 'loading',
+      does: 'Its shape while the items load: the row count.',
+    },
   ],
   priority: { first: 'The list.', main: 'pick-row' },
   sizes: { gives: ['The heading wraps', 'Rows truncate'] },
