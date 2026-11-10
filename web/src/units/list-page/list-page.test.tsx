@@ -4,15 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { List, LIST_CAP } from '@/units/list';
 import { ListPage } from './index';
-import {
-  COURSE_LIST,
-  MANY,
-  MANY_SETS,
-  MEMORIES,
-  TODAY,
-  WORK,
-  WORK_SETS,
-} from './sample';
+import { COURSE_LIST, MEMORIES, TODAY, WORK, WORK_SETS } from './sample';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -197,19 +189,23 @@ describe('ListPage', () => {
   });
 
   it('shows every match with no cap', () => {
+    // The everyday list, not the three hundred row one: rendering that many
+    // rows in jsdom outran the 5 s limit while make check loaded the machine.
+    const done = WORK_SETS.filter((s) => s.finished !== undefined).length;
+    expect(done).toBeGreaterThan(LIST_CAP);
     const el = render(
       <ListPage
-        page={MANY}
+        page={WORK}
         today={TODAY}
         courseHref={course}
         initial={{ state: 'done' }}
       />,
     );
     expect(el.querySelectorAll('[role="radio"]')[1].textContent).toBe(
-      `Done${String(MANY_SETS.filter((s) => s.finished !== undefined).length)}`,
+      `Done${String(done)}`,
     );
     expect(el.textContent).not.toContain('Show all');
-    expect(links(el)).toBeGreaterThan(200);
+    expect(links(el)).toBeGreaterThanOrEqual(done);
   });
 
   it('shows the side’s own line, not No assignments match, when it is empty and nothing is searched', () => {

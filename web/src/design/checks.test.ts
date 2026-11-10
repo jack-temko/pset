@@ -128,6 +128,9 @@ function textOf(node: ReactNode) {
   return document.body.textContent.replace(/\s+/g, ' ');
 }
 
+/** Time for one state to render in jsdom, with room for a loaded machine. */
+const STATE_RENDER_MS = 20_000;
+
 // F2: a state's exact text is on screen when the state is rendered.
 describe('every state text', () => {
   const withText = ALL.flatMap((e, i) =>
@@ -135,11 +138,17 @@ describe('every state text', () => {
       .filter((s) => s.text !== undefined)
       .map((s) => [e.spec.id, s.id, i] as const),
   );
-  it.each(withText)('%s, state %s, shows its text', async (_id, state, i) => {
-    const text = ALL[i].spec.states.find((s) => s.id === state)?.text ?? '';
-    const examples = await ALL[i].examples();
-    expect(textOf(examples.states[state]())).toContain(text);
-  });
+  // Each case renders a whole state, up to the list page's three hundred
+  // rows; under make check's load that outran vitest's 5 s default.
+  it.each(withText)(
+    '%s, state %s, shows its text',
+    async (_id, state, i) => {
+      const text = ALL[i].spec.states.find((s) => s.id === state)?.text ?? '';
+      const examples = await ALL[i].examples();
+      expect(textOf(examples.states[state]())).toContain(text);
+    },
+    STATE_RENDER_MS,
+  );
 });
 
 describe('the checks', () => {
