@@ -98,7 +98,7 @@ export default defineSpec({
     {
       id: 'clearing',
       name: 'Clear asks first',
-      when: 'Clear pressed: the top row says how many turns go and that memories stay, with Cancel and Clear.',
+      when: 'Clear pressed: the Confirm popover under it says how many messages go and that memories stay, with Clear, then Cancel.',
       text: 'Clear 4 messages? Memories stay.',
     },
     {
@@ -479,6 +479,14 @@ export default defineSpec({
         'Captions, column heads, plot titles, step names and the Remembered row take runs, so math in them draws as math, as in the prose.',
       why: 'Fable review, item 17: "V_0" showed its underscore everywhere outside the paragraphs.',
       beat: 'Plain strings for every label',
+      date: '2026-11-09',
+    },
+    {
+      id: 'ask-d28',
+      decision:
+        'Clear asks with the Confirm popover under its button, the action first and Cancel rightmost, as every confirm in PSet.',
+      why: 'Jack: "Confirm popover, act first (Recommended)" (ideas/fable-review-grill.md D5).',
+      beat: "Its own inline row in the top line (ask-d7's assumed confirm)",
       date: '2026-11-09',
     },
   ],

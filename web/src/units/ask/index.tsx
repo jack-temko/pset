@@ -9,6 +9,7 @@ import {
 } from 'react';
 
 import { Button } from '@/units/button';
+import { Confirm } from '@/units/confirm';
 import { ErrorNotice } from '@/units/error-notice';
 import { IconButton } from '@/units/icon-button';
 import { Tag } from '@/units/tag';
@@ -186,55 +187,37 @@ function Top({
   onClearing: (v: boolean) => void;
   onClear?: () => void;
 }) {
-  // Cancel takes the trigger's place at the right and the focus, so a second
-  // click on the same spot cancels; the destructive button sits beside it.
-  const cancel = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    if (clearing) cancel.current?.querySelector('button')?.focus();
-  }, [clearing]);
+  // Clear asks with the Confirm popover under it, as every confirm does
+  // (ask-d28): the action first, Cancel rightmost, nothing pushed down.
+  const [button, setButton] = useState<HTMLElement | null>(null);
   return (
     <div className="flex min-h-(--ds-control) items-center justify-between gap-3">
-      {clearing ? (
-        <>
-          <p className="ds-small min-w-0 flex-1 truncate">
-            {`Clear ${String(turns)} ${turns === 1 ? 'message' : 'messages'}? Memories stay.`}
-          </p>
-          <div className="flex shrink-0 gap-2">
-            <Button
-              variant="danger"
-              onPress={() => {
-                onClearing(false);
-                onClear?.();
-              }}
-            >
-              Clear
-            </Button>
-            <span ref={cancel} className="inline-flex">
-              <Button
-                variant="quiet"
-                onPress={() => {
-                  onClearing(false);
-                }}
-              >
-                Cancel
-              </Button>
-            </span>
-          </div>
-        </>
-      ) : (
-        <>
-          <span className="ds-label text-(--ds-fg-muted)">
-            Start of conversation
-          </span>
-          <Button
-            variant="quiet"
-            onPress={() => {
-              onClearing(true);
-            }}
-          >
-            Clear
-          </Button>
-        </>
+      <span className="ds-label text-(--ds-fg-muted)">
+        Start of conversation
+      </span>
+      <span ref={setButton} className="inline-flex">
+        <Button
+          variant="quiet"
+          onPress={() => {
+            onClearing(true);
+          }}
+        >
+          Clear
+        </Button>
+      </span>
+      {clearing && (
+        <Confirm
+          anchor={button}
+          message={`Clear ${String(turns)} ${turns === 1 ? 'message' : 'messages'}? Memories stay.`}
+          confirmLabel="Clear"
+          onConfirm={() => {
+            onClearing(false);
+            onClear?.();
+          }}
+          onCancel={() => {
+            onClearing(false);
+          }}
+        />
       )}
     </div>
   );

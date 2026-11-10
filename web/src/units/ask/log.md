@@ -26,3 +26,4 @@ Batch 5: thinking **""Thinking" shimmer, then gone (Recommended)"**; actions **"
 - Send, Stop and Copy are **icon buttons** (the new `icon-button` unit), named in a tooltip; a failure keeps no empty row under it; wide math no longer raises a scroll control beside it (ask-d26). Jack's annotations: "Can we make the stop/send icons?", "Can we make this just an icon too?", "Whats with the gap below this error?", "Whats with the control on the right side of these boxes?"
 - A failed answer uses Error notice's line (the red mark, the words in ink, one outlined action).
 - Labels (captions, column heads, plot titles, step names, Remembered) take runs, so math draws as math (ask-d27). Fable review, item 17.
+- Clear asks with the Confirm popover under its button, Clear then Cancel (ask-d28). ideas/fable-review-grill.md D5.

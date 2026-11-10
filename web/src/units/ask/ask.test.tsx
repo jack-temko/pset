@@ -100,8 +100,11 @@ describe('Ask', () => {
     press(button(el, 'Clear'));
     expect(el.textContent).toContain('Clear 4 messages? Memories stay.');
     expect(onClear).not.toHaveBeenCalled();
+    // The Confirm popover's own Clear, after the trigger.
     press(
-      [...el.querySelectorAll('button')].find((b) => b.textContent === 'Clear'),
+      [...el.querySelectorAll('button')]
+        .filter((b) => b.textContent === 'Clear')
+        .at(-1),
     );
     expect(onClear).toHaveBeenCalledOnce();
   });
@@ -170,7 +173,7 @@ describe('Ask', () => {
     );
   });
 
-  it('retries a failed turn and asks Cancel first when clearing', () => {
+  it('retries a failed turn, and clearing asks with the action before Cancel', () => {
     const onRetry = vi.fn();
     const failed = render(
       <Ask course="ECE 210" turns={[sample.FAILED]} onRetry={onRetry} />,
@@ -179,7 +182,10 @@ describe('Ask', () => {
     expect(onRetry).toHaveBeenCalledWith('e');
     const { el } = render(<Ask course="ECE 210" turns={sample.HISTORY} />);
     press(button(el, 'Clear'));
-    expect(document.activeElement?.textContent).toBe('Cancel');
+    const order = [...el.querySelectorAll('[role="alertdialog"] button')].map(
+      (b) => b.textContent,
+    );
+    expect(order).toEqual(['Clear', 'Cancel']);
   });
 
   it('takes a pasted image and removes it', async () => {
