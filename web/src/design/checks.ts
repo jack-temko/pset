@@ -258,10 +258,21 @@ export function checkUnit(u: Subject, ctx: Context): string[] {
       if (typeof u.examples.states[s.id] !== 'function')
         fail(`no example render for state ${s.id}`);
     if (typeof u.examples.stress !== 'function') fail('no stress render');
-    if (spec.data && spec.data.length > 0)
+    // A unit that reads data has a loading form for every state the page
+    // can load into: derived, when it is made with `waits` (the loading
+    // contract), or hand-written until it is converted (skeleton-grill S7).
+    const waiting =
+      u.sources === null ||
+      Object.values(u.sources).some((src) => src.includes('waits('));
+    if (spec.data && spec.data.length > 0 && !waiting)
       for (const s of spec.states)
-        if (typeof u.examples.skeletons?.[s.id] !== 'function')
-          fail(`no skeleton render for state ${s.id}`);
+        if (
+          s.loads !== false &&
+          typeof u.examples.skeletons?.[s.id] !== 'function'
+        )
+          fail(
+            `no loading form for state ${s.id}: write a skeleton or use waits`,
+          );
   } else fail('has no examples');
 
   return bad;

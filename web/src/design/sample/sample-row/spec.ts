@@ -17,6 +17,7 @@ export default defineSpec({
       id: 'menu',
       name: 'Menu open',
       when: 'The student pressed the menu button.',
+      loads: false,
     },
     {
       id: 'failed',
@@ -57,12 +58,17 @@ export default defineSpec({
     {
       reads: 'One item',
       call: 'sample',
+      before: 'Nothing: the row is always two lines, so it needs no shape.',
     },
   ],
   inputs: [
     { name: 'title', does: 'The first line.' },
     { name: 'detail', does: 'The second line, muted.' },
     { name: 'menuOpen', does: 'Shows the menu under the row.' },
+    {
+      name: 'loading',
+      does: 'Its shape while the item loads: the lines are bones, the button real.',
+    },
     {
       name: 'failed',
       does: 'Draws the failed state: the detail in red with an icon.',
