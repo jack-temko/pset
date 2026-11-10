@@ -98,6 +98,12 @@ export const COLOURS: readonly Colour[] = [
     on: [],
   },
   {
+    name: 'bone',
+    value: '#22262b',
+    use: 'a loading bar: quieter than a rule, so a skeleton never outshines what replaces it',
+    on: [],
+  },
+  {
     name: 'fg',
     value: FG,
     use: 'text',
