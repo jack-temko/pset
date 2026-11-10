@@ -430,7 +430,7 @@ export default defineSpec({
     {
       id: 'course-d31',
       decision:
-        "Course reads name and line, Assignments, Materials, the stats box, memories. The box is still Home's own, in the same place as on Home.",
+        "Course reads name and line, Assignments, Materials, the stats box, memories. The box is still Home's own; Home keeps it first.",
       why: 'Jack: "Assignments first (Recommended)": the one active assignment was below the fold (ideas/fable-review-grill.md D1).',
       beat: "The stats box first (course-d23's order)",
       date: '2026-11-09',
