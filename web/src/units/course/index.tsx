@@ -19,6 +19,7 @@ import { Beside, Caption, Row, Rows } from '@/units/home/layouts';
 import { WEEKS } from '@/units/home/options';
 import { changeOf, homeStats } from '@/units/home/stats';
 import { List, LIST_CAP } from '@/units/list';
+import { countBeside } from '@/units/list/count';
 import { ListRow } from '@/units/list-row';
 import { MoreMenu } from '@/units/menu';
 import { ProgressBar } from '@/units/progress-bar';
@@ -33,6 +34,8 @@ import {
 import { Sparkline } from '@/units/sparkline';
 import { TextField } from '@/units/text-field';
 import { TopBar } from '@/units/top-bar';
+import { ErrorNotice } from '@/units/error-notice';
+import { MemoryList } from '@/units/memory';
 import type { CourseData, CourseMaterial, CourseSet } from './sample';
 
 /** The work row's aside: the progress bar, then the row's menu. */
@@ -132,6 +135,7 @@ function WorkRow({
       title={set.name}
       titleField={titleField}
       href="#"
+      rowLink
       label={reading === undefined ? dueBadge(set.due, today) : undefined}
       status={reading === undefined && set.due && dueText(set.due, today).text}
       meta={
@@ -139,12 +143,15 @@ function WorkRow({
           ? [`Reading, about ${String(reading)} min`]
           : time
             ? [time]
-            : []
+            : finished
+              ? [plural(set.total, 'problem', 'problems')]
+              : []
       }
       aside={
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
-            {reading === undefined && (
+            {/* A finished row is all done: a full bar would say nothing. */}
+            {reading === undefined && !finished && (
               <ProgressBar done={set.done} total={set.total} />
             )}
           </div>
@@ -183,6 +190,7 @@ function MaterialRow({
       title={material.name}
       titleField={titleField}
       href="#"
+      rowLink
       meta={[
         material.kind,
         reading === undefined
@@ -218,8 +226,10 @@ function AddButton({ label, onPick }: { label: string; onPick: () => void }) {
 
 /** The line under the name says only what the list cannot: when the next set
  *  is due, as "Next due Thu". With nothing dated it is empty, and the Work
- *  list says "Nothing to do" (course-d26). */
+ *  list says "Nothing to do" (course-d26). With one assignment to do, its row
+ *  already says the date, so the line stays empty, its height kept (course-d30). */
 function standing(todo: readonly CourseSet[], today: Date): string {
+  if (todo.length === 1) return '';
   const dated = todo.flatMap((s) => (s.due ? [s.due] : []));
   const next = dated.sort((a, b) => a.getTime() - b.getTime())[0] as
     | Date
@@ -266,7 +276,7 @@ function Stats({ course, today }: { course: CourseData; today: Date }) {
                   <span className="text-(--ds-fg-muted)">this week</span>
                 </p>
                 <p className="ds-small ds-tabular flex flex-wrap items-center gap-x-2 text-(--ds-fg-muted)">
-                  {minutesText(s.time.last)} by this time last week
+                  {`Last week by now: ${minutesText(s.time.last)}`}
                   {timeChange && <ChangeText change={timeChange} />}
                 </p>
               </>
@@ -337,6 +347,7 @@ export function Course({
   unfolded,
   workHref,
   materialsHref,
+  memoriesHref = '#',
   homeHref = '/',
   settingsHref = '/settings',
 }: {
@@ -351,6 +362,8 @@ export function Course({
   workHref: string;
   /** Where Materials' "Show all" goes. */
   materialsHref: string;
+  /** Where the memories' "Show all" goes. */
+  memoriesHref?: string;
   homeHref?: string;
   settingsHref?: string;
 }) {
@@ -511,10 +524,7 @@ export function Course({
       <TopBar
         homeHref={homeHref}
         settingsHref={settingsHref}
-        path={[
-          { label: 'Home', href: homeHref },
-          { label: failed ? 'Course' : name },
-        ]}
+        path={[{ label: failed ? 'Course' : name }]}
       />
       <div className="px-(--ds-gutter) pb-16">
         <div
@@ -550,14 +560,15 @@ export function Course({
             }}
           />
           {failed ? (
-            <div className="flex flex-col items-center py-32 text-center">
-              <p className="ds-heading text-(--ds-fg)">
-                Could not load this course
-              </p>
-              <p className="ds-body mt-2 mb-6 text-(--ds-fg-muted)">
-                PSet could not read it. Try again in a moment.
-              </p>
-              <Button>Try again</Button>
+            <div className="flex justify-center py-32">
+              <ErrorNotice
+                error={{
+                  what: `Couldn't load ${name}`,
+                  why: "PSet couldn't read this course from your library. Nothing in it was lost.",
+                  chain: ['course.load'],
+                }}
+                actions={[{ label: 'Try again' }]}
+              />
             </div>
           ) : (
             <>
@@ -628,7 +639,7 @@ export function Course({
                   <SectionHeading
                     count={
                       done.length === 0 && todo.length > 0
-                        ? todo.length
+                        ? countBeside(todo.length)
                         : undefined
                     }
                     button={
@@ -666,7 +677,7 @@ export function Course({
 
                 <div>
                   <SectionHeading
-                    count={materials.length}
+                    count={countBeside(materials.length)}
                     button={
                       <AddButton
                         label="Add material"
@@ -718,35 +729,24 @@ export function Course({
                   </div>
                 </div>
 
-                <Fold
-                  label={`PSet remembers ${plural(memories.length, 'thing', 'things')}`}
-                  defaultOpen={unfolded}
-                >
-                  <List empty="PSet remembers nothing yet.">
-                    {memories.map((m) => (
-                      <ListRow
-                        key={m}
-                        title={m}
-                        aside={
-                          <div className="flex justify-end">
-                            <Button
-                              variant="quiet"
-                              onPress={() => {
-                                settle();
-                                setMemories((all) =>
-                                  all.filter((x) => x !== m),
-                                );
-                              }}
-                            >
-                              Forget
-                            </Button>
-                          </div>
-                        }
-                        asideWidth={96}
-                      />
-                    ))}
-                  </List>
-                </Fold>
+                {/* Hidden with nothing to show (a zero says nothing); the rows
+                    are the Memory unit's own (course-d29). */}
+                {memories.length > 0 && (
+                  <Fold
+                    label={`PSet remembers ${plural(memories.length, 'thing', 'things')}`}
+                    defaultOpen={unfolded}
+                  >
+                    <MemoryList
+                      memories={memories.map((text, i) => ({
+                        id: `${course.name}-${String(i)}`,
+                        text,
+                        source: 'you',
+                        at: '2026-11-01',
+                      }))}
+                      showAllHref={memoriesHref}
+                    />
+                  </Fold>
+                )}
               </div>
             </>
           )}
@@ -770,7 +770,7 @@ export function CourseSkeleton({
       <TopBar
         homeHref={homeHref}
         settingsHref={settingsHref}
-        path={[{ label: 'Home', href: homeHref }, { label: 'Course' }]}
+        path={[{ label: 'Course' }]}
       />
       <div className="px-(--ds-gutter) pb-16">
         <div className="@container mx-auto max-w-(--ds-page-width)">

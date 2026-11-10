@@ -3,6 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { Section } from './types';
 
+/** The page pill's height and gap, at the foot of the pane (64px, pb-16). */
+const PILL_ROOM = 64;
+
 /** The deepest section that starts on or before a printed page. */
 function currentOf(
   tree: readonly Section[],
@@ -71,7 +74,9 @@ export function Contents({
     // the marked row has left the view.
     const seen =
       row.offsetTop >= box.scrollTop &&
-      row.offsetTop + row.offsetHeight <= box.scrollTop + box.clientHeight;
+      // Under the page pill does not count as seen.
+      row.offsetTop + row.offsetHeight <=
+        box.scrollTop + box.clientHeight - PILL_ROOM;
     if (!(beside && seen && placed.current))
       box.scrollTop = row.offsetTop - box.clientHeight / 2;
     placed.current = true;
@@ -141,8 +146,8 @@ export function Contents({
       ref={panel}
       className={
         beside
-          ? 'relative w-[288px] shrink-0 overflow-y-auto border-r border-(--ds-border-muted) bg-(--ds-bg) py-2'
-          : 'absolute inset-0 z-10 overflow-y-auto border-b border-(--ds-border-muted) bg-(--ds-bg) py-2'
+          ? 'relative w-[288px] shrink-0 scroll-pb-16 overflow-y-auto border-r border-(--ds-border-muted) bg-(--ds-bg) pt-2 pb-16'
+          : 'absolute inset-0 z-10 scroll-pb-16 overflow-y-auto border-b border-(--ds-border-muted) bg-(--ds-bg) pt-2 pb-16'
       }
     >
       <p className="ds-label px-4 pt-1 pb-2 text-(--ds-fg-muted) [overflow-wrap:anywhere]">

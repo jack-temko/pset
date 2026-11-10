@@ -30,10 +30,11 @@ export function Caption({ children }: { children: ReactNode }) {
 }
 
 /** The figure rows under the bars share one grid: the first column is as wide
- *  as the widest figure, so every label starts at the same x. */
+ *  as the widest figure, never narrower, so a long one ("$1,234.50") cannot
+ *  run into its label and every label starts at the same x. */
 export function Rows({ children }: { children: ReactNode }) {
   return (
-    <div className="grid grid-cols-[auto_minmax(max-content,1fr)_minmax(40px,6rem)] gap-x-3 gap-y-2">
+    <div className="grid grid-cols-[max-content_minmax(max-content,1fr)_minmax(40px,6rem)] gap-x-3 gap-y-2">
       {children}
     </div>
   );

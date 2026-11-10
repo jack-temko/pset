@@ -188,6 +188,7 @@ function SetRow({
   const time = set.minutesLeft === undefined ? '' : timeLeft(set.minutesLeft);
   return (
     <ListRow
+      rowLink
       title={set.name}
       href="#"
       label={finished ? undefined : dueBadge(set.due, today)}
@@ -217,8 +218,10 @@ function SetRow({
       ]}
       aside={
         <div className="flex items-center gap-3">
+          {/* A finished row says when in its status; a full bar would only
+              repeat it (list-page-d8). */}
           <div className="min-w-0 flex-1">
-            <ProgressBar done={set.done} total={set.total} />
+            {!finished && <ProgressBar done={set.done} total={set.total} />}
           </div>
           <MoreMenu
             label={`More for ${set.name}`}
@@ -406,7 +409,6 @@ export function ListPage({
         homeHref={homeHref}
         settingsHref={settingsHref}
         path={[
-          { label: 'Home', href: homeHref },
           ...(spanning
             ? []
             : [{ label: f.course, href: courseHref(f.course) }]),
@@ -484,7 +486,7 @@ export function ListPageSkeleton({
       <TopBar
         homeHref={homeHref}
         settingsHref={settingsHref}
-        path={[{ label: 'Home', href: homeHref }, { label: 'Assignments' }]}
+        path={[{ label: 'Assignments' }]}
       />
       <div className="px-(--ds-gutter) pb-16">
         <div className="@container mx-auto max-w-(--ds-page-width)">

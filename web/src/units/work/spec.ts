@@ -344,6 +344,7 @@ export default defineSpec({
       why: 'Jack: "Make sure every part of the panel looks good when not expanded or empty. For example we should center what we can vertically and horizontally."',
       beat: 'Standing at the top with empty space under',
       date: '2026-10-21',
+      supersededBy: 'work-d20',
     },
     {
       id: 'work-d15',
@@ -386,6 +387,14 @@ export default defineSpec({
       why: 'Jack: "B, then approved, make sure the bar is the similar color as the text".',
       beat: 'A flag icon; a link in the set line; one more segment',
       date: '2026-10-21',
+    },
+    {
+      id: 'work-d20',
+      decision:
+        'Only the summary and an empty assignment stand alone, centred. A problem being found or not found keeps the loaded layout.',
+      why: 'Fable review: the heading and actions moved from centred to top left when the problem arrived, a jump on load.',
+      beat: 'Centring a problem being found (work-d14)',
+      date: '2026-11-09',
     },
   ],
 });

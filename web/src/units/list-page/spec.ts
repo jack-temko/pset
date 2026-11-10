@@ -14,7 +14,7 @@ export default defineSpec({
     {
       id: 'filtered',
       name: 'Pre-filtered from Show all',
-      when: 'Opened from "Show all 6" under ECE 210’s Done: the course and state are already set, the path reads "Home / ECE 210 / Work", and the rows carry no course name.',
+      when: 'Opened from "Show all 6" under ECE 210’s Done: the course and state are already set, the path reads "ECE 210 / Assignments", and the rows carry no course name.',
       text: 'Finished',
     },
     {
@@ -197,7 +197,7 @@ export default defineSpec({
     {
       id: 'list-page-d6',
       decision:
-        'The page is reached only from a list’s "Show all"; the top bar path ("Home / ECE 210 / Work") leads back. It has no entry of its own.',
+        'The page is reached only from a list’s "Show all"; the top bar path ("ECE 210 / Assignments") leads back. It has no entry of its own.',
       why: 'Jack: "Only via Show all (Recommended)" (L7).',
       beat: 'Permanent Work and Memories entries in the top bar',
       date: '2026-11-04',
@@ -209,6 +209,14 @@ export default defineSpec({
       why: 'Jack: "It becomes the header switch (Recommended)" (L11) and, after review, "Drop the State menu (Recommended)" (L12).',
       beat: 'A kind menu on the page only',
       date: '2026-11-04',
+    },
+    {
+      id: 'list-page-d8',
+      decision:
+        'A finished row drops its progress bar: its status already says "Finished Oct 6", and a full bar on every Done row says nothing.',
+      why: 'Fable review, item 18; say-it-once. Jack took it in the review batch.',
+      beat: 'The summary row unchanged on Done (list-page-d4)',
+      date: '2026-11-09',
     },
   ],
 });

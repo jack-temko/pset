@@ -1,5 +1,6 @@
 import { CourseRow } from '@/units/course-row';
 import { List, LIST_CAP } from '@/units/list';
+import { countBeside } from '@/units/list/count';
 import { SectionHeading } from '@/units/section-heading';
 import { AssignmentRow } from './index';
 import { listAssignments } from './listed';
@@ -51,7 +52,9 @@ export function HomeLists({
   return (
     <div className="space-y-10">
       <div>
-        <SectionHeading count={all.length}>Assignments</SectionHeading>
+        <SectionHeading count={countBeside(all.length)}>
+          Assignments
+        </SectionHeading>
         <div className="mt-3">
           <List cap={LIST_CAP} showAllHref={workHref}>
             {all.map((a) => (
@@ -67,7 +70,9 @@ export function HomeLists({
         </div>
       </div>
       <div>
-        <SectionHeading count={COURSES.length}>Courses</SectionHeading>
+        <SectionHeading count={countBeside(COURSES.length)}>
+          Courses
+        </SectionHeading>
         <div className="mt-3">
           <List cap={LIST_CAP} showAllHref={coursesHref}>
             {COURSES.map((c) => (

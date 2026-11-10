@@ -206,5 +206,13 @@ export default defineSpec({
       beat: 'Figures beside the text',
       date: '2026-10-21',
     },
+    {
+      id: 'problem-d9',
+      decision:
+        'Finding, queued and not found draw in the loaded layout: heading, status, skeleton lines and help rows, actions in place and not ready.',
+      why: 'Nothing jumps: centred, everything moved to the top left when the problem arrived (Fable review, item 3).',
+      beat: 'Centred while it stands alone (work-d14)',
+      date: '2026-11-09',
+    },
   ],
 });

@@ -17,24 +17,31 @@ export function CourseRow({
 }: {
   name: string;
   href: string;
-  /** Assignments still to do; zero shows as "0 assignments to do". */
+  /** Assignments still to do; zero says "Nothing to do". */
   todo: number;
-  /** Materials in the course; zero shows as "0 materials". */
+  /** Materials in the course; zero is left out. */
   materials: number;
   /** Minutes spent on the course this week. */
   weekMinutes: number;
 }) {
   return (
     <ListRow
+      rowLink
       title={name}
       href={href}
+      // A zero is said in words or not at all (course-row-d13): a printed 0
+      // reads as data and costs a scan.
       meta={[
-        `${String(todo)} assignment${todo === 1 ? '' : 's'} to do`,
-        `${String(materials)} material${materials === 1 ? '' : 's'}`,
+        todo === 0
+          ? 'Nothing to do'
+          : `${String(todo)} assignment${todo === 1 ? '' : 's'} to do`,
+        ...(materials > 0
+          ? [`${String(materials)} material${materials === 1 ? '' : 's'}`]
+          : []),
       ]}
       aside={
-        <span className="ds-small ds-tabular block text-right whitespace-nowrap text-(--ds-fg-muted)">
-          {minutesText(weekMinutes)} this week
+        <span className="ds-small ds-tabular block min-h-5 text-right whitespace-nowrap text-(--ds-fg-muted)">
+          {weekMinutes > 0 && `${minutesText(weekMinutes)} this week`}
         </span>
       }
       asideWidth={ASIDE_WIDTH}

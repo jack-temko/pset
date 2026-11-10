@@ -10,6 +10,7 @@ const view = (p: Partial<Parameters<typeof Course>[0]> = {}) => (
     today={TODAY}
     workHref={PLACEHOLDER.courseWork}
     materialsHref={PLACEHOLDER.courseWork}
+    memoriesHref={PLACEHOLDER.memories}
     {...p}
   />
 );

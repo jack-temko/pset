@@ -56,8 +56,8 @@ export default defineSpec({
     {
       id: 'failed',
       name: 'Failed to load',
-      when: 'Settings could not be read: the page says so and offers Try again.',
-      text: 'Could not load Settings',
+      when: 'Settings could not be read: an Error notice block, centred, with Try again and Details.',
+      text: "Couldn't load Settings",
     },
   ],
   stress:

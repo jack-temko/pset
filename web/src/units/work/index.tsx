@@ -254,10 +254,9 @@ export function Work({
     } else onSetMenu?.(item, here?.id);
   };
 
-  const stands =
-    problems.length === 0 ||
-    summary ||
-    (here !== undefined && here.found.status !== 'ready');
+  // A problem being found or not found keeps the loaded layout (problem-d9);
+  // only the summary and an empty assignment stand alone, centred.
+  const stands = problems.length === 0 || summary;
   const minutes =
     set.minutesLeft === undefined ? '' : timeLeft(set.minutesLeft);
 
@@ -371,6 +370,7 @@ export function Work({
             onTurnIn={wantTurnIn}
             onTakeBack={takeBack}
             onBack={onBackToCourse}
+            onContinue={go}
           />
         ) : (
           here && (

@@ -114,17 +114,13 @@ function Heading({
   index,
   problem,
   onOpenPage,
-  centred = false,
 }: {
   index: number;
   problem: ProblemData;
   onOpenPage?: () => void;
-  centred?: boolean;
 }) {
   return (
-    <div
-      className={`flex min-w-0 flex-wrap items-baseline gap-x-3 ${centred ? 'justify-center' : ''}`}
-    >
+    <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
       <h2 className="ds-heading min-w-0 text-(--ds-fg) [overflow-wrap:anywhere]">
         Problem {index} · {problem.title}
       </h2>
@@ -239,26 +235,20 @@ export function Problem({
   const items = MENU.filter(
     (m) => m.id !== 'check-figure' || problem.figures.length > 0,
   );
-  const stands = !ready;
   const wait = ready ? undefined : 'Wait until the problem is found';
 
   return (
-    <article
-      className={`min-w-0 space-y-4 ${stands ? 'mx-auto w-full max-w-[520px] text-center' : ''}`}
-    >
+    // Finding, queued and not found draw in the loaded layout, so nothing
+    // moves when the problem arrives (problem-d9, reversing work-d14 here).
+    <article className="min-w-0 space-y-4">
       <Note problem={problem} />
-      <Heading
-        index={index}
-        problem={problem}
-        onOpenPage={onOpenPage}
-        centred={stands}
-      />
+      <Heading index={index} problem={problem} onOpenPage={onOpenPage} />
 
       {finding && problem.found.status === 'finding' && (
         <div className="space-y-3">
           <p
             role="status"
-            className="ds-body flex items-center justify-center gap-2 text-(--ds-fg-muted)"
+            className="ds-body flex items-center gap-2 text-(--ds-fg-muted)"
           >
             <LoaderCircle
               className="size-4 shrink-0 animate-spin motion-reduce:animate-none"
@@ -275,7 +265,7 @@ export function Problem({
         <div className="space-y-3">
           <p
             role="status"
-            className="ds-body flex items-center justify-center gap-2 text-(--ds-fg-muted)"
+            className="ds-body flex items-center gap-2 text-(--ds-fg-muted)"
           >
             Waiting its turn: {problem.label} on page {problem.page} is next to
             be found
@@ -287,6 +277,8 @@ export function Problem({
       {problem.found.status === 'failed' && (
         <Failed problem={problem} onFix={onFix} />
       )}
+
+      {(finding || queued) && <HelpSkeleton />}
 
       {ready && (
         <>
@@ -342,9 +334,7 @@ export function Problem({
         </>
       )}
 
-      <div
-        className={`flex min-w-0 flex-wrap items-center gap-2 ${stands ? 'justify-center' : ''}`}
-      >
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <Button
           variant={problem.done ? 'default' : 'primary'}
           icon={problem.done ? Check : undefined}
@@ -373,7 +363,7 @@ export function Problem({
         >
           Next
         </Button>
-        <span className={stands ? '' : 'ml-auto'}>
+        <span className="ml-auto">
           <MoreMenu
             variant="default"
             label="More for this problem"
@@ -399,21 +389,28 @@ export function ProblemSkeleton() {
         <Bar className="h-5 w-11/12" />
         <Bar className="h-5 w-3/5" />
       </div>
-      <div className="space-y-2">
-        {HELP_KINDS.map((k) => (
-          <div
-            key={k}
-            className="flex h-[34px] items-center rounded-(--ds-radius-control) border border-(--ds-border-muted) px-3"
-          >
-            <Bar className="h-4 w-24" />
-          </div>
-        ))}
-      </div>
+      <HelpSkeleton />
       <div className="flex h-(--ds-control) items-center gap-2">
         <Bar className="h-(--ds-control) w-[112px]" />
         <Bar className="h-(--ds-control) w-[144px]" />
         <Bar className="h-(--ds-control) w-20" />
       </div>
+    </div>
+  );
+}
+
+/** The three closed help rows, in their heights, until they can be opened. */
+function HelpSkeleton() {
+  return (
+    <div aria-hidden className="space-y-2">
+      {HELP_KINDS.map((k) => (
+        <div
+          key={k}
+          className="flex h-[34px] items-center rounded-(--ds-radius-control) border border-(--ds-border-muted) px-3"
+        >
+          <Bar className="h-4 w-24" />
+        </div>
+      ))}
     </div>
   );
 }

@@ -180,5 +180,13 @@ export default defineSpec({
       beat: 'Icon counts and last opened',
       date: '2026-10-16',
     },
+    {
+      id: 'course-row-d13',
+      decision:
+        'Zeros are said in words or not at all: "Nothing to do", no "0 materials", and no time this week when there was none.',
+      why: 'Fable review, item 13: a printed 0 reads as data and costs a scan. Jack took it in the review batch.',
+      beat: '"0 assignments to do · 0 materials", "0 m this week"',
+      date: '2026-11-09',
+    },
   ],
 });
