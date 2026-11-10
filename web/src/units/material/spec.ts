@@ -419,5 +419,13 @@ export default defineSpec({
       beat: 'The thin line with page and zoom (M2, M4); chrome, firefox and quiet',
       date: '2026-11-03',
     },
+    {
+      id: 'material-d20',
+      decision:
+        "Boxing's buttons read Done, then Cancel: the action first and Cancel rightmost, as the Confirm popover and the danger dialog.",
+      why: 'Jack: "Confirm popover, act first (Recommended)" (ideas/fable-review-grill.md D5).',
+      beat: 'Cancel, then Done',
+      date: '2026-11-09',
+    },
   ],
 });

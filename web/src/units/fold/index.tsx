@@ -7,28 +7,37 @@ import { useState, type ReactNode } from 'react';
 export function Fold({
   label,
   defaultOpen = false,
+  action,
   children,
 }: {
   label: string;
   /** Opens it at first. */
   defaultOpen?: boolean;
+  /** One button at the right end of the line, such as "Clear all", shown
+   *  while it is open (fold-d2). */
+  action?: ReactNode;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const Chevron = open ? ChevronDown : ChevronRight;
   return (
     <div className="min-w-0">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => {
-          setOpen((v) => !v);
-        }}
-        className="ds-small inline-flex h-8 max-w-full items-center gap-1 rounded-(--ds-radius-control) pr-2 text-(--ds-fg-muted) hover:text-(--ds-fg)"
-      >
-        <Chevron className="size-4 shrink-0" aria-hidden />
-        <span className="min-w-0 truncate">{label}</span>
-      </button>
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => {
+            setOpen((v) => !v);
+          }}
+          className="ds-small inline-flex h-8 max-w-full items-center gap-1 rounded-(--ds-radius-control) pr-2 text-(--ds-fg-muted) hover:text-(--ds-fg)"
+        >
+          <Chevron className="size-4 shrink-0" aria-hidden />
+          <span className="min-w-0 truncate">{label}</span>
+        </button>
+        {open && action !== undefined && (
+          <div className="shrink-0">{action}</div>
+        )}
+      </div>
       {open && <div className="min-w-0">{children}</div>}
     </div>
   );

@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 
 import { MoreMenu, type MenuItem } from '@/units/menu';
 import { Button } from '@/units/button';
-import { List } from '@/units/list';
-import { ListRow } from '@/units/list-row';
 import { Problem, ProblemSkeleton, type Fix } from '@/units/problem';
 import {
   HELP_KINDS,
@@ -265,32 +263,33 @@ export function Work({
       className="@container mx-auto flex min-w-0 max-w-[760px] flex-col gap-4 py-6"
       style={{ minHeight: PANE_MIN }}
     >
-      <List>
-        <div className="flex min-w-0 items-center pr-3">
-          <div className="min-w-0 flex-1">
-            <ListRow
-              title={set.name}
-              label={
-                turnedIn ? (
-                  <Tag>Turned in</Tag>
-                ) : all ? (
-                  <Tag>Done</Tag>
-                ) : (
-                  dueBadge(set.due, today)
-                )
-              }
-              status={<DueStatus due={set.due} today={today} />}
-              meta={[...(minutes ? [minutes] : [])]}
-            />
-          </div>
+      {/* One plain line, always one line (work-d21): the due tag, the date,
+          the time left and the menu. The name is in the path and the tab. */}
+      <div className="flex h-(--ds-row) min-w-0 items-center gap-3">
+        <span className="shrink-0">
+          {turnedIn ? (
+            <Tag>Turned in</Tag>
+          ) : all ? (
+            <Tag>Done</Tag>
+          ) : (
+            dueBadge(set.due, today)
+          )}
+        </span>
+        <span className="ds-small shrink-0 whitespace-nowrap text-(--ds-fg)">
+          <DueStatus due={set.due} today={today} />
+        </span>
+        <span className="ds-small ds-tabular min-w-0 truncate text-(--ds-fg-muted)">
+          {minutes}
+        </span>
+        <span className="ml-auto shrink-0">
           <MoreMenu
             variant="default"
             label="More for this assignment"
             items={menu}
             onSelect={onSetItem}
           />
-        </div>
-      </List>
+        </span>
+      </div>
 
       {turnedInAt && !summary && (
         <div className="ds-body flex min-w-0 flex-wrap items-center gap-3 rounded-(--ds-radius-control) border border-(--ds-border) px-4 py-2">
@@ -431,7 +430,10 @@ export function WorkSkeleton({
       className="@container mx-auto flex min-w-0 max-w-[760px] flex-col gap-4 py-6"
       style={{ minHeight: PANE_MIN }}
     >
-      <div className="h-[58px] min-w-0 animate-pulse rounded-(--ds-radius-control) border border-(--ds-border-muted) motion-reduce:animate-none" />
+      <div className="flex h-(--ds-row) min-w-0 items-center gap-3">
+        <span className="block h-5 w-[72px] animate-pulse rounded-full bg-(--ds-border-muted) motion-reduce:animate-none" />
+        <span className="block h-3 w-[88px] animate-pulse rounded-(--ds-radius-tag) bg-(--ds-border-muted) motion-reduce:animate-none" />
+      </div>
       <ProblemStripSkeleton count={chips} />
       {opens === 'problem' ? (
         <ProblemSkeleton />

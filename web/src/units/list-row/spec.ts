@@ -188,5 +188,13 @@ export default defineSpec({
       beat: 'Only the title is the target (list-row-d7), for every row',
       date: '2026-11-09',
     },
+    {
+      id: 'list-row-d12',
+      decision:
+        'UndoRow is the one shape of Undo in a list: the removed row becomes one line, "Deleted ... · Undo", in its place for 10 s.',
+      why: 'Jack: "Row in place, 10 s (Recommended)" (ideas/fable-review-grill.md D4); Course had it (course-d17), Memory joins.',
+      beat: "Each screen's own undo shape",
+      date: '2026-11-09',
+    },
   ],
 });

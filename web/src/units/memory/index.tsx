@@ -1,9 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { Button } from '@/units/button';
 import { Link } from '@/units/link';
 import { List, LIST_CAP } from '@/units/list';
-import { ListRow } from '@/units/list-row';
+import { ListRow, UndoRow, UNDO_ROW_MS } from '@/units/list-row';
 import { MoreMenu } from '@/units/menu';
 import { SectionHeading } from '@/units/section-heading';
 import { TextField } from '@/units/text-field';
@@ -14,31 +14,36 @@ const ROW_MENU = [
   { id: 'forget', label: 'Forget', danger: true },
 ] as const;
 
-interface Undo {
-  memory: Memory;
-  index: number;
-}
-
-/** The sample's memories and what can be done to them. Nothing is saved. */
+/** The sample's memories and what can be done to them. Nothing is saved.
+ *  A forgotten memory stays in its place as an Undo row for 10 seconds, or
+ *  until the next one is forgotten, then goes (memory-d8). */
 function useMemories(
   start: readonly Memory[],
   deleted: string | undefined,
   editing: string | undefined,
 ) {
-  const [items, setItems] = useState<readonly Memory[]>(() =>
-    start.filter((m) => m.id !== deleted),
-  );
-  const [undo, setUndo] = useState<Undo | null>(() => {
-    const index = start.findIndex((m) => m.id === deleted);
-    const memory = start.at(index);
-    return memory && index >= 0 ? { memory, index } : null;
-  });
+  const [all, setAll] = useState<readonly Memory[]>(start);
+  const [gone, setGone] = useState<string | null>(deleted ?? null);
   const [editId, setEditId] = useState<string | null>(editing ?? null);
   const [next, setNext] = useState(1);
+  const timer = useRef<number | undefined>(undefined);
+  useEffect(
+    () => () => {
+      window.clearTimeout(timer.current);
+    },
+    [],
+  );
+  const settle = (id: string | null) => {
+    if (id !== null) setAll((xs) => xs.filter((m) => m.id !== id));
+    setGone((g) => (g === id ? null : g));
+  };
 
   return {
-    items,
-    undo,
+    /** Every memory still kept: what counts and lists use. */
+    items: all.filter((m) => m.id !== gone),
+    /** In order with the forgotten one, which draws as its Undo row. */
+    all,
+    gone,
     editId,
     startEdit: (id: string) => {
       setEditId(id);
@@ -49,9 +54,9 @@ function useMemories(
     add: (text: string) => {
       const t = text.trim();
       if (!t) return;
-      setItems((all) => [
+      setAll((xs) => [
         { id: `new${String(next)}`, text: t, source: 'you', at: TODAY },
-        ...all,
+        ...xs,
       ]);
       setNext(next + 1);
     },
@@ -59,29 +64,23 @@ function useMemories(
       const t = text.trim();
       setEditId(null);
       if (!t) return;
-      setItems((all) => all.map((m) => (m.id === id ? { ...m, text: t } : m)));
+      setAll((xs) => xs.map((m) => (m.id === id ? { ...m, text: t } : m)));
     },
     remove: (id: string) => {
-      const index = items.findIndex((m) => m.id === id);
-      const memory = items.at(index);
-      if (!memory || index < 0) return;
-      setItems((all) => all.filter((m) => m.id !== id));
-      setUndo({ memory, index });
+      window.clearTimeout(timer.current);
+      if (gone !== null) settle(gone);
+      setGone(id);
       setEditId(null);
+      timer.current = window.setTimeout(() => {
+        settle(id);
+      }, UNDO_ROW_MS);
     },
     restore: () => {
-      if (!undo) return;
-      setItems((all) => [
-        ...all.slice(0, undo.index),
-        undo.memory,
-        ...all.slice(undo.index),
-      ]);
-      setUndo(null);
+      window.clearTimeout(timer.current);
+      setGone(null);
     },
     keep: (id: string) => {
-      setItems((all) =>
-        all.map((m) => (m.id === id ? { ...m, fresh: false } : m)),
-      );
+      setAll((xs) => xs.map((m) => (m.id === id ? { ...m, fresh: false } : m)));
     },
   };
 }
@@ -136,23 +135,6 @@ function AddField({
         </Button>
       }
     />
-  );
-}
-
-function UndoLine({ m }: { m: Memories }) {
-  return (
-    <div className="ds-small flex min-h-8 items-center gap-2 text-(--ds-fg-muted)">
-      {m.undo && (
-        <>
-          <span className="min-w-0 truncate">
-            Forgot “{m.undo.memory.text}”
-          </span>
-          <Button variant="quiet" onPress={m.restore}>
-            Undo
-          </Button>
-        </>
-      )}
-    </div>
   );
 }
 
@@ -316,7 +298,7 @@ export function MemoryArea({
   const [picked, setPicked] = useState<string>(
     startSide ?? (waiting ? 'new' : 'you'),
   );
-  if (mem.items.length === 0 && mem.undo === null)
+  if (mem.items.length === 0 && mem.gone === null)
     return (
       <div className="min-w-0">
         <EmptyMemory mem={mem} />
@@ -330,7 +312,7 @@ export function MemoryArea({
   })).filter((s) => s.id !== 'new' || s.count > 0);
   // New goes once its last memory is kept; the list falls back to Yours.
   const side = states.some((s) => s.id === picked) ? picked : 'you';
-  const shown = mem.items.filter((m) => sideOf(m) === side);
+  const shown = mem.all.filter((m) => sideOf(m) === side);
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <Intro count={mem.items.length} />
@@ -347,17 +329,24 @@ export function MemoryArea({
             : 'Ask has not saved any yet'
         }
       >
-        {shown.map((m) => (
-          <Row
-            key={m.id}
-            m={m}
-            mem={mem}
-            label={false}
-            review={side === 'new'}
-          />
-        ))}
+        {shown.map((m) =>
+          m.id === mem.gone ? (
+            <UndoRow
+              key={m.id}
+              text={`Forgot “${m.text}”`}
+              onUndo={mem.restore}
+            />
+          ) : (
+            <Row
+              key={m.id}
+              m={m}
+              mem={mem}
+              label={false}
+              review={side === 'new'}
+            />
+          ),
+        )}
       </List>
-      <UndoLine m={mem} />
     </div>
   );
 }
@@ -377,11 +366,18 @@ export function MemoryList({
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <List cap={LIST_CAP} showAllHref={showAllHref} empty="Nothing remembered">
-        {mem.items.map((m) => (
-          <Row key={m.id} m={m} mem={mem} label={false} />
-        ))}
+        {mem.all.map((m) =>
+          m.id === mem.gone ? (
+            <UndoRow
+              key={m.id}
+              text={`Forgot “${m.text}”`}
+              onUndo={mem.restore}
+            />
+          ) : (
+            <Row key={m.id} m={m} mem={mem} label={false} />
+          ),
+        )}
       </List>
-      <UndoLine m={mem} />
     </div>
   );
 }

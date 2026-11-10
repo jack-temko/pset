@@ -136,7 +136,7 @@ export default defineSpec({
     {
       id: 'remove',
       label: 'Remove, in the problem menu',
-      does: 'Removes the problem at once and says "Removed 4.62 · Undo" for six seconds.',
+      does: 'Removes the problem at once and says "Removed 4.62 · Undo" for ten seconds.',
     },
     {
       id: 'set-menu',
@@ -248,6 +248,7 @@ export default defineSpec({
       why: 'Jack picked "Undo, no confirm (Recommended)": finding #7 (P8).',
       beat: 'Confirm and no undo',
       date: '2026-10-21',
+      supersededBy: 'work-d22',
     },
     {
       id: 'work-d3',
@@ -296,6 +297,7 @@ export default defineSpec({
       why: 'Jack: "Lets go with the segments"; on the segments, the line and "3 of 8": "Don\'t these show the same thing?"; "We don\'t need the title twice".',
       beat: 'Boxes of numbers; a progress bar and count in the set line',
       date: '2026-10-21',
+      supersededBy: 'work-d21',
     },
     {
       id: 'work-d9',
@@ -394,6 +396,22 @@ export default defineSpec({
         'Only the summary and an empty assignment stand alone, centred. A problem being found or not found keeps the loaded layout.',
       why: 'Fable review: the heading and actions moved from centred to top left when the problem arrived, a jump on load.',
       beat: 'Centring a problem being found (work-d14)',
+      date: '2026-11-09',
+    },
+    {
+      id: 'work-d21',
+      decision:
+        'The header is one plain line, 44px, always one line: due tag, due date, time left muted, the menu at the right. No name: the path and tab say it.',
+      why: 'Jack: "One line, no name (Recommended)": "Problem set 4" showed three times in 130px (ideas/fable-review-grill.md D3).',
+      beat: 'The boxed set line keeping the name (work-d8)',
+      date: '2026-11-09',
+    },
+    {
+      id: 'work-d22',
+      decision:
+        'Remove\'s "Removed 4.62 · Undo" box stays 10 s, as every Undo does; it floats because a removed problem has no row to stay in.',
+      why: 'Jack: "Row in place, 10 s (Recommended)" (ideas/fable-review-grill.md D4).',
+      beat: 'Six seconds (work-d2)',
       date: '2026-11-09',
     },
   ],
