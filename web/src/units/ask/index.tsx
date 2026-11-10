@@ -13,6 +13,7 @@ import { ErrorNotice } from '@/units/error-notice';
 import { IconButton } from '@/units/icon-button';
 import { Tag } from '@/units/tag';
 import { Document } from './blocks';
+import { LabelText } from './label';
 import { ThinkingRow } from './steps';
 import type { Question, Turn } from './types';
 
@@ -102,7 +103,7 @@ function TurnView({
         {turn.remembered && (
           <p className="ds-small flex max-w-[680px] flex-wrap items-center gap-x-1 text-(--ds-fg-muted)">
             <span className="[overflow-wrap:anywhere]">
-              {`Remembered: ${turn.remembered}`}
+              Remembered: <LabelText value={turn.remembered} />
             </span>
             <Button variant="quiet" onPress={() => onUndo?.(turn.id)}>
               Undo

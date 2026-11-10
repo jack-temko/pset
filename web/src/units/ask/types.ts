@@ -11,6 +11,10 @@ export interface PageRef {
  *  chips, which the workspace turns into a page of the material. */
 export type Inline = Run | { ref: PageRef };
 
+/** A short label the model writes (a caption, a column head, a step): plain
+ *  text, or runs when it holds math, so "V_0" draws as math (ask-d27). */
+export type Label = string | readonly Run[];
+
 export interface Series {
   name: string;
   points: readonly (readonly [number, number])[];
@@ -21,12 +25,12 @@ type Part =
   | { k: 'p'; runs: readonly Inline[] }
   | { k: 'math'; tex: string }
   | { k: 'statement'; name: string; ref?: PageRef; runs: readonly Inline[] }
-  | { k: 'steps'; steps: readonly { tex: string; why?: string }[] }
-  | { k: 'plot'; title: string; series: readonly Series[] }
+  | { k: 'steps'; steps: readonly { tex: string; why?: Label }[] }
+  | { k: 'plot'; title: Label; series: readonly Series[] }
   | {
       k: 'table';
-      head: readonly string[];
-      rows: readonly (readonly string[])[];
+      head: readonly Label[];
+      rows: readonly (readonly Label[])[];
     }
   | { k: 'code'; code: string }
   | { k: 'callout'; runs: readonly Inline[] }
@@ -45,7 +49,7 @@ export type CallKind = 'search' | 'read' | 'look' | 'compute';
 export interface Call {
   kind: CallKind;
   /** The query, the page, the figure or the sum. */
-  what: string;
+  what: Label;
   /** For a read: how many pages it took in (one if left out). */
   pages?: number;
 }
@@ -65,8 +69,8 @@ export interface Turn {
   /** The answer in order: text, and the runs of steps between it. A working
    *  turn with nothing here yet is thinking. */
   blocks: readonly Block[];
-  /** A preference Ask saved while answering. */
-  remembered?: string;
+  /** A memory Ask saved while answering. */
+  remembered?: Label;
   failure?: {
     why: string;
     /** The key or the setup is the cause: Open Settings is offered. */
@@ -95,13 +99,28 @@ const doneText: Record<CallKind, string> = {
   compute: 'Computed',
 };
 
-const quote = (c: Call) => (c.kind === 'search' ? `'${c.what}'` : c.what);
+/** A label as runs, for a line that joins it with words. */
+export const runsOf = (l: Label): readonly Run[] =>
+  typeof l === 'string' ? [{ t: l }] : l;
+
+/** A label as plain text, for a tooltip or the clipboard. */
+export const textOf = (l: Label): string =>
+  typeof l === 'string' ? l : l.map((r) => r.t ?? r.m ?? '').join('');
+
+const quote = (c: Call): readonly Run[] =>
+  c.kind === 'search' ? [{ t: `'${textOf(c.what)}'` }] : runsOf(c.what);
 
 /** The call in flight, as the live line says it: "Searching 'time constant'". */
-export const liveLine = (c: Call) => `${liveText[c.kind]} ${quote(c)}`;
+export const liveLine = (c: Call): readonly Run[] => [
+  { t: `${liveText[c.kind]} ` },
+  ...quote(c),
+];
 
 /** A finished call, as the opened list says it. */
-export const doneLine = (c: Call) => `${doneText[c.kind]} ${quote(c)}`;
+export const doneLine = (c: Call): readonly Run[] => [
+  { t: `${doneText[c.kind]} ` },
+  ...quote(c),
+];
 
 const times = (n: number) =>
   n === 1 ? 'once' : n === 2 ? 'twice' : `${String(n)} times`;

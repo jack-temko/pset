@@ -64,7 +64,7 @@ export default defineSpec({
       id: 'remembered',
       name: 'Remembered',
       when: 'Ask saved a memory: a quiet row in the answer with Undo and Edit; the memory list shows it as New.',
-      text: 'Remembered: you use V_0 for node voltages',
+      text: 'Remembered: you use',
     },
     {
       id: 'stopped',
@@ -472,6 +472,14 @@ export default defineSpec({
       why: 'Jack: "Can we make the stop/send icons?", "Can we make this just an icon too?", and the gap below the error.',
       beat: 'Labelled buttons',
       date: '2026-11-05',
+    },
+    {
+      id: 'ask-d27',
+      decision:
+        'Captions, column heads, plot titles, step names and the Remembered row take runs, so math in them draws as math, as in the prose.',
+      why: 'Fable review, item 17: "V_0" showed its underscore everywhere outside the paragraphs.',
+      beat: 'Plain strings for every label',
+      date: '2026-11-09',
     },
   ],
 });

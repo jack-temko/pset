@@ -15,7 +15,10 @@ export const SEARCH: Call = { kind: 'search', what: 'time constant' };
 /** A run of finished steps, where they happened in the answer. */
 export const run = (...calls: Call[]): Block => ({ k: 'run', calls });
 
-const SUM: Call = { kind: 'compute', what: 'V_0 at t = τ' };
+const SUM: Call = {
+  kind: 'compute',
+  what: [m('V_0'), { t: ' at ' }, m('t = \\tau')],
+};
 export const CALLS: readonly Call[] = [
   SEARCH,
   READ,
@@ -63,17 +66,17 @@ export const ANSWER: readonly Block[] = [
       },
       {
         tex: '\\frac{dV_0}{dt} + \\frac{V_0}{\\tau} = \\frac{V_s}{R_1 C}',
-        why: 'Divide by C and collect the V_0 terms',
+        why: [{ t: 'Divide by C and collect the ' }, m('V_0'), { t: ' terms' }],
       },
       {
         tex: 'V_0(t) = V_s\\,\\frac{R_2}{R_1+R_2}\\left(1 - e^{-t/\\tau}\\right)',
-        why: 'Solve it with V_0(0) = 0',
+        why: [{ t: 'Solve it with ' }, m('V_0(0) = 0')],
       },
     ],
   },
   {
     k: 'plot',
-    title: 'V_0 against time, in seconds',
+    title: [m('V_0'), { t: ' against time, in seconds' }],
     series: [
       { name: 'R2 = 2 kΩ', points: decay(1, 4) },
       { name: 'R2 = 1 kΩ', points: decay(1, 2.5) },
@@ -82,7 +85,7 @@ export const ANSWER: readonly Block[] = [
   {
     k: 'table',
     own: true,
-    head: ['Time', 'V_0 (V)', 'Share of final'],
+    head: ['Time', [m('V_0'), { t: ' (V)' }], 'Share of final'],
     rows: [
       ['1 τ', '2.53', '63%'],
       ['2 τ', '3.46', '86%'],
@@ -148,7 +151,7 @@ export const REMEMBERED: Turn = {
   id: 'r',
   question: 'I always call the node voltages V_0, V_1 and so on.',
   about: undefined,
-  remembered: 'you use V_0 for node voltages',
+  remembered: [{ t: 'you use ' }, m('V_0'), { t: ' for node voltages' }],
   blocks: [
     {
       k: 'p',
@@ -219,7 +222,7 @@ export const HISTORY: readonly Turn[] = [
     id: 'h4',
     day: 'Today',
     question: 'I always call the node voltages V_0, V_1 and so on.',
-    remembered: 'you use V_0 for node voltages',
+    remembered: [{ t: 'you use ' }, m('V_0'), { t: ' for node voltages' }],
     blocks: REMEMBERED.blocks,
   }),
 ];

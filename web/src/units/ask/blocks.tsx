@@ -4,7 +4,9 @@ import { Runs } from '@/units/problem/math';
 import type { Run } from '@/units/problem/types';
 import { StepRow } from './steps';
 import { Tag } from '@/units/tag';
-import type { Block, Inline, PageRef, Series } from './types';
+import type { Block, Inline, Label, PageRef, Series } from './types';
+import { textOf } from './types';
+import { LabelText } from './label';
 
 /** A page chip: "p. 142", pressed to open the material at that page
  *  (ask-d9). Quiet, but plainly something to press. */
@@ -56,7 +58,7 @@ const COLOURS = ['var(--ds-accent)', 'var(--ds-attention)'];
 
 /** One or two functions on shared axes, each in its own colour, named in the
  *  legend rather than on the lines. */
-function Plot({ title, series }: { title: string; series: readonly Series[] }) {
+function Plot({ title, series }: { title: Label; series: readonly Series[] }) {
   const W = 480;
   const H = 200;
   const pad = 28;
@@ -71,13 +73,13 @@ function Plot({ title, series }: { title: string; series: readonly Series[] }) {
   return (
     <figure className="m-0 max-w-[680px]">
       <figcaption className="ds-label mb-2 text-(--ds-fg-muted)">
-        {title}
+        <LabelText value={title} />
       </figcaption>
       <svg
         viewBox={`0 0 ${String(W)} ${String(H)}`}
         className="block h-auto w-full rounded-(--ds-radius-control) border border-(--ds-border-muted) bg-(--ds-bg-raised)"
         role="img"
-        aria-label={title}
+        aria-label={textOf(title)}
       >
         <path
           d={`M${String(pad)} 8V${String(H - pad)}H${String(W - 8)}`}
@@ -181,7 +183,9 @@ export function BlockView({
                   <Runs runs={[{ m: s.tex }]} />
                 </div>
                 {s.why && (
-                  <p className="ds-small text-(--ds-fg-muted)">{s.why}</p>
+                  <p className="ds-small text-(--ds-fg-muted)">
+                    <LabelText value={s.why} />
+                  </p>
                 )}
               </div>
             </li>
@@ -196,9 +200,9 @@ export function BlockView({
           <table className="ds-small w-full border-collapse text-left">
             <thead>
               <tr className="bg-(--ds-neutral-soft)">
-                {block.head.map((h) => (
-                  <th key={h} className="px-3 py-2 font-medium">
-                    {h}
+                {block.head.map((h, i) => (
+                  <th key={i} className="px-3 py-2 font-medium">
+                    <LabelText value={h} />
                   </th>
                 ))}
               </tr>
@@ -208,7 +212,7 @@ export function BlockView({
                 <tr key={i} className="border-t border-(--ds-border-muted)">
                   {r.map((c, j) => (
                     <td key={j} className="ds-tabular px-3 py-2">
-                      {c}
+                      <LabelText value={c} />
                     </td>
                   ))}
                 </tr>

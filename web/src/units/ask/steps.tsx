@@ -13,7 +13,9 @@ import {
   summary,
   type CallKind,
   type Block,
+  type Label,
 } from './types';
+import { LabelText } from './label';
 
 const ICONS: Record<CallKind, LucideIcon> = {
   search: Search,
@@ -27,11 +29,13 @@ const ROW =
 
 /** A label for work in progress, in the row's place: the same row as the
  *  steps it gives way to, so nothing moves (ask-d19). */
-export function ThinkingRow({ text = 'Thinking' }: { text?: string }) {
+export function ThinkingRow({ text = 'Thinking' }: { text?: Label }) {
   return (
     <p className={ROW}>
       <span className="size-4 shrink-0" aria-hidden />
-      <span className="ds-shimmer min-w-0 truncate">{text}</span>
+      <span className="ds-shimmer min-w-0 truncate">
+        <LabelText value={text} />
+      </span>
     </p>
   );
 }
@@ -84,7 +88,9 @@ export function StepRow({
                 <span className="z-10 grid h-5 w-4 shrink-0 place-items-center bg-(--ds-bg)">
                   <Icon className="size-3" aria-hidden />
                 </span>
-                <span className="[overflow-wrap:anywhere]">{doneLine(c)}</span>
+                <span className="[overflow-wrap:anywhere]">
+                  <LabelText value={doneLine(c)} />
+                </span>
               </li>
             );
           })}
