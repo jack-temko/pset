@@ -86,6 +86,7 @@ export function Summary({
   onTurnIn,
   onTakeBack,
   onBack,
+  onContinue,
 }: {
   problems: readonly SummaryProblem[];
   /** Only to say how early or late it was finished; never shown on its own. */
@@ -97,10 +98,15 @@ export function Summary({
   onTurnIn?: () => void;
   onTakeBack?: () => void;
   onBack?: () => void;
+  /** Opens a problem that is not done yet: the summary's main action while
+   *  any is left (summary-d9). */
+  onContinue?: (id: string) => void;
 }) {
   const total = problems.length;
   const done = problems.filter((p) => p.state === 'done').length;
   const all = total > 0 && done === total;
+  const left = problems.findIndex((p) => p.state !== 'done');
+  const next = left === -1 ? undefined : left;
   const minutes = problems.reduce((n, p) => n + p.minutes, 0);
   const longest = problems.reduce<SummaryProblem | undefined>(
     (m, p) => (p.minutes > (m?.minutes ?? 0) ? p : m),
@@ -128,14 +134,27 @@ export function Summary({
       Take back
     </Button>
   ) : (
-    <Button
-      variant="primary"
-      onPress={() => {
-        onTurnIn?.();
-      }}
-    >
-      Turn in
-    </Button>
+    <>
+      {/* While problems are left, the next one leads and Turn in steps back. */}
+      {next !== undefined && (
+        <Button
+          variant="primary"
+          onPress={() => {
+            onContinue?.(problems[next].id);
+          }}
+        >
+          {`Continue with problem ${String(next + 1)}`}
+        </Button>
+      )}
+      <Button
+        variant={next === undefined ? 'primary' : 'default'}
+        onPress={() => {
+          onTurnIn?.();
+        }}
+      >
+        Turn in
+      </Button>
+    </>
   );
   const back = (
     <Link

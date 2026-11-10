@@ -50,7 +50,9 @@ export function AssignmentRow({
 }: AssignmentRowProps) {
   const time = minutesLeft === undefined ? '' : timeLeft(minutesLeft);
   return (
+    // The row opens the assignment; the course link in the meta stays its own.
     <ListRow
+      rowLink
       title={set}
       href={href}
       label={dueBadge(due, today)}

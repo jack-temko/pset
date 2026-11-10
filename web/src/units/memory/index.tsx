@@ -361,3 +361,27 @@ export function MemoryArea({
     </div>
   );
 }
+
+/** The Memory list alone, for a fold on another screen (Course): the same
+ *  rows (whole text, the "..." menu, Undo), capped with "Show all", with no
+ *  intro, add field or switch (memory-d7). */
+export function MemoryList({
+  memories,
+  showAllHref,
+}: {
+  memories: readonly Memory[];
+  /** Where "Show all" goes: the list page's memories for this course. */
+  showAllHref: string;
+}) {
+  const mem = useMemories(memories, undefined, undefined);
+  return (
+    <div className="flex min-w-0 flex-col gap-3">
+      <List cap={LIST_CAP} showAllHref={showAllHref} empty="Nothing remembered">
+        {mem.items.map((m) => (
+          <Row key={m.id} m={m} mem={mem} label={false} />
+        ))}
+      </List>
+      <UndoLine m={mem} />
+    </div>
+  );
+}

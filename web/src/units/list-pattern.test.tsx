@@ -63,11 +63,13 @@ describe('Course lists', () => {
     expect(el.textContent).not.toContain('Show all');
   });
 
-  it('says only the next due date under the name, and nothing when none is due', () => {
+  it('says only the next due date under the name, and nothing when none is due or the one row says it', () => {
     const h1 = (el: HTMLElement) =>
       el.querySelector('h1')?.parentElement?.parentElement;
-    expect(h1(render(course()))?.textContent).toContain('Next due Thu');
-    expect(h1(render(course()))?.textContent).not.toContain('set to do');
+    expect(h1(render(course(STRESS)))?.textContent).toContain('Next due Wed');
+    expect(h1(render(course(STRESS)))?.textContent).not.toContain('set to do');
+    // One assignment to do: its row already says the date (course-d30).
+    expect(h1(render(course()))?.textContent).not.toContain('due');
     expect(h1(render(course(NOTHING_DUE)))?.textContent).not.toContain('due');
   });
 

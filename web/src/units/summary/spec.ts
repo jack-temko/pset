@@ -17,7 +17,7 @@ export default defineSpec({
     {
       id: 'unfinished',
       name: 'Not finished',
-      when: 'Some problems left: "5 of 8 done", total time, the bars, the longest and Turn in.',
+      when: 'Some problems left: "5 of 8 done", total time, the bars, the longest, Continue with the next one as primary, and Turn in.',
       text: '5 of 8 done',
     },
     {
@@ -37,6 +37,11 @@ export default defineSpec({
     '30 problems taking 99 h, a 70 character title for the longest and a set of 999 done: the bars thin out, the line wraps and nothing overflows.',
   actions: [
     {
+      id: 'continue',
+      label: 'Continue with problem N',
+      does: 'Opens the first problem not done yet; the main action while any are left.',
+    },
+    {
       id: 'turn-in',
       label: 'Turn in',
       does: 'Hands the assignment in; the pane asks first when problems are left.',
@@ -53,6 +58,7 @@ export default defineSpec({
     },
   ],
   inputs: [
+    { name: 'onContinue', does: 'Opens a problem not done yet.' },
     {
       name: 'problems',
       does: 'Each problem’s label, title, state and minutes spent.',
@@ -160,6 +166,14 @@ export default defineSpec({
       why: 'Jack: "lets go with C."',
       beat: 'The GitHub box; Home\u2019s stats box; tiles',
       date: '2026-10-21',
+    },
+    {
+      id: 'summary-d9',
+      decision:
+        'With problems left, "Continue with problem N" is the primary and Turn in a default button; all done, Turn in is the primary.',
+      why: 'Fable review, item 6: the likely next step is the next problem, not handing it in. Jack took it in the review batch.',
+      beat: 'Turn in as the one primary whatever is left',
+      date: '2026-11-09',
     },
   ],
 });

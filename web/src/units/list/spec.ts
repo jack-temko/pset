@@ -132,5 +132,13 @@ export default defineSpec({
       beat: 'A header on every list',
       date: '2026-10-14',
     },
+    {
+      id: 'list-d5',
+      decision:
+        'The count beside a list\'s heading shows only from 1 to the cap: a zero says nothing, and past the cap "Show all N" already says it.',
+      why: 'Fable review, items 13 and 20 (no printed zeros; say it once). Jack took them in the review batch.',
+      beat: '"Assignments 6" above "Show all 6"; "Materials 0"',
+      date: '2026-11-09',
+    },
   ],
 });
