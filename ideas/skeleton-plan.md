@@ -43,22 +43,37 @@ export const UNKNOWN = 'unknown';
  *  passed is drawn real (the name from the clicked link, a read that has
  *  already answered); every other value is a bar. */
 export type Waits<K, D, S> = K &
-  ((D & { loading?: undefined }) | (Partial<D> & { loading: S | typeof UNKNOWN }));
+  (
+    | (D & { loading?: undefined })
+    | (Partial<D> & { loading: S | typeof UNKNOWN })
+  );
 
 /** Wraps a unit that waits: keeps its `loads` for the checks, and lets the
  *  design page and the proof force it into loading with `shapeOf` of the
  *  data an example gave it, so no skeleton example is written by hand. */
-export function waits<K, D, S>(loads: Loads<D, S>, unit: (p: Waits<K, D, S>) => ReactNode);
+export function waits<K, D, S>(
+  loads: Loads<D, S>,
+  unit: (p: Waits<K, D, S>) => ReactNode,
+);
 ```
 
 ```tsx
 // web/src/units/bone/index.tsx: the only place a bar is drawn
 /** A bar where text will be. Widths are in ch; a list of widths is a rhythm,
  *  picked by `row`, so rows differ but a row always draws the same. */
-export function Bone(p: { ch: number | readonly number[]; row?: number; pill?: boolean; still?: boolean });
+export function Bone(p: {
+  ch: number | readonly number[];
+  row?: number;
+  pill?: boolean;
+  still?: boolean;
+});
 /** A value, or the bar that holds its place. A value that replaces a bar the
  *  student saw fades in over 150ms. */
-export function Fill(p: { ch: number | readonly number[]; row?: number; children: ReactNode | undefined });
+export function Fill(p: {
+  ch: number | readonly number[];
+  row?: number;
+  children: ReactNode | undefined;
+});
 /** For what is not text (a chart, a page): fills the box its parent made. */
 export function BoneBlock(p: { still?: boolean });
 ```
@@ -68,12 +83,25 @@ export function BoneBlock(p: { still?: boolean });
    text's (48, 28, 28, 22, 20, 18, 20), and a row of bars is 60px like the
    real row. `overflow: hidden` on the bone itself grows the line by 5 to
    10px: it must not be added. */
-.ds .ds-bone { display: inline-block; position: relative; height: 1lh; max-width: 100%; vertical-align: top; }
+.ds .ds-bone {
+  display: inline-block;
+  position: relative;
+  height: 1lh;
+  max-width: 100%;
+  vertical-align: top;
+}
 .ds .ds-bone::before {
-  content: ''; position: absolute; inset-inline: 0; top: 50%; height: 0.7em; translate: 0 -50%;
-  border-radius: var(--ds-radius-tag); background: var(--ds-bone);
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 0.7em;
+  translate: 0 -50%;
+  border-radius: var(--ds-radius-tag);
+  background: var(--ds-bone);
   /* The grace and the fade-in are CSS: no timer per skeleton. */
-  animation: ds-bone-in 150ms ease-out var(--ds-grace, 300ms) both,
+  animation:
+    ds-bone-in 150ms ease-out var(--ds-grace, 300ms) both,
     ds-bone-pulse 2s ease-in-out calc(var(--ds-grace, 300ms) + 150ms) infinite;
 }
 ```
@@ -171,13 +199,13 @@ function HomeRoute() {
 
 ### What is real, what is a bar
 
-| Drawn real at once | A bar until its data | Not drawn until its data |
-| --- | --- | --- |
-| Top bar, wordmark, Settings link, tab rows (side-d1) | Names, dates, counts, figures, statuses | Anything that hangs off an unknown width (a tag after a title) |
-| Static page titles and section headings ("Assignments", "Settings") | A tag as a pill, a counter as an empty pill, a progress bar as an empty track | A banner or notice whose presence is not in the shape |
-| Button and link labels ("Add material", "Show all"), help row labels | Chart bars and heat cells (the grid, weekdays and months are real) | |
-| The crumb and title carried by the clicked link (the course's name) | | |
-| The filter bar, the composer, list frames, rules, header bands | | |
+| Drawn real at once                                                   | A bar until its data                                                          | Not drawn until its data                                       |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Top bar, wordmark, Settings link, tab rows (side-d1)                 | Names, dates, counts, figures, statuses                                       | Anything that hangs off an unknown width (a tag after a title) |
+| Static page titles and section headings ("Assignments", "Settings")  | A tag as a pill, a counter as an empty pill, a progress bar as an empty track | A banner or notice whose presence is not in the shape          |
+| Button and link labels ("Add material", "Show all"), help row labels | Chart bars and heat cells (the grid, weekdays and months are real)            |                                                                |
+| The crumb and title carried by the clicked link (the course's name)  |                                                                               |                                                                |
+| The filter bar, the composer, list frames, rules, header bands       |                                                                               |                                                                |
 
 Bar widths are never random. Each slot has a rhythm of three widths in `ch` (title 22, 16, 28; second line 30, 24, 34), picked by row number, capped at the slot's width so stress widths truncate as text does. Figures take their character count from the shape. The bone unit exports the common rhythms so a title bar is the same on every screen.
 
@@ -185,15 +213,15 @@ Row counts: the shape's count, cut by the same cap code as the loaded list. Past
 
 ### Where the shape comes from (where real data plugs in)
 
-| Screen | From the link that was clicked | From the last visit | From the route |
-| --- | --- | --- | --- |
-| Home | nothing | both list counts, greeting line count, figure widths | |
-| Course | name, assignments to do, materials (Home's course row has all three) | Done count, a material reading in, memories fold present | course id |
-| List page | which list, the course, the side, the count ("Show all 14" carries it) | count per side, sort | kind, filters |
-| Work pane | name, problems done and total (the row has them): strip length, and problem or summary | the problem you were on (work `remembers`), its statement's line count | assignment id |
-| Material pane | name, page count (the materials row) | exact scroll spot (M8), page sizes | material id |
-| Ask pane | course | empty or has turns | |
-| Settings | nothing; its sections are fixed | key or no key, update or not, errors kept | |
+| Screen        | From the link that was clicked                                                         | From the last visit                                                    | From the route |
+| ------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------- |
+| Home          | nothing                                                                                | both list counts, greeting line count, figure widths                   |                |
+| Course        | name, assignments to do, materials (Home's course row has all three)                   | Done count, a material reading in, memories fold present               | course id      |
+| List page     | which list, the course, the side, the count ("Show all 14" carries it)                 | count per side, sort                                                   | kind, filters  |
+| Work pane     | name, problems done and total (the row has them): strip length, and problem or summary | the problem you were on (work `remembers`), its statement's line count | assignment id  |
+| Material pane | name, page count (the materials row)                                                   | exact scroll spot (M8), page sizes                                     | material id    |
+| Ask pane      | course                                                                                 | empty or has turns                                                     |                |
+| Settings      | nothing; its sections are fixed                                                        | key or no key, update or not, errors kept                              |                |
 
 A link carries its seed as router state; the list's cached row is the source, as loading-standard D11 ("navigation carries the summary") already decided. Remembered shapes live in localStorage under `pset.shape.v1:<unit>:<key>`, pruned to the newest 200.
 
@@ -218,37 +246,37 @@ The real List frame, always. Header band real: a title is real text; a switch dr
 
 Offsets are loaded height minus skeleton height, per state, at the unit's example width.
 
-| Unit | How it loads today | What changes |
-| --- | --- | --- |
-| home (view) | `HomeSkeleton`: real top bar; greeting and stats as bars; each list a heading bar over a 346px slab. 1.8px short | `waits`. Headings real, lists as real frames at the shape. `HomeSkeleton`, `RowSkeleton`, `h-[346px]` go |
-| course (view) | `CourseSkeleton`: a fake crumb "Course", a title bar, slabs at `SECTIONS = [103, 184]` measured from one sample. Fits 1 of 5 states: 203px off empty, 63px reading in, 610px failed | Name and crumb from the link. Headings and Add buttons real. Lists by shape. Stats box as on Home. Fold present or not from the shape. `SECTIONS` goes |
-| settings (view) | Title "Settings" as a bar; four slabs at 145, 372, 235, 135. Fits none of 8 states (24 to 827px off) | Title, section headings and row labels real (they are fixed); values as bars. No key, update and kept errors are shape |
-| list-page (view) | Crumb always "Assignments" (wrong for Memories and Courses, and it gains the course crumb on load); title bar; filter bar slab; 408px slab. Fits 1 of 7 (up to 366px; 15,372px at many) | Kind, course and side from the link: real crumbs, real title, real filter bar (not ready). List at the count the "Show all N" link carried |
-| work (pane) | `WorkSkeleton`: two header bars, 8 chips, `ProblemSkeleton`; `opens` picked by hand. 45px short at 440 wide | Strip length and problem-or-summary from the clicked row's done and total. Header line as its real 44px frame |
-| ask (pane) | `AskSkeleton`: a made-up message and answer as bars, the composer as a slab. Same for all 17 states | Composer real, not ready. Conversation bars only when the last visit had turns, anchored to the bottom as the real one is |
-| material (pane) | `MaterialSkeleton`: a top line bar, one still page box (M9), a pill slab | Top line real with the name from the tab; page boxes at the real count and size; pill frame real. M9 stays: still, no pulse |
-| side (pane), workspace (view) | Tab rows real; each side picks `WorkSkeleton`, `MaterialSkeleton` or `AskSkeleton` | Same picture of the chrome; they pass each pane its `loading` shape |
-| greeting | Two bars in hand-set line heights. 48px short when the greeting wraps to two lines | `Fill` inside the real `h1` and `p`; line count in the shape |
-| heatmap | A heading bar over one slab; 22px off in the narrow state | The real grid: months and weekdays real, cells empty, heading a `Fill` |
-| bar-chart | Seven stub bars at made-up heights, label bars | Weekday labels and tracks real; bars come with the data |
-| problem, problem-strip, summary | `ProblemSkeleton`, `ProblemStripSkeleton`, `SummarySkeleton`; problem also draws bars in place for Finding and Queued | One path each. Help row labels and action buttons real, not ready. Statement lines from the shape. Finding and Queued use `Bone still` |
-| memory | Its skeletons are `() => null` (50px against 238 to 601) | `MemoryList` loads through List; rows wrap, so line counts are shape |
-| list, list-row | None: screens draw a slab instead | `loading` and `row` on List; `loading` on ListRow (above) |
-| assignment-row, course-row; Course's work and material rows; memory rows | None | A loading form each, through ListRow |
-| home's figure rows | `RowSkeleton` | `Fill`; the figure column's width from the shape, since labels align to it |
-| tag, counter, progress-bar, set-line (DueStatus), sparkline, meter | None | A designed loading form each: pill, empty pill, empty track with a count bar, bar, flat line |
-| button, icon-button, link, section-heading, top-bar, tabs, text-field, menu, tooltip, fold, divider, confirm, danger-dialog, segmented-control, help-row, error-notice | Wait on nothing | No loading form. Inside a loading unit a button is real and not ready (button-d4) |
-| nine private `Bar` helpers, plus inline `animate-pulse` in work, material, problem-strip, bar-chart, summary | Copies of one span; six lack the reduced-motion class | All become `Bone` |
-| sample-row, sample-screen (fixtures) | `SampleRowSkeleton`, `SampleScreenSkeleton` | Converted first, as the reference and the checks' fixtures |
-| `components/loaded`, `components/skeleton` (old app) | The old standard | Untouched; they retire with the old app. `reveal.ts` is reused |
+| Unit                                                                                                                                                                   | How it loads today                                                                                                                                                                      | What changes                                                                                                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| home (view)                                                                                                                                                            | `HomeSkeleton`: real top bar; greeting and stats as bars; each list a heading bar over a 346px slab. 1.8px short                                                                        | `waits`. Headings real, lists as real frames at the shape. `HomeSkeleton`, `RowSkeleton`, `h-[346px]` go                                               |
+| course (view)                                                                                                                                                          | `CourseSkeleton`: a fake crumb "Course", a title bar, slabs at `SECTIONS = [103, 184]` measured from one sample. Fits 1 of 5 states: 203px off empty, 63px reading in, 610px failed     | Name and crumb from the link. Headings and Add buttons real. Lists by shape. Stats box as on Home. Fold present or not from the shape. `SECTIONS` goes |
+| settings (view)                                                                                                                                                        | Title "Settings" as a bar; four slabs at 145, 372, 235, 135. Fits none of 8 states (24 to 827px off)                                                                                    | Title, section headings and row labels real (they are fixed); values as bars. No key, update and kept errors are shape                                 |
+| list-page (view)                                                                                                                                                       | Crumb always "Assignments" (wrong for Memories and Courses, and it gains the course crumb on load); title bar; filter bar slab; 408px slab. Fits 1 of 7 (up to 366px; 15,372px at many) | Kind, course and side from the link: real crumbs, real title, real filter bar (not ready). List at the count the "Show all N" link carried             |
+| work (pane)                                                                                                                                                            | `WorkSkeleton`: two header bars, 8 chips, `ProblemSkeleton`; `opens` picked by hand. 45px short at 440 wide                                                                             | Strip length and problem-or-summary from the clicked row's done and total. Header line as its real 44px frame                                          |
+| ask (pane)                                                                                                                                                             | `AskSkeleton`: a made-up message and answer as bars, the composer as a slab. Same for all 17 states                                                                                     | Composer real, not ready. Conversation bars only when the last visit had turns, anchored to the bottom as the real one is                              |
+| material (pane)                                                                                                                                                        | `MaterialSkeleton`: a top line bar, one still page box (M9), a pill slab                                                                                                                | Top line real with the name from the tab; page boxes at the real count and size; pill frame real. M9 stays: still, no pulse                            |
+| side (pane), workspace (view)                                                                                                                                          | Tab rows real; each side picks `WorkSkeleton`, `MaterialSkeleton` or `AskSkeleton`                                                                                                      | Same picture of the chrome; they pass each pane its `loading` shape                                                                                    |
+| greeting                                                                                                                                                               | Two bars in hand-set line heights. 48px short when the greeting wraps to two lines                                                                                                      | `Fill` inside the real `h1` and `p`; line count in the shape                                                                                           |
+| heatmap                                                                                                                                                                | A heading bar over one slab; 22px off in the narrow state                                                                                                                               | The real grid: months and weekdays real, cells empty, heading a `Fill`                                                                                 |
+| bar-chart                                                                                                                                                              | Seven stub bars at made-up heights, label bars                                                                                                                                          | Weekday labels and tracks real; bars come with the data                                                                                                |
+| problem, problem-strip, summary                                                                                                                                        | `ProblemSkeleton`, `ProblemStripSkeleton`, `SummarySkeleton`; problem also draws bars in place for Finding and Queued                                                                   | One path each. Help row labels and action buttons real, not ready. Statement lines from the shape. Finding and Queued use `Bone still`                 |
+| memory                                                                                                                                                                 | Its skeletons are `() => null` (50px against 238 to 601)                                                                                                                                | `MemoryList` loads through List; rows wrap, so line counts are shape                                                                                   |
+| list, list-row                                                                                                                                                         | None: screens draw a slab instead                                                                                                                                                       | `loading` and `row` on List; `loading` on ListRow (above)                                                                                              |
+| assignment-row, course-row; Course's work and material rows; memory rows                                                                                               | None                                                                                                                                                                                    | A loading form each, through ListRow                                                                                                                   |
+| home's figure rows                                                                                                                                                     | `RowSkeleton`                                                                                                                                                                           | `Fill`; the figure column's width from the shape, since labels align to it                                                                             |
+| tag, counter, progress-bar, set-line (DueStatus), sparkline, meter                                                                                                     | None                                                                                                                                                                                    | A designed loading form each: pill, empty pill, empty track with a count bar, bar, flat line                                                           |
+| button, icon-button, link, section-heading, top-bar, tabs, text-field, menu, tooltip, fold, divider, confirm, danger-dialog, segmented-control, help-row, error-notice | Wait on nothing                                                                                                                                                                         | No loading form. Inside a loading unit a button is real and not ready (button-d4)                                                                      |
+| nine private `Bar` helpers, plus inline `animate-pulse` in work, material, problem-strip, bar-chart, summary                                                           | Copies of one span; six lack the reduced-motion class                                                                                                                                   | All become `Bone`                                                                                                                                      |
+| sample-row, sample-screen (fixtures)                                                                                                                                   | `SampleRowSkeleton`, `SampleScreenSkeleton`                                                                                                                                             | Converted first, as the reference and the checks' fixtures                                                                                             |
+| `components/loaded`, `components/skeleton` (old app)                                                                                                                   | The old standard                                                                                                                                                                        | Untouched; they retire with the old app. `reveal.ts` is reused                                                                                         |
 
 ## 4. Proof
 
-| Layer | What it proves | Where it runs | Cost |
-| --- | --- | --- | --- |
-| A. Checks in `checks.ts` (jsdom) | No unit exports a `*Skeleton`; `animate-pulse` and `ds-bone` appear only in `units/bone`; a spec with `data` is a `waits` unit; every unit root has `data-unit`; every text shown while loading is also on screen once loaded (catches the fake "Course" crumb, a printed "Nothing here yet", leaked sample text); every `data-unit` drawn while loading exists once loaded | `make check`, every PR | Seconds |
-| B. Box proof (`make loading-check`, Chromium over `/design/proof/<id>`, sample data, no Go server) | For every unit with data, every landing state, Normal and Stress, at its example width (views at 1280 and 1440): the root boxes are equal, and every `data-unit` box drawn while loading is at the same place and size once loaded, to 0.01px. Then, in the same page, the unit goes from loading to loaded in one tree and no `data-unit` box moves. An `UNKNOWN` render must pass the second rule only | Its own CI step on PRs that touch `web/`; `/change` before a UI PR | About 2 minutes (below) |
-| C. The jump guard on the real app (`make jumps-check`) | Real arrival order, the reveal train, fonts, images | Comes back screen by screen as each is wired: slow mode only, one run, hand-written scenarios; the full profile stays nightly | About 1 to 1.5 minutes once screens are wired; nothing until then |
+| Layer                                                                                              | What it proves                                                                                                                                                                                                                                                                                                                                                                                           | Where it runs                                                                                                                 | Cost                                                              |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| A. Checks in `checks.ts` (jsdom)                                                                   | No unit exports a `*Skeleton`; `animate-pulse` and `ds-bone` appear only in `units/bone`; a spec with `data` is a `waits` unit; every unit root has `data-unit`; every text shown while loading is also on screen once loaded (catches the fake "Course" crumb, a printed "Nothing here yet", leaked sample text); every `data-unit` drawn while loading exists once loaded                              | `make check`, every PR                                                                                                        | Seconds                                                           |
+| B. Box proof (`make loading-check`, Chromium over `/design/proof/<id>`, sample data, no Go server) | For every unit with data, every landing state, Normal and Stress, at its example width (views at 1280 and 1440): the root boxes are equal, and every `data-unit` box drawn while loading is at the same place and size once loaded, to 0.01px. Then, in the same page, the unit goes from loading to loaded in one tree and no `data-unit` box moves. An `UNKNOWN` render must pass the second rule only | Its own CI step on PRs that touch `web/`; `/change` before a UI PR                                                            | About 2 minutes (below)                                           |
+| C. The jump guard on the real app (`make jumps-check`)                                             | Real arrival order, the reveal train, fonts, images                                                                                                                                                                                                                                                                                                                                                      | Comes back screen by screen as each is wired: slow mode only, one run, hand-written scenarios; the full profile stays nightly | About 1 to 1.5 minutes once screens are wired; nothing until then |
 
 B is stricter than the old guard, which allowed a skeleton to be 2px off its content: more than Home's 1.8px. It needs no server because the units run on sample data, and one tree means loading and loaded can be compared element by element.
 
@@ -262,23 +290,23 @@ The old guard stays off until C: its scenarios open the old app's screens (`/boo
 
 Each change lands on its own. Changes 4 to 12 change what a screen looks like while loading, so each waits for Jack's try.
 
-| # | Change | Touches |
-| --- | --- | --- |
-| 0 | The skeleton grill: this plan's decisions, as `ideas/skeleton-grill.md` | `ideas/` |
-| 1 | The `bone` unit: `Bone`, `Fill`, `BoneBlock`, the `--ds-bone` token, grace and pulse keyframes | `units/bone/*`, `design/tokens.css`, `tokens.ts`, `tokens.test.ts` |
-| 2 | The contract: `Loads`, `Waits`, `waits`, forced loading; `skeletons` becomes optional and derived; `data-unit` on every unit root; spec fields `UnitState.loads` and `DataRead.before` (decision 7); layer A's checks with a shrinking allow-list; the two fixtures converted | `design/loading.ts`, `examples.ts`, `spec.ts`, `checks.ts` and tests, `design/sample/*`, one attribute in each `units/*/index.tsx`, `pages/design/stage.tsx` |
-| 3 | The box proof and the board: `/design/proof/:id`, `/design/loading`, the Playwright script, `make loading-check`, the CI step, one line in AGENTS.md | `pages/design/*`, `web/scripts/loading/*`, `Makefile`, `.github/workflows/ci.yml`, `AGENTS.md` |
-| 4 | Leaves: tag, counter, progress-bar, set-line, sparkline, meter get their loading form and a Loading example | those six units |
-| 5 | Lists: list, list-row, assignment-row, course-row, memory's list and rows, Course's two rows | `units/list*`, `assignment-row`, `course-row`, `memory`, `course` (rows only) |
-| 6 | Stats: greeting, heatmap, bar-chart, home's figure rows | those units, `home/layouts.tsx` |
-| 7 | Home: `waits`; `HomeSkeleton` and `RowSkeleton` deleted | `units/home`, `assignment-row/home.tsx` |
-| 8 | Course: `CourseSkeleton` and `SECTIONS` deleted; name and crumb from the seed | `units/course` |
-| 9 | List page: `ListPageSkeleton` deleted; real crumbs, title and filter bar | `units/list-page` |
-| 10 | Settings: `SettingsSkeleton` deleted | `units/settings` |
-| 11 | Work pane: problem, problem-strip, summary, work | those four units |
-| 12 | Ask, material, side, workspace | those four units |
-| 13 | Close: the allow-lists are empty and removed; `skeletons` leaves `Examples`; a `nothing-jumps` rule in `rules.ts`, enforced by B; "Nothing jumps" in `design/design-system.md` rewritten for the units | `design/*`, `design/design-system.md` |
-| 14 | Later, with each screen's wiring: `useShape`, `useLoaded`, link seeds, that screen's scenario in the jump guard (layer C) | `web/src/design` or `lib`, routes, `web/scripts/jumps` |
+| #   | Change                                                                                                                                                                                                                                                                        | Touches                                                                                                                                                      |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0   | The skeleton grill: this plan's decisions, as `ideas/skeleton-grill.md`                                                                                                                                                                                                       | `ideas/`                                                                                                                                                     |
+| 1   | The `bone` unit: `Bone`, `Fill`, `BoneBlock`, the `--ds-bone` token, grace and pulse keyframes                                                                                                                                                                                | `units/bone/*`, `design/tokens.css`, `tokens.ts`, `tokens.test.ts`                                                                                           |
+| 2   | The contract: `Loads`, `Waits`, `waits`, forced loading; `skeletons` becomes optional and derived; `data-unit` on every unit root; spec fields `UnitState.loads` and `DataRead.before` (decision 7); layer A's checks with a shrinking allow-list; the two fixtures converted | `design/loading.ts`, `examples.ts`, `spec.ts`, `checks.ts` and tests, `design/sample/*`, one attribute in each `units/*/index.tsx`, `pages/design/stage.tsx` |
+| 3   | The box proof and the board: `/design/proof/:id`, `/design/loading`, the Playwright script, `make loading-check`, the CI step, one line in AGENTS.md                                                                                                                          | `pages/design/*`, `web/scripts/loading/*`, `Makefile`, `.github/workflows/ci.yml`, `AGENTS.md`                                                               |
+| 4   | Leaves: tag, counter, progress-bar, set-line, sparkline, meter get their loading form and a Loading example                                                                                                                                                                   | those six units                                                                                                                                              |
+| 5   | Lists: list, list-row, assignment-row, course-row, memory's list and rows, Course's two rows                                                                                                                                                                                  | `units/list*`, `assignment-row`, `course-row`, `memory`, `course` (rows only)                                                                                |
+| 6   | Stats: greeting, heatmap, bar-chart, home's figure rows                                                                                                                                                                                                                       | those units, `home/layouts.tsx`                                                                                                                              |
+| 7   | Home: `waits`; `HomeSkeleton` and `RowSkeleton` deleted                                                                                                                                                                                                                       | `units/home`, `assignment-row/home.tsx`                                                                                                                      |
+| 8   | Course: `CourseSkeleton` and `SECTIONS` deleted; name and crumb from the seed                                                                                                                                                                                                 | `units/course`                                                                                                                                               |
+| 9   | List page: `ListPageSkeleton` deleted; real crumbs, title and filter bar                                                                                                                                                                                                      | `units/list-page`                                                                                                                                            |
+| 10  | Settings: `SettingsSkeleton` deleted                                                                                                                                                                                                                                          | `units/settings`                                                                                                                                             |
+| 11  | Work pane: problem, problem-strip, summary, work                                                                                                                                                                                                                              | those four units                                                                                                                                             |
+| 12  | Ask, material, side, workspace                                                                                                                                                                                                                                                | those four units                                                                                                                                             |
+| 13  | Close: the allow-lists are empty and removed; `skeletons` leaves `Examples`; a `nothing-jumps` rule in `rules.ts`, enforced by B; "Nothing jumps" in `design/design-system.md` rewritten for the units                                                                        | `design/*`, `design/design-system.md`                                                                                                                        |
+| 14  | Later, with each screen's wiring: `useShape`, `useLoaded`, link seeds, that screen's scenario in the jump guard (layer C)                                                                                                                                                     | `web/src/design` or `lib`, routes, `web/scripts/jumps`                                                                                                       |
 
 ## 6. Open decisions
 
