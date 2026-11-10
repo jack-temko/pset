@@ -2,15 +2,13 @@ import { LoaderCircle, type LucideIcon } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { Tooltip } from '@/units/tooltip';
-import { buttonLook, type ButtonVariant } from './looks';
+import { buttonLook, NOT_READY, type ButtonVariant } from './looks';
 
 export type { ButtonVariant };
 
 /** A not-ready button has no fill and no hover: muted text and its reason
  *  (a tooltip) mark it. Its look is the default shape whatever its variant, since muted
  *  text does not reach its contrast on a solid ground. */
-const NOT_READY =
-  'border-(--ds-border) bg-transparent text-(--ds-fg-muted) cursor-default';
 
 /** How long a reason opened by a press stays. */
 export const REASON_MS = 4000;
