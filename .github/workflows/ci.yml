@@ -38,16 +38,22 @@ jobs:
       # data, so it needs no server, secret or model.
       - name: Does this change touch the web app?
         id: web
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            range="origin/${{ github.base_ref }}...HEAD"
+          if [ "$EVENT" = "pull_request" ]; then
+            range="origin/$BASE...HEAD"
           else
-            range="${{ github.event.before }}...HEAD"
+            range="$BEFORE...HEAD"
           fi
-          if ! git diff --name-only "$range" >/dev/null 2>&1; then
+          # Read whole, then matched: a pipe into grep -q can fail the step
+          # on SIGPIPE under pipefail and skip the proof wrongly.
+          if ! files="$(git diff --name-only "$range" 2>/dev/null)"; then
             # No usable range (a new branch's first push): run it.
             echo "changed=true" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "$range" | grep -Eq '^(web/|tools/loading-check\.sh)'; then
+          elif grep -Eq '^(web/|tools/loading-check\.sh|Makefile|\.github/workflows/ci\.yml)' <<<"$files"; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -57,7 +63,9 @@ jobs:
         id: pw
         working-directory: web
         run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
+      # Restored and saved apart, so a red proof still keeps the browser.
+      - uses: actions/cache/restore@v4
+        id: browser
         if: steps.web.outputs.changed == 'true'
         with:
           path: ~/.cache/ms-playwright
@@ -66,8 +74,14 @@ jobs:
         if: steps.web.outputs.changed == 'true'
         working-directory: web
         run: npx playwright install --with-deps chromium
+      - uses: actions/cache/save@v4
+        if: steps.web.outputs.changed == 'true' && steps.browser.outputs.cache-hit != 'true'
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
       - name: The loading proof
         if: steps.web.outputs.changed == 'true'
+        timeout-minutes: 5
         run: make loading-check
 
       # The jump guard (make jumps-check) is off for now (2026-11-04, AGENTS.md):

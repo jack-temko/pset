@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Component, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { ForceLoading } from '@/design/loading';
 import { FIXTURES, UNITS, type Entry } from '@/design/registry';
@@ -42,21 +42,66 @@ const PROVEN: readonly Entry[] = [...UNITS, ...FIXTURES].filter(
   (e) => (e.spec.data?.length ?? 0) > 0,
 );
 
-/** A state's whole box, loading against loaded: nothing in a unit to mark
- *  or list, so a new or changed component needs nothing here. */
+/** What a state takes up: its height, how wide its content is (the union of
+ *  its top boxes, so a pill or a narrower row counts), and what overflows.
+ *  Nothing in a unit to mark or list, so a new or changed component needs
+ *  nothing here. */
+function sizeOf(frame: HTMLElement) {
+  const at = frame.getBoundingClientRect();
+  let left = Infinity;
+  let right = -Infinity;
+  for (const el of frame.children) {
+    const r = el.getBoundingClientRect();
+    left = Math.min(left, r.left);
+    right = Math.max(right, r.right);
+  }
+  return {
+    height: at.height,
+    width: right > left ? right - left : 0,
+    'overflow width': frame.scrollWidth,
+    'overflow height': frame.scrollHeight,
+  };
+}
+
 function compare(loaded: HTMLElement, loading: HTMLElement) {
-  const a = loaded.getBoundingClientRect();
-  const b = loading.getBoundingClientRect();
-  const dw = Math.abs(a.width - b.width);
-  const dh = Math.abs(a.height - b.height);
-  const worst = Math.max(dw, dh);
-  const note =
-    worst <= TOLERANCE
-      ? ''
-      : dh >= dw
-        ? `${dh.toFixed(1)}px ${b.height < a.height ? 'short' : 'tall'}`
-        : `${dw.toFixed(1)}px ${b.width < a.width ? 'narrow' : 'wide'}`;
+  const a = sizeOf(loaded);
+  const b = sizeOf(loading);
+  let worst = 0;
+  let note = '';
+  for (const k of Object.keys(a) as (keyof typeof a)[]) {
+    const d = Math.abs(a[k] - b[k]);
+    if (d > worst) {
+      worst = d;
+      note = `${k} is ${d.toFixed(1)}px ${b[k] < a[k] ? 'less' : 'more'} loading`;
+    }
+  }
+  // A unit that reads data but neither waits nor has a skeleton draws the
+  // same thing either way: it has no loading form at all, so it fails.
+  if (worst <= TOLERANCE && loaded.innerHTML === loading.innerHTML)
+    return {
+      ok: false,
+      worst: Infinity,
+      note: 'no loading form: it reads data but is not made with waits',
+    };
   return { ok: worst <= TOLERANCE, worst, note };
+}
+
+/** Catches a state whose render throws, so the board reports it and goes
+ *  on instead of the whole page failing. */
+class Caught extends Component<
+  { onError: (message: string) => void; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(e: Error) {
+    this.props.onError(e.message);
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
 }
 
 /** One state, drawn twice, measured once both have laid out and the fonts
@@ -80,10 +125,17 @@ function Case({
 }) {
   const a = useRef<HTMLDivElement>(null);
   const b = useRef<HTMLDivElement>(null);
-  // Held, so a new callback from the parent does not measure again.
-  const report = useRef(onDone);
+  // Held, so a new callback from the parent does not measure again; and a
+  // state reports once, whether it measured or failed.
+  const sent = useRef(false);
+  const latest = useRef(onDone);
   useEffect(() => {
-    report.current = onDone;
+    latest.current = onDone;
+  });
+  const report = useRef((r: ProofResult) => {
+    if (sent.current) return;
+    sent.current = true;
+    latest.current(r);
   });
   useEffect(() => {
     let live = true;
@@ -105,13 +157,23 @@ function Case({
       live = false;
     };
   }, [unit, state, contract]);
+  const broke = (message: string) => {
+    report.current({
+      unit,
+      state,
+      contract,
+      ok: false,
+      worst: Infinity,
+      note: `it failed to render: ${message}`,
+    });
+  };
   return (
     <div className="flex items-start gap-6">
       <div ref={a} className="ds shrink-0" style={{ width }}>
-        {loaded()}
+        <Caught onError={broke}>{loaded()}</Caught>
       </div>
       <div ref={b} className="ds shrink-0" style={{ width }}>
-        {loading()}
+        <Caught onError={broke}>{loading()}</Caught>
       </div>
     </div>
   );
@@ -134,8 +196,11 @@ export function UnitProof({
   const { spec } = entry;
   const [ex, setEx] = useState<AnyExamples>();
   const [at, setAt] = useState(0);
+  const [broken, setBroken] = useState<string>();
   useEffect(() => {
-    void entry.examples().then(setEx);
+    entry.examples().then(setEx, (e: unknown) => {
+      setBroken(e instanceof Error ? e.message : String(e));
+    });
   }, [entry]);
 
   const states = spec.states.filter((s) => s.loads !== false);
@@ -149,7 +214,24 @@ export function UnitProof({
     finished.current = onFinished;
   });
   const skipped = onlyContract === true && ex?.skeletons !== undefined;
-  const over = ex !== undefined && (current === undefined || skipped);
+  const over =
+    broken !== undefined ||
+    (ex !== undefined && (current === undefined || skipped));
+  const told = useRef(onResult);
+  useEffect(() => {
+    told.current = onResult;
+  });
+  useEffect(() => {
+    if (broken !== undefined)
+      told.current({
+        unit: spec.id,
+        state: 'examples',
+        contract: true,
+        ok: false,
+        worst: Infinity,
+        note: `its examples failed to load: ${broken}`,
+      });
+  }, [broken, spec.id]);
   useEffect(() => {
     if (over) finished.current();
   }, [over]);
@@ -200,8 +282,14 @@ export function LoadingBoard() {
   const [at, setAt] = useState(0);
   const entry = PROVEN.at(at);
   const done = entry === undefined;
+  // "done" is marked only after the results are on window, in the same
+  // step, so the script can never read a board that finished but has not
+  // published.
+  const board = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (done) window.loadingProof = results;
+    if (!done || !board.current) return;
+    window.loadingProof = results;
+    board.current.dataset.proof = 'done';
   }, [done, results]);
 
   const shown = [...results].sort(
@@ -213,7 +301,7 @@ export function LoadingBoard() {
   const on = results.filter((r) => r.contract);
   const failing = on.filter((r) => !r.ok).length;
   return (
-    <div className="space-y-6 p-6" data-proof={done ? 'done' : 'running'}>
+    <div className="space-y-6 p-6" ref={board} data-proof="running">
       <div>
         <h1 className="text-2xl font-semibold">Loading</h1>
         <p className="text-sm text-muted-foreground">

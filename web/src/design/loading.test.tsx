@@ -20,8 +20,8 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-/** Every piece of text a render shows, trimmed, in order. */
-function textsOf(node: ReactNode): string[] {
+/** Every piece of text a render shows, trimmed, in order, and its markup. */
+function drawn(node: ReactNode): { texts: string[]; html: string } {
   const el = document.createElement('div');
   document.body.append(el);
   const root = createRoot(el);
@@ -35,14 +35,15 @@ function textsOf(node: ReactNode): string[] {
     const t = n.textContent?.replace(/\s+/g, ' ').trim();
     if (t) out.push(t);
   }
+  const html = el.innerHTML;
   el.remove();
-  return out;
+  return { texts: out, html };
 }
 
 /** Time for one state to render twice in jsdom, on a loaded machine. */
 const RENDER_MS = 20_000;
 
-describe('a loading form prints nothing its loaded state does not', () => {
+describe('a unit that reads data has a loading form, and it prints nothing its loaded state does not', () => {
   const cases = ALL.filter((e) => (e.spec.data?.length ?? 0) > 0).flatMap((e) =>
     e.spec.states
       .filter((s) => s.loads !== false)
@@ -55,11 +56,17 @@ describe('a loading form prints nothing its loaded state does not', () => {
       // Not on the contract yet: its hand-written skeleton goes when it is.
       if (ex.skeletons !== undefined) return;
       const render = ex.states[state];
-      const loaded = textsOf(render()).join(' ');
-      const loading = textsOf(
+      const loaded = drawn(render());
+      const loading = drawn(
         <ForceLoading.Provider value="shape">{render()}</ForceLoading.Provider>,
       );
-      expect(loading.filter((t) => !loaded.includes(t))).toEqual([]);
+      // Drawn the same either way: it reads data but is not made with waits,
+      // so it has no loading form at all.
+      expect(loading.html, 'no loading form: make it with waits').not.toBe(
+        loaded.html,
+      );
+      const said = loaded.texts.join(' ');
+      expect(loading.texts.filter((t) => !said.includes(t))).toEqual([]);
     },
     RENDER_MS,
   );
