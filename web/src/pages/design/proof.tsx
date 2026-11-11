@@ -104,6 +104,12 @@ class Caught extends Component<
   }
 }
 
+/** Calls an example's render inside the boundary, so a render that throws is
+ *  caught there and not in the case around it. */
+function Draw({ render }: { render: () => ReactNode }) {
+  return <>{render()}</>;
+}
+
 /** One state, drawn twice, measured once both have laid out and the fonts
  *  are in. */
 function Case({
@@ -170,10 +176,14 @@ function Case({
   return (
     <div className="flex items-start gap-6">
       <div ref={a} className="ds shrink-0" style={{ width }}>
-        <Caught onError={broke}>{loaded()}</Caught>
+        <Caught onError={broke}>
+          <Draw render={loaded} />
+        </Caught>
       </div>
       <div ref={b} className="ds shrink-0" style={{ width }}>
-        <Caught onError={broke}>{loading()}</Caught>
+        <Caught onError={broke}>
+          <Draw render={loading} />
+        </Caught>
       </div>
     </div>
   );

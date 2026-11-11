@@ -21,11 +21,28 @@ try {
     viewport: { width: 1440, height: 1000 },
   });
   // A page error ends the run at once, with what went wrong, rather than a
-  // wait for a board that will never finish.
+  // wait for a board that will never finish. Only the page's own failures
+  // count: a dev tool's request to another port (the Agentation toolbar's
+  // localhost:4747, absent in CI) is refused quietly, not as a failure. A
+  // state that throws is logged by React too, so it also ends the run here;
+  // the board's own "failed to render" row is for reading it in a browser.
+  const origin = new URL(base).origin;
+  await page.route(
+    (url) => url.origin !== origin,
+    (route) => route.abort(),
+  );
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {
-    if (m.type() === 'error') errors.push(m.text());
+    if (m.type() !== 'error') return;
+    const from = m.location().url;
+    if (from && !from.startsWith(origin)) return;
+    if (/^Failed to load resource/.test(m.text())) return;
+    errors.push(m.text());
+  });
+  page.on('requestfailed', (r) => {
+    if (r.url().startsWith(origin))
+      errors.push(`${r.url()} failed: ${r.failure()?.errorText ?? 'unknown'}`);
   });
   const started = Date.now();
   // Only the units on the loading contract: the ones not converted yet show
@@ -41,9 +58,15 @@ try {
         reject(new Error(`the page failed:\n  ${errors.join('\n  ')}`));
       }
     }, 200);
-    void done.finally(() => {
-      clearInterval(tick);
-    });
+    // Handled both ways: closing the browser after a failure rejects it.
+    done.then(
+      () => {
+        clearInterval(tick);
+      },
+      () => {
+        clearInterval(tick);
+      },
+    );
   });
   await Promise.race([done, failed]);
   const results = await page.evaluate(() => window.loadingProof);
