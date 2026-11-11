@@ -33,8 +33,45 @@ jobs:
         working-directory: web
       - run: make check
 
+      # The loading proof (make loading-check, ideas/skeleton-grill.md S6):
+      # only for a change under web/. It runs on the design page's sample
+      # data, so it needs no server, secret or model.
+      - name: Does this change touch the web app?
+        id: web
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            range="origin/${{ github.base_ref }}...HEAD"
+          else
+            range="${{ github.event.before }}...HEAD"
+          fi
+          if ! git diff --name-only "$range" >/dev/null 2>&1; then
+            # No usable range (a new branch's first push): run it.
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$range" | grep -Eq '^(web/|tools/loading-check\.sh)'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Playwright version
+        if: steps.web.outputs.changed == 'true'
+        id: pw
+        working-directory: web
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        if: steps.web.outputs.changed == 'true'
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - name: Install Chromium
+        if: steps.web.outputs.changed == 'true'
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: The loading proof
+        if: steps.web.outputs.changed == 'true'
+        run: make loading-check
+
       # The jump guard (make jumps-check) is off for now (2026-11-04, AGENTS.md):
-      # it comes back when it is revisited.
+      # it comes back screen by screen as screens are wired (skeleton-grill S6).
 
   # What friends run: the shipped web bundle and the server, built. Only for
   # a release.

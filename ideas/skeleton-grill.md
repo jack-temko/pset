@@ -66,3 +66,9 @@ Empty.
 - How is it enforced? Options: Checks + box proof on every PR (Recommended) / Also the old jump guard now / Box proof nightly only. **"Checks + box proof on every PR (Recommended)"**
 - Should the unit spec format change for this? Options: Two optional fields; derived skeletons (Recommended) / Derived skeletons, no new fields / Keep hand-written skeletons. **"Two optional fields; derived skeletons (Recommended)"**
 - Text of unknown length that wraps: how many placeholder lines? Options: Remember its line count (Recommended) / Fixed lines, then grow / Clamp it for good. **"Remember its line count (Recommended)"**
+
+### After step 2
+
+- Jack, during step 3: **"I want this to be as lightweight as possible. It should not require us to constantly update logic with it when adding new components or changing components. The check should also be lightweight, especially if it runs on every PR"**. S9 below.
+
+S9 (decided 2026-11-11): the checks find the units on the contract by themselves (they read data and write no skeleton) and judge only those. No offender lists or allow-lists to keep, and no `data-unit` marker on unit roots: the proof compares each state's whole box. A unit declares only its data props and its shape, once, in its own file; a unit that waits on nothing declares nothing. The CI proof runs on Vite with no build, only for units on the contract, only when `web/` changed: about 10 seconds plus the cached browser.
