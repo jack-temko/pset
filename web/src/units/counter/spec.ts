@@ -17,7 +17,7 @@ export default defineSpec({
     {
       id: 'loading',
       name: 'Loading',
-      when: 'While its number loads: a small pill bar at the counter’s height.',
+      when: 'While its number loads: its own pill, empty, as wide as one digit.',
     },
   ],
   stress:
@@ -56,9 +56,9 @@ export default defineSpec({
     {
       id: 'counter-d3',
       decision:
-        'A small pill bar at the counter’s height while its number loads.',
-      why: 'Step 4 of the loading skeleton plan (ideas/skeleton-plan.md): each leaf designs its loading form once, so it loads the same everywhere.',
-      beat: 'Each screen drawing its own bar for it',
+        'While its number loads: its own pill, empty, one digit wide. A small bone bar was too faint to see on the dark ground.',
+      why: 'Jack: "The counter shows nothing": a 3ch bone pulsing on the dark ground could not be seen. Step 4 of the loading skeleton plan.',
+      beat: 'A small pill bone (too faint); each screen drawing its own',
       date: '2026-11-12',
     },
   ],
