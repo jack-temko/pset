@@ -15,11 +15,20 @@ export default defineSpec({
       when: 'A share of nothing: only the track shows.',
     },
     { id: 'full', name: 'The whole', when: 'The share is the whole.' },
+    {
+      id: 'loading',
+      name: 'Loading',
+      when: 'While the share loads: the empty track alone.',
+    },
   ],
   stress:
     'A value above the whole and a whole of zero: the bar stops at full and shows empty.',
   actions: [],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its loading form: bone bars at its own size.',
+    },
     { name: 'value', does: 'The share.' },
     { name: 'max', does: 'The whole, in the same unit.' },
   ],
@@ -34,6 +43,13 @@ export default defineSpec({
       why: 'Confirmed by Jack: "Month, per course, all time (Recommended)" (G5): usage per course needs a thin bar, and the progress bar shows "x of y".',
       beat: 'Reusing the progress bar with a hidden count',
       date: '2026-10-22',
+    },
+    {
+      id: 'meter-d2',
+      decision: 'The empty track alone while the share loads.',
+      why: 'Step 4 of the loading skeleton plan (ideas/skeleton-plan.md): each leaf designs its loading form once, so it loads the same everywhere.',
+      beat: 'Each screen drawing its own bar for it',
+      date: '2026-11-12',
     },
   ],
 });
