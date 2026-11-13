@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { unitPath } from './lookup';
 import { Foundations } from './foundations';
 import { RulePage, RulesPage } from './rules';
+import { LoadingBoard } from './proof';
 import { Quiet } from './sections';
 import { UnitPage } from './unit';
 
@@ -197,6 +198,7 @@ export function Design() {
     <Routes>
       <Route index element={<Navigate to="/design/foundations" replace />} />
       <Route path="sample" element={<UnitRoute sample />} />
+      <Route path="loading" element={<LoadingBoard />} />
       <Route
         path="rules/:id"
         element={

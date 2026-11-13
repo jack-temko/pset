@@ -27,5 +27,5 @@ export default defineExamples(spec, SampleRow, {
       />
     ),
   },
-  stress: () => <SampleRow title={LONG_TITLE} detail={LONG_DETAIL} menuOpen />,
+  stress: () => <SampleRow title={LONG_TITLE} detail={LONG_DETAIL} />,
 });

@@ -99,6 +99,10 @@ app before calling it done:
   old app still belongs on `/components`: a section in a group file under
   `web/src/pages/components/sections/`, with the component's README as its
   Docs.
+- `make loading-check` proves that every unit on the loading contract
+  (made with `waits`, `ideas/skeleton-grill.md`) is the same size loading as
+  loaded; seconds, and CI runs it for any change under `web/`. It finds the
+  units itself: adding or converting one needs no list or marker.
 - `make jumps-check` is off for now (2026-11-04, until it is revisited): CI
   does not run it. Nothing jumping is still the rule ("Nothing jumps" in
   `design/design-system.md`); check it by eye in the states you changed.

@@ -2,7 +2,7 @@
 # Vite with /api proxied. Go lives in /usr/local/go/bin, nvm's node first.
 export PATH := $(HOME)/.nvm/versions/node/v24.18.0/bin:$(PATH):/usr/local/go/bin
 
-.PHONY: dev test-library seed gen check-gen katex-check fmt fmt-check lint test check build release jumps jumps-check
+.PHONY: dev test-library seed gen check-gen katex-check fmt fmt-check lint test check build release jumps jumps-check loading-check
 
 dev:
 	go run ./tools/dev
@@ -90,6 +90,11 @@ jumps:
 # scenarios, 2 runs); FULL=1 adds discovery and 3 runs, and is what runs nightly.
 jumps-check:
 	tools/jumps.sh --check
+
+# The loading proof: each unit on the loading contract, drawn loading, is the
+# size it is loaded (ideas/skeleton-grill.md S6). Seconds; in CI for web/.
+loading-check:
+	tools/loading-check.sh
 
 # Every release file in dist/ (Linux and macOS tarballs, install.sh, SHA256SUMS):
 # make release VERSION=0.1.0
