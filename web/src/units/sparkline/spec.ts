@@ -23,11 +23,20 @@ export default defineSpec({
       name: 'One day',
       when: 'A single value: the dot, with no line to draw.',
     },
+    {
+      id: 'loading',
+      name: 'Loading',
+      when: 'While the days load: a flat, quiet line along the bottom, at the same height.',
+    },
   ],
   stress:
     'Sixty values in 96px: the line stays inside its box and the dot stays on the last value.',
   actions: [],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its loading form: bone bars at its own size.',
+    },
     {
       name: 'values',
       does: 'One value per day, oldest first; scaled so the highest reaches the top.',
@@ -51,6 +60,14 @@ export default defineSpec({
       why: 'Jack, 2026-10-21: "include sparklines in that one too". Each line scales to its own range: the shape here, the size in the figure beside it.',
       beat: 'Bars; a shared scale across tiles',
       date: '2026-10-21',
+    },
+    {
+      id: 'sparkline-d2',
+      decision:
+        'A flat, quiet line along the bottom, no dot, at the same height, while the days load.',
+      why: 'Step 4 of the loading skeleton plan (ideas/skeleton-plan.md): each leaf designs its loading form once, so it loads the same everywhere.',
+      beat: 'Each screen drawing its own bar for it',
+      date: '2026-11-12',
     },
   ],
 });

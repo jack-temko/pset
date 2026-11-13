@@ -1,8 +1,21 @@
+import { Bone } from '@/units/bone';
+
 /** How far a set is done: one continuous bar and the count in words beside
  *  it. The count always shows, right-aligned in a box as wide as "99 of 99"
  *  (progress-bar-d6); the bar fills the room the count leaves, from a 16px floor, and adapts to its own width, so nothing outside
  *  reaches into it (progress-bar-d2, d3, d5). */
-export function ProgressBar({ done, total }: { done: number; total: number }) {
+export function ProgressBar({
+  done = 0,
+  total = 0,
+  loading,
+}: {
+  done?: number;
+  total?: number;
+  /** While the counts load: the empty track, and a bar where the count goes,
+   *  in the count's own "99 of 99" box, so nothing beside it moves
+   *  (progress-bar-d7). */
+  loading?: boolean;
+}) {
   const shown = Math.min(Math.max(done, 0), Math.max(total, 0));
   const complete = total > 0 && shown === total;
   const fill = complete ? 'bg-(--ds-fg-muted)' : 'bg-(--ds-accent)';
@@ -15,12 +28,18 @@ export function ProgressBar({ done, total }: { done: number; total: number }) {
         <span
           className={`block h-full ${fill}`}
           style={{
-            width: `${String(total > 0 ? (shown / total) * 100 : 0)}%`,
+            width: `${String(loading !== true && total > 0 ? (shown / total) * 100 : 0)}%`,
           }}
         />
       </span>
       <span className="ds-body ds-tabular flex shrink-0 flex-col items-end whitespace-nowrap text-(--ds-fg-muted) before:invisible before:block before:h-0 before:content-['99_of_99']">
-        {shown} of {total}
+        {loading === true ? (
+          <Bone ch={6} />
+        ) : (
+          <>
+            {shown} of {total}
+          </>
+        )}
       </span>
     </span>
   );

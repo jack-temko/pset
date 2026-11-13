@@ -14,11 +14,20 @@ export default defineSpec({
       name: 'Three digits',
       when: 'Many things, such as 128: the pill grows with the number.',
     },
+    {
+      id: 'loading',
+      name: 'Loading',
+      when: 'While its number loads: its own pill, empty, as wide as one digit.',
+    },
   ],
   stress:
     'The number "1,234" in a 32px container: it never truncates, and overflows the container rather than lie.',
   actions: [],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its loading form: bone bars at its own size.',
+    },
     { name: 'children', does: 'The number, written as it should read.' },
   ],
   priority: { first: 'The number.' },
@@ -43,6 +52,14 @@ export default defineSpec({
       why: 'Jack: "Needs more padding." and "Not vertically centered with the header and has not enough padding": what he saw was none, a locked-out fractional step.',
       beat: 'A pill with no visible padding',
       date: '2026-10-14',
+    },
+    {
+      id: 'counter-d3',
+      decision:
+        'While its number loads: its own pill, empty, one digit wide. A small bone bar was too faint to see on the dark ground.',
+      why: 'Jack: "The counter shows nothing": a 3ch bone pulsing on the dark ground could not be seen. Step 4 of the loading skeleton plan.',
+      beat: 'A small pill bone (too faint); each screen drawing its own',
+      date: '2026-11-12',
     },
   ],
 });

@@ -38,11 +38,20 @@ export default defineSpec({
       name: 'Thirty problems',
       when: 'A smaller share of the same one bar, filling the room the count leaves.',
     },
+    {
+      id: 'loading',
+      name: 'Loading',
+      when: 'While the counts load: the empty track, and a bar where the count goes.',
+    },
   ],
   stress:
     'Twelve problems in a 96px container: the bar shrinks to its 16px floor; the count stays whole.',
   actions: [],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its loading form: bone bars at its own size.',
+    },
     {
       name: 'done',
       does: 'How many problems are done; kept between 0 and total.',
@@ -117,6 +126,14 @@ export default defineSpec({
       why: 'Jack: "Can we make sure that the progress bar and this text are in the same location for every row/ The length of the numbers affects the offset of the bar."',
       beat: 'A count as wide as its numbers',
       date: '2026-10-16',
+    },
+    {
+      id: 'progress-bar-d7',
+      decision:
+        'The empty track, and a bar where the count goes in its own “99 of 99” box, while the counts load.',
+      why: 'Step 4 of the loading skeleton plan (ideas/skeleton-plan.md): each leaf designs its loading form once, so it loads the same everywhere.',
+      beat: 'Each screen drawing its own bar for it',
+      date: '2026-11-12',
     },
   ],
 });
