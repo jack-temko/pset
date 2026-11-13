@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { Bone } from '@/units/bone';
+
 /** A small pill holding a number, set beside a title (counter-d1). It never
  *  truncates: a number that does not fit overflows rather than lie. Padding
  *  is a whole step: the theme locks fractional spacing out, and a
@@ -8,19 +10,15 @@ export function Counter({
   loading,
   children,
 }: {
-  /** While its number loads: the counter's own pill, empty, as wide as one
-   *  digit (counter-d3). A bone this small read as nothing on the dark
-   *  ground. */
+  /** While its number loads: a small pill bar at the counter's height
+   *  (counter-d3). */
   loading?: boolean;
   children?: ReactNode;
 }) {
   if (loading === true)
     return (
-      <span
-        aria-hidden
-        className="ds-small ds-tabular inline-flex h-5 shrink-0 items-center justify-center rounded-full bg-(--ds-pressed) px-2 whitespace-nowrap"
-      >
-        <span className="invisible">0</span>
+      <span className="ds-small inline-flex h-5 shrink-0 items-center">
+        <Bone ch={3} pill />
       </span>
     );
   return (
