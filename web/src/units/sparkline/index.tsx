@@ -4,14 +4,32 @@ const PAD = 4;
  *  44 tall unless told, the last day marked with a dot. Drawn only: the figure it
  *  belongs to is written beside it. */
 export function Sparkline({
-  values,
+  values = [],
   height = 44,
+  loading,
 }: {
-  values: readonly number[];
+  values?: readonly number[];
   /** How tall it is, in px. */
   height?: number;
+  /** While the days load: a flat, quiet line along the bottom, no dot, at the
+   *  same height (sparkline-d2). */
+  loading?: boolean;
 }) {
   const H = height;
+  if (loading === true)
+    return (
+      <span
+        data-sparkline
+        className="relative block w-full"
+        style={{ height: H }}
+      >
+        <span
+          aria-hidden
+          className="absolute inset-x-0 h-[2px] rounded-full bg-(--ds-bone)"
+          style={{ top: H - PAD - 1 }}
+        />
+      </span>
+    );
   const n = values.length;
   const max = Math.max(1, ...values);
   const x = (i: number) => 3 + (n > 1 ? (i / (n - 1)) * 94 : 47);

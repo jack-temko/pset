@@ -304,6 +304,14 @@
     ds-bone-pulse 2s ease-in-out calc(var(--ds-grace, 300ms) + 150ms) infinite;
 }
 
+/* A zero-width character gives the bar a text baseline, so a line or a box
+   that aligns by baseline (a tag, a counter, an inline-flex row) sits the
+   same with a bone in it as with its text: without it the bone's baseline is
+   its bottom edge and the line grows by the font's descent. */
+.ds .ds-bone::after {
+  content: '\200b';
+}
+
 .ds .ds-bone::before {
   inset-inline: 0;
   top: 50%;

@@ -4,6 +4,7 @@ import spec from './spec';
 
 export default defineExamples(spec, ProgressBar, {
   states: {
+    loading: () => <ProgressBar loading />,
     'none-done': () => <ProgressBar done={0} total={6} />,
     'some-done': () => <ProgressBar done={2} total={6} />,
     'all-done': () => <ProgressBar done={6} total={6} />,

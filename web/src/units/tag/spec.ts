@@ -28,10 +28,19 @@ export default defineSpec({
       name: 'Attention without a glyph',
       when: 'The word alone carries the meaning.',
     },
+    {
+      id: 'loading',
+      name: 'Loading',
+      when: 'While the fact it names loads: a pill bar at the tag’s height.',
+    },
   ],
   stress: 'A 40 character tag in a 120px container, which truncates.',
   actions: [],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its loading form: bone bars at its own size.',
+    },
     { name: 'tone', does: 'Which border and text colour.' },
     { name: 'icon', does: 'One glyph before the word.' },
     { name: 'children', does: 'The word or two.' },
@@ -86,6 +95,14 @@ export default defineSpec({
       why: 'Jack: "Can we make them look more like GitHubs badges?"',
       beat: 'A soft filled ground at 14px (tag-d1)',
       date: '2026-10-16',
+    },
+    {
+      id: 'tag-d5',
+      decision:
+        'A pill bar at the tag’s own height, in place of the word, while its fact loads.',
+      why: 'Step 4 of the loading skeleton plan (ideas/skeleton-plan.md): each leaf designs its loading form once, so it loads the same everywhere.',
+      beat: 'Each screen drawing its own bar for it',
+      date: '2026-11-12',
     },
   ],
 });

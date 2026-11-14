@@ -1,6 +1,8 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { Bone } from '@/units/bone';
+
 export type TagTone = 'neutral' | 'attention' | 'danger';
 
 const TONES: Record<TagTone, string> = {
@@ -13,12 +15,21 @@ const TONES: Record<TagTone, string> = {
 export function Tag({
   tone = 'neutral',
   icon: Icon,
+  loading,
   children,
 }: {
   tone?: TagTone;
   icon?: LucideIcon;
-  children: ReactNode;
+  /** While its fact loads: a pill bar at the tag's height (tag-d5). */
+  loading?: boolean;
+  children?: ReactNode;
 }) {
+  if (loading === true)
+    return (
+      <span className="ds-label inline-flex h-5 items-center">
+        <Bone ch={8} pill />
+      </span>
+    );
   return (
     <span
       className={`ds-label inline-flex h-5 max-w-full min-w-0 items-center gap-1 rounded-full border border-solid bg-transparent px-2 whitespace-nowrap ${TONES[tone]}`}
