@@ -34,6 +34,11 @@ export default defineSpec({
       name: 'No href',
       when: 'The title is plain text, not a link.',
     },
+    {
+      id: 'loading',
+      name: 'Loading',
+      when: 'While its row loads: the title and meta as bars, widths picked by its place in the list; the caller passes the status and aside’s own loading forms.',
+    },
   ],
   exampleWidth: 720,
   stress:
@@ -46,6 +51,10 @@ export default defineSpec({
     },
   ],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its loading form: its place in the list and whether it has a second line.',
+    },
     { name: 'title', does: 'Line one, truncating.' },
     {
       name: 'titleField',
@@ -195,6 +204,14 @@ export default defineSpec({
       why: 'Jack: "Row in place, 10 s (Recommended)" (ideas/fable-review-grill.md D4); Course had it (course-d17), Memory joins.',
       beat: "Each screen's own undo shape",
       date: '2026-11-09',
+    },
+    {
+      id: 'list-row-d13',
+      decision:
+        'Loading, the title and meta are bars in the row’s own slots, widths from the shared rhythm by its place; no label, since it hangs off the title’s width.',
+      why: 'Step 5 of the loading skeleton plan (ideas/skeleton-plan.md): a list loads as itself, so nothing on the screen moves when its rows come.',
+      beat: 'A separate row skeleton',
+      date: '2026-11-14',
     },
   ],
 });

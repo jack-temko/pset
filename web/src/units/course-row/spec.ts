@@ -28,6 +28,11 @@ export default defineSpec({
       name: 'Home: assignments and courses',
       when: 'Home: an Assignments list of five rows, 40 below it a Courses list of five rows, each list under a section heading with a Counter; Courses ends in "Show all 8".',
     },
+    {
+      id: 'loading',
+      name: 'Loading',
+      when: 'While the course loads: two lines of bars, and a bar where the time this week goes.',
+    },
   ],
   exampleWidth: 960,
   stress:
@@ -40,6 +45,10 @@ export default defineSpec({
     },
   ],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its loading form at its place in the list.',
+    },
     { name: 'name', does: 'The course’s name.' },
     { name: 'href', does: 'Where the course name goes.' },
     {
@@ -187,6 +196,14 @@ export default defineSpec({
       why: 'Fable review, item 13: a printed 0 reads as data and costs a scan. Jack took it in the review batch.',
       beat: '"0 assignments to do · 0 materials", "0 m this week"',
       date: '2026-11-09',
+    },
+    {
+      id: 'course-row-d14',
+      decision:
+        'While loading, the row is ListRow’s loading form with two lines and a bar where the time this week goes, at the same aside width.',
+      why: 'Step 5 of the loading skeleton plan (ideas/skeleton-plan.md): a list loads as itself, so nothing on the screen moves when its rows come.',
+      beat: 'Each screen drawing its own bar for it',
+      date: '2026-11-14',
     },
   ],
 });
