@@ -47,6 +47,11 @@ export default defineSpec({
       when: 'The chosen side has no rows: one quiet line, and the list stays on it; the other side keeps its count in the header.',
       text: 'Nothing to do',
     },
+    {
+      id: 'loading',
+      name: 'Loading',
+      when: 'While its rows load: the frame, header and rules real, each row its own loading form at the shape’s count, cut by the cap; Show all’s number a bar.',
+    },
   ],
   stress:
     'A 70 character title in a 240px container: the title truncates; the Counter and action stay.',
@@ -64,6 +69,11 @@ export default defineSpec({
     },
   ],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its loading form at its shape (how many rows); with nothing known the list draws nothing.',
+    },
+    { name: 'row', does: 'One row’s loading form, by its place in the list.' },
     {
       name: 'title',
       does: 'The header’s title; without it there is no header.',
@@ -139,6 +149,14 @@ export default defineSpec({
       why: 'Fable review, items 13 and 20 (no printed zeros; say it once). Jack took them in the review batch.',
       beat: '"Assignments 6" above "Show all 6"; "Materials 0"',
       date: '2026-11-09',
+    },
+    {
+      id: 'list-d6',
+      decision:
+        'Loading, the list is its real frame with row(i) per row of the shape, cut by the cap; counts are bars; count 0 is the empty box; nothing known draws nothing.',
+      why: 'Step 5 of the loading skeleton plan (ideas/skeleton-plan.md): a list loads as itself, so nothing on the screen moves when its rows come.',
+      beat: 'Every screen drawing its own slab for a list',
+      date: '2026-11-14',
     },
   ],
 });

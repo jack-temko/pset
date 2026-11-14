@@ -1,5 +1,7 @@
 import { Children, type ReactNode } from 'react';
 
+import { UNKNOWN, type Unknown } from '@/design/loading';
+import { Bone, Fill } from '@/units/bone';
 import { Counter } from '@/units/counter';
 import { Link } from '@/units/link';
 
@@ -14,16 +16,23 @@ export interface ListState {
   count: number;
 }
 
+/** What sizes a list while it loads: how many rows the chosen side holds. */
+export interface ListShape {
+  count: number;
+}
+
 /** The states as a switch in the header, as GitHub Issues' Open and Closed:
  *  text and a count each, the chosen one in full ink. */
 function StateSwitch({
   states,
   state,
   onState,
+  loading,
 }: {
   states: readonly ListState[];
   state: string | undefined;
   onState: (id: string) => void;
+  loading: boolean;
 }) {
   return (
     <div
@@ -45,7 +54,7 @@ function StateSwitch({
             className={`ds-body ds-tabular flex h-8 items-center gap-2 whitespace-nowrap ${on ? 'font-medium text-(--ds-fg)' : 'text-(--ds-fg-muted) hover:text-(--ds-fg)'}`}
           >
             {s.label}
-            <Counter>{s.count}</Counter>
+            {loading ? <Counter loading /> : <Counter>{s.count}</Counter>}
           </button>
         );
       })}
@@ -91,6 +100,12 @@ type ListProps = Header &
     /** The one quiet line shown when there are no rows; it may hold one action. */
     empty?: ReactNode;
     children?: ReactNode;
+    /** Draws the list's loading form at its shape: the frame, header and
+     *  rules real, `row(i)` for each row, cut by the same cap (list-d6).
+     *  With nothing known the list stays quiet (skeleton-grill S2). */
+    loading?: ListShape | Unknown;
+    /** One row's loading form, by its place in the list. */
+    row?: (i: number) => ReactNode;
   };
 
 /** The old Box, in `ds` tokens: a bordered box of rows, with an optional
@@ -109,8 +124,14 @@ export function List({
   showAllHref,
   empty = 'Nothing here yet',
   children,
+  loading,
+  row,
 }: ListProps) {
-  const all = Children.toArray(children);
+  if (loading === UNKNOWN) return null;
+  const on = loading !== undefined;
+  const all = on
+    ? Array.from({ length: loading.count }, (_, i) => row?.(i))
+    : Children.toArray(children);
   const rows = cap === undefined ? all : all.slice(0, cap);
   const switched = states !== undefined && states.length > 1;
   const header = title !== undefined || switched;
@@ -125,13 +146,15 @@ export function List({
               onState={(id) => {
                 onState?.(id);
               }}
+              loading={on}
             />
           ) : (
             <div className="flex min-w-0 items-center gap-2">
               <h2 className="ds-body min-w-0 truncate font-medium text-(--ds-fg)">
                 {title}
               </h2>
-              {count !== undefined && <Counter>{count}</Counter>}
+              {count !== undefined &&
+                (on ? <Counter loading /> : <Counter>{count}</Counter>)}
             </div>
           )}
           {action !== undefined && (
@@ -141,7 +164,8 @@ export function List({
       )}
       {rows.length === 0 ? (
         <div className="ds-small flex min-h-14 flex-wrap items-center justify-center gap-x-3 px-4 py-2 text-center text-(--ds-fg-muted)">
-          {empty}
+          {/* The empty line is not said until it is true. */}
+          {on ? <Bone ch={18} /> : empty}
         </div>
       ) : (
         <div className="divide-y divide-(--ds-border-muted)">{rows}</div>
@@ -149,7 +173,10 @@ export function List({
       {rows.length < all.length && showAllHref !== undefined && (
         <div className="flex min-h-10 items-center justify-center border-t border-(--ds-border-muted) px-4">
           <Link href={showAllHref} size="small">
-            Show all {all.length}
+            Show all{' '}
+            <Fill ch={Math.max(2, String(all.length).length)}>
+              {on ? undefined : all.length}
+            </Fill>
           </Link>
         </div>
       )}

@@ -35,19 +35,37 @@ export interface AssignmentRowProps {
  *  line one, the course, time left and, for a recently opened one, when it
  *  was opened on line two, the due date and progress bar at the right
  *  (assignment-row-d1 to d4). */
-export function AssignmentRow({
-  set,
-  href,
-  course,
-  courseHref,
-  done,
-  total,
-  minutesLeft,
-  due,
-  reason,
-  openedAt,
-  today = new Date(),
-}: AssignmentRowProps) {
+export function AssignmentRow(
+  props:
+    | (AssignmentRowProps & { loading?: undefined })
+    | (Partial<AssignmentRowProps> & {
+        /** Draws its loading form: its place in the list, which picks the
+         *  bars' widths (assignment-row-d6). */
+        loading: { row: number };
+      }),
+) {
+  if (props.loading !== undefined)
+    return (
+      <ListRow
+        loading={{ row: props.loading.row, lines: 2 }}
+        status={<DueStatus loading />}
+        aside={<ProgressBar loading />}
+        asideWidth={ASIDE_WIDTH}
+      />
+    );
+  const {
+    set,
+    href,
+    course,
+    courseHref,
+    done,
+    total,
+    minutesLeft,
+    due,
+    reason,
+    openedAt,
+    today = new Date(),
+  } = props;
   const time = minutesLeft === undefined ? '' : timeLeft(minutesLeft);
   return (
     // The row opens the assignment; the course link in the meta stays its own.

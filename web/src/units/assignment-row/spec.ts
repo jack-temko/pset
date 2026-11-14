@@ -38,6 +38,11 @@ export default defineSpec({
       name: 'Home: assignments and courses',
       when: 'Home: an Assignments list of five rows, due soon first, then a Courses list of five lean rows.',
     },
+    {
+      id: 'loading',
+      name: 'Loading',
+      when: 'While the assignment loads: two lines of bars, the due date as a bar and the progress bar’s empty track, at its place in the list.',
+    },
   ],
   exampleWidth: 960,
   stress:
@@ -55,6 +60,10 @@ export default defineSpec({
     },
   ],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its loading form at its place in the list.',
+    },
     { name: 'set', does: 'The set’s name.' },
     { name: 'href', does: 'Where the set opens.' },
     { name: 'course', does: 'The course’s name.' },
@@ -151,6 +160,14 @@ export default defineSpec({
       why: 'Jack, 2026-10-16: the badge replaced the date, and he chose a label after the name (set-line-d7).',
       beat: 'The label in place of the date',
       date: '2026-10-16',
+    },
+    {
+      id: 'assignment-row-d6',
+      decision:
+        'Loading, the row is ListRow’s loading form with two lines, DueStatus’s bar as its status and ProgressBar’s empty track as its aside, at the same width.',
+      why: 'Step 5 of the loading skeleton plan (ideas/skeleton-plan.md): a list loads as itself, so nothing on the screen moves when its rows come.',
+      beat: 'RowSkeleton, Home’s own copy of the row',
+      date: '2026-11-14',
     },
   ],
 });

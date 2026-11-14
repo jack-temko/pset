@@ -1,7 +1,16 @@
 import { Fragment, type ReactNode } from 'react';
 
+import { Bone, Fill } from '@/units/bone';
+import { RHYTHM } from '@/units/bone/rhythm';
 import { Button } from '@/units/button';
 import { Link } from '@/units/link';
+
+/** A row while it loads: its place in the list, which picks the bars'
+ *  widths, and whether it has a second line (list-row-d13). */
+export interface RowLoading {
+  row: number;
+  lines: 1 | 2;
+}
 
 /** The one row shape: a title on line one, small meta on line two, the
  *  status and an optional aside at the right, each centred vertically in
@@ -19,8 +28,16 @@ export function ListRow({
   statusWidth,
   rowLink,
   wrap,
-}: {
-  title: string;
+  loading,
+}: (
+  | { title: string; loading?: undefined }
+  | {
+      title?: string;
+      /** Draws the row's loading form: the title and meta as bars, the
+       *  status and aside as the caller passes them, the frame real. */
+      loading: RowLoading;
+    }
+) & {
   /** Takes the title's place while it is being edited, so the row keeps its height. */
   titleField?: ReactNode;
   /** Makes the title a link. */
@@ -48,16 +65,26 @@ export function ListRow({
   wrap?: boolean;
 }) {
   const whole =
-    rowLink === true && href !== undefined && titleField === undefined;
+    loading === undefined &&
+    rowLink === true &&
+    href !== undefined &&
+    titleField === undefined;
+  const two = loading === undefined ? meta.length > 0 : loading.lines === 2;
   return (
     <div
-      className={`min-w-0 ${meta.length > 0 ? 'min-h-14' : ''} ${whole ? 'group/row relative hover:bg-(--ds-hover) [&_a:not([data-row-link])]:relative [&_a:not([data-row-link])]:z-[1] [&_button]:relative [&_button]:z-[1]' : ''}`}
+      className={`min-w-0 ${two ? 'min-h-14' : ''} ${whole ? 'group/row relative hover:bg-(--ds-hover) [&_a:not([data-row-link])]:relative [&_a:not([data-row-link])]:z-[1] [&_button]:relative [&_button]:z-[1]' : ''}`}
     >
       <div className="flex min-w-0 items-center gap-4 px-4 py-2">
         <div className="min-w-0 flex-1">
           <div className="flex min-h-6 min-w-0 items-center gap-2">
             <div className={`min-w-0 ${wrap ? 'flex-1' : ''}`}>
-              {titleField !== undefined ? (
+              {loading !== undefined ? (
+                <span className="ds-body block truncate font-medium">
+                  <Fill ch={RHYTHM.title} row={loading.row}>
+                    {title}
+                  </Fill>
+                </span>
+              ) : titleField !== undefined ? (
                 titleField
               ) : href === undefined ? (
                 <span
@@ -79,9 +106,17 @@ export function ListRow({
                 </Link>
               )}
             </div>
-            {label !== undefined && <div className="shrink-0">{label}</div>}
+            {/* A label hangs off the title's width: not drawn until it is. */}
+            {label !== undefined && loading === undefined && (
+              <div className="shrink-0">{label}</div>
+            )}
           </div>
-          {meta.length > 0 && (
+          {two && loading !== undefined && (
+            <p className="ds-small min-h-5 truncate">
+              <Bone ch={RHYTHM.meta} row={loading.row} />
+            </p>
+          )}
+          {two && loading === undefined && (
             <p className="ds-small ds-tabular min-h-5 truncate text-(--ds-fg-muted)">
               {meta.map((item, i) => (
                 <span key={i}>
