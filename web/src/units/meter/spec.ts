@@ -51,5 +51,13 @@ export default defineSpec({
       beat: 'Each screen drawing its own bar for it',
       date: '2026-11-12',
     },
+    {
+      id: 'meter-d3',
+      decision:
+        'When the share comes, the fill grows from the empty track to its value over 700ms; a later change slides the same way.',
+      why: 'Jack: "can we make the bars (stat and progress) grow to their values as they load? And make the numbers tick up to their values like a stock ticker".',
+      beat: 'The fill appearing at once',
+      date: '2026-11-14',
+    },
   ],
 });

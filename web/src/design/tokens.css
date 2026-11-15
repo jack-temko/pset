@@ -343,6 +343,13 @@
   animation: ds-bone-in 150ms ease-out var(--ds-grace, 300ms) both;
 }
 
+/* A Ticker's digit strip: 0 to 9 twice, one per line, drawn as generated
+   content so the page's text is only the value itself (bone-d5). */
+.ds .ds-ticker-strip::before {
+  content: '0\A 1\A 2\A 3\A 4\A 5\A 6\A 7\A 8\A 9\A 0\A 1\A 2\A 3\A 4\A 5\A 6\A 7\A 8\A 9';
+  white-space: pre;
+}
+
 /* A value that replaces a bar the student saw. */
 .ds .ds-fill-in {
   animation: ds-fade-in 150ms ease-out;

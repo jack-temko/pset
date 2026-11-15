@@ -102,5 +102,13 @@ export default defineSpec({
       beat: "Remembering each text's line count (S8); one line, then a jump",
       date: '2026-11-14',
     },
+    {
+      id: 'bone-d5',
+      decision:
+        'Ticker, for figures: digits roll up from 0 when a number first shows and from the old digit when it changes, in 700ms; one-digit numbers and counts never roll.',
+      why: 'Jack: "can we make the bars (stat and progress) grow to their values as they load? And make the numbers tick up to their values like a stock ticker".',
+      beat: 'A count-up through every value; rolling counts and single digits too (Jack: "Individual digits don’t need to roll")',
+      date: '2026-11-14',
+    },
   ],
 });

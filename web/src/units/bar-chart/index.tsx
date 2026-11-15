@@ -78,19 +78,18 @@ export const BarChart = waits(
                   <span className="relative mx-auto w-7 rounded-(--ds-radius-control) bg-(--ds-heat-0)">
                     {/* Loading, a day that has passed pulses in its track,
                         so a quiet week loading reads apart from a quiet week. */}
-                    {on && b.future !== true ? (
-                      <BoneBlock />
-                    ) : (
-                      <span
-                        className="absolute inset-x-0 bottom-0 block rounded-(--ds-radius-control)"
-                        style={{
-                          height: `${String(pct)}%`,
-                          background: b.today
-                            ? 'var(--ds-accent)'
-                            : 'var(--ds-heat-2)',
-                        }}
-                      />
-                    )}
+                    {on && b.future !== true && <BoneBlock />}
+                    {/* Always here, so it grows from the floor when the
+                        day's minutes come (bar-chart-d4). */}
+                    <span
+                      className="absolute inset-x-0 bottom-0 block rounded-(--ds-radius-control) transition-[height] duration-700 ease-out motion-reduce:transition-none"
+                      style={{
+                        height: `${String(pct)}%`,
+                        background: b.today
+                          ? 'var(--ds-accent)'
+                          : 'var(--ds-heat-2)',
+                      }}
+                    />
                   </span>
                 </Tooltip>
               </div>
