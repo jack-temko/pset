@@ -189,5 +189,13 @@ export default defineSpec({
       beat: 'The flag; a set-line link; one more segment',
       date: '2026-10-21',
     },
+    {
+      id: 'problem-strip-d14',
+      decision:
+        'Loading, the strip has its real segments, each a bone in its track, and the Summary stop real.',
+      why: 'Step 11 of the loading skeleton plan (ideas/skeleton-plan.md): the pane loads as itself, at the set it opens on.',
+      beat: 'ProblemStripSkeleton, pulsing blocks of its own',
+      date: '2026-11-15',
+    },
   ],
 });

@@ -214,5 +214,13 @@ export default defineSpec({
       beat: 'Centred while it stands alone (work-d14)',
       date: '2026-11-09',
     },
+    {
+      id: 'problem-d10',
+      decision:
+        'Loading, a problem keeps the layout of where it stands; help titles and action labels are real, buttons not ready, and wrapping text grows.',
+      why: 'Step 11 of the loading skeleton plan (ideas/skeleton-plan.md): the pane loads as itself, at the set it opens on.',
+      beat: 'ProblemSkeleton, the same bars for every problem',
+      date: '2026-11-15',
+    },
   ],
 });

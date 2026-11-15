@@ -1,6 +1,8 @@
 import { Check, LoaderCircle, MessageCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { Bone, BoneBlock, FillBlock } from '@/units/bone';
+import { RHYTHM } from '@/units/bone/rhythm';
 import { MoreMenu, type MenuItem } from '@/units/menu';
 import { Button } from '@/units/button';
 import { ErrorNotice } from '@/units/error-notice';
@@ -29,15 +31,6 @@ const MENU: readonly MenuItem<ProblemMenuItem>[] = [
   { id: 'wrong-problem', label: 'This is the wrong problem' },
   { id: 'remove', label: 'Remove', danger: true },
 ];
-
-function Bar({ className }: { className: string }) {
-  return (
-    <span
-      aria-hidden
-      className={`block animate-pulse rounded-(--ds-radius-tag) bg-(--ds-border-muted) motion-reduce:animate-none ${className}`}
-    />
-  );
-}
 
 /** A figure under the text; a press shows it larger (P: figures under the
  *  text, click to enlarge). */
@@ -69,9 +62,13 @@ function FigureView({ figure }: { figure: Figure }) {
           className="block h-40 max-w-full object-contain"
         />
       </button>
-      <figcaption className="ds-small mt-1 text-(--ds-fg-muted) [overflow-wrap:anywhere]">
+      <FillBlock
+        as="div"
+        ch={RHYTHM.meta}
+        className="ds-small mt-1 text-(--ds-fg-muted) [overflow-wrap:anywhere]"
+      >
         {figure.caption}
-      </figcaption>
+      </FillBlock>
       {big && (
         <div
           role="dialog"
@@ -101,9 +98,9 @@ function Note({ problem }: { problem: ProblemData }) {
       <span className="font-medium text-(--ds-fg)">
         Note from your professor
       </span>
-      <span className="block">
+      <FillBlock as="span" ch={RHYTHM.meta} className="block">
         <Runs runs={problem.note} />
-      </span>
+      </FillBlock>
     </aside>
   );
 }
@@ -120,33 +117,41 @@ function Heading({
   onOpenPage?: () => void;
 }) {
   return (
-    <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
-      <h2 className="ds-heading min-w-0 text-(--ds-fg) [overflow-wrap:anywhere]">
-        Problem {index} · {problem.title}
-      </h2>
-      <p className="ds-small ds-tabular min-w-0 text-(--ds-fg-muted) [overflow-wrap:anywhere]">
-        {problem.label} ·{' '}
-        <Link
-          href="#"
-          size="small"
-          onClick={(e) => {
-            e.preventDefault();
-            onOpenPage?.();
-          }}
-        >
-          p. {problem.page}
-        </Link>
-      </p>
-    </div>
+    // The whole line is the block that may wrap: a long title pushes the
+    // label and page under it, and loading it is one bar line that grows.
+    <FillBlock as="div" ch={RHYTHM.title} className="ds-heading min-w-0">
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
+        <h2 className="ds-heading min-w-0 text-(--ds-fg) [overflow-wrap:anywhere]">
+          Problem {index} · {problem.title}
+        </h2>
+        <p className="ds-small ds-tabular min-w-0 text-(--ds-fg-muted) [overflow-wrap:anywhere]">
+          {problem.label} ·{' '}
+          <Link
+            href="#"
+            size="small"
+            onClick={(e) => {
+              e.preventDefault();
+              onOpenPage?.();
+            }}
+          >
+            p. {problem.page}
+          </Link>
+        </p>
+      </div>
+    </FillBlock>
   );
 }
 
+/** Where the statement will be while PSet finds it: still bones, since this
+ *  is work in progress, not loading (skeleton-grill S3). */
 function FoundSkeleton() {
   return (
-    <div aria-hidden className="space-y-3">
-      <Bar className="h-5 w-full" />
-      <Bar className="h-5 w-11/12" />
-      <Bar className="h-5 w-3/5" />
+    <div aria-hidden className="ds-reading ds-measure">
+      {[60, 56, 36].map((ch) => (
+        <span key={ch} className="block">
+          <Bone ch={ch} still />
+        </span>
+      ))}
     </div>
   );
 }
@@ -282,9 +287,13 @@ export function Problem({
 
       {ready && (
         <>
-          <div className="ds-reading ds-measure min-w-0 [overflow-wrap:anywhere]">
+          <FillBlock
+            as="div"
+            ch={RHYTHM.meta}
+            className="ds-reading ds-measure min-w-0 [overflow-wrap:anywhere]"
+          >
             <Runs runs={problem.statement} />
-          </div>
+          </FillBlock>
           {problem.figures.length > 0 && (
             <div className="flex min-w-0 flex-wrap gap-4">
               {problem.figures.map((f) => (
@@ -300,9 +309,13 @@ export function Problem({
                   className={`flex min-w-0 items-baseline gap-2 ${p.skipped ? 'text-(--ds-fg-muted)' : ''}`}
                 >
                   <span className="shrink-0">({p.label})</span>
-                  <span className="min-w-0 [overflow-wrap:anywhere]">
+                  <FillBlock
+                    as="span"
+                    ch={RHYTHM.meta}
+                    className="min-w-0 [overflow-wrap:anywhere]"
+                  >
                     <Runs runs={p.runs} />
-                  </span>
+                  </FillBlock>
                   {p.skipped && (
                     <span className="shrink-0">
                       <Tag>Skipped</Tag>
@@ -376,41 +389,171 @@ export function Problem({
   );
 }
 
-/** The problem while the set loads: a heading bar, three lines of text, three
- *  closed help rows and the actions, in the heights of the real thing. */
-export function ProblemSkeleton() {
+/** The three help rows while the problem is found: their real titles,
+ *  closed, until they can be opened. */
+function HelpSkeleton() {
   return (
-    <div aria-hidden className="space-y-4">
-      <div className="flex h-(--ds-heading-line) items-center">
-        <Bar className="h-5 w-40" />
-      </div>
-      <div className="space-y-3">
-        <Bar className="h-5 w-full" />
-        <Bar className="h-5 w-11/12" />
-        <Bar className="h-5 w-3/5" />
-      </div>
-      <HelpSkeleton />
-      <div className="flex h-(--ds-control) items-center gap-2">
-        <Bar className="h-(--ds-control) w-[112px]" />
-        <Bar className="h-(--ds-control) w-[144px]" />
-        <Bar className="h-(--ds-control) w-20" />
-      </div>
+    <div className="space-y-2">
+      {HELP_KINDS.map((k) => (
+        <HelpRow key={k} title={HELP_TITLE[k]} />
+      ))}
     </div>
   );
 }
 
-/** The three closed help rows, in their heights, until they can be opened. */
-function HelpSkeleton() {
+/** What sizes a problem while its set loads: where it stands, and which of
+ *  its parts are there. Every line that may wrap is one bar line that grows
+ *  when its text comes (bone-d4). */
+export interface ProblemShape {
+  status: 'ready' | 'finding' | 'queued' | 'failed';
+  note: boolean;
+  figures: number;
+  parts: number;
+  /** A failed find: tried twice or more, and how many things it tried. */
+  again: boolean;
+  tried: number;
+  done: boolean;
+}
+
+const STILL = 'Still loading';
+
+/** A problem while its set loads (problem-d10): its place in the loaded
+ *  layout for where it stands, the help titles and the action labels real,
+ *  every value a bar, and the buttons not ready. */
+export function ProblemWaiting({ shape }: { shape: ProblemShape }) {
+  const wait = shape.status === 'finding' || shape.status === 'queued';
   return (
-    <div aria-hidden className="space-y-2">
-      {HELP_KINDS.map((k) => (
-        <div
-          key={k}
-          className="flex h-[34px] items-center rounded-(--ds-radius-control) border border-(--ds-border-muted) px-3"
-        >
-          <Bar className="h-4 w-24" />
+    <article className="min-w-0 space-y-4">
+      {shape.note && (
+        <aside className="ds-small min-w-0 rounded-(--ds-radius-control) border border-(--ds-border-muted) px-3 py-2 text-(--ds-fg-muted) [overflow-wrap:anywhere]">
+          <span className="font-medium text-(--ds-fg)">
+            Note from your professor
+          </span>
+          <FillBlock as="span" ch={RHYTHM.meta} className="block">
+            {undefined}
+          </FillBlock>
+        </aside>
+      )}
+      <FillBlock as="div" ch={RHYTHM.title} className="ds-heading min-w-0">
+        {undefined}
+      </FillBlock>
+
+      {wait && (
+        <div className="space-y-3">
+          <p className="ds-body">
+            <Bone ch={RHYTHM.meta} />
+          </p>
+          <FoundSkeleton />
         </div>
-      ))}
-    </div>
+      )}
+
+      {shape.status === 'failed' && (
+        <div className="flex w-full max-w-[560px] min-w-0 gap-3 rounded-(--ds-radius-control) border border-(--ds-border) bg-(--ds-bg-raised) p-4 text-left">
+          <span className="mt-[3px] size-4 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="ds-body">
+              <Bone ch={RHYTHM.title} />
+            </p>
+            {shape.tried > 0 && (
+              <ul className="ds-small mt-1 list-disc space-y-1 pl-4 text-(--ds-fg-muted)">
+                {Array.from({ length: shape.tried }, (_, i) => (
+                  <li key={i}>
+                    <Bone ch={RHYTHM.meta} row={i} />
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {(shape.again
+                ? ['Box it on the page', 'Paste the text', 'Try again']
+                : ['Try again', 'Box it on the page', 'Paste the text']
+              ).map((label, i) => (
+                <Button
+                  key={label}
+                  variant={i === 0 ? 'primary' : 'default'}
+                  notReady={STILL}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {wait && <HelpSkeleton />}
+
+      {shape.status === 'ready' && (
+        <>
+          <FillBlock
+            as="div"
+            ch={RHYTHM.meta}
+            className="ds-reading ds-measure min-w-0 [overflow-wrap:anywhere]"
+          >
+            {undefined}
+          </FillBlock>
+          {shape.figures > 0 && (
+            <div className="flex min-w-0 flex-wrap gap-4">
+              {Array.from({ length: shape.figures }, (_, i) => (
+                <div key={i} className="min-w-0">
+                  <span className="block h-[178px] w-[178px] rounded-(--ds-radius-control) border border-(--ds-border-muted) p-2">
+                    <BoneBlock />
+                  </span>
+                  <FillBlock
+                    as="div"
+                    ch={RHYTHM.word}
+                    row={i}
+                    className="ds-small mt-1 [overflow-wrap:anywhere]"
+                  >
+                    {undefined}
+                  </FillBlock>
+                </div>
+              ))}
+            </div>
+          )}
+          {shape.parts > 0 && (
+            <ol className="ds-reading ds-measure min-w-0 space-y-2">
+              {Array.from({ length: shape.parts }, (_, i) => (
+                <li key={i} className="flex min-w-0 items-baseline gap-2">
+                  <span className="shrink-0">
+                    <Bone ch={3} />
+                  </span>
+                  <FillBlock
+                    as="span"
+                    ch={RHYTHM.meta}
+                    row={i}
+                    className="min-w-0 [overflow-wrap:anywhere]"
+                  >
+                    {undefined}
+                  </FillBlock>
+                </li>
+              ))}
+            </ol>
+          )}
+          <div className="space-y-2">
+            {HELP_KINDS.map((k) => (
+              <HelpRow key={k} title={HELP_TITLE[k]} />
+            ))}
+          </div>
+        </>
+      )}
+
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <Button
+          variant={shape.done ? 'default' : 'primary'}
+          icon={shape.done ? Check : undefined}
+          notReady={STILL}
+        >
+          {shape.done ? 'Done' : 'Mark done'}
+        </Button>
+        <Button icon={MessageCircle} notReady={STILL}>
+          Ask about this
+        </Button>
+        <Button variant={shape.done ? 'primary' : 'default'} notReady={STILL}>
+          Next
+        </Button>
+        <span className="ml-auto block size-(--ds-control)" />
+      </div>
+    </article>
   );
 }

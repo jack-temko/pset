@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { defineExamples } from '@/design/examples';
-import { Work, WorkSkeleton, type WorkProps } from './index';
+import { Work, type WorkProps } from './index';
 import { pageMemory } from './memory';
 import * as sample from './sample';
 import spec from './spec';
@@ -62,14 +62,4 @@ export default defineExamples(spec, Work, {
     failed: () => <Recorded set={sample.failedOnce()} startAt="p5" />,
   },
   stress: () => <Recorded set={sample.stress()} startAt="s1" />,
-  skeletons: {
-    'current-underline': () => <WorkSkeleton />,
-    summary: () => <WorkSkeleton />,
-    'summary-finished': () => <WorkSkeleton opens="summary" />,
-    'summary-turned-in': () => <WorkSkeleton opens="turned-in" />,
-    empty: () => <WorkSkeleton />,
-    plain: () => <WorkSkeleton />,
-    finding: () => <WorkSkeleton />,
-    failed: () => <WorkSkeleton />,
-  },
 });

@@ -13,7 +13,8 @@ import { DropFill, Side } from '@/units/side';
 import { type TabAction } from '@/units/tabs';
 import { endDrag, useDraggedTab } from '@/units/tabs/drag';
 import { TopBar } from '@/units/top-bar';
-import { Work, WorkSkeleton, type Marks } from '@/units/work';
+import { Work, type Marks } from '@/units/work';
+import { workShape } from '@/units/work/shape';
 import { pageMemory } from '@/units/work/memory';
 import type { WorkSet } from '@/units/work/sets';
 
@@ -270,7 +271,14 @@ export function Workspace({
       if (wait || !set)
         return (
           <div className="px-6">
-            <WorkSkeleton />
+            <Work
+              loading={
+                set
+                  ? workShape({ set: { ...set, ...marks[set.id] }, memory })
+                  : 'unknown'
+              }
+              today={today}
+            />
           </div>
         );
       const work: WorkSet = { ...set, ...marks[set.id] };

@@ -175,5 +175,13 @@ export default defineSpec({
       beat: 'Turn in as the one primary whatever is left',
       date: '2026-11-09',
     },
+    {
+      id: 'summary-d10',
+      decision:
+        'Loading, the summary’s lines are bars that grow if they wrap, a bone column stands for each problem, and its buttons are real, not ready.',
+      why: 'Step 11 of the loading skeleton plan (ideas/skeleton-plan.md): the pane loads as itself, at the set it opens on.',
+      beat: 'SummarySkeleton, stub bars at made-up heights',
+      date: '2026-11-15',
+    },
   ],
 });

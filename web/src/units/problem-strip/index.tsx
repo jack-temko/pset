@@ -1,3 +1,4 @@
+import { BoneBlock } from '@/units/bone';
 import { Tooltip } from '@/units/tooltip';
 import { FILL, LINE, type ChipState } from './colors';
 
@@ -94,23 +95,25 @@ export function ProblemStrip({
   );
 }
 
-/** The strip while the set loads: the track with as many segments as it
- *  will have, in the same heights. */
-export function ProblemStripSkeleton({ count = 8 }: { count?: number }) {
+/** The strip while the set loads (problem-strip-d14): as many segments as it
+ *  will have, each a bone in its track, and the Summary stop real, in the
+ *  loaded heights. */
+export function ProblemStripWaiting({ count }: { count: number }) {
   return (
-    <ul
-      aria-hidden
-      className="flex h-5 min-w-0 items-center"
-      style={{ gap: 2 }}
-    >
+    <ul className="flex min-w-0" style={{ gap: 2 }}>
       {Array.from({ length: count }, (_, i) => (
-        <li
-          key={i}
-          className={`h-2 min-w-0 flex-1 animate-pulse bg-(--ds-border-muted) motion-reduce:animate-none ${i === 0 ? 'rounded-l-full' : ''} ${i === count - 1 ? 'rounded-r-full' : ''}`}
-        />
+        <li key={i} className="flex h-5 min-w-0 flex-1 items-center">
+          <span
+            className={`relative block h-2 w-full overflow-hidden ${i === 0 ? 'rounded-l-full' : ''} ${i === count - 1 ? 'rounded-r-full' : ''}`}
+          >
+            <BoneBlock />
+          </span>
+        </li>
       ))}
-      <li className="ml-2 flex h-5 w-14 shrink-0 items-center">
-        <span className="h-3 w-full animate-pulse rounded-(--ds-radius-tag) bg-(--ds-border-muted) motion-reduce:animate-none" />
+      <li className="ml-2 flex shrink-0">
+        <span className="ds-small relative flex h-5 items-center text-(--ds-fg-muted)">
+          <span style={{ lineHeight: '14px', marginTop: -2 }}>Summary</span>
+        </span>
       </li>
     </ul>
   );

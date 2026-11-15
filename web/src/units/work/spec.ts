@@ -164,6 +164,10 @@ export default defineSpec({
     },
   ],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Its shape while the set loads: the strip’s length and what it opens on.',
+    },
     { name: 'set', does: 'The set and its problems.' },
     { name: 'startAt', does: 'The problem to open on.' },
     {
@@ -413,6 +417,14 @@ export default defineSpec({
       why: 'Jack: "Row in place, 10 s (Recommended)" (ideas/fable-review-grill.md D4).',
       beat: 'Six seconds (work-d2)',
       date: '2026-11-09',
+    },
+    {
+      id: 'work-d23',
+      decision:
+        'Loading, the set line is its frame with bars, the strip is at the set’s length, and the problem or summary it opens on draws its own loading form.',
+      why: 'Step 11 of the loading skeleton plan (ideas/skeleton-plan.md): the pane loads as itself, at the set it opens on.',
+      beat: 'WorkSkeleton, with the problem or summary picked by hand',
+      date: '2026-11-15',
     },
   ],
 });

@@ -63,32 +63,38 @@ function sizeOf(frame: HTMLElement) {
   };
 }
 
-/** How much taller the text that may wrap is loaded than loading: it loads
- *  as one bar line and grows smoothly when it comes (bone-d4), so only that
- *  growth may differ, and only in height. */
-function growth(loaded: HTMLElement, loading: HTMLElement): number {
-  const height = (el: HTMLElement) =>
-    [...el.querySelectorAll('[data-grows]')].map(
-      (g) => g.getBoundingClientRect().height,
-    );
-  const a = height(loaded);
-  const b = height(loading);
-  if (a.length !== b.length) return 0;
-  return a.reduce((n, h, i) => n + h - (b[i] ?? 0), 0);
+/** Text that may wrap loads as one bar line and grows smoothly when it
+ *  comes (bone-d4). So before measuring, each such block in the loading
+ *  render is given the height its loaded twin reached, as if its text had
+ *  come; then the two must match exactly. A floor, a flex box or a grid
+ *  around the text needs no arithmetic this way. Returns whether any grew. */
+function grow(loaded: HTMLElement, loading: HTMLElement): boolean {
+  const a = [...loaded.querySelectorAll<HTMLElement>('[data-grows]')];
+  const b = [...loading.querySelectorAll<HTMLElement>('[data-grows]')];
+  if (a.length !== b.length) return false;
+  let any = false;
+  a.forEach((el, i) => {
+    const h = el.getBoundingClientRect().height;
+    const twin = b[i];
+    if (Math.abs(twin.getBoundingClientRect().height - h) < 0.005) return;
+    twin.style.boxSizing = 'border-box';
+    twin.style.height = `${String(h)}px`;
+    any = true;
+  });
+  return any;
 }
 
 function compare(loaded: HTMLElement, loading: HTMLElement) {
+  const grown = grow(loaded, loading);
   const a = sizeOf(loaded);
   const b = sizeOf(loading);
-  const grown = growth(loaded, loading);
   let worst = 0;
   let note = '';
   for (const k of Object.keys(a) as (keyof typeof a)[]) {
-    const allowed = k === 'width' || k === 'overflow width' ? 0 : grown;
-    const d = Math.abs(a[k] - b[k] - allowed);
+    const d = Math.abs(a[k] - b[k]);
     if (d > worst) {
       worst = d;
-      note = `${k} is ${d.toFixed(1)}px ${b[k] + allowed < a[k] ? 'less' : 'more'} loading${allowed === 0 ? '' : ', past what its wrapping text grows'}`;
+      note = `${k} is ${d.toFixed(1)}px ${b[k] < a[k] ? 'less' : 'more'} loading${grown ? ', with its wrapping text grown' : ''}`;
     }
   }
   // A unit that reads data but neither waits nor has a skeleton draws the

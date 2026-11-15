@@ -2,6 +2,7 @@ import { Button } from '@/units/button';
 import { Link } from '@/units/link';
 import { FILL, type ChipState } from '@/units/problem-strip/colors';
 import { daysUntil, minutesText } from '@/units/set-line/dates';
+import { Bone, BoneBlock, FillBlock } from '@/units/bone';
 import { Tooltip } from '@/units/tooltip';
 
 export interface SummaryProblem {
@@ -175,9 +176,13 @@ export function Summary({
   return (
     <section className="mx-auto flex w-full max-w-[520px] min-w-0 flex-col items-center gap-8 text-center">
       <div className="space-y-2">
-        <h2 className="ds-heading text-(--ds-fg) [overflow-wrap:anywhere]">
+        <FillBlock
+          as="h2"
+          ch={16}
+          className="ds-heading text-(--ds-fg) [overflow-wrap:anywhere]"
+        >
           {heading}
-        </h2>
+        </FillBlock>
         {sub}
         {(time ?? day) && (
           <p className="ds-body ds-tabular text-(--ds-fg-muted)">
@@ -194,9 +199,12 @@ export function Summary({
         <div className="w-full max-w-[360px] space-y-2">
           {bars}
           {longestText && (
-            <p className="ds-small text-(--ds-fg-muted) [overflow-wrap:anywhere]">
+            <FillBlock
+              ch={30}
+              className="ds-small text-(--ds-fg-muted) [overflow-wrap:anywhere]"
+            >
               Longest: {longestText}
-            </p>
+            </FillBlock>
           )}
         </div>
       )}
@@ -208,59 +216,99 @@ export function Summary({
   );
 }
 
-function Bar({ className }: { className: string }) {
-  return (
-    <span
-      aria-hidden
-      className={`block animate-pulse rounded-(--ds-radius-tag) bg-(--ds-border-muted) motion-reduce:animate-none ${className}`}
-    />
-  );
+/** What sizes the summary while its set loads: which lines it has, how many
+ *  problems the bars stand for, and which buttons. */
+export interface SummaryShape {
+  count: number;
+  turnedIn: boolean;
+  /** The line of total time and when it was finished. */
+  line: boolean;
+  /** Time was spent: the bars, and the longest under them. */
+  timed: boolean;
+  longest: boolean;
+  /** A problem is left: Continue leads. */
+  next: boolean;
 }
 
-/** The summary while its set loads, in the heights of the real thing. */
-export function SummarySkeleton({
-  turnedIn = false,
-  count = 8,
+/** The summary while its set loads (summary-d10): its lines as bars that
+ *  grow if they wrap, a bone column for each problem, and its buttons real
+ *  and not ready, in the loaded layout. */
+export function SummaryWaiting({
+  shape,
+  onBack,
 }: {
-  turnedIn?: boolean;
-  count?: number;
+  shape: SummaryShape;
+  onBack?: () => void;
 }) {
+  const still = 'Still loading';
   return (
-    <div
-      aria-hidden
-      className="mx-auto flex w-full max-w-[520px] min-w-0 flex-col items-center gap-8"
-    >
-      <div className="flex flex-col items-center gap-2">
-        <div className="flex h-(--ds-heading-line) items-center">
-          <Bar className="h-5 w-40" />
-        </div>
-        {turnedIn && (
-          <div className="flex h-(--ds-small-line) items-center">
-            <Bar className="h-3 w-20" />
-          </div>
+    <section className="mx-auto flex w-full max-w-[520px] min-w-0 flex-col items-center gap-8 text-center">
+      <div className="space-y-2">
+        <FillBlock
+          as="h2"
+          ch={16}
+          className="ds-heading text-(--ds-fg) [overflow-wrap:anywhere]"
+        >
+          {undefined}
+        </FillBlock>
+        {shape.turnedIn && (
+          <p className="ds-small">
+            <Bone ch={10} />
+          </p>
         )}
-        <div className="flex h-(--ds-body-line) items-center">
-          <Bar className="h-4 w-64" />
-        </div>
+        {shape.line && (
+          <p className="ds-body">
+            <Bone ch={28} />
+          </p>
+        )}
       </div>
-      <div className="w-full max-w-[360px] space-y-2">
-        <div className="flex h-14 w-full items-end" style={{ gap: 2 }}>
-          {Array.from({ length: count }, (_, i) => (
-            <span
-              key={i}
-              className="block min-w-px flex-1 animate-pulse rounded-t-(--ds-radius-segment) bg-(--ds-border-muted) motion-reduce:animate-none"
-              style={{ height: `${String(40 + ((i * 23) % 55))}%` }}
-            />
-          ))}
+      {shape.timed && (
+        <div className="w-full max-w-[360px] space-y-2">
+          <ul className="flex h-14 w-full items-end" style={{ gap: 2 }}>
+            {Array.from({ length: shape.count }, (_, i) => (
+              <li key={i} className="flex h-full min-w-0 flex-1 items-end">
+                <BoneBlock />
+              </li>
+            ))}
+          </ul>
+          {shape.longest && (
+            <FillBlock
+              ch={30}
+              className="ds-small text-(--ds-fg-muted) [overflow-wrap:anywhere]"
+            >
+              {undefined}
+            </FillBlock>
+          )}
         </div>
-        <div className="flex h-(--ds-small-line) items-center justify-center">
-          <Bar className="h-3 w-[224px]" />
-        </div>
+      )}
+      <div className="flex min-w-0 flex-wrap items-center justify-center gap-x-4 gap-y-2">
+        {shape.turnedIn ? (
+          <Button notReady={still}>Take back</Button>
+        ) : (
+          <>
+            {shape.next && (
+              <Button variant="primary" notReady={still}>
+                Continue with problem
+              </Button>
+            )}
+            <Button
+              variant={shape.next ? 'default' : 'primary'}
+              notReady={still}
+            >
+              Turn in
+            </Button>
+          </>
+        )}
+        <Link
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            onBack?.();
+          }}
+        >
+          Back to the course
+        </Link>
       </div>
-      <div className="flex h-(--ds-control) items-center justify-center gap-4">
-        <Bar className="h-(--ds-control) w-24" />
-        <Bar className="h-4 w-[144px]" />
-      </div>
-    </div>
+    </section>
   );
 }
