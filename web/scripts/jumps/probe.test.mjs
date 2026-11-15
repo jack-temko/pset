@@ -10,6 +10,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { analyzeRun, aggregate } from './analyze.mjs';
 import { check } from './check.mjs';
 
+/** Chromium under a full `make check` (the Go race tests and every vitest
+ *  worker at once) runs several times slower than alone: the first page here
+ *  went from 300ms to 1.7s beside only the web suite, and once past the 4s
+ *  waits and vitest's 5s default. These are ceilings for a loaded machine;
+ *  a passing run takes no longer. */
+const SLOW_MS = 30_000;
+const WAIT_MS = 15_000;
+
 const probe = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   'probe.js',
@@ -22,7 +30,7 @@ beforeAll(async () => {
   } catch {
     browser = undefined;
   }
-});
+}, SLOW_MS);
 afterAll(async () => {
   await browser?.close();
 });
@@ -54,13 +62,15 @@ async function judge({
   await page.setContent(`<body style="margin:0">${open}<div id="box" data-view="v" style="display:grid;${scroller ? '' : `height:${boxHeight}px`}">
     <div aria-hidden="true" data-view="v" data-variant="${variant[0]}" style="grid-area:1/1">${html(skeleton)}</div>
     <div id="c" data-view="v" data-variant="${variant[1]}" style="grid-area:1/1"></div></div>${close}</body>`);
-  await page.waitForFunction(() => !!window.__jumps, null, { timeout: 4000 });
+  await page.waitForFunction(() => !!window.__jumps, null, {
+    timeout: WAIT_MS,
+  });
   await page.waitForTimeout(150);
   await page.evaluate((h) => {
     document.getElementById('c').innerHTML = h;
   }, html(content));
   await page.waitForFunction(() => window.__jumps.reveals.length > 0, null, {
-    timeout: 4000,
+    timeout: WAIT_MS,
   });
   const raw = await page.evaluate(() =>
     JSON.parse(JSON.stringify(window.__jumps)),
@@ -88,7 +98,7 @@ async function judge({
   };
 }
 
-describe('fidelity on a real page', () => {
+describe('fidelity on a real page', { timeout: SLOW_MS }, () => {
   const need = (fn) => async () => {
     if (!browser) return; // no Chromium here: nothing to measure with
     await fn();
