@@ -198,7 +198,7 @@ export const Heatmap = waits(
                       open={dayKey(date) === openDay}
                     >
                       <span
-                        className="block"
+                        className="ds-shade-in block"
                         style={{
                           width: size,
                           height: size,

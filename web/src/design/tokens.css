@@ -350,6 +350,19 @@
   white-space: pre;
 }
 
+/* A heatmap square coming in: from the empty shade to its own, in the time
+   the bars grow and the figures roll (heatmap-d14). It runs when the square
+   is first drawn, so a square already shown never fades again. */
+@keyframes ds-shade-in {
+  from {
+    background-color: var(--ds-heat-0);
+  }
+}
+
+.ds .ds-shade-in {
+  animation: ds-shade-in 700ms ease-out;
+}
+
 /* A value that replaces a bar the student saw. */
 .ds .ds-fill-in {
   animation: ds-fade-in 150ms ease-out;
@@ -360,7 +373,8 @@
   .ds .ds-bone-block::before {
     animation: ds-bone-in 1ms linear var(--ds-grace, 300ms) both;
   }
-  .ds .ds-fill-in {
+  .ds .ds-fill-in,
+  .ds .ds-shade-in {
     animation: none;
   }
 }
