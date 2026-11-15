@@ -36,7 +36,7 @@ import {
 import { Sparkline } from '@/units/sparkline';
 import { TextField } from '@/units/text-field';
 import { TopBar } from '@/units/top-bar';
-import { MemoryList } from '@/units/memory';
+import { MemoryList } from '@/units/memory/area';
 import type { CourseData, CourseMaterial, CourseSet } from './sample';
 import { split, type CourseShape } from './shape';
 

@@ -34,12 +34,14 @@ export default defineSpec({
       name: 'Editing a row',
       when: 'A row’s text becomes a field in the same place, as tall as the wrapped text and growing; Enter saves, Shift+Enter adds a line.',
       text: 'Save',
+      loads: false,
     },
     {
       id: 'deleted',
       name: 'Forgotten, with Undo',
       when: 'A row is forgotten at once, no question asked, and stays in its place as one line with Undo for 10 s.',
       text: 'Forgot “Round to three significant figures”',
+      loads: false,
     },
   ],
   stress:
@@ -90,7 +92,14 @@ export default defineSpec({
     },
   ],
   inputs: [
-    { name: 'empty', does: 'Starts with nothing remembered.' },
+    {
+      name: 'memories',
+      does: 'The memories, newest first; none shows the paragraph that says what memory is.',
+    },
+    {
+      name: 'loading',
+      does: 'Its shape while it loads: how many, which sides, and how many rows the side it opens on holds.',
+    },
     { name: 'side', does: 'Which side of the switch starts chosen.' },
     {
       name: 'showAllHref',
@@ -190,6 +199,14 @@ export default defineSpec({
         'MemoryList loads as its frame at the count, each row a bar line that grows to its wrapped text when it comes; the menu keeps its place.',
       why: 'Step 8 of the loading skeleton plan: Course opens its memories fold, and the fold must load at its size.',
       beat: 'Nothing while loading; a fixed line count',
+      date: '2026-11-15',
+    },
+    {
+      id: 'memory-d10',
+      decision:
+        'Loading, the heading, add field and switch labels are real, Add not ready; rows are bar lines that grow, with Keep and Edit not ready on New.',
+      why: 'Step 12 of the loading skeleton plan: its skeletons drew nothing (50px against 238 to 601).',
+      beat: 'Nothing while loading',
       date: '2026-11-15',
     },
   ],
