@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { TopBar } from '@/units/top-bar';
+
 /** The info area: one outlined box, no fill, with the heatmap on the left
  *  and this week on the right, split by a hairline. The box has 20px on every side; the two columns are as
  *  tall as each other, the right one's bars taking up the difference. */
@@ -66,6 +68,35 @@ export function Row({
         {caption}
       </div>
       <div>{trailing}</div>
+    </div>
+  );
+}
+
+/** The top bar, the greeting, the info area and what is under it, in the
+ *  content width. Loaded and loading, Home lays out in it alike. */
+export function HomeFrame({
+  homeHref,
+  settingsHref,
+  greeting,
+  info,
+  children,
+}: {
+  homeHref: string;
+  settingsHref: string;
+  greeting: ReactNode;
+  info: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="@container">
+      <TopBar homeHref={homeHref} settingsHref={settingsHref} />
+      <div className="px-(--ds-gutter) pb-16">
+        <div className="@container mx-auto max-w-(--ds-page-width)">
+          <div className="ds-room-display">{greeting}</div>
+          <div data-info>{info}</div>
+          <div className="mt-16">{children}</div>
+        </div>
+      </div>
     </div>
   );
 }
