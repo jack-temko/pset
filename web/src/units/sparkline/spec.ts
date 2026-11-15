@@ -69,5 +69,13 @@ export default defineSpec({
       beat: 'Each screen drawing its own bar for it',
       date: '2026-11-12',
     },
+    {
+      id: 'sparkline-d3',
+      decision:
+        'When the days come, the line rises from the flat loading line into its shape over 700ms, the area with it, and the dot rides up to the last day.',
+      why: 'Jack: "Can we apply the same loading animation as the ticker + bars to the spark line?"',
+      beat: 'The line appearing at once',
+      date: '2026-11-14',
+    },
   ],
 });
