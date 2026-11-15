@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 
 import { defineExamples } from '@/design/examples';
 import { Button } from '@/units/button';
-import { Material, MaterialSkeleton, type MaterialProps } from './index';
+import { Material, type MaterialProps } from './index';
 import { pageMemory } from './memory';
 import * as sample from './sample';
 import spec from './spec';
@@ -87,19 +87,6 @@ function Demo(props: Partial<MaterialProps>) {
   );
 }
 
-/** The loading render in the same frame as the loaded one, so the example
- *  keeps its height. */
-function Loading() {
-  return (
-    <div className="space-y-3">
-      <div className="h-[640px] outline-[1px] outline-(--ds-border-muted)">
-        <MaterialSkeleton />
-      </div>
-      <div className="min-h-8" />
-    </div>
-  );
-}
-
 const BOX = { x: 0.1, y: 0.3, w: 0.8, h: 0.16 };
 
 export default defineExamples(spec, Material, {
@@ -130,8 +117,5 @@ export default defineExamples(spec, Material, {
       startContents
       besideAt={Infinity}
     />
-  ),
-  skeletons: Object.fromEntries(
-    spec.states.map((s) => [s.id, () => <Loading />]),
   ),
 });

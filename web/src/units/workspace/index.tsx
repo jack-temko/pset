@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { AskSkeleton } from '@/units/ask';
+import { Ask } from '@/units/ask';
 import { SampleAsk } from '@/units/ask/chat';
 import { HISTORY } from '@/units/ask/sample';
 import { Divider } from '@/units/divider';
 import type { MenuGroup } from '@/units/menu';
-import { Material, MaterialSkeleton } from '@/units/material';
+import { Material } from '@/units/material';
 import { pageMemory as materialMemory } from '@/units/material/memory';
 import { bookOf, boxOfProblem } from '@/units/material/sample';
 import { printedOf, type Box } from '@/units/material/types';
@@ -318,7 +318,20 @@ export function Workspace({
       );
     }
     if (tab.kind === 'material') {
-      if (wait) return <MaterialSkeleton />;
+      if (wait)
+        return (
+          <Material
+            key={tab.id}
+            name={materialOf(course, tab.ref)?.name ?? tab.ref}
+            loading={{ aspect: bookOf(tab.ref).aspect, ready: true }}
+            tabId={tab.id}
+            boxing={
+              boxing?.tab === tab.id
+                ? { label: boxing.label, page: boxing.page }
+                : undefined
+            }
+          />
+        );
       const shown = box?.tab === tab.id ? box : undefined;
       const problem = shown && problemOf(course, shown.problem);
       return (
@@ -356,7 +369,14 @@ export function Workspace({
         />
       );
     }
-    if (wait) return <AskSkeleton />;
+    if (wait)
+      return (
+        <Ask
+          course={course.name}
+          loading={{ turns: HISTORY.length }}
+          about={aboutOf(course, tab.problem)}
+        />
+      );
     return (
       <SampleAsk
         key={tab.id}

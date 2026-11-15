@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import { defineExamples } from '@/design/examples';
-import { Ask, AskSkeleton } from './index';
+import { Ask } from './index';
 import { SampleAsk } from './chat';
 import * as sample from './sample';
 import type { Turn } from './types';
@@ -85,17 +85,6 @@ function Demo({
   );
 }
 
-/** The loading render in the same frame, so the example keeps its height. */
-function Loading() {
-  return (
-    <div className="space-y-3">
-      <div className="h-[640px] outline-[1px] outline-(--ds-border-muted)">
-        <AskSkeleton />
-      </div>
-    </div>
-  );
-}
-
 const earlier = sample.HISTORY.slice(0, 3);
 
 export default defineExamples(spec, Ask, {
@@ -122,7 +111,6 @@ export default defineExamples(spec, Ask, {
     image: () => <Demo turns={earlier} startImage={sample.WITH_IMAGE.image} />,
     history: () => <Demo turns={sample.HISTORY} />,
     clearing: () => <Demo turns={sample.HISTORY} startClearing />,
-    loading: () => <Loading />,
   },
   stress: () => (
     <Demo
@@ -130,23 +118,4 @@ export default defineExamples(spec, Ask, {
       about={sample.WORST.about}
     />
   ),
-  skeletons: {
-    empty: () => <Loading />,
-    opened: () => <Loading />,
-    thinking: () => <Loading />,
-    'step-running': () => <Loading />,
-    writing: () => <Loading />,
-    streaming: () => <Loading />,
-    'steps-folded': () => <Loading />,
-    'steps-open': () => <Loading />,
-    'not-ours': () => <Loading />,
-    remembered: () => <Loading />,
-    stopped: () => <Loading />,
-    failed: () => <Loading />,
-    'failed-setup': () => <Loading />,
-    image: () => <Loading />,
-    history: () => <Loading />,
-    clearing: () => <Loading />,
-    loading: () => <Loading />,
-  },
 });

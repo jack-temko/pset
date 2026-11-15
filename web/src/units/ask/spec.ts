@@ -101,11 +101,6 @@ export default defineSpec({
       when: 'Clear pressed: the Confirm popover under it says how many messages go and that memories stay, with Clear, then Cancel.',
       text: 'Clear 4 messages? Memories stay.',
     },
-    {
-      id: 'loading',
-      name: 'Loading',
-      when: 'The conversation is on its way: the top row, a message and an answer as quiet bars, and the composer at its own size.',
-    },
   ],
   exampleWidth: 560,
   stress:
@@ -205,6 +200,10 @@ export default defineSpec({
     },
   ],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Its shape while the conversation loads: how many turns the last visit had.',
+    },
     {
       name: 'course',
       does: 'The course’s name, for the empty line and the box.',
@@ -488,6 +487,14 @@ export default defineSpec({
       why: 'Jack: "Confirm popover, act first (Recommended)" (ideas/fable-review-grill.md D5).',
       beat: "Its own inline row in the top line (ask-d7's assumed confirm)",
       date: '2026-11-09',
+    },
+    {
+      id: 'ask-d29',
+      decision:
+        'Loading, the composer is real with nothing to send yet; above it, at the foot, a question and an answer as bars, or one bar if the last visit had none.',
+      why: 'Step 12 of the loading skeleton plan; S7: a loading render is the same example, forced, so the Loading state goes.',
+      beat: 'AskSkeleton, a made-up message and answer the same for all seventeen states',
+      date: '2026-11-15',
     },
   ],
 });

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { defineExamples } from '@/design/examples';
-import { Material, MaterialSkeleton } from '@/units/material';
+import { Material } from '@/units/material';
 import { GRIFFITHS } from '@/units/material/sample';
 import type { TabItem } from '@/units/tabs';
 import { Side } from './index';
@@ -16,12 +16,10 @@ const TABS: TabItem[] = [
 
 function Demo({
   tabs = TABS,
-  loading,
   dropping,
   name = 'Griffiths',
 }: {
   tabs?: TabItem[];
-  loading?: boolean;
   dropping?: boolean;
   name?: string;
 }) {
@@ -34,13 +32,7 @@ function Demo({
         open={open}
         add={[{ items: [{ id: 'a', label: 'Ask' }] }]}
         dropping={dropping}
-        body={
-          loading ? (
-            <MaterialSkeleton />
-          ) : (
-            <Material name={name} book={GRIFFITHS} tabId={name} page={112} />
-          )
-        }
+        body={<Material name={name} book={GRIFFITHS} tabId={name} page={112} />}
         onOpen={setOpen}
         onClose={noop}
         onAdd={noop}
@@ -77,9 +69,4 @@ export default defineExamples(spec, Side, {
       ]}
     />
   ),
-  skeletons: {
-    default: () => <Demo loading />,
-    dropping: () => <Demo loading dropping />,
-    overflow: () => <Demo loading tabs={many} />,
-  },
 });

@@ -178,6 +178,10 @@ export default defineSpec({
   ],
   inputs: [
     {
+      name: 'loading',
+      does: 'Its shape while the book loads: the pages’ width over height.',
+    },
+    {
       name: 'name',
       does: 'The material’s name; it heads Contents and the wait.',
     },
@@ -426,6 +430,14 @@ export default defineSpec({
       why: 'Jack: "Confirm popover, act first (Recommended)" (ideas/fable-review-grill.md D5).',
       beat: 'Cancel, then Done',
       date: '2026-11-09',
+    },
+    {
+      id: 'material-d21',
+      decision:
+        'Loading, the top line is real (Contents not ready, or the boxing prompt) and one still page-shaped frame waits at the book’s shape (M9).',
+      why: 'Step 12 of the loading skeleton plan (ideas/skeleton-plan.md): the top line real with the name from the tab, pages at their shape, still.',
+      beat: 'MaterialSkeleton, a bar for the top line and a pulsing pill',
+      date: '2026-11-15',
     },
   ],
 });

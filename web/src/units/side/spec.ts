@@ -50,12 +50,6 @@ export default defineSpec({
       does: 'Moves the dragged tab to the end of this side and opens it.',
     },
   ],
-  data: [
-    {
-      reads: 'The open tab’s pane: an assignment, a material or Ask',
-      call: 'sample',
-    },
-  ],
   inputs: [
     { name: 'label', does: 'The side’s name.' },
     { name: 'tabs', does: 'The tabs in its row.' },

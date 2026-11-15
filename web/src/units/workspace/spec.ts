@@ -122,13 +122,6 @@ export default defineSpec({
       does: 'Opens a material (a new tab, so it can be open twice), another assignment, or Ask, as a tab on that side.',
     },
   ],
-  data: [
-    {
-      reads:
-        'The course’s name, materials and assignments with their problems; which tabs are open',
-      call: 'sample',
-    },
-  ],
   remembers: [
     {
       what: 'Which tabs are open on each side, the open tab on each, and the split',
