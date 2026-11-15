@@ -151,6 +151,10 @@ export default defineSpec({
   ],
   inputs: [
     {
+      name: 'loading',
+      does: 'Its shape while it loads: how many rows each list holds and which folds are open.',
+    },
+    {
       name: 'settings',
       does: 'Everything the page shows and every count its confirms use.',
     },
@@ -389,6 +393,14 @@ export default defineSpec({
       why: 'Jack: "Take both (Recommended)", as the Adds sit across from their headings (D9).',
       beat: 'Clear all under the list; "pset 0.2.1"',
       date: '2026-11-09',
+    },
+    {
+      id: 'settings-d26',
+      decision:
+        'Loading, every name, hint, heading and button is real, values are bars and fields empty; a failed read keeps the page’s shape under its notice.',
+      why: 'Step 10 of the loading skeleton plan (ideas/skeleton-plan.md); S4: the failed part keeps its box.',
+      beat: 'SettingsSkeleton, four slabs that fit none of its eight states; a short failed page',
+      date: '2026-11-15',
     },
   ],
 });
