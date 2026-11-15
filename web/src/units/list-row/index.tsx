@@ -1,7 +1,7 @@
 import { Fragment, type ReactNode } from 'react';
 
 import { Bone, Fill } from '@/units/bone';
-import { RHYTHM } from '@/units/bone/rhythm';
+import { QUIET_FROM, RHYTHM } from '@/units/bone/rhythm';
 import { Button } from '@/units/button';
 import { Link } from '@/units/link';
 
@@ -79,10 +79,12 @@ export function ListRow({
           <div className="flex min-h-6 min-w-0 items-center gap-2">
             <div className={`min-w-0 ${wrap ? 'flex-1' : ''}`}>
               {loading !== undefined ? (
-                <span className="ds-body block truncate font-medium">
-                  <Fill ch={RHYTHM.title} row={loading.row}>
-                    {title}
-                  </Fill>
+                <span className="ds-body block min-h-6 truncate font-medium">
+                  {loading.row < QUIET_FROM && (
+                    <Fill ch={RHYTHM.title} row={loading.row}>
+                      {title}
+                    </Fill>
+                  )}
                 </span>
               ) : titleField !== undefined ? (
                 titleField
@@ -113,7 +115,9 @@ export function ListRow({
           </div>
           {two && loading !== undefined && (
             <p className="ds-small min-h-5 truncate">
-              <Bone ch={RHYTHM.meta} row={loading.row} />
+              {loading.row < QUIET_FROM && (
+                <Bone ch={RHYTHM.meta} row={loading.row} />
+              )}
             </p>
           )}
           {two && loading === undefined && (

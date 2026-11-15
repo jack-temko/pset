@@ -114,6 +114,10 @@ export default defineSpec({
   ],
   inputs: [
     {
+      name: 'loading',
+      does: 'Its shape while it loads: which list, and how many rows match the filters it opens with.',
+    },
+    {
       name: 'page',
       does: 'The kind of list (work, memories or courses) and every item in it.',
     },
@@ -217,6 +221,14 @@ export default defineSpec({
       why: 'Fable review, item 18; say-it-once. Jack took it in the review batch.',
       beat: 'The summary row unchanged on Done (list-page-d4)',
       date: '2026-11-09',
+    },
+    {
+      id: 'list-page-d9',
+      decision:
+        'Loading, the crumbs, title, filter bar and switch are real from the link; the list is its frame at the count, rows past the 20th quiet.',
+      why: 'Step 9 of the loading skeleton plan (ideas/skeleton-plan.md): the crumb was always "Assignments" and the slab fit one state of seven.',
+      beat: 'ListPageSkeleton: a fixed crumb, a title bar and a 408px slab',
+      date: '2026-11-15',
     },
   ],
 });

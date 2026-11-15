@@ -24,3 +24,8 @@ export function moves(el: Element): boolean {
     !window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 }
+
+/** From this row on, a loading row keeps its frame and height and drops its
+ *  bars, so a long list holds its full height without hundreds of pulsing
+ *  bars (skeleton-plan, Lists). */
+export const QUIET_FROM = 20;

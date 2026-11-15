@@ -1,4 +1,5 @@
 import { Bone } from '@/units/bone';
+import { QUIET_FROM } from '@/units/bone/rhythm';
 import { ListRow } from '@/units/list-row';
 import { minutesText } from '@/units/set-line/dates';
 
@@ -35,7 +36,7 @@ export function CourseRow(
         loading={{ row: props.loading.row, lines: 2 }}
         aside={
           <span className="ds-small block min-h-5 text-right">
-            <Bone ch={11} />
+            {props.loading.row < QUIET_FROM && <Bone ch={11} />}
           </span>
         }
         asideWidth={ASIDE_WIDTH}
