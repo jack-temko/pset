@@ -46,6 +46,10 @@ export default defineSpec({
   ],
   inputs: [
     {
+      name: 'loading',
+      does: 'Draws its loading form: the real grid, empty, and the heading as a bar.',
+    },
+    {
       name: 'days',
       does: 'The study days, each under its date "2026-10-13"; a day left out is empty.',
     },
@@ -169,6 +173,14 @@ export default defineSpec({
       why: 'Not designed: noted when the spec format dropped the data waiting and failed fields (ideas/spec-format-grill.md, F9).',
       beat: 'A failed line in the data section',
       date: '2026-10-22',
+    },
+    {
+      id: 'heatmap-d12',
+      decision:
+        "Loading, the grid is real and empty (months, weekdays, today's place) and the heading one bar line that grows smoothly if its text wraps.",
+      why: 'Step 6, S8 reversed: Jack, "lets go with 2, but it smoothly grows if needed. and smoothly replaces the text. Make it effortless".',
+      beat: 'HeatmapSkeleton, a heading bar over one block',
+      date: '2026-11-14',
     },
   ],
 });

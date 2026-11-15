@@ -35,6 +35,10 @@ export default defineSpec({
   ],
   inputs: [
     {
+      name: 'loading',
+      does: 'Draws its loading form at its shape: the weekdays and which is today.',
+    },
+    {
       name: 'bars',
       does: 'One per column: the day under it, its words in the tooltip, and whether it is today or still to come.',
     },
@@ -63,6 +67,14 @@ export default defineSpec({
       why: 'Not designed: noted when the spec format dropped the data waiting and failed fields (ideas/spec-format-grill.md, F9).',
       beat: 'A failed line in the data section',
       date: '2026-10-22',
+    },
+    {
+      id: 'bar-chart-d3',
+      decision:
+        "Loading, the tracks and weekday labels are real, today's label in full ink, and the bars come with the data.",
+      why: 'Step 6 of the loading skeleton plan (ideas/skeleton-plan.md): the chart loads as itself, so nothing beside it moves when the days come.',
+      beat: 'BarChartSkeleton, seven stubs at made-up heights',
+      date: '2026-11-14',
     },
   ],
 });

@@ -1,7 +1,7 @@
 import { defineExamples } from '@/design/examples';
 import { parseDueDate } from '@/units/set-line/dates';
 import { type GreetingSet } from './due';
-import { Greeting, GreetingSkeleton } from './index';
+import { Greeting } from './index';
 import spec from './spec';
 
 /** A fixed Tuesday, so "due Thu" reads the same on every visit. */
@@ -19,8 +19,6 @@ const SETS: GreetingSet[] = [
 const at = (hour: number, p: Partial<Parameters<typeof Greeting>[0]> = {}) => (
   <Greeting name="Jack" hour={hour} pick={0} sets={SETS} today={TODAY} {...p} />
 );
-
-const skeleton = () => <GreetingSkeleton />;
 
 export default defineExamples(spec, Greeting, {
   states: {
@@ -56,16 +54,4 @@ export default defineExamples(spec, Greeting, {
       })}
     </div>
   ),
-  skeletons: {
-    'band-12am': skeleton,
-    'band-3am': skeleton,
-    'band-6am': skeleton,
-    'band-11am': skeleton,
-    'band-2pm': skeleton,
-    'band-5pm': skeleton,
-    'band-9pm': skeleton,
-    'no-name': skeleton,
-    'nothing-due': skeleton,
-    overdue: skeleton,
-  },
 });

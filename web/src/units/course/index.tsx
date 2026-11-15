@@ -9,10 +9,10 @@ import {
 
 import { money, plural } from '@/lib/format';
 import { Button } from '@/units/button';
-import { BarChart, BarChartSkeleton } from '@/units/bar-chart';
+import { BarChart, weekShape } from '@/units/bar-chart';
 import { DangerDialog } from '@/units/danger-dialog';
 import { Fold } from '@/units/fold';
-import { Heatmap, HeatmapSkeleton } from '@/units/heatmap';
+import { Heatmap } from '@/units/heatmap';
 import { studyDay } from '@/units/heatmap/day';
 import { ChangeText, Moved, RowSkeleton } from '@/units/home';
 import { Beside, Caption, Row, Rows } from '@/units/home/layouts';
@@ -790,7 +790,9 @@ export function CourseSkeleton({
           </div>
           <div className="mt-16">
             <Beside
-              heatmap={<HeatmapSkeleton weeks={WEEKS} grow />}
+              heatmap={
+                <Heatmap loading={{}} today={new Date()} weeks={WEEKS} grow />
+              }
               week={
                 <>
                   <Caption>
@@ -802,7 +804,7 @@ export function CourseSkeleton({
                     </p>
                   </Caption>
                   <div className="min-h-0 flex-1">
-                    <BarChartSkeleton />
+                    <BarChart loading={weekShape(new Date())} />
                   </div>
                   <Rows>
                     <RowSkeleton first />

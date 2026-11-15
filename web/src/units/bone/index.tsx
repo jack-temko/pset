@@ -1,4 +1,11 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import {
+  createElement,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { GRACE_MS } from './rhythm';
 
@@ -63,6 +70,69 @@ export function Fill({
     <span className="ds-fill-in">{children}</span>
   ) : (
     children
+  );
+}
+
+/** How long a block of text takes to grow to its height when it comes. */
+export const GROW_MS = 200;
+
+/** Text that may wrap: a name, a sentence, a memory (bone-d4). While it
+ *  loads it is one bar line; when it comes, the block grows smoothly to the
+ *  text's height and the text fades in where the bar was, so what is below
+ *  slides down instead of jumping. Nothing to count or remember: use it for
+ *  any text slot that can wrap. */
+export function FillBlock({
+  as = 'p',
+  className,
+  ch,
+  row,
+  children,
+}: {
+  /** The element the text is set in. */
+  as?: 'p' | 'h1' | 'h2' | 'h3' | 'div' | 'span';
+  className?: string;
+  ch: number | readonly number[];
+  row?: number;
+  /** The text; undefined while it is loading. */
+  children: ReactNode;
+}) {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  const waiting = children === undefined || children === null;
+  // The height while the bar showed, kept until the text comes.
+  const was = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (el === null) return;
+    const h = el.getBoundingClientRect().height;
+    if (waiting) {
+      was.current = h;
+      return;
+    }
+    const from = was.current;
+    was.current = null;
+    if (
+      from === null ||
+      Math.abs(from - h) < 0.5 ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
+      return;
+    el.animate(
+      [
+        { height: `${String(from)}px`, overflow: 'hidden' },
+        { height: `${String(h)}px`, overflow: 'hidden' },
+      ],
+      { duration: GROW_MS, easing: 'ease-out' },
+    );
+  }, [el, waiting]);
+  return createElement(
+    as,
+    {
+      ref: setEl,
+      className,
+      'data-grows': true,
+    },
+    <Fill ch={ch} row={row}>
+      {children}
+    </Fill>,
   );
 }
 
