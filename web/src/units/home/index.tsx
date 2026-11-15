@@ -1,20 +1,26 @@
-import { useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { useState } from 'react';
 
+import { UNKNOWN, waits, type Loads, type Waits } from '@/design/loading';
 import { HomeLists } from '@/units/assignment-row/home';
+import {
+  listsShape,
+  type CourseSummary,
+  type HomeSet,
+  type ListsShape,
+} from '@/units/assignment-row/lists';
+import { Bone, Ticker } from '@/units/bone';
 import { BarChart, weekShape } from '@/units/bar-chart';
-import type { GreetingSet } from '@/units/greeting/due';
 import { Greeting } from '@/units/greeting';
 import type { StudyDay } from '@/units/heatmap';
 import { Heatmap } from '@/units/heatmap';
 import { studyDay } from '@/units/heatmap/day';
 import { Sparkline } from '@/units/sparkline';
 import { minutesText } from '@/units/set-line/dates';
-import { TopBar } from '@/units/top-bar';
 
-import { Beside, Caption as Line, Row, Rows } from './layouts';
+import { Beside, Caption as Line, HomeFrame, Row, Rows } from './layouts';
+import { ChangeText, Moved, small } from './parts';
 import { WEEKS } from './options';
-import { changeOf, homeStats, leftToDo, type Change } from './stats';
+import { changeOf, homeStats, leftToDo } from './stats';
 
 const DAY = new Intl.DateTimeFormat('en-US', {
   weekday: 'short',
@@ -27,172 +33,87 @@ const count = (n: number) => String(n);
 const plural = (n: number, one: string, many: string) =>
   `${String(n)} ${n === 1 ? one : many}`;
 
-function Bar({ className }: { className: string }) {
-  return (
-    <span
-      aria-hidden
-      className={`block animate-pulse rounded-(--ds-radius-tag) bg-(--ds-border-muted) ${className}`}
-    />
-  );
-}
-
-/** A change as a glyph and its words, muted: being behind is not a warning. */
-export function ChangeText({ change }: { change: Change }) {
-  return (
-    <span className="inline-flex items-center gap-[2px] text-(--ds-fg-muted)">
-      {change.direction === 'up' ? (
-        <ArrowUp size={14} aria-hidden />
-      ) : (
-        <ArrowDown size={14} aria-hidden />
-      )}
-      {change.text}
-    </span>
-  );
-}
-
-const small = 'ds-small truncate text-(--ds-fg-muted)';
-
-/** The muted line under a row's label: last week and how it moved. */
-export function Moved({ text, change }: { text: string; change?: Change }) {
-  return (
-    <p className="ds-small ds-tabular flex items-center gap-x-2 whitespace-nowrap text-(--ds-fg-muted)">
-      <span className="truncate">{text}</span>
-      {change && <ChangeText change={change} />}
-    </p>
-  );
-}
-
-const figureOf = (value: string) => (
-  <p className="ds-heading ds-tabular text-(--ds-fg)">{value}</p>
+/** A figure under the bars: a bar at the shape's width while it loads, then
+ *  the number rolling to its value (bone-d5). */
+const figureOf = (value: string | undefined, digits: number) => (
+  <p className="ds-heading ds-tabular text-(--ds-fg)">
+    <Ticker ch={digits}>{value}</Ticker>
+  </p>
 );
 
-export function RowSkeleton({ first }: { first?: boolean }) {
-  return (
-    <Row
-      first={first}
-      figure={
-        <p className="ds-heading flex h-(--ds-heading-line) items-center">
-          <Bar className="h-5 w-8" />
-        </p>
-      }
-      label={
-        <p className="ds-small flex h-(--ds-small-line) items-center">
-          <Bar className="h-3 w-24" />
-        </p>
-      }
-      caption={
-        <p className="ds-small flex h-(--ds-small-line) items-center">
-          <Bar className="h-3 w-32" />
-        </p>
-      }
-      trailing={<Bar className="h-7 w-full" />}
-    />
-  );
+interface HomeData {
+  name: string;
+  sets: readonly HomeSet[];
+  study: readonly StudyDay[];
+  courses: readonly CourseSummary[];
 }
+
+/** What sizes Home while it loads: how many rows each list holds, and how
+ *  many digits each figure under the bars has, since the labels beside them
+ *  align to the widest. The greeting and the heatmap's heading load as one
+ *  bar line each and grow if they wrap (bone-d4). */
+export interface HomeShape {
+  lists: ListsShape;
+  figures: readonly [number, number];
+}
+
+const digits = (n: number) => String(n).length;
 
 /** Home (S14): the info area (greeting, the heatmap and this week beside it),
  *  then the Assignments list, then the Courses list. This week sits beside
  *  the heatmap with a 14-day sparkline beside each figure (home-d10).
- *  It reads typed sample data until the backend has what it needs. */
-export function Home({
-  name,
-  now,
-  pick,
-  sets,
-  study,
-  workHref,
-  coursesHref,
-  homeHref = '/',
-  settingsHref = '/settings',
-}: {
-  name: string;
-  now: Date;
-  /** In [0, 1): which of the hour's greetings; held for the visit. */
-  pick?: number;
-  sets: readonly GreetingSet[];
-  study: readonly StudyDay[];
-  /** Where Assignments' "Show all" goes. */
-  workHref: string;
-  /** Where Courses' "Show all" goes. */
-  coursesHref: string;
-  homeHref?: string;
-  settingsHref?: string;
-}) {
-  const [held] = useState(() => Math.random());
-  const today = studyDay(now);
-  const s = homeStats(study, today);
-  const left = leftToDo(sets, today);
-  // Today's point is the live number, so the line ends where the figure is.
-  const leftSpark = [...s.spark.left.slice(0, -1), left.questions];
-  const questionsChange = changeOf(s.questions.week, s.questions.last);
-  const timeChange = changeOf(s.time.week, s.time.last);
+ *  It reads typed sample data until the backend has what it needs. Loading,
+ *  every part draws its own loading form at the shape, and the headings,
+ *  labels and links are real (home-d19). */
+export const Home = waits(
+  {
+    data: ['name', 'sets', 'study', 'courses'],
+    shapeOf: (d: HomeData & { now: Date }): HomeShape => {
+      const today = studyDay(d.now);
+      const s = homeStats(d.study, today);
+      return {
+        lists: listsShape(d.sets, d.courses, d.now),
+        figures: [
+          digits(s.questions.week),
+          digits(leftToDo(d.sets, today).questions),
+        ],
+      };
+    },
+  } satisfies Loads<HomeData & { now: Date }, HomeShape>,
+  function Home({
+    name,
+    now,
+    pick,
+    sets,
+    study,
+    courses,
+    workHref,
+    coursesHref,
+    homeHref = '/',
+    settingsHref = '/settings',
+    loading,
+  }: Waits<
+    {
+      now: Date;
+      /** In [0, 1): which of the hour's greetings; held for the visit. */
+      pick?: number;
+      /** Where Assignments' "Show all" goes. */
+      workHref: string;
+      /** Where Courses' "Show all" goes. */
+      coursesHref: string;
+      homeHref?: string;
+      settingsHref?: string;
+    },
+    HomeData,
+    HomeShape
+  >) {
+    const [held] = useState(() => Math.random());
+    const today = studyDay(now);
+    const shape = loading === UNKNOWN ? undefined : loading;
+    const figures = shape?.figures ?? [2, 2];
 
-  const info = (
-    <Beside
-      heatmap={<Heatmap days={study} today={today} weeks={WEEKS} grow />}
-      week={
-        <>
-          <Line>
-            <p className="ds-body ds-tabular text-(--ds-fg)">
-              {minutesText(s.time.week)}{' '}
-              <span className="text-(--ds-fg-muted)">this week</span>
-            </p>
-            <p className="ds-small ds-tabular flex flex-wrap items-center gap-x-2 text-(--ds-fg-muted)">
-              {`Last week by now: ${minutesText(s.time.last)}`}
-              {timeChange && <ChangeText change={timeChange} />}
-            </p>
-          </Line>
-          <div className="min-h-0 flex-1">
-            <BarChart
-              bars={s.days.map((d) => ({
-                label: WEEKDAY.format(d.date),
-                value: d.minutes,
-                tip: `${DAY.format(d.date)}\n${d.minutes > 0 ? minutesText(d.minutes) : 'No time studied'}`,
-                today: d.today,
-                future: d.future,
-              }))}
-            />
-          </div>
-          <Rows>
-            <Row
-              first
-              figure={figureOf(count(s.questions.week))}
-              label={
-                <p className="ds-small flex items-center gap-x-2 whitespace-nowrap text-(--ds-fg-muted)">
-                  <span>Problems done</span>
-                  {questionsChange && <ChangeText change={questionsChange} />}
-                </p>
-              }
-              caption={
-                <Moved text={`Last week by now: ${count(s.questions.last)}`} />
-              }
-              trailing={<Sparkline values={s.spark.questions} height={28} />}
-            />
-            <Row
-              figure={figureOf(count(left.questions))}
-              label={<p className={small}>Problems left</p>}
-              caption={
-                <Moved
-                  text={
-                    left.questions > 0
-                      ? `in ${plural(left.sets, 'assignment', 'assignments')} due soon`
-                      : 'Nothing due in a week'
-                  }
-                />
-              }
-              trailing={<Sparkline values={leftSpark} height={28} />}
-            />
-          </Rows>
-        </>
-      }
-    />
-  );
-
-  return (
-    <HomeFrame
-      homeHref={homeHref}
-      settingsHref={settingsHref}
-      greeting={
+    const greeting =
+      loading === undefined ? (
         <Greeting
           name={name}
           hour={now.getHours()}
@@ -200,103 +121,177 @@ export function Home({
           sets={sets}
           today={now}
         />
-      }
-      info={info}
-    >
-      <HomeLists workHref={workHref} coursesHref={coursesHref} />
-    </HomeFrame>
-  );
-}
-
-/** The top bar, the greeting, the info area and what is under it, in the
- *  content width. Home and its skeleton share it, so they lay out alike. */
-function HomeFrame({
-  homeHref,
-  settingsHref,
-  greeting,
-  info,
-  children,
-}: {
-  homeHref: string;
-  settingsHref: string;
-  greeting: ReactNode;
-  info: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <div className="@container">
-      <TopBar homeHref={homeHref} settingsHref={settingsHref} />
-      <div className="px-(--ds-gutter) pb-16">
-        <div className="@container mx-auto max-w-(--ds-page-width)">
-          <div className="ds-room-display">{greeting}</div>
-          <div data-info>{info}</div>
-          <div className="mt-16">{children}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Home while it loads: every part as its own skeleton, laid out as Home is,
- *  and the two lists as a heading bar over a block. */
-export function HomeSkeleton({
-  homeHref = '/',
-  settingsHref = '/settings',
-}: {
-  homeHref?: string;
-  settingsHref?: string;
-}) {
-  return (
-    <HomeFrame
-      homeHref={homeHref}
-      settingsHref={settingsHref}
-      greeting={
+      ) : (
         <Greeting
           loading={{}}
-          hour={new Date().getHours()}
-          pick={0}
-          today={new Date()}
+          hour={now.getHours()}
+          pick={pick ?? held}
+          today={now}
         />
-      }
-      info={
-        <Beside
-          heatmap={
-            <Heatmap loading={{}} today={new Date()} weeks={WEEKS} grow />
-          }
-          week={
-            <>
-              <Line>
-                <p className="ds-body flex h-(--ds-body-line) items-center">
-                  <Bar className="h-4 w-[112px]" />
-                </p>
-                <p className="ds-small flex h-(--ds-small-line) items-center">
-                  <Bar className="h-3 w-[112px]" />
-                </p>
-              </Line>
-              <div className="min-h-0 flex-1">
-                <BarChart loading={weekShape(new Date())} />
-              </div>
-              <Rows>
-                <RowSkeleton first />
-                <RowSkeleton />
-              </Rows>
-            </>
-          }
+      );
+
+    const heatmap =
+      loading === undefined ? (
+        <Heatmap days={study} today={today} weeks={WEEKS} grow />
+      ) : (
+        <Heatmap loading={{}} today={today} weeks={WEEKS} grow />
+      );
+
+    const lists =
+      loading === undefined ? (
+        <HomeLists
+          workHref={workHref}
+          coursesHref={coursesHref}
+          today={now}
+          sets={sets}
+          courses={courses}
         />
-      }
-    >
-      <div className="space-y-10">
-        {[0, 1].map((i) => (
-          <div key={i}>
-            <div className="flex min-h-8 items-center">
-              <Bar className="h-5 w-40" />
+      ) : (
+        <HomeLists
+          workHref={workHref}
+          coursesHref={coursesHref}
+          today={now}
+          loading={shape?.lists ?? UNKNOWN}
+        />
+      );
+
+    if (loading !== undefined)
+      return (
+        <HomeFrame
+          homeHref={homeHref}
+          settingsHref={settingsHref}
+          greeting={greeting}
+          info={
+            <Beside
+              heatmap={heatmap}
+              week={
+                <>
+                  <Line>
+                    <p className="ds-body">
+                      <Bone ch={14} />
+                    </p>
+                    <p className="ds-small">
+                      <Bone ch={22} />
+                    </p>
+                  </Line>
+                  <div className="min-h-0 flex-1">
+                    <BarChart loading={weekShape(today)} />
+                  </div>
+                  <Rows>
+                    <Row
+                      first
+                      figure={figureOf(undefined, figures[0])}
+                      label={
+                        <p className="ds-small whitespace-nowrap text-(--ds-fg-muted)">
+                          Problems done
+                        </p>
+                      }
+                      caption={
+                        <p className="ds-small">
+                          <Bone ch={20} />
+                        </p>
+                      }
+                      trailing={<Sparkline loading height={28} />}
+                    />
+                    <Row
+                      figure={figureOf(undefined, figures[1])}
+                      label={<p className={small}>Problems left</p>}
+                      caption={
+                        <p className="ds-small">
+                          <Bone ch={24} />
+                        </p>
+                      }
+                      trailing={<Sparkline loading height={28} />}
+                    />
+                  </Rows>
+                </>
+              }
+            />
+          }
+        >
+          {lists}
+        </HomeFrame>
+      );
+
+    const s = homeStats(study, today);
+    const left = leftToDo(sets, today);
+    // Today's point is the live number, so the line ends where the figure is.
+    const leftSpark = [...s.spark.left.slice(0, -1), left.questions];
+    const questionsChange = changeOf(s.questions.week, s.questions.last);
+    const timeChange = changeOf(s.time.week, s.time.last);
+
+    const info = (
+      <Beside
+        heatmap={heatmap}
+        week={
+          <>
+            <Line>
+              <p className="ds-body ds-tabular text-(--ds-fg)">
+                <Ticker ch={6}>{minutesText(s.time.week)}</Ticker>{' '}
+                <span className="text-(--ds-fg-muted)">this week</span>
+              </p>
+              <p className="ds-small ds-tabular flex flex-wrap items-center gap-x-2 text-(--ds-fg-muted)">
+                {`Last week by now: ${minutesText(s.time.last)}`}
+                {timeChange && <ChangeText change={timeChange} />}
+              </p>
+            </Line>
+            <div className="min-h-0 flex-1">
+              <BarChart
+                bars={s.days.map((d) => ({
+                  label: WEEKDAY.format(d.date),
+                  value: d.minutes,
+                  tip: `${DAY.format(d.date)}\n${d.minutes > 0 ? minutesText(d.minutes) : 'No time studied'}`,
+                  today: d.today,
+                  future: d.future,
+                }))}
+              />
             </div>
-            <div className="mt-3 h-[346px]">
-              <Bar className="h-full w-full" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </HomeFrame>
-  );
-}
+            <Rows>
+              <Row
+                first
+                figure={figureOf(count(s.questions.week), figures[0])}
+                label={
+                  <p className="ds-small flex items-center gap-x-2 whitespace-nowrap text-(--ds-fg-muted)">
+                    <span>Problems done</span>
+                    {questionsChange && <ChangeText change={questionsChange} />}
+                  </p>
+                }
+                caption={
+                  <Moved
+                    text={`Last week by now: ${count(s.questions.last)}`}
+                  />
+                }
+                trailing={<Sparkline values={s.spark.questions} height={28} />}
+              />
+              <Row
+                figure={figureOf(count(left.questions), figures[1])}
+                label={<p className={small}>Problems left</p>}
+                caption={
+                  <Moved
+                    text={
+                      left.questions > 0
+                        ? `in ${plural(left.sets, 'assignment', 'assignments')} due soon`
+                        : 'Nothing due in a week'
+                    }
+                  />
+                }
+                trailing={<Sparkline values={leftSpark} height={28} />}
+              />
+            </Rows>
+          </>
+        }
+      />
+    );
+
+    return (
+      <HomeFrame
+        homeHref={homeHref}
+        settingsHref={settingsHref}
+        greeting={greeting}
+        info={info}
+      >
+        {lists}
+      </HomeFrame>
+    );
+  },
+);

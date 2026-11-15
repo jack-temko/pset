@@ -174,9 +174,13 @@ export function List({
         <div className="flex min-h-10 items-center justify-center border-t border-(--ds-border-muted) px-4">
           <Link href={showAllHref} size="small">
             Show all{' '}
-            <Fill ch={Math.max(2, String(all.length).length)}>
-              {on ? undefined : all.length}
-            </Fill>
+            {/* As wide loading as loaded: a bar of the number's digits, in
+                tabular figures, so "Show all" does not shift (list-d7). */}
+            <span className="ds-tabular">
+              <Fill ch={String(all.length).length}>
+                {on ? undefined : all.length}
+              </Fill>
+            </span>
           </Link>
         </div>
       )}

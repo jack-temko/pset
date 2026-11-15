@@ -34,11 +34,20 @@ export default defineSpec({
       name: 'With both',
       when: 'A count and an action.',
     },
+    {
+      id: 'loading',
+      name: 'Loading',
+      when: 'While the count loads: the Counter’s pill bar in its place; the title is real.',
+    },
   ],
   stress:
     'A 60 character title in a 240px container: the title wraps; the Counter stays beside its first line and the action at the right.',
   actions: [],
   inputs: [
+    {
+      name: 'loading',
+      does: 'While the count loads: the Counter’s pill bar in its place.',
+    },
     { name: 'children', does: 'The title.' },
     {
       name: 'count',
@@ -103,6 +112,14 @@ export default defineSpec({
       why: 'Jack: "Make sure this is aligned too with the header and chip".',
       beat: 'An action on its own line box',
       date: '2026-10-14',
+    },
+    {
+      id: 'section-heading-d6',
+      decision:
+        'While the count loads, the Counter is its pill bar, present or not as the shape says; the title is real.',
+      why: 'Step 7 of the loading skeleton plan (ideas/skeleton-plan.md): Home loads as itself, so nothing on it moves when its data comes.',
+      beat: 'Each screen drawing its own heading bar',
+      date: '2026-11-14',
     },
   ],
 });

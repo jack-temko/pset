@@ -14,7 +14,7 @@ import { DangerDialog } from '@/units/danger-dialog';
 import { Fold } from '@/units/fold';
 import { Heatmap } from '@/units/heatmap';
 import { studyDay } from '@/units/heatmap/day';
-import { ChangeText, Moved, RowSkeleton } from '@/units/home';
+import { ChangeText, Moved, RowSkeleton } from '@/units/home/parts';
 import { Beside, Caption, Row, Rows } from '@/units/home/layouts';
 import { WEEKS } from '@/units/home/options';
 import { changeOf, homeStats } from '@/units/home/stats';

@@ -1,8 +1,9 @@
 import { defineExamples } from '@/design/examples';
 import { sampleStudy } from '@/design/study-sample';
 import { PLACEHOLDER } from '@/units/list-page/hrefs';
+import { COURSES } from '@/units/assignment-row/lists';
 import { SETS, TODAY } from '@/units/assignment-row/sample';
-import { Home, HomeSkeleton } from './index';
+import { Home } from './index';
 import spec from './spec';
 
 /** Tuesday evening, so the greeting is the 5pm stretch and a study day is
@@ -22,6 +23,7 @@ const home = (p: Partial<Parameters<typeof Home>[0]> = {}) => (
     pick={0}
     sets={SETS}
     study={STUDY}
+    courses={COURSES}
     workHref={PLACEHOLDER.work}
     coursesHref={PLACEHOLDER.courses}
     {...p}
@@ -39,6 +41,7 @@ export default defineExamples(spec, Home, {
       sets: [
         {
           set: 'Problem set 4: magnetic circuits, hysteresis and transformer losses, parts A to F',
+          course: 'Electromagnetics and the physics of electrical machines',
           due: new Date(2026, 9, 15),
           done: 0,
           total: 999,
@@ -53,8 +56,4 @@ export default defineExamples(spec, Home, {
         })),
       })),
     }),
-  skeletons: {
-    default: () => <HomeSkeleton />,
-    'no-time': () => <HomeSkeleton />,
-  },
 });

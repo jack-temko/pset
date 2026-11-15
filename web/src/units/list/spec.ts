@@ -158,5 +158,13 @@ export default defineSpec({
       beat: 'Every screen drawing its own slab for a list',
       date: '2026-11-14',
     },
+    {
+      id: 'list-d7',
+      decision:
+        'The Show all number’s bar is exactly its digits wide, and the number is in tabular figures, so the foot does not shift when it comes.',
+      why: 'Jack: "The number after show all makes that line jump slightly."',
+      beat: 'A bar of at least 2ch, wider than a one-digit number',
+      date: '2026-11-14',
+    },
   ],
 });

@@ -62,6 +62,11 @@ export default defineSpec({
   ],
   inputs: [
     {
+      name: 'loading',
+      does: 'Its shape while it loads: each list’s row count and each figure’s digits.',
+    },
+    { name: 'courses', does: 'The courses, for the Courses list.' },
+    {
       name: 'name',
       does: 'The student’s name, empty for a new student.',
     },
@@ -260,6 +265,14 @@ export default defineSpec({
       why: 'Jack, in ideas/list-pattern-grill.md: "Cap 5, Show all page (Recommended)" and "Foot, with a count (Recommended)" (L2, L3).',
       beat: '"Show all" at the heading’s right, going nowhere',
       date: '2026-11-04',
+    },
+    {
+      id: 'home-d19',
+      decision:
+        'Loading, every part draws its own loading form at the shape (list counts, figure digits); headings, labels and links are real. HomeSkeleton is gone.',
+      why: 'Step 7 of the loading skeleton plan (ideas/skeleton-plan.md): Home loads as itself, so nothing on it moves when its data comes.',
+      beat: 'HomeSkeleton, a heading bar over a 346px slab per list',
+      date: '2026-11-14',
     },
   ],
 });

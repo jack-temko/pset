@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { sampleStudy } from '@/design/study-sample';
+import { COURSES } from '@/units/assignment-row/lists';
 import { SETS, TODAY } from '@/units/assignment-row/sample';
 import { Course } from '@/units/course';
 import { ECE, NOTHING_DUE, STRESS } from '@/units/course/sample';
@@ -93,6 +94,7 @@ describe('Home lists', () => {
         pick={0}
         sets={SETS}
         study={sampleStudy()}
+        courses={COURSES}
         workHref={PLACEHOLDER.work}
         coursesHref={PLACEHOLDER.courses}
       />,

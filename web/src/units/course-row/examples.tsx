@@ -1,6 +1,8 @@
 import { defineExamples } from '@/design/examples';
 import { PLACEHOLDER } from '@/units/list-page/hrefs';
 import { HomeLists } from '@/units/assignment-row/home';
+import { COURSES } from '@/units/assignment-row/lists';
+import { SETS, TODAY } from '@/units/assignment-row/sample';
 import { CourseRow } from './index';
 import spec from './spec';
 
@@ -38,6 +40,9 @@ export default defineExamples(spec, CourseRow, {
       <HomeLists
         workHref={PLACEHOLDER.work}
         coursesHref={PLACEHOLDER.courses}
+        today={TODAY}
+        sets={SETS}
+        courses={COURSES}
       />
     ),
   },
