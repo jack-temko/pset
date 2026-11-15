@@ -190,5 +190,13 @@ export default defineSpec({
       beat: 'The total appearing at once',
       date: '2026-11-14',
     },
+    {
+      id: 'heatmap-d14',
+      decision:
+        'When the days come, every square fades from the empty shade to its own over 700ms, all together, as the bars grow and the figures roll.',
+      why: 'Jack: "Do the heatmap", on fading its squares in like the other stats.',
+      beat: 'A left-to-right sweep, which would draw the eye on every Home visit; the squares appearing at once',
+      date: '2026-11-14',
+    },
   ],
 });
