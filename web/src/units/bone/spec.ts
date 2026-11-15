@@ -94,5 +94,13 @@ export default defineSpec({
       beat: 'Random or percent widths per screen',
       date: '2026-11-09',
     },
+    {
+      id: 'bone-d4',
+      decision:
+        'Text that may wrap loads as one bar line in its own element (FillBlock); when it comes, the block grows smoothly to its height over 200ms and the text fades in.',
+      why: 'Step 6, S8 reversed: Jack, "lets go with 2, but it smoothly grows if needed. and smoothly replaces the text. Make it effortless".',
+      beat: "Remembering each text's line count (S8); one line, then a jump",
+      date: '2026-11-14',
+    },
   ],
 });

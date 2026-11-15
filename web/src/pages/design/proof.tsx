@@ -63,16 +63,32 @@ function sizeOf(frame: HTMLElement) {
   };
 }
 
+/** How much taller the text that may wrap is loaded than loading: it loads
+ *  as one bar line and grows smoothly when it comes (bone-d4), so only that
+ *  growth may differ, and only in height. */
+function growth(loaded: HTMLElement, loading: HTMLElement): number {
+  const height = (el: HTMLElement) =>
+    [...el.querySelectorAll('[data-grows]')].map(
+      (g) => g.getBoundingClientRect().height,
+    );
+  const a = height(loaded);
+  const b = height(loading);
+  if (a.length !== b.length) return 0;
+  return a.reduce((n, h, i) => n + h - (b[i] ?? 0), 0);
+}
+
 function compare(loaded: HTMLElement, loading: HTMLElement) {
   const a = sizeOf(loaded);
   const b = sizeOf(loading);
+  const grown = growth(loaded, loading);
   let worst = 0;
   let note = '';
   for (const k of Object.keys(a) as (keyof typeof a)[]) {
-    const d = Math.abs(a[k] - b[k]);
+    const allowed = k === 'width' || k === 'overflow width' ? 0 : grown;
+    const d = Math.abs(a[k] - b[k] - allowed);
     if (d > worst) {
       worst = d;
-      note = `${k} is ${d.toFixed(1)}px ${b[k] < a[k] ? 'less' : 'more'} loading`;
+      note = `${k} is ${d.toFixed(1)}px ${b[k] + allowed < a[k] ? 'less' : 'more'} loading${allowed === 0 ? '' : ', past what its wrapping text grows'}`;
     }
   }
   // A unit that reads data but neither waits nor has a skeleton draws the

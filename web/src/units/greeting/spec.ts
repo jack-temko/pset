@@ -70,6 +70,10 @@ export default defineSpec({
   ],
   actions: [],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its loading form: one bar line for each line, growing when the text comes.',
+    },
     { name: 'name', does: 'The student’s name; empty drops it from the line.' },
     {
       name: 'hour',
@@ -138,6 +142,14 @@ export default defineSpec({
       why: 'Not designed: noted when the spec format dropped the data waiting and failed fields (ideas/spec-format-grill.md, F9).',
       beat: 'A failed line in the data section',
       date: '2026-10-22',
+    },
+    {
+      id: 'greeting-d6',
+      decision:
+        'Loading, each line is one bar line in its own element (FillBlock); a line that wraps grows smoothly to its height when the text comes.',
+      why: 'Step 6, S8 reversed: Jack, "lets go with 2, but it smoothly grows if needed. and smoothly replaces the text. Make it effortless".',
+      beat: 'GreetingSkeleton, bars in hand-set line heights',
+      date: '2026-11-14',
     },
   ],
 });

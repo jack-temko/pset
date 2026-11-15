@@ -1,5 +1,5 @@
 import { defineExamples } from '@/design/examples';
-import { BarChart, BarChartSkeleton, type Bar } from './index';
+import { BarChart, type Bar } from './index';
 import spec from './spec';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -18,8 +18,6 @@ function week(minutes: number[], today: number, big = 1): Bar[] {
   }));
 }
 
-const skeleton = () => <BarChartSkeleton />;
-
 export default defineExamples(spec, BarChart, {
   states: {
     midweek: () => (
@@ -37,5 +35,4 @@ export default defineExamples(spec, BarChart, {
       <BarChart bars={week([65, 95, 600, 40, 130, 20, 75], 6, 1)} />
     </div>
   ),
-  skeletons: { midweek: skeleton, 'full-week': skeleton, quiet: skeleton },
 });

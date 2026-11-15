@@ -74,6 +74,7 @@ function Toolbar({
             { value: 'loading', label: 'Loading' },
             { value: 'both', label: 'Both' },
             { value: 'first', label: 'First visit' },
+            { value: 'arriving', label: 'Arriving' },
           ]}
           onChange={(load) => {
             change({ load });
@@ -221,6 +222,8 @@ function Render({
       </ForceLoading.Provider>
     );
   if (s.load === 'loading' || s.load === 'first') return <>{loading()}</>;
+  if (s.load === 'arriving')
+    return <Arriving key={`${s.state}:${String(s.stress)}`} render={loaded} />;
   return (
     <div className="relative">
       <div>{loaded()}</div>
@@ -231,6 +234,32 @@ function Render({
         {loading()}
       </div>
     </div>
+  );
+}
+
+/** How long Arriving holds each side: loading, then the data. */
+const ARRIVE_MS = { loading: 1500, loaded: 2500 };
+
+/** The data coming in, over and over: loading for 1.5 s, then loaded for
+ *  2.5 s, in the same tree, so the bars give way and wrapping text grows as
+ *  it will in the app. */
+function Arriving({ render }: { render: () => ReactNode }) {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    const t = window.setTimeout(
+      () => {
+        setOn((x) => !x);
+      },
+      on ? ARRIVE_MS.loading : ARRIVE_MS.loaded,
+    );
+    return () => {
+      window.clearTimeout(t);
+    };
+  }, [on]);
+  return (
+    <ForceLoading.Provider value={on ? 'shape' : null}>
+      {render()}
+    </ForceLoading.Provider>
   );
 }
 

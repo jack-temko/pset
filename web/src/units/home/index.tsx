@@ -2,11 +2,11 @@ import { useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 
 import { HomeLists } from '@/units/assignment-row/home';
-import { BarChart, BarChartSkeleton } from '@/units/bar-chart';
+import { BarChart, weekShape } from '@/units/bar-chart';
 import type { GreetingSet } from '@/units/greeting/due';
-import { Greeting, GreetingSkeleton } from '@/units/greeting';
+import { Greeting } from '@/units/greeting';
 import type { StudyDay } from '@/units/heatmap';
-import { Heatmap, HeatmapSkeleton } from '@/units/heatmap';
+import { Heatmap } from '@/units/heatmap';
 import { studyDay } from '@/units/heatmap/day';
 import { Sparkline } from '@/units/sparkline';
 import { minutesText } from '@/units/set-line/dates';
@@ -250,10 +250,19 @@ export function HomeSkeleton({
     <HomeFrame
       homeHref={homeHref}
       settingsHref={settingsHref}
-      greeting={<GreetingSkeleton />}
+      greeting={
+        <Greeting
+          loading={{}}
+          hour={new Date().getHours()}
+          pick={0}
+          today={new Date()}
+        />
+      }
       info={
         <Beside
-          heatmap={<HeatmapSkeleton weeks={WEEKS} grow />}
+          heatmap={
+            <Heatmap loading={{}} today={new Date()} weeks={WEEKS} grow />
+          }
           week={
             <>
               <Line>
@@ -265,7 +274,7 @@ export function HomeSkeleton({
                 </p>
               </Line>
               <div className="min-h-0 flex-1">
-                <BarChartSkeleton />
+                <BarChart loading={weekShape(new Date())} />
               </div>
               <Rows>
                 <RowSkeleton first />

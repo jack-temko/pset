@@ -1,7 +1,7 @@
 import { defineExamples } from '@/design/examples';
 import { SAMPLE_TODAY, sampleStudy } from '@/design/study-sample';
 import { addDays, dayKey } from './day';
-import { Heatmap, HeatmapSkeleton, type StudyDay } from './index';
+import { Heatmap, type StudyDay } from './index';
 import spec from './spec';
 
 const DAYS = sampleStudy();
@@ -33,8 +33,6 @@ function In({ px, children }: { px: number; children: React.ReactNode }) {
     </div>
   );
 }
-
-const skeleton = () => <HeatmapSkeleton />;
 
 export default defineExamples(spec, Heatmap, {
   states: {
@@ -81,15 +79,4 @@ export default defineExamples(spec, Heatmap, {
       />
     </div>
   ),
-  skeletons: {
-    'six-months': skeleton,
-    grown: () => (
-      <div className="w-[880px] max-w-full">
-        <HeatmapSkeleton grow />
-      </div>
-    ),
-    narrow: () => <In px={264}>{skeleton()}</In>,
-    hover: skeleton,
-    empty: skeleton,
-  },
 });
