@@ -18,7 +18,7 @@ export function Meter({
       className="block h-1 w-full overflow-hidden rounded-(--ds-radius-segment) bg-(--ds-border)"
     >
       <span
-        className="block h-full bg-(--ds-accent)"
+        className="block h-full bg-(--ds-accent) transition-[width] duration-700 ease-out motion-reduce:transition-none"
         style={{ width: `${String(share * 100)}%` }}
       />
     </span>

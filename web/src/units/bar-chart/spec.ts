@@ -76,5 +76,13 @@ export default defineSpec({
       beat: 'BarChartSkeleton, seven stubs at made-up heights',
       date: '2026-11-14',
     },
+    {
+      id: 'bar-chart-d4',
+      decision:
+        'When the days come, each bar grows up from the floor of its track to its height over 700ms; a later change slides the same way.',
+      why: 'Jack: "can we make the bars (stat and progress) grow to their values as they load? And make the numbers tick up to their values like a stock ticker".',
+      beat: 'The bars appearing at once',
+      date: '2026-11-14',
+    },
   ],
 });

@@ -1,5 +1,5 @@
 import { waits, type Loads, type Waits } from '@/design/loading';
-import { FillBlock } from '@/units/bone';
+import { FillBlock, Ticker } from '@/units/bone';
 import { minutesText } from '@/units/set-line/dates';
 import { Tooltip } from '@/units/tooltip';
 import { addDays, dayKey, mondayOf, shade } from './day';
@@ -130,7 +130,7 @@ export const Heatmap = waits(
         <FillBlock ch={24} className="ds-body ds-tabular text-(--ds-fg)">
           {on ? undefined : total > 0 ? (
             <>
-              {totalText(total)}{' '}
+              <Ticker ch={4}>{totalText(total)}</Ticker>{' '}
               <span className="text-(--ds-fg-muted)">
                 studied in the last {spanName(shown)}
               </span>

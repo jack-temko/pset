@@ -135,5 +135,13 @@ export default defineSpec({
       beat: 'Each screen drawing its own bar for it',
       date: '2026-11-12',
     },
+    {
+      id: 'progress-bar-d8',
+      decision:
+        'When the counts come, the fill grows from empty to its share over 700ms; a later change slides the same way. The count fades in and does not roll.',
+      why: 'Jack: "can we make the bars (stat and progress) grow to their values as they load? And make the numbers tick up to their values like a stock ticker".',
+      beat: 'The fill appearing at once; the count rolling like a ticker (Jack: "Individual digits don’t need to roll, for example counts or 2 of 8")',
+      date: '2026-11-14',
+    },
   ],
 });

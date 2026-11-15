@@ -209,6 +209,16 @@ function Render({
     );
   const written = ex.skeletons?.[s.state];
   const waits = written !== undefined || (spec.data?.length ?? 0) > 0;
+  // A leaf draws its loading form from its own Loading example: Arriving
+  // swaps that for the chosen state in place, so its motion plays.
+  const leaf = 'loading' in ex.states ? ex.states.loading : undefined;
+  if (s.load === 'arriving' && !waits && leaf !== undefined)
+    return (
+      <Arriving
+        key={`${s.state}:${String(s.stress)}`}
+        render={(on) => (on ? leaf() : loaded())}
+      />
+    );
   if (!waits)
     return (
       <Message>{spec.title} has no loading form: it waits on nothing.</Message>
@@ -223,7 +233,16 @@ function Render({
     );
   if (s.load === 'loading' || s.load === 'first') return <>{loading()}</>;
   if (s.load === 'arriving')
-    return <Arriving key={`${s.state}:${String(s.stress)}`} render={loaded} />;
+    return (
+      <Arriving
+        key={`${s.state}:${String(s.stress)}`}
+        render={(on) => (
+          <ForceLoading.Provider value={on ? 'shape' : null}>
+            {loaded()}
+          </ForceLoading.Provider>
+        )}
+      />
+    );
   return (
     <div className="relative">
       <div>{loaded()}</div>
@@ -243,7 +262,7 @@ const ARRIVE_MS = { loading: 1500, loaded: 2500 };
 /** The data coming in, over and over: loading for 1.5 s, then loaded for
  *  2.5 s, in the same tree, so the bars give way and wrapping text grows as
  *  it will in the app. */
-function Arriving({ render }: { render: () => ReactNode }) {
+function Arriving({ render }: { render: (loading: boolean) => ReactNode }) {
   const [on, setOn] = useState(true);
   useEffect(() => {
     const t = window.setTimeout(
@@ -256,11 +275,7 @@ function Arriving({ render }: { render: () => ReactNode }) {
       window.clearTimeout(t);
     };
   }, [on]);
-  return (
-    <ForceLoading.Provider value={on ? 'shape' : null}>
-      {render()}
-    </ForceLoading.Provider>
-  );
+  return <>{render(on)}</>;
 }
 
 /** One stage, on the muted ground: the unit at its chosen width, left

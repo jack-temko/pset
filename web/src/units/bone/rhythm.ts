@@ -10,3 +10,7 @@ export const RHYTHM = {
   meta: [30, 24, 34],
   word: [8, 6, 10],
 } as const;
+
+/** How long a bar takes to grow to its value and a number to roll to it,
+ *  once the data comes (bone-d5). The same for both, so they land together. */
+export const ARRIVE_MS = 700;
