@@ -167,10 +167,10 @@ export const Home = waits(
               week={
                 <>
                   <Line>
-                    <p className="ds-body">
+                    <p className="ds-body basis-full">
                       <Bone ch={14} />
                     </p>
-                    <p className="ds-small">
+                    <p className="ds-small basis-full">
                       <Bone ch={22} />
                     </p>
                   </Line>

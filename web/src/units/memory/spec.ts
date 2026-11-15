@@ -184,5 +184,13 @@ export default defineSpec({
       beat: 'A muted Undo line under the list',
       date: '2026-11-09',
     },
+    {
+      id: 'memory-d9',
+      decision:
+        'MemoryList loads as its frame at the count, each row a bar line that grows to its wrapped text when it comes; the menu keeps its place.',
+      why: 'Step 8 of the loading skeleton plan: Course opens its memories fold, and the fold must load at its size.',
+      beat: 'Nothing while loading; a fixed line count',
+      date: '2026-11-15',
+    },
   ],
 });

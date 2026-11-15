@@ -143,6 +143,10 @@ export default defineSpec({
   ],
   inputs: [
     {
+      name: 'loading',
+      does: 'Its shape while it loads: each list’s rows, the switch, the memories and the figures’ widths.',
+    },
+    {
       name: 'course',
       does: 'The course: name, assignments, materials, time, cost and memories.',
     },
@@ -434,6 +438,14 @@ export default defineSpec({
       why: 'Jack: "Assignments first (Recommended)": the one active assignment was below the fold (ideas/fable-review-grill.md D1).',
       beat: "The stats box first (course-d23's order)",
       date: '2026-11-09',
+    },
+    {
+      id: 'course-d32',
+      decision:
+        'Loading, the frame, headings, Add buttons and list frames are real at the shape; values are bars; a failed read keeps that shape under its notice.',
+      why: 'Step 8 of the loading skeleton plan (ideas/skeleton-plan.md); S4: the failed part keeps its box.',
+      beat: 'CourseSkeleton, slabs measured from one sample that fit one state of five',
+      date: '2026-11-15',
     },
   ],
 });

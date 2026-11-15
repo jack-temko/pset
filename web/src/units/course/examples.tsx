@@ -1,6 +1,6 @@
 import { defineExamples } from '@/design/examples';
 import { PLACEHOLDER } from '@/units/list-page/hrefs';
-import { Course, CourseSkeleton } from './index';
+import { Course } from './index';
 import { ECE, EMPTY, NOTHING_DUE, READING_IN, STRESS, TODAY } from './sample';
 import spec from './spec';
 
@@ -24,11 +24,4 @@ export default defineExamples(spec, Course, {
     failed: () => view({ failed: true }),
   },
   stress: () => view({ course: STRESS, unfolded: true }),
-  skeletons: {
-    normal: () => <CourseSkeleton />,
-    'nothing-due': () => <CourseSkeleton />,
-    empty: () => <CourseSkeleton />,
-    'reading-in': () => <CourseSkeleton />,
-    failed: () => <CourseSkeleton />,
-  },
 });

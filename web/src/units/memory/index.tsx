@@ -357,15 +357,33 @@ export function MemoryArea({
 export function MemoryList({
   memories,
   showAllHref,
+  loading,
 }: {
-  memories: readonly Memory[];
+  memories?: readonly Memory[];
   /** Where "Show all" goes: the list page's memories for this course. */
   showAllHref: string;
+  /** While the memories load: how many there are. Each row is a bar line
+   *  that grows to its text when it comes (memory-d9). */
+  loading?: number;
 }) {
-  const mem = useMemories(memories, undefined, undefined);
+  const mem = useMemories(memories ?? [], undefined, undefined);
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <List cap={LIST_CAP} showAllHref={showAllHref} empty="Nothing remembered">
+      <List
+        cap={LIST_CAP}
+        showAllHref={showAllHref}
+        empty="Nothing remembered"
+        loading={loading === undefined ? undefined : { count: loading }}
+        row={(i) => (
+          <ListRow
+            key={i}
+            loading={{ row: i, lines: 2 }}
+            wrap
+            aside={<span className="block size-(--ds-control)" />}
+            asideWidth="auto"
+          />
+        )}
+      >
         {mem.all.map((m) =>
           m.id === mem.gone ? (
             <UndoRow

@@ -213,5 +213,13 @@ export default defineSpec({
       beat: 'A separate row skeleton',
       date: '2026-11-14',
     },
+    {
+      id: 'list-row-d14',
+      decision:
+        'A title that wraps is a FillBlock, loaded or loading: one bar line while it loads, growing smoothly to its lines when it comes.',
+      why: 'Step 8 of the loading skeleton plan: Memory rows wrap, and S8 (reversed 2026-11-14) lets wrapping text grow.',
+      beat: 'A one-line bar that jumps to the wrapped title',
+      date: '2026-11-15',
+    },
   ],
 });

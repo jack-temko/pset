@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
 
-import { Bone, Fill } from '@/units/bone';
+import { Bone, Fill, FillBlock } from '@/units/bone';
 import { RHYTHM } from '@/units/bone/rhythm';
 import { Button } from '@/units/button';
 import { Link } from '@/units/link';
@@ -78,7 +78,18 @@ export function ListRow({
         <div className="min-w-0 flex-1">
           <div className="flex min-h-6 min-w-0 items-center gap-2">
             <div className={`min-w-0 ${wrap ? 'flex-1' : ''}`}>
-              {loading !== undefined ? (
+              {loading !== undefined && wrap === true ? (
+                // A title that wraps loads as one bar line and grows when it
+                // comes (bone-d4, list-row-d14).
+                <FillBlock
+                  as="span"
+                  ch={RHYTHM.title}
+                  row={loading.row}
+                  className="ds-body block min-h-6 font-medium"
+                >
+                  {title}
+                </FillBlock>
+              ) : loading !== undefined ? (
                 <span className="ds-body block truncate font-medium">
                   <Fill ch={RHYTHM.title} row={loading.row}>
                     {title}
@@ -86,6 +97,14 @@ export function ListRow({
                 </span>
               ) : titleField !== undefined ? (
                 titleField
+              ) : href === undefined && wrap === true ? (
+                <FillBlock
+                  as="span"
+                  ch={RHYTHM.title}
+                  className="ds-body block min-h-6 font-medium whitespace-pre-wrap text-(--ds-fg) [overflow-wrap:anywhere]"
+                >
+                  {title}
+                </FillBlock>
               ) : href === undefined ? (
                 <span
                   title={title}
