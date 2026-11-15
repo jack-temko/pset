@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 
-import { ARRIVE_MS, GRACE_MS } from './rhythm';
+import { ARRIVE_MS, GRACE_MS, moves } from './rhythm';
 
 const widthOf = (ch: number | readonly number[], row = 0) =>
   typeof ch === 'number' ? ch : (ch.at(row % ch.length) ?? 8);
@@ -70,16 +70,6 @@ export function Fill({
     <span className="ds-fill-in">{children}</span>
   ) : (
     children
-  );
-}
-
-/** Whether to move: the browser can animate and the student has not asked
- *  for less motion. Tests run where neither exists. */
-function moves(el: Element): boolean {
-  return (
-    'animate' in el &&
-    'matchMedia' in window &&
-    !window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 }
 
