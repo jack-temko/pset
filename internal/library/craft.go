@@ -18,9 +18,12 @@ import (
 // Section is one heading of a book's contents, with the pages it spans.
 type Section = section
 
+// ChatModel is the chat model the import asks.
+type ChatModel = model
+
 // Model is the chat model the import asks. Wrap, when set, is given every
 // request first: the step runner keys its calls so.
-func Model(client *llm.Client, name string, wrap func(llm.ChatRequest) llm.ChatRequest) model {
+func Model(client *llm.Client, name string, wrap func(llm.ChatRequest) llm.ChatRequest) ChatModel {
 	return model{client: client, name: name, wrap: wrap}
 }
 
@@ -44,7 +47,7 @@ func FindContentsPages(pages []string) []int { return findContentsPages(pages) }
 // ReadName reads the title and author line off the first pages; empty
 // where nothing checked out. id names the book in the log; title and
 // author are what it has now, a hint.
-func ReadName(ctx context.Context, m model, img PageImage, id, title, author string, pages []string, printed []int) (string, string, error) {
+func ReadName(ctx context.Context, m ChatModel, img PageImage, id, title, author string, pages []string, printed []int) (string, string, error) {
 	return readName(ctx, m, img, id, title, author, pages, printed)
 }
 
@@ -52,7 +55,7 @@ func ReadName(ctx context.Context, m model, img PageImage, id, title, author str
 // contents placed on the pages, else headings the model picks from the
 // lines that look like them. lines is a digital book's text lines, nil for
 // a scan.
-func ReadContents(ctx context.Context, m model, img PageImage, id string, pages []string, lines []pdf.XMLLine, printed []int) ([]Section, error) {
+func ReadContents(ctx context.Context, m ChatModel, img PageImage, id string, pages []string, lines []pdf.XMLLine, printed []int) ([]Section, error) {
 	return readContents(ctx, m, img, id, pages, lines, printed)
 }
 
