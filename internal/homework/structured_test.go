@@ -11,9 +11,9 @@ import (
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
+	"github.com/jackt/pset/internal/oldwork/oldworktest"
 	"github.com/jackt/pset/internal/testx"
 	"github.com/jackt/pset/internal/usage"
 )
@@ -103,7 +103,7 @@ func TestGuidesAreWipedAndTextBecomesRuns(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer cleanup.Close(d)
-	migs := append(jobs.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
+	migs := append(oldworktest.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
 	all := usage.Migrations()
 	all = append(all, Migrations()...)
 	// Everything before the wipe, whatever comes after it.

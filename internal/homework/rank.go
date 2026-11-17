@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/jackt/pset/internal/errs"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/oldwork"
 	"github.com/jackt/pset/internal/usage"
 )
 
@@ -42,16 +42,15 @@ func (s *Service) rankWhenFound(ctx context.Context, setID string) {
 	// at a time, or both queue a ranking.
 	s.rankMu.Lock()
 	defer s.rankMu.Unlock()
-	var total, finding, waiting int
+	var total, finding int
 	if err := s.c.DB.QueryRowContext(ctx, `SELECT count(*), coalesce(sum(in_book = 1 AND state IN ('pending', 'locating')), 0)
 		FROM questions WHERE homework_id = ?`, setID).Scan(&total, &finding); err != nil || total == 0 || finding > 0 {
 		return
 	}
-	if err := s.c.DB.QueryRowContext(ctx, `SELECT count(*) FROM jobs WHERE kind = ? AND subject = ? AND state = ?`,
-		JobRank, setID, jobs.Queued).Scan(&waiting); err != nil || waiting > 0 {
+	if waiting, err := s.c.Queue.Waiting(ctx, JobRank, setID); err != nil || waiting > 0 {
 		return
 	}
-	if _, err := s.c.Queue.Enqueue(ctx, s.c.DB, jobs.Spec{
+	if _, err := s.c.Queue.Enqueue(ctx, s.c.DB, oldwork.Spec{
 		Kind: JobRank, Subject: setID, Key: "rank:" + setID, Priority: locateFirst, Payload: rankPayload{SetID: setID},
 	}); err != nil {
 		slog.Warn("rank: queue", "set", setID, "err", err)
@@ -60,7 +59,7 @@ func (s *Service) rankWhenFound(ctx context.Context, setID string) {
 
 // runRank scores a set's questions and saves what changed. A run stopped
 // on shutdown is run again on the next start.
-func (s *Service) runRank(ctx context.Context, j jobs.Job) error {
+func (s *Service) runRank(ctx context.Context, j oldwork.Job) error {
 	var p rankPayload
 	if err := j.Decode(&p); err != nil {
 		return err

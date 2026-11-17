@@ -15,6 +15,8 @@ var (
 	// KeyMissing is a call that needs a key nobody has saved.
 	KeyMissing = errs.Define(errs.Entry{
 		ID:     "key.missing",
+		Kind:   errs.KindWaitingOnYou,
+		Clears: "key",
 		What:   "There's no OpenRouter key yet.",
 		Why:    "PSet needs a key to read pages and write answers.",
 		Fix:    "Add your key in Settings, under Connections.",
@@ -23,6 +25,8 @@ var (
 	})
 	keyRefused = errs.Define(errs.Entry{
 		ID:     "key.refused",
+		Kind:   errs.KindWaitingOnYou,
+		Clears: "key",
 		What:   "OpenRouter refused the key.",
 		Why:    "The key in Settings may be wrong, expired or deleted.",
 		Fix:    "Check the key in Settings, then try again.",
@@ -31,6 +35,8 @@ var (
 	})
 	keyOutOfCredit = errs.Define(errs.Entry{
 		ID:     "key.out_of_credit",
+		Kind:   errs.KindWaitingOnYou,
+		Clears: "credit",
 		What:   "PSet can't use OpenRouter.",
 		Why:    "Your OpenRouter account is out of credit.",
 		Fix:    "Add credit on OpenRouter, then try again.",
@@ -38,6 +44,7 @@ var (
 	})
 	modelUnknown = errs.Define(errs.Entry{
 		ID:     "model.unknown",
+		Kind:   errs.KindOurs,
 		What:   "OpenRouter doesn't know a model PSet uses.",
 		Why:    "A model PSet relies on was renamed or removed.",
 		Fix:    "Check for a PSet update.",
@@ -46,6 +53,8 @@ var (
 	})
 	modelBusy = errs.Define(errs.Entry{
 		ID:     "model.busy",
+		Kind:   errs.KindPassing,
+		Clears: "provider",
 		What:   "OpenRouter didn't answer properly.",
 		Why:    "OpenRouter is busy or having trouble right now.",
 		Fix:    "Try again in a minute.",
@@ -64,6 +73,8 @@ var (
 	// no reply in time.
 	ModelUnreachable = errs.Define(errs.Entry{
 		ID:     "model.unreachable",
+		Kind:   errs.KindPassing,
+		Clears: "provider",
 		What:   "PSet couldn't reach OpenRouter.",
 		Why:    "The internet connection is down, or OpenRouter didn't answer in time.",
 		Fix:    "Check the internet connection, then try again.",
@@ -72,6 +83,8 @@ var (
 	})
 	modelCut = errs.Define(errs.Entry{
 		ID:     "model.cut",
+		Kind:   errs.KindPassing,
+		Clears: "provider",
 		What:   "The model's answer stopped partway.",
 		Why:    "The connection to the model dropped while it was writing.",
 		Fix:    "Trying again usually works.",

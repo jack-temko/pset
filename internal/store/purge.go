@@ -47,6 +47,14 @@ func (s *Store) Purge(ctx context.Context, now time.Time) error {
 				return errs.Database.Wrap(err)
 			}
 		}
+		// Steps go with their subject, and their calls with them.
+		if _, err := tx.ExecContext(ctx, `DELETE FROM steps WHERE
+			(subject_kind = 'question' AND NOT EXISTS (SELECT 1 FROM questions x WHERE x.id = steps.subject_id))
+			OR (subject_kind = 'set' AND NOT EXISTS (SELECT 1 FROM sets x WHERE x.id = steps.subject_id))
+			OR (subject_kind = 'material' AND NOT EXISTS (SELECT 1 FROM materials x WHERE x.id = steps.subject_id))
+			OR (subject_kind = 'turn' AND NOT EXISTS (SELECT 1 FROM turns x WHERE x.id = steps.subject_id))`); err != nil {
+			return errs.Database.Wrap(err)
+		}
 		// Incidents are kept while open, plus a week.
 		if _, err := tx.ExecContext(ctx, `DELETE FROM incidents WHERE resolved_at != '' AND resolved_at < ?`, cutoff); err != nil {
 			return errs.Database.Wrap(err)

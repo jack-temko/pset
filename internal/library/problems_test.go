@@ -7,7 +7,6 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/probnum"
 )
 
@@ -20,7 +19,7 @@ func TestProblemStylesKeepTheStudentsWord(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { cleanup.Close(d) })
-	if err := db.Migrate(ctx, d, append(jobs.Migrations(), Migrations()...)); err != nil {
+	if err := db.Migrate(ctx, d, Migrations()); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := d.Exec(`INSERT INTO books (id, sha256, title, page_count, state, created_at, updated_at) VALUES ('b', 'b', 'T', 3, 'ready', '', '')`); err != nil {

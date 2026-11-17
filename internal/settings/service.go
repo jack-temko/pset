@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/condition"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
@@ -37,13 +38,6 @@ type Library interface {
 	Count(ctx context.Context) (books, pages int, err error)
 }
 
-// Queue is what Reset needs from the job queue: nothing may run while
-// the database is wiped.
-type Queue interface {
-	Pause()
-	Resume()
-}
-
 // Config is what the service is built from.
 type Config struct {
 	DB         *sql.DB
@@ -53,9 +47,25 @@ type Config struct {
 	Migrations []db.Migration // every feature's, for the database check and Reset
 	Dialer     Dialer
 	Library    Library
-	Queue      Queue
+	// Keep names other databases in the data directory that Reset leaves
+	// alone: the new backend's store, open beside this one until it takes
+	// Reset over (track 7 of ideas/backend-courses.md).
+	Keep []string
 	// LookPath finds a tool; exec.LookPath unless a test says otherwise.
 	LookPath func(string) (string, error)
+	// Heal, when set, is told a condition holds again: a key was saved, or a
+	// health check passed. The step runner runs what waited on it.
+	Heal func(ctx context.Context, condition condition.ID)
+}
+
+// heal tells the runner each condition holds again.
+func (s *Service) heal(ctx context.Context, ids ...condition.ID) {
+	if s.c.Heal == nil {
+		return
+	}
+	for _, id := range ids {
+		s.c.Heal(ctx, id)
+	}
 }
 
 // Service keeps the student's settings: the name, the keys and the health of what PSet needs.
@@ -170,6 +180,8 @@ func (s *Service) Save(ctx context.Context, in KeyInput) (SaveResult, error) {
 	if err := save(ctx, s.c.DB, keyChat, chatRow{APIKey: strings.TrimSpace(in.APIKey)}); err != nil {
 		return SaveResult{}, err
 	}
+	// A key that passed its test is accepted and its account has credit.
+	s.heal(ctx, condition.IDKey, condition.IDCredit)
 	cur, err := s.Get(ctx)
 	return SaveResult{Settings: cur, Detail: r.Detail}, err
 }
@@ -201,14 +213,10 @@ func (s *Service) ResetCounts(ctx context.Context) (ResetCounts, error) {
 	return ResetCounts{Books: b, Pages: p}, err
 }
 
-// Reset is a fresh install: the queue pauses, every table is dropped and
-// recreated, and every file in the data directory except the open
-// database goes. Settings live in the database, so they go too.
+// Reset is a fresh install: every table is dropped and recreated, and
+// every file in the data directory except the open databases goes.
+// Settings live in the database, so they go too.
 func (s *Service) Reset(ctx context.Context) error {
-	if s.c.Queue != nil {
-		s.c.Queue.Pause()
-		defer s.c.Queue.Resume()
-	}
 	if err := db.Wipe(ctx, s.c.DB, s.c.Migrations); err != nil {
 		return fmt.Errorf("wipe database: %w", err)
 	}
@@ -216,10 +224,14 @@ func (s *Service) Reset(ctx context.Context) error {
 	if err != nil {
 		return errs.Disk.Wrap(err)
 	}
-	base := filepath.Base(s.c.DBPath)
+	keep := map[string]bool{}
+	for _, path := range append([]string{s.c.DBPath}, s.c.Keep...) {
+		base := filepath.Base(path)
+		keep[base], keep[base+"-wal"], keep[base+"-shm"] = true, true, true
+	}
 	for _, e := range entries {
 		n := e.Name()
-		if n == base || n == base+"-wal" || n == base+"-shm" {
+		if keep[n] {
 			continue
 		}
 		if err := os.RemoveAll(filepath.Join(s.c.DataDir, n)); err != nil {

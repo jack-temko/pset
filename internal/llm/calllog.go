@@ -119,10 +119,15 @@ func logCall(req ChatRequest, start time.Time, reply Reply, err error) {
 		names = append(names, t.Function.Name)
 	}
 	call.Tools = strings.Join(names, ",")
-
 	callLog.Lock()
 	path, sink := callLog.path, callLog.sink
 	callLog.Unlock()
+	if req.OnDone != nil {
+		// A call keyed to a step is recorded on the step, and only there:
+		// the old usage store would count it again, under no subject.
+		req.OnDone(call)
+		sink = nil
+	}
 	if path == "" {
 		if sink != nil {
 			sink(call)

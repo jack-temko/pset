@@ -40,7 +40,7 @@ func must(t *testing.T, err error) {
 var ids = map[string]string{
 	"courses": "c1", "materials": "m1", "sets": "s1", "questions": "q1", "finds": "f1",
 	"readings": "r1", "documents": "d1", "turns": "t1", "memories": "y1", "incidents": "INC001",
-	"conditions": "key",
+	"conditions": "key", "steps": "st1",
 }
 
 // seed fills every logged table with one row, and a page and a section, as
@@ -64,6 +64,8 @@ func seed(t *testing.T, s *Store) int64 {
 			`INSERT INTO memories (id, course_id, text, created_at) VALUES ('y1', 'c1', 'Short answers', '` + now + `')`,
 			`INSERT INTO incidents (id, error, kind, subject_kind, subject_id, course_id, set_id, born, first_at, last_at) VALUES ('INC001', '{"id":"llm.key_missing"}', 'waiting_on_you', 'question', 'q1', 'c1', 's1', 'step', '` + now + `', '` + now + `')`,
 			`INSERT INTO conditions (id, holds, since) VALUES ('key', 1, '` + now + `')`,
+			`INSERT INTO steps (id, subject_kind, subject_id, name, position, state, created_at) VALUES ('st1', 'question', 'q1', 'find', 0, 'done', '` + now + `')`,
+			`INSERT INTO calls (step_id, attempt, at, model) VALUES ('st1', 1, '` + now + `', 'm')`,
 		} {
 			if _, err := tx.Exec(q); err != nil {
 				return fmt.Errorf("%s: %w", q, err)
@@ -83,7 +85,7 @@ type row map[string]any
 func snapshot(t *testing.T, s *Store) map[string][]row {
 	t.Helper()
 	out := map[string][]row{}
-	names := []string{"pages", "sections"}
+	names := []string{"pages", "sections", "calls"}
 	for _, tb := range Tables {
 		names = append(names, tb.Name)
 	}
@@ -160,7 +162,7 @@ func columns(t *testing.T, s *Store, table string) map[string]string {
 // moving a thing, which no action does.
 var fixed = map[string]any{
 	"incidents.state": "dismissed", "incidents.kind": "cant", "incidents.born": "page",
-	"documents.state": "stopped", "documents.owner_kind": "turn",
+	"documents.state": "stopped", "steps.state": "failed", "documents.owner_kind": "turn",
 	"materials.course_id": nil, "sets.course_id": nil, "questions.set_id": nil, "finds.question_id": nil,
 	"readings.question_id": nil, "turns.course_id": nil, "memories.course_id": nil,
 }

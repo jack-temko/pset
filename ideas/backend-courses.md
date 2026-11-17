@@ -11,9 +11,9 @@ the order of work and the tracker. Branch
 | Track | What                                | Status                                      | Branch             |
 | ----- | ----------------------------------- | ------------------------------------------- | ------------------ |
 | 0     | Groundwork on `dev`                 | Done: the bar is measured, the test fix #95 | `flaky-go-test`    |
-| 1     | The contract                        | Built, awaiting merge into `backend`        | `backend-contract` |
-| 2     | Schema, change log, events          | In progress                                 | `changelog`        |
-| 3     | The step runner                     | Not started                                 |                    |
+| 1     | The contract                        | Done: #96                                   | `backend-contract` |
+| 2     | Schema, change log, events          | Built, reviewed twice, in #97               | `changelog`        |
+| 3     | The step runner                     | Built, in review                            | `step-runner`      |
 | 4     | Courses and materials               | Not started                                 |                    |
 | 5     | Work: sets, finds, readings, guides | Not started                                 |                    |
 | 6     | Ask                                 | Not started                                 |                    |
@@ -115,6 +115,36 @@ tool that reports its own cost, fix this in track 5).
 - Also done when: a fake step that fails for want of a key runs again by itself once
   a key is saved, and its incident resolves.
 - Deletes: `jobs`, lanes, `usage`'s forgotten marks and sweep.
+
+**How track 3 went** (2026-11-17, Jack's calls in the cloud session):
+
+- A step's tries start over with each new run (asked, Try again, out of date, a
+  condition healed); a run cut short by shutdown, a crash or a pause is not a try.
+- Healing has explicit triggers only: saving a key (key, credit), a passing health
+  check in Settings, Try again on a waiting incident, and any model call that works.
+  No background probe, so out of credit waits for Try again.
+- No Stop: a running step whose subject is removed pauses, and resumes if the
+  removal is undone. Ask's "stopped by you" is designed in track 6.
+- All eight conditions clear: a passing failure still failing after three tries
+  waits on the provider; the readers, the data folder, the database and disk space
+  are named from the raw cause (`condition.Cause`).
+- Wired into `main` now: `store.db` beside the old database, one keyed model client,
+  a daily purge. Reset leaves `store.db` alone until track 7 moves it.
+- `jobs` and its lanes are gone from the app: homework and ask put their work on
+  `oldwork.Idle`, which keeps nothing, and the library leaves books queued. **On
+  `backend` the old screens no longer import, find, guide or answer**; Jack uses
+  `dev` meanwhile. The old queue survives only as `internal/oldwork/oldworktest`,
+  imported by homework's and ask's tests, so what tracks 5 and 6 port stays tested;
+  it goes with the last of them. The library's tests import inline instead.
+- For track 7: a SQLite fault in `store.db` marks the `database` condition, but
+  Settings' database check, which heals it, still looks at the old `pset.db`.
+- Migration `usage/5` drops the old `forgotten` table: a release before it, run on a
+  library this build has opened, would fail to record calls or remove anything.
+  `backend` ships no release, so this matters only if a build of it reaches Jack's
+  own library.
+- Not done here: no Try again route yet (the action comes with track 7's catalog),
+  and the new store's event stream is not mounted (no screen reads it before
+  track 8).
 
 **4. Courses and materials.**
 

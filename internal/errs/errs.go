@@ -40,6 +40,53 @@ type Entry struct {
 	Scope Scope
 	// Owner is the package that declared the entry, filled in by Define.
 	Owner string
+	// Kind is what kind of failure this is, which decides how it looks and
+	// what clears it (ideas/errors-grill.md). Empty takes the kind from the
+	// next entry down the chain that names one, and then from the status.
+	Kind Kind
+	// Clears names the condition whose return clears a waiting_on_you
+	// failure ("key", "credit"): the steps waiting on it then run again.
+	Clears string
+}
+
+// Kind is what kind of failure an entry is.
+type Kind string
+
+// The kinds, as incident.Kind names them on the wire.
+const (
+	// KindPassing may pass by itself (the model is busy): tried again with
+	// a growing wait before it is said.
+	KindPassing Kind = "passing"
+	// KindWaitingOnYou needs something only the student can give (a key,
+	// credit): the work waits, and carries on once it is back.
+	KindWaitingOnYou Kind = "waiting_on_you"
+	// KindYourInput is the student's typing: one line under the field.
+	KindYourInput Kind = "your_input"
+	// KindCant is something PSet cannot do as asked: the student chooses.
+	KindCant Kind = "cant"
+	// KindOurs is an unexpected failure.
+	KindOurs Kind = "ours"
+)
+
+// KindOf is the kind of err and the condition that clears it: the kind the
+// innermost entry naming one gives (the cause decides: out of credit under
+// "couldn't find the problem" is still waiting on you), else a field's
+// error is your input, a 5xx ours, and anything else can't.
+func KindOf(err error) (Kind, string) {
+	chain := catalogChain(err)
+	for i := len(chain) - 1; i >= 0; i-- {
+		if e := chain[i].entry; e.Kind != "" {
+			return e.Kind, e.Clears
+		}
+	}
+	v := Resolve(err)
+	switch {
+	case v.Scope == ScopeField:
+		return KindYourInput, ""
+	case v.Status >= 500 || v.Status == 0:
+		return KindOurs, ""
+	}
+	return KindCant, ""
 }
 
 var idPattern = regexp.MustCompile(`^[a-z]+(\.[a-z_]+)+$`)

@@ -4,7 +4,7 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-132 entries.
+138 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
@@ -21,6 +21,11 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `ask.turn_failed` | Couldn't answer that. | Something went wrong while the tutor was answering. | Ask again. | `retry` | inline | ask |
 | `book.duplicate` | {title} is already on your shelf. | This is the same file as a book you already added. | Open the one on your shelf. | `open_book` | inline | library |
 | `book.not_found` | That book isn't on your shelf. | It was removed, or the link is out of date. | Go back to your shelf and open it from there. |  | inline | errs |
+| `condition.data_folder` | PSet can't use its data folder. | The folder is missing, or PSet isn't allowed to write to it. | Check the data folder in Settings, then try again. | `open_settings` | inline | condition |
+| `condition.database` | PSet can't open or write its database. | The file may be read-only, damaged, or on a drive that went away. | Check the database in Settings, then try again. | `open_settings` | inline | condition |
+| `condition.disk_space` | The disk is full. | PSet needs room for pages, images and its database. | Free some space, then try again. | `retry` | inline | condition |
+| `condition.pdf_reader` | PSet can't read PDFs on this computer. | Poppler, the program PSet reads PDFs with, isn't installed. | Install Poppler (Settings shows how), then try again. | `open_settings` | inline | condition |
+| `condition.scan_reader` | PSet can't read scanned pages on this computer. | Tesseract, the program PSet reads scans with, isn't installed. | Install Tesseract (Settings shows how), then try again. | `open_settings` | inline | condition |
 | `embed.failed` | Ollama couldn't build the book's search. | Ollama answered with an error. It may be out of memory or missing its model. | Settings, under Health, says how to check it, then try again. | `open_settings` | inline | llm |
 | `embed.unreachable` | PSet couldn't reach Ollama. | Ollama searches your books, and it isn't running or isn't answering. | Settings, under Health, says how to start it. | `open_settings` | inline | llm |
 | `errors.clear_failed` | Couldn't clear the list of errors. | PSet's database didn't answer. | Try again. If it keeps happening, check the database in Settings. | `retry` | inline | errlog |
@@ -112,6 +117,7 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `request.too_large` | That's too much to send in one request. | A single request is limited to {limit} MB. | Send it in smaller pieces. |  | inline | errs |
 | `request.unreachable` | PSet can't reach its server. | The server may have stopped, or the computer went to sleep. | Start PSet again, then try again. | `retry` | screen | errs |
 | `request.upload_cut` | The upload was cut off. |  |  |  | field | httpx |
+| `runner.incident_gone` | That problem is no longer there. | It was resolved, or what it was about was removed. |  |  | inline | runner |
 | `settings.fix_data_dir` | Couldn't create the data folder. | PSet isn't allowed to create it there, or the disk is full. | Create the folder yourself, or free up space, then check again. |  | inline | settings |
 | `settings.fix_database` | Couldn't update the database. | The database can't be brought up to date, which means it is damaged or comes from a newer PSet. | Update PSet. If that doesn't help, reset PSet from this page. |  | inline | settings |
 | `settings.fix_ollama` | Ollama couldn't download {model}. | Ollama isn't running, or the download was cut off. | Start Ollama and check the internet connection, then try again. | `retry` | inline | settings |

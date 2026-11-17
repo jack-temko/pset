@@ -618,7 +618,7 @@ func TestPurgeTakesARemovedCourseWholeAndKeepsOpenIncidents(t *testing.T) {
 		`INSERT INTO incidents (id, error, kind, born, first_at, last_at, state, resolved_at) VALUES ('NEW001', '{}', 'ours', 'step', 'x', 'x', 'healed', '`+db.Now()+`')`)
 	exec(t, s, change.ActorStudent, "rm", `UPDATE courses SET removed_at = '`+old+`' WHERE id = 'c1'`)
 	must(t, s.Purge(bg, time.Now()))
-	for _, name := range []string{"courses", "materials", "pages", "sections", "sets", "questions", "finds", "readings", "documents", "turns", "memories"} {
+	for _, name := range []string{"courses", "materials", "pages", "sections", "sets", "questions", "finds", "readings", "documents", "turns", "memories", "steps", "calls"} {
 		if n := count(t, s, `SELECT count(*) FROM `+name); n != 0 {
 			t.Errorf("%d rows of %s outlived their course", n, name)
 		}

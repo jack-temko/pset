@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/condition"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
@@ -25,9 +26,28 @@ var checkOrder = []string{"data_dir", "database", "poppler", "tesseract", "ollam
 func (s *Service) Health(ctx context.Context) Health {
 	out := Health{Checks: make([]HealthCheck, 0, len(checkOrder))}
 	for _, id := range checkOrder {
-		out.Checks = append(out.Checks, s.check(ctx, id))
+		c := s.check(ctx, id)
+		s.healIfOK(ctx, c)
+		out.Checks = append(out.Checks, c)
 	}
 	return out
+}
+
+// conditionOf is the condition each check shows to hold.
+var conditionOf = map[string]condition.ID{
+	"data_dir":  condition.IDDataFolder,
+	"database":  condition.IDDatabase,
+	"poppler":   condition.IDPDFReader,
+	"tesseract": condition.IDScanReader,
+	"ollama":    condition.IDEmbeddings,
+}
+
+// healIfOK says a check that passed holds: whatever waited on it (a scan
+// waiting for Tesseract to be installed) carries on.
+func (s *Service) healIfOK(ctx context.Context, c HealthCheck) {
+	if id, ok := conditionOf[c.ID]; ok && c.OK {
+		s.heal(ctx, id)
+	}
 }
 
 // Fix repairs one check and returns it re-run.
@@ -56,7 +76,9 @@ func (s *Service) Fix(ctx context.Context, id string) (HealthCheck, error) {
 			return HealthCheck{}, fixOllama.Wrap(err, "model", llm.EmbedModel)
 		}
 	}
-	return s.check(ctx, id), nil
+	c = s.check(ctx, id)
+	s.healIfOK(ctx, c)
+	return c, nil
 }
 
 func (s *Service) check(ctx context.Context, id string) HealthCheck {

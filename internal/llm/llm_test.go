@@ -406,3 +406,59 @@ func TestClientsShareConnections(t *testing.T) {
 		t.Errorf("100 clients left %d more goroutines running: each kept its own idle connections", grew)
 	}
 }
+
+// A keyed client sends the key saved at the time of each call, and a blank
+// one fails as KeyMissing without calling out.
+func TestAKeyedClientFollowsTheSavedKey(t *testing.T) {
+	var got []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = append(got, r.Header.Get("Authorization"))
+		w.Header().Set("Content-Type", "application/json")
+		testx.Check(t, testx.Err(io.WriteString(w, `{"choices":[{"message":{"role":"assistant","content":"ok"}}]}`)))
+	}))
+	defer srv.Close()
+	key := ""
+	c := NewKeyed(srv.URL, func(context.Context) (string, error) { return key, nil })
+	req := ChatRequest{Model: "m", Messages: []Message{TextMessage("user", "hi")}}
+	if _, err := c.ChatOnce(context.Background(), req); !errors.Is(err, KeyMissing) {
+		t.Fatalf("no key: %v, want KeyMissing", err)
+	}
+	for _, k := range []string{"sk-one", "sk-two"} {
+		key = k
+		if _, err := c.ChatOnce(context.Background(), req); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(got) != 2 || got[0] != "Bearer sk-one" || got[1] != "Bearer sk-two" {
+		t.Fatalf("sent %q, want each call's own key", got)
+	}
+}
+
+// A call keyed to a step is handed to the step alone: the old usage sink
+// would count it a second time, under no subject. A keyed client counts as
+// configured whether or not a key is saved yet.
+func TestAStepsCallSkipsTheOldSink(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		testx.Check(t, testx.Err(io.WriteString(w, `{"choices":[{"message":{"role":"assistant","content":"ok"}}]}`)))
+	}))
+	defer srv.Close()
+	var sunk, keyed int
+	OnCall(func(Call) { sunk++ })
+	defer OnCall(nil)
+	c := NewKeyed(srv.URL, func(context.Context) (string, error) { return "sk", nil })
+	if !c.ChatConfigured() {
+		t.Fatal("a keyed client says it is not configured")
+	}
+	req := ChatRequest{Model: "m", Messages: []Message{TextMessage("user", "hi")}}
+	if _, err := c.ChatOnce(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	req.OnDone = func(Call) { keyed++ }
+	if _, err := c.ChatOnce(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	if sunk != 1 || keyed != 1 {
+		t.Fatalf("the old sink got %d calls and the step %d; want the unkeyed one each", sunk, keyed)
+	}
+}

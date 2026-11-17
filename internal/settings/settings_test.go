@@ -9,10 +9,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/condition"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
@@ -286,6 +288,21 @@ func TestResetIsAFreshInstall(t *testing.T) {
 	}
 }
 
+// The new backend's store, open beside the old database, is not Reset's.
+func TestResetLeavesTheDatabasesItIsToldToKeep(t *testing.T) {
+	s := newServer(t)
+	s.svc.c.Keep = []string{filepath.Join(s.dir, "store.db")}
+	for _, n := range []string{"store.db", "store.db-wal", "other.db"} {
+		testx.Check(t, os.WriteFile(filepath.Join(s.dir, n), []byte("x"), 0o600))
+	}
+	testx.Check(t, s.svc.Reset(context.Background()))
+	for n, want := range map[string]bool{"store.db": true, "store.db-wal": true, "other.db": false} {
+		if _, err := os.Stat(filepath.Join(s.dir, n)); (err == nil) != want {
+			t.Errorf("%s kept %v, want %v", n, err == nil, want)
+		}
+	}
+}
+
 func TestAbout(t *testing.T) {
 	s := newServer(t)
 	var a About
@@ -327,5 +344,28 @@ func TestOutOfCreditPointsAtTheKey(t *testing.T) {
 		if v.Field != "apiKey" || v.Chain[len(v.Chain)-1] != "key.out_of_credit" || !strings.Contains(v.Why, "out of credit") {
 			t.Errorf("%d: got %+v, want out of credit on apiKey", le.Status, v)
 		}
+	}
+}
+
+// Saving a key that passed its test, and a health check that passes, tell
+// the runner the condition holds again; a failed save tells it nothing.
+func TestSavingAKeyAndAPassingCheckHeal(t *testing.T) {
+	s := newServer(t)
+	var healed []condition.ID
+	s.svc.c.Heal = func(_ context.Context, id condition.ID) { healed = append(healed, id) }
+	s.dial.chatErr = errors.New("refused")
+	s.do(t, "PUT", "/api/settings", goodKey, nil)
+	if len(healed) != 0 {
+		t.Fatalf("a refused key healed %v", healed)
+	}
+	s.dial.chatErr = nil
+	s.do(t, "PUT", "/api/settings", goodKey, nil)
+	if !slices.Equal(healed, []condition.ID{condition.IDKey, condition.IDCredit}) {
+		t.Fatalf("saving a key healed %v, want key and credit", healed)
+	}
+	healed = nil
+	s.svc.Health(context.Background())
+	if !slices.Contains(healed, condition.IDDataFolder) || slices.Contains(healed, condition.IDPDFReader) {
+		t.Fatalf("the health checks healed %v: want the data folder, which is there, and not Poppler, which is missing", healed)
 	}
 }
