@@ -27,12 +27,36 @@ type Entry struct {
 	Costs bool `json:"costs"`
 }
 
+// List is every action in the catalog, sorted by id: what the palette
+// lists. Never null.
+type List struct {
+	Actions []Entry `json:"actions"`
+}
+
+// Done is the action route's reply: the action's id, for its Undo, and
+// what it acted on.
+type Done struct {
+	// Action is the id Undo takes it back by; absent when there is nothing to
+	// take back (it changed nothing, or can't be undone).
+	Action string `json:"action,omitempty"`
+	// Kind and ID are the thing it acted on, when it names one.
+	Kind change.Resource `json:"kind,omitempty"`
+	ID   string          `json:"id,omitempty"`
+	// Seq is how far the change log had got once it was done, so the page
+	// knows when its copies have caught up.
+	Seq int64 `json:"seq"`
+}
+
 // Undo is the undo call (Ctrl+Z, or the Undo on "Removed Problem set 4.
 // Undo."): it writes an action's old values back.
 type Undo struct {
-	// Action is the id of the action to take back, as the change log named
-	// it. Absent for Ctrl+Z: the student's newest action not yet undone.
+	// Action is the id of the action to take back: a Done's action, or an
+	// Undone's undo to redo it.
 	Action string `json:"action,omitempty"`
+	// Newest is Ctrl+Z: the student's newest action not yet undone, in
+	// place of Action. Never implied by an empty Action, so an Undo offered
+	// for an action that had nothing to undo can't take back another.
+	Newest bool `json:"newest,omitempty"`
 }
 
 // Undone is the undo call's reply: what was taken back, said where the
@@ -40,14 +64,17 @@ type Undo struct {
 type Undone struct {
 	// Action is the id of the action taken back.
 	Action string `json:"action"`
+	// Undo is this undo's own id: undoing it is redo.
+	Undo string `json:"undo"`
 	// Entry is its catalog id ("set.rename").
-	Entry string `json:"entry"`
+	Entry string `json:"entry,omitempty"`
 	// Said is the sentence to show.
 	Said string `json:"said"`
 	// Kind is what kind of thing Show goes to.
-	Kind change.Resource `json:"kind"`
-	// ID is the thing Show goes to.
-	ID string `json:"id"`
+	Kind change.Resource `json:"kind,omitempty"`
+	// ID is the thing Show goes to. Kind, ID and Entry are absent when the
+	// action's record is gone (purged with the week): no Show then.
+	ID string `json:"id,omitempty"`
 	// Seq is the change-log sequence of the undo's last write, so the page
 	// knows when its copies have caught up.
 	Seq int64 `json:"seq"`

@@ -40,3 +40,22 @@ export interface Courses {
    */
   courses: Course[];
 }
+/**
+ * Add is a new course, by name.
+ */
+export interface Add {
+  name: string;
+}
+/**
+ * Rename gives a course a new name.
+ */
+export interface Rename {
+  id: string;
+  name: string;
+}
+/**
+ * Remove hides a course, with everything in it, for a week.
+ */
+export interface Remove {
+  id: string;
+}

@@ -249,6 +249,11 @@ on. Stop is an explicit call.
 
 ## Jobs
 
+On `backend` the job queue is gone from the app (track 3 of
+`ideas/backend-courses.md`): the step runner below replaces it, and the queue
+survives only as `internal/oldwork/oldworktest` for the old features' tests. What
+follows is the queue as it was.
+
 A small durable queue, with no notion of UI "tasks". A job has a kind, a
 lane, a subject id, a state (`queued`, `running`, `done`, `failed`,
 `cancelled`), a payload and an error. Features register a handler per
@@ -288,6 +293,45 @@ the scan carries on after it. Homework and Ask jobs are not resumable.
 Cancel cancels the handler's context. On restart, `running` goes back to
 `queued`. Retry re-enqueues with the same payload. Import's Stop leaves
 the book `failed` with "Stopped", per the import spec; Dismiss deletes it.
+
+## The new backend (on `backend`, being built)
+
+The rewrite of `ideas/backend-courses.md`, track by track; this section grows with
+it, and replaces the rest of this file at the cut-over (track 9).
+
+- **The store** (`internal/store`, `store.db` beside `pset.db`): one baseline
+  schema. Triggers log every change of a logged table into `changes`; a write
+  outside `Store.Write` is refused. `Write(ctx, actor, action, fn)` is one
+  transaction, by the student (with the action's id) or by PSet. Undo writes an
+  action's before values back; undoing an undo is redo. The daily purge drops
+  what was removed or changed more than a week ago.
+- **Steps** (`internal/runner`): every piece of background work, one row per
+  subject and step name in `steps`, its model calls in `calls`. See the
+  package's README.
+- **Actions** (`internal/action`): everything a student can do, declared once by
+  the package that owns it (`action.Add`), with its key, the conditions it
+  needs, whether it can be undone and whether it costs. `internal/backend`
+  assembles every feature and its actions. Generated to
+  `web/src/api/gen/actions.ts` and `design/actions.md` by `tools/actioncatalog`.
+  An action writes once, through `do.Write`; one that can't be undone writes as
+  PSet, outside the chain Ctrl+Z walks. The `actions` table records which entry
+  each run was and what it acted on, so Undo can say what it took back.
+
+```
+GET  /api/actions             every action, sorted by id: the palette's list
+POST /api/actions/{id}        run it; body is its typed input
+                              -> {action?, kind?, id?, seq}; action is what Undo takes
+POST /api/undo                {action} or {newest: true} -> {action, undo, entry, said, kind, id, seq}
+                              newest: Ctrl+Z, the newest not undone (never an empty action);
+                              action = a previous undo's id: redo
+GET  /api/courses             the courses not removed, in the order added
+GET  /api/courses/{id}        one course
+```
+
+An action is refused before it runs when a condition it needs does not hold
+(`action.blocked`, with the condition's own why and fix). A catalog test runs
+every undoable action in a fresh world with its declared `Try` input, undoes it,
+redoes it, and compares every logged table each time.
 
 ## The document (structured guides)
 

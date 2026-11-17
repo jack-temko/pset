@@ -42,15 +42,49 @@ export interface Entry {
   costs: boolean;
 }
 /**
+ * List is every action in the catalog, sorted by id: what the palette
+ * lists. Never null.
+ */
+export interface List {
+  actions: Entry[];
+}
+/**
+ * Done is the action route's reply: the action's id, for its Undo, and
+ * what it acted on.
+ */
+export interface Done {
+  /**
+   * Action is the id Undo takes it back by; absent when there is nothing to
+   * take back (it changed nothing, or can't be undone).
+   */
+  action?: string;
+  /**
+   * Kind and ID are the thing it acted on, when it names one.
+   */
+  kind?: Resource;
+  id?: string;
+  /**
+   * Seq is how far the change log had got once it was done, so the page
+   * knows when its copies have caught up.
+   */
+  seq: number /* int64 */;
+}
+/**
  * Undo is the undo call (Ctrl+Z, or the Undo on "Removed Problem set 4.
  * Undo."): it writes an action's old values back.
  */
 export interface Undo {
   /**
-   * Action is the id of the action to take back, as the change log named
-   * it. Absent for Ctrl+Z: the student's newest action not yet undone.
+   * Action is the id of the action to take back: a Done's action, or an
+   * Undone's undo to redo it.
    */
   action?: string;
+  /**
+   * Newest is Ctrl+Z: the student's newest action not yet undone, in
+   * place of Action. Never implied by an empty Action, so an Undo offered
+   * for an action that had nothing to undo can't take back another.
+   */
+  newest?: boolean;
 }
 /**
  * Undone is the undo call's reply: what was taken back, said where the
@@ -62,9 +96,13 @@ export interface Undone {
    */
   action: string;
   /**
+   * Undo is this undo's own id: undoing it is redo.
+   */
+  undo: string;
+  /**
    * Entry is its catalog id ("set.rename").
    */
-  entry: string;
+  entry?: string;
   /**
    * Said is the sentence to show.
    */
@@ -72,11 +110,12 @@ export interface Undone {
   /**
    * Kind is what kind of thing Show goes to.
    */
-  kind: Resource;
+  kind?: Resource;
   /**
-   * ID is the thing Show goes to.
+   * ID is the thing Show goes to. Kind, ID and Entry are absent when the
+   * action's record is gone (purged with the week): no Show then.
    */
-  id: string;
+  id?: string;
   /**
    * Seq is the change-log sequence of the undo's last write, so the page
    * knows when its copies have caught up.

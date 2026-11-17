@@ -2,6 +2,9 @@
 import type { Action, Scope } from './errs';
 
 export type ErrorId =
+  | "action.blocked"
+  | "action.unknown"
+  | "action.wrote_twice"
   | "activity.bad_id"
   | "activity.bad_question_id"
   | "activity.bad_since"
@@ -20,6 +23,8 @@ export type ErrorId =
   | "condition.disk_space"
   | "condition.pdf_reader"
   | "condition.scan_reader"
+  | "course.name_empty"
+  | "course.name_too_long"
   | "embed.failed"
   | "embed.unreachable"
   | "errors.clear_failed"
@@ -153,6 +158,31 @@ export interface CatalogEntry {
 }
 
 export const ERRORS: Record<ErrorId, CatalogEntry> = {
+  "action.blocked": {
+    what: "{name} can't run yet.",
+    why: "{why}.",
+    fix: "{fix}.",
+    action: "open_settings",
+    scope: "inline",
+    status: 409,
+    owner: "action",
+  },
+  "action.unknown": {
+    what: "PSet doesn't know how to do that.",
+    why: "The page asked for an action this version of PSet doesn't have.",
+    fix: "Reload the page.",
+    action: "reload",
+    scope: "inline",
+    status: 404,
+    owner: "action",
+  },
+  "action.wrote_twice": {
+    what: "Something went wrong inside PSet.",
+    why: "An action tried to save its changes in two parts.",
+    scope: "inline",
+    status: 500,
+    owner: "action",
+  },
   "activity.bad_id": {
     what: "Name the stretch with an id of up to 64 characters.",
     scope: "field",
@@ -286,6 +316,18 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 503,
     owner: "condition",
+  },
+  "course.name_empty": {
+    what: "Give the course a name.",
+    scope: "field",
+    status: 422,
+    owner: "course",
+  },
+  "course.name_too_long": {
+    what: "Keep it under {max} characters.",
+    scope: "field",
+    status: 422,
+    owner: "course",
   },
   "embed.failed": {
     what: "Ollama couldn't build the book's search.",

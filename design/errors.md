@@ -4,10 +4,13 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-138 entries.
+143 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
+| `action.blocked` | {name} can't run yet. | {why}. | {fix}. | `open_settings` | inline | action |
+| `action.unknown` | PSet doesn't know how to do that. | The page asked for an action this version of PSet doesn't have. | Reload the page. | `reload` | inline | action |
+| `action.wrote_twice` | Something went wrong inside PSet. | An action tried to save its changes in two parts. |  |  | inline | action |
 | `activity.bad_id` | Name the stretch with an id of up to 64 characters. |  |  |  | field | activity |
 | `activity.bad_question_id` | A question's id is up to 64 characters. |  |  |  | field | activity |
 | `activity.bad_since` | Say when the week starts, as an RFC 3339 time. |  |  |  | field | activity |
@@ -26,6 +29,8 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `condition.disk_space` | The disk is full. | PSet needs room for pages, images and its database. | Free some space, then try again. | `retry` | inline | condition |
 | `condition.pdf_reader` | PSet can't read PDFs on this computer. | Poppler, the program PSet reads PDFs with, isn't installed. | Install Poppler (Settings shows how), then try again. | `open_settings` | inline | condition |
 | `condition.scan_reader` | PSet can't read scanned pages on this computer. | Tesseract, the program PSet reads scans with, isn't installed. | Install Tesseract (Settings shows how), then try again. | `open_settings` | inline | condition |
+| `course.name_empty` | Give the course a name. |  |  |  | field | course |
+| `course.name_too_long` | Keep it under {max} characters. |  |  |  | field | course |
 | `embed.failed` | Ollama couldn't build the book's search. | Ollama answered with an error. It may be out of memory or missing its model. | Settings, under Health, says how to check it, then try again. | `open_settings` | inline | llm |
 | `embed.unreachable` | PSet couldn't reach Ollama. | Ollama searches your books, and it isn't running or isn't answering. | Settings, under Health, says how to start it. | `open_settings` | inline | llm |
 | `errors.clear_failed` | Couldn't clear the list of errors. | PSet's database didn't answer. | Try again. If it keeps happening, check the database in Settings. | `retry` | inline | errlog |
