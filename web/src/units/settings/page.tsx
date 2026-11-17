@@ -3,6 +3,7 @@ import type { Waits } from '@/design/loading';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { money, plural } from '@/lib/format';
+import { Bone } from '@/units/bone';
 import { Button } from '@/units/button';
 import { Confirm } from '@/units/confirm';
 import { DangerDialog } from '@/units/danger-dialog';
@@ -103,6 +104,16 @@ function FoldRow({
   );
 }
 
+/** The checks PSet runs, known before their results: their rows are drawn
+ *  while they run. */
+const CHECK_NAMES = [
+  { id: 'key', name: 'Model key' },
+  { id: 'pages', name: 'Page reading' },
+  { id: 'search', name: 'Search' },
+  { id: 'data', name: 'Study data' },
+  { id: 'disk', name: 'Disk space' },
+] as const;
+
 /** Runs `fn` after `ms`, once, and forgets it when the page goes. */
 function useLater() {
   const timers = useRef(new Set<number>());
@@ -201,19 +212,26 @@ function Groups({
             ? 'PSet needs a key to read and guide.'
             : undefined;
   const keyReady = key.trim() === '' ? 'Paste a key first.' : undefined;
-  const failing = settings.checks.filter((c) => !c.ok);
+  // The checks are the slowest read here (a second or so): until they are
+  // in, Health says it is checking and each check's result is a bar.
+  const checks = settings.checks;
+  const failing = (checks ?? []).filter((c) => !c.ok);
 
   // "Working" is quiet text and only "Failing" is a tag, at the row's right
   // edge with its fix to the left (settings-d22).
-  const rows = settings.checks.map((c) => (
+  const rows = (checks ?? CHECK_NAMES).map((c) => (
     <ListRow
       key={c.id}
       title={c.name}
-      meta={[c.detail]}
+      meta={['detail' in c ? c.detail : <Bone key="detail" ch={28} />]}
       aside={
         <div className="flex items-center justify-end gap-3">
-          {c.fix && <Button>{c.fix}</Button>}
-          {c.ok ? (
+          {'ok' in c && c.fix && <Button>{c.fix}</Button>}
+          {!('ok' in c) ? (
+            <span className="ds-small">
+              <Bone ch={7} />
+            </span>
+          ) : c.ok ? (
             <span className="ds-small text-(--ds-fg-muted)">Working</span>
           ) : (
             <Tag tone="danger">Failing</Tag>
@@ -389,7 +407,13 @@ function Groups({
         )}
         <Row
           name="Health"
-          hint="Everything is working"
+          hint={
+            checks === undefined ? (
+              <span className="ds-shimmer">Checking</span>
+            ) : (
+              'Everything is working'
+            )
+          }
           note={
             failing.length === 0
               ? undefined
@@ -397,6 +421,9 @@ function Groups({
           }
           tone="danger"
         />
+        {/* Opened for a failure only when the results were in as the page
+            drew: one that comes later says so in Health's line, and the
+            fold stays as it is, so nothing under it moves. */}
         <FoldRow label="Checks" open={unfolded || failing.length > 0}>
           {rows}
         </FoldRow>

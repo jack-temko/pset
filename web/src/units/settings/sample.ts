@@ -38,7 +38,9 @@ export interface SettingsData {
     courses: readonly { name: string; cost: number }[];
     allTime: number;
   };
-  checks: readonly Check[];
+  /** The health checks; undefined while PSet is still running them, which
+   *  takes a second or so (the slowest read in Settings). */
+  checks?: readonly Check[];
   errors: readonly KeptError[];
   /** What a reset would take, for the confirms. */
   counts: {
@@ -50,6 +52,40 @@ export interface SettingsData {
     answers: number;
   };
 }
+
+/** Every check working. */
+const CHECKS: readonly Check[] = [
+  {
+    id: 'key',
+    name: 'Model key',
+    ok: true,
+    detail: 'Lets PSet read and guide',
+  },
+  {
+    id: 'pages',
+    name: 'Page reading',
+    ok: true,
+    detail: 'Reads scanned pages',
+  },
+  {
+    id: 'search',
+    name: 'Search',
+    ok: true,
+    detail: 'Ollama searches your materials',
+  },
+  {
+    id: 'data',
+    name: 'Study data',
+    ok: true,
+    detail: 'Keeps your courses and study time',
+  },
+  {
+    id: 'disk',
+    name: 'Disk space',
+    ok: true,
+    detail: 'Room for your materials: 38 GB free',
+  },
+];
 
 export const FINE: SettingsData = {
   version: '0.2.1',
@@ -74,38 +110,7 @@ export const FINE: SettingsData = {
     ],
     allTime: 41.8,
   },
-  checks: [
-    {
-      id: 'key',
-      name: 'Model key',
-      ok: true,
-      detail: 'Lets PSet read and guide',
-    },
-    {
-      id: 'pages',
-      name: 'Page reading',
-      ok: true,
-      detail: 'Reads scanned pages',
-    },
-    {
-      id: 'search',
-      name: 'Search',
-      ok: true,
-      detail: 'Ollama searches your materials',
-    },
-    {
-      id: 'data',
-      name: 'Study data',
-      ok: true,
-      detail: 'Keeps your courses and study time',
-    },
-    {
-      id: 'disk',
-      name: 'Disk space',
-      ok: true,
-      detail: 'Room for your materials: 38 GB free',
-    },
-  ],
+  checks: CHECKS,
   errors: [],
   counts: {
     courses: 4,
@@ -120,7 +125,7 @@ export const FINE: SettingsData = {
 export const NO_KEY: SettingsData = {
   ...FINE,
   key: { status: 'none', value: '' },
-  checks: FINE.checks.map((c) =>
+  checks: CHECKS.map((c) =>
     c.id === 'key'
       ? {
           ...c,
@@ -159,9 +164,12 @@ export const UPDATING: SettingsData = {
   update: { ...UPDATE_AVAILABLE.update, status: 'updating' },
 };
 
+/** The checks still running: everything else is in. */
+export const CHECKING: SettingsData = { ...FINE, checks: undefined };
+
 export const CHECK_FAILING: SettingsData = {
   ...FINE,
-  checks: FINE.checks.map((c) =>
+  checks: CHECKS.map((c) =>
     c.id === 'search'
       ? {
           ...c,
@@ -222,7 +230,7 @@ export const STRESS: SettingsData = {
     })),
     allTime: 98765.43,
   },
-  checks: FINE.checks.map((c, i) => ({
+  checks: CHECKS.map((c, i) => ({
     ...c,
     ok: i % 2 === 0,
     detail: LONG,
