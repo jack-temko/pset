@@ -239,7 +239,8 @@ export interface Image {
 /**
  * Find is where PSet found a question, and the problem as found: its
  * statement, its box on the page and its figures. Exactly one of
- * MaterialID (with Page) and EarlierID is set.
+ * MaterialID (with Page) and EarlierID is set. A problem the student wrote
+ * out in full has no find step and no find: its Text is its statement.
  */
 export interface Find {
   /**
@@ -279,8 +280,8 @@ export interface Find {
    */
   figures: Figure[];
   /**
-   * Statement is the problem as it is printed (or as the student typed
-   * it, for one that is not in a material), as runs. Never null.
+   * Statement is the problem as it is printed, or as the earlier question
+   * has it, as runs. Never null.
    */
   statement: Run[];
 }
