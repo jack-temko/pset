@@ -3,7 +3,8 @@
 ## Status
 
 Planned. The decisions are in [backend-courses-grill.md](backend-courses-grill.md)
-(approved 2026-11-17); this file is the order of work and the tracker. Branch
+(approved 2026-11-17) and, for errors, [errors-grill.md](errors-grill.md); this file is
+the order of work and the tracker. Branch
 `backend`, not yet created.
 
 | Track | What                                | Status      | Branch |
@@ -72,6 +73,8 @@ Planned. The decisions are in [backend-courses-grill.md](backend-courses-grill.m
 - Then: the baseline migration, the trigger generator (from one list of tables and
   which columns the student made), the stream replaying the log, hiding and the weekly
   purge, the action id.
+- The `incidents` table, on the log like any resource
+  ([errors-grill.md](errors-grill.md)); the `errors` table and every `error` column go.
 - Done when: every table has a test that writes, reads the log, undoes and compares.
 - Deletes: every migration, `events`' ring and `reset`, every `Publish` call.
 
@@ -83,6 +86,10 @@ Planned. The decisions are in [backend-courses-grill.md](backend-courses-grill.m
   in `context`.
 - Done when: a fake three-step pipeline survives a kill and a restart, retries, goes
   out of date when its input changes, and its calls vanish with its subject.
+- Errors: every catalog entry gains its kind and what clears it; a failed step opens
+  an incident; healing reruns waiting steps when their cause is gone.
+- Also done when: a fake step that fails for want of a key runs again by itself once
+  a key is saved, and its incident resolves.
 - Deletes: `jobs`, lanes, `usage`'s forgotten marks and sweep.
 
 **4. Courses and materials.**
@@ -107,6 +114,8 @@ Planned. The decisions are in [backend-courses-grill.md](backend-courses-grill.m
 **7. Undo, and the rest.**
 
 - The undo call and Ctrl+Z's server side.
+- Errors: the Settings list (open, then a week), an incident's trace, and the
+  development switch that forces any error at any step.
 - Study time, usage views, Settings, health, Reset, the updater: moved onto the new
   tables with as little change as they allow.
 
@@ -114,6 +123,9 @@ Planned. The decisions are in [backend-courses-grill.md](backend-courses-grill.m
 
 - One event handler, one cache rule (the higher sequence wins), hooks per resource,
   the document stream, undo.
+- One error module: every failure on the page becomes a catalog error, the page's own
+  are posted as incidents, each shows once at the closest owner, and the layer runs
+  Try again.
 - Then each screen swaps its sample data for the hooks: Home, the course, the work
   pane, the material pane, Ask, Settings. Jack tries each.
 
