@@ -67,13 +67,14 @@ type Undone struct {
 	// Undo is this undo's own id: undoing it is redo.
 	Undo string `json:"undo"`
 	// Entry is its catalog id ("set.rename").
-	Entry string `json:"entry"`
+	Entry string `json:"entry,omitempty"`
 	// Said is the sentence to show.
 	Said string `json:"said"`
 	// Kind is what kind of thing Show goes to.
-	Kind change.Resource `json:"kind"`
-	// ID is the thing Show goes to.
-	ID string `json:"id"`
+	Kind change.Resource `json:"kind,omitempty"`
+	// ID is the thing Show goes to. Kind, ID and Entry are absent when the
+	// action's record is gone (purged with the week): no Show then.
+	ID string `json:"id,omitempty"`
 	// Seq is the change-log sequence of the undo's last write, so the page
 	// knows when its copies have caught up.
 	Seq int64 `json:"seq"`

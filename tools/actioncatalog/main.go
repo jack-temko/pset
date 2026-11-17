@@ -7,8 +7,10 @@ package main
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -21,9 +23,10 @@ func main() {
 	if len(os.Args) > 1 {
 		root = os.Args[1]
 	}
-	entries := backend.New(nil).Actions.Entries()
+	c := backend.New(nil).Actions
+	entries := c.Entries()
 	for path, content := range map[string]string{
-		filepath.Join(root, "web/src/api/gen/actions.ts"): typescript(entries),
+		filepath.Join(root, "web/src/api/gen/actions.ts"): typescript(entries, c.Inputs()),
 		filepath.Join(root, "design/actions.md"):          markdown(entries),
 	} {
 		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
@@ -33,12 +36,22 @@ func main() {
 	}
 }
 
-// typescript is the ids as a union and every entry, for the palette, the
-// keys and the buttons.
-func typescript(entries []action.Entry) string {
+// typescript is the ids as a union, every entry, for the palette, the keys
+// and the buttons, and each action's input type, so running one is typed.
+func typescript(entries []action.Entry, inputs map[string]action.Input) string {
 	var b strings.Builder
 	b.WriteString("// Generated from the action catalog (internal/action) by tools/actioncatalog. Do not edit.\n")
-	b.WriteString("import type { Entry } from './action';\n\n")
+	b.WriteString("import type { Entry } from './action';\n")
+	pkgs := map[string]bool{}
+	for _, in := range inputs {
+		if in.Name != "" {
+			pkgs[in.Package] = true
+		}
+	}
+	for _, p := range slices.Sorted(maps.Keys(pkgs)) {
+		fmt.Fprintf(&b, "import type * as %s from './%s';\n", p, p)
+	}
+	b.WriteString("\n")
 	b.WriteString("export type ActionId =\n")
 	for _, e := range entries {
 		fmt.Fprintf(&b, "  | %s\n", strconv.Quote(e.ID))
@@ -64,7 +77,18 @@ func typescript(entries []action.Entry) string {
 		fmt.Fprintf(&b, "    costs: %t,\n", e.Costs)
 		b.WriteString("  },\n")
 	}
-	b.WriteString("};\n")
+	b.WriteString("};\n\n")
+	b.WriteString("// What each action takes: the body of POST /api/actions/{id}.\n")
+	b.WriteString("export interface ActionInputs {\n")
+	for _, e := range entries {
+		in := inputs[e.ID]
+		t := "Record<string, never>"
+		if in.Name != "" {
+			t = in.Package + "." + in.Name
+		}
+		fmt.Fprintf(&b, "  %s: %s;\n", strconv.Quote(e.ID), t)
+	}
+	b.WriteString("}\n")
 	return b.String()
 }
 
