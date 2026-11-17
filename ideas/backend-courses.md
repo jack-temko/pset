@@ -3,7 +3,8 @@
 ## Status
 
 Planned. The decisions are in [backend-courses-grill.md](backend-courses-grill.md)
-(approved 2026-11-17) and, for errors, [errors-grill.md](errors-grill.md); this file is
+(approved 2026-11-17), [errors-grill.md](errors-grill.md) and
+[actions-conditions-place-grill.md](actions-conditions-place-grill.md); this file is
 the order of work and the tracker. Branch
 `backend`, not yet created.
 
@@ -61,6 +62,8 @@ the order of work and the tracker. Branch
 
 - `wire.go` for course, material, set, question, find, reading, document, turn, step
   and change; generated to TypeScript; no handlers.
+- Also the shapes of an incident, a condition, a place and an action's entry, so the
+  screens can be designed against them.
 - Merged into `design`, whose sample data is retyped against it.
 - Done when: `design` builds on the generated types. Jack reads the shapes once, since
   every screen is designed against them.
@@ -84,6 +87,9 @@ the order of work and the tracker. Branch
   calls keyed to steps.
 - The model client built once in `main`, with no package globals and no labels carried
   in `context`.
+- Conditions: the key, credit, the provider, the readers, the data folder, the
+  database and disk space as resources on the log, learned from what happens. They
+  are what healing watches.
 - Done when: a fake three-step pipeline survives a kill and a restart, retries, goes
   out of date when its input changes, and its calls vanish with its subject.
 - Errors: every catalog entry gains its kind and what clears it; a failed step opens
@@ -113,11 +119,20 @@ the order of work and the tracker. Branch
 
 **7. Undo, and the rest.**
 
+- The action catalog: every student action declared once (id, name, input, key, what
+  it needs, whether it can be undone, whether it spends), generated to TypeScript.
+  Routes, undo and Ask's tools come from it; Ask runs only what can be undone and
+  costs nothing.
+- Places: where the student was, the layout and what was not sent, per thing, by the
+  one rule in the grill.
 - The undo call and Ctrl+Z's server side.
 - Errors: the Settings list (open, then a week), an incident's trace, and the
   development switch that forces any error at any step.
 - Study time, usage views, Settings, health, Reset, the updater: moved onto the new
   tables with as little change as they allow.
+- Settings health reads the conditions, and each Fix is an action.
+- Done when: a test walks the catalog and proves every undoable action undoes, and
+  no two actions share a key on one screen.
 
 **8. The web data layer and the screens.** On `design`.
 
@@ -126,6 +141,10 @@ the order of work and the tracker. Branch
 - One error module: every failure on the page becomes a catalog error, the page's own
   are posted as incidents, each shows once at the closest owner, and the layer runs
   Try again.
+- Shortcuts from the catalog, single keys when not typing; a blocked action says what
+  it needs; places replace the browser-storage files for layout and position.
+- The palette (Ctrl+K): actions, and going to a course, set, problem or material by
+  name. A new unit, with its own short design pass first.
 - Then each screen swaps its sample data for the hooks: Home, the course, the work
   pane, the material pane, Ask, Settings. Jack tries each.
 
@@ -147,6 +166,9 @@ the order of work and the tracker. Branch
 | Porting the old library                      | After track 9 | Its own small grill, if Jack still wants it. The old folder is kept until then                                                   |
 | Routes and wire types                        | Tracks 1 to 7 | Written into `design/backend.md` as each part is built                                                                           |
 | A history screen                             | Not planned   | The log keeps a week; a screen needs its own grill                                                                               |
+| The palette's design and each action's key   | Track 8       | The palette's design pass on `/design`; keys drafted with the catalog and corrected in the palette                               |
+| The look of "waiting" and the one notice     | Track 8       | The error notice's design pass on `design`                                                                                       |
+| Step replay and the cost ledger              | After track 9 | Ideas, not decided: [step-replay.md](step-replay.md), [cost-ledger.md](cost-ledger.md)                                           |
 
 ### What could go wrong
 
@@ -155,8 +177,10 @@ the order of work and the tracker. Branch
 - **The pipeline gets worse without anyone noticing.** Rule 1 and track 0's bar.
 - **The branches drift.** The contract first, `dev` merged in weekly, and `dev` frozen
   for backend features.
-- **It grows.** The history screen, the port and the PDF library are named above as
-  not part of this, so they are not started by accident.
+- **It grows.** The history screen, the port, the PDF library, step replay and the
+  cost ledger are named above as not part of this, so they are not started by
+  accident. Actions, conditions and places were added on purpose: undo and healing
+  already build half of each.
 
 ### What Jack does
 
@@ -164,5 +188,5 @@ the order of work and the tracker. Branch
 - Track 1: read the shapes.
 - Track 2: hear the spike's result; decide if it changes the design.
 - Tracks 4 and 5: approve a capped model key for the evals, each time.
-- Track 8: try each screen.
+- Track 8: try each screen, and the palette.
 - Track 9: import his library again.
