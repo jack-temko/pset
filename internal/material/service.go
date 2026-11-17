@@ -162,7 +162,7 @@ func (r *reading) Read(p []byte) (int, error) {
 	if err != nil && !errors.Is(err, io.EOF) {
 		r.err = err
 	}
-	return n, err
+	return n, err //nolint:wrapcheck // a Reader passes its source's errors as they are: io.Copy needs io.EOF itself
 }
 
 // sniffer keeps the first bytes of a stream, to check it is a PDF.
