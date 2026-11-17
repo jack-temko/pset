@@ -80,7 +80,7 @@ D7 and the deletion. I recommended keeping the leaf forms, then deferring the de
 
 ### Open
 
-- Settings' checks loading form: designed when built and shown to Jack. With no remembered shapes, decide how the section holds its place so nothing under it moves.
+- ~~Settings' checks loading form~~ (step 7, 2026-11-17, waiting on Jack's try): the checks are their own read. While they run, Health's line says "Checking", shimmering, and the folded rows show each check by name with a bar for its result. A late failure takes Health's line (the error line, in place) and the fold does not open by itself, so nothing under it moves; it opens for a failure only when the results were in as the page drew.
 - The hold itself (D1) is built when routes are wired. Until then it is a written rule.
 
 ### Work, in order

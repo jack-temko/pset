@@ -48,6 +48,18 @@ export default defineSpec({
       text: 'Start Ollama',
     },
     {
+      id: 'checking',
+      name: 'Checking',
+      when: 'The checks are still running (a second or so): Health says Checking, shimmering; opened, each check shows a bar for its result.',
+      text: 'Checking',
+    },
+    {
+      id: 'checks-arriving',
+      name: 'Checks coming in',
+      when: 'Checking, then one check failing, in a loop: Health says so in its own line and the fold stays as it was, so nothing under it moves.',
+      loads: false,
+    },
+    {
       id: 'errors-kept',
       name: 'Errors kept',
       when: 'Errors are kept: "Recent errors (3)" is unfolded with each id, reason and fix, and Clear all.',
@@ -145,10 +157,15 @@ export default defineSpec({
   data: [
     {
       reads:
-        'The name, key and status, models per job, look, version and update, usage by month and course, health checks, kept errors and the reset counts',
+        'The name, key and status, models per job, look, version and update, usage by month and course, kept errors and the reset counts',
+      call: 'sample',
+      before: 'The title only. The groups wait for the settings (loading D2).',
+    },
+    {
+      reads: 'The health checks: whether each works, what it found, its fix',
       call: 'sample',
       before:
-        'The title only. The groups wait for the settings (loading D2); Settings checks get their own form later (step 7).',
+        'The page and the five checks by name. Each result is a bar and Health says Checking, for the second or so the checks take.',
     },
   ],
   inputs: [
@@ -403,6 +420,14 @@ export default defineSpec({
         'Its quiet form is the top bar and the title, nothing past them. A failed read keeps that and puts the Error notice under the title (A3).',
       why: 'Jack, 2026-11-16: "Hold the old screen" and "Stop at first unknown" (ideas/skeleton-grill.md D1, D2).',
       beat: 'A skeleton shaped like the sections (settings-d12)',
+      date: '2026-11-16',
+    },
+    {
+      id: 'settings-d27',
+      decision:
+        "The checks load on their own: Health says Checking, shimmering; opened, each result is a bar. A late failure takes Health's line and the fold stays as it was.",
+      why: 'Loading D7: the checks (/api/health, 0.9 to 1.6 s) are the one read in Settings that outlasts the grace (ideas/skeleton-grill.md, Open).',
+      beat: 'The page waiting for the checks; opening the fold when a late failure comes',
       date: '2026-11-16',
     },
   ],
