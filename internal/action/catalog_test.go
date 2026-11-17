@@ -5,7 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/jackt/pset/internal/change"
@@ -14,6 +17,7 @@ import (
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/store"
+	"github.com/jackt/pset/internal/testx"
 )
 
 var bg = context.Background()
@@ -48,8 +52,8 @@ func catalog(t *testing.T) (*Catalog, *store.Store) {
 	Add(c, Def[named]{ID: "test.rename", Name: "Rename", Undoable: true,
 		Undone: "Renamed back to {name}.", Redone: "Renamed to {name} again.", Run: rename})
 	Add(c, Def[named]{ID: "test.keep", Name: "Keep a name", Run: rename})
-	Add(c, Def[named]{ID: "test.read", Name: "Read a PDF", Undoable: true, Undone: "x", Needs: []condition.ID{condition.IDPDFReader}, Run: rename})
-	Add(c, Def[named]{ID: "test.twice", Name: "Write twice", Undoable: true, Undone: "x", Run: func(ctx context.Context, do *Do, in named) error {
+	Add(c, Def[named]{ID: "test.read", Name: "Read a PDF", Undoable: true, Undone: "x", Redone: "y", Needs: []condition.ID{condition.IDPDFReader}, Run: rename})
+	Add(c, Def[named]{ID: "test.twice", Name: "Write twice", Undoable: true, Undone: "x", Redone: "y", Run: func(ctx context.Context, do *Do, in named) error {
 		if err := rename(ctx, do, in); err != nil {
 			return err
 		}
@@ -88,19 +92,64 @@ func TestUndoSaysWhatItTookBackAndRedoes(t *testing.T) {
 	if done.Action == "" || done.Kind != change.ResourceCourse || done.ID != "c1" || done.Seq == 0 {
 		t.Fatalf("done %+v", done)
 	}
-	u, err := c.Undo(bg, "") // Ctrl+Z
+	u, err := c.Undo(bg, "", true) // Ctrl+Z
 	if err != nil {
 		t.Fatal(err)
 	}
 	if courseName(t, s) != "ECE 210" || u.Action != done.Action || u.Entry != "test.rename" || u.Said != "Renamed back to ECE 210." || u.ID != "c1" {
 		t.Fatalf("undone %+v, name %q", u, courseName(t, s))
 	}
-	r, err := c.Undo(bg, u.Undo)
+	r, err := c.Undo(bg, u.Undo, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if courseName(t, s) != "ECE 211" || r.Said != "Renamed to ECE 211 again." {
 		t.Fatalf("redone %+v, name %q", r, courseName(t, s))
+	}
+	// The redo undone, and that redone: the chain's root still names it.
+	u2, err := c.Undo(bg, r.Undo, false)
+	if err != nil || courseName(t, s) != "ECE 210" || u2.Said != "Renamed back to ECE 210." || u2.Entry != "test.rename" {
+		t.Fatalf("the redo undone: %+v (%v), name %q", u2, err, courseName(t, s))
+	}
+	r2, err := c.Undo(bg, u2.Undo, false)
+	if err != nil || courseName(t, s) != "ECE 211" || r2.Said != "Renamed to ECE 211 again." {
+		t.Fatalf("redone again: %+v (%v), name %q", r2, err, courseName(t, s))
+	}
+	// Undone once already: a second tab's undo of it is refused.
+	if _, err := c.Undo(bg, done.Action, false); !errors.Is(err, store.AlreadyUndone) {
+		t.Fatalf("undoing it twice: %v", err)
+	}
+}
+
+// Ctrl+Z after an undo and its redo goes on back, never toggling; with
+// nothing left it says so. An empty action is never Ctrl+Z by accident.
+func TestCtrlZWalksBack(t *testing.T) {
+	c, s := catalog(t)
+	run(t, c, "test.rename", "ECE 211")
+	run(t, c, "test.rename", "ECE 212")
+	u, err := c.Undo(bg, "", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Undo(bg, u.Undo, false); err != nil { // redo: 212 again
+		t.Fatal(err)
+	}
+	for _, want := range []string{"ECE 211", "ECE 210"} {
+		if _, err := c.Undo(bg, "", true); err != nil {
+			t.Fatal(err)
+		}
+		if got := courseName(t, s); got != want {
+			t.Fatalf("Ctrl+Z left %q, want %q", got, want)
+		}
+	}
+	if _, err := c.Undo(bg, "", true); !errors.Is(err, store.NothingToUndo) {
+		t.Fatalf("Ctrl+Z with nothing left: %v", err)
+	}
+	if _, err := c.Undo(bg, "", false); !errors.Is(err, store.NothingToUndo) {
+		t.Fatalf("an empty action: %v", err)
+	}
+	if _, err := c.Undo(bg, "no-such-action", false); err == nil {
+		t.Fatal("undoing an action that never ran")
 	}
 }
 
@@ -122,7 +171,7 @@ func TestCtrlZPassesOverWhatCantBeUndone(t *testing.T) {
 	if d.Action != "" {
 		t.Fatalf("an action that can't be undone gave an id to undo it by: %+v", d)
 	}
-	u, err := c.Undo(bg, "")
+	u, err := c.Undo(bg, "", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +213,8 @@ func TestAddRefusesBadDeclarations(t *testing.T) {
 	for name, d := range map[string]Def[named]{
 		"bad id":              {ID: "Rename", Name: "x", Run: func(context.Context, *Do, named) error { return nil }},
 		"no name":             {ID: "test.x", Run: func(context.Context, *Do, named) error { return nil }},
-		"undoable, no Undone": {ID: "test.y", Name: "y", Undoable: true, Run: func(context.Context, *Do, named) error { return nil }},
+		"undoable, no Undone": {ID: "test.y", Name: "y", Undoable: true, Redone: "z", Run: func(context.Context, *Do, named) error { return nil }},
+		"undoable, no Redone": {ID: "test.z", Name: "z", Undoable: true, Undone: "z", Run: func(context.Context, *Do, named) error { return nil }},
 	} {
 		func() {
 			defer func() {
@@ -174,5 +224,54 @@ func TestAddRefusesBadDeclarations(t *testing.T) {
 			}()
 			Add(c, d)
 		}()
+	}
+}
+
+// The routes: an action with no body is one that takes nothing; anything
+// after the input is refused; Undo by route says what it took back.
+func TestTheRoutes(t *testing.T) {
+	c, s := catalog(t)
+	Add(c, Def[struct{}]{ID: "test.touch", Name: "Touch", Run: func(ctx context.Context, do *Do, _ struct{}) error {
+		return do.Write(ctx, change.ResourceCourse, "c1", func(*sql.Tx) error { return nil })
+	}})
+	mux := http.NewServeMux()
+	c.Routes(mux)
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+	post := func(path, body string, out any) int {
+		t.Helper()
+		resp, err := http.Post(srv.URL+path, "application/json", strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer cleanup.Close(resp.Body)
+		if out != nil {
+			testx.Check(t, json.NewDecoder(resp.Body).Decode(out))
+		}
+		return resp.StatusCode
+	}
+	if code := post("/api/actions/test.touch", "", nil); code != http.StatusOK {
+		t.Fatalf("an action that takes nothing, with no body: %d", code)
+	}
+	if code := post("/api/actions/test.rename", `{"id":"c1","name":"x"} {"id":"c1","name":"y"}`, nil); code != http.StatusBadRequest {
+		t.Fatalf("two inputs in one body: %d", code)
+	}
+	var done Done
+	if code := post("/api/actions/test.rename", `{"id":"c1","name":"ECE 211"}`, &done); code != http.StatusOK || done.Action == "" {
+		t.Fatalf("a rename: %d %+v", code, done)
+	}
+	var u Undone
+	if code := post("/api/undo", `{"newest":true}`, &u); code != http.StatusOK || u.Said != "Renamed back to ECE 210." || courseName(t, s) != "ECE 210" {
+		t.Fatalf("Ctrl+Z by route: %d %+v", code, u)
+	}
+	resp, err := http.Get(srv.URL + "/api/actions")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var list List
+	testx.Check(t, json.NewDecoder(resp.Body).Decode(&list))
+	cleanup.Close(resp.Body)
+	if len(list.Actions) != 5 || list.Actions[0].ID != "test.keep" || list.Actions[0].Needs == nil {
+		t.Fatalf("the list %+v", list)
 	}
 }

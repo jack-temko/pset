@@ -75,10 +75,16 @@ export interface Done {
  */
 export interface Undo {
   /**
-   * Action is the id of the action to take back, as the change log named
-   * it. Absent for Ctrl+Z: the student's newest action not yet undone.
+   * Action is the id of the action to take back: a Done's action, or an
+   * Undone's undo to redo it.
    */
   action?: string;
+  /**
+   * Newest is Ctrl+Z: the student's newest action not yet undone, in
+   * place of Action. Never implied by an empty Action, so an Undo offered
+   * for an action that had nothing to undo can't take back another.
+   */
+  newest?: boolean;
 }
 /**
  * Undone is the undo call's reply: what was taken back, said where the

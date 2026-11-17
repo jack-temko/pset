@@ -321,8 +321,8 @@ it, and replaces the rest of this file at the cut-over (track 9).
 GET  /api/actions             every action, sorted by id: the palette's list
 POST /api/actions/{id}        run it; body is its typed input
                               -> {action?, kind?, id?, seq}; action is what Undo takes
-POST /api/undo                {action?} -> {action, undo, entry, said, kind, id, seq}
-                              no action: Ctrl+Z, the newest not undone;
+POST /api/undo                {action} or {newest: true} -> {action, undo, entry, said, kind, id, seq}
+                              newest: Ctrl+Z, the newest not undone (never an empty action);
                               action = a previous undo's id: redo
 GET  /api/courses             the courses not removed, in the order added
 GET  /api/courses/{id}        one course

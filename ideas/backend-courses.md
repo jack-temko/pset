@@ -171,7 +171,9 @@ Settings list, an incident's trace, Try again, the switch that forces an error);
 7d Settings, health, study time, usage and Reset on the new store. Each later track
 adds its own actions, and the catalog's walk test grows with them. Decided
 (Jack had no preference): one route for every action, `POST /api/actions/{id}`;
-the key and profile move to `store.db` in 7d.
+the key and profile move to `store.db` in 7d. For track 8: an action that can't
+be undone writes as PSet, so the stream can't tell it from PSet's own work; a page
+offers Undo only when the action's reply carries an `action`.
 
 - The action catalog: every student action declared once (id, name, input, key, what
   it needs, whether it can be undone, whether it spends), generated to TypeScript.
