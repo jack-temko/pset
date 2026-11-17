@@ -28,11 +28,6 @@ export default defineSpec({
       name: 'Home: assignments and courses',
       when: 'Home: an Assignments list of five rows, 40 below it a Courses list of five rows, each list under a section heading with a Counter; Courses ends in "Show all 8".',
     },
-    {
-      id: 'loading',
-      name: 'Loading',
-      when: 'While the course loads: two lines of bars, and a bar where the time this week goes.',
-    },
   ],
   exampleWidth: 960,
   stress:
@@ -45,10 +40,6 @@ export default defineSpec({
     },
   ],
   inputs: [
-    {
-      name: 'loading',
-      does: 'Draws its loading form at its place in the list.',
-    },
     { name: 'name', does: 'The course’s name.' },
     { name: 'href', does: 'Where the course name goes.' },
     {
@@ -204,6 +195,15 @@ export default defineSpec({
       why: 'Step 5 of the loading skeleton plan (ideas/skeleton-plan.md): a list loads as itself, so nothing on the screen moves when its rows come.',
       beat: 'Each screen drawing its own bar for it',
       date: '2026-11-14',
+      supersededBy: 'course-row-d15',
+    },
+    {
+      id: 'course-row-d15',
+      decision:
+        'No loading form of its own: its screen holds the previous one until the data is in, then this draws whole (loading D1, D7).',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
+      beat: 'Its own loading form (course-row-d14)',
+      date: '2026-11-16',
     },
   ],
 });

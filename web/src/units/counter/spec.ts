@@ -14,20 +14,11 @@ export default defineSpec({
       name: 'Three digits',
       when: 'Many things, such as 128: the pill grows with the number.',
     },
-    {
-      id: 'loading',
-      name: 'Loading',
-      when: 'While its number loads: a small pill bar at the counter’s height.',
-    },
   ],
   stress:
     'The number "1,234" in a 32px container: it never truncates, and overflows the container rather than lie.',
   actions: [],
   inputs: [
-    {
-      name: 'loading',
-      does: 'Draws its loading form: bone bars at its own size.',
-    },
     { name: 'children', does: 'The number, written as it should read.' },
   ],
   priority: { first: 'The number.' },
@@ -60,6 +51,15 @@ export default defineSpec({
       why: 'Step 4 of the loading skeleton plan: it matches every other loading bar. Jack, on a picture that hid it: "I want it to match the other bars".',
       beat: 'Each screen drawing its own bar for it',
       date: '2026-11-12',
+      supersededBy: 'counter-d4',
+    },
+    {
+      id: 'counter-d4',
+      decision:
+        'No loading form of its own: its screen holds the previous one until the data is in, then this draws whole (loading D1, D7).',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
+      beat: 'Its own loading form (counter-d3)',
+      date: '2026-11-16',
     },
   ],
 });

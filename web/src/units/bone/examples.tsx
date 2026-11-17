@@ -1,6 +1,5 @@
 import { defineExamples } from '@/design/examples';
-import { Bone, BoneBlock, Fill } from './index';
-import { RHYTHM } from './rhythm';
+import { Bone, BoneBlock } from './index';
 import spec from './spec';
 
 const STEPS = [
@@ -10,18 +9,6 @@ const STEPS = [
   ['ds-small', 'Small'],
   ['ds-label', 'Label'],
 ] as const;
-
-/** A row drawn the way a list row is: title on line one, meta on line two. */
-const Row = ({ row }: { row: number }) => (
-  <div className="min-h-14 border-b border-(--ds-border-muted) px-4 py-2 last:border-b-0">
-    <p className="ds-body font-medium">
-      <Bone ch={RHYTHM.title} row={row} />
-    </p>
-    <p className="ds-small min-h-5">
-      <Bone ch={RHYTHM.meta} row={row} />
-    </p>
-  </div>
-);
 
 export default defineExamples(spec, Bone, {
   states: {
@@ -34,13 +21,6 @@ export default defineExamples(spec, Bone, {
               <Bone ch={14} />
             </p>
           </div>
-        ))}
-      </div>
-    ),
-    rhythm: () => (
-      <div className="w-[480px] rounded-(--ds-radius-control) border border-(--ds-border)">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <Row key={i} row={i} />
         ))}
       </div>
     ),
@@ -58,11 +38,6 @@ export default defineExamples(spec, Bone, {
     still: () => (
       <p className="ds-reading">
         <Bone ch={30} still />
-      </p>
-    ),
-    fill: () => (
-      <p className="ds-body font-medium text-(--ds-fg)">
-        <Fill ch={RHYTHM.title}>Problem set 4</Fill>
       </p>
     ),
   },

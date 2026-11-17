@@ -70,10 +70,6 @@ export default defineSpec({
   ],
   actions: [],
   inputs: [
-    {
-      name: 'loading',
-      does: 'Draws its loading form: one bar line for each line, growing when the text comes.',
-    },
     { name: 'name', does: 'The student’s name; empty drops it from the line.' },
     {
       name: 'hour',
@@ -150,6 +146,15 @@ export default defineSpec({
       why: 'Step 6, S8 reversed: Jack, "lets go with 2, but it smoothly grows if needed. and smoothly replaces the text. Make it effortless".',
       beat: 'GreetingSkeleton, bars in hand-set line heights',
       date: '2026-11-14',
+      supersededBy: 'greeting-d7',
+    },
+    {
+      id: 'greeting-d7',
+      decision:
+        'No loading form of its own: its screen holds the previous one until the data is in, then this draws whole (loading D1, D7).',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
+      beat: 'Its own loading form (greeting-d6)',
+      date: '2026-11-16',
     },
   ],
 });

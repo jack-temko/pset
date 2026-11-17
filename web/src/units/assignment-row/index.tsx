@@ -35,24 +35,7 @@ export interface AssignmentRowProps {
  *  line one, the course, time left and, for a recently opened one, when it
  *  was opened on line two, the due date and progress bar at the right
  *  (assignment-row-d1 to d4). */
-export function AssignmentRow(
-  props:
-    | (AssignmentRowProps & { loading?: undefined })
-    | (Partial<AssignmentRowProps> & {
-        /** Draws its loading form: its place in the list, which picks the
-         *  bars' widths (assignment-row-d6). */
-        loading: { row: number };
-      }),
-) {
-  if (props.loading !== undefined)
-    return (
-      <ListRow
-        loading={{ row: props.loading.row, lines: 2 }}
-        status={<DueStatus loading />}
-        aside={<ProgressBar loading />}
-        asideWidth={ASIDE_WIDTH}
-      />
-    );
+export function AssignmentRow(props: AssignmentRowProps) {
   const {
     set,
     href,

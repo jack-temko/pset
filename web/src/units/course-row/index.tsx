@@ -1,4 +1,3 @@
-import { Bone } from '@/units/bone';
 import { ListRow } from '@/units/list-row';
 import { minutesText } from '@/units/set-line/dates';
 
@@ -20,27 +19,7 @@ interface CourseRowProps {
   weekMinutes: number;
 }
 
-export function CourseRow(
-  props:
-    | (CourseRowProps & { loading?: undefined })
-    | (Partial<CourseRowProps> & {
-        /** Draws its loading form: its place in the list, which picks the
-         *  bars' widths (course-row-d14). */
-        loading: { row: number };
-      }),
-) {
-  if (props.loading !== undefined)
-    return (
-      <ListRow
-        loading={{ row: props.loading.row, lines: 2 }}
-        aside={
-          <span className="ds-small block min-h-5 text-right">
-            <Bone ch={11} />
-          </span>
-        }
-        asideWidth={ASIDE_WIDTH}
-      />
-    );
+export function CourseRow(props: CourseRowProps) {
   const { name, href, todo, materials, weekMinutes } = props;
   return (
     <ListRow

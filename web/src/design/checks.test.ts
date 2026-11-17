@@ -243,7 +243,7 @@ describe('the checks', () => {
     expect(noStress.join()).toContain('no stress render');
   });
 
-  it('requires a loading form per state that loads, when the unit reads data', async () => {
+  it('requires a quiet form per state that loads, when a screen reads data', async () => {
     // Off the contract (no waits in its sources), a state without a skeleton fails.
     const off = (sub: Subject) => ({
       sources: Object.fromEntries(
@@ -251,14 +251,16 @@ describe('the checks', () => {
       ),
     });
     const noRender = await broken(SCREEN, () => ({}), off);
-    expect(noRender.join()).toContain('no loading form for state list');
+    expect(noRender.join()).toContain('no quiet form for state list');
     // A state reached only by acting needs none.
     const acting = await broken(
       SCREEN,
       (s) => ({ states: s.states.map((x) => ({ ...x, loads: false })) }),
       off,
     );
-    expect(acting.join()).not.toContain('no loading form');
+    expect(acting.join()).not.toContain('no quiet form');
+    // A part that reads data needs none: its screen holds.
+    expect(await broken(ROW, () => ({}), off)).toEqual([]);
     // On the contract, none is written: it is derived.
     expect(await broken(SCREEN, () => ({}))).toEqual([]);
   });

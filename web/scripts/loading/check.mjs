@@ -1,8 +1,9 @@
-// The box proof (make loading-check; ideas/skeleton-plan.md, layer B). Opens
-// /design/loading in Chromium for the units on the loading contract, and
-// fails on any state whose loading form is not the size of the loaded one.
-// It finds those units itself: nothing to list or update when one is added
-// or converted.
+// The loading proof (make loading-check; ideas/skeleton-grill.md D8). Opens
+// /design/loading in Chromium for the screens on the loading contract, and
+// fails on any state whose quiet form draws a text somewhere else than
+// loaded, or whose flip to loaded redraws a text or jumps it in one frame.
+// It finds those screens itself: nothing to list or update when one is
+// added or converted.
 //
 //   node scripts/loading/check.mjs <base url> [--shot <png>]
 import { chromium } from 'playwright';

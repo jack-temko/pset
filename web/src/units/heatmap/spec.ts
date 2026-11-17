@@ -46,10 +46,6 @@ export default defineSpec({
   ],
   inputs: [
     {
-      name: 'loading',
-      does: 'Draws its loading form: the real grid, empty, and the heading as a bar.',
-    },
-    {
       name: 'days',
       does: 'The study days, each under its date "2026-10-13"; a day left out is empty.',
     },
@@ -181,6 +177,7 @@ export default defineSpec({
       why: 'Step 6, S8 reversed: Jack, "lets go with 2, but it smoothly grows if needed. and smoothly replaces the text. Make it effortless".',
       beat: 'HeatmapSkeleton, a heading bar over one block',
       date: '2026-11-14',
+      supersededBy: 'heatmap-d15',
     },
     {
       id: 'heatmap-d13',
@@ -197,6 +194,14 @@ export default defineSpec({
       why: 'Jack: "Do the heatmap", on fading its squares in like the other stats.',
       beat: 'A left-to-right sweep, which would draw the eye on every Home visit; the squares appearing at once',
       date: '2026-11-14',
+    },
+    {
+      id: 'heatmap-d15',
+      decision:
+        'No loading form of its own: its screen holds the previous one until the data is in, then this draws whole (loading D1, D7).',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
+      beat: 'Its own loading form (heatmap-d12)',
+      date: '2026-11-16',
     },
   ],
 });

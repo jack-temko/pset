@@ -1,15 +1,10 @@
 import { useState } from 'react';
 
-import { UNKNOWN, waits, type Loads, type Waits } from '@/design/loading';
+import { waits, type Loads, type Waits } from '@/design/loading';
 import { HomeLists } from '@/units/assignment-row/home';
-import {
-  listsShape,
-  type CourseSummary,
-  type HomeSet,
-  type ListsShape,
-} from '@/units/assignment-row/lists';
-import { Bone, Ticker } from '@/units/bone';
-import { BarChart, weekShape } from '@/units/bar-chart';
+import type { CourseSummary, HomeSet } from '@/units/assignment-row/lists';
+import { Ticker } from '@/units/bone';
+import { BarChart } from '@/units/bar-chart';
 import { Greeting } from '@/units/greeting';
 import type { StudyDay } from '@/units/heatmap';
 import { Heatmap } from '@/units/heatmap';
@@ -33,11 +28,10 @@ const count = (n: number) => String(n);
 const plural = (n: number, one: string, many: string) =>
   `${String(n)} ${n === 1 ? one : many}`;
 
-/** A figure under the bars: a bar at the shape's width while it loads, then
- *  the number rolling to its value (bone-d5). */
-const figureOf = (value: string | undefined, digits: number) => (
+/** A figure under the bars, rolling to its value (bone-d5). */
+const figureOf = (value: string) => (
   <p className="ds-heading ds-tabular text-(--ds-fg)">
-    <Ticker ch={digits}>{value}</Ticker>
+    <Ticker>{value}</Ticker>
   </p>
 );
 
@@ -48,38 +42,16 @@ interface HomeData {
   courses: readonly CourseSummary[];
 }
 
-/** What sizes Home while it loads: how many rows each list holds, and how
- *  many digits each figure under the bars has, since the labels beside them
- *  align to the widest. The greeting and the heatmap's heading load as one
- *  bar line each and grow if they wrap (bone-d4). */
-export interface HomeShape {
-  lists: ListsShape;
-  figures: readonly [number, number];
-}
-
-const digits = (n: number) => String(n).length;
-
 /** Home (S14): the info area (greeting, the heatmap and this week beside it),
  *  then the Assignments list, then the Courses list. This week sits beside
  *  the heatmap with a 14-day sparkline beside each figure (home-d10).
- *  It reads typed sample data until the backend has what it needs. Loading,
- *  every part draws its own loading form at the shape, and the headings,
- *  labels and links are real (home-d19). */
+ *  It reads typed sample data until the backend has what it needs. Its
+ *  quiet form, when its read outlasts the grace, is the top bar alone: the
+ *  greeting is data, so nothing below it is known (loading D2, A2). */
 export const Home = waits(
   {
     data: ['name', 'sets', 'study', 'courses'],
-    shapeOf: (d: HomeData & { now: Date }): HomeShape => {
-      const today = studyDay(d.now);
-      const s = homeStats(d.study, today);
-      return {
-        lists: listsShape(d.sets, d.courses, d.now),
-        figures: [
-          digits(s.questions.week),
-          digits(leftToDo(d.sets, today).questions),
-        ],
-      };
-    },
-  } satisfies Loads<HomeData & { now: Date }, HomeShape>,
+  } satisfies Loads<HomeData>,
   function Home({
     name,
     now,
@@ -104,114 +76,40 @@ export const Home = waits(
       homeHref?: string;
       settingsHref?: string;
     },
-    HomeData,
-    HomeShape
+    HomeData
   >) {
     const [held] = useState(() => Math.random());
-    const today = studyDay(now);
-    const shape = loading === UNKNOWN ? undefined : loading;
-    const figures = shape?.figures ?? [2, 2];
-
-    const greeting =
-      loading === undefined ? (
-        <Greeting
-          name={name}
-          hour={now.getHours()}
-          pick={pick ?? held}
-          sets={sets}
-          today={now}
-        />
-      ) : (
-        <Greeting
-          loading={{}}
-          hour={now.getHours()}
-          pick={pick ?? held}
-          today={now}
-        />
-      );
-
-    const heatmap =
-      loading === undefined ? (
-        <Heatmap days={study} today={today} weeks={WEEKS} grow />
-      ) : (
-        <Heatmap loading={{}} today={today} weeks={WEEKS} grow />
-      );
-
-    const lists =
-      loading === undefined ? (
-        <HomeLists
-          workHref={workHref}
-          coursesHref={coursesHref}
-          today={now}
-          sets={sets}
-          courses={courses}
-        />
-      ) : (
-        <HomeLists
-          workHref={workHref}
-          coursesHref={coursesHref}
-          today={now}
-          loading={shape?.lists ?? UNKNOWN}
-        />
-      );
-
-    if (loading !== undefined)
+    if (loading === true)
       return (
         <HomeFrame
           homeHref={homeHref}
           settingsHref={settingsHref}
-          greeting={greeting}
-          info={
-            <Beside
-              heatmap={heatmap}
-              week={
-                <>
-                  <Line>
-                    <p className="ds-body">
-                      <Bone ch={14} />
-                    </p>
-                    <p className="ds-small">
-                      <Bone ch={22} />
-                    </p>
-                  </Line>
-                  <div className="min-h-0 flex-1">
-                    <BarChart loading={weekShape(today)} />
-                  </div>
-                  <Rows>
-                    <Row
-                      first
-                      figure={figureOf(undefined, figures[0])}
-                      label={
-                        <p className="ds-small whitespace-nowrap text-(--ds-fg-muted)">
-                          Problems done
-                        </p>
-                      }
-                      caption={
-                        <p className="ds-small">
-                          <Bone ch={20} />
-                        </p>
-                      }
-                      trailing={<Sparkline loading height={28} />}
-                    />
-                    <Row
-                      figure={figureOf(undefined, figures[1])}
-                      label={<p className={small}>Problems left</p>}
-                      caption={
-                        <p className="ds-small">
-                          <Bone ch={24} />
-                        </p>
-                      }
-                      trailing={<Sparkline loading height={28} />}
-                    />
-                  </Rows>
-                </>
-              }
-            />
-          }
+          greeting={null}
+          info={null}
         >
-          {lists}
+          {null}
         </HomeFrame>
       );
+    const today = studyDay(now);
+    const greeting = (
+      <Greeting
+        name={name}
+        hour={now.getHours()}
+        pick={pick ?? held}
+        sets={sets}
+        today={now}
+      />
+    );
+    const heatmap = <Heatmap days={study} today={today} weeks={WEEKS} grow />;
+    const lists = (
+      <HomeLists
+        workHref={workHref}
+        coursesHref={coursesHref}
+        today={now}
+        sets={sets}
+        courses={courses}
+      />
+    );
 
     const s = homeStats(study, today);
     const left = leftToDo(sets, today);
@@ -227,7 +125,7 @@ export const Home = waits(
           <>
             <Line>
               <p className="ds-body ds-tabular text-(--ds-fg)">
-                <Ticker ch={6}>{minutesText(s.time.week)}</Ticker>{' '}
+                <Ticker>{minutesText(s.time.week)}</Ticker>{' '}
                 <span className="text-(--ds-fg-muted)">this week</span>
               </p>
               <p className="ds-small ds-tabular flex flex-wrap items-center gap-x-2 text-(--ds-fg-muted)">
@@ -249,7 +147,7 @@ export const Home = waits(
             <Rows>
               <Row
                 first
-                figure={figureOf(count(s.questions.week), figures[0])}
+                figure={figureOf(count(s.questions.week))}
                 label={
                   <p className="ds-small flex items-center gap-x-2 whitespace-nowrap text-(--ds-fg-muted)">
                     <span>Problems done</span>
@@ -264,7 +162,7 @@ export const Home = waits(
                 trailing={<Sparkline values={s.spark.questions} height={28} />}
               />
               <Row
-                figure={figureOf(count(left.questions), figures[1])}
+                figure={figureOf(count(left.questions))}
                 label={<p className={small}>Problems left</p>}
                 caption={
                   <Moved

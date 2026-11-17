@@ -7,11 +7,6 @@ const FRAME =
 
 export default defineExamples(spec, Sparkline, {
   states: {
-    loading: () => (
-      <div className={FRAME}>
-        <Sparkline loading />
-      </div>
-    ),
     busy: () => (
       <div className={FRAME}>
         <Sparkline

@@ -62,7 +62,7 @@ Superseded by these: S1 (reversed by D1), S7's derived skeletons and S8's FillBl
 
 ### Assumed (Jack can overrule)
 
-- A1: The callers that remain are Settings' checks, the material pane's page boxes (`BoneBlock`) and Problem's Finding and Queued (`Bone`). Verified by search before anything is deleted.
+- A1: The callers that remain are Settings' checks, the material pane's page boxes (`BoneBlock`) and Problem's Finding and Queued (`Bone`). Verified by search before anything is deleted. Searched 2026-11-16: on design none of them uses `Bone` yet (those uses were in the closed PRs; each draws its own box), so after the deletion nothing calls `Bone` or `BoneBlock`. Both stay as the one bar primitive for step 7 and D4's pulse; `Fill`, `FillBlock` and the rhythms go.
 - A2: Home's quiet form is the top bar alone, since the greeting is data.
 - A3: A whole screen whose read fails shows its quiet form with the Error notice and Try again under the title.
 - A4: "Session" in D3 means since the page loaded, kept in memory per screen.

@@ -15,20 +15,11 @@ export default defineSpec({
       when: 'A share of nothing: only the track shows.',
     },
     { id: 'full', name: 'The whole', when: 'The share is the whole.' },
-    {
-      id: 'loading',
-      name: 'Loading',
-      when: 'While the share loads: the empty track alone.',
-    },
   ],
   stress:
     'A value above the whole and a whole of zero: the bar stops at full and shows empty.',
   actions: [],
   inputs: [
-    {
-      name: 'loading',
-      does: 'Draws its loading form: bone bars at its own size.',
-    },
     { name: 'value', does: 'The share.' },
     { name: 'max', does: 'The whole, in the same unit.' },
   ],
@@ -50,6 +41,7 @@ export default defineSpec({
       why: 'Step 4 of the loading skeleton plan (ideas/skeleton-plan.md): each leaf designs its loading form once, so it loads the same everywhere.',
       beat: 'Each screen drawing its own bar for it',
       date: '2026-11-12',
+      supersededBy: 'meter-d4',
     },
     {
       id: 'meter-d3',
@@ -58,6 +50,15 @@ export default defineSpec({
       why: 'Jack: "can we make the bars (stat and progress) grow to their values as they load? And make the numbers tick up to their values like a stock ticker".',
       beat: 'The fill appearing at once',
       date: '2026-11-14',
+      supersededBy: 'meter-d4',
+    },
+    {
+      id: 'meter-d4',
+      decision:
+        'No loading form of its own: it draws whole once its screen has the data; a later change slides over 700ms. Arrival motion waits for D3.',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
+      beat: 'Its own loading form (meter-d2, meter-d3)',
+      date: '2026-11-16',
     },
   ],
 });

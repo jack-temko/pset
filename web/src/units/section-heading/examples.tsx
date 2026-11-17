@@ -25,11 +25,6 @@ export default defineExamples(spec, SectionHeading, {
         Work
       </SectionHeading>
     ),
-    loading: () => (
-      <SectionHeading count={3} loading>
-        In progress
-      </SectionHeading>
-    ),
     both: () => (
       <SectionHeading count={8} action={showAll}>
         In progress

@@ -34,11 +34,6 @@ export default defineSpec({
       name: 'No href',
       when: 'The title is plain text, not a link.',
     },
-    {
-      id: 'loading',
-      name: 'Loading',
-      when: 'While its row loads: the title and meta as bars, widths picked by its place in the list; the caller passes the status and aside’s own loading forms.',
-    },
   ],
   exampleWidth: 720,
   stress:
@@ -51,10 +46,6 @@ export default defineSpec({
     },
   ],
   inputs: [
-    {
-      name: 'loading',
-      does: 'Draws its loading form: its place in the list and whether it has a second line.',
-    },
     { name: 'title', does: 'Line one, truncating.' },
     {
       name: 'titleField',
@@ -212,6 +203,15 @@ export default defineSpec({
       why: 'Step 5 of the loading skeleton plan (ideas/skeleton-plan.md): a list loads as itself, so nothing on the screen moves when its rows come.',
       beat: 'A separate row skeleton',
       date: '2026-11-14',
+      supersededBy: 'list-row-d14',
+    },
+    {
+      id: 'list-row-d14',
+      decision:
+        'No loading form of its own: its screen holds the previous one until the data is in, then this draws whole (loading D1, D7).',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
+      beat: 'Its own loading form (list-row-d13)',
+      date: '2026-11-16',
     },
   ],
 });

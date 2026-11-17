@@ -4,6 +4,7 @@ import { LINE_MAX, PURPOSE_MAX } from './limits';
 import type { Rule } from './rules';
 import type { AnySpec } from './spec';
 import type { Vision } from './vision';
+import { hasQuietForm } from './quiet';
 
 /** Everything the checks may need to know about the other units. */
 export interface Context {
@@ -258,21 +259,19 @@ export function checkUnit(u: Subject, ctx: Context): string[] {
       if (typeof u.examples.states[s.id] !== 'function')
         fail(`no example render for state ${s.id}`);
     if (typeof u.examples.stress !== 'function') fail('no stress render');
-    // A unit that reads data has a loading form for every state the page
-    // can load into: derived, when it is made with `waits` (the loading
-    // contract), or hand-written until it is converted (skeleton-grill S7).
+    // A screen or pane that reads data has a quiet form for every state the
+    // page can load into (loading D1, D2): derived, when it is made with
+    // `waits`, or hand-written until it is converted. A part has none.
     const waiting =
       u.sources === null ||
       Object.values(u.sources).some((src) => src.includes('waits('));
-    if (spec.data && spec.data.length > 0 && !waiting)
+    if (hasQuietForm(spec) && !waiting)
       for (const s of spec.states)
         if (
           s.loads !== false &&
           typeof u.examples.skeletons?.[s.id] !== 'function'
         )
-          fail(
-            `no loading form for state ${s.id}: write a skeleton or use waits`,
-          );
+          fail(`no quiet form for state ${s.id}: make it with waits`);
   } else fail('has no examples');
 
   return bad;

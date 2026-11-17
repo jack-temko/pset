@@ -1,4 +1,4 @@
-import { listAssignments, type Listable } from './listed';
+import type { Listable } from './listed';
 
 /** One assignment as Home lists it. */
 export interface HomeSet extends Listable {
@@ -16,21 +16,6 @@ export interface CourseSummary {
   materials: number;
   weekMinutes: number;
 }
-
-/** What sizes Home's lists while they load: how many rows each holds. */
-export interface ListsShape {
-  assignments: number;
-  courses: number;
-}
-
-export const listsShape = (
-  sets: readonly HomeSet[],
-  courses: readonly CourseSummary[],
-  today: Date,
-): ListsShape => ({
-  assignments: listAssignments(sets, today).length,
-  courses: courses.length,
-});
 
 /** The sample's courses. */
 export const COURSES: CourseSummary[] = [

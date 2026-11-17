@@ -4,7 +4,6 @@ import spec from './spec';
 
 export default defineExamples(spec, Meter, {
   states: {
-    loading: () => <Meter loading />,
     half: () => <Meter value={5} max={10} />,
     empty: () => <Meter value={0} max={10} />,
     full: () => <Meter value={10} max={10} />,
