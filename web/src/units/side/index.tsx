@@ -16,8 +16,9 @@ export function DropFill() {
 }
 
 /** One side of the workspace: a row of tabs over the open tab's pane. The
- *  tab row is drawn at once; the pane is whatever the caller gives, a pane or
- *  its skeleton, so a side loads on its own (side-d1). A tab from the other
+ *  tab row is drawn at once; the pane is whatever the caller gives, and draws
+ *  its own quiet form until its data is in, so a side loads on its own
+ *  (side-d1). A tab from the other
  *  side dragged anywhere over it, row or pane, tints the whole side and lands
  *  at the end of its tabs (or before the tab it is dropped on). A tab of this
  *  side only shows an insertion bar in its row. */

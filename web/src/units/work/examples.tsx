@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { defineExamples } from '@/design/examples';
-import { Work, WorkSkeleton, type WorkProps } from './index';
+import { Work, type WorkProps } from './index';
 import { pageMemory } from './memory';
 import * as sample from './sample';
 import spec from './spec';
@@ -13,8 +14,19 @@ function Recorded(props: WorkProps) {
   const say = (s: string) => {
     setFired(s);
   };
+  // The readout is the design page's, not the pane's: it goes in the stage's
+  // caption slot, outside the pane, so the pane's own height is all it has.
+  const [slot, setSlot] = useState<Element | null>(null);
   return (
-    <div className="space-y-4">
+    <div
+      ref={(el) => {
+        setSlot(
+          el
+            ?.closest('.ds')
+            ?.parentElement?.querySelector('[data-stage-caption]') ?? null,
+        );
+      }}
+    >
       <Work
         memory={pageMemory()}
         today={sample.TODAY}
@@ -38,12 +50,13 @@ function Recorded(props: WorkProps) {
         }}
         {...props}
       />
-      <p
-        data-fired
-        className="ds-small mx-auto max-w-[760px] border-t border-(--ds-border-muted) pt-2 text-(--ds-fg-muted)"
-      >
-        {fired}
-      </p>
+      {slot &&
+        createPortal(
+          <p data-fired className="pt-3">
+            {fired}
+          </p>,
+          slot,
+        )}
     </div>
   );
 }
@@ -62,14 +75,4 @@ export default defineExamples(spec, Work, {
     failed: () => <Recorded set={sample.failedOnce()} startAt="p5" />,
   },
   stress: () => <Recorded set={sample.stress()} startAt="s1" />,
-  skeletons: {
-    'current-underline': () => <WorkSkeleton />,
-    summary: () => <WorkSkeleton />,
-    'summary-finished': () => <WorkSkeleton opens="summary" />,
-    'summary-turned-in': () => <WorkSkeleton opens="turned-in" />,
-    empty: () => <WorkSkeleton />,
-    plain: () => <WorkSkeleton />,
-    finding: () => <WorkSkeleton />,
-    failed: () => <WorkSkeleton />,
-  },
 });

@@ -1,5 +1,5 @@
 import { defineExamples } from '@/design/examples';
-import { ListPage, ListPageSkeleton } from './index';
+import { ListPage } from './index';
 import {
   COURSE_LIST,
   MANY,
@@ -12,7 +12,13 @@ import {
 import spec from './spec';
 
 const view = (p: Partial<Parameters<typeof ListPage>[0]> = {}) => (
-  <ListPage page={WORK} today={TODAY} courseHref={() => '#'} {...p} />
+  <ListPage
+    kind={(p.page ?? WORK).kind}
+    page={WORK}
+    today={TODAY}
+    courseHref={() => '#'}
+    {...p}
+  />
 );
 
 const LONG =
@@ -51,13 +57,4 @@ export default defineExamples(spec, ListPage, {
       },
       initial: { state: 'done' },
     }),
-  skeletons: {
-    filtered: () => <ListPageSkeleton />,
-    'all-courses': () => <ListPageSkeleton />,
-    'no-matches': () => <ListPageSkeleton />,
-    'nothing-to-do': () => <ListPageSkeleton />,
-    many: () => <ListPageSkeleton />,
-    courses: () => <ListPageSkeleton />,
-    memories: () => <ListPageSkeleton />,
-  },
 });

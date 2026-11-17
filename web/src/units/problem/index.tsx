@@ -376,29 +376,6 @@ export function Problem({
   );
 }
 
-/** The problem while the set loads: a heading bar, three lines of text, three
- *  closed help rows and the actions, in the heights of the real thing. */
-export function ProblemSkeleton() {
-  return (
-    <div aria-hidden className="space-y-4">
-      <div className="flex h-(--ds-heading-line) items-center">
-        <Bar className="h-5 w-40" />
-      </div>
-      <div className="space-y-3">
-        <Bar className="h-5 w-full" />
-        <Bar className="h-5 w-11/12" />
-        <Bar className="h-5 w-3/5" />
-      </div>
-      <HelpSkeleton />
-      <div className="flex h-(--ds-control) items-center gap-2">
-        <Bar className="h-(--ds-control) w-[112px]" />
-        <Bar className="h-(--ds-control) w-[144px]" />
-        <Bar className="h-(--ds-control) w-20" />
-      </div>
-    </div>
-  );
-}
-
 /** The three closed help rows, in their heights, until they can be opened. */
 function HelpSkeleton() {
   return (

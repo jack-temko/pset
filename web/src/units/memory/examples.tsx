@@ -14,11 +14,4 @@ export default defineExamples(spec, MemoryArea, {
     deleted: () => <MemoryArea deleted="m7" side="you" showAllHref={all} />,
   },
   stress: () => <MemoryArea showAllHref={all} />,
-  skeletons: {
-    'ask-saves': () => null,
-    'from-ask': () => null,
-    empty: () => null,
-    editing: () => null,
-    deleted: () => null,
-  },
 });

@@ -1,16 +1,6 @@
 import { ArrowDown, ArrowUp } from 'lucide-react';
 
-import { Row } from './layouts';
 import type { Change } from './stats';
-
-function Bar({ className }: { className: string }) {
-  return (
-    <span
-      aria-hidden
-      className={`block animate-pulse rounded-(--ds-radius-tag) bg-(--ds-border-muted) ${className}`}
-    />
-  );
-}
 
 /** A change as a glyph and its words, muted: being behind is not a warning. */
 export function ChangeText({ change }: { change: Change }) {
@@ -36,31 +26,5 @@ export function Moved({ text, change }: { text: string; change?: Change }) {
       <span className="truncate">{text}</span>
       {change && <ChangeText change={change} />}
     </p>
-  );
-}
-
-/** A figure row while it loads, for Course until its own loading form
- *  (step 8 of the loading skeleton plan). */
-export function RowSkeleton({ first }: { first?: boolean }) {
-  return (
-    <Row
-      first={first}
-      figure={
-        <p className="ds-heading flex h-(--ds-heading-line) items-center">
-          <Bar className="h-5 w-8" />
-        </p>
-      }
-      label={
-        <p className="ds-small flex h-(--ds-small-line) items-center">
-          <Bar className="h-3 w-24" />
-        </p>
-      }
-      caption={
-        <p className="ds-small flex h-(--ds-small-line) items-center">
-          <Bar className="h-3 w-32" />
-        </p>
-      }
-      trailing={<Bar className="h-7 w-full" />}
-    />
   );
 }

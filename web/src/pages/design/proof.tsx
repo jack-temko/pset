@@ -23,11 +23,8 @@ import { DEFAULT_WIDTH } from './url-state';
  *    loaded;
  *  - flip: drawn quiet, then turned loaded in the same tree, every text
  *    survives (no remount) and none reaches a new place in a single frame.
- *  One not yet converted is measured against its hand-written skeleton, for
- *  size only, so the board shows how far it is off. */
-
-/** Two boxes count as the same to this many pixels. */
-export const TOLERANCE = 0.01;
+ *  A screen whose quiet form draws what its loaded form draws fails: it has
+ *  none. */
 
 /** A text counts as in place to this many pixels. */
 export const TEXT_TOLERANCE = 0.5;
@@ -38,11 +35,8 @@ const VIEW_PX = 1280;
 export interface ProofResult {
   unit: string;
   state: string;
-  /** On the loading contract (made with waits): only these fail the check.
-   *  The rest are shown for how far they are from it. */
-  contract: boolean;
   ok: boolean;
-  /** The larger of the width and height differences, in px. */
+  /** How far the worst text moved, in px; infinite for a missing one. */
   worst: number;
   /** What differed, for the board. */
   note: string;
@@ -57,27 +51,6 @@ const widthOf = (spec: AnySpec) => {
 const PROVEN: readonly Entry[] = [...UNITS, ...FIXTURES].filter((e) =>
   hasQuietForm(e.spec),
 );
-
-/** What a state takes up: its height, how wide its content is (the union of
- *  its top boxes, so a pill or a narrower row counts), and what overflows.
- *  Nothing in a unit to mark or list, so a new or changed component needs
- *  nothing here. */
-function sizeOf(frame: HTMLElement) {
-  const at = frame.getBoundingClientRect();
-  let left = Infinity;
-  let right = -Infinity;
-  for (const el of frame.children) {
-    const r = el.getBoundingClientRect();
-    left = Math.min(left, r.left);
-    right = Math.max(right, r.right);
-  }
-  return {
-    height: at.height,
-    width: right > left ? right - left : 0,
-    'overflow width': frame.scrollWidth,
-    'overflow height': frame.scrollHeight,
-  };
-}
 
 /** One drawn text: its node, its content and where it starts in its frame. */
 interface Placed {
@@ -136,18 +109,27 @@ function worstOf(found: Found[]): Found {
 const apart = (a: { x: number; y: number }, b: { x: number; y: number }) =>
   Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 
-/** Each text drawn loading against the same text loaded: the nth time a text
- *  shows loading is matched with its nth time loaded (or the nth loaded text
- *  that starts with it, where the loaded value joins it in one node). */
+/** Each text drawn loading against the same text loaded: the nearest loaded
+ *  text with the same content not already matched (or, failing that, the
+ *  nearest that starts with it, where the loaded value joins it in one
+ *  node). A text shown twice, as the box's chip and in a turn, is matched to
+ *  the one in its own place. */
 function textsMatch(loaded: HTMLElement, loading: HTMLElement) {
   const there = textsOf(loaded);
   const used = new Set<Placed>();
   let worst = 0;
   let note = '';
   for (const t of textsOf(loading)) {
+    const nearest = (ok: (p: Placed) => boolean) =>
+      there
+        .filter((p) => !used.has(p) && ok(p))
+        .reduce<Placed | undefined>(
+          (best, p) => (best && apart(best, t) <= apart(p, t) ? best : p),
+          undefined,
+        );
     const twin =
-      there.find((p) => !used.has(p) && p.text === t.text) ??
-      there.find((p) => !used.has(p) && p.text.startsWith(t.text));
+      nearest((p) => p.text === t.text) ??
+      nearest((p) => p.text.startsWith(t.text));
     if (twin === undefined)
       return {
         worst: Infinity,
@@ -161,21 +143,6 @@ function textsMatch(loaded: HTMLElement, loading: HTMLElement) {
     }
   }
   return { worst, note };
-}
-
-function compare(loaded: HTMLElement, loading: HTMLElement) {
-  const a = sizeOf(loaded);
-  const b = sizeOf(loading);
-  let worst = 0;
-  let note = '';
-  for (const k of Object.keys(a) as (keyof typeof a)[]) {
-    const d = Math.abs(a[k] - b[k]);
-    if (d > worst) {
-      worst = d;
-      note = `${k} is ${d.toFixed(1)}px ${b[k] < a[k] ? 'less' : 'more'} loading`;
-    }
-  }
-  return { ok: worst <= TOLERANCE, worst, note };
 }
 
 /** Catches a state whose render throws, so the board reports it and goes
@@ -226,24 +193,18 @@ const twoFrames = () =>
   );
 
 /** One state: drawn loaded, drawn quiet, and drawn quiet then flipped to
- *  loaded in one tree. Measured once all have laid out and the fonts are in.
- *  A hand-written skeleton has no flip and is checked for size only. */
+ *  loaded in one tree. Measured once all have laid out and the fonts are in. */
 function Case({
   unit,
   state,
-  contract,
   width,
   loaded,
-  written,
   onDone,
 }: {
   unit: string;
   state: string;
-  contract: boolean;
   width: number;
   loaded: () => ReactNode;
-  /** A hand-written skeleton, for a unit not on the contract. */
-  written?: () => ReactNode;
   onDone: (r: ProofResult) => void;
 }) {
   const a = useRef<HTMLDivElement>(null);
@@ -295,22 +256,13 @@ function Case({
           note: `"${t.text}" jumps ${moved.toFixed(1)}px at the flip`,
         });
     });
-    report.current({ unit, state, contract, ...worstOf(found) });
+    report.current({ unit, state, ...worstOf(found) });
   });
 
   useEffect(() => {
     let live = true;
     void document.fonts.ready.then(twoFrames).then(() => {
       if (!live || !a.current || !b.current || !c.current) return;
-      if (written) {
-        report.current({
-          unit,
-          state,
-          contract,
-          ...compare(a.current, b.current),
-        });
-        return;
-      }
       const text = textsMatch(a.current, b.current);
       // A quiet form that draws what loaded draws is no quiet form.
       const found: Found =
@@ -327,7 +279,7 @@ function Case({
     return () => {
       live = false;
     };
-  }, [unit, state, contract, written]);
+  }, [unit, state]);
 
   // Before paint: where each text is in the first frame after the flip.
   useLayoutEffect(() => {
@@ -350,7 +302,6 @@ function Case({
     report.current({
       unit,
       state,
-      contract,
       ok: false,
       worst: Infinity,
       note: `it failed to render: ${message}`,
@@ -369,15 +320,11 @@ function Case({
         </Caught>
       </div>
       <div ref={b} className="ds shrink-0" style={{ width }}>
-        <Caught onError={broke}>
-          {written ? <Draw render={written} /> : forced(true)}
-        </Caught>
+        <Caught onError={broke}>{forced(true)}</Caught>
       </div>
-      {!written && (
-        <div ref={c} className="ds shrink-0" style={{ width }}>
-          <Caught onError={broke}>{forced(!flipped)}</Caught>
-        </div>
-      )}
+      <div ref={c} className="ds shrink-0" style={{ width }}>
+        <Caught onError={broke}>{forced(!flipped)}</Caught>
+      </div>
     </div>
   );
 }
@@ -386,13 +333,10 @@ function Case({
  *  another; reports each result. */
 export function UnitProof({
   entry,
-  onlyContract,
   onResult,
   onFinished,
 }: {
   entry: Entry;
-  /** Skip a unit not on the contract: the check in CI, kept light. */
-  onlyContract?: boolean;
   onResult: (r: ProofResult) => void;
   onFinished: () => void;
 }) {
@@ -416,10 +360,8 @@ export function UnitProof({
   useEffect(() => {
     finished.current = onFinished;
   });
-  const skipped = onlyContract === true && ex?.skeletons !== undefined;
   const over =
-    broken !== undefined ||
-    (ex !== undefined && (current === undefined || skipped));
+    broken !== undefined || (ex !== undefined && current === undefined);
   const told = useRef(onResult);
   useEffect(() => {
     told.current = onResult;
@@ -429,7 +371,6 @@ export function UnitProof({
       told.current({
         unit: spec.id,
         state: 'examples',
-        contract: true,
         ok: false,
         worst: Infinity,
         note: `its examples failed to load: ${broken}`,
@@ -438,23 +379,16 @@ export function UnitProof({
   useEffect(() => {
     if (over) finished.current();
   }, [over]);
-  if (!ex || !current || skipped) return null;
+  if (!ex || !current) return null;
 
   const render = current.stress ? ex.stress : ex.states[current.id];
-  // A unit off the contract has hand-written skeletons; its stress case has
-  // none, so it is measured against the first state's.
-  const written =
-    ex.skeletons?.[current.id] ??
-    (current.stress ? ex.skeletons?.[spec.states[0].id] : undefined);
   return (
     <Case
       key={current.id}
       unit={spec.id}
       state={current.id}
-      contract={ex.skeletons === undefined}
       width={widthOf(spec)}
       loaded={render}
-      written={written}
       onDone={(r) => {
         onResult(r);
         setAt((n) => n + 1);
@@ -473,8 +407,6 @@ declare global {
 /** `/design/loading`: the board. Proves every unit that reads data, one at a
  *  time, then lists every state, failures first and worst first. */
 export function LoadingBoard() {
-  const onlyContract =
-    new URLSearchParams(window.location.search).get('only') === 'contract';
   const [results, setResults] = useState<ProofResult[]>([]);
   const [at, setAt] = useState(0);
   const entry = PROVEN.at(at);
@@ -490,27 +422,22 @@ export function LoadingBoard() {
   }, [done, results]);
 
   const shown = [...results].sort(
-    (p, q) =>
-      Number(q.contract) - Number(p.contract) ||
-      Number(p.ok) - Number(q.ok) ||
-      q.worst - p.worst,
+    (p, q) => Number(p.ok) - Number(q.ok) || q.worst - p.worst,
   );
-  const on = results.filter((r) => r.contract);
-  const failing = on.filter((r) => !r.ok).length;
+  const failing = results.filter((r) => !r.ok).length;
   return (
     <div className="space-y-6 p-6" ref={board} data-proof="running">
       <div>
         <h1 className="text-2xl font-semibold">Loading</h1>
         <p className="text-sm text-muted-foreground">
           {done
-            ? `On the loading contract: ${String(on.length)} states, ${String(failing)} off. Every text in a quiet form must stay in place once loaded, to ${String(TEXT_TOLERANCE)}px, and survive the flip without a jump. Screens not converted yet are listed under them, for how far their skeletons are from their loaded size.`
+            ? `${String(results.length)} states, ${String(failing)} off. Every text in a quiet form must stay in place once loaded, to ${String(TEXT_TOLERANCE)}px, and survive the flip without a jump.`
             : `Proving ${entry.spec.id}…`}
         </p>
       </div>
       <table className="text-sm">
         <thead>
           <tr className="text-left text-muted-foreground">
-            <th className="pr-6 font-medium">Contract</th>
             <th className="pr-6 font-medium">Unit</th>
             <th className="pr-6 font-medium">State</th>
             <th className="pr-6 font-medium">Result</th>
@@ -520,9 +447,6 @@ export function LoadingBoard() {
         <tbody>
           {shown.map((r) => (
             <tr key={`${r.unit}:${r.state}`}>
-              <td className="pr-6 text-muted-foreground">
-                {r.contract ? 'Yes' : 'Not yet'}
-              </td>
               <td className="pr-6">{r.unit}</td>
               <td className="pr-6">{r.state}</td>
               <td
@@ -548,7 +472,6 @@ export function LoadingBoard() {
           <UnitProof
             key={entry.spec.id}
             entry={entry}
-            onlyContract={onlyContract}
             onResult={(r) => {
               setResults((all) => [...all, r]);
             }}

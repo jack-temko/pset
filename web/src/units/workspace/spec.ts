@@ -51,7 +51,7 @@ export default defineSpec({
     {
       id: 'loading',
       name: 'One side still loading',
-      when: 'The left side has loaded and the right is still a skeleton: each side loads on its own, and both tab rows are there.',
+      when: 'The left side has loaded and the right still shows its pane’s quiet form: each side loads on its own, and both tab rows are there.',
     },
   ],
   stress:
@@ -122,13 +122,6 @@ export default defineSpec({
       does: 'Opens a material (a new tab, so it can be open twice), another assignment, or Ask, as a tab on that side.',
     },
   ],
-  data: [
-    {
-      reads:
-        'The course’s name, materials and assignments with their problems; which tabs are open',
-      call: 'sample',
-    },
-  ],
   remembers: [
     {
       what: 'Which tabs are open on each side, the open tab on each, and the split',
@@ -154,7 +147,7 @@ export default defineSpec({
     },
     {
       name: 'loading',
-      does: 'Which sides still show their pane as a skeleton.',
+      does: 'Which sides still show their pane as its quiet form (the design page only).',
     },
     {
       name: 'onChange',

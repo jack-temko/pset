@@ -7,18 +7,14 @@ type ByState<S extends string> = Record<S, () => ReactNode>;
 /** The live renders of a unit, beside its spec. */
 export interface Examples<
   S extends string = string,
-  // The data reads no longer decide the fields: a unit that waits derives
-  // its loading renders (skeleton-grill S7). Kept so specs stay one type.
+  // The data reads no longer decide the fields: a screen that waits derives
+  // its quiet form from the same example, forced. Kept so specs stay one type.
   _D extends readonly DataRead[] = readonly DataRead[],
 > {
   /** One render per state id. */
   states: ByState<S>;
   /** The worst-case content: the longest, the most, the empty. */
   stress: () => ReactNode;
-  /** Hand-written loading renders, for a unit not yet on the loading
-   *  contract. A unit made with `waits` has none: its loading render is the
-   *  same example, forced. Goes when every unit is converted. */
-  skeletons?: Partial<ByState<S>>;
 }
 
 /** The error a component gets when its props and the spec's inputs differ:
@@ -62,5 +58,4 @@ export function defineExamples<
 export type AnyExamples = {
   states: Record<string, () => ReactNode>;
   stress: () => ReactNode;
-  skeletons?: Record<string, () => ReactNode>;
 };

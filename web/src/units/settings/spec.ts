@@ -56,7 +56,7 @@ export default defineSpec({
     {
       id: 'failed',
       name: 'Failed to load',
-      when: 'Settings could not be read: an Error notice block, centred, with Try again and Details.',
+      when: 'Settings could not be read: its quiet form, with an Error notice block under the title, Try again and Details.',
       text: "Couldn't load Settings",
     },
   ],
@@ -147,9 +147,15 @@ export default defineSpec({
       reads:
         'The name, key and status, models per job, look, version and update, usage by month and course, health checks, kept errors and the reset counts',
       call: 'sample',
+      before:
+        'The title only. The groups wait for the settings (loading D2); Settings checks get their own form later (step 7).',
     },
   ],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its quiet form: the top bar and the title.',
+    },
     {
       name: 'settings',
       does: 'Everything the page shows and every count its confirms use.',
@@ -284,6 +290,7 @@ export default defineSpec({
       why: `${ASSUMED}: nothing jumps on load.`,
       beat: 'A spinner',
       date: '2026-10-22',
+      supersededBy: 'settings-d26',
     },
     {
       id: 'settings-d13',
@@ -389,6 +396,14 @@ export default defineSpec({
       why: 'Jack: "Take both (Recommended)", as the Adds sit across from their headings (D9).',
       beat: 'Clear all under the list; "pset 0.2.1"',
       date: '2026-11-09',
+    },
+    {
+      id: 'settings-d26',
+      decision:
+        'Its quiet form is the top bar and the title, nothing past them. A failed read keeps that and puts the Error notice under the title (A3).',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Stop at first unknown" (ideas/skeleton-grill.md D1, D2).',
+      beat: 'A skeleton shaped like the sections (settings-d12)',
+      date: '2026-11-16',
     },
   ],
 });

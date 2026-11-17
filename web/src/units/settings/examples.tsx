@@ -1,5 +1,5 @@
 import { defineExamples } from '@/design/examples';
-import { Settings, SettingsSkeleton } from './index';
+import { Settings } from './index';
 import {
   CHECK_FAILING,
   ERRORS_KEPT,
@@ -28,14 +28,4 @@ export default defineExamples(spec, Settings, {
     failed: () => view({ failed: true }),
   },
   stress: () => view({ settings: STRESS, unfolded: true }),
-  skeletons: {
-    fine: () => <SettingsSkeleton />,
-    'no-key': () => <SettingsSkeleton />,
-    'key-failed': () => <SettingsSkeleton />,
-    'update-available': () => <SettingsSkeleton />,
-    updating: () => <SettingsSkeleton />,
-    'check-failing': () => <SettingsSkeleton />,
-    'errors-kept': () => <SettingsSkeleton />,
-    failed: () => <SettingsSkeleton />,
-  },
 });

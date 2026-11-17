@@ -110,9 +110,19 @@ export default defineSpec({
       reads:
         'Every assignment (name, course, due, problems done and total, time left, when finished) or every memory (text, course, source, when added)',
       call: 'sample',
+      before:
+        'Which list and its filters, from the Show all that opened it. The list itself waits for the items (loading D2).',
     },
   ],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its quiet form: the crumbs, the title and the filter bar.',
+    },
+    {
+      name: 'kind',
+      does: 'Which list (work, memories or courses), known from the Show all that opened it.',
+    },
     {
       name: 'page',
       does: 'The kind of list (work, memories or courses) and every item in it.',
@@ -217,6 +227,14 @@ export default defineSpec({
       why: 'Fable review, item 18; say-it-once. Jack took it in the review batch.',
       beat: 'The summary row unchanged on Done (list-page-d4)',
       date: '2026-11-09',
+    },
+    {
+      id: 'list-page-d9',
+      decision:
+        'Its quiet form is the crumbs, the title and the filter bar, all known from the Show all that opened it; it stops at the list, whose length is not.',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Stop at first unknown" (ideas/skeleton-grill.md D1, D2).',
+      beat: 'A bar where the heading, the filter bar and six rows go',
+      date: '2026-11-16',
     },
   ],
 });

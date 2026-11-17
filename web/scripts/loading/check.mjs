@@ -46,9 +46,7 @@ try {
       errors.push(`${r.url()} failed: ${r.failure()?.errorText ?? 'unknown'}`);
   });
   const started = Date.now();
-  // Only the units on the loading contract: the ones not converted yet show
-  // on /design/loading, but cannot fail a pull request.
-  await page.goto(`${base}/design/loading?only=contract`);
+  await page.goto(`${base}/design/loading`);
   const done = page.waitForSelector('[data-proof="done"]', {
     timeout: 120_000,
   });
@@ -76,10 +74,10 @@ try {
   // A run that measured nothing proves nothing.
   if (!Array.isArray(results) || results.length === 0)
     throw new Error('the board finished with no results');
-  const off = results.filter((r) => r.contract && !r.ok);
+  const off = results.filter((r) => !r.ok);
   const secs = ((Date.now() - started) / 1000).toFixed(0);
   console.log(
-    `Loading proof: ${String(results.length)} states on the contract, measured in ${secs}s; ${String(off.length)} off.`,
+    `Loading proof: ${String(results.length)} states, measured in ${secs}s; ${String(off.length)} off.`,
   );
   for (const r of off) console.log(`  ${r.unit}:${r.state}: ${r.note}`);
   if (off.length > 0) process.exitCode = 1;

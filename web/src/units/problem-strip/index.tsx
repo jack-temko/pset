@@ -94,28 +94,6 @@ export function ProblemStrip({
   );
 }
 
-/** The strip while the set loads: the track with as many segments as it
- *  will have, in the same heights. */
-export function ProblemStripSkeleton({ count = 8 }: { count?: number }) {
-  return (
-    <ul
-      aria-hidden
-      className="flex h-5 min-w-0 items-center"
-      style={{ gap: 2 }}
-    >
-      {Array.from({ length: count }, (_, i) => (
-        <li
-          key={i}
-          className={`h-2 min-w-0 flex-1 animate-pulse bg-(--ds-border-muted) motion-reduce:animate-none ${i === 0 ? 'rounded-l-full' : ''} ${i === count - 1 ? 'rounded-r-full' : ''}`}
-        />
-      ))}
-      <li className="ml-2 flex h-5 w-14 shrink-0 items-center">
-        <span className="h-3 w-full animate-pulse rounded-(--ds-radius-tag) bg-(--ds-border-muted) motion-reduce:animate-none" />
-      </li>
-    </ul>
-  );
-}
-
 /** The 2px line under the summary's stop: the same y as a segment's
  *  underline, in the stop's own colour unless given one. */
 function Underline({ color = 'currentColor' }: { color?: string }) {

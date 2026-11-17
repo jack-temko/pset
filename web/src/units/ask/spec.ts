@@ -101,11 +101,6 @@ export default defineSpec({
       when: 'Clear pressed: the Confirm popover under it says how many messages go and that memories stay, with Clear, then Cancel.',
       text: 'Clear 4 messages? Memories stay.',
     },
-    {
-      id: 'loading',
-      name: 'Loading',
-      when: 'The conversation is on its way: the top row, a message and an answer as quiet bars, and the composer at its own size.',
-    },
   ],
   exampleWidth: 560,
   stress:
@@ -195,6 +190,8 @@ export default defineSpec({
     {
       reads: 'The course’s one conversation: turns, calls, answers as blocks',
       call: 'sample',
+      before:
+        'The course, so the box works at once. The turns wait for the conversation (loading D2).',
     },
   ],
   remembers: [
@@ -205,6 +202,10 @@ export default defineSpec({
     },
   ],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its quiet form: the box at the foot, the conversation empty.',
+    },
     {
       name: 'course',
       does: 'The course’s name, for the empty line and the box.',
@@ -488,6 +489,14 @@ export default defineSpec({
       why: 'Jack: "Confirm popover, act first (Recommended)" (ideas/fable-review-grill.md D5).',
       beat: "Its own inline row in the top line (ask-d7's assumed confirm)",
       date: '2026-11-09',
+    },
+    {
+      id: 'ask-d29',
+      decision:
+        'Its quiet form is the box at the foot and an empty conversation above it; no bars for turns. The box is known, the turns are not.',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Stop at first unknown" (ideas/skeleton-grill.md D1, D2).',
+      beat: 'The top row, a message and an answer as quiet bars (the old Loading state)',
+      date: '2026-11-16',
     },
   ],
 });

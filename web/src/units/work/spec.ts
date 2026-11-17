@@ -149,6 +149,8 @@ export default defineSpec({
       reads:
         'The assignment (name, due, time left, time spent) and its problems with their labels, pages, statements, figures, parts and help',
       call: 'sample',
+      before:
+        'Which set, from the tab. Nothing in the pane is drawn until the set is in (loading D2).',
     },
   ],
   remembers: [
@@ -164,6 +166,7 @@ export default defineSpec({
     },
   ],
   inputs: [
+    { name: 'loading', does: 'Draws its quiet form: its column, empty.' },
     { name: 'set', does: 'The set and its problems.' },
     { name: 'startAt', does: 'The problem to open on.' },
     {
@@ -413,6 +416,14 @@ export default defineSpec({
       why: 'Jack: "Row in place, 10 s (Recommended)" (ideas/fable-review-grill.md D4).',
       beat: 'Six seconds (work-d2)',
       date: '2026-11-09',
+    },
+    {
+      id: 'work-d23',
+      decision:
+        "Its quiet form is its column at the pane height, empty: the due tag, the date, the strip and the problem are all the set's, so nothing is drawn before it.",
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Stop at first unknown" (ideas/skeleton-grill.md D1, D2).',
+      beat: 'WorkSkeleton: the set line, a strip and a problem or summary as bars',
+      date: '2026-11-16',
     },
   ],
 });
