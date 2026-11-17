@@ -5,9 +5,9 @@ name: CI
 # bundle build and the vulnerability scan. Spec: ideas/git-workflow-grill.md.
 on:
   push:
-    branches: [dev, main]
+    branches: [dev, main, backend]
   pull_request:
-    branches: [dev, main]
+    branches: [dev, main, backend]
 
 jobs:
   check:
