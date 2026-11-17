@@ -94,11 +94,15 @@ same connection and are not logged.
 
 ### Open
 
-- Whether embeddings (Ollama) stay: an eval of text search alone, its own decision.
+Each is tracked, with where and how it gets decided, in
+[backend-courses.md](backend-courses.md) ("What is still open").
+
+- Whether embeddings (Ollama) stay: an eval of text search alone.
 - Poppler and Tesseract as programs beside the binary: needs a spike.
 - The limits per model, in numbers.
 - The port of the old library, if Jack wants it: its own small grill.
 - The route list and wire types: written into `design/backend.md` as each part is built.
+- A history screen (Jack, 2026-11-17: "eventually I'll add a history"): its own grill.
 
 ## Reversals
 
