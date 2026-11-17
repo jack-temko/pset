@@ -22,3 +22,21 @@ type Courses struct {
 	// Courses is every course not removed.
 	Courses []Course `json:"courses"`
 }
+
+// The course actions' inputs (internal/action): what the page sends to
+// POST /api/actions/course.add and the rest.
+type (
+	// Add is a new course, by name.
+	Add struct {
+		Name string `json:"name"`
+	}
+	// Rename gives a course a new name.
+	Rename struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	// Remove hides a course, with everything in it, for a week.
+	Remove struct {
+		ID string `json:"id"`
+	}
+)

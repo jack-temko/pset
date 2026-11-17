@@ -12,10 +12,12 @@ import (
 	"os"
 	"path/filepath"
 
+	_ "github.com/jackt/pset/internal/action"
 	_ "github.com/jackt/pset/internal/activity"
 	_ "github.com/jackt/pset/internal/agent"
 	_ "github.com/jackt/pset/internal/ask"
 	_ "github.com/jackt/pset/internal/condition"
+	_ "github.com/jackt/pset/internal/course"
 	_ "github.com/jackt/pset/internal/errlog"
 	"github.com/jackt/pset/internal/errs"
 	_ "github.com/jackt/pset/internal/events"

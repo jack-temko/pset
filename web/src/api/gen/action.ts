@@ -42,6 +42,34 @@ export interface Entry {
   costs: boolean;
 }
 /**
+ * List is every action in the catalog, sorted by id: what the palette
+ * lists. Never null.
+ */
+export interface List {
+  actions: Entry[];
+}
+/**
+ * Done is the action route's reply: the action's id, for its Undo, and
+ * what it acted on.
+ */
+export interface Done {
+  /**
+   * Action is the id Undo takes it back by; absent when there is nothing to
+   * take back (it changed nothing, or can't be undone).
+   */
+  action?: string;
+  /**
+   * Kind and ID are the thing it acted on, when it names one.
+   */
+  kind?: Resource;
+  id?: string;
+  /**
+   * Seq is how far the change log had got once it was done, so the page
+   * knows when its copies have caught up.
+   */
+  seq: number /* int64 */;
+}
+/**
  * Undo is the undo call (Ctrl+Z, or the Undo on "Removed Problem set 4.
  * Undo."): it writes an action's old values back.
  */
@@ -61,6 +89,10 @@ export interface Undone {
    * Action is the id of the action taken back.
    */
   action: string;
+  /**
+   * Undo is this undo's own id: undoing it is redo.
+   */
+  undo: string;
   /**
    * Entry is its catalog id ("set.rename").
    */

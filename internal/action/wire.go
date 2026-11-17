@@ -27,6 +27,26 @@ type Entry struct {
 	Costs bool `json:"costs"`
 }
 
+// List is every action in the catalog, sorted by id: what the palette
+// lists. Never null.
+type List struct {
+	Actions []Entry `json:"actions"`
+}
+
+// Done is the action route's reply: the action's id, for its Undo, and
+// what it acted on.
+type Done struct {
+	// Action is the id Undo takes it back by; absent when there is nothing to
+	// take back (it changed nothing, or can't be undone).
+	Action string `json:"action,omitempty"`
+	// Kind and ID are the thing it acted on, when it names one.
+	Kind change.Resource `json:"kind,omitempty"`
+	ID   string          `json:"id,omitempty"`
+	// Seq is how far the change log had got once it was done, so the page
+	// knows when its copies have caught up.
+	Seq int64 `json:"seq"`
+}
+
 // Undo is the undo call (Ctrl+Z, or the Undo on "Removed Problem set 4.
 // Undo."): it writes an action's old values back.
 type Undo struct {
@@ -40,6 +60,8 @@ type Undo struct {
 type Undone struct {
 	// Action is the id of the action taken back.
 	Action string `json:"action"`
+	// Undo is this undo's own id: undoing it is redo.
+	Undo string `json:"undo"`
 	// Entry is its catalog id ("set.rename").
 	Entry string `json:"entry"`
 	// Said is the sentence to show.

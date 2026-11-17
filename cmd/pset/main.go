@@ -22,6 +22,7 @@ import (
 	"github.com/jackt/pset/internal/activity"
 	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/ask"
+	"github.com/jackt/pset/internal/backend"
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/condition"
 	"github.com/jackt/pset/internal/db"
@@ -205,6 +206,7 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	})
 
 	mux := http.NewServeMux()
+	backend.New(work).Routes(mux)
 	failures.Routes(mux)
 	cfg.Routes(mux)
 	books.Routes(mux)

@@ -236,6 +236,17 @@ CREATE TABLE calls (
 );
 CREATE INDEX calls_step ON calls (step_id);
 
+-- Each student action run, by the catalog entry it was (internal/action):
+-- what Undo says it took back, and where its Show goes. Not logged; it goes
+-- with its changes.
+CREATE TABLE actions (
+	id     TEXT PRIMARY KEY,
+	entry  TEXT NOT NULL,
+	kind   TEXT NOT NULL DEFAULT '',
+	res_id TEXT NOT NULL DEFAULT '',
+	at     TEXT NOT NULL
+);
+
 -- The change log. Written only by the triggers. AUTOINCREMENT keeps seq
 -- rising across purges: a plain rowid restarts at 1 once the log is emptied,
 -- and a page would take new changes for ones it has seen.

@@ -12,12 +12,12 @@ the order of work and the tracker. Branch
 | ----- | ----------------------------------- | ------------------------------------------- | ------------------ |
 | 0     | Groundwork on `dev`                 | Done: the bar is measured, the test fix #95 | `flaky-go-test`    |
 | 1     | The contract                        | Done: #96                                   | `backend-contract` |
-| 2     | Schema, change log, events          | Built, reviewed twice, in #97               | `changelog`        |
-| 3     | The step runner                     | Built, in review                            | `step-runner`      |
-| 4     | Courses and materials               | Not started                                 |                    |
+| 2     | Schema, change log, events          | Done: #97                                   | `changelog`        |
+| 3     | The step runner                     | Done: #98                                   | `step-runner`      |
+| 4     | Courses and materials               | Waiting: the eval and a real import (below) |                    |
 | 5     | Work: sets, finds, readings, guides | Not started                                 |                    |
 | 6     | Ask                                 | Not started                                 |                    |
-| 7     | Undo, and the rest of the app       | Not started                                 |                    |
+| 7     | Undo, and the rest of the app       | In progress: 7a, the action catalog         | `action-catalog`   |
 | 8     | The web data layer and the screens  | Not started                                 |                    |
 | 9     | Cut over                            | Not started                                 |                    |
 
@@ -138,15 +138,15 @@ tool that reports its own cost, fix this in track 5).
   it goes with the last of them. The library's tests import inline instead.
 - For track 7: a SQLite fault in `store.db` marks the `database` condition, but
   Settings' database check, which heals it, still looks at the old `pset.db`.
-- Migration `usage/5` drops the old `forgotten` table: a release before it, run on a
-  library this build has opened, would fail to record calls or remove anything.
-  `backend` ships no release, so this matters only if a build of it reaches Jack's
-  own library.
+- Old databases need not keep working (Jack, 2026-11-17): the migration stack is
+  reset once the rewrite is done, so a migration here never needs a way back.
 - Not done here: no Try again route yet (the action comes with track 7's catalog),
   and the new store's event stream is not mounted (no screen reads it before
   track 8).
 
-**4. Courses and materials.**
+**4. Courses and materials.** Waiting (2026-11-17): the search step waits for the
+embeddings eval, which needs Jack's test library, Ollama and a model key; the "done
+when" needs a real textbook and a scan. Courses themselves were built in 7a.
 
 - Courses; a material's import as steps (examine, read pages, contents, numbering,
   search); textbook detection; page images.
@@ -165,7 +165,13 @@ tool that reports its own cost, fix this in track 5).
 
 **6. Ask.** Turns per course on the same documents and stream; memory.
 
-**7. Undo, and the rest.**
+**7. Undo, and the rest.** Built ahead of 4 to 6, in four pull requests: 7a the
+action catalog, its route, Undo and the course actions; 7b places; 7c errors (the
+Settings list, an incident's trace, Try again, the switch that forces an error);
+7d Settings, health, study time, usage and Reset on the new store. Each later track
+adds its own actions, and the catalog's walk test grows with them. Decided
+(Jack had no preference): one route for every action, `POST /api/actions/{id}`;
+the key and profile move to `store.db` in 7d.
 
 - The action catalog: every student action declared once (id, name, input, key, what
   it needs, whether it can be undone, whether it spends), generated to TypeScript.
