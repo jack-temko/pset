@@ -22,6 +22,9 @@ type Run struct {
 	// Attempt is which run this is, from 1.
 	Attempt int
 	hash    string
+	// healed is the runner's count of each condition's Holds as this run
+	// started.
+	healed map[string]int
 }
 
 // Client is the model client, built once for the whole run. Without a

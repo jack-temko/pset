@@ -110,7 +110,11 @@ func Open(c Config) *Client {
 }
 
 // ChatConfigured reports whether the chat endpoint has a base URL and key.
-func (c *Client) ChatConfigured() bool { return c.apiBaseURL != "" && c.apiKey != "" }
+// A keyed client (NewKeyed) has a key source, and is configured: whether a
+// key is saved right now is asked of that source.
+func (c *Client) ChatConfigured() bool {
+	return c.apiBaseURL != "" && (c.apiKey != "" || c.key != nil)
+}
 
 // EmbedConfigured reports whether the embeddings endpoint is reachable in
 // principle (a base URL is set).

@@ -148,6 +148,7 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	defer cleanup.Close(work.DB)
 	var cfg *settings.Service
 	steps := runner.New(work, runner.Options{
+		DataDir: dir,
 		Key: func(ctx context.Context) (string, error) {
 			c, err := cfg.LLM(ctx)
 			return c.APIKey, err
@@ -241,7 +242,11 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 		}
 		close(stepsDone)
 	}()
-	go purgeDaily(runCtx, work, log)
+	purgeDone := make(chan struct{})
+	go func() {
+		purgeDaily(runCtx, work, log)
+		close(purgeDone)
+	}()
 
 	// Handlers hang off a context of their own so shutdown can end the
 	// event stream, which otherwise never returns while a tab is open.
@@ -277,6 +282,8 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	case <-time.After(30 * time.Second):
 		log.Warn("the step runner did not stop in time")
 	}
+	// A purge in flight finishes before the store closes.
+	<-purgeDone
 	endHandlers()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

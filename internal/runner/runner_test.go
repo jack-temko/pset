@@ -21,6 +21,7 @@ import (
 	"github.com/jackt/pset/internal/llm/llmtest"
 	"github.com/jackt/pset/internal/step"
 	"github.com/jackt/pset/internal/store"
+	"github.com/jackt/pset/internal/testx"
 )
 
 var bg = context.Background()
@@ -539,5 +540,173 @@ func TestTryAgainOnNothing(t *testing.T) {
 	r := e.runner(nil)
 	if err := r.TryAgain(bg, "INC404"); !errors.Is(err, IncidentGone) {
 		t.Fatalf("Try again on no incident: %v", err)
+	}
+}
+
+// A run whose ending can't be written (a full disk, a locked database) is
+// written once it can: the step never shows as running for good, and is not
+// started twice meanwhile.
+func TestAnEndingThatCantBeWrittenIsWrittenLater(t *testing.T) {
+	e := newEnv(t)
+	var runs atomic.Int32
+	r := e.runner(nil, ok(stepA, &runs))
+	r.SettleRetry = 20 * time.Millisecond
+	// The store refuses to write the step done, as a full disk would.
+	testx.Check(t, testx.Err(e.s.DB.Exec(`CREATE TRIGGER refuse_done BEFORE UPDATE OF state ON steps
+		WHEN NEW.state = 'done' BEGIN SELECT RAISE(ABORT, 'disk full'); END`)))
+	start(t, r)
+	e.begin(r, "s1")
+	deadline := time.Now().Add(5 * time.Second)
+	for runs.Load() == 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("the step never ran")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	time.Sleep(100 * time.Millisecond)
+	if got := e.step("s1", stepA).state; got != step.StateRunning {
+		t.Fatalf("while its ending can't be written the step is %s, want still running", got)
+	}
+	testx.Check(t, testx.Err(e.s.DB.Exec(`DROP TRIGGER refuse_done`)))
+	e.wait("s1", stepA, step.StateDone)
+	if runs.Load() != 1 {
+		t.Fatalf("the step ran %d times, want once", runs.Load())
+	}
+}
+
+// A step whose inputs can't be read fails on its own; the steps behind it
+// still run.
+func TestAnInputThatCantBeReadFailsOnlyItsStep(t *testing.T) {
+	e := newEnv(t, "s1", "s2")
+	var ranB atomic.Int32
+	broken := Handler{Name: stepA, After: []step.Name{}, Run: func(context.Context, *Run) error { return nil },
+		Input: func(_ context.Context, _ *sql.DB, id string) (string, error) {
+			if id == "s1" {
+				return "", errs.Data.Wrap(errors.New("unreadable"))
+			}
+			return id, nil
+		}}
+	r := e.runner(nil, broken, Handler{Name: stepB, After: []step.Name{}, Run: func(context.Context, *Run) error {
+		ranB.Add(1)
+		return nil
+	}})
+	start(t, r)
+	e.write(func(tx *sql.Tx) error {
+		if err := r.Start(bg, tx, change.ResourceSet, "s1"); err != nil {
+			return err
+		}
+		// s1's broken step goes first.
+		_, err := tx.Exec(`UPDATE steps SET priority = 99 WHERE subject_id = 's1' AND name = 'a'`)
+		return err
+	})
+	e.begin(r, "s2")
+	e.wait("s1", stepA, step.StateFailed)
+	e.wait("s2", stepA, step.StateDone)
+	e.wait("s2", stepB, step.StateDone)
+}
+
+// A key saved while a step's call is failing for want of one: the step runs
+// again, rather than wait on a key that is already there.
+func TestAKeySavedAsTheCallFailsDoesNotStrandTheStep(t *testing.T) {
+	e := newEnv(t)
+	inCall, release := make(chan struct{}), make(chan struct{})
+	var runs atomic.Int32
+	h := Handler{Name: stepA, Run: func(context.Context, *Run) error {
+		if runs.Add(1) == 1 {
+			close(inCall)
+			<-release
+			return llm.KeyMissing.New()
+		}
+		return nil
+	}}
+	r := e.runner(nil, h)
+	start(t, r)
+	e.begin(r, "s1")
+	<-inCall
+	if err := r.Holds(bg, "key"); err != nil {
+		t.Fatal(err)
+	}
+	close(release)
+	got := e.wait("s1", stepA, step.StateDone)
+	if got.incident != "" || e.count(`SELECT count(*) FROM incidents WHERE state = 'open'`) != 0 {
+		t.Fatalf("the step is %+v with an open incident, though the key came back as it failed", got)
+	}
+}
+
+// A model call that works shows the provider is back: what waited on it
+// runs again by itself.
+func TestACallThatWorksHealsTheProvider(t *testing.T) {
+	e := newEnv(t, "s1", "s2")
+	e.model.Fallback(func(llm.ChatRequest) llmtest.Reply { return llmtest.Reply{Text: "ok"} })
+	var down atomic.Bool
+	down.Store(true)
+	h := Handler{Name: stepA, Run: func(ctx context.Context, run *Run) error {
+		if run.SubjectID == "s1" && down.Load() {
+			return llm.ModelUnreachable.New()
+		}
+		c, err := run.Client(ctx)
+		if err != nil {
+			return err
+		}
+		_, err = c.ChatOnce(ctx, run.Request(llm.ChatRequest{Model: "fake-chat", Messages: []llm.Message{llm.TextMessage("user", "hi")}}))
+		return err
+	}}
+	r := e.runner(nil, h)
+	start(t, r)
+	e.begin(r, "s1")
+	deadline := time.Now().Add(5 * time.Second)
+	for e.step("s1", stepA).incident == "" {
+		if time.Now().After(deadline) {
+			t.Fatal("s1 never waited on the provider")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	down.Store(false)
+	e.begin(r, "s2") // its call works
+	e.wait("s2", stepA, step.StateDone)
+	e.wait("s1", stepA, step.StateDone)
+	if n := e.count(`SELECT count(*) FROM conditions WHERE id = 'provider' AND holds = 1`); n != 1 {
+		t.Fatal("the provider does not hold again")
+	}
+}
+
+// Shut down while a step waits to be tried again: it keeps its place and
+// its tries, and runs when due after the next start.
+func TestAStepRetryingAcrossARestartRunsWhenDue(t *testing.T) {
+	e := newEnv(t)
+	var runs atomic.Int32
+	h := Handler{Name: stepA, Run: func(context.Context, *Run) error {
+		if runs.Add(1) == 1 {
+			return errBusy.New()
+		}
+		return nil
+	}}
+	r := e.runner(nil, h)
+	r.Backoff = []time.Duration{200 * time.Millisecond}
+	stop := start(t, r)
+	e.begin(r, "s1")
+	e.wait("s1", stepA, step.StateRetrying)
+	stop()
+	r = e.runner(nil, h)
+	start(t, r)
+	got := e.wait("s1", stepA, step.StateDone)
+	if got.attempts != 2 {
+		t.Fatalf("done after %d tries, want 2", got.attempts)
+	}
+}
+
+// Settings asks each condition to hold every time it opens: with nothing
+// broken, that writes nothing.
+func TestHoldingWithNothingBrokenWritesNothing(t *testing.T) {
+	e := newEnv(t)
+	r := e.runner(nil)
+	before := e.count(`SELECT count(*) FROM changes`)
+	for _, c := range []string{"key", "data_folder", "disk_space"} {
+		if err := r.Holds(bg, c); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if after := e.count(`SELECT count(*) FROM changes`); after != before {
+		t.Fatalf("holding what already held logged %d changes", after-before)
 	}
 }

@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"slices"
 	"sync"
@@ -82,6 +83,9 @@ type Options struct {
 	// BaseURL is where the client sends chat requests: OpenRouter, or a
 	// test's server.
 	BaseURL string
+	// DataDir is the data folder: a permission refused under it means the
+	// folder is the trouble (condition data_folder).
+	DataDir string
 }
 
 // Runner schedules and runs steps.
@@ -95,14 +99,21 @@ type Runner struct {
 	// tried again, after the first, second, ... failure. Tests set both.
 	Now     func() time.Time
 	Backoff []time.Duration
+	// SettleRetry is the wait before writing how a run ended is tried again,
+	// after that write failed.
+	SettleRetry time.Duration
 
-	wake chan struct{}
+	dataDir string
+	wake    chan struct{}
 
 	mu      sync.Mutex
 	running map[string]*running // by step id
 	busy    map[string]int      // running steps per model
 	broken  map[string]bool     // conditions known not to hold
-	wg      sync.WaitGroup
+	// healed counts each condition's Holds, so a run that fails for want
+	// of a condition can tell it came back while the run was going.
+	healed map[string]int
+	wg     sync.WaitGroup
 }
 
 type running struct {
@@ -121,10 +132,12 @@ func New(s *store.Store, o Options, pipes ...Pipeline) *Runner {
 	r := &Runner{
 		store: s, pipes: map[change.Resource]Pipeline{}, limits: o.Limits,
 		key: o.Key, client: llm.NewKeyed(o.BaseURL, o.Key),
-		Now:     time.Now,
-		Backoff: []time.Duration{8 * time.Second, 30 * time.Second, 2 * time.Minute},
-		wake:    make(chan struct{}, 1),
-		running: map[string]*running{}, busy: map[string]int{}, broken: map[string]bool{},
+		Now:         time.Now,
+		Backoff:     []time.Duration{8 * time.Second, 30 * time.Second, 2 * time.Minute},
+		SettleRetry: time.Second,
+		dataDir:     o.DataDir,
+		wake:        make(chan struct{}, 1),
+		running:     map[string]*running{}, busy: map[string]int{}, broken: map[string]bool{}, healed: map[string]int{},
 	}
 	for _, p := range pipes {
 		r.pipes[p.Kind] = p
@@ -424,13 +437,6 @@ func (r *Runner) ready(ctx context.Context, c candidate, after []step.Name) (boo
 
 // start claims a step and runs it in its own goroutine.
 func (r *Runner) start(ctx context.Context, c candidate, h *Handler) error {
-	hash := ""
-	if h.Input != nil {
-		var err error
-		if hash, err = h.Input(ctx, r.store.DB, c.subject); err != nil {
-			return err
-		}
-	}
 	attempt := c.attempts + 1
 	claimed := false
 	err := r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
@@ -447,10 +453,11 @@ func (r *Runner) start(ctx context.Context, c candidate, h *Handler) error {
 		return err
 	}
 	stepCtx, cancel := context.WithCancelCause(context.WithoutCancel(ctx))
-	run := &Run{r: r, StepID: c.id, Kind: change.Resource(c.kind), SubjectID: c.subject, Name: step.Name(c.name), Attempt: attempt, hash: hash}
+	run := &Run{r: r, StepID: c.id, Kind: change.Resource(c.kind), SubjectID: c.subject, Name: step.Name(c.name), Attempt: attempt}
 	r.mu.Lock()
 	r.running[c.id] = &running{cancel: cancel, handler: h}
 	r.busy[h.Model]++
+	run.healed = maps.Clone(r.healed)
 	r.mu.Unlock()
 	r.wg.Add(1)
 	go func() {
@@ -458,10 +465,35 @@ func (r *Runner) start(ctx context.Context, c candidate, h *Handler) error {
 		// Shutdown stops the step; it goes back to waiting.
 		stop := context.AfterFunc(ctx, func() { cancel(errShutdown) })
 		defer stop()
-		err := safely(stepCtx, h, run)
+		// What the inputs are as it starts: a failure to read them is this
+		// step's own, not the scheduler's.
+		var err error
+		if h.Input != nil {
+			run.hash, err = h.Input(stepCtx, r.store.DB, c.subject)
+		}
+		if err == nil {
+			err = safely(stepCtx, h, run)
+		}
 		cause := context.Cause(stepCtx)
 		cancel(nil)
-		r.settle(run, err, cause)
+		// The step stays in running, so nothing starts it again, until how
+		// it ended is written: a full disk or a locked database can refuse
+		// that write too, and a step left running in the table would show
+		// as running for good.
+		for {
+			werr := r.settle(run, err, cause)
+			if werr == nil {
+				break
+			}
+			slog.Error("runner: settle a step", "step", run.StepID, "err", werr)
+			select {
+			case <-ctx.Done():
+				// Left running in the table: the next start puts it back.
+			case <-time.After(r.SettleRetry):
+				continue
+			}
+			break
+		}
 		r.mu.Lock()
 		delete(r.running, c.id)
 		r.busy[h.Model]--
@@ -518,7 +550,7 @@ func safely(ctx context.Context, h *Handler, run *Run) (err error) {
 }
 
 // settle writes how a run ended.
-func (r *Runner) settle(run *Run, err, cause error) {
+func (r *Runner) settle(run *Run, err, cause error) error {
 	ctx := context.Background()
 	now := db.At(r.Now())
 	var werr error
@@ -547,9 +579,7 @@ func (r *Runner) settle(run *Run, err, cause error) {
 	default:
 		werr = r.fail(ctx, run, err)
 	}
-	if werr != nil {
-		slog.Error("runner: settle a step", "step", run.StepID, "err", werr)
-	}
+	return werr
 }
 
 // fail writes a failure by its kind (ideas/errors-grill.md):
@@ -562,7 +592,7 @@ func (r *Runner) settle(run *Run, err, cause error) {
 // A cause the computer shows (a full disk, Poppler missing) is named first,
 // whatever entry the step wrapped it in.
 func (r *Runner) fail(ctx context.Context, run *Run, err error) error {
-	if c := condition.Cause(err); c != nil {
+	if c := condition.Cause(err, r.dataDir); c != nil {
 		err = c
 	}
 	kind, clears := errs.KindOf(err)
@@ -589,7 +619,23 @@ func (r *Runner) fail(ctx context.Context, run *Run, err error) error {
 	}
 	view := errs.Resolve(err)
 	if kind == errs.KindWaitingOnYou {
-		werr := r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
+		return r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
+			// The condition came back while this run went (a key saved as
+			// the call failed for want of one): run again, rather than wait
+			// on something that already holds. Checked inside the write, so
+			// a Holds after this point waits for it and heals what it wrote.
+			// Otherwise it is marked broken before the write, so a call that
+			// works heals it even if the write fails.
+			r.mu.Lock()
+			healed := r.healed[clears] != run.healed[clears]
+			if !healed {
+				r.broken[clears] = true
+			}
+			r.mu.Unlock()
+			if healed {
+				_, err := tx.ExecContext(ctx, `UPDATE steps SET state = 'waiting', ended_at = ?, attempts = 0 WHERE id = ?`, now, run.StepID)
+				return errs.Database.Of(err)
+			}
 			id, err := r.incident(ctx, tx, view, kind, clears, run, true, err)
 			if err != nil {
 				return err
@@ -601,12 +647,6 @@ func (r *Runner) fail(ctx context.Context, run *Run, err error) error {
 				now, id, run.StepID)
 			return errs.Database.Of(err)
 		})
-		if werr == nil {
-			r.mu.Lock()
-			r.broken[clears] = true
-			r.mu.Unlock()
-		}
-		return werr
 	}
 	return r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
 		id, err := r.incident(ctx, tx, view, kind, "", run, false, err)
@@ -629,9 +669,10 @@ func (r *Runner) incident(ctx context.Context, tx *sql.Tx, view errs.View, kind 
 		subjectKind, subjectID = "", ""
 	}
 	// One per cause (E1): a general one is its condition, whatever step
-	// error it came wrapped in; a step's own is its error on its subject.
+	// error it came wrapped in; a step's own is its error, on that step, so
+	// Try again on it and its healing are the step's alone.
 	q, args := `SELECT id FROM incidents WHERE state = 'open' AND born = 'step'
-		AND json_extract(error, '$.id') = ? AND subject_kind = ? AND subject_id = ?`, []any{view.ID, subjectKind, subjectID}
+		AND json_extract(error, '$.id') = ? AND step_id = ?`, []any{view.ID, run.StepID}
 	if general {
 		q, args = `SELECT id FROM incidents WHERE state = 'open' AND born = 'step' AND clears = ?`, []any{clears}
 	}
@@ -694,7 +735,26 @@ func (r *Runner) loadBroken(ctx context.Context) error {
 // try (E2). A step that fails again for the same cause opens a new
 // incident, so nothing loops.
 func (r *Runner) Holds(ctx context.Context, condition string) error {
-	err := r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
+	// Counted first: a run failing for want of it from now on runs again
+	// instead of waiting (see fail).
+	r.mu.Lock()
+	r.healed[condition]++
+	r.mu.Unlock()
+	var open int
+	err := r.store.DB.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM conditions WHERE id = ?1 AND holds = 0) +
+		(SELECT count(*) FROM incidents WHERE state = 'open' AND clears = ?1)`, condition).Scan(&open)
+	if err != nil {
+		return errs.Database.Wrap(err)
+	}
+	if open == 0 {
+		// Nothing is broken or waiting: no write (Settings checks every
+		// condition each time it opens).
+		r.mu.Lock()
+		delete(r.broken, condition)
+		r.mu.Unlock()
+		return nil
+	}
+	err = r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
 		var broken int
 		if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM conditions WHERE id = ? AND holds = 0`, condition).Scan(&broken); err != nil {
 			return errs.Database.Wrap(err)

@@ -433,3 +433,32 @@ func TestAKeyedClientFollowsTheSavedKey(t *testing.T) {
 		t.Fatalf("sent %q, want each call's own key", got)
 	}
 }
+
+// A call keyed to a step is handed to the step alone: the old usage sink
+// would count it a second time, under no subject. A keyed client counts as
+// configured whether or not a key is saved yet.
+func TestAStepsCallSkipsTheOldSink(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		testx.Check(t, testx.Err(io.WriteString(w, `{"choices":[{"message":{"role":"assistant","content":"ok"}}]}`)))
+	}))
+	defer srv.Close()
+	var sunk, keyed int
+	OnCall(func(Call) { sunk++ })
+	defer OnCall(nil)
+	c := NewKeyed(srv.URL, func(context.Context) (string, error) { return "sk", nil })
+	if !c.ChatConfigured() {
+		t.Fatal("a keyed client says it is not configured")
+	}
+	req := ChatRequest{Model: "m", Messages: []Message{TextMessage("user", "hi")}}
+	if _, err := c.ChatOnce(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	req.OnDone = func(Call) { keyed++ }
+	if _, err := c.ChatOnce(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	if sunk != 1 || keyed != 1 {
+		t.Fatalf("the old sink got %d calls and the step %d; want the unkeyed one each", sunk, keyed)
+	}
+}

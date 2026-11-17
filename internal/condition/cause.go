@@ -5,7 +5,10 @@ import (
 	"io/fs"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"syscall"
+
+	"modernc.org/sqlite"
 
 	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/execx"
@@ -76,7 +79,8 @@ var (
 
 // SQLite's primary result codes that mean the database file, not the
 // query, is the trouble (sqlite.org/rescode.html). An extended code keeps
-// its primary code in the low byte.
+// its primary code in the low byte. Only the driver's own error is read:
+// another error with a Code method (an HTTP status) is not SQLite's.
 const (
 	sqliteReadOnly = 8
 	sqliteIOErr    = 10
@@ -89,18 +93,19 @@ const (
 // Cause names the condition err shows to have stopped holding, wrapped in
 // its entry, or returns nil when err is not one of these. It reads the raw
 // cause under any catalog entry: a full disk under "couldn't import the
-// book" is still a full disk.
-func Cause(err error) error {
+// book" is still a full disk. dataDir is the data folder: only a permission
+// refused under it is the folder's.
+func Cause(err error, dataDir string) error {
 	if err == nil {
 		return nil
 	}
-	if e := of(err); e != nil {
+	if e := of(err, dataDir); e != nil {
 		return e.Wrap(err)
 	}
 	return nil
 }
 
-func of(err error) *errs.Entry {
+func of(err error, dataDir string) *errs.Entry {
 	var missing *execx.NotInstalledError
 	if errors.As(err, &missing) {
 		if filepath.Base(missing.Name) == "tesseract" {
@@ -112,7 +117,7 @@ func of(err error) *errs.Entry {
 	if errors.Is(err, syscall.ENOSPC) {
 		return DiskFull
 	}
-	var coded interface{ Code() int }
+	var coded *sqlite.Error
 	if errors.As(err, &coded) {
 		switch coded.Code() & 0xff {
 		case sqliteFull:
@@ -122,8 +127,18 @@ func of(err error) *errs.Entry {
 		}
 	}
 	var path *fs.PathError
-	if errors.As(err, &path) && (errors.Is(err, fs.ErrPermission) || errors.Is(err, syscall.EROFS)) {
+	if errors.As(err, &path) && (errors.Is(err, fs.ErrPermission) || errors.Is(err, syscall.EROFS)) && under(path.Path, dataDir) {
 		return DataFolderRefused
 	}
 	return nil
+}
+
+// under is whether path is dataDir or inside it. A program that could not
+// be started, or a file elsewhere, is not the data folder's.
+func under(path, dataDir string) bool {
+	if dataDir == "" || !filepath.IsAbs(path) {
+		return false
+	}
+	rel, err := filepath.Rel(dataDir, path)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
