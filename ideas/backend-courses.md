@@ -157,7 +157,8 @@ the contents against a real model. Courses were built in 7a.
 
 - Courses; a material's import as steps (examine, read pages, contents, numbering,
   search); textbook detection; page images.
-- Decided here: **embeddings** (below), before the search step is ported.
+- Decided here: **embeddings** (below). Still open: the search step was ported
+  as it was, embeddings and all, and Jack's eval decides.
 - Done when: a real textbook and a scan import, resume after a kill, and search.
 
 **5. Work.** The largest track; three pull requests.

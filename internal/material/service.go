@@ -199,6 +199,10 @@ func (s *Service) add(ctx context.Context, do *action.Do, in Add) error {
 	if err := os.Rename(s.staged(in.UploadID), s.path(id)); err != nil {
 		return uploadGone.Wrap(err)
 	}
+	// A rename keeps the upload's time; the sweep spares a file by its age,
+	// so it is made new as it moves in.
+	now := time.Now()
+	cleanup.Log("material: date a file moved in", os.Chtimes(s.path(id), now, now))
 	err = do.Write(ctx, change.ResourceMaterial, id, func(tx *sql.Tx) error {
 		var course int
 		if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM courses WHERE id = ? AND removed_at = ''`, in.CourseID).Scan(&course); err != nil {

@@ -626,6 +626,28 @@ func TestStepsRunAgainSafely(t *testing.T) {
 	if n := e.count(`SELECT count(*) FROM sections WHERE material_id = ?`, digital); n != 1 {
 		t.Fatalf("%d sections after the purge, want the one", n)
 	}
+	// More sections, at new depths, over the ids kept: each nests under its
+	// own parent.
+	deeper := []library.Section{
+		{Level: 1, Title: "Part I", StartPage: 1, EndPage: 4},
+		{Level: 2, Title: "Chapter 1", StartPage: 1, EndPage: 2},
+		{Level: 3, Title: "1.1 Kettles", StartPage: 2, EndPage: 2},
+		{Level: 1, Title: "Part II", StartPage: 5, EndPage: 6},
+		{Level: 2, Title: "Chapter 2", StartPage: 5, EndPage: 6},
+	}
+	if err := e.s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error { return saveSections(bg, tx, digital, deeper) }); err != nil {
+		t.Fatal(err)
+	}
+	c, err := e.svc.Contents(bg, digital)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.Entries) != 2 || c.Entries[0].Title != "Part I" || len(c.Entries[0].Children) != 1 ||
+		c.Entries[0].Children[0].Title != "Chapter 1" || len(c.Entries[0].Children[0].Children) != 1 ||
+		c.Entries[0].Children[0].Children[0].Title != "1.1 Kettles" ||
+		len(c.Entries[1].Children) != 1 || c.Entries[1].Children[0].Title != "Chapter 2" {
+		t.Fatalf("the deeper contents nest as %+v", c)
+	}
 }
 
 // A rename holds: neither the file's own title nor the one read off its
