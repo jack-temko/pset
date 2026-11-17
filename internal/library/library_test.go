@@ -7,8 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
-	"maps"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -29,7 +27,6 @@ import (
 
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
 	"github.com/jackt/pset/internal/usage"
@@ -115,7 +112,6 @@ type env struct {
 	svc    *Service
 	models *models
 	events *recorder
-	queue  *jobs.Queue
 	llm    *llmtest.Server
 	dir    string
 	ocr    func(page int) (string, error)
@@ -139,7 +135,7 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { cleanup.Close(d) })
-	if err := db.Migrate(context.Background(), d, append(append(jobs.Migrations(), usage.Migrations()...), Migrations()...)); err != nil {
+	if err := db.Migrate(context.Background(), d, append(usage.Migrations(), Migrations()...)); err != nil {
 		t.Fatal(err)
 	}
 	// The tables other features own, which the book's usage shape reads; the
@@ -157,8 +153,6 @@ func newEnv(t *testing.T) *env {
 	// A book without an outline asks the model for its contents; unless a
 	// test scripts an answer, it finds none.
 	e.llm.Fallback(func(llm.ChatRequest) llmtest.Reply { return llmtest.Reply{Text: "{}"} })
-	e.queue = jobs.New(d, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	e.queue.Lane(LaneImport, 1)
 	tools := LiveTools()
 	tools.OCR = func(_ context.Context, _ string, page int) (string, error) {
 		e.mu.Lock()
@@ -169,7 +163,7 @@ func newEnv(t *testing.T) *env {
 	e.ocr = func(page int) (string, error) {
 		return fmt.Sprintf("Recognized text of page %d about eigenvalues.\n%d", page, page), nil
 	}
-	e.svc = New(Config{DB: d, DataDir: dir, Events: e.events, Queue: e.queue, Models: e.models, Tools: tools})
+	e.svc = New(Config{DB: d, DataDir: dir, Events: e.events, Models: e.models, Tools: tools})
 	mux := http.NewServeMux()
 	e.svc.Routes(mux)
 	e.Server = httptest.NewServer(mux)
@@ -178,9 +172,7 @@ func newEnv(t *testing.T) *env {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() {
-		if err := e.queue.Run(ctx); err != nil && ctx.Err() == nil {
-			t.Error(err)
-		}
+		e.svc.runImports(ctx)
 		close(done)
 	}()
 	t.Cleanup(func() { cancel(); <-done })
@@ -412,163 +404,6 @@ func TestEmbeddingFailureIsAReadableReason(t *testing.T) {
 	e.llm.FailEmbeddings(0)
 	e.do(t, "POST", "/api/books/"+b.ID+"/retry", nil, nil)
 	e.waitFor(t, b.ID, StateReady)
-}
-
-// A book stopped before its first job ran says so, and tried again it reads.
-// The queue is paused so that "before it started" is a fact of the test and
-// not a race with the lane: an examine outranks a scan's reading and starts
-// the moment it can.
-func TestStopQueuedThenRetry(t *testing.T) {
-	e := newEnv(t)
-	e.queue.Pause()
-	var up BookChanged
-	e.upload(t, "next.pdf", fixturePDF(t, 0, 3, "Next"), &up)
-
-	var stopped Book
-	e.do(t, "POST", "/api/books/"+up.Book.ID+"/stop", nil, &stopped)
-	if stopped.State.Kind != StateFailed || stopped.State.Error == nil || stopped.State.Error.ID != "import.cancelled" {
-		t.Fatalf("stopped %+v", stopped.State)
-	}
-	e.queue.Resume()
-	e.do(t, "POST", "/api/books/"+up.Book.ID+"/retry", nil, nil)
-	e.waitFor(t, up.Book.ID, StateReady)
-}
-
-// A scan stopped while its pages are being read is "Stopped.".
-func TestStopWhileReading(t *testing.T) {
-	e := newEnv(t)
-	entered, release := make(chan struct{}), make(chan struct{})
-	var once, unblock sync.Once
-	// The reading is held in its first page until the test lets it go, and
-	// is let go however the test ends: a held handler would make the
-	// cleanup wait on the queue for the whole test timeout.
-	e.setOCR(func(_ int) (string, error) {
-		once.Do(func() { close(entered) })
-		<-release
-		return "text", nil
-	})
-	t.Cleanup(func() { unblock.Do(func() { close(release) }) })
-
-	var up BookChanged
-	e.upload(t, "slow.pdf", scannedPDF(t, 2), &up)
-	select {
-	case <-entered:
-	case <-time.After(20 * time.Second):
-		t.Fatal("the scan was never read")
-	}
-	e.do(t, "POST", "/api/books/"+up.Book.ID+"/stop", nil, nil)
-	unblock.Do(func() { close(release) })
-	if b := e.waitFor(t, up.Book.ID, StateFailed); b.State.Error == nil || b.State.Error.ID != "import.stopped" {
-		t.Fatalf("running stop: %+v", b.State)
-	}
-}
-
-// slowOCR reads a page in a few milliseconds and counts how often each
-// page was read. Like Tesseract, it finishes the page it's on even when
-// its job is interrupted.
-func (e *env) slowOCR() (reads func() map[int]int) {
-	var mu sync.Mutex
-	count := map[int]int{}
-	e.setOCR(func(p int) (string, error) {
-		time.Sleep(5 * time.Millisecond)
-		mu.Lock()
-		count[p]++
-		mu.Unlock()
-		return fmt.Sprintf("Recognized text of page %d about eigenvalues.", p), nil
-	})
-	return func() map[int]int {
-		mu.Lock()
-		defer mu.Unlock()
-		return maps.Clone(count)
-	}
-}
-
-// waitRead waits until a scan has read at least n pages.
-func (e *env) waitRead(t *testing.T, id string, n int) {
-	t.Helper()
-	deadline := time.Now().Add(20 * time.Second)
-	for time.Now().Before(deadline) {
-		var b Book
-		e.do(t, "GET", "/api/books/"+id, nil, &b)
-		if b.State.Phase == PhaseRead && b.State.Done != nil && *b.State.Done >= n {
-			return
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Fatalf("book %s never read %d pages", id, n)
-}
-
-func TestADigitalBookGoesAheadOfAScansReading(t *testing.T) {
-	e := newEnv(t)
-	reads := e.slowOCR()
-	const pages = 60
-	var scan, digital BookChanged
-	e.upload(t, "scan.pdf", scannedPDF(t, pages), &scan)
-	e.waitRead(t, scan.Book.ID, 3)
-
-	e.upload(t, "notes.pdf", fixturePDF(t, 0, 8, "Notes"), &digital)
-	d := e.waitFor(t, digital.Book.ID, StateReady)
-	var mid Book
-	e.do(t, "GET", "/api/books/"+scan.Book.ID, nil, &mid)
-	if mid.State.Kind == StateReady || len(reads()) >= pages {
-		t.Fatalf("the digital book waited for the scan: %+v, %d pages read", mid.State, len(reads()))
-	}
-	if d.Kind != KindDigital || mid.Kind != KindScanned {
-		t.Fatalf("kinds %q, %q", d.Kind, mid.Kind)
-	}
-	// While it stepped aside, the scan was queued with what it had read.
-	if !e.events.has(EventBookChanged, `"kind":"queued","phase":"read","done":`) {
-		t.Fatal("the interrupted scan forgot its count")
-	}
-
-	e.waitFor(t, scan.Book.ID, StateReady)
-	twice := 0
-	for p := 1; p <= pages; p++ {
-		switch n := reads()[p]; {
-		case n == 0:
-			t.Fatalf("page %d never read", p)
-		case n > 1:
-			twice++
-		}
-	}
-	// Only the page it was on when interrupted is read again.
-	if twice > 1 {
-		t.Fatalf("%d pages read twice", twice)
-	}
-}
-
-func TestAnInterruptedScanKeepsItsPagesThroughStopAndRetry(t *testing.T) {
-	e := newEnv(t)
-	reads := e.slowOCR()
-	const pages = 40
-	var up BookChanged
-	e.upload(t, "scan.pdf", scannedPDF(t, pages), &up)
-	e.waitRead(t, up.Book.ID, 5)
-
-	// Pause interrupts it the way a shutdown does.
-	e.queue.Pause()
-	var b Book
-	e.do(t, "GET", "/api/books/"+up.Book.ID, nil, &b)
-	if b.State.Kind != StateQueued || b.State.Phase != PhaseRead || b.State.Done == nil || *b.State.Done < 5 || *b.State.Total != pages {
-		t.Fatalf("interrupted: %+v", b.State)
-	}
-	// It has begun, so stopping it is Stopped, not Cancelled.
-	var stopped Book
-	e.do(t, "POST", "/api/books/"+b.ID+"/stop", nil, &stopped)
-	if stopped.State.Error == nil || stopped.State.Error.ID != "import.stopped" {
-		t.Fatalf("stop: %+v", stopped.State)
-	}
-	e.queue.Resume()
-	e.do(t, "POST", "/api/books/"+b.ID+"/retry", nil, nil)
-	e.waitFor(t, b.ID, StateReady)
-	for p, n := range reads() {
-		if n > 2 {
-			t.Fatalf("page %d read %d times", p, n)
-		}
-	}
-	if len(reads()) != pages {
-		t.Fatalf("%d of %d pages read", len(reads()), pages)
-	}
 }
 
 func TestEditRemoveAndScans(t *testing.T) {

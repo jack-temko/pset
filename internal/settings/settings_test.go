@@ -288,6 +288,21 @@ func TestResetIsAFreshInstall(t *testing.T) {
 	}
 }
 
+// The new backend's store, open beside the old database, is not Reset's.
+func TestResetLeavesTheDatabasesItIsToldToKeep(t *testing.T) {
+	s := newServer(t)
+	s.svc.c.Keep = []string{filepath.Join(s.dir, "store.db")}
+	for _, n := range []string{"store.db", "store.db-wal", "other.db"} {
+		testx.Check(t, os.WriteFile(filepath.Join(s.dir, n), []byte("x"), 0o600))
+	}
+	testx.Check(t, s.svc.Reset(context.Background()))
+	for n, want := range map[string]bool{"store.db": true, "store.db-wal": true, "other.db": false} {
+		if _, err := os.Stat(filepath.Join(s.dir, n)); (err == nil) != want {
+			t.Errorf("%s kept %v, want %v", n, err == nil, want)
+		}
+	}
+}
+
 func TestAbout(t *testing.T) {
 	s := newServer(t)
 	var a About

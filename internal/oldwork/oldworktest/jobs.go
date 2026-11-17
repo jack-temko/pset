@@ -1,4 +1,9 @@
-// Package jobs is PSet's durable work queue. A job is a kind, a lane, a
+// Package oldworktest is the job queue the old features ran their
+// background work on, kept only so their tests still run that work until
+// each is moved onto the step runner (see package oldwork). Nothing in the
+// app imports it.
+//
+// It was PSet's durable work queue. A job is a kind, a lane, a
 // subject and a JSON payload; features register a handler per kind and
 // publish their own domain events while it runs. The queue has no notion of
 // what the UI shows: it never publishes anything.
@@ -10,7 +15,7 @@
 // whose handler saves its work as it goes can be marked Resumable: a run
 // of it gives its slot up to a higher-priority job and resumes later (a
 // scan's reading steps aside for a digital book).
-package jobs
+package oldworktest
 
 import (
 	"context"
@@ -30,7 +35,10 @@ import (
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
+	"github.com/jackt/pset/internal/oldwork"
 )
+
+var _ oldwork.Queue = (*Queue)(nil)
 
 // State is where a job is.
 type State string
@@ -68,7 +76,7 @@ func (j Job) Decode(v any) error { return errs.Data.Of(json.Unmarshal(j.Payload,
 // Handler does one job. Returning nil marks it done; an error marks it
 // failed, unless the job was stopped (cancelled) or the queue is shutting
 // down (queued again, to resume on the next start).
-type Handler func(ctx context.Context, j Job) error
+type Handler = oldwork.Handler
 
 // Migrations is the queue's one table.
 func Migrations() []db.Migration {
@@ -182,23 +190,11 @@ func (q *Queue) Resumable(kindName string) {
 	q.kinds[kindName] = k
 }
 
-// Execer is a *sql.DB or a *sql.Tx: enqueue inside the caller's
-// transaction, so a row and the job that fills it appear together.
-type Execer interface {
-	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
-}
+// Execer is the seam's own.
+type Execer = oldwork.Execer
 
-// Spec is what Enqueue needs.
-type Spec struct {
-	Kind    string
-	Subject string // the row this job works on, for StopSubject
-	Key     string // jobs sharing a key run one at a time
-	// Priority orders a lane's queued jobs: higher starts first, and equals
-	// start oldest first. Zero is the default. A running job gives way to a
-	// higher one only if its kind is Resumable.
-	Priority int
-	Payload  any
-}
+// Spec is the seam's own.
+type Spec = oldwork.Spec
 
 // Enqueue adds a job. It wakes the scheduler, which is enough on a *sql.DB;
 // inside a transaction the scheduler can't see the job yet, so call Wake
@@ -308,6 +304,17 @@ type stopKey struct{}
 
 // Stopped reports whether ctx was cancelled by Stop, as opposed to a
 // shutdown. A handler uses it to record "Stopped" on its own row.
+func (q *Queue) Stopped(ctx context.Context) bool { return Stopped(ctx) }
+
+// Waiting is how many jobs of kind are queued on subject.
+func (q *Queue) Waiting(ctx context.Context, kind, subject string) (int, error) {
+	var n int
+	err := q.db.QueryRowContext(ctx, `SELECT count(*) FROM jobs WHERE kind = ? AND subject = ? AND state = 'queued'`, kind, subject).Scan(&n)
+	return n, errs.Database.Of(err)
+}
+
+// Stopped reports whether ctx was cancelled by Stop, as opposed to a
+// shutdown.
 func Stopped(ctx context.Context) bool {
 	r, ok := ctx.Value(stopKey{}).(*running)
 	if !ok {
@@ -499,7 +506,8 @@ func (q *Queue) safely(ctx context.Context, h Handler, j Job) (err error) {
 			err = fmt.Errorf("panic: %v", p)
 		}
 	}()
-	return h(ctx, j)
+	return h(ctx, oldwork.Job{ID: j.ID, Kind: j.Kind, Lane: j.Lane, Subject: j.Subject, Key: j.Key,
+		Priority: j.Priority, Payload: j.Payload, Attempts: j.Attempts})
 }
 
 func (q *Queue) settle(j Job, r *running, err error) {

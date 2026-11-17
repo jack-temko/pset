@@ -1,5 +1,5 @@
 // Command pset serves the PSet web app and its API. This file is wiring
-// only: open the database, build the features, start the queue, serve.
+// only: open the databases, build the features, start the step runner, serve.
 package main
 
 import (
@@ -30,10 +30,10 @@ import (
 	"github.com/jackt/pset/internal/events"
 	"github.com/jackt/pset/internal/homework"
 	"github.com/jackt/pset/internal/httpx"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/library"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/memory"
+	"github.com/jackt/pset/internal/oldwork"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/platform"
 	"github.com/jackt/pset/internal/runner"
@@ -91,8 +91,8 @@ func main() {
 // asked to start the new one once it has shut down.
 var restarting atomic.Bool
 
-// restartSelf asks for a clean shutdown (the same path as Ctrl+C: running jobs
-// go back to queued and resume), after which main starts the new program.
+// restartSelf asks for a clean shutdown (the same path as Ctrl+C: running steps
+// go back to waiting and resume), after which main starts the new program.
 func restartSelf() {
 	restarting.Store(true)
 	cleanup.Log("restart: ask for a shutdown", syscall.Kill(syscall.Getpid(), syscall.SIGTERM))
@@ -110,7 +110,6 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	// before the table.
 	migrations := concat(
 		errlog.Migrations(),
-		jobs.Migrations(),
 		settings.Migrations(),
 		usage.Migrations(),
 		library.Migrations(),
@@ -136,15 +135,13 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	llm.SetSessionPrefix(installTag(dir))
 	// Every call's cost, recorded on what it was spent on.
 	llm.OnCall(usage.Sink(d))
-	if err := usage.Sweep(ctx, d); err != nil {
-		log.Warn("usage: sweep", "err", err)
-	}
 
 	// The new backend's store (ideas/backend-courses.md): its own database
 	// beside the old one until the cut-over, and the step runner over it,
 	// with the one model client every step uses. No pipeline is on it yet;
 	// they come with each feature's track.
-	work, err := store.Open(ctx, filepath.Join(dir, "store.db"))
+	storePath := filepath.Join(dir, "store.db")
+	work, err := store.Open(ctx, storePath)
 	if err != nil {
 		return err
 	}
@@ -162,18 +159,15 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	errs.SetRecorder(failures)
 
 	bus := events.NewBus()
-	queue := jobs.New(d, log)
-	queue.Lane(library.LaneImport, 1)
-	queue.Lane(homework.LaneQuestion, 2)
-	queue.Lane(homework.LaneAssignment, 2)
-	// Many books may be answering at once; each book one question at a time.
-	queue.Lane(ask.LaneTurn, 8)
+	// The old features' background work waits: it moves onto the step
+	// runner track by track (ideas/backend-courses.md).
+	idle := oldwork.Idle{}
 
 	cfg = settings.New(settings.Config{
 		DB: d, DataDir: dir, DBPath: dbPath, Version: Version,
 		Migrations: migrations,
 		Dialer:     settings.LiveDialer{},
-		Queue:      queue,
+		Keep:       []string{storePath},
 		Heal: func(ctx context.Context, id condition.ID) {
 			if err := steps.Holds(ctx, string(id)); err != nil {
 				log.Warn("runner: heal", "condition", id, "err", err)
@@ -185,7 +179,7 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	var sets *homework.Service
 	var tutor *ask.Service
 	books := library.New(library.Config{
-		DB: d, DataDir: dir, Events: bus, Queue: queue, Models: cfg,
+		DB: d, DataDir: dir, Events: bus, Models: cfg,
 		ForgetCalls: func(ctx context.Context, bookID string) error {
 			if err := sets.ForgetBookCalls(ctx, bookID); err != nil {
 				return err
@@ -199,13 +193,13 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	// turn reads "questions worked" from: built first, told after.
 	clock := activity.New(d, nil)
 	sets = homework.New(homework.Config{
-		DB: d, Events: bus, Queue: queue, Library: homeworkLibrary{books}, Settings: cfg,
+		DB: d, Events: bus, Queue: idle, Library: homeworkLibrary{books}, Settings: cfg,
 		Memory: agentMemory{memories}, Time: clock,
 	})
 	clock.SetHomework(sets)
 
 	tutor = ask.New(ask.Config{
-		DB: d, Events: bus, Queue: queue, Library: askLibrary{books}, Settings: cfg,
+		DB: d, Events: bus, Queue: idle, Library: askLibrary{books}, Settings: cfg,
 		Memory: agentMemory{memories},
 	})
 
@@ -219,10 +213,9 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	clock.Routes(mux)
 	updater := update.New(update.Config{
 		Version: Version, PublicKey: update.PublicKey,
-		Busy: func(ctx context.Context) (n int, err error) {
-			err = d.QueryRowContext(ctx, `SELECT count(*) FROM jobs WHERE state IN ('queued', 'running')`).Scan(&n)
-			return
-		},
+		// A step cut short by the restart resumes after it, so only one
+		// running now is in the way.
+		Busy:    func(context.Context) (int, error) { return len(steps.Running()), nil },
 		Restart: restartSelf,
 	})
 	updater.Routes(mux)
@@ -230,8 +223,8 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	mux.HandleFunc("/api/", httpx.NotFoundAPI)
 	mux.Handle("/", httpx.SPAFrom(web.Dist, "dist"))
 
-	// The port is taken before the queue starts: a second copy on the same
-	// data would otherwise put the first one's running jobs back to queued,
+	// The port is taken before the runner starts: a second copy on the same
+	// data would otherwise put the first one's running steps back to waiting,
 	// and start them again, before finding the port busy.
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -249,13 +242,6 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 		close(stepsDone)
 	}()
 	go purgeDaily(runCtx, work, log)
-	queueDone := make(chan struct{})
-	go func() {
-		if err := queue.Run(runCtx); err != nil {
-			log.Error("queue stopped", "err", err)
-		}
-		close(queueDone)
-	}()
 
 	// Handlers hang off a context of their own so shutdown can end the
 	// event stream, which otherwise never returns while a tab is open.
@@ -285,12 +271,6 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	case <-runCtx.Done():
 	}
 
-	// Running jobs go back to queued and resume on the next start.
-	select {
-	case <-queueDone:
-	case <-time.After(30 * time.Second):
-		log.Warn("the queue did not stop in time")
-	}
 	// Running steps go back to waiting and resume on the next start.
 	select {
 	case <-stepsDone:

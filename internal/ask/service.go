@@ -16,8 +16,8 @@ import (
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/events"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/oldwork"
 	"github.com/jackt/pset/internal/usage"
 )
 
@@ -36,14 +36,9 @@ type Settings interface {
 	Name(ctx context.Context) string
 }
 
-// Queue is the job queue as the tutor uses it.
-type Queue interface {
-	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
-	// Wake starts what was enqueued, once its transaction has committed.
-	Wake()
-	StopSubject(ctx context.Context, subject string) error
-	Handle(kind, lane string, h jobs.Handler)
-}
+// Queue is where the tutor's background work goes: in the app, oldwork.Idle,
+// so it waits until it is moved onto the step runner.
+type Queue = oldwork.Queue
 
 // Config is what the service is built from.
 type Config struct {
@@ -138,7 +133,7 @@ func (s *Service) Ask(ctx context.Context, bookID string, q Question) (Turn, err
 			VALUES (?, ?, ?, ?, ?, 'running', ?, ?)`, id, bookID, text, about, aboutText, now, now); err != nil {
 			return errs.Database.Wrap(err)
 		}
-		_, err := s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobTurn, Subject: id, Key: bookID, Payload: turnPayload{TurnID: id}})
+		_, err := s.c.Queue.Enqueue(ctx, tx, oldwork.Spec{Kind: JobTurn, Subject: id, Key: bookID, Payload: turnPayload{TurnID: id}})
 		return err
 	})
 	if err != nil {

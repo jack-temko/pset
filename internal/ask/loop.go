@@ -12,8 +12,8 @@ import (
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/errs"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/oldwork"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/usage"
 )
@@ -43,7 +43,7 @@ type run struct {
 	saved  time.Time
 }
 
-func (s *Service) runTurn(ctx context.Context, j jobs.Job) error {
+func (s *Service) runTurn(ctx context.Context, j oldwork.Job) error {
 	var p turnPayload
 	if err := j.Decode(&p); err != nil {
 		return err
@@ -64,7 +64,7 @@ func (s *Service) runTurn(ctx context.Context, j jobs.Job) error {
 	case err == nil:
 		r.finish(settle, TurnDone, nil)
 		return nil
-	case jobs.Stopped(ctx):
+	case s.c.Queue.Stopped(ctx):
 		r.finish(settle, TurnStopped, nil)
 		return err
 	case ctx.Err() != nil:

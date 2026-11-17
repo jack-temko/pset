@@ -15,6 +15,11 @@ export type ErrorId =
   | "ask.turn_failed"
   | "book.duplicate"
   | "book.not_found"
+  | "condition.data_folder"
+  | "condition.database"
+  | "condition.disk_space"
+  | "condition.pdf_reader"
+  | "condition.scan_reader"
   | "embed.failed"
   | "embed.unreachable"
   | "errors.clear_failed"
@@ -106,6 +111,7 @@ export type ErrorId =
   | "request.too_large"
   | "request.unreachable"
   | "request.upload_cut"
+  | "runner.incident_gone"
   | "settings.fix_data_dir"
   | "settings.fix_database"
   | "settings.fix_ollama"
@@ -235,6 +241,51 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 404,
     owner: "errs",
+  },
+  "condition.data_folder": {
+    what: "PSet can't use its data folder.",
+    why: "The folder is missing, or PSet isn't allowed to write to it.",
+    fix: "Check the data folder in Settings, then try again.",
+    action: "open_settings",
+    scope: "inline",
+    status: 503,
+    owner: "condition",
+  },
+  "condition.database": {
+    what: "PSet can't open or write its database.",
+    why: "The file may be read-only, damaged, or on a drive that went away.",
+    fix: "Check the database in Settings, then try again.",
+    action: "open_settings",
+    scope: "inline",
+    status: 503,
+    owner: "condition",
+  },
+  "condition.disk_space": {
+    what: "The disk is full.",
+    why: "PSet needs room for pages, images and its database.",
+    fix: "Free some space, then try again.",
+    action: "retry",
+    scope: "inline",
+    status: 507,
+    owner: "condition",
+  },
+  "condition.pdf_reader": {
+    what: "PSet can't read PDFs on this computer.",
+    why: "Poppler, the program PSet reads PDFs with, isn't installed.",
+    fix: "Install Poppler (Settings shows how), then try again.",
+    action: "open_settings",
+    scope: "inline",
+    status: 503,
+    owner: "condition",
+  },
+  "condition.scan_reader": {
+    what: "PSet can't read scanned pages on this computer.",
+    why: "Tesseract, the program PSet reads scans with, isn't installed.",
+    fix: "Install Tesseract (Settings shows how), then try again.",
+    action: "open_settings",
+    scope: "inline",
+    status: 503,
+    owner: "condition",
   },
   "embed.failed": {
     what: "Ollama couldn't build the book's search.",
@@ -898,6 +949,13 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "field",
     status: 422,
     owner: "httpx",
+  },
+  "runner.incident_gone": {
+    what: "That problem is no longer there.",
+    why: "It was resolved, or what it was about was removed.",
+    scope: "inline",
+    status: 404,
+    owner: "runner",
   },
   "settings.fix_data_dir": {
     what: "Couldn't create the data folder.",

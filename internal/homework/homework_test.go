@@ -30,10 +30,10 @@ import (
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/errs"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
 	"github.com/jackt/pset/internal/memory"
+	"github.com/jackt/pset/internal/oldwork/oldworktest"
 	"github.com/jackt/pset/internal/usage"
 )
 
@@ -120,7 +120,7 @@ type env struct {
 	llm    *llmtest.Server
 	events *recorder
 	cfg    *settings
-	queue  *jobs.Queue
+	queue  *oldworktest.Queue
 }
 
 const guide = `{"type":"hint","text":"Start from Ohm's law [p. 1]."}
@@ -181,7 +181,7 @@ func newEnvWith(t *testing.T, mem agent.Memory) *env {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { cleanup.Close(d) })
-	migs := append(jobs.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
+	migs := append(oldworktest.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
 	migs = append(migs, usage.Migrations()...)
 	migs = append(migs, memory.Migrations()...)
 	migs = append(migs, Migrations()...)
@@ -193,7 +193,7 @@ func newEnvWith(t *testing.T, mem agent.Memory) *env {
 	e := &env{llm: llmtest.New(t), events: &recorder{}}
 	e.llm.Fallback(fakeModel)
 	e.cfg = &settings{cfg: e.llm.Config()}
-	q := jobs.New(d, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	q := oldworktest.New(d, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	q.Lane(LaneQuestion, 2)
 	q.Lane(LaneAssignment, 2)
 	e.queue = q

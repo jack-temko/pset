@@ -57,11 +57,11 @@ var transport = &http.Transport{
 // Client talks to one chat endpoint and one embeddings endpoint, both
 // OpenAI-shaped. The zero value is not usable; use New.
 type Client struct {
-	apiBaseURL   string
-	apiKey       string
+	apiBaseURL string
+	apiKey     string
 	// key, when set, is read for each request instead of apiKey: a client
 	// built once (NewKeyed) follows the key the student saves.
-	key func(context.Context) (string, error)
+	key          func(context.Context) (string, error)
 	embedBaseURL string
 	embedModel   string
 	http         *http.Client

@@ -1,4 +1,4 @@
-package jobs
+package oldworktest
 
 import (
 	"context"
@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/oldwork"
 	"github.com/jackt/pset/internal/testx"
 )
 
@@ -65,7 +66,7 @@ func TestLaneRunsInOrderOneAtATime(t *testing.T) {
 	var mu sync.Mutex
 	var order []int
 	var live, peak atomic.Int32
-	q.Handle("imp", "import", func(_ context.Context, j Job) error {
+	q.Handle("imp", "import", func(_ context.Context, j oldwork.Job) error {
 		n := live.Add(1)
 		if n > peak.Load() {
 			peak.Store(n)
@@ -101,7 +102,7 @@ func TestHigherPriorityStartsFirstThenOldest(t *testing.T) {
 	q.Lane("l", 1)
 	var mu sync.Mutex
 	var order []string
-	q.Handle("k", "l", func(_ context.Context, j Job) error {
+	q.Handle("k", "l", func(_ context.Context, j oldwork.Job) error {
 		var p struct{ Name string }
 		testx.Check(t, j.Decode(&p))
 		mu.Lock()
@@ -141,7 +142,7 @@ func TestHigherPriorityStartsFirstThenOldest(t *testing.T) {
 func TestEnqueueInATransactionNeverWaitsOnTheScheduler(t *testing.T) {
 	q := newQueue(t)
 	q.Lane("l", 1)
-	q.Handle("k", "l", func(_ context.Context, _ Job) error { return nil })
+	q.Handle("k", "l", func(_ context.Context, _ oldwork.Job) error { return nil })
 	ctx := context.Background()
 	run(t, q)
 	// Once a job has run, the scheduler is past its start-up writes.
@@ -179,7 +180,7 @@ func TestWakeAfterCommitStartsTheJobWithoutWaitingForThePoll(t *testing.T) {
 	q := newQueue(t)
 	q.Lane("l", 1)
 	started := make(chan time.Time, 1)
-	q.Handle("k", "l", func(_ context.Context, _ Job) error {
+	q.Handle("k", "l", func(_ context.Context, _ oldwork.Job) error {
 		started <- time.Now()
 		return nil
 	})
@@ -221,7 +222,7 @@ func TestResumableJobGivesWayToAHigherOneThenResumes(t *testing.T) {
 	var log []string
 	note := func(s string) { mu.Lock(); log = append(log, s); mu.Unlock() }
 	started := make(chan struct{}, 4)
-	q.Handle("slow", "l", func(ctx context.Context, j Job) error {
+	q.Handle("slow", "l", func(ctx context.Context, j oldwork.Job) error {
 		note(fmt.Sprintf("slow run %d", j.Attempts))
 		started <- struct{}{}
 		if j.Attempts > 1 {
@@ -234,7 +235,7 @@ func TestResumableJobGivesWayToAHigherOneThenResumes(t *testing.T) {
 		return ctx.Err()
 	})
 	q.Resumable("slow")
-	q.Handle("fast", "l", func(_ context.Context, j Job) error {
+	q.Handle("fast", "l", func(_ context.Context, j oldwork.Job) error {
 		var p struct{ Name string }
 		testx.Check(t, j.Decode(&p))
 		note(p.Name)
@@ -271,7 +272,7 @@ func TestAJobThatIsntResumableIsNeverInterrupted(t *testing.T) {
 	q := newQueue(t)
 	q.Lane("l", 1)
 	started, release := make(chan struct{}), make(chan struct{})
-	q.Handle("slow", "l", func(ctx context.Context, _ Job) error {
+	q.Handle("slow", "l", func(ctx context.Context, _ oldwork.Job) error {
 		close(started)
 		select {
 		case <-release:
@@ -280,7 +281,7 @@ func TestAJobThatIsntResumableIsNeverInterrupted(t *testing.T) {
 			return ctx.Err()
 		}
 	})
-	q.Handle("fast", "l", func(_ context.Context, _ Job) error { return nil })
+	q.Handle("fast", "l", func(_ context.Context, _ oldwork.Job) error { return nil })
 	ctx := context.Background()
 	run(t, q)
 	slow, _ := q.Enqueue(ctx, q.db, Spec{Kind: "slow"})
@@ -301,7 +302,7 @@ func TestSameKeyNeverRunsTogether(t *testing.T) {
 	q := newQueue(t)
 	q.Lane("turn", 8)
 	var live, peak atomic.Int32
-	q.Handle("t", "turn", func(_ context.Context, _ Job) error {
+	q.Handle("t", "turn", func(_ context.Context, _ oldwork.Job) error {
 		n := live.Add(1)
 		if n > peak.Load() {
 			peak.Store(n)
@@ -330,7 +331,7 @@ func TestStopRunningCancelsAndHandlerSeesIt(t *testing.T) {
 	q.Lane("l", 1)
 	started := make(chan struct{})
 	var sawStop atomic.Bool
-	q.Handle("k", "l", func(ctx context.Context, _ Job) error {
+	q.Handle("k", "l", func(ctx context.Context, _ oldwork.Job) error {
 		close(started)
 		<-ctx.Done()
 		sawStop.Store(Stopped(ctx))
@@ -350,7 +351,7 @@ func TestStopQueuedAndRetry(t *testing.T) {
 	q := newQueue(t)
 	q.Lane("l", 1)
 	var runs atomic.Int32
-	q.Handle("k", "l", func(_ context.Context, _ Job) error { runs.Add(1); return nil })
+	q.Handle("k", "l", func(_ context.Context, _ oldwork.Job) error { runs.Add(1); return nil })
 	ctx := context.Background()
 	id, _ := q.Enqueue(ctx, q.db, Spec{Kind: "k"})
 	testx.Check(t, q.Stop(ctx, id))
@@ -368,8 +369,8 @@ func TestStopQueuedAndRetry(t *testing.T) {
 func TestFailureRecordsErrorAndPanicIsAFailure(t *testing.T) {
 	q := newQueue(t)
 	q.Lane("l", 2)
-	q.Handle("bad", "l", func(_ context.Context, _ Job) error { return errors.New("boom") })
-	q.Handle("panic", "l", func(_ context.Context, _ Job) error { panic("oops") })
+	q.Handle("bad", "l", func(_ context.Context, _ oldwork.Job) error { return errors.New("boom") })
+	q.Handle("panic", "l", func(_ context.Context, _ oldwork.Job) error { panic("oops") })
 	ctx := context.Background()
 	a, _ := q.Enqueue(ctx, q.db, Spec{Kind: "bad"})
 	b, _ := q.Enqueue(ctx, q.db, Spec{Kind: "panic"})
@@ -385,7 +386,7 @@ func TestShutdownRequeuesAndRestartResumes(t *testing.T) {
 	q.Lane("l", 1)
 	started := make(chan struct{}, 2)
 	var finish atomic.Bool
-	q.Handle("k", "l", func(ctx context.Context, _ Job) error {
+	q.Handle("k", "l", func(ctx context.Context, _ oldwork.Job) error {
 		started <- struct{}{}
 		if finish.Load() {
 			return nil
@@ -420,7 +421,7 @@ func TestPauseRequeuesUntilResume(t *testing.T) {
 	q.Lane("l", 1)
 	started := make(chan struct{}, 4)
 	var finish atomic.Bool
-	q.Handle("k", "l", func(ctx context.Context, _ Job) error {
+	q.Handle("k", "l", func(ctx context.Context, _ oldwork.Job) error {
 		started <- struct{}{}
 		if finish.Load() {
 			return nil
