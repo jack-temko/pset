@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/condition"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
@@ -56,6 +57,19 @@ type Config struct {
 	Queue      Queue
 	// LookPath finds a tool; exec.LookPath unless a test says otherwise.
 	LookPath func(string) (string, error)
+	// Heal, when set, is told a condition holds again: a key was saved, or a
+	// health check passed. The step runner runs what waited on it.
+	Heal func(ctx context.Context, condition condition.ID)
+}
+
+// heal tells the runner each condition holds again.
+func (s *Service) heal(ctx context.Context, ids ...condition.ID) {
+	if s.c.Heal == nil {
+		return
+	}
+	for _, id := range ids {
+		s.c.Heal(ctx, id)
+	}
 }
 
 // Service keeps the student's settings: the name, the keys and the health of what PSet needs.
@@ -170,6 +184,8 @@ func (s *Service) Save(ctx context.Context, in KeyInput) (SaveResult, error) {
 	if err := save(ctx, s.c.DB, keyChat, chatRow{APIKey: strings.TrimSpace(in.APIKey)}); err != nil {
 		return SaveResult{}, err
 	}
+	// A key that passed its test is accepted and its account has credit.
+	s.heal(ctx, condition.IDKey, condition.IDCredit)
 	cur, err := s.Get(ctx)
 	return SaveResult{Settings: cur, Detail: r.Detail}, err
 }

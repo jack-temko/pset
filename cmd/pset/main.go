@@ -23,6 +23,7 @@ import (
 	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/ask"
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/condition"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errlog"
 	"github.com/jackt/pset/internal/errs"
@@ -35,7 +36,9 @@ import (
 	"github.com/jackt/pset/internal/memory"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/platform"
+	"github.com/jackt/pset/internal/runner"
 	"github.com/jackt/pset/internal/settings"
+	"github.com/jackt/pset/internal/store"
 	"github.com/jackt/pset/internal/update"
 	"github.com/jackt/pset/internal/usage"
 	"github.com/jackt/pset/web"
@@ -137,6 +140,23 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 		log.Warn("usage: sweep", "err", err)
 	}
 
+	// The new backend's store (ideas/backend-courses.md): its own database
+	// beside the old one until the cut-over, and the step runner over it,
+	// with the one model client every step uses. No pipeline is on it yet;
+	// they come with each feature's track.
+	work, err := store.Open(ctx, filepath.Join(dir, "store.db"))
+	if err != nil {
+		return err
+	}
+	defer cleanup.Close(work.DB)
+	var cfg *settings.Service
+	steps := runner.New(work, runner.Options{
+		Key: func(ctx context.Context) (string, error) {
+			c, err := cfg.LLM(ctx)
+			return c.APIKey, err
+		},
+	})
+
 	// Every error a student is shown is kept here, for Settings to list.
 	failures := errlog.New(d)
 	errs.SetRecorder(failures)
@@ -149,11 +169,16 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	// Many books may be answering at once; each book one question at a time.
 	queue.Lane(ask.LaneTurn, 8)
 
-	cfg := settings.New(settings.Config{
+	cfg = settings.New(settings.Config{
 		DB: d, DataDir: dir, DBPath: dbPath, Version: Version,
 		Migrations: migrations,
 		Dialer:     settings.LiveDialer{},
 		Queue:      queue,
+		Heal: func(ctx context.Context, id condition.ID) {
+			if err := steps.Holds(ctx, string(id)); err != nil {
+				log.Warn("runner: heal", "condition", id, "err", err)
+			}
+		},
 	})
 	// The book remover deletes a book's homework and turn usage through
 	// these, which the features fill in once built.
@@ -216,6 +241,14 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 
 	runCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	stepsDone := make(chan struct{})
+	go func() {
+		if err := steps.Run(runCtx); err != nil {
+			log.Error("the step runner stopped", "err", err)
+		}
+		close(stepsDone)
+	}()
+	go purgeDaily(runCtx, work, log)
 	queueDone := make(chan struct{})
 	go func() {
 		if err := queue.Run(runCtx); err != nil {
@@ -257,6 +290,12 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	case <-queueDone:
 	case <-time.After(30 * time.Second):
 		log.Warn("the queue did not stop in time")
+	}
+	// Running steps go back to waiting and resume on the next start.
+	select {
+	case <-stepsDone:
+	case <-time.After(30 * time.Second):
+		log.Warn("the step runner did not stop in time")
 	}
 	endHandlers()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -359,4 +398,21 @@ func installTag(dir string) string {
 	}
 	sum := sha256.Sum256([]byte(dir))
 	return "pset-" + hex.EncodeToString(sum[:4])
+}
+
+// purgeDaily runs the store's purge at start and then once a day: what was
+// removed or changed more than a week ago goes for good.
+func purgeDaily(ctx context.Context, s *store.Store, log *slog.Logger) {
+	t := time.NewTicker(24 * time.Hour)
+	defer t.Stop()
+	for {
+		if err := s.Purge(ctx, time.Now()); err != nil && ctx.Err() == nil {
+			log.Warn("store: purge", "err", err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
 }
