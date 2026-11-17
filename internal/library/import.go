@@ -258,7 +258,7 @@ func (s *Service) index(ctx context.Context, b row, path, kind string, pages []s
 		return err
 	}
 	if len(secs) == 0 {
-		if secs, err = s.readContents(ctx, m, b, path, pages, lines, printed); err != nil {
+		if secs, err = readContents(ctx, m, s.images(b, path), b.ID, pages, lines, printed); err != nil {
 			return err
 		}
 	}

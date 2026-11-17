@@ -24,10 +24,23 @@ import (
 // images and checked against the scan; else the model's pick of the
 // heading-shaped lines; else nothing, and the book has no rail.
 
-// model is the chat model the contents step talks to.
+// model is the chat model the contents step talks to. wrap, when set, is
+// given every request first (the step runner keys its calls so).
 type model struct {
 	client *llm.Client
 	name   string
+	wrap   func(llm.ChatRequest) llm.ChatRequest
+}
+
+// pageImage is one page of the book being read, as a JPEG about width
+// pixels across.
+type pageImage func(ctx context.Context, page, width int) ([]byte, error)
+
+// images is a book's pages, rendered through the scan cache.
+func (s *Service) images(b row, path string) pageImage {
+	return func(ctx context.Context, page, width int) ([]byte, error) {
+		return s.scans.get(ctx, b.ID, path, b.PageCount, b.Width, page, width)
+	}
 }
 
 // chatModel is the model the import talks to; a book can't be prepared
@@ -47,9 +60,10 @@ func (s *Service) chatModel(ctx context.Context) (model, error) {
 // every page's text (index i is PDF page i+1); lines are a digital book's
 // text lines with their font sizes, nil for a scan; printed are the
 // contents pages findContentsPages found.
-func (s *Service) readContents(ctx context.Context, m model, b row, path string, pages []string, lines []pdf.XMLLine, printed []int) ([]section, error) {
+// id names the book in the log.
+func readContents(ctx context.Context, m model, img pageImage, id string, pages []string, lines []pdf.XMLLine, printed []int) ([]section, error) {
 	if len(printed) > 0 {
-		entries, err := s.readPrinted(ctx, m, b, path, printed)
+		entries, err := readPrinted(ctx, m, img, printed)
 		if err != nil {
 			return nil, err
 		}
@@ -57,7 +71,7 @@ func (s *Service) readContents(ctx context.Context, m model, b row, path string,
 		if ok {
 			return secs, nil
 		}
-		slog.Info("contents: the printed contents didn't match the scan", "book", b.ID, "entries", len(entries))
+		slog.Info("contents: the printed contents didn't match the scan", "book", id, "entries", len(entries))
 	}
 	return pickHeadings(ctx, m, headingCandidates(pages, lines, printed))
 }
@@ -142,10 +156,10 @@ func (n *flexInt) UnmarshalJSON(b []byte) error {
 }
 
 // readPrinted shows the contents pages to the model.
-func (s *Service) readPrinted(ctx context.Context, m model, b row, path string, pages []int) ([]contentsEntry, error) {
+func readPrinted(ctx context.Context, m model, img pageImage, pages []int) ([]contentsEntry, error) {
 	content := llm.PartsContent(llm.TextPart(fmt.Sprintf("The contents pages follow, %d images in order.", len(pages))))
 	for i, p := range pages {
-		data, err := s.scans.get(ctx, b, path, p, contentsImageWidth)
+		data, err := img(ctx, p, contentsImageWidth)
 		if err != nil {
 			if ctx.Err() != nil {
 				return nil, fmt.Errorf("stopped: %w", ctx.Err())
@@ -174,10 +188,14 @@ var contentsCallTimeout = 5 * time.Minute
 func (m model) askJSON(ctx context.Context, system string, user llm.Content, out any) error {
 	for try := 0; ; try++ {
 		call, cancel := context.WithTimeout(ctx, contentsCallTimeout)
-		reply, err := m.client.ChatOnce(call, llm.ChatRequest{Model: m.name, Messages: []llm.Message{
+		req := llm.ChatRequest{Model: m.name, Messages: []llm.Message{
 			llm.TextMessage("system", system),
 			{Role: "user", Content: user},
-		}})
+		}}
+		if m.wrap != nil {
+			req = m.wrap(req)
+		}
+		reply, err := m.client.ChatOnce(call, req)
 		stalled := call.Err() != nil
 		cancel()
 		switch {
