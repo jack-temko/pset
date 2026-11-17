@@ -109,7 +109,7 @@ func (s *Service) rename(ctx context.Context, do *action.Do, in Rename) error {
 		case err != nil:
 			return errs.Database.Wrap(err)
 		case cur == n:
-			return action.Unchanged
+			return action.ErrUnchanged
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE courses SET name = ? WHERE id = ? AND removed_at = ''`, n, in.ID)
 		return action.One(res, err, "course")

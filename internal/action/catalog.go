@@ -183,10 +183,10 @@ var (
 	})
 )
 
-// Unchanged is what a Write's fn returns when it finds nothing to change
+// ErrUnchanged is what a Write's fn returns when it finds nothing to change
 // (a rename to the name it has): nothing is written, and there is nothing to
 // undo.
-var Unchanged = errors.New("action: nothing to change")
+var ErrUnchanged = errors.New("action: nothing to change")
 
 // One is the error of an UPDATE meant to change one thing, guarded by its
 // state (`... WHERE id = ? AND removed_at = ”`): Gone when it changed
@@ -241,7 +241,7 @@ func (do *Do) Write(ctx context.Context, kind change.Resource, id string, fn fun
 			do.id, do.entry, string(kind), id, db.Now())
 		return errs.Database.Of(err)
 	})
-	if errors.Is(err, Unchanged) {
+	if errors.Is(err, ErrUnchanged) {
 		return nil
 	}
 	do.changed = err == nil
