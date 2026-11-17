@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { waits, type Loads, type Waits } from '@/design/loading';
 import { HomeLists } from '@/units/assignment-row/home';
 import type { CourseSummary, HomeSet } from '@/units/assignment-row/lists';
-import { Ticker } from '@/units/bone';
+import { Ticker } from '@/design/ticker';
 import { BarChart } from '@/units/bar-chart';
 import { Greeting } from '@/units/greeting';
 import type { StudyDay } from '@/units/heatmap';
@@ -84,6 +84,7 @@ export const Home = waits(
         <HomeFrame
           homeHref={homeHref}
           settingsHref={settingsHref}
+          ready={false}
           greeting={null}
           info={null}
         >
@@ -185,6 +186,7 @@ export const Home = waits(
       <HomeFrame
         homeHref={homeHref}
         settingsHref={settingsHref}
+        ready
         greeting={greeting}
         info={info}
       >

@@ -100,6 +100,7 @@ export default defineSpec({
       why: 'Jack: "can we make the bars (stat and progress) grow to their values as they load? And make the numbers tick up to their values like a stock ticker".',
       beat: 'A count-up through every value; rolling counts and single digits too (Jack: "Individual digits don’t need to roll")',
       date: '2026-11-14',
+      supersededBy: 'bone-d7',
     },
     {
       id: 'bone-d6',
@@ -107,6 +108,14 @@ export default defineSpec({
         'Bone and BoneBlock only, for a part slow by nature. Fill, FillBlock and the row rhythms go with the loading forms that used them.',
       why: 'Jack, 2026-11-16: "Only what has a caller" (ideas/skeleton-grill.md D7). Bars show after the grace and pulse, as bone-d2 said.',
       beat: 'Keeping Fill, FillBlock and the rhythms for later',
+      date: '2026-11-16',
+    },
+    {
+      id: 'bone-d7',
+      decision:
+        'Ticker moves out to web/src/design/ticker.tsx with the arrival code; the bone unit is Bone and BoneBlock. Bars pulse down to 0.7, not 0.5 (D4).',
+      why: 'Jack, 2026-11-16: "Take my numbers" (D4); A5: Ticker is not a bar.',
+      beat: 'Ticker in the bone unit; a pulse down to 0.5',
       date: '2026-11-16',
     },
   ],

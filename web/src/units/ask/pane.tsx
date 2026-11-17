@@ -1,3 +1,4 @@
+import { Arrives } from '@/design/arrives';
 import type { Waits } from '@/design/loading';
 import { ArrowUp, Check, Copy, Square, X } from 'lucide-react';
 import {
@@ -508,48 +509,54 @@ export function Pane({
         }}
         className="min-h-0 flex-1 overflow-y-auto"
       >
-        {loading === true ? null : empty ? (
-          <div className="flex min-h-full flex-col justify-end px-6 py-4">
-            <p className="ds-small text-(--ds-fg-muted)">
-              {`Ask anything about ${course}. It reads your materials.`}
-            </p>
-          </div>
-        ) : (
-          <div ref={inner} className="space-y-6 px-6 py-4">
-            <Top
-              turns={turns.length}
-              clearing={clearing}
-              onClearing={setClearing}
-              onClear={onClear}
-            />
-            {turns.map((t, i) => {
-              const label = t.day !== turns[i - 1]?.day ? t.day : undefined;
-              return (
-                <div key={t.id} className="space-y-6">
-                  {label && <Day label={label} />}
-                  <TurnView
-                    turn={t}
-                    latest={i === turns.length - 1}
-                    open={(n) => open.has(`${t.id}:${String(n)}`)}
-                    onToggle={(n) => {
-                      const key = `${t.id}:${String(n)}`;
-                      setOpen((o) => {
-                        const next = new Set(o);
-                        if (!next.delete(key)) next.add(key);
-                        return next;
-                      });
-                    }}
-                    onRetry={onRetry}
-                    onUndo={onUndo}
-                    onEdit={onEdit}
-                    onPage={onPage}
-                    onSettings={onSettings}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <Arrives
+          screen="ask"
+          ready={loading !== true}
+          className="flex min-h-full flex-col"
+        >
+          {loading === true ? null : empty ? (
+            <div className="flex flex-1 flex-col justify-end px-6 py-4">
+              <p className="ds-small text-(--ds-fg-muted)">
+                {`Ask anything about ${course}. It reads your materials.`}
+              </p>
+            </div>
+          ) : (
+            <div ref={inner} className="space-y-6 px-6 py-4">
+              <Top
+                turns={turns.length}
+                clearing={clearing}
+                onClearing={setClearing}
+                onClear={onClear}
+              />
+              {turns.map((t, i) => {
+                const label = t.day !== turns[i - 1]?.day ? t.day : undefined;
+                return (
+                  <div key={t.id} className="space-y-6">
+                    {label && <Day label={label} />}
+                    <TurnView
+                      turn={t}
+                      latest={i === turns.length - 1}
+                      open={(n) => open.has(`${t.id}:${String(n)}`)}
+                      onToggle={(n) => {
+                        const key = `${t.id}:${String(n)}`;
+                        setOpen((o) => {
+                          const next = new Set(o);
+                          if (!next.delete(key)) next.add(key);
+                          return next;
+                        });
+                      }}
+                      onRetry={onRetry}
+                      onUndo={onUndo}
+                      onEdit={onEdit}
+                      onPage={onPage}
+                      onSettings={onSettings}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Arrives>
       </div>
       <Composer
         about={chip}

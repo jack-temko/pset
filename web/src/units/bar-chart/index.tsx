@@ -1,3 +1,4 @@
+import { useGrown } from '@/design/arrival';
 import { Tooltip } from '@/units/tooltip';
 
 /** One column of the chart: a day. */
@@ -22,6 +23,7 @@ const MIN_TRACK = 32;
  *  as its bare track. The columns share the width; a bar is 28 wide; the
  *  tracks take the height they are given, 32 at least. */
 export function BarChart({ bars }: { bars: readonly Bar[] }) {
+  const grown = useGrown();
   const max = Math.max(1, ...bars.map((b) => (b.future ? 0 : b.value)));
   return (
     <div className="@container flex h-full gap-1">
@@ -42,9 +44,9 @@ export function BarChart({ bars }: { bars: readonly Bar[] }) {
                   {/* Always here, so it slides when the day's minutes
                         change (bar-chart-d4). */}
                   <span
-                    className="absolute inset-x-0 bottom-0 block rounded-(--ds-radius-control) transition-[height] duration-700 ease-out motion-reduce:transition-none"
+                    className="absolute inset-x-0 bottom-0 block rounded-(--ds-radius-control) transition-[height] duration-(--ds-arrive) ease-out motion-reduce:transition-none"
                     style={{
-                      height: `${String(pct)}%`,
+                      height: `${String(grown ? pct : 0)}%`,
                       background: b.today
                         ? 'var(--ds-accent)'
                         : 'var(--ds-heat-2)',

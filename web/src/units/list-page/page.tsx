@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { Button } from '@/units/button';
 import { Link } from '@/units/link';
+import { Arrives } from '@/design/arrives';
 import type { Waits } from '@/design/loading';
 import { List } from '@/units/list';
 import { ListRow } from '@/units/list-row';
@@ -453,18 +454,20 @@ export function Page({
               }}
             />
           </div>
-          {loading !== true && (
-            <List
-              {...header}
-              state={f.state}
-              onState={(state) => {
-                set({ state, sort: undefined });
-              }}
-              empty={empty}
-            >
-              {rows()}
-            </List>
-          )}
+          <Arrives screen={`list-${kind}`} ready={loading !== true}>
+            {loading !== true && (
+              <List
+                {...header}
+                state={f.state}
+                onState={(state) => {
+                  set({ state, sort: undefined });
+                }}
+                empty={empty}
+              >
+                {rows()}
+              </List>
+            )}
+          </Arrives>
         </div>
       </div>
     </div>

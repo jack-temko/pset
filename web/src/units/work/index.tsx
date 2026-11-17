@@ -1,3 +1,4 @@
+import { Arrives } from '@/design/arrives';
 import { waits, type Loads, type Waits } from '@/design/loading';
 import { Loaded, Quiet, type WorkProps } from './pane';
 import type { WorkSet } from './sets';
@@ -10,6 +11,10 @@ export type { Marks, WorkProps } from './pane';
 export const Work = waits(
   { data: ['set'] } satisfies Loads<{ set: WorkSet }>,
   function Work(props: Waits<Omit<WorkProps, 'set'>, { set: WorkSet }>) {
-    return props.loading === true ? <Quiet /> : <Loaded {...props} />;
+    return (
+      <Arrives screen="work" ready={props.loading !== true}>
+        {props.loading === true ? <Quiet /> : <Loaded {...props} />}
+      </Arrives>
+    );
   },
 );

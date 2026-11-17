@@ -98,6 +98,9 @@
   --ds-row: 44px;
   --ds-control: 32px;
   --ds-topbar: 56px;
+  --ds-grace: 300ms;
+  --ds-reveal: 150ms;
+  --ds-arrive: 700ms;
   --ds-page-width: 1012px;
   --ds-radius-segment: 2px;
   --ds-radius-tag: 10px;
@@ -281,7 +284,7 @@
     opacity: 1;
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.7;
   }
 }
 
@@ -300,8 +303,9 @@
   border-radius: var(--ds-radius-tag);
   background: var(--ds-bone);
   animation:
-    ds-bone-in 150ms ease-out var(--ds-grace, 300ms) both,
-    ds-bone-pulse 2s ease-in-out calc(var(--ds-grace, 300ms) + 150ms) infinite;
+    ds-bone-in var(--ds-reveal) ease-out var(--ds-grace) both,
+    ds-bone-pulse 2s ease-in-out calc(var(--ds-grace) + var(--ds-reveal))
+      infinite;
 }
 
 /* A zero-width character gives the bar a text baseline, so a line or a box
@@ -340,7 +344,7 @@
 /* Still: for a wait that is work in progress (Finding, a page being drawn),
    where the shimmer, not a pulse, says PSet is working. */
 .ds .ds-bone-still::before {
-  animation: ds-bone-in 150ms ease-out var(--ds-grace, 300ms) both;
+  animation: ds-bone-in var(--ds-reveal) ease-out var(--ds-grace) both;
 }
 
 /* A Ticker's digit strip: 0 to 9 twice, one per line, drawn as generated
@@ -350,9 +354,9 @@
   white-space: pre;
 }
 
-/* A heatmap square coming in: from the empty shade to its own, in the time
-   the bars grow and the figures roll (heatmap-d14). It runs when the square
-   is first drawn, so a square already shown never fades again. */
+/* A heatmap square arriving: from the empty shade to its own, in the time
+   the bars grow and the figures roll (heatmap-d14). Only on a screen's first
+   open after PSet starts (loading D3). */
 @keyframes ds-shade-in {
   from {
     background-color: var(--ds-heat-0);
@@ -360,15 +364,28 @@
 }
 
 .ds .ds-shade-in {
-  animation: ds-shade-in 700ms ease-out;
+  animation: ds-shade-in var(--ds-arrive) ease-out;
+}
+
+/* What a screen draws below its title, when it replaces a quiet form the
+   student saw: a fade, opacity only, so nothing moves (loading D6, step 6). */
+@keyframes ds-arrive {
+  from {
+    opacity: 0;
+  }
+}
+
+.ds .ds-arrive {
+  animation: ds-arrive var(--ds-reveal) ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ds .ds-bone::before,
   .ds .ds-bone-block::before {
-    animation: ds-bone-in 1ms linear var(--ds-grace, 300ms) both;
+    animation: ds-bone-in 1ms linear var(--ds-grace) both;
   }
-  .ds .ds-shade-in {
+  .ds .ds-shade-in,
+  .ds .ds-arrive {
     animation: none;
   }
 }

@@ -1,3 +1,4 @@
+import { Arrives } from '@/design/arrives';
 import type { Waits } from '@/design/loading';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
@@ -535,20 +536,22 @@ export function Page({
           <div className="ds-room-display">
             <h1 className="ds-display text-(--ds-fg)">Settings</h1>
           </div>
-          {failed === true ? (
-            <div className="flex justify-center py-24">
-              <ErrorNotice
-                error={{
-                  what: "Couldn't load Settings",
-                  why: "PSet couldn't read your settings. Nothing was changed.",
-                  chain: ['settings.load'],
-                }}
-                actions={[{ label: 'Try again' }]}
-              />
-            </div>
-          ) : loading === true ? null : (
-            <Groups settings={settings} unfolded={unfolded} />
-          )}
+          <Arrives screen="settings" ready={loading !== true}>
+            {failed === true ? (
+              <div className="flex justify-center py-24">
+                <ErrorNotice
+                  error={{
+                    what: "Couldn't load Settings",
+                    why: "PSet couldn't read your settings. Nothing was changed.",
+                    chain: ['settings.load'],
+                  }}
+                  actions={[{ label: 'Try again' }]}
+                />
+              </div>
+            ) : loading === true ? null : (
+              <Groups settings={settings} unfolded={unfolded} />
+            )}
+          </Arrives>
         </div>
       </div>
     </div>

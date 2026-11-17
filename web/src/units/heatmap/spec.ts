@@ -186,6 +186,7 @@ export default defineSpec({
       why: 'Jack: "can we make the bars (stat and progress) grow to their values as they load? And make the numbers tick up to their values like a stock ticker".',
       beat: 'The total appearing at once',
       date: '2026-11-14',
+      supersededBy: 'heatmap-d16',
     },
     {
       id: 'heatmap-d14',
@@ -194,6 +195,7 @@ export default defineSpec({
       why: 'Jack: "Do the heatmap", on fading its squares in like the other stats.',
       beat: 'A left-to-right sweep, which would draw the eye on every Home visit; the squares appearing at once',
       date: '2026-11-14',
+      supersededBy: 'heatmap-d16',
     },
     {
       id: 'heatmap-d15',
@@ -201,6 +203,14 @@ export default defineSpec({
         'No loading form of its own: its screen holds the previous one until the data is in, then this draws whole (loading D1, D7).',
       why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
       beat: 'Its own loading form (heatmap-d12)',
+      date: '2026-11-16',
+    },
+    {
+      id: 'heatmap-d16',
+      decision:
+        "On its screen's first open after PSet starts, the total rolls up and every square fades from the empty shade, over 700ms; after that both draw at once.",
+      why: 'Jack, 2026-11-16: "First open per session" (ideas/skeleton-grill.md D3); 2026-11-17: "fold the fade into step 6".',
+      beat: 'Rolling and fading on every open (heatmap-d13, d14)',
       date: '2026-11-16',
     },
   ],

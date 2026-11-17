@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { Arrives } from '@/design/arrives';
 import { TopBar } from '@/units/top-bar';
 
 /** The info area: one outlined box, no fill, with the heatmap on the left
@@ -79,10 +80,13 @@ export function HomeFrame({
   settingsHref,
   greeting,
   info,
+  ready,
   children,
 }: {
   homeHref: string;
   settingsHref: string;
+  /** The data is in: what is below the top bar arrives (loading D3). */
+  ready: boolean;
   greeting: ReactNode;
   info: ReactNode;
   children: ReactNode;
@@ -91,11 +95,15 @@ export function HomeFrame({
     <div className="@container">
       <TopBar homeHref={homeHref} settingsHref={settingsHref} />
       <div className="px-(--ds-gutter) pb-16">
-        <div className="@container mx-auto max-w-(--ds-page-width)">
+        <Arrives
+          screen="home"
+          ready={ready}
+          className="@container mx-auto max-w-(--ds-page-width)"
+        >
           <div className="ds-room-display">{greeting}</div>
           <div data-info>{info}</div>
           <div className="mt-16">{children}</div>
-        </div>
+        </Arrives>
       </div>
     </div>
   );
