@@ -58,6 +58,24 @@ the order of work and the tracker. Branch
   write down find accuracy, guides right, cost and time for a ten-problem set.
 - Done when: `make check` passes ten times running, and the bar is in this file.
 
+**The bar** (measured once on `dev`, 2026-11-17, seeded test library, $0.39 spent):
+
+| Measure                                      | Result                                                                                            |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Finder, all three books (`tools/findertest`) | 44 of 44 questions found on the right page, in 5 min 05 s                                         |
+| A set of 5 problems without figures          | 5 of 5 ready, none failed, 132.6 s from adding the set to the last guide                          |
+| The same set, cost                           | $0.072 over 46 calls, about $0.015 a problem: finds $0.018, rank $0.001, guides and checks $0.052 |
+| The same set, pace                           | finds 8 to 21 s each, two at a time; first guide at 45 s, the rest at 50, 78, 112 and 133 s       |
+
+What the bar does not cover, so track 5 must not claim it: the finder eval scores the
+page only, not the statement, boxes or figures, and some references are read without a
+model; no problem in the timed set had a figure, so figure reading was not timed or
+priced; guide correctness was not judged.
+
+Found while measuring: `tools/findertest` deletes its set when it ends, which deletes
+that set's calls, so its cost cannot be read afterwards (calls keyed to steps, and a
+tool that reports its own cost, fix this in track 5).
+
 **1. The contract.** Types only.
 
 - `wire.go` for course, material, set, question, find, reading, document, turn, step
