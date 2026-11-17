@@ -24,6 +24,7 @@ import (
 	"github.com/jackt/pset/internal/condition"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
+	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/library"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/probnum"
@@ -120,8 +121,13 @@ func (s *Service) Stage(r io.Reader, name string) (Upload, error) {
 	defer cleanup.Remove(tmp.Name()) // a no-op once renamed
 	h := sha256.New()
 	head := &sniffer{}
-	if _, err := io.Copy(io.MultiWriter(tmp, h, head), r); err != nil {
+	src := &reading{r: r}
+	if _, err := io.Copy(io.MultiWriter(tmp, h, head), src); err != nil {
 		cleanup.Close(tmp)
+		if src.err != nil {
+			// The upload was cut off, not the disk.
+			return Upload{}, httpx.UploadCut.Wrap(src.err).OnField("file")
+		}
 		return Upload{}, errs.Disk.Wrap(fmt.Errorf("stage upload: %w", err))
 	}
 	if err := tmp.Close(); err != nil {
@@ -145,6 +151,20 @@ func (s *Service) Stage(r io.Reader, name string) (Upload, error) {
 	return Upload{ID: id, Name: filepath.Base(name)}, nil
 }
 
+// reading keeps the error reading the upload gave, apart from writing it.
+type reading struct {
+	r   io.Reader
+	err error
+}
+
+func (r *reading) Read(p []byte) (int, error) {
+	n, err := r.r.Read(p)
+	if err != nil && !errors.Is(err, io.EOF) {
+		r.err = err
+	}
+	return n, err
+}
+
 // sniffer keeps the first bytes of a stream, to check it is a PDF.
 type sniffer struct{ b []byte }
 
@@ -161,8 +181,11 @@ func (h *sniffer) isPDF() bool { return strings.Contains(string(h.b), "%PDF-") }
 // it in. The file moves to the materials folder first, and back if the
 // write fails.
 func (s *Service) add(ctx context.Context, do *action.Do, in Add) error {
+	if in.UploadID == "" || strings.ContainsAny(in.UploadID, `/\.`) {
+		return uploadGone.New()
+	}
 	raw, err := os.ReadFile(s.stagedMeta(in.UploadID))
-	if err != nil || strings.ContainsAny(in.UploadID, `/\.`) {
+	if err != nil {
 		return uploadGone.New()
 	}
 	var st staging
@@ -410,7 +433,10 @@ func (s *Service) Sweep(ctx context.Context) error {
 		if err := s.c.Store.DB.QueryRowContext(ctx, `SELECT count(*) FROM materials WHERE id = ?`, id).Scan(&n); err != nil {
 			return errs.Database.Wrap(err)
 		}
-		if n == 0 {
+		// A file younger than a minute may be a material being added, its
+		// row not yet committed.
+		info, err := e.Info()
+		if n == 0 && err == nil && time.Since(info.ModTime()) > time.Minute {
 			cleanup.Remove(s.path(id))
 			s.pages.Drop(id)
 		}

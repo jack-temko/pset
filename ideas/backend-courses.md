@@ -147,7 +147,11 @@ tool that reports its own cost, fix this in track 5).
 **4. Courses and materials.** Built 2026-11-17 in the cloud, without Jack's books:
 the five steps run on the repo's sample PDFs, a scan with OCR faked (no Tesseract
 there), a fake model and embedder. Search was ported as it was, embeddings and
-all; Jack's measurements decide whether they stay (the eval below). Not proven
+all; Jack's measurements decide whether they stay (the eval below). The search
+step's input is the embedding model's name, but a done step is only checked against
+its input when something calls the runner's Changed: a new embedder needs that call
+(or the step dropped) when the eval decides. Naming's calls are keyed to the
+contents step, with no separate "Naming" stage as the old usage store had. Not proven
 until Jack's run: a real textbook and a real scan, Tesseract, Ollama, naming and
 the contents against a real model. Courses were built in 7a.
 

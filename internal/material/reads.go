@@ -17,7 +17,7 @@ func (s *Service) Contents(ctx context.Context, id string) (Contents, error) {
 	if _, err := s.get(ctx, id); err != nil {
 		return Contents{}, err
 	}
-	rows, err := s.c.Store.DB.QueryContext(ctx, `SELECT id, parent_id, title, page FROM sections WHERE material_id = ? ORDER BY position`, id)
+	rows, err := s.c.Store.DB.QueryContext(ctx, `SELECT id, parent_id, title, page FROM sections WHERE material_id = ? AND position >= 0 ORDER BY position`, id)
 	if err != nil {
 		return Contents{}, errs.Database.Wrap(err)
 	}
@@ -74,6 +74,9 @@ func (s *Service) PageImage(ctx context.Context, id string, page, width int) ([]
 
 // PageText is one page's text, "" for a page not read yet.
 func (s *Service) PageText(ctx context.Context, id string, page int) (string, error) {
+	if _, err := s.get(ctx, id); err != nil {
+		return "", err
+	}
 	var t string
 	err := s.c.Store.DB.QueryRowContext(ctx, `SELECT text FROM pages WHERE material_id = ? AND number = ?`, id, page).Scan(&t)
 	if errors.Is(err, sql.ErrNoRows) {

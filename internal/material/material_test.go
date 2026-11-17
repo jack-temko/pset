@@ -482,9 +482,11 @@ func TestTheFirstMaterialWithProblemsIsTheTextbook(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	// A removed textbook still counts until it is purged: undoing its
+	// removal never leaves two.
 	claim("m3")
-	if !textbook("m3") {
-		t.Fatal("with the textbook removed, the next material with problems is not the textbook")
+	if textbook("m3") {
+		t.Fatal("with the textbook only removed, another material took it")
 	}
 }
 
@@ -558,5 +560,143 @@ func TestTheRoutes(t *testing.T) {
 	}
 	if r := get("/api/materials/"+done.ID+"/pages/x/image", nil); r.StatusCode != http.StatusNotFound {
 		t.Fatalf("a page that isn't a number: %d", r.StatusCode)
+	}
+}
+
+// redo marks a material's done steps waiting, as a kill between a step's
+// write and its being marked done leaves one, and waits for them to finish.
+func (e *env) redo(id string, names ...step.Name) {
+	e.t.Helper()
+	if err := e.s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
+		for _, n := range names {
+			if _, err := tx.Exec(`UPDATE steps SET state = 'waiting' WHERE subject_id = ? AND name = ?`, id, n); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		e.t.Fatal(err)
+	}
+	e.r.Wake()
+	for _, n := range names {
+		e.wait(id, n, step.StateDone)
+	}
+}
+
+// Every step runs again safely: examine and contents write over what they
+// wrote, deleting nothing, and a scan keeps the pages it read.
+func TestStepsRunAgainSafely(t *testing.T) {
+	e := newEnv(t)
+	e.start()
+	digital := e.add("sample-digital.pdf")
+	scan := e.add("sample-scanned.pdf")
+	e.wait(digital, step.NameSearch, step.StateDone)
+	e.wait(scan, step.NameSearch, step.StateDone)
+	before, err := e.svc.Contents(bg, digital)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.redo(digital, step.NameExamine, step.NameContents, step.NameNumbering, step.NameSearch)
+	e.redo(scan, step.NameExamine)
+	after, err := e.svc.Contents(bg, digital)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b, a := fmt.Sprint(before), fmt.Sprint(after); a != b {
+		t.Fatalf("contents changed when read again:\n%s\n%s", b, a)
+	}
+	if n := e.count(`SELECT count(*) FROM pages WHERE material_id = ?`, digital); n != 6 {
+		t.Fatalf("%d pages after examine ran again", n)
+	}
+	if n := e.count(`SELECT pages_read FROM materials WHERE id = ?`, scan); n != 6 {
+		t.Fatalf("a scan examined again says %d pages read", n)
+	}
+	// Fewer sections on a read again: the extra are retired, then purged.
+	if err := e.s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
+		return saveSections(bg, tx, digital, []library.Section{{Level: 1, Title: "Whole book", StartPage: 1, EndPage: 6}})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if c, err := e.svc.Contents(bg, digital); err != nil || len(c.Entries) != 1 || c.Entries[0].Title != "Whole book" {
+		t.Fatalf("contents after fewer sections: %+v (%v)", c, err)
+	}
+	if err := e.s.Purge(bg, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.count(`SELECT count(*) FROM sections WHERE material_id = ?`, digital); n != 1 {
+		t.Fatalf("%d sections after the purge, want the one", n)
+	}
+}
+
+// A rename holds: neither the file's own title nor the one read off its
+// first pages writes over it.
+func TestARenameHoldsAgainstReadingTheTitle(t *testing.T) {
+	e := newEnv(t)
+	e.model.Fallback(func(llm.ChatRequest) llmtest.Reply {
+		return llmtest.Reply{Text: `{"title":"Foundations of Brontolithics","authors":["Voss"]}`}
+	})
+	id := e.add("sample-digital.pdf")
+	in, err := json.Marshal(Rename{ID: id, Title: "My thunder notes"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.c.Run(bg, "material.rename", in); err != nil {
+		t.Fatal(err)
+	}
+	e.start()
+	e.wait(id, step.NameSearch, step.StateDone)
+	if m, err := e.svc.Get(bg, id); err != nil || m.Title != "My thunder notes" {
+		t.Fatalf("after reading it in, the title is %q (%v)", m.Title, err)
+	}
+}
+
+// An upload id that names anything but an upload is refused before any
+// file is touched.
+func TestAnUploadIDIsOnlyAnUploads(t *testing.T) {
+	e := newEnv(t)
+	for _, id := range []string{"", "../store", "..", "a/b", `a\b`, "nope"} {
+		in, err := json.Marshal(Add{CourseID: "c1", UploadID: id})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := e.c.Run(bg, "material.add", in); !errors.Is(err, uploadGone) {
+			t.Errorf("upload id %q: %v", id, err)
+		}
+	}
+}
+
+// The sweep drops a file no material names once it is a minute old, and an
+// upload once it is a day old; younger ones may be in the middle of being
+// added.
+func TestTheSweep(t *testing.T) {
+	e := newEnv(t)
+	kept := e.add("sample-flat.pdf")
+	dir := e.svc.filesDir()
+	old := time.Now().Add(-2 * time.Minute)
+	for _, f := range []string{"orphan.pdf", "young.pdf"} {
+		if err := os.WriteFile(filepath.Join(dir, f), []byte("%PDF-"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	testx.Check(t, os.Chtimes(filepath.Join(dir, "orphan.pdf"), old, old))
+	testx.Check(t, os.Chtimes(e.svc.path(kept), old, old))
+	f, err := os.Open(filepath.Join("..", "..", "testdata", "sample-digital.pdf"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	up, err := e.svc.Stage(f, "x.pdf")
+	cleanup.Close(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stale := time.Now().Add(-25 * time.Hour)
+	testx.Check(t, os.Chtimes(e.svc.staged(up.ID), stale, stale))
+	testx.Check(t, e.svc.Sweep(bg))
+	exists := func(p string) bool { _, err := os.Stat(p); return err == nil }
+	if exists(filepath.Join(dir, "orphan.pdf")) || !exists(filepath.Join(dir, "young.pdf")) || !exists(e.svc.path(kept)) {
+		t.Fatal("the sweep took the wrong files")
+	}
+	if exists(e.svc.staged(up.ID)) {
+		t.Fatal("an upload a day old was kept")
 	}
 }

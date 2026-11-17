@@ -37,7 +37,10 @@ func (s *Service) pipeline() runner.Pipeline {
 		{Name: step.NameReadPages, Model: limitReader, Run: s.readPages},
 		{Name: step.NameContents, Model: s.c.ChatModel, Run: s.contents},
 		{Name: step.NameNumbering, Run: s.numbering},
-		{Name: step.NameSearch, Model: limitEmbedder, Run: s.search},
+		// Its input is the embedder: vectors from another model are
+		// useless, so a new one makes search out of date.
+		{Name: step.NameSearch, Model: limitEmbedder, Run: s.search,
+			Input: func(context.Context, *sql.DB, string) (string, error) { return s.c.EmbedModel, nil }},
 	}}
 }
 
@@ -77,26 +80,25 @@ func (s *Service) examine(ctx context.Context, run *runner.Run) error {
 		aspect = meta.PageHeight / meta.PageWidth
 	}
 	return run.Write(ctx, func(tx *sql.Tx) error {
-		t := m.Title
-		if !m.Renamed {
-			if mt := library.MetaTitle(meta.Title); mt != "" {
-				t = mt
-			}
-		}
-		read := 0
 		if kind == "digital" {
-			read = meta.PageCount
-			if _, err := tx.ExecContext(ctx, `DELETE FROM pages WHERE material_id = ?`, m.ID); err != nil {
-				return errs.Database.Wrap(err)
-			}
+			// A PDF's pages never change, so a run again writes over the
+			// same pages: nothing is deleted (only the purge deletes).
 			for i, p := range pages {
 				if err := savePage(ctx, tx, m.ID, i+1, p, pageStatus(p)); err != nil {
 					return err
 				}
 			}
 		}
-		_, err := tx.ExecContext(ctx, `UPDATE materials SET title = ?, page_count = ?, aspect = ?, page_width = ?, kind = ?, pages_read = ? WHERE id = ?`,
-			t, meta.PageCount, aspect, meta.PageWidth, kind, read, m.ID)
+		// The title the file gives, unless the student has renamed it by
+		// now: checked in this write, not from the read above, which is
+		// seconds old on a big book. pages_read is what is stored, so a run
+		// again never forgets a scan's pages.
+		_, err := tx.ExecContext(ctx, `UPDATE materials SET
+			title = CASE WHEN renamed = 0 AND ?1 != '' THEN ?1 ELSE title END,
+			page_count = ?2, aspect = ?3, page_width = ?4, kind = ?5,
+			pages_read = (SELECT count(*) FROM pages WHERE material_id = ?6 AND status != 'failed')
+			WHERE id = ?6`,
+			library.MetaTitle(meta.Title), meta.PageCount, aspect, meta.PageWidth, kind, m.ID)
 		return errs.Database.Of(err)
 	})
 }
@@ -272,7 +274,13 @@ func (s *Service) contents(ctx context.Context, run *runner.Run) error {
 		// Only a stopped step is an error: a failed call or an answer that
 		// doesn't check out leaves the title as it was, as the old import's
 		// did.
-		t, _, err := library.ReadName(ctx, model, s.images(m), m.ID, m.Title, "", pages, printed)
+		// The hint is the file's own name and author, as the old import's
+		// was; the author is only a hint here, since a material has none.
+		author := ""
+		if meta, err := s.c.Tools.Metadata(ctx, s.path(m.ID)); err == nil {
+			author = strings.TrimSpace(meta.Author)
+		}
+		t, _, err := library.ReadName(ctx, model, s.images(m), m.ID, m.Title, author, pages, printed)
 		switch {
 		case ctx.Err() != nil:
 			return stopped(ctx)
@@ -298,9 +306,31 @@ func (s *Service) contents(ctx context.Context, run *runner.Run) error {
 }
 
 // saveSections replaces a material's contents. Each section's parent is the
-// nearest section above it at a shallower level.
+// nearest section above it at a shallower level. Only the purge deletes, so
+// a run again writes over the sections it had, position by position, keeps
+// their ids, and retires those past the new count (position -1): reads skip
+// them and the purge takes them.
 func saveSections(ctx context.Context, tx *sql.Tx, id string, secs []library.Section) error {
-	if _, err := tx.ExecContext(ctx, `DELETE FROM sections WHERE material_id = ?`, id); err != nil {
+	have := map[int]string{}
+	rows, err := tx.QueryContext(ctx, `SELECT position, id FROM sections WHERE material_id = ? AND position >= 0`, id)
+	if err != nil {
+		return errs.Database.Wrap(err)
+	}
+	for rows.Next() {
+		var pos int
+		var sid string
+		if err := rows.Scan(&pos, &sid); err != nil {
+			cleanup.Close(rows)
+			return errs.Database.Wrap(err)
+		}
+		have[pos] = sid
+	}
+	err = rows.Err()
+	cleanup.Close(rows)
+	if err != nil {
+		return errs.Database.Wrap(err)
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE sections SET position = -1 WHERE material_id = ? AND position >= ?`, id, len(secs)); err != nil {
 		return errs.Database.Wrap(err)
 	}
 	type open struct {
@@ -316,8 +346,13 @@ func saveSections(ctx context.Context, tx *sql.Tx, id string, secs []library.Sec
 		if len(stack) > 0 {
 			parent = stack[len(stack)-1].id
 		}
-		sid := uuid.NewString()
-		if _, err := tx.ExecContext(ctx, `INSERT INTO sections (id, material_id, parent_id, title, page, end_page, level, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		sid, ok := have[i]
+		if !ok {
+			sid = uuid.NewString()
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO sections (id, material_id, parent_id, title, page, end_page, level, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			ON CONFLICT (id) DO UPDATE SET parent_id = excluded.parent_id, title = excluded.title, page = excluded.page,
+				end_page = excluded.end_page, level = excluded.level`,
 			sid, id, parent, sec.Title, sec.StartPage, sec.EndPage, sec.Level, i); err != nil {
 			return errs.Database.Wrap(err)
 		}
@@ -327,7 +362,7 @@ func saveSections(ctx context.Context, tx *sql.Tx, id string, secs []library.Sec
 }
 
 func (s *Service) sections(ctx context.Context, id string) ([]library.Section, error) {
-	rows, err := s.c.Store.DB.QueryContext(ctx, `SELECT level, title, page, end_page FROM sections WHERE material_id = ? ORDER BY position`, id)
+	rows, err := s.c.Store.DB.QueryContext(ctx, `SELECT level, title, page, end_page FROM sections WHERE material_id = ? AND position >= 0 ORDER BY position`, id)
 	if err != nil {
 		return nil, errs.Database.Wrap(err)
 	}
@@ -387,11 +422,12 @@ func (s *Service) numbering(ctx context.Context, run *runner.Run) error {
 
 // claimTextbook makes a material that numbers its problems its course's
 // textbook, unless the course has one already (A2): the student's choice,
-// or an earlier material's.
+// or an earlier material's. A removed textbook still counts until it is
+// purged, so undoing its removal never leaves two.
 func claimTextbook(ctx context.Context, tx *sql.Tx, id string) error {
 	_, err := tx.ExecContext(ctx, `UPDATE materials SET textbook = 1 WHERE id = ?1 AND NOT EXISTS
 		(SELECT 1 FROM materials o WHERE o.course_id = (SELECT course_id FROM materials WHERE id = ?1)
-			AND o.id != ?1 AND o.textbook = 1 AND o.removed_at = '')`, id)
+			AND o.id != ?1 AND o.textbook = 1)`, id)
 	return errs.Database.Of(err)
 }
 
