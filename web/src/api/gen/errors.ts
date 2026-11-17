@@ -113,6 +113,11 @@ export type ErrorId =
   | "settings.name_too_long"
   | "settings.not_fixable"
   | "settings.test_failed"
+  | "store.already_undone"
+  | "store.changed_since"
+  | "store.no_streaming"
+  | "store.nothing_to_undo"
+  | "store.rewritten_since"
   | "update.already_installing"
   | "update.check_unreachable"
   | "update.download_failed"
@@ -946,6 +951,43 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 422,
     owner: "settings",
+  },
+  "store.already_undone": {
+    what: "That was already undone.",
+    why: "It was taken back earlier, perhaps from another tab.",
+    scope: "inline",
+    status: 409,
+    owner: "store",
+  },
+  "store.changed_since": {
+    what: "That can't be undone on its own.",
+    why: "You changed the same thing again afterwards.",
+    fix: "Undo the newer change first.",
+    scope: "inline",
+    status: 409,
+    owner: "store",
+  },
+  "store.no_streaming": {
+    what: "PSet couldn't keep this page up to date.",
+    why: "The connection can't stream updates.",
+    fix: "Reload the page.",
+    scope: "inline",
+    status: 500,
+    owner: "store",
+  },
+  "store.nothing_to_undo": {
+    what: "There's nothing to undo.",
+    why: "Nothing you did in the last week is left to take back.",
+    scope: "inline",
+    status: 404,
+    owner: "store",
+  },
+  "store.rewritten_since": {
+    what: "That can't be undone any more.",
+    why: "PSet has worked on it since, and undoing would throw that away.",
+    scope: "inline",
+    status: 409,
+    owner: "store",
   },
   "update.already_installing": {
     what: "An update is already being installed.",

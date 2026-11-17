@@ -4,7 +4,7 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-126 entries.
+131 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
@@ -119,6 +119,11 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `settings.name_too_long` | Keep it under {max} characters. |  |  |  | field | settings |
 | `settings.not_fixable` | PSet can't fix this one itself. | Fixing it needs something installed or changed outside PSet. | Follow the steps listed with the check, then check again. |  | inline | settings |
 | `settings.test_failed` | Couldn't connect with that key. | PSet couldn't finish the test. | Try again in a minute. | `retry` | inline | settings |
+| `store.already_undone` | That was already undone. | It was taken back earlier, perhaps from another tab. |  |  | inline | store |
+| `store.changed_since` | That can't be undone on its own. | You changed the same thing again afterwards. | Undo the newer change first. |  | inline | store |
+| `store.no_streaming` | PSet couldn't keep this page up to date. | The connection can't stream updates. | Reload the page. |  | inline | store |
+| `store.nothing_to_undo` | There's nothing to undo. | Nothing you did in the last week is left to take back. |  |  | inline | store |
+| `store.rewritten_since` | That can't be undone any more. | PSet has worked on it since, and undoing would throw that away. |  |  | inline | store |
 | `update.already_installing` | An update is already being installed. | Another request started it a moment ago. | Wait for PSet to restart. |  | inline | update |
 | `update.check_unreachable` | Couldn't look for an update. | PSet couldn't reach GitHub. | Check the internet connection, then try again. | `retry` | inline | update |
 | `update.download_failed` | The update wasn't installed. | The download failed or broke off. Nothing was changed. | Check the internet connection, then try again. | `retry` | inline | update |

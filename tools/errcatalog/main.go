@@ -24,6 +24,7 @@ import (
 	_ "github.com/jackt/pset/internal/llm"
 	_ "github.com/jackt/pset/internal/memory"
 	_ "github.com/jackt/pset/internal/settings"
+	_ "github.com/jackt/pset/internal/store"
 	_ "github.com/jackt/pset/internal/update"
 )
 
