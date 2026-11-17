@@ -4,7 +4,7 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-143 entries.
+144 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
@@ -111,6 +111,7 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `model.rejected` | OpenRouter turned the request down. | OpenRouter refused it for a reason PSet has no name for. | Try again. If it keeps happening, copy the details and report it. | `retry` | inline | llm |
 | `model.unknown` | OpenRouter doesn't know a model PSet uses. | A model PSet relies on was renamed or removed. | Check for a PSet update. | `check_update` | inline | llm |
 | `model.unreachable` | PSet couldn't reach OpenRouter. | The internet connection is down, or OpenRouter didn't answer in time. | Check the internet connection, then try again. | `retry` | inline | llm |
+| `place.bad` | PSet couldn't remember where you were. | The page sent a place it can't keep: {why}. | Reload the page. | `reload` | inline | place |
 | `request.foreign_origin` | PSet refused that change. | PSet takes changes only from its own page. | Make the change from PSet's own page. |  | inline | errs |
 | `request.gone` | That {thing} isn't there. | It was removed, or the page is out of date. | Reload the page to see what is there now. | `reload` | inline | errs |
 | `request.invalid_json` | PSet couldn't read what was sent. | The page and PSet's server are out of step, which happens after an update. | Reload the page and try again. | `reload` | inline | errs |
