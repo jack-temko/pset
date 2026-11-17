@@ -113,7 +113,10 @@ type Runner struct {
 	// healed counts each condition's Holds, so a run that fails for want
 	// of a condition can tell it came back while the run was going.
 	healed map[string]int
-	wg     sync.WaitGroup
+	// failing, in tests, runs inside a failure's write, after it has
+	// decided to wait on a condition and before it commits.
+	failing func()
+	wg      sync.WaitGroup
 }
 
 type running struct {
@@ -567,8 +570,12 @@ func (r *Runner) settle(run *Run, err, cause error) error {
 			return errs.Database.Of(err)
 		})
 		if werr == nil {
-			// What came after it may have read its output.
-			werr = r.Changed(ctx, run.Kind, run.SubjectID)
+			// What came after it may have read its output. Not part of the
+			// ending: a sibling whose inputs can't be read is logged, not
+			// retried, or this finished step would hold its slot for good.
+			if err := r.Changed(ctx, run.Kind, run.SubjectID); err != nil {
+				slog.Warn("runner: check what read a finished step", "step", run.StepID, "err", err)
+			}
 		}
 	case cause == errShutdown || cause == errPaused: //nolint:errorlint // the runner's own sentinels, never wrapped
 		werr = r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
@@ -622,16 +629,20 @@ func (r *Runner) fail(ctx context.Context, run *Run, err error) error {
 		return r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
 			// The condition came back while this run went (a key saved as
 			// the call failed for want of one): run again, rather than wait
-			// on something that already holds. Checked inside the write, so
-			// a Holds after this point waits for it and heals what it wrote.
-			// Otherwise it is marked broken before the write, so a call that
-			// works heals it even if the write fails.
+			// on something that already holds. Otherwise it is marked broken,
+			// under the same lock Holds counts under: a Holds from here on
+			// sees the mark, takes its write path, waits for this write and
+			// heals what it wrote. The mark is set before the write, so a
+			// call that works heals it even if the write fails.
 			r.mu.Lock()
 			healed := r.healed[clears] != run.healed[clears]
 			if !healed {
 				r.broken[clears] = true
 			}
 			r.mu.Unlock()
+			if r.failing != nil && !healed {
+				r.failing()
+			}
 			if healed {
 				_, err := tx.ExecContext(ctx, `UPDATE steps SET state = 'waiting', ended_at = ?, attempts = 0 WHERE id = ?`, now, run.StepID)
 				return errs.Database.Of(err)
@@ -739,6 +750,7 @@ func (r *Runner) Holds(ctx context.Context, condition string) error {
 	// instead of waiting (see fail).
 	r.mu.Lock()
 	r.healed[condition]++
+	marked := r.broken[condition]
 	r.mu.Unlock()
 	var open int
 	err := r.store.DB.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM conditions WHERE id = ?1 AND holds = 0) +
@@ -746,12 +758,10 @@ func (r *Runner) Holds(ctx context.Context, condition string) error {
 	if err != nil {
 		return errs.Database.Wrap(err)
 	}
-	if open == 0 {
+	if open == 0 && !marked {
 		// Nothing is broken or waiting: no write (Settings checks every
-		// condition each time it opens).
-		r.mu.Lock()
-		delete(r.broken, condition)
-		r.mu.Unlock()
+		// condition each time it opens). A failure still writing its wait
+		// has marked it (see fail), so it never gets here.
 		return nil
 	}
 	err = r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {

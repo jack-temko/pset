@@ -136,6 +136,12 @@ tool that reports its own cost, fix this in track 5).
   `dev` meanwhile. The old queue survives only as `internal/oldwork/oldworktest`,
   imported by homework's and ask's tests, so what tracks 5 and 6 port stays tested;
   it goes with the last of them. The library's tests import inline instead.
+- For track 7: a SQLite fault in `store.db` marks the `database` condition, but
+  Settings' database check, which heals it, still looks at the old `pset.db`.
+- Migration `usage/5` drops the old `forgotten` table: a release before it, run on a
+  library this build has opened, would fail to record calls or remove anything.
+  `backend` ships no release, so this matters only if a build of it reaches Jack's
+  own library.
 - Not done here: no Try again route yet (the action comes with track 7's catalog),
   and the new store's event stream is not mounted (no screen reads it before
   track 8).

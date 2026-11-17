@@ -710,3 +710,77 @@ func TestHoldingWithNothingBrokenWritesNothing(t *testing.T) {
 		t.Fatalf("holding what already held logged %d changes", after-before)
 	}
 }
+
+// A key saved while the failure's write is still going (decided to wait,
+// not yet committed): Holds waits for that write and heals what it wrote,
+// so the step runs.
+func TestAKeySavedAsTheWaitIsWrittenDoesNotStrandTheStep(t *testing.T) {
+	e := newEnv(t)
+	var runs atomic.Int32
+	h := Handler{Name: stepA, Run: func(context.Context, *Run) error {
+		if runs.Add(1) == 1 {
+			return llm.KeyMissing.New()
+		}
+		return nil
+	}}
+	r := e.runner(nil, h)
+	inWrite, release := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	r.failing = func() {
+		once.Do(func() {
+			close(inWrite)
+			<-release
+		})
+	}
+	start(t, r)
+	e.begin(r, "s1")
+	<-inWrite
+	held := make(chan error, 1)
+	go func() { held <- r.Holds(bg, "key") }()
+	time.Sleep(50 * time.Millisecond) // Holds reaches its write and waits
+	close(release)
+	if err := <-held; err != nil {
+		t.Fatal(err)
+	}
+	got := e.wait("s1", stepA, step.StateDone)
+	if got.incident != "" || e.count(`SELECT count(*) FROM incidents WHERE state = 'open'`) != 0 {
+		t.Fatalf("the step is %+v with an open incident, though the key came back as its wait was written", got)
+	}
+}
+
+// A done step whose inputs can no longer be read does not hold up the
+// steps after it from finishing.
+func TestASiblingsUnreadableInputDoesNotHoldAFinishedStep(t *testing.T) {
+	e := newEnv(t)
+	var bad atomic.Bool
+	var ranA, ranB atomic.Int32
+	a := ok(stepA, &ranA)
+	a.Input = func(context.Context, *sql.DB, string) (string, error) {
+		if bad.Load() {
+			return "", errs.Data.Wrap(errors.New("its row is gone"))
+		}
+		return "x", nil
+	}
+	entered, release := make(chan struct{}), make(chan struct{})
+	b := Handler{Name: stepB, Run: func(context.Context, *Run) error {
+		ranB.Add(1)
+		close(entered)
+		<-release
+		return nil
+	}}
+	r := e.runner(nil, a, b)
+	r.SettleRetry = 10 * time.Millisecond
+	start(t, r)
+	e.begin(r, "s1")
+	<-entered
+	bad.Store(true)
+	close(release)
+	e.wait("s1", stepB, step.StateDone)
+	deadline := time.Now().Add(2 * time.Second)
+	for len(r.Running()) != 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("the finished step still holds its slot")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
