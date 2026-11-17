@@ -1,0 +1,17 @@
+{
+  "$schema": "./web/node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "semi": true,
+  "printWidth": 80,
+  "tabWidth": 2,
+  "useTabs": false,
+  "ignorePatterns": [
+    "web/src/api/gen",
+    "design/errors.md",
+    "**/package-lock.json",
+    "web/dist",
+    "**/node_modules",
+    ".dev",
+    "internal/doc/katex-check.js"
+  ]
+}

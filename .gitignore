@@ -1,0 +1,10 @@
+/pset
+*.test
+coverage.out
+
+# Inspection artifacts never live in the repo root (see AGENTS.md).
+/*.png
+/.playwright-mcp/
+/node_modules/
+.dev/
+/dist/

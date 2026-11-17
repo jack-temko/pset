@@ -1,0 +1,19 @@
+{
+  "hooks": {
+    "enabled": true,
+    "events": {
+      "PostToolUse": [
+        {
+          "matcher": "Write|Edit",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "\"${ZCODE_PROJECT_DIR}\"/tools/format-file.sh",
+              "timeout": 120
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,210 @@
+# The backend rewrite: how it gets built
+
+## Status
+
+Planned. The decisions are in [backend-courses-grill.md](backend-courses-grill.md)
+(approved 2026-11-17), [errors-grill.md](errors-grill.md) and
+[actions-conditions-place-grill.md](actions-conditions-place-grill.md); this file is
+the order of work and the tracker. Branch
+`backend`, not yet created.
+
+| Track | What                                | Status                                           | Branch          |
+| ----- | ----------------------------------- | ------------------------------------------------ | --------------- |
+| 0     | Groundwork on `dev`                 | The bar is measured; the test fix is in progress | `flaky-go-test` |
+| 1     | The contract                        | Not started                                      |                 |
+| 2     | Schema, change log, events          | Not started                                      |                 |
+| 3     | The step runner                     | Not started                                      |                 |
+| 4     | Courses and materials               | Not started                                      |                 |
+| 5     | Work: sets, finds, readings, guides | Not started                                      |                 |
+| 6     | Ask                                 | Not started                                      |                 |
+| 7     | Undo, and the rest of the app       | Not started                                      |                 |
+| 8     | The web data layer and the screens  | Not started                                      |                 |
+| 9     | Cut over                            | Not started                                      |                 |
+
+## Information
+
+### Four rules for the whole rewrite
+
+1. **The container changes, the craft does not.** The prompts, the model choices, the
+   find's rungs, the three readings and the check were each won by an eval. They move
+   into steps word for word. A track that touches them reruns the evals and must match
+   the bar set in track 0.
+2. **Leaves are kept.** `pdf`, `ocr`, `mathx`, `doc`, `pagenum`, `probnum`, `errs`,
+   `httpx`, `agent` and most of `llm` are not rewritten. What is rewritten is what
+   holds state: `library`, `homework`, `ask`, `jobs`, `events`, `usage`.
+3. **The contract comes first.** The wire types are written before any behaviour and
+   handed to `design`, so the new screens' sample data has the real shapes from the
+   start and the two branches cannot drift.
+4. **Each track ends in something that runs** and passes the full `make check` on
+   `backend`. Nothing is left half built between tracks.
+
+### The branches
+
+- `backend` is cut from `dev` after track 0. Every track is a pull request into it.
+  `dev` takes only fixes meanwhile, and is merged into `backend` weekly.
+- `design` merges `backend` in after track 1 (for the types), and again at track 8.
+  **Assumed:** `design` is the branch that becomes the app, so the last merge is
+  `design` into `dev`. Say if `backend` should be the one instead.
+- Reviews: tracks 2, 3 and 9 touch the database and get the reviewer, and the second
+  reviewer if it escalates. Only track 8 is a UI change that waits for Jack to try.
+
+### The tracks
+
+**0. Groundwork on `dev`.** Before anything is cut.
+
+- Find and fix the intermittent Go test seen on 2026-11-17 (first `make check` run in
+  the grill's worktree failed, the next four passed).
+- Set the bar: run `tools/findertest` and `tools/assignmenttest` on today's code and
+  write down find accuracy, guides right, cost and time for a ten-problem set.
+- Done when: `make check` passes ten times running, and the bar is in this file.
+
+**The bar** (measured once on `dev`, 2026-11-17, seeded test library, $0.39 spent):
+
+| Measure                                      | Result                                                                                            |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Finder, all three books (`tools/findertest`) | 44 of 44 questions found on the right page, in 5 min 05 s                                         |
+| A set of 5 problems without figures          | 5 of 5 ready, none failed, 132.6 s from adding the set to the last guide                          |
+| The same set, cost                           | $0.072 over 46 calls, about $0.015 a problem: finds $0.018, rank $0.001, guides and checks $0.052 |
+| The same set, pace                           | finds 8 to 21 s each, two at a time; first guide at 45 s, the rest at 50, 78, 112 and 133 s       |
+
+What the bar does not cover, so track 5 must not claim it: the finder eval scores the
+page only, not the statement, boxes or figures, and some references are read without a
+model; no problem in the timed set had a figure, so figure reading was not timed or
+priced; guide correctness was not judged.
+
+Found while measuring: `tools/findertest` deletes its set when it ends, which deletes
+that set's calls, so its cost cannot be read afterwards (calls keyed to steps, and a
+tool that reports its own cost, fix this in track 5).
+
+**1. The contract.** Types only.
+
+- `wire.go` for course, material, set, question, find, reading, document, turn, step
+  and change; generated to TypeScript; no handlers.
+- Also the shapes of an incident, a condition, a place and an action's entry, so the
+  screens can be designed against them.
+- Merged into `design`, whose sample data is retyped against it.
+- Done when: `design` builds on the generated types. Jack reads the shapes once, since
+  every screen is designed against them.
+
+**2. Schema, change log, events.** The riskiest track, so it starts with a spike.
+
+- Spike: the triggers on three tables, an import of a 700-page book through them, and
+  an undo of a removed set. If logging slows the import by more than a tenth, pages
+  are not logged row by row, only their material.
+- Then: the baseline migration, the trigger generator (from one list of tables and
+  which columns the student made), the stream replaying the log, hiding and the weekly
+  purge, the action id.
+- The `incidents` table, on the log like any resource
+  ([errors-grill.md](errors-grill.md)); the `errors` table and every `error` column go.
+- Done when: every table has a test that writes, reads the log, undoes and compares.
+- Deletes: every migration, `events`' ring and `reset`, every `Publish` call.
+
+**3. The step runner.**
+
+- The `steps` table, states, input hashes, the one retry rule, limits per model,
+  calls keyed to steps.
+- The model client built once in `main`, with no package globals and no labels carried
+  in `context`.
+- Conditions: the key, credit, the provider, the readers, the data folder, the
+  database and disk space as resources on the log, learned from what happens. They
+  are what healing watches.
+- Done when: a fake three-step pipeline survives a kill and a restart, retries, goes
+  out of date when its input changes, and its calls vanish with its subject.
+- Errors: every catalog entry gains its kind and what clears it; a failed step opens
+  an incident; healing reruns waiting steps when their cause is gone.
+- Also done when: a fake step that fails for want of a key runs again by itself once
+  a key is saved, and its incident resolves.
+- Deletes: `jobs`, lanes, `usage`'s forgotten marks and sweep.
+
+**4. Courses and materials.**
+
+- Courses; a material's import as steps (examine, read pages, contents, numbering,
+  search); textbook detection; page images.
+- Decided here: **embeddings** (below), before the search step is ported.
+- Done when: a real textbook and a scan import, resume after a kill, and search.
+
+**5. Work.** The largest track; three pull requests.
+
+- a. Sets, questions, assignment reads with the sheet kept as a material.
+- b. Finds with the widening rungs, readings, ranking, the worksheet.
+- c. Documents and their stream, guides three ahead, the check beside the guide,
+  out-of-date marking.
+- Decided here: **the limits per model**, by measuring.
+- Done when: the evals match track 0's bar, and a ten-problem set is ready to work in
+  under half the time it took in track 0.
+
+**6. Ask.** Turns per course on the same documents and stream; memory.
+
+**7. Undo, and the rest.**
+
+- The action catalog: every student action declared once (id, name, input, key, what
+  it needs, whether it can be undone, whether it spends), generated to TypeScript.
+  Routes, undo and Ask's tools come from it; Ask runs only what can be undone and
+  costs nothing.
+- Places: where the student was, the layout and what was not sent, per thing, by the
+  one rule in the grill.
+- The undo call and Ctrl+Z's server side.
+- Errors: the Settings list (open, then a week), an incident's trace, and the
+  development switch that forces any error at any step.
+- Study time, usage views, Settings, health, Reset, the updater: moved onto the new
+  tables with as little change as they allow.
+- Settings health reads the conditions, and each Fix is an action.
+- Done when: a test walks the catalog and proves every undoable action undoes, and
+  no two actions share a key on one screen.
+
+**8. The web data layer and the screens.** On `design`.
+
+- One event handler, one cache rule (the higher sequence wins), hooks per resource,
+  the document stream, undo.
+- One error module: every failure on the page becomes a catalog error, the page's own
+  are posted as incidents, each shows once at the closest owner, and the layer runs
+  Try again.
+- Shortcuts from the catalog, single keys when not typing; a blocked action says what
+  it needs; places replace the browser-storage files for layout and position.
+- The palette (Ctrl+K): actions, and going to a course, set, problem or material by
+  name. A new unit, with its own short design pass first.
+- Then each screen swaps its sample data for the hooks: Home, the course, the work
+  pane, the material pane, Ask, Settings. Jack tries each.
+
+**9. Cut over.**
+
+- The old screens and their API go. `tools/testlib`, `fixturelib`, `samplegen` and
+  `seedusage` are rebuilt on the new schema, and the test library is made again.
+- `design/backend.md` is rewritten from this spec; each package's README with it.
+- Jack's library: the old folder is set aside, and he imports again.
+- Done when: `design` is merged into `dev` and `make check` is green there.
+
+### What is still open, and where each gets decided
+
+| Open                                         | Decided in    | How                                                                                                                              |
+| -------------------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Whether embeddings and Ollama stay           | Track 4       | Run the Ask and guide evals with text search alone. If they match, the embed step, its health check and its table are not ported |
+| Poppler and Tesseract as programs to install | After track 9 | A spike of an embedded PDF library. Not on the path: the leaves are kept, so it can change later without touching the rest       |
+| The limits per model, in numbers             | Track 5       | Raise each until the provider pushes back, then halve                                                                            |
+| Porting the old library                      | After track 9 | Its own small grill, if Jack still wants it. The old folder is kept until then                                                   |
+| Routes and wire types                        | Tracks 1 to 7 | Written into `design/backend.md` as each part is built                                                                           |
+| A history screen                             | Not planned   | The log keeps a week; a screen needs its own grill                                                                               |
+| The palette's design and each action's key   | Track 8       | The palette's design pass on `/design`; keys drafted with the catalog and corrected in the palette                               |
+| The look of "waiting" and the one notice     | Track 8       | The error notice's design pass on `design`                                                                                       |
+| Step replay and the cost ledger              | After track 9 | Ideas, not decided: [step-replay.md](step-replay.md), [cost-ledger.md](cost-ledger.md)                                           |
+
+### What could go wrong
+
+- **A wrong trigger corrupts quietly.** Track 2's per-table tests, and undo is tested
+  by comparing whole rows, not by reading the code.
+- **The pipeline gets worse without anyone noticing.** Rule 1 and track 0's bar.
+- **The branches drift.** The contract first, `dev` merged in weekly, and `dev` frozen
+  for backend features.
+- **It grows.** The history screen, the port, the PDF library, step replay and the
+  cost ledger are named above as not part of this, so they are not started by
+  accident. Actions, conditions and places were added on purpose: undo and healing
+  already build half of each.
+
+### What Jack does
+
+- Track 0: nothing.
+- Track 1: read the shapes.
+- Track 2: hear the spike's result; decide if it changes the design.
+- Tracks 4 and 5: approve a capped model key for the evals, each time.
+- Track 8: try each screen, and the palette.
+- Track 9: import his library again.
