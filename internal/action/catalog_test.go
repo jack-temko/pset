@@ -275,3 +275,43 @@ func TestTheRoutes(t *testing.T) {
 		t.Fatalf("the list %+v", list)
 	}
 }
+
+// An undo naming an action and asking for the newest both is a page bug:
+// refused, so it can't take back the wrong thing.
+func TestUndoRefusesAnActionAndNewestTogether(t *testing.T) {
+	c, s := catalog(t)
+	d := run(t, c, "test.rename", "ECE 211")
+	if _, err := c.Undo(bg, d.Action, true); !errors.Is(err, errs.InvalidJSON) {
+		t.Fatalf("both: %v", err)
+	}
+	if courseName(t, s) != "ECE 211" {
+		t.Fatal("a refused undo took something back")
+	}
+}
+
+// Changed tells a Run whether its write changed anything, and the reply
+// names what it acted on without reading it back.
+func TestChangedSaysWhetherTheWriteDidAnything(t *testing.T) {
+	c, _ := catalog(t)
+	var seen []bool
+	Add(c, Def[named]{ID: "test.maybe", Name: "Maybe", Undoable: true, Undone: "x", Redone: "y",
+		Run: func(ctx context.Context, do *Do, in named) error {
+			err := do.Write(ctx, change.ResourceCourse, in.ID, func(tx *sql.Tx) error {
+				if in.Name == "same" {
+					return ErrUnchanged
+				}
+				_, err := tx.Exec(`UPDATE courses SET name = ? WHERE id = ?`, in.Name, in.ID)
+				return err
+			})
+			seen = append(seen, do.Changed())
+			return err
+		}})
+	same := run(t, c, "test.maybe", "same")
+	changed := run(t, c, "test.maybe", "ECE 300")
+	if len(seen) != 2 || seen[0] || !seen[1] {
+		t.Fatalf("Changed said %v, want false then true", seen)
+	}
+	if same.Action != "" || same.ID != "" || changed.Action == "" || changed.ID != "c1" || changed.Kind != change.ResourceCourse {
+		t.Fatalf("replies %+v and %+v", same, changed)
+	}
+}

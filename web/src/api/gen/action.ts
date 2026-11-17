@@ -102,7 +102,7 @@ export interface Undone {
   /**
    * Entry is its catalog id ("set.rename").
    */
-  entry: string;
+  entry?: string;
   /**
    * Said is the sentence to show.
    */
@@ -110,11 +110,12 @@ export interface Undone {
   /**
    * Kind is what kind of thing Show goes to.
    */
-  kind: Resource;
+  kind?: Resource;
   /**
-   * ID is the thing Show goes to.
+   * ID is the thing Show goes to. Kind, ID and Entry are absent when the
+   * action's record is gone (purged with the week): no Show then.
    */
-  id: string;
+  id?: string;
   /**
    * Seq is the change-log sequence of the undo's last write, so the page
    * knows when its copies have caught up.

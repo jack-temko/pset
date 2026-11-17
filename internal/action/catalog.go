@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -57,6 +59,7 @@ type Seed struct {
 // def is a declared action, its input no longer typed.
 type def struct {
 	entry          Entry
+	input          Input
 	undone, redone string
 	run            func(ctx context.Context, do *Do, raw json.RawMessage) error
 	try            func(Seed) json.RawMessage
@@ -93,7 +96,9 @@ func Add[In any](c *Catalog, d Def[In]) {
 	if needs == nil {
 		needs = []condition.ID{}
 	}
+	in := reflect.TypeFor[In]()
 	x := &def{
+		input:  Input{Package: path.Base(in.PkgPath()), Name: in.Name()},
 		entry:  Entry{ID: d.ID, Name: d.Name, Key: d.Key, Needs: needs, Undoable: d.Undoable, Costs: d.Costs},
 		undone: d.Undone, redone: d.Redone,
 		run: func(ctx context.Context, do *Do, raw json.RawMessage) error {
@@ -125,6 +130,23 @@ func Add[In any](c *Catalog, d Def[In]) {
 		panic("action: " + d.ID + " declared twice")
 	}
 	c.defs[d.ID] = x
+}
+
+// Input is the Go type an action takes, so its TypeScript can be named:
+// Name in Package's wire.go. Name is "" for an action that takes nothing.
+type Input struct {
+	Package, Name string
+}
+
+// Inputs is every action's input type, by id.
+func (c *Catalog) Inputs() map[string]Input {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	out := make(map[string]Input, len(c.defs))
+	for id, d := range c.defs {
+		out[id] = d.input
+	}
+	return out
 }
 
 // Entries is every action, sorted by id.
@@ -214,7 +236,14 @@ type Do struct {
 	undoable bool
 	wrote    bool
 	changed  bool
+	kind     change.Resource
+	resID    string
 }
+
+// Changed says whether this run's Write changed anything: false before it
+// writes, and after a Write whose fn found nothing to change. A Run that
+// does more after its write (starting work that costs) asks this first.
+func (do *Do) Changed() bool { return do.changed }
 
 // ID is this run's action id: what Undo takes back.
 func (do *Do) ID() string { return do.id }
@@ -237,6 +266,10 @@ func (do *Do) Write(ctx context.Context, kind change.Resource, id string, fn fun
 		if err := fn(tx); err != nil {
 			return err
 		}
+		if !do.undoable {
+			// Nothing will undo it, so nothing needs its record.
+			return nil
+		}
 		_, err := tx.ExecContext(ctx, `INSERT INTO actions (id, entry, kind, res_id, at) VALUES (?, ?, ?, ?, ?)`,
 			do.id, do.entry, string(kind), id, db.Now())
 		return errs.Database.Of(err)
@@ -244,7 +277,9 @@ func (do *Do) Write(ctx context.Context, kind change.Resource, id string, fn fun
 	if errors.Is(err, ErrUnchanged) {
 		return nil
 	}
-	do.changed = err == nil
+	if err == nil {
+		do.changed, do.kind, do.resID = true, kind, id
+	}
 	return err
 }
 
@@ -269,12 +304,9 @@ func (c *Catalog) Run(ctx context.Context, id string, input json.RawMessage) (Do
 	}
 	var out Done
 	if do.changed {
+		out.Kind, out.ID = do.kind, do.resID
 		if do.undoable {
 			out.Action = do.id
-		}
-		err := c.store.DB.QueryRowContext(ctx, `SELECT kind, res_id FROM actions WHERE id = ?`, do.id).Scan(&out.Kind, &out.ID)
-		if err != nil {
-			return Done{}, errs.Database.Wrap(err)
 		}
 	}
 	var err error
@@ -324,13 +356,28 @@ var names = map[change.Resource]string{
 // (C7). Undoing an undo is redo. An empty action without newest is nothing
 // to undo: never the newest by accident.
 func (c *Catalog) Undo(ctx context.Context, action string, newest bool) (Undone, error) {
-	if newest {
+	if newest && action != "" {
+		return Undone{}, errs.InvalidJSON.Wrap(errors.New("undo: an action and newest both"))
+	}
+	if !newest {
+		return c.undo(ctx, action)
+	}
+	// Ctrl+Z: the newest, and if another tab took that back a moment ago,
+	// the next.
+	for try := 0; ; try++ {
 		n, err := c.store.Newest(ctx)
 		if err != nil {
 			return Undone{}, err
 		}
-		action = n
+		u, err := c.undo(ctx, n)
+		if try == 0 && errors.Is(err, store.AlreadyUndone) {
+			continue
+		}
+		return u, err
 	}
+}
+
+func (c *Catalog) undo(ctx context.Context, action string) (Undone, error) {
 	if action == "" {
 		return Undone{}, store.NothingToUndo.New()
 	}
