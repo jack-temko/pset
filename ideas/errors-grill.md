@@ -1,6 +1,6 @@
 # Errors, full stack: grill
 
-- status: awaiting OK
+- status: approved ("Approve, fix the test first", 2026-11-17)
 - date: 2026-11-17
 - brief: one layer for every error, from where it is raised to where it is shown, stored and cleared, built on the change log and the step runner of `ideas/backend-courses-grill.md`; judged from an ordinary student doing this week's work
 - sources:

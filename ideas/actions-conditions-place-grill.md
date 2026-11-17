@@ -1,6 +1,6 @@
 # Actions, conditions and your place: grill
 
-- status: awaiting OK
+- status: approved ("Approve, fix the test first", 2026-11-17)
 - date: 2026-11-17
 - brief: three layers that sit on the change log and the step runner of `ideas/backend-courses-grill.md`: one catalog of what a student can do, health as live conditions, and the student's place kept on the server; judged from an ordinary student doing this week's work
 - sources:
