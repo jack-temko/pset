@@ -39,7 +39,13 @@ func seed(t testing.TB, d *sql.DB, n int) (setID string, qs []string) {
 	t.Helper()
 	setID = "set-1"
 	now := db.Now()
-	must(t, Write(bg, d, "pset", "seed", func(tx *sql.Tx) error {
+	write := func(fn func(tx *sql.Tx) error) error { return Write(bg, d, "pset", "seed", fn) }
+	var hasCtx int
+	must(t, d.QueryRow(`SELECT count(*) FROM sqlite_master WHERE name = 'change_ctx'`).Scan(&hasCtx))
+	if hasCtx == 0 {
+		write = func(fn func(tx *sql.Tx) error) error { return db.Tx(bg, d, fn) }
+	}
+	must(t, write(func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`INSERT INTO books (id, sha256, title, state, created_at, updated_at) VALUES (?, ?, 'Circuits', 'ready', ?, ?)`, bookID, bookID, now, now); err != nil {
 			return err
 		}

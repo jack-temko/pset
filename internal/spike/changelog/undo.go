@@ -111,7 +111,7 @@ func checkNewest(ctx context.Context, tx *sql.Tx, action string, c change) error
 SELECT l.seq, l.action_id, l.after FROM changes l
 WHERE l.kind = ? AND l.res_id = ? AND l.seq > ? AND l.action_id != ?
   AND l.after IS NOT NULL AND l.undoes = ''
-  AND NOT EXISTS (SELECT 1 FROM changes u WHERE u.undoes = l.action_id)`, c.kind, c.resID, c.seq, action)
+  AND NOT EXISTS (SELECT 1 FROM changes u WHERE u.undoes = l.action_id AND u.undoes != '')`, c.kind, c.resID, c.seq, action)
 	if err != nil {
 		return err
 	}

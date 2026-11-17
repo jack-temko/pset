@@ -128,7 +128,10 @@ func Triggers(t Table, p Policy) string {
 	if t.Removed != "" {
 		op = fmt.Sprintf("CASE WHEN OLD.%[1]s = '' AND NEW.%[1]s != '' THEN 'removed' WHEN OLD.%[1]s != '' AND NEW.%[1]s = '' THEN 'restored' ELSE 'changed' END", t.Removed)
 	}
-	fmt.Fprintf(&b, "CREATE TRIGGER %s_log_u AFTER UPDATE ON %s FOR EACH ROW\nWHEN %s\nBEGIN\n", t.Name, t.Name, strings.Join(when, "\n\tOR "))
+	// UPDATE OF the logged columns: a statement that sets none of them (an
+	// update of rev, updated_at or an unlogged column) does not even compile
+	// this trigger into its program.
+	fmt.Fprintf(&b, "CREATE TRIGGER %s_log_u AFTER UPDATE OF %s ON %s FOR EACH ROW\nWHEN %s\nBEGIN\n", t.Name, strings.Join(logged, ", "), t.Name, strings.Join(when, "\n\tOR "))
 	fmt.Fprintf(&b, guard, t.Name)
 	fmt.Fprintf(&b, "\tINSERT INTO changes (%s)\n\tSELECT c.at, '%s', %s, %s, %s,\n\t\t%s,\n\t\tc.actor, c.action_id, c.undoes,\n\t\t%s,\n\t\t%s\n\tFROM change_ctx c;\nEND;\n\n",
 		cols, t.Kind, t.idExpr("NEW"), sub(t.SetID, "NEW"), sub(t.CourseID, "NEW"), op,
