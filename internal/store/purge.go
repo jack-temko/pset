@@ -29,7 +29,7 @@ func (s *Store) Purge(ctx context.Context, now time.Time) error {
 		// Parents first: their children go with them by cascade. Materials
 		// last, once the work that used them has gone.
 		stmts := []string{
-			gone("courses"), gone("sets"), gone("questions"), gone("turns"), gone("memories"),
+			gone("courses"), gone("sets"), gone("questions"), gone("finds"), gone("readings"), gone("turns"), gone("memories"),
 			gone("materials") + ` AND NOT EXISTS (SELECT 1 FROM finds f WHERE f.material_id = materials.id)
 				AND NOT EXISTS (SELECT 1 FROM sets s WHERE s.sheet_id = materials.id)`,
 		}

@@ -116,6 +116,7 @@ export type ErrorId =
   | "store.already_undone"
   | "store.changed_since"
   | "store.no_streaming"
+  | "store.not_undoable"
   | "store.nothing_to_undo"
   | "store.rewritten_since"
   | "update.already_installing"
@@ -973,6 +974,13 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     fix: "Reload the page.",
     scope: "inline",
     status: 500,
+    owner: "store",
+  },
+  "store.not_undoable": {
+    what: "That can't be undone.",
+    why: "It made something PSet has no way to take back.",
+    scope: "inline",
+    status: 409,
     owner: "store",
   },
   "store.nothing_to_undo": {

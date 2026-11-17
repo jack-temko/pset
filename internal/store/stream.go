@@ -90,7 +90,7 @@ func (s *Store) Latest(ctx context.Context) (int64, error) {
 var ErrResync = fmt.Errorf("store: the log no longer reaches that far back")
 
 // replayBatch is how many log rows one read of Since takes.
-const replayBatch = 1000
+var replayBatch = 1000
 
 // Since is every thing changed after seq, once each, oldest first, read
 // from at most limit rows of the log: the caller asks again from the last
@@ -102,23 +102,35 @@ const replayBatch = 1000
 // student makes, so patching from it leaves nothing stale; otherwise the
 // page reads the thing again. A created thing is always read again.
 func (s *Store) Since(ctx context.Context, seq int64, limit int) ([]change.Change, error) {
-	latest, err := s.Latest(ctx)
+	// One read transaction, so a purge between the reads cannot open a gap
+	// that is neither sent nor said. BEGIN by hand: the pool's own BeginTx
+	// takes the write lock (_txlock=immediate), which a read must not.
+	conn, err := s.DB.Conn(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errs.Database.Wrap(err)
 	}
-	if seq > latest {
+	defer cleanup.Close(conn)
+	if _, err := conn.ExecContext(ctx, `BEGIN`); err != nil {
+		return nil, errs.Database.Wrap(err)
+	}
+	defer func() { _, _ = conn.ExecContext(context.WithoutCancel(ctx), `ROLLBACK`) }() //nolint:errcheck // a read: nothing to keep
+	var latest sql.NullInt64
+	if err := conn.QueryRowContext(ctx, `SELECT (SELECT seq FROM sqlite_sequence WHERE name = 'changes')`).Scan(&latest); err != nil {
+		return nil, errs.Database.Wrap(err)
+	}
+	if seq > latest.Int64 {
 		return nil, ErrResync
 	}
-	if seq < latest {
+	if seq < latest.Int64 {
 		var oldest sql.NullInt64
-		if err := s.DB.QueryRowContext(ctx, `SELECT min(seq) FROM changes`).Scan(&oldest); err != nil {
+		if err := conn.QueryRowContext(ctx, `SELECT min(seq) FROM changes`).Scan(&oldest); err != nil {
 			return nil, errs.Database.Wrap(err)
 		}
 		if !oldest.Valid || seq < oldest.Int64-1 {
 			return nil, ErrResync
 		}
 	}
-	rows, err := s.DB.QueryContext(ctx, `
+	rows, err := conn.QueryContext(ctx, `
 SELECT seq, kind, res_id, ifnull(set_id, ''), ifnull(course_id, ''), op, actor, action_id, echo, after
 FROM changes WHERE seq > ? ORDER BY seq LIMIT ?`, seq, limit)
 	if err != nil {
@@ -272,14 +284,14 @@ func (s *Store) Handler(w http.ResponseWriter, r *http.Request) {
 	wake, live, cancel := s.subscribe()
 	defer cancel()
 
-	last, from := int64(0), r.Header.Get("Last-Event-ID")
+	// A seq the page sends, even 0 (it read an empty library), is where
+	// to replay from; no seq at all starts from now.
+	last, from := int64(-1), r.Header.Get("Last-Event-ID")
 	if from == "" {
 		from = r.URL.Query().Get("after")
 	}
-	if from != "" {
-		if n, err := strconv.ParseInt(from, 10, 64); err == nil && n > 0 {
-			last = n
-		}
+	if n, err := strconv.ParseInt(from, 10, 64); err == nil && n >= 0 {
+		last = n
 	}
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -325,7 +337,7 @@ func (s *Store) Handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if last == 0 {
+	if last < 0 {
 		var err error
 		if last, err = s.Latest(ctx); err != nil {
 			return

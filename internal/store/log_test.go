@@ -46,7 +46,13 @@ func TestUndoTakesBackNewestFirstAndRedoes(t *testing.T) {
 	exec(t, s, change.ActorStudent, "A", `UPDATE sets SET title = 'Y' WHERE id = 's1'`)
 	exec(t, s, change.ActorStudent, "B", `UPDATE sets SET title = 'Z' WHERE id = 's1'`)
 	// PSet's own write to the set does not stand in the way.
-	exec(t, s, change.ActorPSet, "", `UPDATE sets SET course_id = course_id WHERE id = 's1'`)
+	before := count(t, s, `SELECT count(*) FROM changes`)
+	exec(t, s, change.ActorPSet, "",
+		`INSERT INTO courses (id, name, created_at) VALUES ('c2', 'Other', 'now')`,
+		`UPDATE sets SET course_id = 'c2' WHERE id = 's1'`)
+	if count(t, s, `SELECT count(*) FROM changes`) != before+2 {
+		t.Fatal("PSet's move of the set was not logged")
+	}
 
 	if newest, err := s.Newest(bg); err != nil || newest != "B" {
 		t.Fatalf("newest %q %v, want B", newest, err)
@@ -80,8 +86,15 @@ func TestUndoRefusesToThrowAwayPSetsWork(t *testing.T) {
 	seed(t, s)
 	exec(t, s, change.ActorStudent, "fix", `UPDATE readings SET lines = '[["R = 4 ohm"]]', corrected = 1 WHERE id = 'r1'`)
 	exec(t, s, change.ActorPSet, "", `UPDATE readings SET lines = '[["R = 5 ohm"]]' WHERE id = 'r1'`)
-	if _, err := s.Undo(bg, "fix", "u"); !is(err, ChangedSince) {
+	if _, err := s.Undo(bg, "fix", "u"); !is(err, RewrittenSince) {
 		t.Fatalf("undoing a correction PSet read over: %v", err)
+	}
+	// PSet writing over what a student action changed, through a column
+	// logged without values for PSet, is caught by the values left.
+	exec(t, s, change.ActorStudent, "rank", `UPDATE questions SET difficulty = 4, text = '1.3b' WHERE id = 'q1'`)
+	exec(t, s, change.ActorPSet, "", `UPDATE questions SET difficulty = 2 WHERE id = 'q1'`)
+	if _, err := s.Undo(bg, "rank", "u3"); !is(err, RewrittenSince) {
+		t.Fatalf("undoing what PSet re-ranked: %v", err)
 	}
 	// A value-less PSet change to the same thing does not block an undo
 	// whose values still stand.
@@ -125,10 +138,18 @@ func TestUndoingAnAddRemovesIt(t *testing.T) {
 	if removed == "" {
 		t.Fatal("undoing an add left the question in place")
 	}
-	// What cannot be hidden cannot be un-added.
-	exec(t, s, change.ActorStudent, "box", `INSERT INTO finds (id, question_id, material_id, page) VALUES ('f2', 'q2', 'm1', 1)`)
-	if _, err := s.Undo(bg, "box", "u2"); !is(err, RewrittenSince) {
-		t.Fatalf("undoing a find's creation: %v", err)
+	// A problem added with its reading, and a find made by boxing, come
+	// off whole.
+	exec(t, s, change.ActorStudent, "box",
+		`INSERT INTO questions (id, set_id, position, text, created_at) VALUES ('q4', 's1', 3, '1.6', 'now')`,
+		`INSERT INTO readings (id, question_id) VALUES ('r4', 'q4')`,
+		`INSERT INTO finds (id, question_id, material_id, page) VALUES ('f4', 'q4', 'm1', 1)`)
+	if _, err := s.Undo(bg, "box", "u2"); err != nil {
+		t.Fatalf("undoing an add with its reading and find: %v", err)
+	}
+	if n := count(t, s, `SELECT count(*) FROM questions q JOIN readings r ON r.question_id = q.id JOIN finds f ON f.question_id = q.id
+		WHERE q.id = 'q4' AND q.removed_at != '' AND r.removed_at != '' AND f.removed_at != ''`); n != 1 {
+		t.Fatal("undoing the add left part of it")
 	}
 }
 
@@ -367,5 +388,188 @@ func TestTheStreamSaysResyncToAPageFromBeforeThePurge(t *testing.T) {
 	latest, _ := s.Latest(bg)
 	if e.Type != change.EventResync || id != fmt.Sprint(latest) {
 		t.Fatalf("got %s %s, want resync at %d", id, e.Type, latest)
+	}
+}
+
+func TestAnActionThatWritesAValueTwiceUndoes(t *testing.T) {
+	s := open(t)
+	seed(t, s)
+	exec(t, s, change.ActorStudent, "swap",
+		`UPDATE sets SET title = 'B' WHERE id = 's1'`,
+		`UPDATE sets SET title = 'C' WHERE id = 's1'`)
+	if _, err := s.Undo(bg, "swap", "u"); err != nil || title(t, s) != "Problem set 4" {
+		t.Fatalf("undo: %v, title %q", err, title(t, s))
+	}
+}
+
+func TestCtrlZAfterARedoTakesTheRedoBack(t *testing.T) {
+	s := open(t)
+	seed(t, s)
+	exec(t, s, change.ActorStudent, "A", `UPDATE sets SET title = 'Y' WHERE id = 's1'`)
+	exec(t, s, change.ActorStudent, "B", `UPDATE sets SET title = 'Z' WHERE id = 's1'`)
+	_, err := s.Undo(bg, "B", "uB")
+	must(t, err)
+	if n, _ := s.Newest(bg); n != "A" {
+		t.Fatalf("after undo, Ctrl+Z takes %q, want A", n)
+	}
+	_, err = s.Undo(bg, "uB", "redoB")
+	must(t, err)
+	if n, _ := s.Newest(bg); n != "redoB" {
+		t.Fatalf("after redo, Ctrl+Z takes %q, want the redo", n)
+	}
+	_, err = s.Undo(bg, "redoB", "uu")
+	must(t, err)
+	if title(t, s) != "Y" {
+		t.Fatalf("undoing the redo left %q", title(t, s))
+	}
+}
+
+func TestOnlyTheStoreIsThePurge(t *testing.T) {
+	s := open(t)
+	seed(t, s)
+	err := s.Write(bg, change.Actor("purge"), "", func(tx *sql.Tx) error {
+		_, err := tx.Exec(`DELETE FROM memories`)
+		return err
+	})
+	if err == nil || count(t, s, `SELECT count(*) FROM memories`) != 1 {
+		t.Fatalf("a caller wrote as the purge: %v", err)
+	}
+	err = s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
+		_, err := tx.Exec(`UPDATE sets SET id = 's9' WHERE id = 's1'`)
+		return err
+	})
+	if err == nil {
+		t.Fatal("an id changed")
+	}
+}
+
+func TestEveryTableAddsAndRemovesAndUndoes(t *testing.T) {
+	s := open(t)
+	seed(t, s)
+	for _, tb := range Tables {
+		if tb.Removed == "" {
+			continue
+		}
+		was := snapshot(t, s)
+		exec(t, s, change.ActorStudent, "rm-"+tb.Name, `UPDATE `+tb.Name+` SET removed_at = 'now' WHERE id = '`+ids[tb.Name]+`'`)
+		var op string
+		must(t, s.DB.QueryRow(`SELECT op FROM changes WHERE action_id = ? AND echo = 0`, "rm-"+tb.Name).Scan(&op))
+		if op != "removed" {
+			t.Errorf("%s: removing logged %q", tb.Name, op)
+		}
+		_, err := s.Undo(bg, "rm-"+tb.Name, "u-"+tb.Name)
+		must(t, err)
+		if d := diff(was, snapshot(t, s)); len(d) > 0 {
+			t.Errorf("%s: restored differs: %v", tb.Name, d)
+		}
+	}
+	// Adding: a copy of the seeded row under a new id, then undone.
+	for _, tb := range Tables {
+		if tb.Removed == "" {
+			continue
+		}
+		id := ids[tb.Name] + "-new"
+		var names, exprs []string
+		for c := range columns(t, s, tb.Name) {
+			if c == "id" {
+				continue
+			}
+			names = append(names, c)
+			if c == "question_id" { // one find and one reading a question
+				exprs = append(exprs, "'q2'")
+			} else {
+				exprs = append(exprs, c)
+			}
+		}
+		exec(t, s, change.ActorStudent, "add-"+tb.Name, fmt.Sprintf(`INSERT INTO %s (id, %s) SELECT '%s', %s FROM %s WHERE id = '%s'`,
+			tb.Name, strings.Join(names, ", "), id, strings.Join(exprs, ", "), tb.Name, ids[tb.Name]))
+		var op string
+		must(t, s.DB.QueryRow(`SELECT op FROM changes WHERE action_id = ? AND echo = 0`, "add-"+tb.Name).Scan(&op))
+		if op != "created" {
+			t.Errorf("%s: adding logged %q", tb.Name, op)
+		}
+		_, err := s.Undo(bg, "add-"+tb.Name, "u-add-"+tb.Name)
+		must(t, err)
+		var removed string
+		must(t, s.DB.QueryRow(`SELECT removed_at FROM `+tb.Name+` WHERE id = ?`, id).Scan(&removed))
+		if removed == "" {
+			t.Errorf("%s: undoing an add left it in place", tb.Name)
+		}
+	}
+}
+
+func TestSinceSplitsAcrossBatchesAndTheStreamFollowsThem(t *testing.T) {
+	s := open(t)
+	mark := seed(t, s)
+	for i := range 7 {
+		exec(t, s, change.ActorStudent, fmt.Sprintf("b%d", i), fmt.Sprintf(`UPDATE sets SET title = 'T%d' WHERE id = 's1'`, i))
+	}
+	// Three rows a batch: the set comes in three notices, each newer.
+	var got []string
+	at := mark
+	for {
+		cs, err := s.Since(bg, at, 3)
+		must(t, err)
+		if len(cs) == 0 {
+			break
+		}
+		for _, c := range cs {
+			got = append(got, string(c.After))
+			at = c.Seq
+		}
+	}
+	if len(got) != 3 || got[2] != `{"title":"T6"}` {
+		t.Fatalf("batches %v", got)
+	}
+	replayBatch = 2
+	defer func() { replayBatch = 1000 }()
+	srv := httptest.NewServer(http.HandlerFunc(s.Handler))
+	defer srv.Close()
+	res, err := http.Get(srv.URL + "?after=" + fmt.Sprint(mark))
+	must(t, err)
+	defer cleanup.Close(res.Body)
+	sc := bufio.NewScanner(res.Body)
+	var last change.Change
+	for last.Action != "b6" {
+		_, e := read(t, sc)
+		must(t, json.Unmarshal(e.Data, &last))
+	}
+}
+
+func TestAPageThatReadAnEmptyLibraryMissesNothing(t *testing.T) {
+	s := open(t)
+	srv := httptest.NewServer(http.HandlerFunc(s.Handler))
+	defer srv.Close()
+	seed(t, s) // written after the page's read, before it connects
+	res, err := http.Get(srv.URL + "?after=0")
+	must(t, err)
+	defer cleanup.Close(res.Body)
+	_, e := read(t, bufio.NewScanner(res.Body))
+	var c change.Change
+	must(t, json.Unmarshal(e.Data, &c))
+	if e.Type != change.EventChange || c.Kind != change.ResourceCourse {
+		t.Fatalf("first event %s %+v, want the course", e.Type, c)
+	}
+}
+
+func TestPurgeTakesARemovedCourseWholeAndKeepsOpenIncidents(t *testing.T) {
+	s := open(t)
+	seed(t, s)
+	old := db.At(time.Now().Add(-Keep - time.Hour))
+	exec(t, s, change.ActorPSet, "",
+		`INSERT INTO incidents (id, error, kind, born, first_at, last_at, state, resolved_at) VALUES ('OLD001', '{}', 'ours', 'step', 'x', 'x', 'healed', '`+old+`')`,
+		`INSERT INTO incidents (id, error, kind, born, first_at, last_at, state, resolved_at) VALUES ('NEW001', '{}', 'ours', 'step', 'x', 'x', 'healed', '`+db.Now()+`')`)
+	exec(t, s, change.ActorStudent, "rm", `UPDATE courses SET removed_at = '`+old+`' WHERE id = 'c1'`)
+	must(t, s.Purge(bg, time.Now()))
+	for _, name := range []string{"courses", "materials", "pages", "sections", "sets", "questions", "finds", "readings", "documents", "turns", "memories"} {
+		if n := count(t, s, `SELECT count(*) FROM `+name); n != 0 {
+			t.Errorf("%d rows of %s outlived their course", n, name)
+		}
+	}
+	if count(t, s, `SELECT count(*) FROM incidents WHERE id IN ('INC001', 'NEW001')`) != 2 || count(t, s, `SELECT count(*) FROM incidents WHERE id = 'OLD001'`) != 0 {
+		t.Error("the purge kept a week-old resolved incident or took an open or recent one")
+	}
+	if n := count(t, s, `SELECT count(*) FROM changes WHERE kind NOT IN ('incident', 'condition')`); n != 0 {
+		t.Errorf("%d log rows of purged things kept", n)
 	}
 }

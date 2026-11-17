@@ -201,6 +201,9 @@ func (t Table) Triggers() string {
 	b.WriteString("END;\n\n")
 
 	b.WriteString(guardDelete(t.Name))
+
+	// An id never changes: the log names things by it.
+	fmt.Fprintf(&b, "\nCREATE TRIGGER %[1]s_id BEFORE UPDATE OF id ON %[1]s FOR EACH ROW WHEN OLD.id IS NOT NEW.id BEGIN\n\tSELECT RAISE(ABORT, 'store: the id of a row in %[1]s never changes');\nEND;\n", t.Name)
 	return b.String()
 }
 

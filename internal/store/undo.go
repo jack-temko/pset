@@ -44,6 +44,12 @@ var (
 		Why:    "PSet has worked on it since, and undoing would throw that away.",
 		Status: http.StatusConflict,
 	})
+	NotUndoable = errs.Define(errs.Entry{
+		ID:     "store.not_undoable",
+		What:   "That can't be undone.",
+		Why:    "It made something PSet has no way to take back.",
+		Status: http.StatusConflict,
+	})
 )
 
 // logged is one change row as Undo reads it.
@@ -86,8 +92,11 @@ func (s *Store) Undo(ctx context.Context, action, asNew string) (int64, error) {
 		if len(cs) == 0 {
 			return NothingToUndo.New()
 		}
+		// Newest first: a column this action wrote again later is checked
+		// only against its last write.
+		later := map[string]bool{}
 		for _, c := range cs {
-			if err := stillNewest(ctx, tx, action, c); err != nil {
+			if err := stillNewest(ctx, tx, action, c, later); err != nil {
 				return err
 			}
 		}
@@ -101,13 +110,15 @@ func (s *Store) Undo(ctx context.Context, action, asNew string) (int64, error) {
 	return last, err
 }
 
-// Newest is the student's newest action that is neither undone nor itself
-// an undo: what Ctrl+Z takes back. "" when there is none.
+// Newest is what Ctrl+Z takes back: the student's newest action not yet
+// undone. A plain undo is not one (Ctrl+Z after an undo takes the next
+// older action back); a redo, which undoes an undo, is.
 func (s *Store) Newest(ctx context.Context) (string, error) {
 	var id string
 	err := s.DB.QueryRowContext(ctx, `
 SELECT action_id FROM changes c
-WHERE actor = 'student' AND action_id != '' AND undoes = '' AND echo = 0
+WHERE actor = 'student' AND action_id != '' AND echo = 0
+  AND (undoes = '' OR EXISTS (SELECT 1 FROM changes t WHERE t.action_id = c.undoes AND t.undoes != ''))
   AND NOT EXISTS (SELECT 1 FROM changes u WHERE u.undoes = c.action_id)
 ORDER BY seq DESC LIMIT 1`).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -145,15 +156,17 @@ WHERE action_id = ? AND echo = 0 ORDER BY seq DESC`, action)
 }
 
 // stillNewest refuses when a later change still in force wrote any value c
-// wrote, or the row no longer holds what c left.
-func stillNewest(ctx context.Context, tx *sql.Tx, action string, c logged) error {
+// wrote, or the row no longer holds what c left. later holds the columns a
+// newer change of the same action wrote: those were checked against it.
+func stillNewest(ctx context.Context, tx *sql.Tx, action string, c logged, later map[string]bool) error {
 	t, ok := tableOf(c.kind)
 	if !ok {
 		return errs.Data.Wrap(fmt.Errorf("store: undo of an unknown kind %q", c.kind))
 	}
 	if c.op == change.OpCreated && t.Removed == "" {
-		// Nothing to hide it with; deleting is the purge's alone.
-		return RewrittenSince.New()
+		// Nothing to hide it with; deleting is the purge's alone. Only PSet
+		// makes rows in such a table, so this is a bug, said plainly.
+		return NotUndoable.New()
 	}
 	if c.op != change.OpCreated && !c.hasValues {
 		// A student action that changed only what PSet makes logs its
@@ -164,7 +177,7 @@ func stillNewest(ctx context.Context, tx *sql.Tx, action string, c logged) error
 	// undone and not undos themselves (an undo after this one undid
 	// something newer, which cancels the pair).
 	rows, err := tx.QueryContext(ctx, `
-SELECT l.seq, l.after FROM changes l
+SELECT l.seq, l.actor, l.after FROM changes l
 WHERE l.kind = ? AND l.res_id = ? AND l.seq > ? AND l.action_id != ?
   AND l.after IS NOT NULL AND l.undoes = ''
   AND NOT (l.action_id != '' AND EXISTS (SELECT 1 FROM changes u WHERE u.undoes = l.action_id AND u.undoes != ''))`,
@@ -175,16 +188,19 @@ WHERE l.kind = ? AND l.res_id = ? AND l.seq > ? AND l.action_id != ?
 	defer cleanup.Close(rows)
 	for rows.Next() {
 		var seq int64
-		var raw string
-		if err := rows.Scan(&seq, &raw); err != nil {
+		var who, raw string
+		if err := rows.Scan(&seq, &who, &raw); err != nil {
 			return errs.Database.Wrap(err)
 		}
-		var later map[string]json.RawMessage
-		if err := json.Unmarshal([]byte(raw), &later); err != nil {
+		var newer map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(raw), &newer); err != nil {
 			return errs.Data.Wrap(err)
 		}
-		for col := range later {
+		for col := range newer {
 			if _, ok := c.after[col]; ok {
+				if who == string(change.ActorPSet) {
+					return RewrittenSince.New()
+				}
 				return ChangedSince.New()
 			}
 		}
@@ -192,12 +208,19 @@ WHERE l.kind = ? AND l.res_id = ? AND l.seq > ? AND l.action_id != ?
 	if err := rows.Err(); err != nil {
 		return errs.Database.Wrap(err)
 	}
-	if c.op == change.OpCreated || len(c.after) == 0 {
+	var cols []string
+	for _, col := range sortedKeys(c.after) {
+		key := c.kind + "\x00" + c.id + "\x00" + col
+		if !later[key] {
+			cols = append(cols, col)
+		}
+		later[key] = true
+	}
+	if c.op == change.OpCreated || len(cols) == 0 {
 		return nil
 	}
 	// The values must still be what c left: compare as the triggers wrote
 	// them, through json_object, so types compare too.
-	cols := sortedKeys(c.after)
 	pairs := make([]string, len(cols))
 	for i, col := range cols {
 		pairs[i] = fmt.Sprintf("'%s', %s", col, col)

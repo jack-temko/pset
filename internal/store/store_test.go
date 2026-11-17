@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -383,11 +384,16 @@ func TestPSetsOwnChangesCarryNoPSetValues(t *testing.T) {
 func TestStoreContextIsOnlyTouchedHere(t *testing.T) {
 	// change_ctx is the store's alone: a row set anywhere else and left
 	// behind would attribute the next stray write to someone's action.
-	files, err := filepath.Glob("../../internal/*/*.go")
-	must(t, err)
-	more, err := filepath.Glob("../../cmd/*/*.go")
-	must(t, err)
-	for _, f := range append(files, more...) {
+	var files []string
+	for _, root := range []string{"../../internal", "../../cmd", "../../tools"} {
+		must(t, filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+			if err == nil && !d.IsDir() && strings.HasSuffix(p, ".go") {
+				files = append(files, p)
+			}
+			return err
+		}))
+	}
+	for _, f := range files {
 		if strings.Contains(f, "/internal/store/") {
 			continue
 		}

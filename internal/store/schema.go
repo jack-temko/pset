@@ -102,6 +102,7 @@ CREATE TABLE finds (
 	boxes       TEXT NOT NULL DEFAULT '[]',
 	figures     TEXT NOT NULL DEFAULT '[]',
 	statement   TEXT NOT NULL DEFAULT '[]',
+	removed_at  TEXT NOT NULL DEFAULT '',
 	seq         INTEGER NOT NULL DEFAULT 0
 );
 
@@ -111,6 +112,7 @@ CREATE TABLE readings (
 	lines       TEXT NOT NULL DEFAULT '[]',
 	doubts      TEXT NOT NULL DEFAULT '[]',
 	corrected   INTEGER NOT NULL DEFAULT 0,
+	removed_at  TEXT NOT NULL DEFAULT '',
 	seq         INTEGER NOT NULL DEFAULT 0
 );
 
@@ -286,18 +288,21 @@ var (
 			SetID:    ofQuestion(questionSet, "question_id"),
 			CourseID: ofQuestion(questionCourse, "question_id"),
 			// Boxing a problem by hand says where it is: material, page, boxes.
-			Student: []string{"material_id", "page", "boxes"},
+			Student: []string{"material_id", "page", "boxes", "removed_at"},
 			PSet:    []string{"question_id", "earlier_id", "figures", "statement"},
 			Meta:    []string{"seq"},
+			// A find the student made by boxing is taken back by Undo.
+			Removed: "removed_at",
 			JSON:    []string{"boxes"},
 		},
 		{
 			Name: "readings", Kind: change.ResourceReading,
 			SetID:    ofQuestion(questionSet, "question_id"),
 			CourseID: ofQuestion(questionCourse, "question_id"),
-			Student:  []string{"lines", "corrected"},
+			Student:  []string{"lines", "corrected", "removed_at"},
 			PSet:     []string{"question_id", "doubts"},
 			Meta:     []string{"seq"},
+			Removed:  "removed_at",
 			JSON:     []string{"lines"},
 			Wire:     map[string]Field{"corrected": {"corrected", truth}},
 		},

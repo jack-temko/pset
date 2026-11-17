@@ -69,7 +69,11 @@ const purge actor = "purge"
 // change_ctx: a row left behind would attribute the next stray write to
 // this action (a test bans the name elsewhere).
 func (s *Store) Write(ctx context.Context, who change.Actor, action string, fn func(*sql.Tx) error) error {
-	if who == change.ActorStudent && action == "" {
+	switch {
+	case who != change.ActorStudent && who != change.ActorPSet:
+		// The purge alone deletes, and only through write.
+		return errs.Data.Wrap(fmt.Errorf("store: no writer %q", who))
+	case who == change.ActorStudent && action == "":
 		return errs.Data.Wrap(fmt.Errorf("store: a student write needs its action's id"))
 	}
 	return s.write(ctx, actor(who), action, "", fn)
