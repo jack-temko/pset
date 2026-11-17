@@ -27,12 +27,17 @@ import (
 // and then writes.
 const pragmas = "_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)&_pragma=synchronous(NORMAL)&_txlock=immediate"
 
-// Open opens (creating if needed) the database at path.
-func Open(path string) (*sql.DB, error) {
+// Open opens (creating if needed) the database at path. Each extra is one
+// more pragma for every connection, as "name(value)".
+func Open(path string, extra ...string) (*sql.DB, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return nil, fmt.Errorf("create %s: %w", filepath.Dir(path), err)
 	}
-	d, err := sql.Open("sqlite", fmt.Sprintf("file:%s?%s", path, pragmas))
+	dsn := fmt.Sprintf("file:%s?%s", path, pragmas)
+	for _, p := range extra {
+		dsn += "&_pragma=" + p
+	}
+	d, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, errs.Database.Wrap(err)
 	}
