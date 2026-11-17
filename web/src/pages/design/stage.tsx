@@ -185,8 +185,7 @@ function Message({ children }: { children: ReactNode }) {
 }
 
 /** One state of the unit, in the chosen load mode. A screen on the loading
- *  contract draws its quiet form from the same example, forced; one not yet
- *  converted shows its hand-written skeleton. Both lays the loading form
+ *  contract draws its quiet form from the same example, forced. Both lays the loading form
  *  over the loaded content at half strength, so a layout jump shows as a
  *  doubled edge. */
 function Render({
@@ -207,8 +206,7 @@ function Render({
         {`${state.name} is reached only by acting, so the page never loads into it.`}
       </Message>
     );
-  const written = ex.skeletons?.[s.state];
-  if (written === undefined && !hasQuietForm(spec))
+  if (!hasQuietForm(spec))
     return (
       <Message>
         {(spec.data?.length ?? 0) > 0
@@ -216,12 +214,9 @@ function Render({
           : `${spec.title} has no loading form: it waits on nothing.`}
       </Message>
     );
-  const loading = (): ReactNode =>
-    written ? (
-      written()
-    ) : (
-      <ForceLoading.Provider value>{loaded()}</ForceLoading.Provider>
-    );
+  const loading = (): ReactNode => (
+    <ForceLoading.Provider value>{loaded()}</ForceLoading.Provider>
+  );
   if (s.load === 'loading') return <>{loading()}</>;
   if (s.load === 'arriving')
     return (

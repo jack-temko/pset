@@ -28,8 +28,6 @@ const view = (
   </Window>
 );
 
-const both = { left: true, right: true };
-
 /** The worst names, in a workspace with many tabs and a question asked. */
 function stress() {
   let st = m.openSet('ps4', { ref: 'griffiths', page: 111 });
@@ -54,11 +52,4 @@ const states = Object.fromEntries(
   ]),
 ) as Record<keyof typeof STATES, () => React.ReactNode>;
 
-const skeletons = Object.fromEntries(
-  (Object.keys(STATES) as (keyof typeof STATES)[]).map((id) => [
-    id,
-    () => view(id, both),
-  ]),
-) as Record<keyof typeof STATES, () => React.ReactNode>;
-
-export default defineExamples(spec, Workspace, { states, stress, skeletons });
+export default defineExamples(spec, Workspace, { states, stress });

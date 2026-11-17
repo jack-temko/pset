@@ -167,6 +167,8 @@ export default defineSpec({
       reads:
         'The book’s pages as images, which printed numbers they carry, and its contents',
       call: 'sample',
+      before:
+        'Which material, from the tab. Nothing in the pane is drawn until the book is in (loading D2).',
     },
   ],
   remembers: [
@@ -177,6 +179,10 @@ export default defineSpec({
     },
   ],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its quiet form: the top line and the page area, empty.',
+    },
     {
       name: 'name',
       does: 'The material’s name; it heads Contents and the wait.',
@@ -426,6 +432,14 @@ export default defineSpec({
       why: 'Jack: "Confirm popover, act first (Recommended)" (ideas/fable-review-grill.md D5).',
       beat: 'Cancel, then Done',
       date: '2026-11-09',
+    },
+    {
+      id: 'material-d21',
+      decision:
+        'Its quiet form is the top line and the page area, empty: the pages and where the tab was are unknown before the book. Each page still waits as a plain box (M9).',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Stop at first unknown" (ideas/skeleton-grill.md D1, D2).',
+      beat: 'The top line a bar, one page-shaped box and the pill a bar (MaterialSkeleton)',
+      date: '2026-11-16',
     },
   ],
 });

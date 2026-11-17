@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { AskSkeleton } from '@/units/ask';
+import { Ask } from '@/units/ask';
 import { SampleAsk } from '@/units/ask/chat';
 import { HISTORY } from '@/units/ask/sample';
 import { Divider } from '@/units/divider';
 import type { MenuGroup } from '@/units/menu';
-import { Material, MaterialSkeleton } from '@/units/material';
+import { Material } from '@/units/material';
 import { pageMemory as materialMemory } from '@/units/material/memory';
 import { bookOf, boxOfProblem } from '@/units/material/sample';
 import { printedOf, type Box } from '@/units/material/types';
@@ -13,7 +13,7 @@ import { DropFill, Side } from '@/units/side';
 import { type TabAction } from '@/units/tabs';
 import { endDrag, useDraggedTab } from '@/units/tabs/drag';
 import { TopBar } from '@/units/top-bar';
-import { Work, WorkSkeleton, type Marks } from '@/units/work';
+import { Work, type Marks } from '@/units/work';
 import { pageMemory } from '@/units/work/memory';
 import type { WorkSet } from '@/units/work/sets';
 
@@ -270,7 +270,7 @@ export function Workspace({
       if (wait || !set)
         return (
           <div className="px-6">
-            <WorkSkeleton />
+            <Work loading />
           </div>
         );
       const work: WorkSet = { ...set, ...marks[set.id] };
@@ -310,7 +310,14 @@ export function Workspace({
       );
     }
     if (tab.kind === 'material') {
-      if (wait) return <MaterialSkeleton />;
+      if (wait)
+        return (
+          <Material
+            loading
+            name={materialOf(course, tab.ref)?.name ?? tab.ref}
+            tabId={tab.id}
+          />
+        );
       const shown = box?.tab === tab.id ? box : undefined;
       const problem = shown && problemOf(course, shown.problem);
       return (
@@ -348,7 +355,7 @@ export function Workspace({
         />
       );
     }
-    if (wait) return <AskSkeleton />;
+    if (wait) return <Ask loading course={course.name} />;
     return (
       <SampleAsk
         key={tab.id}

@@ -7,8 +7,7 @@ import { hasQuietForm } from './quiet';
 import { FIXTURES, UNITS } from './registry';
 
 // The loading contract's fast check (ideas/skeleton-grill.md, D2). It finds
-// the screens on the contract by itself (they read data and write no
-// skeleton: their quiet form is derived), so converting one, or adding one,
+// the screens by itself (a screen or pane that reads data), so adding one
 // needs no list here.
 
 const ALL = [...UNITS, ...FIXTURES];
@@ -54,8 +53,6 @@ describe('a screen that reads data has a quiet form, and it prints nothing its l
     '%s',
     async (_key, entry, state) => {
       const ex = await entry.examples();
-      // Not on the contract yet: its hand-written skeleton goes when it is.
-      if (ex.skeletons !== undefined) return;
       const render = ex.states[state];
       const loaded = drawn(render());
       const loading = drawn(

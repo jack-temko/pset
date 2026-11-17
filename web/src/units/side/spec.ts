@@ -6,7 +6,7 @@ export default defineSpec({
   title: 'Side',
   group: 'Panes',
   purpose:
-    'One side of the workspace: a row of tabs over the open tab’s pane. The tab row is there at once; the pane loads on its own, with its own skeleton.',
+    'One side of the workspace: a row of tabs over the open tab’s pane. The tab row is there at once; the pane loads on its own, with its own quiet form.',
   states: [
     {
       id: 'default',
@@ -50,12 +50,6 @@ export default defineSpec({
       does: 'Moves the dragged tab to the end of this side and opens it.',
     },
   ],
-  data: [
-    {
-      reads: 'The open tab’s pane: an assignment, a material or Ask',
-      call: 'sample',
-    },
-  ],
   inputs: [
     { name: 'label', does: 'The side’s name.' },
     { name: 'tabs', does: 'The tabs in its row.' },
@@ -95,7 +89,7 @@ export default defineSpec({
     },
     {
       name: 'body',
-      does: 'The open tab’s pane, or its skeleton while it loads.',
+      does: 'The open tab’s pane, which draws its own quiet form while it loads.',
     },
     {
       name: 'dropping',
@@ -122,6 +116,7 @@ export default defineSpec({
       why: 'Assumed in workspace-grill.',
       beat: 'One skeleton for both sides',
       date: '2026-10-21',
+      supersededBy: 'side-d5',
     },
     {
       id: 'side-d3',
@@ -146,6 +141,14 @@ export default defineSpec({
       why: 'Not designed: noted when the spec format dropped the data waiting and failed fields (ideas/spec-format-grill.md, F9).',
       beat: 'A failed line in the data section',
       date: '2026-10-22',
+    },
+    {
+      id: 'side-d5',
+      decision:
+        'Each side loads on its own: its tab row shows at once and its pane draws its own quiet form until its data is in. The side reads nothing itself.',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Stop at first unknown" (ideas/skeleton-grill.md D1, D2).',
+      beat: 'Each side with its own skeleton (side-d1)',
+      date: '2026-11-16',
     },
   ],
 });

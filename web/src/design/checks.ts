@@ -260,17 +260,14 @@ export function checkUnit(u: Subject, ctx: Context): string[] {
         fail(`no example render for state ${s.id}`);
     if (typeof u.examples.stress !== 'function') fail('no stress render');
     // A screen or pane that reads data has a quiet form for every state the
-    // page can load into (loading D1, D2): derived, when it is made with
-    // `waits`, or hand-written until it is converted. A part has none.
+    // page can load into (loading D1, D2), derived from its example: it is
+    // made with `waits`. A part has none.
     const waiting =
       u.sources === null ||
       Object.values(u.sources).some((src) => src.includes('waits('));
     if (hasQuietForm(spec) && !waiting)
       for (const s of spec.states)
-        if (
-          s.loads !== false &&
-          typeof u.examples.skeletons?.[s.id] !== 'function'
-        )
+        if (s.loads !== false)
           fail(`no quiet form for state ${s.id}: make it with waits`);
   } else fail('has no examples');
 

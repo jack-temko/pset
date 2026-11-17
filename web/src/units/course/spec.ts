@@ -38,7 +38,7 @@ export default defineSpec({
     {
       id: 'failed',
       name: 'Failed to load',
-      when: 'The course could not be read: an Error notice block, centred, with Try again and Details.',
+      when: 'The course could not be read: its quiet form, with an Error notice block under the name, Try again and Details.',
       text: "Couldn't load",
     },
   ],
@@ -139,9 +139,19 @@ export default defineSpec({
       reads:
         'The course: its name, its assignments (due, problems done and total, time left), its materials (kind, pages, reading in), time studied, cost, memories',
       call: 'sample',
+      before:
+        'The name, from the link that was clicked. Nothing past it is drawn until the course is in (loading D2).',
     },
   ],
   inputs: [
+    {
+      name: 'loading',
+      does: 'Draws its quiet form: the top bar and the name, if known.',
+    },
+    {
+      name: 'name',
+      does: 'The course name from the clicked link, drawn while the course loads.',
+    },
     {
       name: 'course',
       does: 'The course: name, assignments, materials, time, cost and memories.',
@@ -318,6 +328,7 @@ export default defineSpec({
       why: `${ASSUMED}: nothing jumps on load.`,
       beat: 'A spinner',
       date: '2026-10-22',
+      supersededBy: 'course-d32',
     },
     {
       id: 'course-d14',
@@ -434,6 +445,14 @@ export default defineSpec({
       why: 'Jack: "Assignments first (Recommended)": the one active assignment was below the fold (ideas/fable-review-grill.md D1).',
       beat: "The stats box first (course-d23's order)",
       date: '2026-11-09',
+    },
+    {
+      id: 'course-d32',
+      decision:
+        'Its quiet form is the top bar and the name the link carried, and nothing past it. A failed read keeps that and puts the Error notice under the name (A3).',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Stop at first unknown" (ideas/skeleton-grill.md D1, D2).',
+      beat: 'A skeleton shaped like each section (course-d13)',
+      date: '2026-11-16',
     },
   ],
 });

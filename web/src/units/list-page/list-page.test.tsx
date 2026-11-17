@@ -119,6 +119,7 @@ describe('ListPage', () => {
   it('starts from where Show all came from', () => {
     const el = render(
       <ListPage
+        kind="work"
         page={WORK}
         today={TODAY}
         courseHref={course}
@@ -133,7 +134,7 @@ describe('ListPage', () => {
 
   it('has no State menu: the header switch is the only state control', () => {
     const el = render(
-      <ListPage page={WORK} today={TODAY} courseHref={course} />,
+      <ListPage kind="work" page={WORK} today={TODAY} courseHref={course} />,
     );
     // The filter bar's menus: the rows' own "..." menus are not filters.
     const menus = [...el.querySelectorAll('button[aria-haspopup]')]
@@ -144,7 +145,7 @@ describe('ListPage', () => {
 
   it('gives every assignment and memory row its own menu, as Course does', () => {
     const work = render(
-      <ListPage page={WORK} today={TODAY} courseHref={course} />,
+      <ListPage kind="work" page={WORK} today={TODAY} courseHref={course} />,
     );
     expect(
       work.querySelectorAll('[aria-label^="More for"]').length,
@@ -153,14 +154,14 @@ describe('ListPage', () => {
 
   it('names the course in each row when it spans courses', () => {
     const el = render(
-      <ListPage page={WORK} today={TODAY} courseHref={course} />,
+      <ListPage kind="work" page={WORK} today={TODAY} courseHref={course} />,
     );
     expect(el.textContent).toContain('Circuits I');
   });
 
   it('switches state by the header switch and keeps both counts', () => {
     const el = render(
-      <ListPage page={WORK} today={TODAY} courseHref={course} />,
+      <ListPage kind="work" page={WORK} today={TODAY} courseHref={course} />,
     );
     expect(radio(el, 'To do').textContent).toBe('To do8');
     press(radio(el, 'Done'));
@@ -172,6 +173,7 @@ describe('ListPage', () => {
   it('says no sets match and Clear filters brings them back', () => {
     const el = render(
       <ListPage
+        kind="work"
         page={WORK}
         today={TODAY}
         courseHref={course}
@@ -195,6 +197,7 @@ describe('ListPage', () => {
     expect(done).toBeGreaterThan(LIST_CAP);
     const el = render(
       <ListPage
+        kind="work"
         page={WORK}
         today={TODAY}
         courseHref={course}
@@ -212,6 +215,7 @@ describe('ListPage', () => {
     const done = WORK_SETS.filter((x) => x.finished !== undefined);
     const el = render(
       <ListPage
+        kind="work"
         page={{ kind: 'work', items: done }}
         today={TODAY}
         courseHref={course}
@@ -223,7 +227,12 @@ describe('ListPage', () => {
 
   it('lists courses with no switch', () => {
     const el = render(
-      <ListPage page={COURSE_LIST} today={TODAY} courseHref={course} />,
+      <ListPage
+        kind="courses"
+        page={COURSE_LIST}
+        today={TODAY}
+        courseHref={course}
+      />,
     );
     expect(el.querySelector('[role="radio"]')).toBeNull();
     expect(el.textContent).toContain('Thermodynamics');
@@ -231,7 +240,12 @@ describe('ListPage', () => {
 
   it('puts memories behind "Yours 12" and "From Ask 8"', () => {
     const el = render(
-      <ListPage page={MEMORIES} today={TODAY} courseHref={course} />,
+      <ListPage
+        kind="memories"
+        page={MEMORIES}
+        today={TODAY}
+        courseHref={course}
+      />,
     );
     expect(radio(el, 'Yours').textContent).toBe('Yours12');
     expect(radio(el, 'From Ask').textContent).toBe('From Ask8');
