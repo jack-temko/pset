@@ -98,6 +98,8 @@ var (
 var (
 	EmbedUnreachable = errs.Define(errs.Entry{
 		ID:     "embed.unreachable",
+		Kind:   errs.KindWaitingOnYou,
+		Clears: "embeddings",
 		What:   "PSet couldn't reach Ollama.",
 		Why:    "Ollama searches your books, and it isn't running or isn't answering.",
 		Fix:    "Settings, under Health, says how to start it.",
@@ -106,6 +108,8 @@ var (
 	})
 	embedFailed = errs.Define(errs.Entry{
 		ID:     "embed.failed",
+		Kind:   errs.KindWaitingOnYou,
+		Clears: "embeddings",
 		What:   "Ollama couldn't build the book's search.",
 		Why:    "Ollama answered with an error. It may be out of memory or missing its model.",
 		Fix:    "Settings, under Health, says how to check it, then try again.",

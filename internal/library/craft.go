@@ -134,3 +134,11 @@ func (p *Pages) Get(ctx context.Context, id, path string, pageCount int, widthPt
 
 // Drop forgets id's renders.
 func (p *Pages) Drop(id string) { p.c.drop(id) }
+
+// FilenameTitle is a file's name tidied into a title, until a real one is
+// read: "linear_algebra-notes.pdf" is "linear algebra notes".
+func FilenameTitle(name string) string { return filenameTitle(name) }
+
+// PartsOf is the numbered chapters and sections of a book's contents, each
+// with where its problems are when an entry says.
+func PartsOf(secs []Section) []probnum.Part { return partsOf(secs) }
