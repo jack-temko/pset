@@ -38,11 +38,6 @@ export default defineSpec({
       name: 'Home: assignments and courses',
       when: 'Home: an Assignments list of five rows, due soon first, then a Courses list of five lean rows.',
     },
-    {
-      id: 'loading',
-      name: 'Loading',
-      when: 'While the assignment loads: two lines of bars, the due date as a bar and the progress bar’s empty track, at its place in the list.',
-    },
   ],
   exampleWidth: 960,
   stress:
@@ -60,10 +55,6 @@ export default defineSpec({
     },
   ],
   inputs: [
-    {
-      name: 'loading',
-      does: 'Draws its loading form at its place in the list.',
-    },
     { name: 'set', does: 'The set’s name.' },
     { name: 'href', does: 'Where the set opens.' },
     { name: 'course', does: 'The course’s name.' },
@@ -168,6 +159,15 @@ export default defineSpec({
       why: 'Step 5 of the loading skeleton plan (ideas/skeleton-plan.md): a list loads as itself, so nothing on the screen moves when its rows come.',
       beat: 'RowSkeleton, Home’s own copy of the row',
       date: '2026-11-14',
+      supersededBy: 'assignment-row-d7',
+    },
+    {
+      id: 'assignment-row-d7',
+      decision:
+        'No loading form of its own: its screen holds the previous one until the data is in, then this draws whole (loading D1, D7).',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
+      beat: 'Its own loading form (assignment-row-d6)',
+      date: '2026-11-16',
     },
   ],
 });

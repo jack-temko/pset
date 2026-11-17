@@ -1,5 +1,4 @@
-import { waits, type Loads, type Waits } from '@/design/loading';
-import { FillBlock, Ticker } from '@/units/bone';
+import { Ticker } from '@/units/bone';
 import { minutesText } from '@/units/set-line/dates';
 import { Tooltip } from '@/units/tooltip';
 import { addDays, dayKey, mondayOf, shade } from './day';
@@ -63,157 +62,140 @@ const boxWidth = (weeks: number) => naturalWidth(weeks);
 
 const WEEKDAYS = ['Mon', '', 'Wed', '', 'Fri', '', ''];
 
-/** The facts of the heatmap that size a box: none. The grid's size comes
- *  from its width and the weeks, both known; its heading may wrap, and loads
- *  as one bar line that grows when it comes (bone-d4). */
-export type HeatmapShape = Record<string, never>;
-
 /** Time studied per day (D1): columns of weeks from Monday, today in the
  *  last, month names above and Mon, Wed and Fri beside, five shades, a
  *  heading with the total, and a tooltip on each square. It shows `weeks` at
  *  most and fewer when its container is narrower, ending today, never
  *  scrolling sideways (heatmap-d3). `grow` lets the squares fill the
- *  container, up to 32 each (heatmap-d8). Loading, the grid is real and
- *  empty and the heading a bar (heatmap-d12). */
-export const Heatmap = waits(
-  {
-    data: ['days'],
-    shapeOf: (): HeatmapShape => ({}),
-  } satisfies Loads<{ days: readonly StudyDay[] }, HeatmapShape>,
-  function Heatmap({
-    days,
-    today,
-    weeks = 26,
-    grow = false,
-    openDay,
-    loading,
-  }: Waits<
-    {
-      /** The study day that is today: the last column's last square. */
-      today: Date;
-      /** The most weeks to show: 26 for about 6 months, 53 for a year (D2). */
-      weeks?: number;
-      /** Fill the container's width, the squares up to 32 and the gaps wider. */
-      grow?: boolean;
-      /** A date "2026-10-13" whose tooltip is held open: the design page. */
-      openDay?: string;
-    },
-    { days: readonly StudyDay[] },
-    HeatmapShape
-  >) {
-    const [box, width] = useWidth<HTMLDivElement>();
-    const { weeks: shown, size, gap } = gridFor(width, weeks, grow);
-    const first = addDays(mondayOf(today), -(shown - 1) * 7);
-    const on = loading !== undefined;
-    const byDate = new Map((on ? [] : days).map((d) => [d.date, d]));
-    const cells: { date: Date; day?: StudyDay; future: boolean }[] = [];
-    let total = 0;
-    for (let i = 0; i < shown * 7; i++) {
-      const date = addDays(first, i);
-      const future = date > today;
-      const day = future ? undefined : byDate.get(dayKey(date));
-      total += dayTotal(day);
-      cells.push({ date, day, future });
-    }
-    const months = monthColumns(
-      Array.from({ length: shown }, (_, c) => addDays(first, c * 7)),
-    );
-    const rowsAt = `repeat(${String(ROWS)}, ${String(size)}px)`;
+ *  container, up to 32 each (heatmap-d8). */
+export function Heatmap({
+  days,
+  today,
+  weeks = 26,
+  grow = false,
+  openDay,
+}: {
+  days: readonly StudyDay[];
+  /** The study day that is today: the last column's last square. */
+  today: Date;
+  /** The most weeks to show: 26 for about 6 months, 53 for a year (D2). */
+  weeks?: number;
+  /** Fill the container's width, the squares up to 32 and the gaps wider. */
+  grow?: boolean;
+  /** A date "2026-10-13" whose tooltip is held open: the design page. */
+  openDay?: string;
+}) {
+  const [box, width] = useWidth<HTMLDivElement>();
+  const { weeks: shown, size, gap } = gridFor(width, weeks, grow);
+  const first = addDays(mondayOf(today), -(shown - 1) * 7);
+  const byDate = new Map(days.map((d) => [d.date, d]));
+  const cells: { date: Date; day?: StudyDay; future: boolean }[] = [];
+  let total = 0;
+  for (let i = 0; i < shown * 7; i++) {
+    const date = addDays(first, i);
+    const future = date > today;
+    const day = future ? undefined : byDate.get(dayKey(date));
+    total += dayTotal(day);
+    cells.push({ date, day, future });
+  }
+  const months = monthColumns(
+    Array.from({ length: shown }, (_, c) => addDays(first, c * 7)),
+  );
+  const rowsAt = `repeat(${String(ROWS)}, ${String(size)}px)`;
 
-    const radius =
-      size >= 24 ? 'var(--ds-radius-control)' : 'var(--ds-radius-segment)';
-    return (
-      <div
-        className="flex min-w-0 flex-col"
-        style={grow ? undefined : { width: boxWidth(weeks), maxWidth: '100%' }}
-      >
-        <FillBlock ch={24} className="ds-body ds-tabular text-(--ds-fg)">
-          {on ? undefined : total > 0 ? (
-            <>
-              <Ticker ch={4}>{totalText(total)}</Ticker>{' '}
-              <span className="text-(--ds-fg-muted)">
-                studied in the last {spanName(shown)}
+  const radius =
+    size >= 24 ? 'var(--ds-radius-control)' : 'var(--ds-radius-segment)';
+  return (
+    <div
+      className="flex min-w-0 flex-col"
+      style={grow ? undefined : { width: boxWidth(weeks), maxWidth: '100%' }}
+    >
+      <p className="ds-body ds-tabular text-(--ds-fg)">
+        {total > 0 ? (
+          <>
+            <Ticker>{totalText(total)}</Ticker>{' '}
+            <span className="text-(--ds-fg-muted)">
+              studied in the last {spanName(shown)}
+            </span>
+          </>
+        ) : (
+          <span className="text-(--ds-fg-muted)">No time studied yet</span>
+        )}
+      </p>
+      <div className={BOX}>
+        <div ref={box} className="min-w-0">
+          <div
+            aria-hidden
+            className="ds-label relative whitespace-nowrap text-(--ds-fg-muted)"
+            style={{ height: MONTH_H, marginLeft: LABEL_W }}
+          >
+            {months.map(({ col, name }) => (
+              <span
+                key={col}
+                className="absolute top-0"
+                style={{ left: col * (size + gap) }}
+              >
+                {name}
               </span>
-            </>
-          ) : (
-            <span className="text-(--ds-fg-muted)">No time studied yet</span>
-          )}
-        </FillBlock>
-        <div className={BOX}>
-          <div ref={box} className="min-w-0">
+            ))}
+          </div>
+          <div className="flex" style={{ marginTop: MONTH_GAP }}>
             <div
               aria-hidden
-              className="ds-label relative whitespace-nowrap text-(--ds-fg-muted)"
-              style={{ height: MONTH_H, marginLeft: LABEL_W }}
+              className="ds-label grid shrink-0 text-(--ds-fg-muted)"
+              style={{
+                width: LABEL_W,
+                gridTemplateRows: rowsAt,
+                rowGap: gap,
+              }}
             >
-              {months.map(({ col, name }) => (
-                <span
-                  key={col}
-                  className="absolute top-0"
-                  style={{ left: col * (size + gap) }}
-                >
-                  {name}
+              {WEEKDAYS.map((d, i) => (
+                <span key={i} className="flex items-center">
+                  {d}
                 </span>
               ))}
             </div>
-            <div className="flex" style={{ marginTop: MONTH_GAP }}>
-              <div
-                aria-hidden
-                className="ds-label grid shrink-0 text-(--ds-fg-muted)"
-                style={{
-                  width: LABEL_W,
-                  gridTemplateRows: rowsAt,
-                  rowGap: gap,
-                }}
-              >
-                {WEEKDAYS.map((d, i) => (
-                  <span key={i} className="flex items-center">
-                    {d}
-                  </span>
-                ))}
-              </div>
-              <div
-                className="grid grid-flow-col"
-                style={{
-                  gridTemplateRows: rowsAt,
-                  gridAutoColumns: `${String(size)}px`,
-                  gap,
-                }}
-              >
-                {cells.map(({ date, day, future }) =>
-                  future || on ? (
+            <div
+              className="grid grid-flow-col"
+              style={{
+                gridTemplateRows: rowsAt,
+                gridAutoColumns: `${String(size)}px`,
+                gap,
+              }}
+            >
+              {cells.map(({ date, day, future }) =>
+                future ? (
+                  <span
+                    key={dayKey(date)}
+                    className="block border border-(--ds-border-muted)"
+                    style={{
+                      width: size,
+                      height: size,
+                      borderRadius: radius,
+                    }}
+                  />
+                ) : (
+                  <Tooltip
+                    key={dayKey(date)}
+                    text={dayTip(date, day)}
+                    open={dayKey(date) === openDay}
+                  >
                     <span
-                      key={dayKey(date)}
-                      className={`block ${future ? 'border border-(--ds-border-muted)' : 'bg-(--ds-heat-0)'}`}
+                      className="ds-shade-in block"
                       style={{
                         width: size,
                         height: size,
                         borderRadius: radius,
+                        background: `var(--ds-heat-${String(shade(dayTotal(day)))})`,
                       }}
                     />
-                  ) : (
-                    <Tooltip
-                      key={dayKey(date)}
-                      text={dayTip(date, day)}
-                      open={dayKey(date) === openDay}
-                    >
-                      <span
-                        className="ds-shade-in block"
-                        style={{
-                          width: size,
-                          height: size,
-                          borderRadius: radius,
-                          background: `var(--ds-heat-${String(shade(dayTotal(day)))})`,
-                        }}
-                      />
-                    </Tooltip>
-                  ),
-                )}
-              </div>
+                  </Tooltip>
+                ),
+              )}
             </div>
           </div>
         </div>
       </div>
-    );
-  },
-);
+    </div>
+  );
+}

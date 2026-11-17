@@ -6,42 +6,23 @@ interface Item {
   detail: string;
 }
 
-/** What sizes the screen while it loads: how many rows. */
-export interface ScreenShape {
-  count: number;
-}
-
-/** A fixture view: a list of rows, or one item opened. Loading, the heading
- *  is drawn real and each row draws its own loading form, at the count the
- *  shape gives; nothing here measures a height. */
+/** A fixture view: a list of rows, or one item opened. Its quiet form is the
+ *  heading alone: the heading is known from where the student is, and the
+ *  rows' number is not, so it stops there (loading D2). */
 export const SampleScreen = waits(
-  {
-    data: ['items'],
-    shapeOf: (d): ScreenShape => ({ count: d.items.length }),
-  } satisfies Loads<{ items: Item[] }, ScreenShape>,
+  { data: ['items'] } satisfies Loads<{ items: Item[] }>,
   function SampleScreen({
     items,
     open,
     loading,
-  }: Waits<{ open?: boolean }, { items: Item[] }, ScreenShape>) {
-    const count =
-      loading === undefined
-        ? undefined
-        : loading === 'unknown'
-          ? 0
-          : open
-            ? Math.min(1, loading.count)
-            : loading.count;
+  }: Waits<{ open?: boolean }, { items: Item[] }>) {
+    const shown = loading === true ? [] : open ? items.slice(0, 1) : items;
     return (
       <div className="space-y-3">
         <h2 className="ds-heading">{open ? 'Item' : 'Items'}</h2>
-        {count === undefined
-          ? (open ? (items ?? []).slice(0, 1) : (items ?? [])).map((i) => (
-              <SampleRow key={i.title} title={i.title} detail={i.detail} />
-            ))
-          : Array.from({ length: count }, (_, i) => (
-              <SampleRow key={i} loading={{}} />
-            ))}
+        {shown.map((i) => (
+          <SampleRow key={i.title} title={i.title} detail={i.detail} />
+        ))}
       </div>
     );
   },

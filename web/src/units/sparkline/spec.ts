@@ -23,20 +23,11 @@ export default defineSpec({
       name: 'One day',
       when: 'A single value: the dot, with no line to draw.',
     },
-    {
-      id: 'loading',
-      name: 'Loading',
-      when: 'While the days load: a flat, quiet line along the bottom, at the same height.',
-    },
   ],
   stress:
     'Sixty values in 96px: the line stays inside its box and the dot stays on the last value.',
   actions: [],
   inputs: [
-    {
-      name: 'loading',
-      does: 'Draws its loading form: bone bars at its own size.',
-    },
     {
       name: 'values',
       does: 'One value per day, oldest first; scaled so the highest reaches the top.',
@@ -68,6 +59,7 @@ export default defineSpec({
       why: 'Step 4 of the loading skeleton plan (ideas/skeleton-plan.md): each leaf designs its loading form once, so it loads the same everywhere.',
       beat: 'Each screen drawing its own bar for it',
       date: '2026-11-12',
+      supersededBy: 'sparkline-d4',
     },
     {
       id: 'sparkline-d3',
@@ -76,6 +68,14 @@ export default defineSpec({
       why: 'Jack: "Can we apply the same loading animation as the ticker + bars to the spark line?"',
       beat: 'The line appearing at once',
       date: '2026-11-14',
+    },
+    {
+      id: 'sparkline-d4',
+      decision:
+        'No loading form of its own: its screen holds the previous one until the data is in, then this draws whole (loading D1, D7).',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
+      beat: 'Its own loading form (sparkline-d2)',
+      date: '2026-11-16',
     },
   ],
 });

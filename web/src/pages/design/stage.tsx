@@ -24,6 +24,7 @@ import {
   type StageState,
 } from './url-state';
 import { ForceLoading } from '@/design/loading';
+import { hasQuietForm } from '@/design/quiet';
 
 function Group({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -73,7 +74,6 @@ function Toolbar({
             { value: 'loaded', label: 'Loaded' },
             { value: 'loading', label: 'Loading' },
             { value: 'both', label: 'Both' },
-            { value: 'first', label: 'First visit' },
             { value: 'arriving', label: 'Arriving' },
           ]}
           onChange={(load) => {
@@ -184,9 +184,9 @@ function Message({ children }: { children: ReactNode }) {
   return <p className="text-xs text-muted-foreground">{children}</p>;
 }
 
-/** One state of the unit, in the chosen load mode. A unit on the loading
- *  contract draws its loading form from the same example, forced; one not
- *  yet converted shows its hand-written skeleton. Both lays the loading form
+/** One state of the unit, in the chosen load mode. A screen on the loading
+ *  contract draws its quiet form from the same example, forced; one not yet
+ *  converted shows its hand-written skeleton. Both lays the loading form
  *  over the loaded content at half strength, so a layout jump shows as a
  *  doubled edge. */
 function Render({
@@ -208,38 +208,27 @@ function Render({
       </Message>
     );
   const written = ex.skeletons?.[s.state];
-  const waits = written !== undefined || (spec.data?.length ?? 0) > 0;
-  // A leaf draws its loading form from its own Loading example: Arriving
-  // swaps that for the chosen state in place, so its motion plays.
-  const leaf = 'loading' in ex.states ? ex.states.loading : undefined;
-  if (s.load === 'arriving' && !waits && leaf !== undefined)
+  if (written === undefined && !hasQuietForm(spec))
     return (
-      <Arriving
-        key={`${s.state}:${String(s.stress)}`}
-        render={(on) => (on ? leaf() : loaded())}
-      />
-    );
-  if (!waits)
-    return (
-      <Message>{spec.title} has no loading form: it waits on nothing.</Message>
+      <Message>
+        {(spec.data?.length ?? 0) > 0
+          ? `${spec.title} has no loading form: its screen holds until the data is in.`
+          : `${spec.title} has no loading form: it waits on nothing.`}
+      </Message>
     );
   const loading = (): ReactNode =>
     written ? (
       written()
     ) : (
-      <ForceLoading.Provider value={s.load === 'first' ? 'unknown' : 'shape'}>
-        {loaded()}
-      </ForceLoading.Provider>
+      <ForceLoading.Provider value>{loaded()}</ForceLoading.Provider>
     );
-  if (s.load === 'loading' || s.load === 'first') return <>{loading()}</>;
+  if (s.load === 'loading') return <>{loading()}</>;
   if (s.load === 'arriving')
     return (
       <Arriving
         key={`${s.state}:${String(s.stress)}`}
         render={(on) => (
-          <ForceLoading.Provider value={on ? 'shape' : null}>
-            {loaded()}
-          </ForceLoading.Provider>
+          <ForceLoading.Provider value={on}>{loaded()}</ForceLoading.Provider>
         )}
       />
     );
@@ -260,8 +249,8 @@ function Render({
 const ARRIVE_MS = { loading: 1500, loaded: 2500 };
 
 /** The data coming in, over and over: loading for 1.5 s, then loaded for
- *  2.5 s, in the same tree, so the bars give way and wrapping text grows as
- *  it will in the app. */
+ *  2.5 s, in the same tree, so the quiet form gives way as it will in the
+ *  app. */
 function Arriving({ render }: { render: (loading: boolean) => ReactNode }) {
   const [on, setOn] = useState(true);
   useEffect(() => {

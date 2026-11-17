@@ -54,9 +54,6 @@ export default defineExamples(spec, ListRow, {
       />
     ),
     'no-href': () => <ListRow title="Circuits I" meta={['Problem set 4']} />,
-    loading: () => (
-      <ListRow loading={{ row: 0, lines: 2 }} aside={<ProgressBar loading />} />
-    ),
   },
   stress: () => (
     <div className="w-[320px] max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">

@@ -11,12 +11,8 @@ export function SectionHeading({
   count,
   action,
   button,
-  loading,
 }: {
   children: ReactNode;
-  /** While the count loads: a Counter's pill bar in its place
-   *  (section-heading-d6). */
-  loading?: boolean;
   /** How many things follow, such as 8, shown as a Counter. */
   count?: ReactNode;
   /** A text link, such as "Show all". */
@@ -34,11 +30,7 @@ export function SectionHeading({
         </h2>
         {count !== undefined && (
           <span className="flex h-7 items-center">
-            {loading === true ? (
-              <Counter loading />
-            ) : (
-              <Counter>{count}</Counter>
-            )}
+            <Counter>{count}</Counter>
           </span>
         )}
       </div>

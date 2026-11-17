@@ -1,4 +1,3 @@
-import { Bone } from '@/units/bone';
 import { ListRow } from '@/units/list-row';
 import { ProgressBar } from '@/units/progress-bar';
 import { dueBadge } from './badge';
@@ -26,14 +25,10 @@ export interface SetLineProps {
 export function DueStatus({
   due,
   today = new Date(),
-  loading,
 }: {
   due?: Date;
   today?: Date;
-  /** While the date loads: a short bar where "Due Thu" goes. */
-  loading?: boolean;
 }) {
-  if (loading === true) return <Bone ch={7} />;
   if (due === undefined) return null;
   return <>{dueText(due, today).text}</>;
 }

@@ -6,7 +6,6 @@ import spec from './spec';
 
 export default defineExamples(spec, Tag, {
   states: {
-    loading: () => <Tag loading />,
     neutral: () => <Tag>Generated</Tag>,
     attention: () => (
       <Tag tone="attention" icon={Clock}>

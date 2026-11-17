@@ -50,7 +50,8 @@ export default defineSpec({
     {
       reads: 'The items',
       call: 'sample',
-      before: 'How many there were last time: the shape, never printed (S1).',
+      before:
+        'Where the student is: list or one item, so the heading. Its quiet form stops there (loading D2).',
     },
   ],
   remembers: [
@@ -65,7 +66,7 @@ export default defineSpec({
     { name: 'open', does: 'The title of the row to open.' },
     {
       name: 'loading',
-      does: 'Its shape while the items load: the row count.',
+      does: 'Draws its quiet form: the heading alone.',
     },
   ],
   priority: { first: 'The list.', main: 'pick-row' },

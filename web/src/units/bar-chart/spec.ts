@@ -35,10 +35,6 @@ export default defineSpec({
   ],
   inputs: [
     {
-      name: 'loading',
-      does: 'Draws its loading form at its shape: the weekdays and which is today.',
-    },
-    {
       name: 'bars',
       does: 'One per column: the day under it, its words in the tooltip, and whether it is today or still to come.',
     },
@@ -75,6 +71,7 @@ export default defineSpec({
       why: 'Step 6 of the loading skeleton plan (ideas/skeleton-plan.md): the chart loads as itself, so nothing beside it moves when the days come.',
       beat: 'BarChartSkeleton, seven stubs at made-up heights',
       date: '2026-11-14',
+      supersededBy: 'bar-chart-d5',
     },
     {
       id: 'bar-chart-d4',
@@ -83,6 +80,15 @@ export default defineSpec({
       why: 'Jack: "can we make the bars (stat and progress) grow to their values as they load? And make the numbers tick up to their values like a stock ticker".',
       beat: 'The bars appearing at once',
       date: '2026-11-14',
+      supersededBy: 'bar-chart-d5',
+    },
+    {
+      id: 'bar-chart-d5',
+      decision:
+        'No loading form of its own: it draws whole once its screen has the data; a later change slides over 700ms. Arrival motion waits for D3.',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
+      beat: 'Its own loading form (bar-chart-d3, bar-chart-d4)',
+      date: '2026-11-16',
     },
   ],
 });

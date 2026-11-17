@@ -1,15 +1,10 @@
 import type { AnySpec } from '@/design/spec';
 
-/** Loaded; loading at the example's own shape; both laid over each other;
- *  or a first visit, with nothing known (skeleton-grill S2). */
-export type Load = 'loaded' | 'loading' | 'both' | 'first' | 'arriving';
-export const LOADS: readonly Load[] = [
-  'loaded',
-  'loading',
-  'both',
-  'first',
-  'arriving',
-];
+/** Loaded; loading (a screen's quiet form, loading D2, or a hand-written
+ *  skeleton not yet replaced); both laid over each other; or arriving, the
+ *  one turning into the other in a loop. */
+export type Load = 'loaded' | 'loading' | 'both' | 'arriving';
+export const LOADS: readonly Load[] = ['loaded', 'loading', 'both', 'arriving'];
 
 /** How wide a unit's example opens: a component and a pane at their own
  *  width, a view across the page. */

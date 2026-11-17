@@ -11,21 +11,17 @@ const EASE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
 export function Sparkline({
   values = [],
   height = 44,
-  loading,
 }: {
   values?: readonly number[];
   /** How tall it is, in px. */
   height?: number;
-  /** While the days load: a flat, quiet line along the bottom, no dot, at the
-   *  same height (sparkline-d2). */
-  loading?: boolean;
 }) {
   const H = height;
   const line = useRef<SVGGElement>(null);
   const dot = useRef<HTMLSpanElement>(null);
-  const drawn = loading !== true && values.length > 0;
-  // When the days come, the line rises from the flat loading line into its
-  // shape and the dot rides up with it (sparkline-d3).
+  const drawn = values.length > 0;
+  // When the days come, the line rises from the floor into its shape and the
+  // dot rides up with it (sparkline-d3).
   useLayoutEffect(() => {
     const g = line.current;
     if (!drawn || g === null || !moves(g)) return;
@@ -40,20 +36,6 @@ export function Sparkline({
         easing: EASE,
       });
   }, [drawn, H]);
-  if (loading === true)
-    return (
-      <span
-        data-sparkline
-        className="relative block w-full"
-        style={{ height: H }}
-      >
-        <span
-          aria-hidden
-          className="absolute inset-x-0 h-[2px] rounded-full bg-(--ds-bone)"
-          style={{ top: H - PAD - 1 }}
-        />
-      </span>
-    );
   const n = values.length;
   const max = Math.max(1, ...values);
   const x = (i: number) => 3 + (n > 1 ? (i / (n - 1)) * 94 : 47);

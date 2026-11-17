@@ -34,20 +34,11 @@ export default defineSpec({
       name: 'With both',
       when: 'A count and an action.',
     },
-    {
-      id: 'loading',
-      name: 'Loading',
-      when: 'While the count loads: the Counter’s pill bar in its place; the title is real.',
-    },
   ],
   stress:
     'A 60 character title in a 240px container: the title wraps; the Counter stays beside its first line and the action at the right.',
   actions: [],
   inputs: [
-    {
-      name: 'loading',
-      does: 'While the count loads: the Counter’s pill bar in its place.',
-    },
     { name: 'children', does: 'The title.' },
     {
       name: 'count',
@@ -120,6 +111,15 @@ export default defineSpec({
       why: 'Step 7 of the loading skeleton plan (ideas/skeleton-plan.md): Home loads as itself, so nothing on it moves when its data comes.',
       beat: 'Each screen drawing its own heading bar',
       date: '2026-11-14',
+      supersededBy: 'section-heading-d7',
+    },
+    {
+      id: 'section-heading-d7',
+      decision:
+        'No loading form of its own: its screen holds the previous one until the data is in, then this draws whole (loading D1, D7).',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
+      beat: 'Its own loading form (section-heading-d6)',
+      date: '2026-11-16',
     },
   ],
 });

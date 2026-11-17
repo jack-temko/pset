@@ -63,7 +63,7 @@ export default defineSpec({
   inputs: [
     {
       name: 'loading',
-      does: 'Its shape while it loads: each list’s row count and each figure’s digits.',
+      does: 'Draws its quiet form: the top bar alone.',
     },
     { name: 'courses', does: 'The courses, for the Courses list.' },
     {
@@ -273,6 +273,15 @@ export default defineSpec({
       why: 'Step 7 of the loading skeleton plan (ideas/skeleton-plan.md): Home loads as itself, so nothing on it moves when its data comes.',
       beat: 'HomeSkeleton, a heading bar over a 346px slab per list',
       date: '2026-11-14',
+      supersededBy: 'home-d20',
+    },
+    {
+      id: 'home-d20',
+      decision:
+        'Its quiet form, past the grace, is the top bar alone: the greeting is data, so nothing below it is known (loading D2, A2).',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
+      beat: 'Every part at the remembered shape (home-d19)',
+      date: '2026-11-16',
     },
   ],
 });

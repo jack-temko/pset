@@ -58,17 +58,14 @@ export default defineSpec({
     {
       reads: 'One item',
       call: 'sample',
-      before: 'Nothing: the row is always two lines, so it needs no shape.',
+      before:
+        'Nothing: a part has no loading form; its screen holds until the data is in (loading D1).',
     },
   ],
   inputs: [
     { name: 'title', does: 'The first line.' },
     { name: 'detail', does: 'The second line, muted.' },
     { name: 'menuOpen', does: 'Shows the menu under the row.' },
-    {
-      name: 'loading',
-      does: 'Its shape while the item loads: the lines are bones, the button real.',
-    },
     {
       name: 'failed',
       does: 'Draws the failed state: the detail in red with an icon.',

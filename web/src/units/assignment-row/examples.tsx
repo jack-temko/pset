@@ -45,7 +45,6 @@ export default defineExamples(spec, AssignmentRow, {
         openedAt: ago(2),
       }),
     'no-time': () => row({ minutesLeft: undefined }),
-    loading: () => <AssignmentRow loading={{ row: 0 }} />,
     list: () => (
       <HomeLists
         workHref={PLACEHOLDER.work}

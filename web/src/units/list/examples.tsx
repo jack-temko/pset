@@ -66,16 +66,6 @@ export default defineExamples(spec, List, {
       </List>
     ),
     'switch-empty': () => <Switched todo={0} />,
-    loading: () => (
-      <List
-        states={SIDES}
-        state="todo"
-        cap={LIST_CAP}
-        showAllHref="#"
-        loading={{ count: 8 }}
-        row={(i) => <ListRow key={i} loading={{ row: i, lines: 2 }} />}
-      />
-    ),
   },
   stress: () => (
     <div className="w-[240px] max-w-full outline-[1px] outline-dashed outline-(--ds-border-muted)">

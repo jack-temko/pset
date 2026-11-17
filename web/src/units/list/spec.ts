@@ -47,11 +47,6 @@ export default defineSpec({
       when: 'The chosen side has no rows: one quiet line, and the list stays on it; the other side keeps its count in the header.',
       text: 'Nothing to do',
     },
-    {
-      id: 'loading',
-      name: 'Loading',
-      when: 'While its rows load: the frame, header and rules real, each row its own loading form at the shape’s count, cut by the cap; Show all’s number a bar.',
-    },
   ],
   stress:
     'A 70 character title in a 240px container: the title truncates; the Counter and action stay.',
@@ -69,11 +64,6 @@ export default defineSpec({
     },
   ],
   inputs: [
-    {
-      name: 'loading',
-      does: 'Draws its loading form at its shape (how many rows); with nothing known the list draws nothing.',
-    },
-    { name: 'row', does: 'One row’s loading form, by its place in the list.' },
     {
       name: 'title',
       does: 'The header’s title; without it there is no header.',
@@ -157,6 +147,7 @@ export default defineSpec({
       why: 'Step 5 of the loading skeleton plan (ideas/skeleton-plan.md): a list loads as itself, so nothing on the screen moves when its rows come.',
       beat: 'Every screen drawing its own slab for a list',
       date: '2026-11-14',
+      supersededBy: 'list-d8',
     },
     {
       id: 'list-d7',
@@ -165,6 +156,15 @@ export default defineSpec({
       why: 'Jack: "The number after show all makes that line jump slightly."',
       beat: 'A bar of at least 2ch, wider than a one-digit number',
       date: '2026-11-14',
+      supersededBy: 'list-d8',
+    },
+    {
+      id: 'list-d8',
+      decision:
+        'No loading form of its own: no rows at a remembered count; its screen holds the previous one until the rows are in (loading D1, D7).',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
+      beat: 'Its own loading form (list-d6, list-d7)',
+      date: '2026-11-16',
     },
   ],
 });

@@ -3,15 +3,11 @@
 export function Meter({
   value = 0,
   max = 0,
-  loading,
 }: {
   value?: number;
   max?: number;
-  /** While the share loads: the empty track alone (meter-d2). */
-  loading?: boolean;
 }) {
-  const share =
-    loading !== true && max > 0 ? Math.min(Math.max(value / max, 0), 1) : 0;
+  const share = max > 0 ? Math.min(Math.max(value / max, 0), 1) : 0;
   return (
     <span
       data-meter

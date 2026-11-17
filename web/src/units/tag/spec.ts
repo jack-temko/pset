@@ -28,19 +28,10 @@ export default defineSpec({
       name: 'Attention without a glyph',
       when: 'The word alone carries the meaning.',
     },
-    {
-      id: 'loading',
-      name: 'Loading',
-      when: 'While the fact it names loads: a pill bar at the tag’s height.',
-    },
   ],
   stress: 'A 40 character tag in a 120px container, which truncates.',
   actions: [],
   inputs: [
-    {
-      name: 'loading',
-      does: 'Draws its loading form: bone bars at its own size.',
-    },
     { name: 'tone', does: 'Which border and text colour.' },
     { name: 'icon', does: 'One glyph before the word.' },
     { name: 'children', does: 'The word or two.' },
@@ -103,6 +94,15 @@ export default defineSpec({
       why: 'Step 4 of the loading skeleton plan (ideas/skeleton-plan.md): each leaf designs its loading form once, so it loads the same everywhere.',
       beat: 'Each screen drawing its own bar for it',
       date: '2026-11-12',
+      supersededBy: 'tag-d6',
+    },
+    {
+      id: 'tag-d6',
+      decision:
+        'No loading form of its own: its screen holds the previous one until the data is in, then this draws whole (loading D1, D7).',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
+      beat: 'Its own loading form (tag-d5)',
+      date: '2026-11-16',
     },
   ],
 });

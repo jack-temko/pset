@@ -35,7 +35,6 @@ export default defineExamples(spec, CourseRow, {
         weekMinutes={0}
       />
     ),
-    loading: () => <CourseRow loading={{ row: 0 }} />,
     list: () => (
       <HomeLists
         workHref={PLACEHOLDER.work}

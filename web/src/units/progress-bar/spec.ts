@@ -38,20 +38,11 @@ export default defineSpec({
       name: 'Thirty problems',
       when: 'A smaller share of the same one bar, filling the room the count leaves.',
     },
-    {
-      id: 'loading',
-      name: 'Loading',
-      when: 'While the counts load: the empty track, and a bar where the count goes.',
-    },
   ],
   stress:
     'Twelve problems in a 96px container: the bar shrinks to its 16px floor; the count stays whole.',
   actions: [],
   inputs: [
-    {
-      name: 'loading',
-      does: 'Draws its loading form: bone bars at its own size.',
-    },
     {
       name: 'done',
       does: 'How many problems are done; kept between 0 and total.',
@@ -134,6 +125,7 @@ export default defineSpec({
       why: 'Step 4 of the loading skeleton plan (ideas/skeleton-plan.md): each leaf designs its loading form once, so it loads the same everywhere.',
       beat: 'Each screen drawing its own bar for it',
       date: '2026-11-12',
+      supersededBy: 'progress-bar-d9',
     },
     {
       id: 'progress-bar-d8',
@@ -142,6 +134,15 @@ export default defineSpec({
       why: 'Jack: "can we make the bars (stat and progress) grow to their values as they load? And make the numbers tick up to their values like a stock ticker".',
       beat: 'The fill appearing at once; the count rolling like a ticker (Jack: "Individual digits don’t need to roll, for example counts or 2 of 8")',
       date: '2026-11-14',
+      supersededBy: 'progress-bar-d9',
+    },
+    {
+      id: 'progress-bar-d9',
+      decision:
+        'No loading form of its own: it draws whole once its screen has the data; a later change slides over 700ms. Arrival motion waits for D3.',
+      why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
+      beat: 'Its own loading form (progress-bar-d7, progress-bar-d8)',
+      date: '2026-11-16',
     },
   ],
 });
