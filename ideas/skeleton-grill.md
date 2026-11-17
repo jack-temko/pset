@@ -1,6 +1,6 @@
 # Loading skeletons: grill
 
-- status: approved
+- status: approved 2026-11-09; largely superseded 2026-11-16 (see "After the audit" below)
 - date: 2026-11-09
 - brief: how every /design unit loads, so that combined screens never jump and the same thing always loads the same way; judged from the tired student's point of view
 - sources: [skeleton-plan.md](skeleton-plan.md) (Fable 5.2's plan, measured on design at ab0c3a0); [fable-review-grill.md](fable-review-grill.md) D11; [loading-standard-grill.md](loading-standard-grill.md); web/src/components/loaded and skeleton; web/src/units/*/spec.ts
@@ -35,6 +35,58 @@ Everything else in [skeleton-plan.md](skeleton-plan.md) stands as written: the f
 
 - Real timings: the units run on sample data, so how often bars show at all is unknown until screens are wired (plan, section 7).
 
+## After the audit (2026-11-16)
+
+An audit of the open PRs #81 to #86 and a grill with Jack replaced most of this file. The PRs are closed, not merged.
+
+### What the audit found
+
+- Measured on the seeded test library: every read answers in 1 to 40 ms warm. On a fresh launch (three runs) the server answers 65 to 165 ms after starting and each first read takes 2 to 20 ms. Only `/api/health` (0.9 to 1.6 s, Settings' checks) and uncached page images (0.3 to 0.5 s) outlast the 300 ms grace. Not measured: a much larger library, a slow disk, the course-centred backend.
+- In the PRs, Course, Settings, Work and Memory remount when data arrives, so text jumps (28px on an ordinary Work problem). Boxes move inside equal outer sizes (list switch 8px, Course stats 5px, Memory empty 22px, Work summary 6.5px, chart tracks 20px). The proof compared only outer size, so it passed all of them.
+- 917 lines in 14 hand-written Waiting functions, for bars a student would almost never see.
+
+### Decisions
+
+| #   | Decision                                                                                                                                                                           | Jack's pick              |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| D1  | The previous screen stays until the next one's data is in; past 300 ms the new screen shows its quiet form. No per-screen Waiting components, no shape functions. **Reverses S1.** | "Hold the old screen"    |
+| D2  | The quiet form draws chrome, the title if known, and stops at the first thing whose size is unknown. Nothing drawn ever moves (S2 as promised).                                    | "Stop at first unknown"  |
+| D3  | Figures roll, bars grow, sparklines rise and heat squares fade the first time each screen shows after PSet starts; after that values just appear.                                  | "First open per session" |
+| D4  | Pulse low point 0.7 in place of 0.5 (`ds-bone-pulse`). Display-size bars 0.45em tall in place of 0.7em, if any survive D7.                                                         | "Take my numbers"        |
+| D5  | Close #81 to #86. Carry over only a loading form for Settings' checks and tidying not about loading.                                                                               | "Close, rebuild small"   |
+| D6  | A read past 300 ms shows the quiet form: no progress line, nothing new.                                                                                                            | "The quiet form"         |
+| D7  | Delete every loading form nothing uses after D1, including the merged ones on design.                                                                                              | "Only what has a caller" |
+| D8  | The proof checks, on every web PR: known text stays in place; nothing jumps at the flip; the quiet form is drawn too.                                                              | "Both on every web PR"   |
+
+Superseded by these: S1 (reversed by D1), S7's derived skeletons and S8's FillBlock (by D7), the plan's steps 8 to 13. Still standing: S2 (now D2), S3 (bars pulse, at D4's depth), S4 and S5 where a loading form survives, S6 and S9 (the proof, extended by D8).
+
+### Assumed (Jack can overrule)
+
+- A1: The callers that remain are Settings' checks, the material pane's page boxes (`BoneBlock`) and Problem's Finding and Queued (`Bone`). Verified by search before anything is deleted.
+- A2: Home's quiet form is the top bar alone, since the greeting is data.
+- A3: A whole screen whose read fails shows its quiet form with the Error notice and Try again under the title.
+- A4: "Session" in D3 means since the page loaded, kept in memory per screen.
+- A5: One source for the 300 ms and 700 ms timings (`bone/rhythm.ts` and `tokens.css` both hold them); `Ticker` moves out of the bone unit; `RowSkeleton` and `Bar` in `home/parts.tsx` go.
+
+### Disagreement, settled
+
+D7 and the deletion. I recommended keeping the leaf forms, then deferring the deletion until the first screen is wired to real data, since the timings come from a backend about to be replaced. Jack: **"don't defer step 4"**. The deletion happens now. Not to be reopened.
+
+### Open
+
+- Settings' checks loading form: designed when built and shown to Jack. With no remembered shapes, decide how the section holds its place so nothing under it moves.
+- The hold itself (D1) is built when routes are wired. Until then it is a written rule.
+
+### Work, in order
+
+1. These decisions, in this file, the plan and `design/design-system.md`. Docs only.
+2. Close #81 to #86, lifting out of their worktrees anything not about loading.
+3. The proof: known text at the same place once loaded (text nodes matched by content, 0.5px); one flip to loaded in one tree, where elements survive and no known text moves in a single frame.
+4. Delete on design what D1 and D7 leave without a caller, and update each unit's spec decisions.
+5. A quiet form per screen under D2 and A2, as the screen's own frame with no body. Jack tries it.
+6. D3 and D4. Jack tries it.
+7. Settings' checks form. Jack tries it.
+
 ## Reversals
 
 - **loading-standard D5's "3 the first time"** (ideas/loading-standard-grill.md): a first visit draws no guessed rows (S2).
@@ -43,11 +95,12 @@ Everything else in [skeleton-plan.md](skeleton-plan.md) stands as written: the f
 - **The 2026-11-04 pause of the jump guard**: ends in a new form, the box proof on every PR (S6).
 - **course-d13 and settings-d12** (assumed there): kept in meaning, changed in mechanism, as each screen's skeleton component is deleted.
 
+- **S1, bars at the remembered shape** (this file, 2026-11-09): reversed 2026-11-16 by D1, Jack choosing "Hold the old screen" with the reversal named. The previous screen holds until data is in; a slow read shows the quiet form, never bars at a remembered shape.
 - **S8, the remembered line count** (this file, 2026-11-09): reversed 2026-11-14. Asked how to find a wrapping text's line count, and what big companies do (most use a fixed count and accept the jump, or clamp the text), Jack: **"lets go with 2, but it smoothly grows if needed. and smoothly replaces the text. Make it effortless"**. Wrapping text loads as one bar line and grows smoothly to its height in 200ms when it comes; the box proof allows exactly that growth and nothing else.
 
 ## Disagreements
 
-None.
+- 2026-11-16, D7: settled for Jack's choice, see "After the audit".
 
 ## Frontier
 
@@ -78,3 +131,7 @@ S9 (decided 2026-11-11): the checks find the units on the contract by themselves
 ### During step 6
 
 - Jack, on how a wrapping text's line count is found: **"lets go with 2, but it smoothly grows if needed. and smoothly replaces the text. Make it effortless"**. S8 reversed (above).
+
+### After the audit (2026-11-16)
+
+Jack's picks, verbatim: "Hold the old screen" (D1, with S1's reversal named), "Stop at first unknown" (D2), "First open per session" (D3), "Take my numbers" (D4), "Close, rebuild small" (D5), "The quiet form" (D6), "Only what has a caller" (D7), "Both on every web PR" (D8). On deferring the deletion: "don't defer step 4".

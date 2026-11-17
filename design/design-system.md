@@ -256,10 +256,24 @@ blank of the same height when nothing was. Progress shows at once. A
 quick answer never blinks a spinner, and a book passing from one step to
 the next never says "Queued" for a frame.
 
-**Nothing jumps when data arrives.** Anything that waits on a request
-draws a **Skeleton** first: shimmering `muted` blocks at the size and
-count of what's coming, inline in real line boxes so a skeleton row and
-the row that replaces it measure the same.
+**Nothing jumps when data arrives** (rewritten 2026-11-16 for the new units,
+`ideas/skeleton-grill.md`, "After the audit"). Moving between screens, the
+previous screen stays until the next one's data is in; reads answer in 1 to 40 ms,
+so the student goes straight from one finished screen to the next. A read that
+outlasts the 300 ms grace shows the new screen's **quiet form**: its chrome, its
+title if the link carried it, and nothing past the first thing whose size is
+unknown. No bars are guessed at a remembered shape, so nothing drawn ever moves.
+Only a part that is slow by nature (Settings' checks, an uncached page image,
+Problem's Finding and Queued) draws a loading form, from `Bone` or `BoneBlock`.
+Figures roll, bars grow, sparklines rise and heat squares fade the first time each
+screen shows after PSet starts; after that values just appear. The box proof
+(`make loading-check`, on every PR that touches `web/`) fails when known text
+moves once loaded, when the flip to loaded moves anything in a frame, or when a
+quiet form is missing.
+
+The rest of this section, from `make jumps` to the end of "One loading standard",
+governs the old app's screens (`components/loaded`, `components/skeleton`) until
+they retire.
 
 `make jumps` measures where this is broken. It drives the real app in Chromium over a
 copy of a library (default `~/.local/share/pset-test-library`, or `DATA=<dir>`), each screen
