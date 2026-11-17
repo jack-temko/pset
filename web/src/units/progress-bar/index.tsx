@@ -1,3 +1,5 @@
+import { useGrown } from '@/design/arrival';
+
 /** How far a set is done: one continuous bar and the count in words beside
  *  it. The count always shows, right-aligned in a box as wide as "99 of 99"
  *  (progress-bar-d6); the bar fills the room the count leaves, from a 16px floor, and adapts to its own width, so nothing outside
@@ -9,6 +11,7 @@ export function ProgressBar({
   done?: number;
   total?: number;
 }) {
+  const grown = useGrown();
   const shown = Math.min(Math.max(done, 0), Math.max(total, 0));
   const complete = total > 0 && shown === total;
   const fill = complete ? 'bg-(--ds-fg-muted)' : 'bg-(--ds-accent)';
@@ -19,9 +22,9 @@ export function ProgressBar({
         className="h-1 min-w-4 flex-1 overflow-hidden rounded-(--ds-radius-segment) bg-(--ds-border)"
       >
         <span
-          className={`block h-full ${fill} transition-[width] duration-700 ease-out motion-reduce:transition-none`}
+          className={`block h-full ${fill} transition-[width] duration-(--ds-arrive) ease-out motion-reduce:transition-none`}
           style={{
-            width: `${String(total > 0 ? (shown / total) * 100 : 0)}%`,
+            width: `${String(grown && total > 0 ? (shown / total) * 100 : 0)}%`,
           }}
         />
       </span>

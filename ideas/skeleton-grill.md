@@ -68,6 +68,12 @@ Superseded by these: S1 (reversed by D1), S7's derived skeletons and S8's FillBl
 - A4: "Session" in D3 means since the page loaded, kept in memory per screen.
 - A5: One source for the 300 ms and 700 ms timings (`bone/rhythm.ts` and `tokens.css` both hold them); `Ticker` moves out of the bone unit; `RowSkeleton` and `Bar` in `home/parts.tsx` go.
 
+### Added in step 6 (2026-11-17)
+
+- D9: When a screen's quiet form was on screen past the grace, what it draws below its title fades in over 150 ms, opacity only, and D3's motion plays inside that fade. An ordinary screen change, held under D1, does not fade. Jack, asked whether first load should get "some sort of graceful load animation": **"merge it and fold the fade into step 6"**. Beat: a fade on every screen change (a delay on every click); a staggered cascade.
+- D4's display-size bars: none survive D7 (nothing draws a `Bone` at display size), so only the pulse changed.
+- A5 done: the 300, 150 and 700 ms live in `MOTION` (`design/tokens.ts`) and as `--ds-grace`, `--ds-reveal` and `--ds-arrive` in `tokens.css`, kept equal by `tokens.test.ts`. `Ticker` is `design/ticker.tsx`, beside the arrival code (`design/arrival.ts`, `design/arrives.tsx`).
+
 ### Disagreement, settled
 
 D7 and the deletion. I recommended keeping the leaf forms, then deferring the deletion until the first screen is wired to real data, since the timings come from a backend about to be replaced. Jack: **"don't defer step 4"**. The deletion happens now. Not to be reopened.

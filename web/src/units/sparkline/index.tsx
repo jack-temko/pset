@@ -1,6 +1,6 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useContext, useLayoutEffect, useRef } from 'react';
 
-import { ARRIVE_MS, moves } from '@/units/bone/rhythm';
+import { ARRIVE_MS, Arriving, moves } from '@/design/arrival';
 
 const PAD = 4;
 const EASE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
@@ -19,9 +19,10 @@ export function Sparkline({
   const H = height;
   const line = useRef<SVGGElement>(null);
   const dot = useRef<HTMLSpanElement>(null);
-  const drawn = values.length > 0;
-  // When the days come, the line rises from the floor into its shape and the
-  // dot rides up with it (sparkline-d3).
+  const arriving = useContext(Arriving);
+  const drawn = values.length > 0 && arriving;
+  // As its screen arrives, the line rises from the floor into its shape and
+  // the dot rides up with it (sparkline-d3, loading D3).
   useLayoutEffect(() => {
     const g = line.current;
     if (!drawn || g === null || !moves(g)) return;

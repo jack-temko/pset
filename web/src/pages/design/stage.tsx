@@ -23,6 +23,7 @@ import {
   type Load,
   type StageState,
 } from './url-state';
+import { ReplayArrivals } from '@/design/arrival';
 import { ForceLoading } from '@/design/loading';
 import { hasQuietForm } from '@/design/quiet';
 
@@ -223,7 +224,9 @@ function Render({
       <Arriving
         key={`${s.state}:${String(s.stress)}`}
         render={(on) => (
-          <ForceLoading.Provider value={on}>{loaded()}</ForceLoading.Provider>
+          <ReplayArrivals.Provider value>
+            <ForceLoading.Provider value={on}>{loaded()}</ForceLoading.Provider>
+          </ReplayArrivals.Provider>
         )}
       />
     );
@@ -245,7 +248,8 @@ const ARRIVE_MS = { loading: 1500, loaded: 2500 };
 
 /** The data coming in, over and over: loading for 1.5 s, then loaded for
  *  2.5 s, in the same tree, so the quiet form gives way as it will in the
- *  app. */
+ *  app: what is below the title fades in and, as on a first open, the
+ *  figures roll, the bars grow and the squares take their shades. */
 function Arriving({ render }: { render: (loading: boolean) => ReactNode }) {
   const [on, setOn] = useState(true);
   useEffect(() => {

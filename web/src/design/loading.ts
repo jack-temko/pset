@@ -2,9 +2,14 @@ import {
   createContext,
   createElement,
   useContext,
+  useEffect,
+  useState,
   type ComponentType,
   type ReactNode,
 } from 'react';
+
+import { QuietSeen } from './arrival';
+import { MOTION } from './tokens';
 
 /** The loading contract, after the audit (ideas/skeleton-grill.md, "After
  *  the audit", D1 and D2). Moving between screens, the previous screen holds
@@ -42,12 +47,36 @@ export function waits<P extends { loading?: unknown }, D>(
 ): ((props: P) => ReactNode) & { loads: Loads<D> } {
   function Waiting(props: P) {
     const forced = useContext(ForceLoading);
-    if (!forced || props.loading !== undefined)
-      return createElement(unit as ComponentType<P>, props);
-    const known: Record<string, unknown> = { ...props };
-    for (const k of loads.data) Reflect.deleteProperty(known, k);
-    known.loading = true;
-    return createElement(unit as ComponentType<P>, known as P);
+    const quiet = forced || props.loading !== undefined;
+    // Whether the quiet form stayed up past the grace, so the student saw
+    // it: then what replaces it fades in (Arrives).
+    const [seen, setSeen] = useState(false);
+    const [was, setWas] = useState(quiet);
+    if (was !== quiet) {
+      setWas(quiet);
+      if (quiet) setSeen(false);
+    }
+    useEffect(() => {
+      if (!quiet) return;
+      const t = setTimeout(() => {
+        setSeen(true);
+      }, MOTION.grace);
+      return () => {
+        clearTimeout(t);
+      };
+    }, [quiet]);
+    let drawn = props;
+    if (forced && props.loading === undefined) {
+      const known: Record<string, unknown> = { ...props };
+      for (const k of loads.data) Reflect.deleteProperty(known, k);
+      known.loading = true;
+      drawn = known as P;
+    }
+    return createElement(
+      QuietSeen.Provider,
+      { value: seen },
+      createElement(unit as ComponentType<P>, drawn),
+    );
   }
   Waiting.displayName = `Waits(${unit.name})`;
   return Object.assign(Waiting, { loads });

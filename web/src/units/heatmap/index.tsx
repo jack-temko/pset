@@ -1,4 +1,7 @@
-import { Ticker } from '@/units/bone';
+import { useContext } from 'react';
+
+import { Arriving } from '@/design/arrival';
+import { Ticker } from '@/design/ticker';
 import { minutesText } from '@/units/set-line/dates';
 import { Tooltip } from '@/units/tooltip';
 import { addDays, dayKey, mondayOf, shade } from './day';
@@ -88,6 +91,7 @@ export function Heatmap({
   const [box, width] = useWidth<HTMLDivElement>();
   const { weeks: shown, size, gap } = gridFor(width, weeks, grow);
   const first = addDays(mondayOf(today), -(shown - 1) * 7);
+  const arriving = useContext(Arriving);
   const byDate = new Map(days.map((d) => [d.date, d]));
   const cells: { date: Date; day?: StudyDay; future: boolean }[] = [];
   let total = 0;
@@ -181,7 +185,7 @@ export function Heatmap({
                     open={dayKey(date) === openDay}
                   >
                     <span
-                      className="ds-shade-in block"
+                      className={`block ${arriving ? 'ds-shade-in' : ''}`}
                       style={{
                         width: size,
                         height: size,

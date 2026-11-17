@@ -9,6 +9,7 @@ import {
   FONTS,
   ROOM,
   LAYOUT,
+  MOTION,
   MUTED_FLOOR,
   RADII,
   SPACING,
@@ -98,6 +99,8 @@ describe('tokens.css and tokens.ts', () => {
       expect(vars.get(k)).toBe(`${String(v)}px`);
     for (const r of RADII)
       expect(vars.get(`radius-${r.name}`)).toBe(`${String(r.px)}px`);
+    for (const [k, v] of Object.entries(MOTION))
+      expect(vars.get(k)).toBe(`${String(v)}ms`);
   });
 
   it('agree on the border, the focus ring and the room around big type', () => {
@@ -125,6 +128,7 @@ describe('tokens.css and tokens.ts', () => {
       ),
       ...SPACING.map((s) => `space-${String(s)}`),
       ...Object.keys(LAYOUT),
+      ...Object.keys(MOTION),
       ...RADII.map((r) => `radius-${r.name}`),
       'border-width',
       'focus-width',

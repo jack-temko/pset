@@ -266,7 +266,9 @@ unknown. No bars are guessed at a remembered shape, so nothing drawn ever moves.
 Only a part that is slow by nature (Settings' checks, an uncached page image,
 Problem's Finding and Queued) draws a loading form, from `Bone` or `BoneBlock`.
 Figures roll, bars grow, sparklines rise and heat squares fade the first time each
-screen shows after PSet starts; after that values just appear. The box proof
+screen shows after PSet starts; after that values just appear. When the quiet form
+was on screen, what replaces it below the title fades in over 150ms (opacity only, so
+nothing moves); a screen change that was held does not fade. The box proof
 (`make loading-check`, on every PR that touches `web/`) fails when known text
 moves once loaded, when the flip to loaded moves anything in a frame, or when a
 quiet form is missing.

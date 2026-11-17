@@ -89,6 +89,15 @@ export default defineSpec({
       why: 'Jack, 2026-11-16: "Hold the old screen" and "Only what has a caller" (ideas/skeleton-grill.md D1, D7): reads take 1 to 40 ms.',
       beat: 'Its own loading form (bar-chart-d3, bar-chart-d4)',
       date: '2026-11-16',
+      supersededBy: 'bar-chart-d6',
+    },
+    {
+      id: 'bar-chart-d6',
+      decision:
+        "On its screen's first open after PSet starts, each bar grows up from the floor over 700ms; after that bars draw at their height. A change slides.",
+      why: 'Jack, 2026-11-16: "First open per session" (ideas/skeleton-grill.md D3); 2026-11-17: "fold the fade into step 6".',
+      beat: 'Growing on every open; never growing',
+      date: '2026-11-16',
     },
   ],
 });

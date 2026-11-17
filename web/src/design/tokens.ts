@@ -397,6 +397,15 @@ export const LAYOUT = {
   'page-width': 1012,
 } as const;
 
+/** Motion, in ms (ideas/skeleton-grill.md D1, D3, A5): how long a wait goes
+ *  unshown, how long a reveal fades, and how long an arrival takes (a figure
+ *  rolling, a bar growing, a square taking its shade). */
+export const MOTION = {
+  grace: 300,
+  reveal: 150,
+  arrive: 700,
+} as const;
+
 export const RADII = [
   { name: 'segment', px: 2 },
   { name: 'tag', px: 10 },

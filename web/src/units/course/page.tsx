@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { Arrives } from '@/design/arrives';
 import type { Waits } from '@/design/loading';
 import { money, plural } from '@/lib/format';
 import { Button } from '@/units/button';
@@ -584,167 +585,171 @@ export function CoursePage({
                   />
                 </div>
               </div>
-              {body && (
-                <p className="ds-body mt-2 min-h-(--ds-body-line) text-(--ds-fg-muted) [overflow-wrap:anywhere]">
-                  {standing(todo, today)}
-                </p>
-              )}
-            </div>
-            {failed === true && (
-              <ErrorNotice
-                error={{
-                  what: `Couldn't load ${name === '' ? 'this course' : name}`,
-                  why: "PSet couldn't read this course from your library. Nothing in it was lost.",
-                  chain: ['course.load'],
-                }}
-                actions={[{ label: 'Try again' }]}
-              />
-            )}
-            {body && (
-              <>
-                {confirming && (
-                  <DangerDialog
-                    title={`Delete ${name}`}
-                    message={`This deletes ${plural(sets.length, 'assignment', 'assignments')} and ${plural(materials.length, 'material', 'materials')}.`}
-                    word={name}
-                    confirmLabel="Delete course"
-                    onConfirm={() => {
-                      setConfirming(false);
-                      settle();
-                      setSets([]);
-                      setMaterials([]);
-                    }}
-                    onCancel={() => {
-                      setConfirming(false);
-                    }}
-                  />
+              <Arrives screen="course" ready={body !== undefined}>
+                {body && (
+                  <p className="ds-body mt-2 min-h-(--ds-body-line) text-(--ds-fg-muted) [overflow-wrap:anywhere]">
+                    {standing(todo, today)}
+                  </p>
                 )}
+              </Arrives>
+            </div>
+            <Arrives screen="course" ready={loading !== true}>
+              {failed === true && (
+                <ErrorNotice
+                  error={{
+                    what: `Couldn't load ${name === '' ? 'this course' : name}`,
+                    why: "PSet couldn't read this course from your library. Nothing in it was lost.",
+                    chain: ['course.load'],
+                  }}
+                  actions={[{ label: 'Try again' }]}
+                />
+              )}
+              {body && (
+                <>
+                  {confirming && (
+                    <DangerDialog
+                      title={`Delete ${name}`}
+                      message={`This deletes ${plural(sets.length, 'assignment', 'assignments')} and ${plural(materials.length, 'material', 'materials')}.`}
+                      word={name}
+                      confirmLabel="Delete course"
+                      onConfirm={() => {
+                        setConfirming(false);
+                        settle();
+                        setSets([]);
+                        setMaterials([]);
+                      }}
+                      onCancel={() => {
+                        setConfirming(false);
+                      }}
+                    />
+                  )}
 
-                {/* The work first, then the stats box, then memories
+                  {/* The work first, then the stats box, then memories
                   (course-d31): the assignment is above the fold. */}
-                <div className="space-y-10">
-                  <div>
-                    <SectionHeading
-                      count={
-                        done.length === 0 && todo.length > 0
-                          ? countBeside(todo.length)
-                          : undefined
-                      }
-                      button={
-                        <AddButton
-                          label="Add assignment"
-                          onPick={() => {
-                            workPicker.current?.click();
-                          }}
-                        />
-                      }
-                    >
-                      Assignments
-                    </SectionHeading>
-                    <div className="mt-3">
-                      <List
-                        {...switchProps}
-                        state={shownSide}
-                        onState={setSide}
-                        cap={LIST_CAP}
-                        showAllHref={workHref}
-                        empty={
-                          sets.length === 0
-                            ? 'No assignments yet. Add an assignment sheet.'
-                            : shownSide === 'done'
-                              ? 'Nothing done yet'
-                              : 'Nothing to do'
+                  <div className="space-y-10">
+                    <div>
+                      <SectionHeading
+                        count={
+                          done.length === 0 && todo.length > 0
+                            ? countBeside(todo.length)
+                            : undefined
+                        }
+                        button={
+                          <AddButton
+                            label="Add assignment"
+                            onPick={() => {
+                              workPicker.current?.click();
+                            }}
+                          />
                         }
                       >
-                        {shownSide === 'done'
-                          ? done.map((s) => setRow(s, true))
-                          : todo.map((s) => setRow(s, false))}
-                      </List>
+                        Assignments
+                      </SectionHeading>
+                      <div className="mt-3">
+                        <List
+                          {...switchProps}
+                          state={shownSide}
+                          onState={setSide}
+                          cap={LIST_CAP}
+                          showAllHref={workHref}
+                          empty={
+                            sets.length === 0
+                              ? 'No assignments yet. Add an assignment sheet.'
+                              : shownSide === 'done'
+                                ? 'Nothing done yet'
+                                : 'Nothing to do'
+                          }
+                        >
+                          {shownSide === 'done'
+                            ? done.map((s) => setRow(s, true))
+                            : todo.map((s) => setRow(s, false))}
+                        </List>
+                      </div>
                     </div>
-                  </div>
 
-                  <div>
-                    <SectionHeading
-                      count={countBeside(materials.length)}
-                      button={
-                        <AddButton
-                          label="Add material"
-                          onPick={() => {
-                            materialPicker.current?.click();
-                          }}
-                        />
-                      }
-                    >
-                      Materials
-                    </SectionHeading>
-                    <div className="mt-3">
-                      <List
-                        cap={LIST_CAP}
-                        showAllHref={materialsHref}
-                        empty="No materials yet. Add a textbook or slides."
+                    <div>
+                      <SectionHeading
+                        count={countBeside(materials.length)}
+                        button={
+                          <AddButton
+                            label="Add material"
+                            onPick={() => {
+                              materialPicker.current?.click();
+                            }}
+                          />
+                        }
                       >
-                        {materials.map((m) =>
-                          pending?.kind === 'material' &&
-                          pending.id === m.id ? (
-                            <UndoRow
-                              key={m.id}
-                              text={`Deleted ${m.name}. Its work stays.`}
-                              onUndo={undo}
-                            />
-                          ) : (
-                            <MaterialRow
-                              key={m.id}
-                              material={m}
-                              titleField={nameField(m.id, m.name, (n) => {
-                                setMaterials((all) =>
-                                  all.map((x) =>
-                                    x.id === m.id ? { ...x, name: n } : x,
-                                  ),
-                                );
-                              })}
-                              onPick={(id) => {
-                                if (id === 'rename') rename(m.id);
-                                if (id === 'remove')
-                                  mark({
-                                    kind: 'material',
-                                    id: m.id,
-                                    name: m.name,
-                                  });
-                              }}
-                            />
-                          ),
-                        )}
-                      </List>
+                        Materials
+                      </SectionHeading>
+                      <div className="mt-3">
+                        <List
+                          cap={LIST_CAP}
+                          showAllHref={materialsHref}
+                          empty="No materials yet. Add a textbook or slides."
+                        >
+                          {materials.map((m) =>
+                            pending?.kind === 'material' &&
+                            pending.id === m.id ? (
+                              <UndoRow
+                                key={m.id}
+                                text={`Deleted ${m.name}. Its work stays.`}
+                                onUndo={undo}
+                              />
+                            ) : (
+                              <MaterialRow
+                                key={m.id}
+                                material={m}
+                                titleField={nameField(m.id, m.name, (n) => {
+                                  setMaterials((all) =>
+                                    all.map((x) =>
+                                      x.id === m.id ? { ...x, name: n } : x,
+                                    ),
+                                  );
+                                })}
+                                onPick={(id) => {
+                                  if (id === 'rename') rename(m.id);
+                                  if (id === 'remove')
+                                    mark({
+                                      kind: 'material',
+                                      id: m.id,
+                                      name: m.name,
+                                    });
+                                }}
+                              />
+                            ),
+                          )}
+                        </List>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="mt-16">
-                  <Stats course={body} today={today} />
-                </div>
+                  <div className="mt-16">
+                    <Stats course={body} today={today} />
+                  </div>
 
-                <div className="mt-10">
-                  {/* Hidden with nothing to show (a zero says nothing); the rows
+                  <div className="mt-10">
+                    {/* Hidden with nothing to show (a zero says nothing); the rows
                     are the Memory unit's own (course-d29). */}
-                  {memories.length > 0 && (
-                    <Fold
-                      label={`PSet remembers ${plural(memories.length, 'thing', 'things')}`}
-                      defaultOpen={unfolded}
-                    >
-                      <MemoryList
-                        memories={memories.map((text, i) => ({
-                          id: `${body.name}-${String(i)}`,
-                          text,
-                          source: 'you',
-                          at: '2026-11-01',
-                        }))}
-                        showAllHref={memoriesHref}
-                      />
-                    </Fold>
-                  )}
-                </div>
-              </>
-            )}
+                    {memories.length > 0 && (
+                      <Fold
+                        label={`PSet remembers ${plural(memories.length, 'thing', 'things')}`}
+                        defaultOpen={unfolded}
+                      >
+                        <MemoryList
+                          memories={memories.map((text, i) => ({
+                            id: `${body.name}-${String(i)}`,
+                            text,
+                            source: 'you',
+                            at: '2026-11-01',
+                          }))}
+                          showAllHref={memoriesHref}
+                        />
+                      </Fold>
+                    )}
+                  </div>
+                </>
+              )}
+            </Arrives>
           </>
         </div>
       </div>
