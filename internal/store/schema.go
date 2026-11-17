@@ -10,8 +10,8 @@ import (
 // baseline is the schema for courses, materials and work. Nothing has
 // shipped on it yet, so it is edited in place until the cut-over (track 9 of
 // ideas/backend-courses.md); from then on every change is a new migration.
-// The steps and calls tables come with the step runner (track 3), images and
-// assignment reads with the work (track 5), places with track 7.
+// Images and assignment reads come with the work (track 5), places with
+// track 7.
 //
 // Conventions: ids are TEXT; stamps are db.Stamp text; "" is "none" for a
 // stamp or a reference, so `IS NOT` comparisons and markers stay simple;
@@ -173,6 +173,8 @@ CREATE TABLE incidents (
 	last_at      TEXT NOT NULL,
 	resolved_at  TEXT NOT NULL DEFAULT '',
 	detail       TEXT NOT NULL DEFAULT '',
+	-- For a waiting_on_you failure, the condition whose return clears it.
+	clears       TEXT NOT NULL DEFAULT '',
 	seq          INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX incidents_open ON incidents (state, subject_kind, subject_id);
@@ -185,6 +187,54 @@ CREATE TABLE conditions (
 	fix   TEXT NOT NULL DEFAULT '',
 	seq   INTEGER NOT NULL DEFAULT 0
 );
+
+-- A piece of background work on one thing (D3): its state is the step's
+-- alone, and what it makes lives in its own table (finds, readings,
+-- documents). input_hash is what its inputs were when it last finished: a
+-- done step whose inputs still hash the same is never run again.
+CREATE TABLE steps (
+	id           TEXT PRIMARY KEY,
+	subject_kind TEXT NOT NULL,
+	subject_id   TEXT NOT NULL,
+	name         TEXT NOT NULL,
+	position     INTEGER NOT NULL,
+	state        TEXT NOT NULL CHECK (state IN ('waiting', 'running', 'retrying', 'done', 'failed', 'out_of_date', 'not_asked')),
+	priority     INTEGER NOT NULL DEFAULT 0,
+	input_hash   TEXT NOT NULL DEFAULT '',
+	attempts     INTEGER NOT NULL DEFAULT 0,
+	retry_at     TEXT NOT NULL DEFAULT '',
+	incident_id  TEXT NOT NULL DEFAULT '',
+	started_at   TEXT NOT NULL DEFAULT '',
+	ended_at     TEXT NOT NULL DEFAULT '',
+	created_at   TEXT NOT NULL,
+	seq          INTEGER NOT NULL DEFAULT 0,
+	UNIQUE (subject_kind, subject_id, name)
+);
+CREATE INDEX steps_runnable ON steps (state, priority DESC, created_at);
+
+-- One model call, keyed to the step that made it: a step's usage is the sum
+-- of its calls, and they go with it. Not logged: nothing on screen is a call.
+CREATE TABLE calls (
+	id                 INTEGER PRIMARY KEY,
+	step_id            TEXT NOT NULL REFERENCES steps (id) ON DELETE CASCADE,
+	attempt            INTEGER NOT NULL,
+	at                 TEXT NOT NULL,
+	model              TEXT NOT NULL,
+	answered           TEXT NOT NULL DEFAULT '',
+	host               TEXT NOT NULL DEFAULT '',
+	ms                 INTEGER NOT NULL DEFAULT 0,
+	prompt_tokens      INTEGER NOT NULL DEFAULT 0,
+	completion_tokens  INTEGER NOT NULL DEFAULT 0,
+	cached_tokens      INTEGER NOT NULL DEFAULT 0,
+	cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+	reasoning_tokens   INTEGER NOT NULL DEFAULT 0,
+	cost               REAL NOT NULL DEFAULT 0,
+	-- 0 when the provider reported no usage (a failed or stopped call):
+	-- its tokens and cost are not known, only that it happened.
+	counted            INTEGER NOT NULL DEFAULT 0,
+	error_id           TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX calls_step ON calls (step_id);
 
 -- The change log. Written only by the triggers. AUTOINCREMENT keeps seq
 -- rising across purges: a plain rowid restarts at 1 once the log is emptied,
@@ -342,8 +392,21 @@ var (
 			// The student dismisses one; everything else is PSet's.
 			Student: []string{"state"},
 			PSet: []string{"error", "kind", "subject_kind", "subject_id", "course_id", "set_id", "step_id",
-				"action", "born", "route", "count", "first_at", "last_at", "resolved_at", "detail"},
+				"action", "born", "route", "count", "first_at", "last_at", "resolved_at", "detail", "clears"},
 			Meta: []string{"seq"},
+		},
+		{
+			Name: "steps", Kind: change.ResourceStep,
+			SetID: "CASE {r}.subject_kind WHEN 'question' THEN " + ofQuestion(questionSet, "subject_id") +
+				" WHEN 'set' THEN {r}.subject_id END",
+			CourseID: "CASE {r}.subject_kind WHEN 'question' THEN " + ofQuestion(questionCourse, "subject_id") +
+				" WHEN 'set' THEN (SELECT course_id FROM sets WHERE id = {r}.subject_id)" +
+				" WHEN 'material' THEN (SELECT course_id FROM materials WHERE id = {r}.subject_id)" +
+				" WHEN 'turn' THEN (SELECT course_id FROM turns WHERE id = {r}.subject_id) END",
+			PSet: []string{"subject_kind", "subject_id", "name", "position", "state", "attempts", "retry_at",
+				"incident_id", "started_at", "ended_at"},
+			// Which goes first and what its inputs were are the runner's own.
+			Meta: []string{"priority", "input_hash", "created_at", "seq"},
 		},
 		{
 			Name: "conditions", Kind: change.ResourceCondition,

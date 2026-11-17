@@ -119,6 +119,9 @@ func logCall(req ChatRequest, start time.Time, reply Reply, err error) {
 		names = append(names, t.Function.Name)
 	}
 	call.Tools = strings.Join(names, ",")
+	if req.OnDone != nil {
+		req.OnDone(call)
+	}
 
 	callLog.Lock()
 	path, sink := callLog.path, callLog.sink

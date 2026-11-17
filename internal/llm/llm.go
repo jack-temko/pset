@@ -333,6 +333,10 @@ type ChatRequest struct {
 	// OnReasoning, if set, receives a thinking model's reasoning as it
 	// streams: the part it writes before, and apart from, its answer.
 	OnReasoning func(text string) `json:"-"`
+	// OnDone, when set, is handed this call once it finishes, beside the
+	// global sink: the step runner keys each call to its step this way,
+	// with nothing carried in the context.
+	OnDone func(Call) `json:"-"`
 }
 
 // ReasoningOptions is OpenRouter's reasoning object: an effort, or just
