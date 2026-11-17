@@ -290,16 +290,22 @@ incident.
 
 ### place
 
-One shape, `{id, seq, ownerKind, ownerId, group, kind}` plus the fields its kind
-fills. A thing has at most one place of each kind.
+One shape, `{id, seq, ownerKind, ownerId, group, kind, tabId?}` plus the fields its
+kind fills. A thing has at most one place of each kind, except a material's `page`
+and `zoom`, which are per tab.
+
+**A material's spot is per tab** (W6, M8): a material can be open in two tabs, and
+each keeps its own exact spot and zoom. A `page` or `zoom` place with a `tabId` is
+that tab's own, and goes when the tab closes. One without a `tabId` is the
+material's last spot, which a newly opened tab starts from.
 
 | Kind         | Group  | Owner    | Fields                                                      |
 | ------------ | ------ | -------- | ----------------------------------------------------------- |
 | `problem`    | where  | set      | `questionId`                                                |
-| `page`       | where  | material | `page`, `down` (fraction of that page scrolled)             |
+| `page`       | where  | material | `tabId?`, `page`, `down` (fraction of that page scrolled)   |
 | `line`       | where  | document | `block` (index of the block last in view)                   |
 | `sides`      | layout | course   | `sides` (each: `tabs` {id, kind, thingId}, `open`), `split` |
-| `zoom`       | layout | material | `zoom` (1 is fitted to width)                               |
+| `zoom`       | layout | material | `tabId?`, `zoom` (1 is fitted to width)                     |
 | `ask_draft`  | unsent | course   | `text`, `aboutId`                                           |
 | `note_draft` | unsent | question | `text`                                                      |
 | `new_set`    | unsent | course   | `title`, `due`, `text` (its lines)                          |
@@ -381,47 +387,50 @@ study time keep their old wire until they move (tracks 6 and 7).
 
 ### Judgement calls, most doubtful first
 
-1. **A material's place is per material, not per tab.** The rule says each place
-   belongs to one thing, but the material pane's M8 and the workspace's W6 say a
-   material open twice keeps two spots. As written, two tabs of one material share
-   one spot and one zoom. The other way: let a tab own its `page` and `zoom` places.
-2. **A set's counts move with its questions.** `total`, `done`, `bar` and `estimate`
+1. **A set's counts move with its questions.** `total`, `done`, `bar` and `estimate`
    are on the Set as the spec asks, so a question's change must also bump its set's
    `seq` (track 2's trigger on questions touches the set). The other way: drop them
    and let the page count from questions, which lists like Home do not load.
-3. **No `guideOutOfDate` on the question.** The guide step's `out_of_date` state says
+2. **No `guideOutOfDate` on the question.** The guide step's `out_of_date` state says
    it; a second field could disagree with it.
-4. **Ask's tool calls are not steps.** A turn has one runner step, `answer`; what it
+3. **Ask's tool calls are not steps.** A turn has one runner step, `answer`; what it
    did while answering (K13, K15) is `tools`, each with the block index it followed.
-5. **Usage is per step, not per question.** A question's spend is the sum of its
+4. **Usage is per step, not per question.** A question's spend is the sum of its
    steps' `usage`, added up on the page. The other way: a `usage` total on the
    question too.
-6. **`action` on a change is the action's own id, not its catalog id.** Undo needs to
+5. **`action` on a change is the action's own id, not its catalog id.** Undo needs to
    name one action among many of the same kind. There is no general reply type that
    hands the page its action's id; it reads it off the change events, or track 7
    adds one.
-7. **Request bodies are left to the catalog** (above). The design branch's sample
+6. **Request bodies are left to the catalog** (above). The design branch's sample
    data needs only the resources.
-8. **`resync` is new**: the log keeps a week, so a page asleep longer cannot replay.
-9. **Block events carry `index`**, so a page that read a document part way through
+7. **`resync` is new**: the log keeps a week, so a page asleep longer cannot replay.
+8. **Block events carry `index`**, so a page that read a document part way through
    knows which blocks it already holds.
-10. **`retrying` is a seventh step state**, for the "passing" failure.
-11. **`typicalSeconds` on a step** for P10's "Writing the walkthrough, about 20 s",
+9. **`retrying` is a seventh step state**, for the "passing" failure.
+10. **`typicalSeconds` on a step** for P10's "Writing the walkthrough, about 20 s",
     from the steps table (A5 of the actions grill).
-12. **`openedAt` on a set**, for Home's "opened in the last 7 days" and "last opened"
+11. **`openedAt` on a set**, for Home's "opened in the last 7 days" and "last opened"
     (S14).
-13. **A condition's words come from the error catalog** (`error`) rather than its own
+12. **A condition's words come from the error catalog** (`error`) rather than its own
     name and detail, so a blocked action and Settings say the same thing.
-14. **A course has no dates.** The spec's table says "name, dates"; no screen shows a
+13. **A course has no dates.** The spec's table says "name, dates"; no screen shows a
     term, so only `createdAt` is kept.
-15. **A place is one flat shape** with fields per kind rather than a nested union, so
-    tygo can generate it; eight kinds, one per owner each.
-16. **A document's `stopped` covers a failure part way** as well as the student's
+14. **A place is one flat shape** with fields per kind rather than a nested union, so
+    tygo can generate it; eight kinds.
+15. **A document's `stopped` covers a failure part way** as well as the student's
     Stop; the step says which.
-17. **Names**: `courseId` and `setId` (with `Id`, as today) where the spec wrote
+16. **Names**: `courseId` and `setId` (with `Id`, as today) where the spec wrote
     `course?` and `set?`; `turn` for the Ask package, since `ask` is the old one;
     `Read` for an assignment read, `Resource` for the kinds of thing.
-18. **`Image` is defined twice**, in `work` and in `turn`, so the two features do not
+17. **`Image` is defined twice**, in `work` and in `turn`, so the two features do not
     import each other.
-19. **Contents has no `seq`** and pages and sections are not on the log, pending
+18. **Contents has no `seq`** and pages and sections are not on the log, pending
     track 2's spike.
+
+### For later tracks
+
+- **Track 2's triggers:** a set's `seq` must move when one of its questions
+  changes, because the set carries the counts, the bar and the estimate.
+- **Track 7:** a reply to a student's action must carry that action's id, so the
+  Undo message can name it.

@@ -22,8 +22,9 @@ export const GroupLayout = "layout";
 export const GroupUnsent = "unsent";
 export type Group = typeof GroupWhere | typeof GroupLayout | typeof GroupUnsent;
 /**
- * Kind is which place it is. A thing has at most one place of each kind,
- * and each kind fills its own fields of Place.
+ * Kind is which place it is. A thing has at most one place of each kind
+ * (for page and zoom, one per tab and one without a tab), and each kind
+ * fills its own fields of Place.
  */
 /**
  * KindProblem is the problem a set was on (Where, owned by a set):
@@ -32,7 +33,9 @@ export type Group = typeof GroupWhere | typeof GroupLayout | typeof GroupUnsent;
 export const KindProblem = "problem";
 /**
  * KindPage is the exact spot a material was scrolled to (Where, owned
- * by a material): Page and Down.
+ * by a material): Page and Down. With TabID it is that tab's own spot;
+ * without, the material's last spot, which a newly opened tab starts
+ * from.
  */
 export const KindPage = "page";
 /**
@@ -47,6 +50,8 @@ export const KindLine = "line";
 export const KindSides = "sides";
 /**
  * KindZoom is a material's zoom (Layout, owned by a material): Zoom.
+ * With TabID it is that tab's own zoom; without, the material's last
+ * zoom, which a newly opened tab starts from.
  */
 export const KindZoom = "zoom";
 /**
@@ -96,6 +101,13 @@ export interface Place {
    * Kind is which place it is, which says which fields below it fills.
    */
   kind: Kind;
+  /**
+   * TabID is the workspace tab a page or zoom place belongs to: that tab's
+   * own spot, since a material can be open in two tabs, and it goes when
+   * the tab closes. Absent, the place is the material's last spot, which a
+   * newly opened tab starts from (page, zoom).
+   */
+  tabId?: string;
   /**
    * QuestionID is the problem the set was on (problem).
    */

@@ -14,8 +14,9 @@ const (
 	GroupUnsent Group = "unsent"
 )
 
-// Kind is which place it is. A thing has at most one place of each kind,
-// and each kind fills its own fields of Place.
+// Kind is which place it is. A thing has at most one place of each kind
+// (for page and zoom, one per tab and one without a tab), and each kind
+// fills its own fields of Place.
 type Kind string
 
 const (
@@ -23,7 +24,9 @@ const (
 	// QuestionID.
 	KindProblem Kind = "problem"
 	// KindPage is the exact spot a material was scrolled to (Where, owned
-	// by a material): Page and Down.
+	// by a material): Page and Down. With TabID it is that tab's own spot;
+	// without, the material's last spot, which a newly opened tab starts
+	// from.
 	KindPage Kind = "page"
 	// KindLine is how far down a guide the student had read (Where, owned
 	// by a document): Block.
@@ -32,6 +35,8 @@ const (
 	// split (Layout, owned by a course): Sides and Split.
 	KindSides Kind = "sides"
 	// KindZoom is a material's zoom (Layout, owned by a material): Zoom.
+	// With TabID it is that tab's own zoom; without, the material's last
+	// zoom, which a newly opened tab starts from.
 	KindZoom Kind = "zoom"
 	// KindAskDraft is a question typed into a course's Ask and not sent
 	// (Unsent, owned by a course): Text and AboutID.
@@ -61,6 +66,11 @@ type Place struct {
 	Group Group `json:"group"`
 	// Kind is which place it is, which says which fields below it fills.
 	Kind Kind `json:"kind"`
+	// TabID is the workspace tab a page or zoom place belongs to: that tab's
+	// own spot, since a material can be open in two tabs, and it goes when
+	// the tab closes. Absent, the place is the material's last spot, which a
+	// newly opened tab starts from (page, zoom).
+	TabID string `json:"tabId,omitempty"`
 	// QuestionID is the problem the set was on (problem).
 	QuestionID string `json:"questionId,omitempty"`
 	// Page is the PDF page at the top of the material's view, from 1 (page).
