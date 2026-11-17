@@ -40,7 +40,7 @@ func must(t *testing.T, err error) {
 var ids = map[string]string{
 	"courses": "c1", "materials": "m1", "sets": "s1", "questions": "q1", "finds": "f1",
 	"readings": "r1", "documents": "d1", "turns": "t1", "memories": "y1", "incidents": "INC001",
-	"conditions": "key", "steps": "st1",
+	"conditions": "key", "steps": "st1", "places": "pl1",
 }
 
 // seed fills every logged table with one row, and a page and a section, as
@@ -66,6 +66,7 @@ func seed(t *testing.T, s *Store) int64 {
 			`INSERT INTO conditions (id, holds, since) VALUES ('key', 1, '` + now + `')`,
 			`INSERT INTO steps (id, subject_kind, subject_id, name, position, state, created_at) VALUES ('st1', 'question', 'q1', 'find', 0, 'done', '` + now + `')`,
 			`INSERT INTO calls (step_id, attempt, at, model) VALUES ('st1', 1, '` + now + `', 'm')`,
+			`INSERT INTO places (id, owner_kind, owner_id, kind, value, updated_at) VALUES ('pl1', 'document', 'd1', 'line', '{"block":2}', '` + now + `')`,
 		} {
 			if _, err := tx.Exec(q); err != nil {
 				return fmt.Errorf("%s: %w", q, err)

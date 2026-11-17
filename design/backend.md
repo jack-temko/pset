@@ -326,7 +326,20 @@ POST /api/undo                {action} or {newest: true} -> {action, undo, entry
                               action = a previous undo's id: redo
 GET  /api/courses             the courses not removed, in the order added
 GET  /api/courses/{id}        one course
+GET  /api/places?owner=kind:id&owner=...   the places of those things, read once
+                              by a tab as it opens
+PUT  /api/places              a place {ownerKind, ownerId, kind, tabId?, ...its
+                              fields} -> the place kept
+DELETE /api/places/{id}       a draft sent: the place emptied, purged later
 ```
+
+- **Places** (`internal/place`): where the student was, how they laid it out and
+  what they had not sent, one per owner, kind and tab, by the rule in
+  `ideas/actions-conditions-place-grill.md`. A tab's spot in a material is also
+  the material's last spot; sides without a tab empty that tab's spot and zoom.
+  Logged (as PSet) so a new tab finds them, but no action: Ctrl+Z never moves the
+  student back. An emptied place reads as none and the purge takes it, as it takes
+  a place whose owner is gone.
 
 An action is refused before it runs when a condition it needs does not hold
 (`action.blocked`, with the condition's own why and fix). A catalog test runs

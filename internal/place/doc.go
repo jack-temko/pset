@@ -2,5 +2,7 @@
 // server by one rule: PSet remembers where you were, how you laid it out,
 // and what you had not sent, and never what you were filtering by. Each
 // place belongs to one thing and goes when that thing goes
-// (ideas/actions-conditions-place-grill.md). Wire types only, for now.
+// (ideas/actions-conditions-place-grill.md). Kept on the store, logged so a
+// newly opened tab finds it, but no action: Ctrl+Z never moves the student
+// back.
 package place
