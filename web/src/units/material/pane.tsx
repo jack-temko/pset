@@ -1,4 +1,4 @@
-import { List, LoaderCircle, X } from 'lucide-react';
+import { List, X } from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -686,11 +686,7 @@ export function Material({
     return (
       <div className="flex h-full min-h-0 items-center justify-center bg-(--ds-bg) p-8 text-center">
         <p className="ds-body flex max-w-md items-center gap-3 text-(--ds-fg-muted)">
-          <LoaderCircle
-            className="size-4 shrink-0 animate-spin motion-reduce:animate-none"
-            aria-hidden
-          />
-          <span className="[overflow-wrap:anywhere]">
+          <span className="ds-shimmer [overflow-wrap:anywhere]">
             {`Reading ${name}, about ${String(readingMin ?? 2)} min`}
           </span>
         </p>

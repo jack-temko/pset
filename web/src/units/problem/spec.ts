@@ -214,5 +214,13 @@ export default defineSpec({
       beat: 'Centred while it stands alone (work-d14)',
       date: '2026-11-09',
     },
+    {
+      id: 'problem-d10',
+      decision:
+        'Finding says so in one shimmering line, with no spinner: one look for PSet at work. Waiting its turn stays still: nothing is happening yet.',
+      why: 'Jack, 2026-11-17, on the shimmer on Checking: "anywhere else that could use it?", then "build all as described".',
+      beat: 'A spinner beside the text; plain text',
+      date: '2026-11-16',
+    },
   ],
 });

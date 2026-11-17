@@ -430,5 +430,13 @@ export default defineSpec({
       beat: 'The page waiting for the checks; opening the fold when a late failure comes',
       date: '2026-11-16',
     },
+    {
+      id: 'settings-d28',
+      decision:
+        "Testing the key shimmers in the key's line while the test runs: one look for PSet at work. Busy buttons keep their own busy look.",
+      why: 'Jack, 2026-11-17, on the shimmer on Checking: "anywhere else that could use it?", then "build all as described".',
+      beat: 'A spinner beside the text; plain text',
+      date: '2026-11-16',
+    },
   ],
 });

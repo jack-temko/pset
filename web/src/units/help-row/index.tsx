@@ -1,4 +1,4 @@
-import { ChevronRight, LoaderCircle } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { waitText } from './wait';
@@ -38,12 +38,7 @@ export function HelpRow({
         className={`ds-body flex min-h-(--ds-control) w-full min-w-0 items-center gap-2 px-3 py-1 text-left text-(--ds-fg) ${writing ? 'cursor-default' : 'hover:bg-(--ds-hover) active:bg-(--ds-pressed)'}`}
       >
         <span className="flex size-4 shrink-0 items-center justify-center">
-          {writing ? (
-            <LoaderCircle
-              className="size-4 animate-spin text-(--ds-fg-muted) motion-reduce:animate-none"
-              aria-hidden
-            />
-          ) : (
+          {writing ? null : (
             <ChevronRight
               className={`size-4 text-(--ds-fg-muted) ${shown ? 'rotate-90' : ''}`}
               aria-hidden
@@ -52,7 +47,7 @@ export function HelpRow({
         </span>
         <span className="min-w-0 truncate font-medium">
           {writing ? (
-            <span className="text-(--ds-fg-muted) font-normal">
+            <span className="ds-shimmer font-normal">
               Writing the {title.toLowerCase()} · {waitText(seconds)}
             </span>
           ) : (
