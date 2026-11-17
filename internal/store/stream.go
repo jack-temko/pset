@@ -113,7 +113,10 @@ func (s *Store) Since(ctx context.Context, seq int64, limit int) ([]change.Chang
 	if _, err := conn.ExecContext(ctx, `BEGIN`); err != nil {
 		return nil, errs.Database.Wrap(err)
 	}
-	defer func() { _, _ = conn.ExecContext(context.WithoutCancel(ctx), `ROLLBACK`) }() //nolint:errcheck // a read: nothing to keep
+	defer func() {
+		_, err := conn.ExecContext(context.WithoutCancel(ctx), `ROLLBACK`)
+		cleanup.Log("store: end a replay's read", err)
+	}()
 	var latest sql.NullInt64
 	if err := conn.QueryRowContext(ctx, `SELECT (SELECT seq FROM sqlite_sequence WHERE name = 'changes')`).Scan(&latest); err != nil {
 		return nil, errs.Database.Wrap(err)
