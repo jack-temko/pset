@@ -61,6 +61,14 @@ func (r *recorder) Publish(typ string, data any) {
 	r.mu.Unlock()
 }
 
+// all is every event so far, copied under the lock: a turn's job may still
+// be publishing while the test reads.
+func (r *recorder) all() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string(nil), r.events...)
+}
+
 func (r *recorder) count(prefix string) int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -187,10 +195,10 @@ func TestTurnSearchesComputesAndAnswers(t *testing.T) {
 		t.Fatalf("about %q", got.About)
 	}
 	if e.events.count(EventTurnBlockStart) != 3 || e.events.count(EventTurnBlockText) == 0 || e.events.count(EventTurnBlock) != 3 {
-		t.Fatalf("events %v", e.events.events)
+		t.Fatalf("events %v", e.events.all())
 	}
 	// Steps come before any words: the answer is still a list, never null.
-	for _, ev := range e.events.events {
+	for _, ev := range e.events.all() {
 		if strings.Contains(ev, `"answer":null`) || strings.Contains(ev, `"steps":null`) {
 			t.Fatalf("a null list on the wire: %s", ev)
 		}
