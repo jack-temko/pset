@@ -2,24 +2,24 @@
 
 ## Status
 
-Planned. The decisions are in [backend-courses-grill.md](backend-courses-grill.md)
+In progress. The decisions are in [backend-courses-grill.md](backend-courses-grill.md)
 (approved 2026-11-17), [errors-grill.md](errors-grill.md) and
 [actions-conditions-place-grill.md](actions-conditions-place-grill.md); this file is
 the order of work and the tracker. Branch
-`backend`, not yet created.
+`backend`, cut from `dev` on 2026-11-17 after track 0.
 
-| Track | What                                | Status                                           | Branch          |
-| ----- | ----------------------------------- | ------------------------------------------------ | --------------- |
-| 0     | Groundwork on `dev`                 | The bar is measured; the test fix is in progress | `flaky-go-test` |
-| 1     | The contract                        | Not started                                      |                 |
-| 2     | Schema, change log, events          | Not started                                      |                 |
-| 3     | The step runner                     | Not started                                      |                 |
-| 4     | Courses and materials               | Not started                                      |                 |
-| 5     | Work: sets, finds, readings, guides | Not started                                      |                 |
-| 6     | Ask                                 | Not started                                      |                 |
-| 7     | Undo, and the rest of the app       | Not started                                      |                 |
-| 8     | The web data layer and the screens  | Not started                                      |                 |
-| 9     | Cut over                            | Not started                                      |                 |
+| Track | What                                | Status                                      | Branch             |
+| ----- | ----------------------------------- | ------------------------------------------- | ------------------ |
+| 0     | Groundwork on `dev`                 | Done: the bar is measured, the test fix #95 | `flaky-go-test`    |
+| 1     | The contract                        | Built, awaiting merge into `backend`        | `backend-contract` |
+| 2     | Schema, change log, events          | In progress                                 | `changelog`        |
+| 3     | The step runner                     | Not started                                 |                    |
+| 4     | Courses and materials               | Not started                                 |                    |
+| 5     | Work: sets, finds, readings, guides | Not started                                 |                    |
+| 6     | Ask                                 | Not started                                 |                    |
+| 7     | Undo, and the rest of the app       | Not started                                 |                    |
+| 8     | The web data layer and the screens  | Not started                                 |                    |
+| 9     | Cut over                            | Not started                                 |                    |
 
 ## Information
 
