@@ -630,3 +630,23 @@ func TestPurgeTakesARemovedCourseWholeAndKeepsOpenIncidents(t *testing.T) {
 		t.Errorf("%d log rows of purged things kept", n)
 	}
 }
+
+// An action's record goes once its changes are purged, and stays while any
+// is kept: it is how Undo names what it takes back.
+func TestPurgeDropsAnActionsRecordWithItsChanges(t *testing.T) {
+	s := open(t)
+	seed(t, s)
+	exec(t, s, change.ActorStudent, "kept", `UPDATE courses SET name = 'ECE 211' WHERE id = 'c1'`)
+	for _, id := range []string{"kept", "gone"} {
+		if _, err := s.DB.Exec(`INSERT INTO actions (id, entry, kind, res_id, at) VALUES (?, 'course.rename', 'course', 'c1', ?)`, id, db.Now()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	must(t, s.Purge(bg, time.Now()))
+	if count(t, s, `SELECT count(*) FROM actions WHERE id = 'kept'`) != 1 {
+		t.Fatal("the record of an action whose changes are kept was purged")
+	}
+	if count(t, s, `SELECT count(*) FROM actions WHERE id = 'gone'`) != 0 {
+		t.Fatal("the record of an action with no changes left was kept")
+	}
+}

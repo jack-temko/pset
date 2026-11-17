@@ -112,3 +112,24 @@ func TestTheReadRoutes(t *testing.T) {
 		t.Fatalf("a course that isn't there: %d", resp.StatusCode)
 	}
 }
+
+// Two tabs remove the same course: the second finds it gone, and records
+// nothing to undo, so Undo can never claim to bring it back.
+func TestRemovingWhatIsGoneRecordsNothing(t *testing.T) {
+	svc, c := setup(t)
+	added, err := do(t, c, "course.add", Add{Name: "ECE 210"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := do(t, c, "course.remove", Remove{ID: added.ID}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := do(t, c, "course.remove", Remove{ID: added.ID}); !errors.Is(err, errs.Gone) {
+		t.Fatalf("removing it again: %v", err)
+	}
+	var n int
+	testx.Check(t, svc.store.DB.QueryRow(`SELECT count(*) FROM actions WHERE entry = 'course.remove'`).Scan(&n))
+	if n != 1 {
+		t.Fatalf("%d removals recorded, want the one that happened", n)
+	}
+}

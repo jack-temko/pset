@@ -65,7 +65,8 @@ func visible(t *testing.T, s *store.Store) map[string][]map[string]any {
 			row := map[string]any{}
 			for i, c := range cols {
 				if c != "seq" {
-					row[c] = fmt.Sprint(vals[i])
+					// Typed: NULL, "<nil>", 5 and "5" all differ.
+					row[c] = fmt.Sprintf("%T:%v", vals[i], vals[i])
 				}
 			}
 			out[tb.Name] = append(out[tb.Name], row)
@@ -82,6 +83,7 @@ func TestEveryUndoableActionUndoesAndRedoes(t *testing.T) {
 	_, all, _ := world(t)
 	for _, e := range all.Entries() {
 		if !e.Undoable {
+			t.Run(e.ID, func(t *testing.T) { cantBeUndone(t, e.ID) })
 			continue
 		}
 		t.Run(e.ID, func(t *testing.T) {
@@ -99,23 +101,51 @@ func TestEveryUndoableActionUndoesAndRedoes(t *testing.T) {
 			if done.Action == "" || reflect.DeepEqual(before, after) {
 				t.Fatalf("its Try input changed nothing (%+v)", done)
 			}
-			u, err := c.Undo(context.Background(), done.Action)
+			u, err := c.Undo(context.Background(), done.Action, false)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if got := visible(t, s); !reflect.DeepEqual(got, before) {
 				t.Fatalf("undone, the store is\n%v\nwant\n%v", got, before)
 			}
-			if u.Said == "" || u.Entry != e.ID {
-				t.Fatalf("Undo said %+v", u)
+			// It names what it took back, in the entry's own words, not the
+			// plain fallback.
+			if u.Entry != e.ID || u.Kind != done.Kind || u.ID != done.ID || u.Said == "" || u.Said == "Took that back." {
+				t.Fatalf("Undo said %+v after %+v", u, done)
 			}
-			if _, err := c.Undo(context.Background(), u.Undo); err != nil {
+			r, err := c.Undo(context.Background(), u.Undo, false)
+			if err != nil {
 				t.Fatal(err)
+			}
+			if r.Said == "" || r.Said == "Did that again." || r.Said == u.Said {
+				t.Fatalf("redo said %q (undo said %q)", r.Said, u.Said)
 			}
 			if got := visible(t, s); !reflect.DeepEqual(got, after) {
 				t.Fatalf("redone, the store is\n%v\nwant\n%v", got, after)
 			}
 		})
+	}
+}
+
+// cantBeUndone runs an action that can't be undone: it gives nothing to undo
+// it by, and none of its changes are the student's, so Ctrl+Z never meets
+// them.
+func cantBeUndone(t *testing.T, id string) {
+	s, c, seed := world(t)
+	in, ok := c.Try(id, seed)
+	if !ok {
+		t.Skip("no Try input")
+	}
+	done, err := c.Run(context.Background(), id, json.RawMessage(in))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := s.DB.QueryRow(`SELECT count(*) FROM changes WHERE actor = 'student'`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if done.Action != "" || n != 0 {
+		t.Fatalf("an action that can't be undone left %d student changes and %+v", n, done)
 	}
 }
 

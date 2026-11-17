@@ -92,31 +92,34 @@ func (s *Service) add(ctx context.Context, do *action.Do, in Add) error {
 	})
 }
 
+// rename and remove check the course inside their write, guarded by its
+// state: a course another tab removed a moment ago is gone, and nothing is
+// written or recorded.
 func (s *Service) rename(ctx context.Context, do *action.Do, in Rename) error {
 	n, err := name(in.Name)
 	if err != nil {
 		return err
 	}
-	c, err := s.Get(ctx, in.ID)
-	if err != nil {
-		return err
-	}
-	if c.Name == n {
-		return nil
-	}
 	return do.Write(ctx, change.ResourceCourse, in.ID, func(tx *sql.Tx) error {
-		_, err := tx.ExecContext(ctx, `UPDATE courses SET name = ? WHERE id = ?`, n, in.ID)
-		return errs.Database.Of(err)
+		var cur string
+		err := tx.QueryRowContext(ctx, `SELECT name FROM courses WHERE id = ? AND removed_at = ''`, in.ID).Scan(&cur)
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return errs.Gone.New("thing", "course")
+		case err != nil:
+			return errs.Database.Wrap(err)
+		case cur == n:
+			return action.Unchanged
+		}
+		res, err := tx.ExecContext(ctx, `UPDATE courses SET name = ? WHERE id = ? AND removed_at = ''`, n, in.ID)
+		return action.One(res, err, "course")
 	})
 }
 
 func (s *Service) remove(ctx context.Context, do *action.Do, in Remove) error {
-	if _, err := s.Get(ctx, in.ID); err != nil {
-		return err
-	}
 	return do.Write(ctx, change.ResourceCourse, in.ID, func(tx *sql.Tx) error {
-		_, err := tx.ExecContext(ctx, `UPDATE courses SET removed_at = ? WHERE id = ?`, db.Now(), in.ID)
-		return errs.Database.Of(err)
+		res, err := tx.ExecContext(ctx, `UPDATE courses SET removed_at = ? WHERE id = ? AND removed_at = ''`, db.Now(), in.ID)
+		return action.One(res, err, "course")
 	})
 }
 

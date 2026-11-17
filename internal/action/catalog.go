@@ -1,11 +1,13 @@
 package action
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"regexp"
 	"slices"
@@ -66,7 +68,6 @@ type Catalog struct {
 	store *store.Store
 	mu    sync.RWMutex
 	defs  map[string]*def
-	order []string
 }
 
 // New is an empty catalog over the store.
@@ -85,8 +86,8 @@ func Add[In any](c *Catalog, d Def[In]) {
 	if d.Name == "" || d.Run == nil {
 		panic("action: " + d.ID + " needs a name and a Run")
 	}
-	if d.Undoable && d.Undone == "" {
-		panic("action: undoable " + d.ID + " needs its Undone sentence")
+	if d.Undoable && (d.Undone == "" || d.Redone == "") {
+		panic("action: undoable " + d.ID + " needs its Undone and Redone sentences")
 	}
 	needs := slices.Clone(d.Needs)
 	if needs == nil {
@@ -97,16 +98,17 @@ func Add[In any](c *Catalog, d Def[In]) {
 		undone: d.Undone, redone: d.Redone,
 		run: func(ctx context.Context, do *Do, raw json.RawMessage) error {
 			var in In
-			dec := json.NewDecoder(strings.NewReader(string(raw)))
+			dec := json.NewDecoder(bytes.NewReader(raw))
 			dec.DisallowUnknownFields()
 			if err := dec.Decode(&in); err != nil {
 				return errs.InvalidJSON.Wrap(err)
 			}
+			// One value, and nothing after it.
+			if _, err := dec.Token(); !errors.Is(err, io.EOF) {
+				return errs.InvalidJSON.Wrap(fmt.Errorf("more after the input: %w", err))
+			}
 			return d.Run(ctx, do, in)
 		},
-	}
-	if x.redone == "" {
-		x.redone = d.Name + "."
 	}
 	if d.Try != nil {
 		x.try = func(s Seed) json.RawMessage {
@@ -123,7 +125,6 @@ func Add[In any](c *Catalog, d Def[In]) {
 		panic("action: " + d.ID + " declared twice")
 	}
 	c.defs[d.ID] = x
-	c.order = append(c.order, d.ID)
 }
 
 // Entries is every action, sorted by id.
@@ -182,6 +183,29 @@ var (
 	})
 )
 
+// Unchanged is what a Write's fn returns when it finds nothing to change
+// (a rename to the name it has): nothing is written, and there is nothing to
+// undo.
+var Unchanged = errors.New("action: nothing to change")
+
+// One is the error of an UPDATE meant to change one thing, guarded by its
+// state (`... WHERE id = ? AND removed_at = ”`): Gone when it changed
+// nothing, as when another tab removed the thing first. Checked inside the
+// write, so no other write slips between the check and the change.
+func One(res sql.Result, err error, thing string) error {
+	if err != nil {
+		return errs.Database.Wrap(err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return errs.Database.Wrap(err)
+	}
+	if n == 0 {
+		return errs.Gone.New("thing", thing)
+	}
+	return nil
+}
+
 // Do is one run of one action, as its Run sees it.
 type Do struct {
 	c        *Catalog
@@ -189,6 +213,7 @@ type Do struct {
 	entry    string
 	undoable bool
 	wrote    bool
+	changed  bool
 }
 
 // ID is this run's action id: what Undo takes back.
@@ -208,7 +233,7 @@ func (do *Do) Write(ctx context.Context, kind change.Resource, id string, fn fun
 	if !do.undoable {
 		who, as = change.ActorPSet, ""
 	}
-	return do.c.store.Write(ctx, who, as, func(tx *sql.Tx) error {
+	err := do.c.store.Write(ctx, who, as, func(tx *sql.Tx) error {
 		if err := fn(tx); err != nil {
 			return err
 		}
@@ -216,6 +241,11 @@ func (do *Do) Write(ctx context.Context, kind change.Resource, id string, fn fun
 			do.id, do.entry, string(kind), id, db.Now())
 		return errs.Database.Of(err)
 	})
+	if errors.Is(err, Unchanged) {
+		return nil
+	}
+	do.changed = err == nil
+	return err
 }
 
 // Run runs action id with its input, as the student: once the conditions
@@ -237,16 +267,17 @@ func (c *Catalog) Run(ctx context.Context, id string, input json.RawMessage) (Do
 	if err := d.run(ctx, do, input); err != nil {
 		return Done{}, err
 	}
-	out := Done{Action: do.id}
-	if !do.wrote || !do.undoable {
-		// Nothing written (renamed to its own name), or nothing Undo can
-		// take back.
-		out.Action = ""
+	var out Done
+	if do.changed {
+		if do.undoable {
+			out.Action = do.id
+		}
+		err := c.store.DB.QueryRowContext(ctx, `SELECT kind, res_id FROM actions WHERE id = ?`, do.id).Scan(&out.Kind, &out.ID)
+		if err != nil {
+			return Done{}, errs.Database.Wrap(err)
+		}
 	}
-	err := c.store.DB.QueryRowContext(ctx, `SELECT kind, res_id FROM actions WHERE id = ?`, do.id).Scan(&out.Kind, &out.ID)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return Done{}, errs.Database.Wrap(err)
-	}
+	var err error
 	out.Seq, err = c.store.Latest(ctx)
 	return out, err
 }
@@ -263,9 +294,16 @@ func (c *Catalog) blocked(ctx context.Context, d *def) error {
 		if err != nil {
 			return errs.Database.Wrap(err)
 		}
-		var why errs.View
+		why := errs.View{What: "Something PSet needs isn't working", Fix: "Settings, under Health, says what"}
 		if raw.Valid {
-			cleanup.Log("action: read a condition's error", json.Unmarshal([]byte(raw.String), &why))
+			var v errs.View
+			cleanup.Log("action: read a condition's error", json.Unmarshal([]byte(raw.String), &v))
+			if v.What != "" {
+				why.What = v.What
+			}
+			if v.Fix != "" {
+				why.Fix = v.Fix
+			}
 		}
 		// The condition's own sentences, their periods the entry's.
 		return Blocked.New("name", d.entry.Name, "why", strings.TrimSuffix(why.What, "."), "fix", strings.TrimSuffix(why.Fix, "."))
@@ -281,16 +319,20 @@ var names = map[change.Resource]string{
 	change.ResourceQuestion: `SELECT CASE label WHEN '' THEN text ELSE label END FROM questions WHERE id = ?`,
 }
 
-// Undo takes action back (Ctrl+Z: the student's newest, when action is
-// empty) and says what it did, without moving the student (C7). Undoing an
-// undo is redo.
-func (c *Catalog) Undo(ctx context.Context, action string) (Undone, error) {
-	if action == "" {
-		newest, err := c.store.Newest(ctx)
+// Undo takes action back, or with newest the student's newest action not
+// yet undone (Ctrl+Z), and says what it did, without moving the student
+// (C7). Undoing an undo is redo. An empty action without newest is nothing
+// to undo: never the newest by accident.
+func (c *Catalog) Undo(ctx context.Context, action string, newest bool) (Undone, error) {
+	if newest {
+		n, err := c.store.Newest(ctx)
 		if err != nil {
 			return Undone{}, err
 		}
-		action = newest
+		action = n
+	}
+	if action == "" {
+		return Undone{}, store.NothingToUndo.New()
 	}
 	// The action the chain began with, and whether this is a redo: an odd
 	// number of undos down from it.
@@ -323,12 +365,20 @@ func (c *Catalog) Undo(ctx context.Context, action string) (Undone, error) {
 		return Undone{}, err
 	}
 	out := Undone{Action: action, Undo: asNew, Entry: entry, Kind: change.Resource(kind), ID: resID, Seq: seq}
+	// What it says: the entry's own sentence, in the thing's name; plainer
+	// when the action or the name can't be read.
+	out.Said = "Took that back."
+	if depth%2 == 1 {
+		out.Said = "Did that again."
+	}
 	if d != nil {
 		said := d.undone
 		if depth%2 == 1 {
 			said = d.redone
 		}
-		out.Said = strings.ReplaceAll(said, "{name}", c.name(ctx, out.Kind, resID))
+		if n := c.name(ctx, out.Kind, resID); n != "" || !strings.Contains(said, "{name}") {
+			out.Said = strings.ReplaceAll(said, "{name}", n)
+		}
 	}
 	return out, nil
 }

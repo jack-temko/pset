@@ -50,9 +50,13 @@ type Done struct {
 // Undo is the undo call (Ctrl+Z, or the Undo on "Removed Problem set 4.
 // Undo."): it writes an action's old values back.
 type Undo struct {
-	// Action is the id of the action to take back, as the change log named
-	// it. Absent for Ctrl+Z: the student's newest action not yet undone.
+	// Action is the id of the action to take back: a Done's action, or an
+	// Undone's undo to redo it.
 	Action string `json:"action,omitempty"`
+	// Newest is Ctrl+Z: the student's newest action not yet undone, in
+	// place of Action. Never implied by an empty Action, so an Undo offered
+	// for an action that had nothing to undo can't take back another.
+	Newest bool `json:"newest,omitempty"`
 }
 
 // Undone is the undo call's reply: what was taken back, said where the
