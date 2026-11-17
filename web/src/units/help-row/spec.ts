@@ -21,7 +21,7 @@ export default defineSpec({
     {
       id: 'writing',
       name: 'Being written',
-      when: 'The step is not written yet: a spinner and the wait, and the row does not open.',
+      when: 'The step is not written yet: the wait, shimmering, and the row does not open.',
       text: 'Writing the walkthrough · about 20 s',
     },
   ],
@@ -82,6 +82,14 @@ export default defineSpec({
       why: 'Jack picked "Problem first, help says when (Recommended)" (P10).',
       beat: 'One waiting line for everything',
       date: '2026-10-21',
+    },
+    {
+      id: 'help-row-d3',
+      decision:
+        "A step being written says so in its place, shimmering, with no spinner: one look for PSet at work, as Ask's Thinking.",
+      why: 'Jack, 2026-11-17, on the shimmer on Checking: "anywhere else that could use it?", then "build all as described".',
+      beat: 'A spinner beside the text; plain text',
+      date: '2026-11-16',
     },
   ],
 });

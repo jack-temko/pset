@@ -454,5 +454,13 @@ export default defineSpec({
       beat: 'A skeleton shaped like each section (course-d13)',
       date: '2026-11-16',
     },
+    {
+      id: 'course-d33',
+      decision:
+        'A set or material being read in says "Reading, about N min" in its row, shimmering: one look for PSet at work.',
+      why: 'Jack, 2026-11-17, on the shimmer on Checking: "anywhere else that could use it?", then "build all as described".',
+      beat: 'A spinner beside the text; plain text',
+      date: '2026-11-16',
+    },
   ],
 });

@@ -441,5 +441,13 @@ export default defineSpec({
       beat: 'The top line a bar, one page-shaped box and the pill a bar (MaterialSkeleton)',
       date: '2026-11-16',
     },
+    {
+      id: 'material-d22',
+      decision:
+        "A book being read in says so in one shimmering line, with no spinner: one look for PSet at work, as Ask's Thinking.",
+      why: 'Jack, 2026-11-17, on the shimmer on Checking: "anywhere else that could use it?", then "build all as described".',
+      beat: 'A spinner beside the text; plain text',
+      date: '2026-11-16',
+    },
   ],
 });

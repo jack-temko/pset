@@ -200,17 +200,17 @@ function Groups({
     settings.key.status === 'none' &&
     result === undefined &&
     key === settings.key.value;
-  const keyNote = testing
-    ? 'Testing the key'
-    : result === 'failed'
-      ? failure
-      : result === 'saved'
-        ? 'Saved'
-        : result === 'ok'
-          ? 'The key works.'
-          : needsKey
-            ? 'PSet needs a key to read and guide.'
-            : undefined;
+  const keyNote = testing ? (
+    <span className="ds-shimmer">Testing the key</span>
+  ) : result === 'failed' ? (
+    failure
+  ) : result === 'saved' ? (
+    'Saved'
+  ) : result === 'ok' ? (
+    'The key works.'
+  ) : needsKey ? (
+    'PSet needs a key to read and guide.'
+  ) : undefined;
   const keyReady = key.trim() === '' ? 'Paste a key first.' : undefined;
   // The checks are the slowest read here (a second or so): until they are
   // in, Health says it is checking and each check's result is a bar.

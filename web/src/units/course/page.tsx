@@ -119,7 +119,11 @@ function WorkRow({
       status={reading === undefined && set.due && dueText(set.due, today).text}
       meta={
         reading !== undefined
-          ? [`Reading, about ${String(reading)} min`]
+          ? [
+              <span key="reading" className="ds-shimmer">
+                {`Reading, about ${String(reading)} min`}
+              </span>,
+            ]
           : time
             ? [time]
             : finished
@@ -172,9 +176,13 @@ function MaterialRow({
       rowLink
       meta={[
         material.kind,
-        reading === undefined
-          ? plural(material.pages, 'page', 'pages')
-          : `Reading, about ${String(reading)} min`,
+        reading === undefined ? (
+          plural(material.pages, 'page', 'pages')
+        ) : (
+          <span key="reading" className="ds-shimmer">
+            {`Reading, about ${String(reading)} min`}
+          </span>
+        ),
       ]}
       aside={
         <div className="flex justify-end">

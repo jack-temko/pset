@@ -1,4 +1,4 @@
-import { Check, LoaderCircle, MessageCircle } from 'lucide-react';
+import { Check, MessageCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { MoreMenu, type MenuItem } from '@/units/menu';
@@ -250,12 +250,11 @@ export function Problem({
             role="status"
             className="ds-body flex items-center gap-2 text-(--ds-fg-muted)"
           >
-            <LoaderCircle
-              className="size-4 shrink-0 animate-spin motion-reduce:animate-none"
-              aria-hidden
-            />
-            Finding {problem.label} on page {problem.page} ·{' '}
-            {waitText(problem.found.seconds)}
+            {/* PSet at work: the line shimmers (bone's S3 meaning). */}
+            <span className="ds-shimmer">
+              Finding {problem.label} on page {problem.page} ·{' '}
+              {waitText(problem.found.seconds)}
+            </span>
           </p>
           <FoundSkeleton />
         </div>
