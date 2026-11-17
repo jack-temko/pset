@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -86,24 +87,44 @@ func TestATabsSpotIsAlsoTheMaterialsLast(t *testing.T) {
 	}
 }
 
+// sides is a course's layout of the given material tabs (id: material).
+func sides(course string, tabs map[string]string) Place {
+	var ts []Tab
+	open := ""
+	for _, id := range []string{"t1", "t2", "t3"} {
+		if m, ok := tabs[id]; ok {
+			ts = append(ts, Tab{ID: id, Kind: TabKindMaterial, ThingID: m})
+			open = id
+		}
+	}
+	return Place{OwnerKind: change.ResourceCourse, OwnerID: course, Kind: KindSides, Split: 0.5, Sides: []Side{{Tabs: ts, Open: open}}}
+}
+
 // Closing a tab (sides without it) drops its spot and zoom; the material's
 // last spot stays, and another course's tabs are not touched.
 func TestClosingATabDropsItsSpot(t *testing.T) {
-	svc, _ := setup(t)
+	svc, s := setup(t)
+	if err := s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`INSERT INTO courses (id, name, created_at) VALUES ('c2', 'PHYS 211', ?)`, db.Now()); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`INSERT INTO materials (id, course_id, title, added_at) VALUES ('m3', 'c2', 'Griffiths', ?)`, db.Now())
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
 	for _, p := range []Place{
+		sides("c1", map[string]string{"t1": "m1", "t2": "m2"}),
+		sides("c2", map[string]string{"t3": "m3"}),
 		{OwnerKind: change.ResourceMaterial, OwnerID: "m1", Kind: KindPage, TabID: "t1", Page: 40},
 		{OwnerKind: change.ResourceMaterial, OwnerID: "m1", Kind: KindZoom, TabID: "t1", Zoom: 1.5},
 		{OwnerKind: change.ResourceMaterial, OwnerID: "m2", Kind: KindPage, TabID: "t2", Page: 3},
+		{OwnerKind: change.ResourceMaterial, OwnerID: "m3", Kind: KindPage, TabID: "t3", Page: 9},
+		sides("c1", map[string]string{"t2": "m2"}),
 	} {
 		if _, err := svc.Set(bg, p); err != nil {
 			t.Fatal(err)
 		}
-	}
-	sides := Place{OwnerKind: change.ResourceCourse, OwnerID: "c1", Kind: KindSides, Split: 0.5, Sides: []Side{
-		{Tabs: []Tab{{ID: "t2", Kind: TabKindMaterial, ThingID: "m2"}, {ID: "ta", Kind: TabKindAsk}}, Open: "t2"},
-	}}
-	if _, err := svc.Set(bg, sides); err != nil {
-		t.Fatal(err)
 	}
 	for _, p := range places(t, svc, change.ResourceMaterial, "m1") {
 		if p.TabID == "t1" {
@@ -115,6 +136,86 @@ func TestClosingATabDropsItsSpot(t *testing.T) {
 	}
 	if got := places(t, svc, change.ResourceMaterial, "m2"); len(got) != 2 {
 		t.Fatalf("the open tab's spot: %+v", got)
+	}
+	if got := places(t, svc, change.ResourceMaterial, "m3"); len(got) != 2 {
+		t.Fatalf("another course's tab: %+v", got)
+	}
+	// Closing every tab.
+	if _, err := svc.Set(bg, sides("c1", map[string]string{})); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range places(t, svc, change.ResourceMaterial, "m2") {
+		if p.TabID == "t2" {
+			t.Fatal("a tab closed with every other kept its spot")
+		}
+	}
+	// A spot written after its tab closed keeps only the material's last.
+	got, err := svc.Set(bg, Place{OwnerKind: change.ResourceMaterial, OwnerID: "m2", Kind: KindPage, TabID: "t2", Page: 11})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.TabID != "" || got.Page != 11 {
+		t.Fatalf("a late write kept %+v", got)
+	}
+	for _, p := range places(t, svc, change.ResourceMaterial, "m2") {
+		if p.TabID == "t2" {
+			t.Fatal("a late write brought a closed tab's spot back")
+		}
+	}
+}
+
+// Typing a draft away clears it: no error, and nothing kept.
+func TestAnEmptyDraftIsCleared(t *testing.T) {
+	svc, _ := setup(t)
+	d := Place{OwnerKind: change.ResourceCourse, OwnerID: "c1", Kind: KindAskDraft, Text: "What"}
+	if _, err := svc.Set(bg, d); err != nil {
+		t.Fatal(err)
+	}
+	d.Text = ""
+	got, err := svc.Set(bg, d)
+	if err != nil {
+		t.Fatalf("typing a draft away: %v", err)
+	}
+	if got.ID != "" || len(places(t, svc, change.ResourceCourse, "c1")) != 0 {
+		t.Fatalf("an empty draft kept %+v", got)
+	}
+	// Never typed at all: nothing to clear, still no error.
+	if _, err := svc.Set(bg, Place{OwnerKind: change.ResourceQuestion, OwnerID: "q1", Kind: KindNoteDraft}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A guide's line is kept on its document.
+func TestALineOnAGuide(t *testing.T) {
+	svc, s := setup(t)
+	if err := s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
+		_, err := tx.Exec(`INSERT INTO documents (id, owner_kind, owner_id, blocks, state) VALUES ('d1', 'question', 'q1', '[]', 'done')`)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	block := 4
+	got, err := svc.Set(bg, Place{OwnerKind: change.ResourceDocument, OwnerID: "d1", Kind: KindLine, Block: &block})
+	if err != nil || got.Block == nil || *got.Block != 4 {
+		t.Fatalf("a guide's line: %+v (%v)", got, err)
+	}
+}
+
+// Clear empties only a draft: a page bug can't wipe a layout.
+func TestClearIsForDrafts(t *testing.T) {
+	svc, _ := setup(t)
+	lay, err := svc.Set(bg, sides("c1", map[string]string{"t1": "m1"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Clear(bg, lay.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Clear(bg, "nope"); err != nil {
+		t.Fatal(err)
+	}
+	if len(places(t, svc, change.ResourceCourse, "c1")) != 1 {
+		t.Fatal("Clear emptied a layout")
 	}
 }
 
@@ -133,7 +234,11 @@ func TestWhatIsntAPlaceIsRefused(t *testing.T) {
 		"three sides":      {OwnerKind: change.ResourceCourse, OwnerID: "c1", Kind: KindSides, Sides: []Side{{}, {}, {}}},
 		"open not a tab": {OwnerKind: change.ResourceCourse, OwnerID: "c1", Kind: KindSides, Sides: []Side{
 			{Tabs: []Tab{{ID: "t1", Kind: TabKindAsk}}, Open: "t9"}}},
-		"a draft too long": {OwnerKind: change.ResourceCourse, OwnerID: "c1", Kind: KindAskDraft, Text: strings.Repeat("x", maxText+1)},
+		"a draft too long":  {OwnerKind: change.ResourceCourse, OwnerID: "c1", Kind: KindAskDraft, Text: strings.Repeat("x", maxText+1)},
+		"about too long":    {OwnerKind: change.ResourceCourse, OwnerID: "c1", Kind: KindAskDraft, AboutID: strings.Repeat("q", maxID+1)},
+		"a bad due date":    {OwnerKind: change.ResourceCourse, OwnerID: "c1", Kind: KindNewSet, Due: "Friday"},
+		"page past the end": {OwnerKind: change.ResourceMaterial, OwnerID: "m1", Kind: KindPage, Page: maxPage + 1},
+		"too many tabs":     {OwnerKind: change.ResourceCourse, OwnerID: "c1", Kind: KindSides, Sides: []Side{manyTabs(maxTabs + 1)}},
 	} {
 		if _, err := svc.Set(bg, p); !errors.Is(err, bad) {
 			t.Errorf("%s: %v", name, err)
@@ -243,5 +348,25 @@ func TestTheRoutes(t *testing.T) {
 	cleanup.Close(resp.Body)
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("an owner without its kind: %d", resp.StatusCode)
+	}
+}
+
+func manyTabs(n int) Side {
+	var ts []Tab
+	for i := range n {
+		ts = append(ts, Tab{ID: fmt.Sprint("t", i), Kind: TabKindAsk})
+	}
+	return Side{Tabs: ts, Open: "t0"}
+}
+
+// A layout with an empty side keeps its tabs as a list, never null.
+func TestAnEmptySideIsAList(t *testing.T) {
+	svc, _ := setup(t)
+	got, err := svc.Set(bg, Place{OwnerKind: change.ResourceCourse, OwnerID: "c1", Kind: KindSides, Sides: []Side{{}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Sides[0].Tabs == nil {
+		t.Fatal("an empty side's tabs are null")
 	}
 }

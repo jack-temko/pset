@@ -4,11 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 
 	"fmt"
 	"math"
 	"net/http"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
@@ -46,8 +48,17 @@ var owners = map[change.Resource]string{
 	change.ResourceDocument: "documents",
 }
 
-// maxText is the most a draft keeps.
-const maxText = 20000
+// The bounds a place is kept within: a page bug never fills the store.
+const (
+	// maxText is the most a draft keeps, all its fields together.
+	maxText = 20000
+	// maxID is the longest id a place names.
+	maxID = 100
+	// maxTabs is the most tabs a workspace has.
+	maxTabs = 50
+	// maxPage is the highest page or block a place points at.
+	maxPage = 100000
+)
 
 // bad is a place the page sent that can't be one: a page bug, said once.
 var bad = errs.Define(errs.Entry{
@@ -92,6 +103,11 @@ func check(p Place) (value, error) {
 	if p.TabID != "" && p.Kind != KindPage && p.Kind != KindZoom {
 		return value{}, refuse("only a page or zoom is per tab")
 	}
+	for _, id := range []string{p.OwnerID, p.TabID, p.QuestionID, p.AboutID} {
+		if len(id) > maxID {
+			return value{}, refuse("an id is %d characters at most", maxID)
+		}
+	}
 	finite := func(f float64) bool { return !math.IsNaN(f) && !math.IsInf(f, 0) }
 	var v value
 	switch p.Kind {
@@ -101,12 +117,12 @@ func check(p Place) (value, error) {
 		}
 		v.QuestionID = p.QuestionID
 	case KindPage:
-		if p.Page < 1 || !finite(p.Down) || p.Down < 0 || p.Down > 1 {
+		if p.Page < 1 || p.Page > maxPage || !finite(p.Down) || p.Down < 0 || p.Down > 1 {
 			return value{}, refuse("a page is from 1, and down from 0 to 1")
 		}
 		v.Page, v.Down = p.Page, p.Down
 	case KindLine:
-		if p.Block == nil || *p.Block < 0 {
+		if p.Block == nil || *p.Block < 0 || *p.Block > maxPage {
 			return value{}, refuse("a line is a block from 0")
 		}
 		v.Block = p.Block
@@ -128,9 +144,14 @@ func check(p Place) (value, error) {
 	case KindNoteDraft:
 		v.Text = p.Text
 	case KindNewSet:
+		if p.Due != "" {
+			if _, err := time.Parse(time.DateOnly, p.Due); err != nil {
+				return value{}, refuse("a due date is YYYY-MM-DD")
+			}
+		}
 		v.Title, v.Due, v.Text = p.Title, p.Due, p.Text
 	}
-	if utf8.RuneCountInString(v.Text)+utf8.RuneCountInString(v.Title) > maxText {
+	if utf8.RuneCountInString(v.Text)+utf8.RuneCountInString(v.Title)+len(v.AboutID)+len(v.Due) > maxText {
 		return value{}, refuse("a draft is kept to %d characters", maxText)
 	}
 	return v, nil
@@ -141,10 +162,18 @@ func checkSides(sides []Side) error {
 		return refuse("a workspace has one side or two")
 	}
 	seen := map[string]bool{}
-	for _, s := range sides {
+	for i := range sides {
+		if sides[i].Tabs == nil {
+			sides[i].Tabs = []Tab{}
+		}
+		s := sides[i]
 		open := false
 		for _, t := range s.Tabs {
 			switch {
+			case len(seen) >= maxTabs:
+				return refuse("a workspace has %d tabs at most", maxTabs)
+			case len(t.ID) > maxID || len(t.ThingID) > maxID || len(s.Open) > maxID:
+				return refuse("an id is %d characters at most", maxID)
 			case t.ID == "" || seen[t.ID]:
 				return refuse("each tab has its own id")
 			case t.Kind != TabKindSet && t.Kind != TabKindMaterial && t.Kind != TabKindAsk:
@@ -230,6 +259,8 @@ func (s *Service) Set(ctx context.Context, p Place) (Place, error) {
 		return Place{}, errs.Data.Wrap(err)
 	}
 	now := db.Now()
+	// Nothing in it (a draft typed away): the place is cleared, not kept.
+	empty := string(raw) == "{}"
 	err = s.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
 		var n int
 		q := `SELECT count(*) FROM ` + owners[p.OwnerKind] + ` WHERE id = ?`
@@ -245,9 +276,34 @@ func (s *Service) Set(ctx context.Context, p Place) (Place, error) {
 		}
 		tabs := []string{p.TabID}
 		if p.TabID != "" {
-			tabs = append(tabs, "")
+			open, err := tabOpen(ctx, tx, p.OwnerID, p.TabID)
+			if err != nil {
+				return err
+			}
+			// The material's last spot always; the tab's own only while the
+			// tab is open: a write that lands after its tab closed would
+			// bring the spot back for good.
+			tabs = []string{""}
+			if open {
+				tabs = append(tabs, p.TabID)
+			}
+		}
+		var before []Side
+		if p.Kind == KindSides {
+			var err error
+			if before, err = storedSides(ctx, tx, p.OwnerID); err != nil {
+				return err
+			}
 		}
 		for _, tab := range tabs {
+			if empty {
+				_, err := tx.ExecContext(ctx, `UPDATE places SET value = '{}', updated_at = ? WHERE owner_kind = ? AND owner_id = ? AND kind = ? AND tab_id = ? AND value != '{}'`,
+					now, string(p.OwnerKind), p.OwnerID, string(p.Kind), tab)
+				if err != nil {
+					return errs.Database.Wrap(err)
+				}
+				continue
+			}
 			if _, err := tx.ExecContext(ctx, `INSERT INTO places (id, owner_kind, owner_id, kind, tab_id, value, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
 				ON CONFLICT (owner_kind, owner_id, kind, tab_id) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
 				WHERE places.value != excluded.value`,
@@ -256,51 +312,114 @@ func (s *Service) Set(ctx context.Context, p Place) (Place, error) {
 			}
 		}
 		if p.Kind == KindSides {
-			return closeTabs(ctx, tx, p.OwnerID, v.Sides)
+			return closeTabs(ctx, tx, p.OwnerID, before, v.Sides)
 		}
 		return nil
 	})
 	if err != nil {
 		return Place{}, err
 	}
+	if empty {
+		return fill(Place{OwnerKind: p.OwnerKind, OwnerID: p.OwnerID, Kind: p.Kind, TabID: p.TabID}, value{}), nil
+	}
 	got, err := s.Of(ctx, []Owner{{p.OwnerKind, p.OwnerID}})
 	if err != nil {
 		return Place{}, err
 	}
+	want := p.TabID
 	for _, q := range got.Places {
-		if q.Kind == p.Kind && q.TabID == p.TabID {
+		if q.Kind == p.Kind && q.TabID == want {
+			return q, nil
+		}
+	}
+	// A closed tab's write kept only the material's last spot.
+	for _, q := range got.Places {
+		if q.Kind == p.Kind && q.TabID == "" {
 			return q, nil
 		}
 	}
 	return Place{}, errs.Gone.New("thing", "place")
 }
 
-// closeTabs empties the per-tab spots and zooms of a course's materials whose
-// tabs the new sides no longer have. Like any place cleared, an empty one
-// reads as none and the purge takes it: only the purge deletes.
-func closeTabs(ctx context.Context, tx *sql.Tx, courseID string, sides []Side) error {
-	var open []any
-	for _, s := range sides {
-		for _, t := range s.Tabs {
-			open = append(open, t.ID)
+// storedSides is a course's sides as kept, nil when it has none.
+func storedSides(ctx context.Context, tx *sql.Tx, courseID string) ([]Side, error) {
+	var raw string
+	err := tx.QueryRowContext(ctx, `SELECT value FROM places WHERE owner_kind = 'course' AND owner_id = ? AND kind = 'sides' AND tab_id = ''`, courseID).Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, errs.Database.Wrap(err)
+	}
+	var v value
+	if err := json.Unmarshal([]byte(raw), &v); err != nil {
+		return nil, errs.Data.Wrap(err)
+	}
+	return v.Sides, nil
+}
+
+// tabOpen is whether a material's course has the tab open, or keeps no
+// sides yet (a first visit writes its spot before its layout).
+func tabOpen(ctx context.Context, tx *sql.Tx, materialID, tabID string) (bool, error) {
+	var course string
+	if err := tx.QueryRowContext(ctx, `SELECT course_id FROM materials WHERE id = ?`, materialID).Scan(&course); err != nil {
+		return false, errs.Database.Wrap(err)
+	}
+	var raw string
+	err := tx.QueryRowContext(ctx, `SELECT value FROM places WHERE owner_kind = 'course' AND owner_id = ? AND kind = 'sides' AND tab_id = '' AND value != '{}'`, course).Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return true, nil
+	}
+	if err != nil {
+		return false, errs.Database.Wrap(err)
+	}
+	var v value
+	if err := json.Unmarshal([]byte(raw), &v); err != nil {
+		return false, errs.Data.Wrap(err)
+	}
+	for _, sd := range v.Sides {
+		for _, t := range sd.Tabs {
+			if t.ID == tabID {
+				return true, nil
+			}
 		}
 	}
-	q := `UPDATE places SET value = '{}' WHERE owner_kind = 'material' AND tab_id != '' AND value != '{}'
-		AND owner_id IN (SELECT id FROM materials WHERE course_id = ?)`
-	args := []any{courseID}
-	if len(open) > 0 {
-		q += ` AND tab_id NOT IN (?` + strings.Repeat(", ?", len(open)-1) + `)`
-		args = append(args, open...)
+	return false, nil
+}
+
+// closeTabs empties the per-tab spots and zooms of the tabs the course's
+// sides had before and no longer have. A course has one layout, so two
+// browser tabs on it share it: the last to write wins, and closes the other's
+// tabs (an open question against C6). Like any place cleared, an empty one
+// reads as none and the purge takes it: only the purge deletes.
+func closeTabs(ctx context.Context, tx *sql.Tx, courseID string, before, after []Side) error {
+	open := map[string]bool{}
+	for _, s := range after {
+		for _, t := range s.Tabs {
+			open[t.ID] = true
+		}
 	}
-	_, err := tx.ExecContext(ctx, q, args...)
-	return errs.Database.Of(err)
+	for _, s := range before {
+		for _, t := range s.Tabs {
+			if open[t.ID] || t.Kind != TabKindMaterial {
+				continue
+			}
+			if _, err := tx.ExecContext(ctx, `UPDATE places SET value = '{}' WHERE owner_kind = 'material' AND owner_id = ? AND tab_id = ? AND value != '{}'
+				AND owner_id IN (SELECT id FROM materials WHERE course_id = ?)`, t.ThingID, t.ID, courseID); err != nil {
+				return errs.Database.Wrap(err)
+			}
+		}
+	}
+	return nil
 }
 
 // Clear forgets a place: a draft that was sent. It is emptied, which reads
 // as none; the purge deletes it.
 func (s *Service) Clear(ctx context.Context, id string) error {
 	return s.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
-		_, err := tx.ExecContext(ctx, `UPDATE places SET value = '{}' WHERE id = ? AND value != '{}'`, id)
+		// Only a draft is cleared so: what the student typed and sent.
+		_, err := tx.ExecContext(ctx, `UPDATE places SET value = '{}' WHERE id = ? AND value != '{}'
+			AND kind IN ('ask_draft', 'note_draft', 'new_set')`, id)
 		return errs.Database.Of(err)
 	})
 }
