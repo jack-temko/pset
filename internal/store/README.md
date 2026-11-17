@@ -13,6 +13,8 @@ cut-over, so the old packages keep running meanwhile.
   last, so it never commits; the write lock taken at BEGIN keeps every other
   connection from seeing it. A write made any other way is refused by the table's
   own triggers. Nothing but this package names `change_ctx` (a test checks).
+- **One action is one `Write`.** Undo checks an action's changes against everything
+  after them; an action split over two writes could not see what came between.
 - **Nothing is deleted but by the purge.** Removing is `UPDATE ... SET removed_at`.
   A removed set's questions are not marked; they hide with it, and every read filters
   on the markers up the chain.
@@ -58,7 +60,10 @@ counts arrive with it.
 - `Undo(action, asNew)`: takes an action back as a new one; undoing that is redo.
   Refuses what is already undone, what a later action changed again
   (`store.changed_since`), and what PSet has written over since
-  (`store.rewritten_since`). `Newest` is what Ctrl+Z takes.
+  (`store.rewritten_since`). Each change records its depth in a chain of undos
+  (0 an action, 1 its undo, 2 the redo): even is in force. `Newest`, what Ctrl+Z
+  takes, is the newest change in force not yet undone, so Ctrl+Z walks back and
+  never toggles. A redone removal is stamped now, so its week starts again.
 - `Purge(now)`: weekly. Removed things older than `Keep` (a week) go, unless a find
   or a set still uses a removed material; then the log older than that, and the log
   of whatever is gone.

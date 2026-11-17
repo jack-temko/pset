@@ -81,7 +81,9 @@ func (s *Store) Write(ctx context.Context, who change.Actor, action string, fn f
 
 func (s *Store) write(ctx context.Context, who actor, action, undoes string, fn func(*sql.Tx) error) error {
 	err := db.Tx(ctx, s.DB, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO change_ctx (only, actor, action_id, undoes, at) VALUES (1, ?, ?, ?, ?)`,
+		// An undo sits one deeper than what it takes back.
+		if _, err := tx.ExecContext(ctx, `INSERT INTO change_ctx (only, actor, action_id, undoes, depth, at)
+			VALUES (1, ?, ?, ?, CASE WHEN ?3 = '' THEN 0 ELSE ifnull((SELECT max(depth) FROM changes WHERE action_id = ?3), 0) + 1 END, ?)`,
 			string(who), action, undoes, db.Now()); err != nil {
 			return errs.Database.Wrap(err)
 		}

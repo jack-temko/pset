@@ -200,6 +200,9 @@ CREATE TABLE changes (
 	actor     TEXT NOT NULL CHECK (actor IN ('student', 'pset')),
 	action_id TEXT NOT NULL,
 	undoes    TEXT NOT NULL DEFAULT '',
+	-- How deep in a chain of undos: 0 an action, 1 its undo, 2 the redo,
+	-- 3 the redo undone. Even is a change in force; odd takes one back.
+	depth     INTEGER NOT NULL DEFAULT 0,
 	echo      INTEGER NOT NULL DEFAULT 0,
 	before    TEXT,
 	after     TEXT
@@ -218,6 +221,7 @@ CREATE TABLE change_ctx (
 	actor     TEXT NOT NULL CHECK (actor IN ('student', 'pset', 'purge')),
 	action_id TEXT NOT NULL,
 	undoes    TEXT NOT NULL DEFAULT '',
+	depth     INTEGER NOT NULL DEFAULT 0,
 	at        TEXT NOT NULL
 );
 `

@@ -422,6 +422,63 @@ func TestCtrlZAfterARedoTakesTheRedoBack(t *testing.T) {
 	if title(t, s) != "Y" {
 		t.Fatalf("undoing the redo left %q", title(t, s))
 	}
+	// Undo, redo, undo: Ctrl+Z goes on back to A, never toggling B.
+	if n, _ := s.Newest(bg); n != "A" {
+		t.Fatalf("after undo, redo, undo, Ctrl+Z takes %q, want A", n)
+	}
+}
+
+func TestARedoneChangeIsTheStudentsInTheRefusal(t *testing.T) {
+	s := open(t)
+	seed(t, s)
+	exec(t, s, change.ActorStudent, "P", `UPDATE questions SET notes = '["x"]' WHERE id = 'q1'`)
+	exec(t, s, change.ActorStudent, "Q", `UPDATE questions SET notes = '["y"]' WHERE id = 'q1'`)
+	for _, u := range [][2]string{{"Q", "uQ"}, {"uQ", "rQ"}} {
+		_, err := s.Undo(bg, u[0], u[1])
+		must(t, err)
+	}
+	if _, err := s.Undo(bg, "P", "uP"); !is(err, ChangedSince) {
+		t.Fatalf("undoing P under a redone Q: %v, want changed since", err)
+	}
+}
+
+func TestARedoneRemovalGetsAFreshWeek(t *testing.T) {
+	s := open(t)
+	seed(t, s)
+	old := db.At(time.Now().Add(-6 * 24 * time.Hour))
+	exec(t, s, change.ActorStudent, "rm", `UPDATE sets SET removed_at = '`+old+`' WHERE id = 's1'`)
+	for _, u := range [][2]string{{"rm", "u"}, {"u", "redo"}} {
+		_, err := s.Undo(bg, u[0], u[1])
+		must(t, err)
+	}
+	must(t, s.Purge(bg, time.Now().Add(2*24*time.Hour)))
+	if count(t, s, `SELECT count(*) FROM sets WHERE id = 's1' AND removed_at != ''`) != 1 {
+		t.Fatal("a set removed again by a redo was purged on its first removal's date")
+	}
+}
+
+func TestUndoingAnAddIgnoresWhatPSetWroteToIt(t *testing.T) {
+	s := open(t)
+	seed(t, s)
+	exec(t, s, change.ActorStudent, "add", `INSERT INTO questions (id, set_id, position, text, created_at) VALUES ('q5', 's1', 4, '2.1', 'now')`)
+	exec(t, s, change.ActorPSet, "", `UPDATE questions SET label = '2.1 #3' WHERE id = 'q5'`)
+	if _, err := s.Undo(bg, "add", "u"); err != nil {
+		t.Fatalf("undoing an add PSet labelled since: %v", err)
+	}
+}
+
+func TestAThingMadeAndChangedInOneBatchIsNew(t *testing.T) {
+	s := open(t)
+	mark := seed(t, s)
+	exec(t, s, change.ActorStudent, "add", `INSERT INTO questions (id, set_id, position, text, created_at) VALUES ('q6', 's1', 5, '2.2', 'now')`)
+	exec(t, s, change.ActorStudent, "edit", `UPDATE questions SET text = '2.2b' WHERE id = 'q6'`)
+	cs, err := s.Since(bg, mark, 100)
+	must(t, err)
+	for _, c := range cs {
+		if c.ID == "q6" && (c.Op != change.OpCreated || c.After != nil) {
+			t.Fatalf("q6 arrived as %s with %s, want created, read again", c.Op, c.After)
+		}
+	}
 }
 
 func TestOnlyTheStoreIsThePurge(t *testing.T) {

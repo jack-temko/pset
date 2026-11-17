@@ -122,7 +122,7 @@ func (t Table) values(cols []string, r string, diff bool) string {
 }
 
 const (
-	insertCols = "at, kind, res_id, set_id, course_id, op, actor, action_id, undoes, echo, before, after"
+	insertCols = "at, kind, res_id, set_id, course_id, op, actor, action_id, undoes, depth, echo, before, after"
 	guard      = "\tSELECT RAISE(ABORT, 'store: write to %s outside store.Write') WHERE NOT EXISTS (SELECT 1 FROM change_ctx);\n"
 	// lastSeq is the seq of the change just logged: max on the rowid is a
 	// single lookup.
@@ -140,7 +140,7 @@ func (t Table) echo(cond string) string {
 		where = " WHERE " + cond
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "\tINSERT INTO changes (%s)\n\tSELECT c.at, '%s', %s, %s, %s, 'changed', c.actor, c.action_id, c.undoes, 1, NULL, NULL\n\tFROM change_ctx c%s;\n",
+	fmt.Fprintf(&b, "\tINSERT INTO changes (%s)\n\tSELECT c.at, '%s', %s, %s, %s, 'changed', c.actor, c.action_id, c.undoes, c.depth, 1, NULL, NULL\n\tFROM change_ctx c%s;\n",
 		insertCols, e.Kind, sub(e.ID, "NEW"), sub(e.SetID, "NEW"), sub(e.CourseID, "NEW"), where)
 	fmt.Fprintf(&b, "\tUPDATE %s SET seq = %s WHERE id = %s", e.Table, lastSeq, sub(e.ID, "NEW"))
 	if cond != "" {
@@ -168,7 +168,7 @@ func (t Table) Triggers() string {
 
 	fmt.Fprintf(&b, "CREATE TRIGGER %[1]s_log_i AFTER INSERT ON %[1]s FOR EACH ROW BEGIN\n", t.Name)
 	fmt.Fprintf(&b, guard, t.Name)
-	fmt.Fprintf(&b, "\tINSERT INTO changes (%s)\n\tSELECT c.at, '%s', NEW.id, %s, %s, 'created', c.actor, c.action_id, c.undoes, 0, NULL,\n\t\t%s\n\tFROM change_ctx c;\n",
+	fmt.Fprintf(&b, "\tINSERT INTO changes (%s)\n\tSELECT c.at, '%s', NEW.id, %s, %s, 'created', c.actor, c.action_id, c.undoes, c.depth, 0, NULL,\n\t\t%s\n\tFROM change_ctx c;\n",
 		insertCols, t.Kind, sub(t.SetID, "NEW"), sub(t.CourseID, "NEW"), t.values(t.Student, "NEW", false))
 	fmt.Fprintf(&b, "\tUPDATE %s SET seq = %s WHERE id = NEW.id;\n", t.Name, lastSeq)
 	b.WriteString(t.echo(""))
@@ -187,7 +187,7 @@ func (t Table) Triggers() string {
 	fmt.Fprintf(&b, "CREATE TRIGGER %[1]s_log_u AFTER UPDATE OF %[2]s ON %[1]s FOR EACH ROW\nWHEN %[3]s\nBEGIN\n",
 		t.Name, strings.Join(logged, ", "), strings.Join(when, "\n\tOR "))
 	fmt.Fprintf(&b, guard, t.Name)
-	fmt.Fprintf(&b, "\tINSERT INTO changes (%s)\n\tSELECT c.at, '%s', NEW.id, %s, %s,\n\t\t%s,\n\t\tc.actor, c.action_id, c.undoes, 0,\n\t\t%s,\n\t\t%s\n\tFROM change_ctx c;\n",
+	fmt.Fprintf(&b, "\tINSERT INTO changes (%s)\n\tSELECT c.at, '%s', NEW.id, %s, %s,\n\t\t%s,\n\t\tc.actor, c.action_id, c.undoes, c.depth, 0,\n\t\t%s,\n\t\t%s\n\tFROM change_ctx c;\n",
 		insertCols, t.Kind, sub(t.SetID, "NEW"), sub(t.CourseID, "NEW"), op,
 		t.values(logged, "OLD", true), t.values(logged, "NEW", true))
 	fmt.Fprintf(&b, "\tUPDATE %s SET seq = %s WHERE id = NEW.id;\n", t.Name, lastSeq)

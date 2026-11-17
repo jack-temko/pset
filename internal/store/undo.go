@@ -110,15 +110,15 @@ func (s *Store) Undo(ctx context.Context, action, asNew string) (int64, error) {
 	return last, err
 }
 
-// Newest is what Ctrl+Z takes back: the student's newest action not yet
-// undone. A plain undo is not one (Ctrl+Z after an undo takes the next
-// older action back); a redo, which undoes an undo, is.
+// Newest is what Ctrl+Z takes back: the student's newest change in force
+// not yet undone, an action or a redo (even depth). An undo is not one:
+// Ctrl+Z after an undo takes the next older action back, and after undo,
+// redo, undo it goes further back still rather than toggling.
 func (s *Store) Newest(ctx context.Context) (string, error) {
 	var id string
 	err := s.DB.QueryRowContext(ctx, `
 SELECT action_id FROM changes c
-WHERE actor = 'student' AND action_id != '' AND echo = 0
-  AND (undoes = '' OR EXISTS (SELECT 1 FROM changes t WHERE t.action_id = c.undoes AND t.undoes != ''))
+WHERE actor = 'student' AND action_id != '' AND echo = 0 AND depth % 2 = 0
   AND NOT EXISTS (SELECT 1 FROM changes u WHERE u.undoes = c.action_id)
 ORDER BY seq DESC LIMIT 1`).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -168,19 +168,24 @@ func stillNewest(ctx context.Context, tx *sql.Tx, action string, c logged, later
 		// makes rows in such a table, so this is a bug, said plainly.
 		return NotUndoable.New()
 	}
-	if c.op != change.OpCreated && !c.hasValues {
+	if c.op == change.OpCreated {
+		// Undoing an add only hides the thing, which throws nothing away,
+		// whoever wrote to it since.
+		return nil
+	}
+	if !c.hasValues {
 		// A student action that changed only what PSet makes logs its
 		// values; a row without them was not the student's to undo.
 		return errs.Data.Wrap(fmt.Errorf("store: %s %s (seq %d) has no values to undo", c.kind, c.id, c.seq))
 	}
-	// Later changes to the same thing that carry values, from actions not
-	// undone and not undos themselves (an undo after this one undid
-	// something newer, which cancels the pair).
+	// Later changes to the same thing that carry values and are still in
+	// force: PSet's, or a student change at an even depth (an action or a
+	// redo) that is not undone. An undo, or a change undone, cancels out.
 	rows, err := tx.QueryContext(ctx, `
 SELECT l.seq, l.actor, l.after FROM changes l
 WHERE l.kind = ? AND l.res_id = ? AND l.seq > ? AND l.action_id != ?
-  AND l.after IS NOT NULL AND l.undoes = ''
-  AND NOT (l.action_id != '' AND EXISTS (SELECT 1 FROM changes u WHERE u.undoes = l.action_id AND u.undoes != ''))`,
+  AND l.after IS NOT NULL
+  AND (l.action_id = '' OR (l.depth % 2 = 0 AND NOT EXISTS (SELECT 1 FROM changes u WHERE u.undoes = l.action_id)))`,
 		c.kind, c.id, c.seq, action)
 	if err != nil {
 		return errs.Database.Wrap(err)
@@ -216,7 +221,7 @@ WHERE l.kind = ? AND l.res_id = ? AND l.seq > ? AND l.action_id != ?
 		}
 		later[key] = true
 	}
-	if c.op == change.OpCreated || len(cols) == 0 {
+	if len(cols) == 0 {
 		return nil
 	}
 	// The values must still be what c left: compare as the triggers wrote
@@ -280,8 +285,13 @@ func revert(ctx context.Context, tx *sql.Tx, c logged) error {
 		// json_extract gives back the value's own SQL type: a JSON number
 		// an INTEGER or REAL, a string TEXT, null NULL.
 		sets[i] = fmt.Sprintf("%s = json_extract(?1, '$.%s')", col, col)
+		if col == t.Removed {
+			// Removed again (a redo) is removed now: its week to undo
+			// starts today, not on the day it was first removed.
+			sets[i] = fmt.Sprintf("%s = CASE json_extract(?1, '$.%s') WHEN '' THEN '' ELSE ?3 END", col, col)
+		}
 	}
 	q := fmt.Sprintf(`UPDATE %s SET %s WHERE id = ?2`, t.Name, strings.Join(sets, ", "))
-	_, err := tx.ExecContext(ctx, q, c.before.String, c.id)
+	_, err := tx.ExecContext(ctx, q, c.before.String, c.id, db.Now())
 	return errs.Database.Of(err)
 }

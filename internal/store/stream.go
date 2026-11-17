@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -114,8 +115,12 @@ func (s *Store) Since(ctx context.Context, seq int64, limit int) ([]change.Chang
 		return nil, errs.Database.Wrap(err)
 	}
 	defer func() {
-		_, err := conn.ExecContext(context.WithoutCancel(ctx), `ROLLBACK`)
-		cleanup.Log("store: end a replay's read", err)
+		if _, err := conn.ExecContext(context.WithoutCancel(ctx), `ROLLBACK`); err != nil {
+			// Still inside its read, it would pin an old snapshot: the pool
+			// drops a connection that says it is bad.
+			cleanup.Log("store: end a replay's read", err)
+			cleanup.Log("store: drop the connection", conn.Raw(func(any) error { return driver.ErrBadConn }))
+		}
 	}()
 	var latest sql.NullInt64
 	if err := conn.QueryRowContext(ctx, `SELECT (SELECT seq FROM sqlite_sequence WHERE name = 'changes')`).Scan(&latest); err != nil {
@@ -145,6 +150,7 @@ FROM changes WHERE seq > ? ORDER BY seq LIMIT ?`, seq, limit)
 		change.Change
 		after   map[string]json.RawMessage
 		partial bool // a change in the batch can't be patched from values
+		created bool // the thing was made in this batch
 	}
 	byRes := map[string]*notice{}
 	var order []*notice
@@ -164,6 +170,7 @@ FROM changes WHERE seq > ? ORDER BY seq LIMIT ?`, seq, limit)
 			order = removeNotice(order, n)
 		}
 		n.Change = c
+		n.created = n.created || c.Op == change.OpCreated
 		order = append(order, n)
 		t, known := tableOf(string(c.Kind))
 		if !known || echo || c.Op == change.OpCreated || c.Actor != change.ActorStudent || !after.Valid {
@@ -192,6 +199,10 @@ FROM changes WHERE seq > ? ORDER BY seq LIMIT ?`, seq, limit)
 	out := make([]change.Change, 0, len(order))
 	for _, n := range order {
 		c := n.Change
+		if n.created && c.Op == change.OpChanged {
+			// Made and then changed: still news of a new thing.
+			c.Op = change.OpCreated
+		}
 		if !n.partial && len(n.after) > 0 {
 			raw, err := json.Marshal(n.after)
 			if err != nil {
