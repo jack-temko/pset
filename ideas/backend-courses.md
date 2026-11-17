@@ -8,18 +8,18 @@ In progress. The decisions are in [backend-courses-grill.md](backend-courses-gri
 the order of work and the tracker. Branch
 `backend`, cut from `dev` on 2026-11-17 after track 0.
 
-| Track | What                                | Status                                       | Branch             |
-| ----- | ----------------------------------- | -------------------------------------------- | ------------------ |
-| 0     | Groundwork on `dev`                 | Done: the bar is measured, the test fix #95  | `flaky-go-test`    |
-| 1     | The contract                        | Built, awaiting merge into `backend`         | `backend-contract` |
-| 2     | Schema, change log, events          | In progress                                  | `changelog`        |
-| 3     | The step runner                     | Not started                                  |                    |
-| 4     | Courses and materials               | Not started                                  |                    |
-| 5     | Work: sets, finds, readings, guides | Not started                                  |                    |
-| 6     | Ask                                 | Not started                                  |                    |
-| 7     | Undo, and the rest of the app       | Not started                                  |                    |
-| 8     | The web data layer and the screens  | Not started                                  |                    |
-| 9     | Cut over                            | Not started                                  |                    |
+| Track | What                                | Status                                      | Branch             |
+| ----- | ----------------------------------- | ------------------------------------------- | ------------------ |
+| 0     | Groundwork on `dev`                 | Done: the bar is measured, the test fix #95 | `flaky-go-test`    |
+| 1     | The contract                        | Built, awaiting merge into `backend`        | `backend-contract` |
+| 2     | Schema, change log, events          | In progress                                 | `changelog`        |
+| 3     | The step runner                     | Not started                                 |                    |
+| 4     | Courses and materials               | Not started                                 |                    |
+| 5     | Work: sets, finds, readings, guides | Not started                                 |                    |
+| 6     | Ask                                 | Not started                                 |                    |
+| 7     | Undo, and the rest of the app       | Not started                                 |                    |
+| 8     | The web data layer and the screens  | Not started                                 |                    |
+| 9     | Cut over                            | Not started                                 |                    |
 
 ## Information
 
