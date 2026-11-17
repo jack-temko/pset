@@ -4,7 +4,7 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-143 entries.
+151 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
@@ -104,6 +104,14 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `library.run_outside` | Each PDF page has to be inside the book: 1 to {max}. |  |  |  | field | library |
 | `library.runs_empty` | Say where printed page 1 is. |  |  |  | field | library |
 | `library.title_empty` | A book needs a title. |  |  |  | field | library |
+| `material.duplicate` | {title} is already in this course. | This is the same file as a material the course already has. | Open the one the course has. |  | inline | material |
+| `material.not_pdf` | That isn't a PDF. |  |  |  | field | material |
+| `material.pages_unread` | Some pages couldn't be read. | PSet's text reader, Tesseract, failed on {count} ({list}). | Try again, or check that Tesseract works in Settings. | `retry` | inline | material |
+| `material.pdf_empty` | This PDF has no pages. | The file opened but holds nothing to read. | Try a different copy of the file. |  | inline | material |
+| `material.pdf_unreadable` | This PDF can't be read. | PSet couldn't open it, so it may be damaged or locked. | Try a different copy of the file. |  | inline | material |
+| `material.title_empty` | Give it a title. |  |  |  | field | material |
+| `material.title_too_long` | Keep it under {max} characters. |  |  |  | field | material |
+| `material.upload_gone` | That upload isn't there any more. | An upload is kept a day, or it was added already. | Choose the file again. |  | inline | material |
 | `memory.empty` | Write what to remember. |  |  |  | field | memory |
 | `memory.too_long` | Keep it to a sentence or two ({max} characters at most). |  |  |  | field | memory |
 | `model.busy` | OpenRouter didn't answer properly. | OpenRouter is busy or having trouble right now. | Try again in a minute. | `retry` | inline | llm |

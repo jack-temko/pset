@@ -54,6 +54,9 @@ type Def[In any] struct {
 // holds. Each track adds the things it brings.
 type Seed struct {
 	CourseID string
+	// MaterialID is a material in the course, not its textbook; UploadID a
+	// PDF staged and not yet added.
+	MaterialID, UploadID string
 }
 
 // def is a declared action, its input no longer typed.

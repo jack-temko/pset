@@ -143,3 +143,47 @@ export interface Contents {
    */
   entries: ContentsEntry[];
 }
+/**
+ * Upload is a PDF staged for adding: POST /api/uploads takes the file, and
+ * material.add names the upload. It is kept a day.
+ */
+export interface Upload {
+  /**
+   * ID is the upload's id, for material.add.
+   */
+  id: string;
+  /**
+   * Name is the file's own name, as it came.
+   */
+  name: string;
+}
+/**
+ * Add adds a staged upload to a course as a material, and starts
+ * reading it in.
+ */
+export interface Add {
+  courseId: string;
+  uploadId: string;
+}
+/**
+ * Rename gives a material a new title; reading it in never writes
+ * over it.
+ */
+export interface Rename {
+  id: string;
+  title: string;
+}
+/**
+ * Remove hides a material for a week; while a set still uses it, it
+ * stays readable underneath.
+ */
+export interface Remove {
+  id: string;
+}
+/**
+ * Textbook makes a material its course's textbook, where references
+ * like "3.1 #7" are looked for first.
+ */
+export interface Textbook {
+  id: string;
+}

@@ -42,7 +42,7 @@ CREATE TABLE materials (
 	-- A page's width in points, for rendering it at a width in pixels.
 	page_width REAL NOT NULL DEFAULT 0,
 	-- 1 once the student renamed it: reading its title never writes over
-	-- theirs.
+	-- theirs. The student's, so undoing the rename lets PSet name it again.
 	renamed    INTEGER NOT NULL DEFAULT 0,
 	added_at   TEXT NOT NULL,
 	removed_at TEXT NOT NULL DEFAULT '',
@@ -357,9 +357,9 @@ var (
 		{
 			Name: "materials", Kind: change.ResourceMaterial,
 			CourseID: "{r}.course_id",
-			Student:  []string{"title", "textbook", "removed_at"},
+			Student:  []string{"title", "textbook", "removed_at", "renamed"},
 			PSet:     []string{"course_id", "file_hash", "page_count", "aspect", "page_runs", "problems", "pages_read", "kind", "page_width"},
-			Meta:     []string{"added_at", "renamed", "seq"},
+			Meta:     []string{"added_at", "seq"},
 			Removed:  "removed_at",
 			JSON:     []string{"page_runs", "problems"},
 			Wire:     map[string]Field{"textbook": {"textbook", truth}},
