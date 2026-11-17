@@ -103,6 +103,10 @@ func measure(t *testing.T, n int, vs []variant) {
 			if v.prep != nil {
 				v.prep(t, d)
 			}
+			// Start every variant with an empty WAL, so the automatic
+			// checkpoint (every 1000 pages) falls at the same point in each.
+			_, err = d.Exec(`PRAGMA wal_checkpoint(TRUNCATE)`)
+			must(t, err)
 			start := time.Now()
 			v.run(t, d)
 			res[i].dur = append(res[i].dur, time.Since(start))
