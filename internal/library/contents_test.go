@@ -405,14 +405,18 @@ func TestContentsModelFailureFailsTheImportThenRetries(t *testing.T) {
 		t.Fatalf("error %+v", b.State.Error)
 	}
 
-	// A stalled call gets one more try too.
+	// A stalled call gets one more try too. The limit leaves a normal reply
+	// room under the race detector on a busy machine; the stall is well past it.
 	defer func(d time.Duration) { contentsCallTimeout = d }(contentsCallTimeout)
-	contentsCallTimeout = 300 * time.Millisecond
-	e.llm.Script(noName, llmtest.Reply{Text: "slow", Pause: time.Second}, entriesReply(t, kettleEntries))
+	contentsCallTimeout = 1500 * time.Millisecond
+	e.llm.Script(noName, llmtest.Reply{Text: "slow", Pause: 5 * time.Second}, entriesReply(t, kettleEntries))
 	e.do(t, "POST", "/api/books/"+b.ID+"/retry", nil, nil)
 	e.waitFor(t, b.ID, StateReady)
-	if reads != len(pages) {
-		t.Fatalf("OCR ran %d times for %d pages: a retry read them again", reads, len(pages))
+	e.mu.Lock()
+	n := reads
+	e.mu.Unlock()
+	if n != len(pages) {
+		t.Fatalf("OCR ran %d times for %d pages: a retry read them again", n, len(pages))
 	}
 }
 
