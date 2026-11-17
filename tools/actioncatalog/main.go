@@ -23,7 +23,7 @@ func main() {
 	if len(os.Args) > 1 {
 		root = os.Args[1]
 	}
-	c := backend.New(nil).Actions
+	c := backend.New(nil, nil).Actions
 	entries := c.Entries()
 	for path, content := range map[string]string{
 		filepath.Join(root, "web/src/api/gen/actions.ts"): typescript(entries, c.Inputs()),

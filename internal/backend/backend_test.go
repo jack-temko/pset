@@ -25,14 +25,19 @@ func world(t *testing.T) (*store.Store, *action.Catalog, action.Seed) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { cleanup.Close(s.DB) })
-	seed := action.Seed{CourseID: "c1"}
+	seed := action.Seed{CourseID: "c1", IncidentID: "INC001"}
 	if err := s.Write(context.Background(), change.ActorPSet, "", func(tx *sql.Tx) error {
-		_, err := tx.Exec(`INSERT INTO courses (id, name, created_at) VALUES (?, 'ECE 210', ?)`, seed.CourseID, db.Now())
+		now := db.Now()
+		if _, err := tx.Exec(`INSERT INTO courses (id, name, created_at) VALUES (?, 'ECE 210', ?)`, seed.CourseID, now); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`INSERT INTO incidents (id, error, kind, born, first_at, last_at) VALUES (?, '{"id":"internal.unexpected"}', 'ours', 'step', ?, ?)`,
+			seed.IncidentID, now, now)
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
-	return s, New(s).Actions, seed
+	return s, New(s, nil).Actions, seed
 }
 
 // visible is every logged table as the student sees it: removed rows left

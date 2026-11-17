@@ -54,6 +54,8 @@ type Def[In any] struct {
 // holds. Each track adds the things it brings.
 type Seed struct {
 	CourseID string
+	// IncidentID is an open incident, a step's own.
+	IncidentID string
 }
 
 // def is a declared action, its input no longer typed.
