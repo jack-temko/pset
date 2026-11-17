@@ -59,6 +59,9 @@ var transport = &http.Transport{
 type Client struct {
 	apiBaseURL   string
 	apiKey       string
+	// key, when set, is read for each request instead of apiKey: a client
+	// built once (NewKeyed) follows the key the student saves.
+	key func(context.Context) (string, error)
 	embedBaseURL string
 	embedModel   string
 	http         *http.Client
@@ -74,6 +77,15 @@ func New(apiBaseURL, apiKey, embedBaseURL, embedModel string) *Client {
 		embedModel:   embedModel,
 		http:         &http.Client{Timeout: DefaultTimeout, Transport: transport},
 	}
+}
+
+// NewKeyed builds a chat client that reads its key for each request, so
+// one client lasts the whole run while the student saves or changes the
+// key. A blank key fails the request as KeyMissing.
+func NewKeyed(apiBaseURL string, key func(context.Context) (string, error)) *Client {
+	c := New(apiBaseURL, "", "", "")
+	c.key = key
+	return c
 }
 
 // Config is a saved, tested connection pair, the one shape every feature
@@ -979,7 +991,16 @@ func (c *Client) request(ctx context.Context, method, url string, body any) (*ht
 		return nil, fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	key := c.apiKey
+	if c.key != nil {
+		if key, err = c.key(ctx); err != nil {
+			return nil, err
+		}
+		if key == "" {
+			return nil, KeyMissing.New()
+		}
+	}
+	req.Header.Set("Authorization", "Bearer "+key)
 	return req, nil
 }
 

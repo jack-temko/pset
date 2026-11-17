@@ -54,6 +54,7 @@ var (
 	modelBusy = errs.Define(errs.Entry{
 		ID:     "model.busy",
 		Kind:   errs.KindPassing,
+		Clears: "provider",
 		What:   "OpenRouter didn't answer properly.",
 		Why:    "OpenRouter is busy or having trouble right now.",
 		Fix:    "Try again in a minute.",
@@ -73,6 +74,7 @@ var (
 	ModelUnreachable = errs.Define(errs.Entry{
 		ID:     "model.unreachable",
 		Kind:   errs.KindPassing,
+		Clears: "provider",
 		What:   "PSet couldn't reach OpenRouter.",
 		Why:    "The internet connection is down, or OpenRouter didn't answer in time.",
 		Fix:    "Check the internet connection, then try again.",
@@ -82,6 +84,7 @@ var (
 	modelCut = errs.Define(errs.Entry{
 		ID:     "model.cut",
 		Kind:   errs.KindPassing,
+		Clears: "provider",
 		What:   "The model's answer stopped partway.",
 		Why:    "The connection to the model dropped while it was writing.",
 		Fix:    "Trying again usually works.",

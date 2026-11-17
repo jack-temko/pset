@@ -14,8 +14,10 @@ package runner
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"slices"
 	"sync"
 	"time"
@@ -24,8 +26,10 @@ import (
 
 	"github.com/jackt/pset/internal/change"
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/condition"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
+	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/step"
 	"github.com/jackt/pset/internal/store"
 )
@@ -48,9 +52,10 @@ type Handler struct {
 	// whose inputs hash the same is never run again. Nil: no inputs to
 	// watch.
 	Input func(ctx context.Context, d *sql.DB, subjectID string) (string, error)
-	// Run does the work. It writes what it makes through run.Write, keys
-	// its model calls with run.Request, and says what it is doing with
-	// run.Activity. A failure's catalog kind decides what happens next.
+	// Run does the work. It gets the model client from run.Client, writes
+	// what it makes through run.Write, keys its model calls with
+	// run.Request, and says what it is doing with run.Activity. A failure's
+	// catalog kind decides what happens next.
 	Run func(ctx context.Context, run *Run) error
 }
 
@@ -67,11 +72,25 @@ const DefaultLimit = 2
 // Tries is how many times a passing failure is tried before it is said.
 const Tries = 3
 
+// Options are what main gives the runner, once.
+type Options struct {
+	// Limits are steps at once per model.
+	Limits map[string]int
+	// Key is the OpenRouter key saved now, blank when none is. The model
+	// client is built once from it and reads it for every call.
+	Key func(context.Context) (string, error)
+	// BaseURL is where the client sends chat requests: OpenRouter, or a
+	// test's server.
+	BaseURL string
+}
+
 // Runner schedules and runs steps.
 type Runner struct {
 	store  *store.Store
 	pipes  map[change.Resource]Pipeline
 	limits map[string]int
+	key    func(context.Context) (string, error)
+	client *llm.Client
 	// Now is the clock and Backoff the waits before a passing failure is
 	// tried again, after the first, second, ... failure. Tests set both.
 	Now     func() time.Time
@@ -91,11 +110,17 @@ type running struct {
 	handler *Handler
 }
 
-// New is a runner for the given pipelines. limits are steps at once per
-// model.
-func New(s *store.Store, limits map[string]int, pipes ...Pipeline) *Runner {
+// New is a runner for the given pipelines.
+func New(s *store.Store, o Options, pipes ...Pipeline) *Runner {
+	if o.BaseURL == "" {
+		o.BaseURL = llm.OpenRouter
+	}
+	if o.Key == nil {
+		o.Key = func(context.Context) (string, error) { return "", nil }
+	}
 	r := &Runner{
-		store: s, pipes: map[change.Resource]Pipeline{}, limits: limits,
+		store: s, pipes: map[change.Resource]Pipeline{}, limits: o.Limits,
+		key: o.Key, client: llm.NewKeyed(o.BaseURL, o.Key),
 		Now:     time.Now,
 		Backoff: []time.Duration{8 * time.Second, 30 * time.Second, 2 * time.Minute},
 		wake:    make(chan struct{}, 1),
@@ -190,7 +215,8 @@ func (r *Runner) Ask(ctx context.Context, tx *sql.Tx, kind change.Resource, id s
 	default:
 		return nil
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE steps SET state = 'waiting', incident_id = '', retry_at = '' WHERE id = ?`, stepID); err != nil {
+	// Asked again is a new run: its tries start over.
+	if _, err := tx.ExecContext(ctx, `UPDATE steps SET state = 'waiting', incident_id = '', retry_at = '', attempts = 0 WHERE id = ?`, stepID); err != nil {
 		return errs.Database.Wrap(err)
 	}
 	if incident != "" {
@@ -252,7 +278,7 @@ func (r *Runner) Changed(ctx context.Context, kind change.Resource, id string) e
 			if d.h.Lazy {
 				state = step.StateOutOfDate
 			}
-			if _, err := tx.ExecContext(ctx, `UPDATE steps SET state = ? WHERE id = ? AND state = 'done'`, state, d.id); err != nil {
+			if _, err := tx.ExecContext(ctx, `UPDATE steps SET state = ?, attempts = 0 WHERE id = ? AND state = 'done'`, state, d.id); err != nil {
 				return errs.Database.Wrap(err)
 			}
 		}
@@ -268,10 +294,11 @@ const poll = time.Second
 
 // Run schedules steps until ctx ends, then waits for the running ones to
 // stop; they go back to waiting and resume on the next start. Steps left
-// running by a crash go back to waiting first.
+// running by a crash go back to waiting first, the run cut short not
+// counted as a try.
 func (r *Runner) Run(ctx context.Context) error {
 	err := r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
-		_, err := tx.ExecContext(ctx, `UPDATE steps SET state = 'waiting' WHERE state = 'running'`)
+		_, err := tx.ExecContext(ctx, `UPDATE steps SET state = 'waiting', attempts = max(attempts - 1, 0) WHERE state = 'running'`)
 		return errs.Database.Of(err)
 	})
 	if err != nil {
@@ -319,6 +346,9 @@ type candidate struct {
 // steps it waits for done. Highest priority first, then oldest (D8: finds,
 // then readings, then guides, by the pipeline's order of creation).
 func (r *Runner) schedule(ctx context.Context) error {
+	if err := r.pauseHidden(ctx); err != nil {
+		return err
+	}
 	rows, err := r.store.DB.QueryContext(ctx, `
 SELECT s.id, s.subject_kind, s.subject_id, s.name, s.attempts FROM steps s
 WHERE ((s.state = 'waiting' AND s.incident_id = '') OR (s.state = 'retrying' AND s.retry_at <= ?))
@@ -441,7 +471,41 @@ func (r *Runner) start(ctx context.Context, c candidate, h *Handler) error {
 	return nil
 }
 
-var errShutdown = fmt.Errorf("runner: shutting down")
+// Why a running step was cancelled by the runner itself: either way it
+// goes back to waiting, the run not counted as a try.
+var (
+	errShutdown = fmt.Errorf("runner: shutting down")
+	errPaused   = fmt.Errorf("runner: its subject was removed")
+)
+
+// pauseHidden stops the running steps whose subject was removed since they
+// started, so nothing is spent on it: they wait, and carry on if the
+// removal is undone.
+func (r *Runner) pauseHidden(ctx context.Context) error {
+	r.mu.Lock()
+	n := len(r.running)
+	r.mu.Unlock()
+	if n == 0 {
+		return nil
+	}
+	rows, err := r.store.DB.QueryContext(ctx, `SELECT s.id FROM steps s WHERE s.state = 'running' AND NOT (`+visible+`)`)
+	if err != nil {
+		return errs.Database.Wrap(err)
+	}
+	defer cleanup.Close(rows)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return errs.Database.Wrap(err)
+		}
+		r.mu.Lock()
+		if run, ok := r.running[id]; ok {
+			run.cancel(errPaused)
+		}
+		r.mu.Unlock()
+	}
+	return errs.Database.Of(rows.Err())
+}
 
 // safely runs a handler, a panic being a failure rather than a dead server.
 func safely(ctx context.Context, h *Handler, run *Run) (err error) {
@@ -474,9 +538,10 @@ func (r *Runner) settle(run *Run, err, cause error) {
 			// What came after it may have read its output.
 			werr = r.Changed(ctx, run.Kind, run.SubjectID)
 		}
-	case cause == errShutdown:
+	case cause == errShutdown || cause == errPaused: //nolint:errorlint // the runner's own sentinels, never wrapped
 		werr = r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
-			_, err := tx.ExecContext(ctx, `UPDATE steps SET state = 'waiting', ended_at = ? WHERE id = ?`, now, run.StepID)
+			_, err := tx.ExecContext(ctx, `UPDATE steps SET state = 'waiting', ended_at = ?, attempts = max(attempts - 1, 0) WHERE id = ?`,
+				now, run.StepID)
 			return errs.Database.Of(err)
 		})
 	default:
@@ -489,10 +554,17 @@ func (r *Runner) settle(run *Run, err, cause error) {
 
 // fail writes a failure by its kind (ideas/errors-grill.md):
 //   - passing: tried again after a growing wait, Tries times, then said;
+//     one that names a condition (the provider) then waits on it;
 //   - waiting on you: the step waits on one incident per cause, shared with
 //     every step waiting on it (E1), and its condition stops holding;
 //   - anything else: the step fails, with an incident on its subject.
+//
+// A cause the computer shows (a full disk, Poppler missing) is named first,
+// whatever entry the step wrapped it in.
 func (r *Runner) fail(ctx context.Context, run *Run, err error) error {
+	if c := condition.Cause(err); c != nil {
+		err = c
+	}
 	kind, clears := errs.KindOf(err)
 	now := db.At(r.Now())
 	if kind == errs.KindPassing && run.Attempt < Tries {
@@ -503,32 +575,38 @@ func (r *Runner) fail(ctx context.Context, run *Run, err error) error {
 			return errs.Database.Of(err)
 		})
 	}
-	if kind == errs.KindPassing || kind == errs.KindYourInput {
+	switch {
+	case kind == errs.KindPassing && clears != "":
+		// Still failing after every try: what it needs is gone for now.
+		kind = errs.KindWaitingOnYou
+	case kind == errs.KindPassing || kind == errs.KindYourInput:
 		// Tried enough: it is not passing. A step has no field to show a
 		// "your input" under.
 		kind = errs.KindOurs
+	case kind == errs.KindWaitingOnYou && clears == "":
+		// Waiting on nothing that can come back would wait for good.
+		kind = errs.KindCant
 	}
 	view := errs.Resolve(err)
 	if kind == errs.KindWaitingOnYou {
-		if clears != "" {
-			r.mu.Lock()
-			r.broken[clears] = true
-			r.mu.Unlock()
-		}
-		return r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
+		werr := r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
 			id, err := r.incident(ctx, tx, view, kind, clears, run, true, err)
 			if err != nil {
 				return err
 			}
-			if clears != "" {
-				if err := setCondition(ctx, tx, clears, false, view); err != nil {
-					return err
-				}
+			if err := setCondition(ctx, tx, clears, false, view); err != nil {
+				return err
 			}
 			_, err = tx.ExecContext(ctx, `UPDATE steps SET state = 'waiting', ended_at = ?, incident_id = ? WHERE id = ?`,
 				now, id, run.StepID)
 			return errs.Database.Of(err)
 		})
+		if werr == nil {
+			r.mu.Lock()
+			r.broken[clears] = true
+			r.mu.Unlock()
+		}
+		return werr
 	}
 	return r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
 		id, err := r.incident(ctx, tx, view, kind, "", run, false, err)
@@ -550,9 +628,15 @@ func (r *Runner) incident(ctx context.Context, tx *sql.Tx, view errs.View, kind 
 	if general {
 		subjectKind, subjectID = "", ""
 	}
+	// One per cause (E1): a general one is its condition, whatever step
+	// error it came wrapped in; a step's own is its error on its subject.
+	q, args := `SELECT id FROM incidents WHERE state = 'open' AND born = 'step'
+		AND json_extract(error, '$.id') = ? AND subject_kind = ? AND subject_id = ?`, []any{view.ID, subjectKind, subjectID}
+	if general {
+		q, args = `SELECT id FROM incidents WHERE state = 'open' AND born = 'step' AND clears = ?`, []any{clears}
+	}
 	var id string
-	err := tx.QueryRowContext(ctx, `SELECT id FROM incidents WHERE state = 'open' AND born = 'step'
-		AND json_extract(error, '$.id') = ? AND subject_kind = ? AND subject_id = ?`, view.ID, subjectKind, subjectID).Scan(&id)
+	err := tx.QueryRowContext(ctx, q, args...).Scan(&id)
 	switch {
 	case err == nil:
 		_, err = tx.ExecContext(ctx, `UPDATE incidents SET count = count + 1, last_at = ? WHERE id = ?`, now, id)
@@ -604,29 +688,78 @@ func (r *Runner) loadBroken(ctx context.Context) error {
 	return errs.Database.Of(rows.Err())
 }
 
-// Holds says a condition is the case again (a key was saved, a call
-// worked): its waiting incidents heal and the steps waiting on them run
-// (E2). A step that fails again for the same cause opens a new incident,
-// so nothing loops.
+// Holds says a condition is the case again: a key was saved, a call worked,
+// Settings fixed it, or the student pressed Try again. Its waiting
+// incidents heal and the steps waiting on them run again from their first
+// try (E2). A step that fails again for the same cause opens a new
+// incident, so nothing loops.
 func (r *Runner) Holds(ctx context.Context, condition string) error {
-	r.mu.Lock()
-	was := r.broken[condition]
-	delete(r.broken, condition)
-	r.mu.Unlock()
-	if !was {
-		return nil
-	}
 	err := r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
-		if err := setCondition(ctx, tx, condition, true, errs.View{}); err != nil {
-			return err
+		var broken int
+		if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM conditions WHERE id = ? AND holds = 0`, condition).Scan(&broken); err != nil {
+			return errs.Database.Wrap(err)
 		}
-		now := db.Now()
-		if _, err := tx.ExecContext(ctx, `UPDATE steps SET incident_id = '' WHERE incident_id IN
+		if broken > 0 {
+			if err := setCondition(ctx, tx, condition, true, errs.View{}); err != nil {
+				return err
+			}
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE steps SET incident_id = '', attempts = 0 WHERE incident_id IN
 			(SELECT id FROM incidents WHERE state = 'open' AND clears = ?)`, condition); err != nil {
 			return errs.Database.Wrap(err)
 		}
-		_, err := tx.ExecContext(ctx, `UPDATE incidents SET state = 'healed', resolved_at = ? WHERE state = 'open' AND clears = ?`, now, condition)
+		_, err := tx.ExecContext(ctx, `UPDATE incidents SET state = 'healed', resolved_at = ? WHERE state = 'open' AND clears = ?`,
+			db.At(r.Now()), condition)
 		return errs.Database.Of(err)
+	})
+	if err != nil {
+		return err
+	}
+	r.mu.Lock()
+	delete(r.broken, condition)
+	r.mu.Unlock()
+	r.Wake()
+	return nil
+}
+
+// IncidentGone is Try again on an incident that is not there.
+var IncidentGone = errs.Define(errs.Entry{
+	ID:     "runner.incident_gone",
+	Kind:   errs.KindCant,
+	What:   "That problem is no longer there.",
+	Why:    "It was resolved, or what it was about was removed.",
+	Status: http.StatusNotFound,
+})
+
+// TryAgain is the student's Try again on an incident a step opened. On one
+// that waits on a condition (no key, no credit, a full disk) it says the
+// condition holds again, so every step waiting on it runs; on a step's own
+// failure it asks that step again, ahead of PSet's own work. An incident
+// already resolved needs nothing.
+func (r *Runner) TryAgain(ctx context.Context, incidentID string) error {
+	var stepID, clears, state string
+	err := r.store.DB.QueryRowContext(ctx, `SELECT step_id, clears, state FROM incidents WHERE id = ? AND born = 'step'`,
+		incidentID).Scan(&stepID, &clears, &state)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return IncidentGone.New()
+	case err != nil:
+		return errs.Database.Wrap(err)
+	case state != "open":
+		return nil
+	case clears != "":
+		return r.Holds(ctx, clears)
+	}
+	var kind, subject, name string
+	err = r.store.DB.QueryRowContext(ctx, `SELECT subject_kind, subject_id, name FROM steps WHERE id = ?`, stepID).Scan(&kind, &subject, &name)
+	if errors.Is(err, sql.ErrNoRows) {
+		return IncidentGone.New()
+	}
+	if err != nil {
+		return errs.Database.Wrap(err)
+	}
+	err = r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
+		return r.Ask(ctx, tx, change.Resource(kind), subject, step.Name(name), PriorityOpened)
 	})
 	r.Wake()
 	return err
@@ -666,16 +799,6 @@ func setCondition(ctx context.Context, tx *sql.Tx, id string, holds bool, why er
 			since = CASE WHEN conditions.holds = excluded.holds THEN conditions.since ELSE excluded.since END`,
 		id, holds, db.Now(), raw)
 	return errs.Database.Of(err)
-}
-
-// Stop ends a running step: it goes back to waiting (removing its subject
-// does not need this: a hidden subject's steps are not started).
-func (r *Runner) Stop(stepID string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if run, ok := r.running[stepID]; ok {
-		run.cancel(errShutdown)
-	}
 }
 
 // Running is the ids of the steps running now.

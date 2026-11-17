@@ -24,6 +24,20 @@ type Run struct {
 	hash    string
 }
 
+// Client is the model client, built once for the whole run. Without a
+// saved key it fails as KeyMissing, so the step waits on the key and runs
+// again once one is saved.
+func (run *Run) Client(ctx context.Context) (*llm.Client, error) {
+	key, err := run.r.key(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if key == "" {
+		return nil, llm.KeyMissing.New()
+	}
+	return run.r.client, nil
+}
+
 // Write writes what the step makes, as PSet.
 func (run *Run) Write(ctx context.Context, fn func(*sql.Tx) error) error {
 	return run.r.store.Write(ctx, change.ActorPSet, "", fn)
