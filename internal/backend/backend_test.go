@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -25,14 +26,29 @@ func world(t *testing.T) (*store.Store, *action.Catalog, action.Seed) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { cleanup.Close(s.DB) })
-	seed := action.Seed{CourseID: "c1"}
+	seed := action.Seed{CourseID: "c1", MaterialID: "m1"}
 	if err := s.Write(context.Background(), change.ActorPSet, "", func(tx *sql.Tx) error {
-		_, err := tx.Exec(`INSERT INTO courses (id, name, created_at) VALUES (?, 'ECE 210', ?)`, seed.CourseID, db.Now())
+		if _, err := tx.Exec(`INSERT INTO courses (id, name, created_at) VALUES (?, 'ECE 210', ?)`, seed.CourseID, db.Now()); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`INSERT INTO materials (id, course_id, title, file_hash, added_at) VALUES (?, ?, 'Oppenheim', 'h1', ?)`,
+			seed.MaterialID, seed.CourseID, db.Now())
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
-	return s, New(s).Actions, seed
+	b := New(s, Options{DataDir: t.TempDir()})
+	f, err := os.Open(filepath.Join("..", "..", "testdata", "sample-digital.pdf"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup.Close(f)
+	up, err := b.Materials.Stage(f, "sample-digital.pdf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed.UploadID = up.ID
+	return s, b.Actions, seed
 }
 
 // visible is every logged table as the student sees it: removed rows left

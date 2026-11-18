@@ -25,6 +25,7 @@ import (
 	_ "github.com/jackt/pset/internal/httpx"
 	_ "github.com/jackt/pset/internal/library"
 	_ "github.com/jackt/pset/internal/llm"
+	_ "github.com/jackt/pset/internal/material"
 	_ "github.com/jackt/pset/internal/memory"
 	_ "github.com/jackt/pset/internal/place"
 	_ "github.com/jackt/pset/internal/runner"

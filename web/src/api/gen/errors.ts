@@ -98,6 +98,14 @@ export type ErrorId =
   | "library.run_outside"
   | "library.runs_empty"
   | "library.title_empty"
+  | "material.duplicate"
+  | "material.not_pdf"
+  | "material.pages_unread"
+  | "material.pdf_empty"
+  | "material.pdf_unreadable"
+  | "material.title_empty"
+  | "material.title_too_long"
+  | "material.upload_gone"
   | "memory.empty"
   | "memory.too_long"
   | "model.busy"
@@ -848,6 +856,65 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "field",
     status: 422,
     owner: "library",
+  },
+  "material.duplicate": {
+    what: "{title} is already in this course.",
+    why: "This is the same file as a material the course already has.",
+    fix: "Open the one the course has.",
+    scope: "inline",
+    status: 409,
+    owner: "material",
+  },
+  "material.not_pdf": {
+    what: "That isn't a PDF.",
+    scope: "field",
+    status: 422,
+    owner: "material",
+  },
+  "material.pages_unread": {
+    what: "Some pages couldn't be read.",
+    why: "PSet's text reader, Tesseract, failed on {count} ({list}).",
+    fix: "Try again, or check that Tesseract works in Settings.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "material",
+  },
+  "material.pdf_empty": {
+    what: "This PDF has no pages.",
+    why: "The file opened but holds nothing to read.",
+    fix: "Try a different copy of the file.",
+    scope: "inline",
+    status: 422,
+    owner: "material",
+  },
+  "material.pdf_unreadable": {
+    what: "This PDF can't be read.",
+    why: "PSet couldn't open it, so it may be damaged or locked.",
+    fix: "Try a different copy of the file.",
+    scope: "inline",
+    status: 422,
+    owner: "material",
+  },
+  "material.title_empty": {
+    what: "Give it a title.",
+    scope: "field",
+    status: 422,
+    owner: "material",
+  },
+  "material.title_too_long": {
+    what: "Keep it under {max} characters.",
+    scope: "field",
+    status: 422,
+    owner: "material",
+  },
+  "material.upload_gone": {
+    what: "That upload isn't there any more.",
+    why: "An upload is kept a day, or it was added already.",
+    fix: "Choose the file again.",
+    scope: "inline",
+    status: 404,
+    owner: "material",
   },
   "memory.empty": {
     what: "Write what to remember.",

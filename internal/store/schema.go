@@ -37,6 +37,13 @@ CREATE TABLE materials (
 	problems   TEXT NOT NULL DEFAULT 'null',
 	textbook   INTEGER NOT NULL DEFAULT 0,
 	pages_read INTEGER NOT NULL DEFAULT 0,
+	-- digital (a text layer worth reading) or scanned, once examined.
+	kind       TEXT NOT NULL DEFAULT '',
+	-- A page's width in points, for rendering it at a width in pixels.
+	page_width REAL NOT NULL DEFAULT 0,
+	-- 1 once the student renamed it: reading its title never writes over
+	-- theirs. The student's, so undoing the rename lets PSet name it again.
+	renamed    INTEGER NOT NULL DEFAULT 0,
 	added_at   TEXT NOT NULL,
 	removed_at TEXT NOT NULL DEFAULT '',
 	seq        INTEGER NOT NULL DEFAULT 0
@@ -50,6 +57,33 @@ CREATE TABLE pages (
 	material_id TEXT NOT NULL REFERENCES materials (id) ON DELETE CASCADE,
 	number      INTEGER NOT NULL,
 	text        TEXT NOT NULL DEFAULT '',
+	-- text, blank, or failed (the reader choked on it): reading a scan
+	-- skips what is settled, so a stopped read resumes.
+	status      TEXT NOT NULL DEFAULT 'text' CHECK (status IN ('text', 'blank', 'failed')),
+	PRIMARY KEY (material_id, number)
+);
+
+-- Full-text search over pages, kept by triggers. material_id and number
+-- are indexed so a search and a removal are column matches, as the old
+-- library's were.
+CREATE VIRTUAL TABLE pages_fts USING fts5(material_id, number, text);
+CREATE TRIGGER pages_fts_insert AFTER INSERT ON pages BEGIN
+	INSERT INTO pages_fts (material_id, number, text) VALUES (new.material_id, new.number, new.text);
+END;
+CREATE TRIGGER pages_fts_update AFTER UPDATE OF text ON pages BEGIN
+	DELETE FROM pages_fts WHERE pages_fts MATCH 'material_id:"' || replace(old.material_id, '"', '""') || '" AND number:"' || old.number || '"';
+	INSERT INTO pages_fts (material_id, number, text) VALUES (new.material_id, new.number, new.text);
+END;
+CREATE TRIGGER pages_fts_delete AFTER DELETE ON pages BEGIN
+	DELETE FROM pages_fts WHERE pages_fts MATCH 'material_id:"' || replace(old.material_id, '"', '""') || '" AND number:"' || old.number || '"';
+END;
+
+-- One vector per page with text, in one embedding model's space.
+CREATE TABLE embeddings (
+	material_id TEXT NOT NULL REFERENCES materials (id) ON DELETE CASCADE,
+	number      INTEGER NOT NULL,
+	model       TEXT NOT NULL,
+	vector      BLOB NOT NULL,
 	PRIMARY KEY (material_id, number)
 );
 
@@ -59,6 +93,10 @@ CREATE TABLE sections (
 	parent_id   TEXT NOT NULL DEFAULT '',
 	title       TEXT NOT NULL,
 	page        INTEGER NOT NULL,
+	-- The last page it spans, and how deep it sits (1 a chapter): what a
+	-- find narrows a reference by.
+	end_page    INTEGER NOT NULL DEFAULT 0,
+	level       INTEGER NOT NULL DEFAULT 1,
 	position    INTEGER NOT NULL
 );
 CREATE INDEX sections_material ON sections (material_id, position);
@@ -336,8 +374,8 @@ var (
 		{
 			Name: "materials", Kind: change.ResourceMaterial,
 			CourseID: "{r}.course_id",
-			Student:  []string{"title", "textbook", "removed_at"},
-			PSet:     []string{"course_id", "file_hash", "page_count", "aspect", "page_runs", "problems", "pages_read"},
+			Student:  []string{"title", "textbook", "removed_at", "renamed"},
+			PSet:     []string{"course_id", "file_hash", "page_count", "aspect", "page_runs", "problems", "pages_read", "kind", "page_width"},
 			Meta:     []string{"added_at", "seq"},
 			Removed:  "removed_at",
 			JSON:     []string{"page_runs", "problems"},
