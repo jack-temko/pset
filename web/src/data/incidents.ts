@@ -47,29 +47,49 @@ function detailOf(e: unknown): string {
   }
 }
 
+/** What names a failure for the throttle: an Error's name and message (a
+ *  stack's first line is the message in Chrome, but the top frame in Firefox
+ *  and Safari), else the first line of what was thrown. */
+function nameOf(e: unknown, detail: string): string {
+  if (e instanceof Error) return `${e.name}: ${e.message}`;
+  return detail.split('\n')[0] ?? '';
+}
+
 /**
  * Keeps a failure of the page as an incident, and says which one. A request's
  * own failure (an ApiError) is not reported: it is the server's to keep. A
- * report that can't be sent is dropped: there is nobody left to tell.
+ * report that can't be sent is dropped: there is nobody left to tell. It still
+ * uses its minute and its place in the cap, so a server that is down is not
+ * asked again and again. Never rejects: a rejection here would be reported
+ * here, for ever.
  */
 export async function reportFailure(
   e: unknown,
   about: About = {},
   now: () => number = Date.now,
 ): Promise<Incident | undefined> {
+  try {
+    return await report(e, about, now);
+  } catch {
+    return undefined;
+  }
+}
+
+async function report(
+  e: unknown,
+  about: About,
+  now: () => number,
+): Promise<Incident | undefined> {
   if (e instanceof ApiError) return undefined;
   const detail = detailOf(e);
   const route = window.location.pathname;
-  // The first line names the failure; the stack below it may differ by build.
-  const key = `${route}\n${about.subjectKind ?? ''}:${about.subjectId ?? ''}\n${
-    detail.split('\n')[0] ?? ''
-  }`;
+  const key = `${route}\n${about.subjectKind ?? ''}:${about.subjectId ?? ''}\n${nameOf(e, detail)}`;
   const last = sentAt.get(key);
   if (last !== undefined && now() - last < REPORT_EVERY_MS) return undefined;
   if (sent >= REPORTS_MAX) return undefined;
   sentAt.set(key, now());
   sent++;
-  const report: PageReport = {
+  const body: PageReport = {
     // The page has no catalog entry of its own for a crash (gap 5 in
     // ideas/backend-courses.md): it is PSet's own unexpected failure.
     chain: ['internal.unexpected'],
@@ -78,11 +98,7 @@ export async function reportFailure(
     route,
     ...about,
   };
-  try {
-    return await post<Incident>('/api/incidents', report);
-  } catch {
-    return undefined;
-  }
+  return await post<Incident>('/api/incidents', body);
 }
 
 /**
@@ -91,8 +107,11 @@ export async function reportFailure(
  */
 export function catchFailures(): () => void {
   const onError = (ev: ErrorEvent) => {
-    // A script that failed to load names no error; its message is enough.
-    void reportFailure(ev.error ?? new Error(ev.message));
+    // An event with no error is not PSet's: the browser's own notices
+    // ("ResizeObserver loop completed ...") and other origins' scripts
+    // ("Script error."), whose errors are hidden from the page.
+    if (ev.error === null || ev.error === undefined) return;
+    void reportFailure(ev.error);
   };
   const onRejection = (ev: PromiseRejectionEvent) => {
     void reportFailure(ev.reason);

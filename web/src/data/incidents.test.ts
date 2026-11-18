@@ -105,6 +105,60 @@ describe('page incidents', () => {
     window.removeEventListener('error', quiet);
   });
 
+  it('reports a rejected promise and anything thrown that isn’t an Error', async () => {
+    const undo = catchFailures();
+    const ev = new Event('unhandledrejection') as Event & { reason: unknown };
+    ev.reason = { why: 'a plain object' };
+    window.dispatchEvent(ev);
+    await vi.waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+    expect(sent(0).body.detail).toBe('{"why":"a plain object"}');
+    await reportFailure('just text');
+    expect(sent(1).body.detail).toBe('"just text"');
+    undo();
+  });
+
+  it('leaves an error event with no error alone', async () => {
+    const undo = catchFailures();
+    const quiet = (ev: Event) => {
+      ev.preventDefault();
+    };
+    window.addEventListener('error', quiet);
+    window.dispatchEvent(
+      new ErrorEvent('error', {
+        message:
+          'ResizeObserver loop completed with undelivered notifications.',
+      }),
+    );
+    await Promise.resolve();
+    expect(fetchMock).not.toHaveBeenCalled();
+    undo();
+    window.removeEventListener('error', quiet);
+  });
+
+  it('never rejects, even for an error that throws when read', async () => {
+    const nasty = new Error('x');
+    Object.defineProperty(nasty, 'stack', {
+      get: () => {
+        throw new Error('no stack for you');
+      },
+    });
+    await expect(reportFailure(nasty)).resolves.toBeUndefined();
+  });
+
+  it('tells apart two errors from the same line by their message', async () => {
+    const at = (m: string) => {
+      const e = new Error(m);
+      // Firefox and Safari: the stack starts at the frame, not the message.
+      e.stack = 'f@app.js:1:2\ng@app.js:3:4';
+      return e;
+    };
+    await reportFailure(at('one'));
+    await reportFailure(at('two'));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('tries again and dismisses through the action route', async () => {
     fetchMock.mockImplementation(() => Promise.resolve(reply(200, { seq: 1 })));
     await tryAgain('abc123');
