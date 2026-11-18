@@ -167,7 +167,7 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `update.unsupported_system` | PSet can't update itself here. | Updating itself isn't supported on this system. | Run the installer for the new version instead. |  | inline | update |
 | `work.bad_due_date` | That isn't a date. |  |  |  | field | work |
 | `work.bad_reveal` | There's no help step called {stage}. |  |  |  | field | work |
-| `work.draft_too_long` | One of these is too long for a single question. |  |  |  | field | work |
+| `work.draft_too_long` | Keep each question under {max} characters. |  |  |  | field | work |
 | `work.no_drafts` | Write at least one question. |  |  |  | field | work |
 | `work.note_too_long` | Keep each note under {max} characters. |  |  |  | field | work |
 | `work.title_empty` | Give it a title. |  |  |  | field | work |

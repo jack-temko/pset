@@ -282,6 +282,22 @@ func splitDraft(d Draft, style probnum.Style) []split {
 	return out
 }
 
+// fitNotes is notes read from a reference, within the caps the student's own
+// are held to, so editing them can always save them back as they were.
+func fitNotes(lines []string) []string {
+	if len(lines) > maxNotes {
+		lines = lines[:maxNotes]
+	}
+	out := make([]string, len(lines))
+	for i, l := range lines {
+		if r := []rune(l); len(r) > maxNote {
+			l = strings.TrimSpace(string(r[:maxNote-1])) + "…"
+		}
+		out[i] = l
+	}
+	return out
+}
+
 // labelFromText is a typed problem's label: its first line, cut short.
 func labelFromText(text string) string {
 	first, _, _ := strings.Cut(strings.TrimSpace(text), "\n")
@@ -317,7 +333,7 @@ func (s *Service) addQuestions(ctx context.Context, do *action.Do, in AddQuestio
 			continue
 		}
 		if utf8.RuneCountInString(d.Text) > maxDraft {
-			return draftTooLong.New().OnField("drafts")
+			return draftTooLong.New("max", strconv.Itoa(maxDraft)).OnField("drafts")
 		}
 		drafts = append(drafts, d)
 	}
@@ -349,7 +365,7 @@ func (s *Service) addQuestions(ctx context.Context, do *action.Do, in AddQuestio
 		}
 		now := db.Now()
 		for _, q := range qs {
-			notes, err := json.Marshal(runLists(q.notes))
+			notes, err := json.Marshal(runLists(fitNotes(q.notes)))
 			if err != nil {
 				return errs.Data.Wrap(err)
 			}

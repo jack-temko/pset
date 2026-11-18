@@ -330,3 +330,56 @@ func TestTheRoutes(t *testing.T) {
 		t.Fatalf("a set that isn't there: %d", rec.Code)
 	}
 }
+
+// Notes read from a reference fit the caps the student's own are held to.
+func TestNotesFromAReferenceFitTheCaps(t *testing.T) {
+	long := strings.Repeat("y", maxNote+20)
+	many := make([]string, maxNotes+3)
+	for i := range many {
+		many[i] = "note"
+	}
+	if got := fitNotes(append([]string{long}, many...)); len(got) != maxNotes || len([]rune(got[0])) != maxNote {
+		t.Fatalf("fitted to %d notes, the first %d long", len(got), len([]rune(got[0])))
+	}
+	if _, err := cleanNotes(fitNotes([]string{long})); err != nil {
+		t.Fatalf("a fitted note does not save back: %v", err)
+	}
+}
+
+// On the stream a question says find as a yes or no, and an unpinned page as
+// null, as the reads leave it out.
+func TestAQuestionOnTheStream(t *testing.T) {
+	e := newEnv(t)
+	set := e.must("set.add", AddSet{CourseID: "c1", Title: "Problem set 4"}).ID
+	e.must("question.add", AddQuestions{SetID: set, Drafts: []Draft{{Text: "2.1.4", Find: true}}})
+	q := e.detail(set).Questions[0].ID
+	after := func(action, q string, cols string, args ...any) map[string]any {
+		t.Helper()
+		mark, err := e.s.Latest(bg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := e.s.Write(bg, change.ActorStudent, action, func(tx *sql.Tx) error {
+			_, err := tx.Exec(`UPDATE questions SET `+cols+` WHERE id = ?`, append(args, q)...)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		cs, err := e.s.Since(bg, mark, 10)
+		if err != nil || len(cs) == 0 {
+			t.Fatalf("no change (%v)", err)
+		}
+		var out map[string]any
+		if err := json.Unmarshal(cs[0].After, &out); err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	if got := after("pin", q, "pin_page = ?, find = ?", 95, 0); got["pinPage"] != float64(95) || got["find"] != false {
+		t.Fatalf("pinned: %v", got)
+	}
+	got := after("unpin", q, "pin_page = ?", 0)
+	if v, ok := got["pinPage"]; !ok || v != nil {
+		t.Fatalf("unpinned, pinPage is %v (sent %v), want null", v, ok)
+	}
+}
