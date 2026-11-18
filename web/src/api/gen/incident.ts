@@ -162,9 +162,10 @@ export interface Incident {
   resolvedAt?: string;
   /**
    * Detail is the error's own text, for a bug report: never a key, a
-   * prompt or an answer.
+   * prompt or an answer. Only in a trace, and in what Report answers;
+   * absent on Settings' list.
    */
-  detail: string;
+  detail?: string;
 }
 /**
  * Incidents is Settings' list: the open ones, then the ones resolved in the
@@ -228,12 +229,14 @@ export interface Trace {
    */
   step?: Step;
   /**
-   * Calls are the step's model calls, newest first. Never null.
+   * Calls are the step's model calls, oldest first. Never null.
    */
   calls: Call[];
   /**
    * Changes are the changes to its subject from an hour before it first
-   * happened, oldest first, at most 50. Never null.
+   * happened, oldest first, at most 50. Never null. Each says who changed
+   * what and how, without its after: a trace shows what happened, and the
+   * values are the subject's own.
    */
   changes: Change[];
 }

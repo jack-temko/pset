@@ -98,6 +98,9 @@ func (s *Service) List(ctx context.Context) (Incidents, error) {
 		if err != nil {
 			return Incidents{}, errs.Database.Of(err)
 		}
+		// The list leaves out the detail (up to 16 KB of Go text and stack
+		// each); the trace carries it.
+		i.Detail = ""
 		out.Incidents = append(out.Incidents, i)
 	}
 	return out, errs.Database.Of(rows.Err())
@@ -155,7 +158,7 @@ func (s *Service) Trace(ctx context.Context, id string) (Trace, error) {
 func (s *Service) calls(ctx context.Context, stepID string) ([]Call, error) {
 	rows, err := s.store.DB.QueryContext(ctx, `SELECT at, attempt, model, answered, ms,
 		CASE WHEN counted THEN prompt_tokens + completion_tokens END, CASE WHEN counted THEN cost END, error_id
-		FROM calls WHERE step_id = ? ORDER BY at DESC, id DESC`, stepID)
+		FROM calls WHERE step_id = ? ORDER BY at, id`, stepID)
 	if err != nil {
 		return nil, errs.Database.Wrap(err)
 	}
@@ -199,9 +202,17 @@ func (s *Service) changes(ctx context.Context, i Incident) ([]change.Change, err
 // Report keeps a failure the page had on its own (a crash, a rejected
 // promise, a dead stream) as an incident, born on the page.
 func (s *Service) Report(ctx context.Context, p PageReport) (Incident, error) {
+	// A chain is a handful of links; more is not a failure the catalog made.
+	if len(p.Chain) > maxChain {
+		p.Chain = p.Chain[:maxChain]
+	}
+	if len(p.Links) > maxChain {
+		p.Links = p.Links[:maxChain]
+	}
 	view := errs.Stored{Chain: p.Chain, Links: p.Links}.View()
+	kind, clears := kindOf(view)
 	id, err := s.keep(ctx, record{
-		view: view, kind: kindOf(view), born: BornPage, route: clip(p.Route, maxName), detail: p.Detail,
+		view: view, kind: kind, clears: clears, born: BornPage, route: clip(p.Route, maxName), detail: p.Detail,
 		subjectKind: change.Resource(clip(string(p.SubjectKind), maxName)), subjectID: clip(p.SubjectID, maxName),
 		action: clip(p.Action, maxName),
 	})
@@ -211,19 +222,22 @@ func (s *Service) Report(ctx context.Context, p PageReport) (Incident, error) {
 	return s.Get(ctx, id)
 }
 
-// kindOf is the kind of a failure from its view: its entry's own kind, or
-// else what its status says (errs.KindOf, for a view rather than an error).
-func kindOf(v errs.View) Kind {
-	if e, ok := errs.Lookup(v.ID); ok && e.Kind != "" {
-		return Kind(e.Kind)
+// kindOf is the kind of a failure from its view, and the condition whose
+// return clears it, as errs.KindOf has them for an error: the innermost entry
+// of the chain that has a kind, or else what its status says.
+func kindOf(v errs.View) (Kind, string) {
+	for i := len(v.Chain) - 1; i >= 0; i-- {
+		if e, ok := errs.Lookup(v.Chain[i]); ok && e.Kind != "" {
+			return Kind(e.Kind), e.Clears
+		}
 	}
 	switch {
 	case v.Scope == errs.ScopeField:
-		return Kind(errs.KindYourInput)
+		return Kind(errs.KindYourInput), ""
 	case v.Status >= 500 || v.Status == 0:
-		return Kind(errs.KindOurs)
+		return Kind(errs.KindOurs), ""
 	}
-	return Kind(errs.KindCant)
+	return Kind(errs.KindCant), ""
 }
 
 // clip cuts s to at most n bytes, on a rune boundary.
@@ -237,8 +251,12 @@ func clip(s string, n int) string {
 	return s[:n]
 }
 
-// maxName bounds the route, action and subject the page reports.
-const maxName = 256
+// maxName bounds the route, action and subject the page reports, and
+// maxChain its chain.
+const (
+	maxName  = 256
+	maxChain = 16
+)
 
 // record is one failure to keep.
 type record struct {
@@ -246,10 +264,11 @@ type record struct {
 	kind                      Kind
 	born                      Born
 	route, detail, action, id string
+	clears                    string
 	subjectKind               change.Resource
 	subjectID                 string
 	// alone keeps it as a new incident even when one is open for the same
-	// cause, subject and route: an old job's failure names a book, which no
+	// cause, subject, route and action: an old job's failure names a book, which no
 	// subject here can, so two books' failures must not count as one.
 	alone bool
 }
@@ -272,8 +291,8 @@ func (s *Service) keep(ctx context.Context, r record) (string, error) {
 		err := sql.ErrNoRows
 		if !r.alone {
 			err = tx.QueryRowContext(ctx, `SELECT id FROM incidents WHERE state = 'open' AND born = ? AND route = ?
-			AND json_extract(error, '$.id') = ? AND subject_kind = ? AND subject_id = ?`,
-				string(r.born), r.route, r.view.ID, string(r.subjectKind), r.subjectID).Scan(&open)
+			AND json_extract(error, '$.id') = ? AND subject_kind = ? AND subject_id = ? AND action = ?`,
+				string(r.born), r.route, r.view.ID, string(r.subjectKind), r.subjectID, r.action).Scan(&open)
 		}
 		switch {
 		case err == nil:
@@ -285,14 +304,14 @@ func (s *Service) keep(ctx context.Context, r record) (string, error) {
 		}
 		// The course and set are its subject's, as the subject's last change
 		// names them (as the runner does for a step's incident).
-		_, err = tx.ExecContext(ctx, `INSERT INTO incidents (id, error, kind, subject_kind, subject_id, course_id, set_id, action, born, route, state, first_at, last_at, detail)
+		_, err = tx.ExecContext(ctx, `INSERT INTO incidents (id, error, kind, subject_kind, subject_id, course_id, set_id, action, born, route, state, first_at, last_at, detail, clears)
 			SELECT ?, ?, ?, ?, ?,
 				ifnull((SELECT course_id FROM changes WHERE kind = ? AND res_id = ? ORDER BY seq DESC LIMIT 1), ''),
 				ifnull((SELECT set_id FROM changes WHERE kind = ? AND res_id = ? ORDER BY seq DESC LIMIT 1), ''),
-				?, ?, ?, 'open', ?, ?, ?`,
+				?, ?, ?, 'open', ?, ?, ?, ?`,
 			id, string(raw), string(r.kind), string(r.subjectKind), r.subjectID,
 			string(r.subjectKind), r.subjectID, string(r.subjectKind), r.subjectID,
-			r.action, string(r.born), r.route, now, now, r.detail)
+			r.action, string(r.born), r.route, now, now, r.detail, r.clears)
 		return errs.Database.Of(err)
 	})
 	return id, err
@@ -307,11 +326,15 @@ const maxDetail = 16 << 10
 // when the same failure was already open, so the student is told an id
 // Settings can find.
 func (s *Service) Record(ctx context.Context, r errs.Record) (string, error) {
+	kind, clears := kindOf(r.View)
 	rec := record{
-		view: r.View, kind: kindOf(r.View), born: BornRequest, route: r.Where.Route, detail: r.Detail, id: r.Incident,
-		alone: r.Where.Book != "",
+		view: r.View, kind: kind, clears: clears, born: BornRequest, route: r.Where.Route, action: r.Where.Action,
+		detail: r.Detail, id: r.Incident, alone: r.Where.Book != "",
 	}
+	// An old job's set and question are the old store's ids, which nothing
+	// here can place, so a failure naming a book has no subject.
 	switch {
+	case r.Where.Book != "":
 	case r.Where.Question != "":
 		rec.subjectKind, rec.subjectID = change.ResourceQuestion, r.Where.Question
 	case r.Where.Set != "":

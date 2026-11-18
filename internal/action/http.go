@@ -19,12 +19,14 @@ func (c *Catalog) Routes(mux *http.ServeMux) {
 		return List{Actions: c.Entries()}, nil
 	}))
 	// An action that takes nothing may be sent with no body.
-	mux.HandleFunc("POST /api/actions/{id}", httpx.Reply(func(r *http.Request) (Done, error) {
+	// The path value is {action}, which httpx reports with a failure, so
+	// two actions' failures are two incidents.
+	mux.HandleFunc("POST /api/actions/{action}", httpx.Reply(func(r *http.Request) (Done, error) {
 		body, err := io.ReadAll(http.MaxBytesReader(nil, r.Body, maxInput))
 		if err != nil {
 			return Done{}, errs.InvalidJSON.Wrap(err)
 		}
-		return c.Run(r.Context(), r.PathValue("id"), body)
+		return c.Run(r.Context(), r.PathValue("action"), body)
 	}))
 	mux.HandleFunc("POST /api/undo", httpx.Send(http.StatusOK, func(r *http.Request, in Undo) (Undone, error) {
 		return c.Undo(r.Context(), in.Action, in.Newest)

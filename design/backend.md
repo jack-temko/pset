@@ -319,7 +319,7 @@ it, and replaces the rest of this file at the cut-over (track 9).
 
 ```
 GET  /api/actions             every action, sorted by id: the palette's list
-POST /api/actions/{id}        run it; body is its typed input
+POST /api/actions/{action}        run it; body is its typed input
                               -> {action?, kind?, id?, seq}; action is what Undo takes
 POST /api/undo                {action} or {newest: true} -> {action, undo, entry, said, kind, id, seq}
                               newest: Ctrl+Z, the newest not undone (never an empty action);
@@ -352,10 +352,16 @@ DELETE /api/places/{id}       a draft sent: the place emptied, purged later
   `incident.try_again` reruns a step's own failure or heals the condition one waits
   on; `incident.dismiss` puts one away, and can be undone. A failed request is told
   the id it was kept under, which is the open incident's when it was counted
-  again. A request's incident takes its subject's course and set from the change
-  log; an old job's failure names a book, which no subject can, so it is never
-  counted on another. Known gap: undoing a dismiss after the same failure came back
-  leaves two open incidents for one cause. The old `errlog` list keeps its routes
+  again: the same error on the same route, action and subject (actions share one
+  route, so the action is part of it). Its kind and what clears it are the innermost
+  entry's that has one, as `errs.KindOf`. A request names no subject yet (httpx
+  reports the route and the action), so its course and set are empty; when a request
+  does name one, they come from the subject's last change. An old job's failure
+  names a book, which no subject can, so it has none and is never counted on another.
+  Settings' list leaves out each incident's detail; the trace has it. Known gaps:
+  undoing a dismiss after the same failure came back leaves two open incidents for
+  one cause; every repeat updates its incident, which is a change on the stream, so
+  a page that reloads a failing read on each change would loop (track 8 must not). The old `errlog` list keeps its routes
   for the old screens but takes no new failures.
 
 - **Materials** (`internal/material`): `material.add` takes a staged upload into a

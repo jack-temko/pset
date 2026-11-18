@@ -82,7 +82,7 @@ export const ACTIONS: Record<ActionId, Entry> = {
   },
 };
 
-// What each action takes: the body of POST /api/actions/{id}.
+// What each action takes: the body of POST /api/actions/{action}.
 export interface ActionInputs {
   "course.add": course.Add;
   "course.remove": course.Remove;

@@ -178,7 +178,7 @@ action catalog, its route, Undo and the course actions; 7b places; 7c errors (th
 Settings list, an incident's trace, Try again, the switch that forces an error);
 7d Settings, health, study time, usage and Reset on the new store. Each later track
 adds its own actions, and the catalog's walk test grows with them. Decided
-(Jack had no preference): one route for every action, `POST /api/actions/{id}`;
+(Jack had no preference): one route for every action, `POST /api/actions/{action}`;
 the key and profile move to `store.db` in 7d. For track 8: an action that can't
 be undone writes as PSet, so the stream can't tell it from PSet's own work; a page
 offers Undo only when the action's reply carries an `action`.

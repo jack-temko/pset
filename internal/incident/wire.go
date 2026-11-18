@@ -104,8 +104,9 @@ type Incident struct {
 	// ResolvedAt is when it was resolved (RFC 3339); absent while open.
 	ResolvedAt string `json:"resolvedAt,omitempty"`
 	// Detail is the error's own text, for a bug report: never a key, a
-	// prompt or an answer.
-	Detail string `json:"detail"`
+	// prompt or an answer. Only in a trace, and in what Report answers;
+	// absent on Settings' list.
+	Detail string `json:"detail,omitempty"`
 }
 
 // Incidents is Settings' list: the open ones, then the ones resolved in the
@@ -145,10 +146,12 @@ type Trace struct {
 	Incident Incident `json:"incident"`
 	// Step is the step that failed, when one did.
 	Step *step.Step `json:"step,omitempty"`
-	// Calls are the step's model calls, newest first. Never null.
+	// Calls are the step's model calls, oldest first. Never null.
 	Calls []Call `json:"calls"`
 	// Changes are the changes to its subject from an hour before it first
-	// happened, oldest first, at most 50. Never null.
+	// happened, oldest first, at most 50. Never null. Each says who changed
+	// what and how, without its after: a trace shows what happened, and the
+	// values are the subject's own.
 	Changes []change.Change `json:"changes"`
 }
 

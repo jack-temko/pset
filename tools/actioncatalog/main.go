@@ -78,7 +78,7 @@ func typescript(entries []action.Entry, inputs map[string]action.Input) string {
 		b.WriteString("  },\n")
 	}
 	b.WriteString("};\n\n")
-	b.WriteString("// What each action takes: the body of POST /api/actions/{id}.\n")
+	b.WriteString("// What each action takes: the body of POST /api/actions/{action}.\n")
 	b.WriteString("export interface ActionInputs {\n")
 	for _, e := range entries {
 		in := inputs[e.ID]
@@ -97,7 +97,7 @@ func markdown(entries []action.Entry) string {
 	var b strings.Builder
 	b.WriteString("<!-- Generated from the action catalog (internal/action) by tools/actioncatalog. Do not edit. -->\n\n")
 	b.WriteString("# Actions\n\n")
-	b.WriteString("Everything a student can do, as the catalog declares it. Each runs through `POST /api/actions/{id}`; the undoable ones are taken back by `POST /api/undo`. A key is corrected in the action's declaration, and this table follows.\n\n")
+	b.WriteString("Everything a student can do, as the catalog declares it. Each runs through `POST /api/actions/{action}`; the undoable ones are taken back by `POST /api/undo`. A key is corrected in the action's declaration, and this table follows.\n\n")
 	fmt.Fprintf(&b, "%d actions.\n\n", len(entries))
 	b.WriteString("| Id | Name | Key | Needs | Undoable | Costs |\n")
 	b.WriteString("|---|---|---|---|---|---|\n")

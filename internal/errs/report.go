@@ -15,6 +15,9 @@ type Where struct {
 	Route string
 	// Book, Set and Question are the ids the failure was about, when known.
 	Book, Set, Question string
+	// Action is the catalog action a request ran, when it ran one: a route
+	// that names an action does so as its {action} path value.
+	Action string
 }
 
 // Record is one kept error.

@@ -157,9 +157,9 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 		},
 	})
 
-	// Every error a student is shown is kept here, for Settings to list.
-	// (Failed requests go to the new store's incidents, set below; the old
-	// list keeps its routes for the old screens.)
+	// The old errors list: it keeps its routes for the old screens, but
+	// takes no new failures. Failed requests are the new store's incidents
+	// (errs.SetRecorder, below).
 	failures := errlog.New(d)
 
 	bus := events.NewBus()

@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"testing"
 	"time"
@@ -14,6 +16,8 @@ import (
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
+	"github.com/jackt/pset/internal/httpx"
+	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/runner"
 	"github.com/jackt/pset/internal/step"
 	"github.com/jackt/pset/internal/store"
@@ -119,17 +123,69 @@ func TestAPageReportsKindFollowsItsStatus(t *testing.T) {
 	}
 }
 
+// A wrapped chain takes its kind from its innermost entry that has one, as
+// errs.KindOf does, with the condition that clears it: a feature's failure
+// because no key is saved waits on the student, and heals with the key.
+func TestAWrappedChainWaitsOnItsCause(t *testing.T) {
+	e := newEnv(t)
+	got, err := e.svc.Report(bg, PageReport{Chain: []string{outerOurs.ID, llm.KeyMissing.ID}, Links: []map[string]string{{}, {}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var clears string
+	if err := e.s.DB.QueryRow(`SELECT clears FROM incidents WHERE id = ?`, got.ID).Scan(&clears); err != nil {
+		t.Fatal(err)
+	}
+	if got.Kind != Kind(errs.KindWaitingOnYou) || clears != llm.KeyMissing.Clears {
+		t.Fatalf("kept as %q, cleared by %q", got.Kind, clears)
+	}
+}
+
+// Every action runs through one route, so a failure is grouped by the action
+// it ran too: two actions' failures are two incidents, one action's twice is
+// one counted twice. Settings' list leaves out their detail.
+func TestFailedActionsAreGroupedByAction(t *testing.T) {
+	e := newEnv(t)
+	errs.SetRecorder(e.svc)
+	t.Cleanup(func() { errs.SetRecorder(nil) })
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/actions/{action}", httpx.Reply(func(*http.Request) (int, error) {
+		return 0, errors.New("boom")
+	}))
+	for _, a := range []string{"a.one", "a.one", "a.two"} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/actions/"+a, nil))
+		if rec.Code != http.StatusInternalServerError {
+			t.Fatalf("%s answered %d", a, rec.Code)
+		}
+	}
+	list, err := e.svc.List(bg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	count := map[string]int{}
+	for _, i := range list.Incidents {
+		count[i.Action] = i.Count
+		if i.Detail != "" {
+			t.Fatal("the list carries the detail")
+		}
+	}
+	if len(list.Incidents) != 2 || count["a.one"] != 2 || count["a.two"] != 1 {
+		t.Fatalf("the incidents by action: %v", count)
+	}
+}
+
 // A failed request is recorded once, as an incident about what it named.
 func TestAFailedRequestIsAnIncident(t *testing.T) {
 	e := newEnv(t)
 	errs.SetRecorder(e.svc)
 	t.Cleanup(func() { errs.SetRecorder(nil) })
-	v := errs.Report(bg, errors.New("boom"), errs.Where{Route: "POST /api/actions/{id}", Set: "s1"})
+	v := errs.Report(bg, errors.New("boom"), errs.Where{Route: "POST /api/actions/{action}", Set: "s1"})
 	i, err := e.svc.Get(bg, v.Incident)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if i.Born != BornRequest || i.SubjectKind != change.ResourceSet || i.SubjectID != "s1" || i.Route != "POST /api/actions/{id}" || i.Detail == "" {
+	if i.Born != BornRequest || i.SubjectKind != change.ResourceSet || i.SubjectID != "s1" || i.Route != "POST /api/actions/{action}" || i.Detail == "" {
 		t.Fatalf("the request's incident %+v", i)
 	}
 }
@@ -141,7 +197,7 @@ func TestTheSameFailedRequestIsOneIncident(t *testing.T) {
 	e := newEnv(t)
 	errs.SetRecorder(e.svc)
 	t.Cleanup(func() { errs.SetRecorder(nil) })
-	where := errs.Where{Route: "POST /api/actions/{id}", Set: "s1"}
+	where := errs.Where{Route: "POST /api/actions/{action}", Set: "s1"}
 	first := errs.Report(bg, errors.New("boom"), where)
 	again := errs.Report(bg, errors.New("boom"), where)
 	if again.Incident != first.Incident {
@@ -169,6 +225,10 @@ func TestTwoBooksFailuresAreTwoIncidents(t *testing.T) {
 	}
 }
 
+// outerOurs is a feature's own failure that has a kind of its own, around a
+// cause that has another.
+var outerOurs = errs.Define(errs.Entry{ID: "test.incident_outer", What: "It broke.", Kind: errs.KindOurs})
+
 // fieldOnly is a mistake in what the student typed.
 var fieldOnly = errs.Define(errs.Entry{ID: "test.incident_field", What: "Fix this.", Scope: errs.ScopeField})
 
@@ -178,7 +238,7 @@ func TestRefusalsAreNotIncidents(t *testing.T) {
 	e := newEnv(t)
 	errs.SetRecorder(e.svc)
 	t.Cleanup(func() { errs.SetRecorder(nil) })
-	where := errs.Where{Route: "POST /api/actions/{id}", Set: "s1"}
+	where := errs.Where{Route: "POST /api/actions/{action}", Set: "s1"}
 	if v := errs.Respond(bg, errs.Gone.New("thing", "set"), where); v.Incident != "" {
 		t.Fatalf("a 404 was given incident %s", v.Incident)
 	}
