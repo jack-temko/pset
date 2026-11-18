@@ -12,6 +12,7 @@ import {
   readPlaces,
   resetPlacesForTest,
   RETRY_MS,
+  TRIES,
   WRITE_MS,
   type PlaceInput,
 } from './places';
@@ -233,6 +234,23 @@ describe('writing', () => {
     expect(failed).toHaveBeenCalledTimes(2);
     expect(failed).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'place.bad' }),
+    );
+  });
+});
+
+describe('when the server stays away', () => {
+  it('says so once the tries are spent', async () => {
+    const failed = vi.fn();
+    onPlaceFailed(failed);
+    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+    keepPlace(page(4));
+    await pass(WRITE_MS);
+    await pass(RETRY_MS);
+    await pass(RETRY_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(TRIES);
+    expect(failed).toHaveBeenCalledTimes(1);
+    expect(failed).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'request.unreachable' }),
     );
   });
 });

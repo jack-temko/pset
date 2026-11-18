@@ -30,7 +30,10 @@ import type { Group, Kind, Place, Places } from '@/api/gen/place';
  *   bug; it goes to whoever listens with `onPlaceFailed` (the error module).
  */
 
-/** What the page sends: the server sets the id, the seq and the group. */
+/** What the page sends: the server sets the id, the seq and the group.
+ *  A place on screen has an empty id and an old seq: the page never needs
+ *  either, so nothing should read them. `tabId` belongs on a page or zoom
+ *  only; the server refuses it on any other kind. */
 export type PlaceInput = Omit<Place, 'id' | 'seq' | 'group'>;
 
 /** The kinds that are something the student had not sent: the ones a
@@ -186,17 +189,24 @@ async function write(key: string, input: PlaceInput, keepalive: boolean) {
     await api<Place>('PUT', '/api/places', input, { keepalive });
     s.tries = 0;
   } catch (e) {
-    if (!(e instanceof ApiError) || e.status === 0) {
+    // api() turns a server that didn't answer into status 0; anything else
+    // that isn't an ApiError is the page's own bug, said at once.
+    if (e instanceof ApiError && e.status === 0) {
       s.tries++;
+      if (s.tries >= TRIES) {
+        // Said once the tries are spent, so a lost place is not silent.
+        fail(e);
+        return;
+      }
       // Only when nothing newer is waiting: a newer write replaces it.
-      if (s.pending === undefined && s.tries < TRIES) {
+      if (s.pending === undefined) {
         s.pending = input;
         schedule(key, RETRY_MS);
       }
       return;
     }
     // The owner was removed while the student was on it: nothing to keep.
-    if (e.status === 404) return;
+    if (e instanceof ApiError && e.status === 404) return;
     fail(e);
   }
 }
