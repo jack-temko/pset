@@ -16,6 +16,7 @@ export type ActionId =
   | "material.remove"
   | "material.rename"
   | "material.textbook"
+  | "time.clear"
 ;
 
 export const ACTIONS: Record<ActionId, Entry> = {
@@ -96,6 +97,13 @@ export const ACTIONS: Record<ActionId, Entry> = {
     undoable: true,
     costs: false,
   },
+  "time.clear": {
+    id: "time.clear",
+    name: "Forget time spent",
+    needs: [],
+    undoable: false,
+    costs: false,
+  },
 };
 
 // What each action takes: the body of POST /api/actions/{action}.
@@ -111,4 +119,5 @@ export interface ActionInputs {
   "material.remove": material.Remove;
   "material.rename": material.Rename;
   "material.textbook": material.Textbook;
+  "time.clear": Record<string, never>;
 }

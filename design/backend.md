@@ -334,6 +334,12 @@ GET  /api/materials/{id}/contents  its contents as a tree of headings
 GET  /api/materials/{id}/pages/{n}/image?w=   a page as a JPEG, cached for good
 GET  /api/health              every condition, in condition.All's order, checked
                               where PSet can check it: {condition, name, detail}
+POST /api/time                a stretch of study {id, courseId, kind, started, ended,
+                              questionId?}: the same id again only moves its end on
+GET  /api/time?since=         the week's minutes by kind and by course
+GET  /api/courses/{id}/spend  what the model calls cost, by model: a course's,
+GET  /api/materials/{id}/spend   a material's import, a set's (its problems'
+GET  /api/sets/{id}/spend        included)
 GET  /api/incidents           Settings' list: open, then resolved in the last week
 GET  /api/incidents/{id}      its trace: the incident, its step, the step's model
                               calls and the changes to its subject around it
@@ -355,6 +361,15 @@ DELETE /api/places/{id}       a draft sent: the place emptied, purged later
   credit, provider and disk space are learned from calls and writes. Each fix PSet
   can make is an action: `health.make_data_folder`, `health.get_embeddings`. The key
   and the student's name are in the store's `settings` table (not logged).
+
+- **Time spent** (`internal/study`): the old activity on courses, in the store's
+  `study` table (not logged; it goes with its course). Overlapping stretches count
+  once; a removed course's time is left out. `time.clear` forgets it all (not
+  undoable). Questions and sets worked come with track 5.
+
+- **Spend** (`internal/spend`): the store's `calls`, through the steps that made
+  them, grouped by the model that answered (the one asked for when none did), the
+  most tokens first, with failed and uncounted calls. A thing purged takes its calls.
 
 - **Incidents** (`internal/incident`): failures from steps (the runner), requests
   (errs' recorder: a 5xx is kept, your input and refusals are not) and the page,

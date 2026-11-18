@@ -15,7 +15,9 @@ import (
 	"github.com/jackt/pset/internal/material"
 	"github.com/jackt/pset/internal/place"
 	"github.com/jackt/pset/internal/runner"
+	"github.com/jackt/pset/internal/spend"
 	"github.com/jackt/pset/internal/store"
+	"github.com/jackt/pset/internal/study"
 )
 
 // Options are what the features need beyond the store.
@@ -45,6 +47,8 @@ type Backend struct {
 	Incidents *incident.Service
 	Places    *place.Service
 	Health    *health.Service
+	Study     *study.Service
+	Spend     *spend.Service
 }
 
 // New builds every feature on s. With a nil store and no runner it is the
@@ -66,6 +70,8 @@ func New(s *store.Store, o Options) *Backend {
 		Incidents: incident.New(s, c, o.Runner),
 		Places:    place.New(s),
 		Health:    health.New(hc),
+		Study:     study.New(s, c),
+		Spend:     spend.New(s),
 	}
 }
 
@@ -77,4 +83,6 @@ func (b *Backend) Routes(mux *http.ServeMux) {
 	b.Incidents.Routes(mux)
 	b.Places.Routes(mux)
 	b.Health.Routes(mux)
+	b.Study.Routes(mux)
+	b.Spend.Routes(mux)
 }
