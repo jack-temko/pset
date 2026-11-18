@@ -61,6 +61,9 @@ type Seed struct {
 	MaterialID, UploadID string
 	// IncidentID is an open incident, a step's own.
 	IncidentID string
+	// SetID is a set in the course, QuestionID a question in it, with a
+	// second question after it (so a move moves it).
+	SetID, QuestionID string
 }
 
 // def is a declared action, its input no longer typed.

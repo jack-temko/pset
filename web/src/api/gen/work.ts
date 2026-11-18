@@ -179,6 +179,16 @@ export interface Question {
    */
   notes: Run[][];
   /**
+   * Find is true for a problem looked up in the course's textbooks (it
+   * was typed as a reference, "3.1 #7"); false for one written out in full.
+   */
+  find: boolean;
+  /**
+   * PinPage is the page the student pointed it to ("it's on page 95"),
+   * for its find; absent when they haven't.
+   */
+  pinPage?: number /* int */;
+  /**
    * Done is true once the student has marked it done.
    */
   done: boolean;
@@ -610,4 +620,93 @@ export interface SetQuestion {
    * Label is its label.
    */
   label: string;
+}
+/**
+ * AddSet makes a set in a course.
+ */
+export interface AddSet {
+  courseId: string;
+  title: string;
+  /**
+   * Due is a date (YYYY-MM-DD), or empty.
+   */
+  due: string;
+}
+/**
+ * RenameSet renames a set.
+ */
+export interface RenameSet {
+  id: string;
+  title: string;
+}
+/**
+ * SetDue changes a set's due date; empty clears it.
+ */
+export interface SetDue {
+  id: string;
+  due: string;
+}
+/**
+ * TurnIn marks a set turned in, or not.
+ */
+export interface TurnIn {
+  id: string;
+  turnedIn: boolean;
+}
+/**
+ * RemoveSet removes a set and, with it, its questions.
+ */
+export interface RemoveSet {
+  id: string;
+}
+/**
+ * AddQuestions adds questions at the end of a set. A draft that is a
+ * textbook reference listing several problems ("2.1: 1, 4, 6") becomes
+ * one question each.
+ */
+export interface AddQuestions {
+  setId: string;
+  drafts: Draft[];
+}
+/**
+ * QuestionMark marks a question done, or not.
+ */
+export interface QuestionMark {
+  id: string;
+  done: boolean;
+}
+/**
+ * QuestionReveal opens one help step of a question.
+ */
+export interface QuestionReveal {
+  id: string;
+  reveal: Reveal;
+}
+/**
+ * QuestionMove moves a question to a place in its set, from 0.
+ */
+export interface QuestionMove {
+  id: string;
+  position: number /* int */;
+}
+/**
+ * QuestionNotes replaces a question's notes, one a line.
+ */
+export interface QuestionNotes {
+  id: string;
+  notes: string[];
+}
+/**
+ * RemoveQuestion removes a question.
+ */
+export interface RemoveQuestion {
+  id: string;
+}
+/**
+ * Draft is a question as the student typed it: a reference to look up in
+ * the textbooks (Find), or a problem written out in full.
+ */
+export interface Draft {
+  text: string;
+  find: boolean;
 }

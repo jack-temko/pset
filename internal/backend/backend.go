@@ -18,6 +18,7 @@ import (
 	"github.com/jackt/pset/internal/spend"
 	"github.com/jackt/pset/internal/store"
 	"github.com/jackt/pset/internal/study"
+	"github.com/jackt/pset/internal/work"
 )
 
 // Options are what the features need beyond the store.
@@ -50,6 +51,7 @@ type Backend struct {
 	Health    *health.Service
 	Study     *study.Service
 	Spend     *spend.Service
+	Work      *work.Service
 }
 
 // New builds every feature on s. With a nil store and no runner it is the
@@ -61,7 +63,7 @@ func New(s *store.Store, o Options) *Backend {
 		// A nil runner in the interface would not be nil.
 		hc.Conditions = o.Runner
 	}
-	return &Backend{
+	b := &Backend{
 		store:   s,
 		Actions: c,
 		Courses: course.New(s, c),
@@ -75,6 +77,8 @@ func New(s *store.Store, o Options) *Backend {
 		Study:     study.New(s, c),
 		Spend:     spend.New(s),
 	}
+	b.Work = work.New(work.Config{Store: s, Actions: c, Runner: o.Runner, Seconds: b.Study.QuestionSeconds})
+	return b
 }
 
 // Routes mounts the catalog's routes, every feature's reads, and the store's
@@ -90,4 +94,5 @@ func (b *Backend) Routes(mux *http.ServeMux) {
 	b.Health.Routes(mux)
 	b.Study.Routes(mux)
 	b.Spend.Routes(mux)
+	b.Work.Routes(mux)
 }

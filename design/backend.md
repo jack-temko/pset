@@ -332,6 +332,10 @@ GET  /api/courses/{id}/materials   the course's materials not removed, with thei
 GET  /api/materials/{id}      one material, removed or not (a set may still use it)
 GET  /api/materials/{id}/contents  its contents as a tree of headings
 GET  /api/materials/{id}/pages/{n}/image?w=   a page as a JPEG, cached for good
+GET  /api/courses/{id}/sets   a course's sets, due soonest first, undated last
+GET  /api/sets                every course's sets not turned in, for Home
+GET  /api/sets/{id}           a set's detail: its questions in order (finds and
+                              readings come with track 5b)
 GET  /api/changes             the store's change stream (server-sent events): every
                               change after ?after= or Last-Event-ID, then each as it
                               is logged, and the unlogged events while connected.
@@ -370,6 +374,17 @@ DELETE /api/places/{id}       a draft sent: the place emptied, purged later
   its view (`condition`, `fixAction`), so the page can offer the fix and watch the
   condition. The key
   and the student's name are in the store's `settings` table (not logged).
+
+- **Work** (`internal/work`, track 5a): sets and questions on the store, every
+  change an action: `set.add`, `set.rename`, `set.due`, `set.turn_in`, `set.remove`;
+  `question.add` (drafts at the end; a textbook reference listing several problems
+  becomes one each, in the oldest textbook's numbering, carrying the professor's
+  notes), `question.done`, `question.reveal`, `question.notes`, `question.move`,
+  `question.remove`. A question says whether it is looked up (`find`) and the page
+  the student pointed to (`pinPage`). A removed question keeps its position, so
+  undoing it puts it back where it was and a new question never lands on it. The
+  old homework's rules and words are kept (titles, dates, caps, notes); its pure
+  reference and notes parsing is copied, until the cut-over deletes the old.
 
 - **Time spent** (`internal/study`): the old activity on courses, in the store's
   `study` table (not logged; it goes with its course). Overlapping stretches count

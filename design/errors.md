@@ -4,7 +4,7 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-157 entries.
+166 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
@@ -165,3 +165,12 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `update.source_build` | PSet can't update itself here. | This is a build from source. | Update it by pulling and rebuilding. |  | inline | update |
 | `update.unreadable_release` | Couldn't look for an update. | GitHub's answer wasn't in a shape PSet can read. | Try again later. If it keeps happening, copy the details and report it. | `retry` | inline | update |
 | `update.unsupported_system` | PSet can't update itself here. | Updating itself isn't supported on this system. | Run the installer for the new version instead. |  | inline | update |
+| `work.bad_due_date` | That isn't a date. |  |  |  | field | work |
+| `work.bad_reveal` | There's no help step called {stage}. |  |  |  | field | work |
+| `work.draft_too_long` | One of these is too long for a single question. |  |  |  | field | work |
+| `work.no_drafts` | Write at least one question. |  |  |  | field | work |
+| `work.note_too_long` | Keep each note under {max} characters. |  |  |  | field | work |
+| `work.title_empty` | Give it a title. |  |  |  | field | work |
+| `work.title_too_long` | Keep the title under {max} characters. |  |  |  | field | work |
+| `work.too_many_drafts` | That's more than {max} questions at once. Add them in smaller batches. |  |  |  | field | work |
+| `work.too_many_notes` | Keep it to {max} notes. |  |  |  | field | work |

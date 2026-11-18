@@ -31,13 +31,22 @@ func world(t *testing.T) (*store.Store, *action.Catalog, action.Seed) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { cleanup.Close(s.DB) })
-	seed := action.Seed{CourseID: "c1", MaterialID: "m1", IncidentID: "INC001"}
+	seed := action.Seed{CourseID: "c1", MaterialID: "m1", IncidentID: "INC001", SetID: "s1", QuestionID: "q1"}
 	if err := s.Write(context.Background(), change.ActorPSet, "", func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`INSERT INTO courses (id, name, created_at) VALUES (?, 'ECE 210', ?)`, seed.CourseID, db.Now()); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(`INSERT INTO materials (id, course_id, title, file_hash, added_at) VALUES (?, ?, 'Oppenheim', 'h1', ?)`,
 			seed.MaterialID, seed.CourseID, db.Now()); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`INSERT INTO sets (id, course_id, title, created_at) VALUES (?, ?, 'Problem set 4', ?)`,
+			seed.SetID, seed.CourseID, db.Now()); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`INSERT INTO questions (id, set_id, position, text, label, created_at) VALUES
+			(?, ?, 0, '3.1 #7', '3.1 #7', ?), ('q2', ?, 1, '3.1 #9', '3.1 #9', ?)`,
+			seed.QuestionID, seed.SetID, db.Now(), seed.SetID, db.Now()); err != nil {
 			return err
 		}
 		_, err := tx.Exec(`INSERT INTO incidents (id, error, kind, born, first_at, last_at) VALUES (?, '{"id":"internal.unexpected"}', 'ours', 'step', ?, ?)`,
@@ -279,7 +288,7 @@ func TestARemovalCountsAndUndoSaysWhatStillHides(t *testing.T) {
 		return done
 	}
 	removedCourse := run("course.remove", map[string]string{"id": seed.CourseID})
-	if want := []action.Took{{Kind: change.ResourceMaterial, N: 1}}; !reflect.DeepEqual(removedCourse.Took, want) {
+	if want := []action.Took{{Kind: change.ResourceMaterial, N: 1}, {Kind: change.ResourceSet, N: 1}}; !reflect.DeepEqual(removedCourse.Took, want) {
 		t.Fatalf("removing the course took %+v, want %+v", removedCourse.Took, want)
 	}
 	if _, err := c.Undo(ctx, removedCourse.Action, false); err != nil {
@@ -291,8 +300,8 @@ func TestARemovalCountsAndUndoSaysWhatStillHides(t *testing.T) {
 	if len(removedMaterial.Took) != 0 {
 		t.Fatalf("a material took %+v", removedMaterial.Took)
 	}
-	if again := run("course.remove", map[string]string{"id": seed.CourseID}); len(again.Took) != 0 {
-		t.Fatalf("a course whose only material is removed took %+v", again.Took)
+	if again := run("course.remove", map[string]string{"id": seed.CourseID}); !reflect.DeepEqual(again.Took, []action.Took{{Kind: change.ResourceSet, N: 1}}) {
+		t.Fatalf("a course whose material is removed on its own took %+v, want its set alone", again.Took)
 	}
 	u, err := c.Undo(ctx, removedMaterial.Action, false)
 	if err != nil {
