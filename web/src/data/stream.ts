@@ -15,9 +15,9 @@ import type { Store } from './store';
  * between a read and the connection is missed.
  */
 
-/** Where the store's stream is served. The old bus still has
- *  `/api/events`; this is the route gap 1 in `ideas/backend-courses.md`
- *  asks the backend for, until the cut-over. */
+/** Where the store's stream is served: `GET /api/changes` on `backend`
+ *  (#112, gap 1). The old screens keep the old bus at `/api/events` until
+ *  the cut-over, when this takes that path. */
 export const STREAM_URL = '/api/changes';
 
 /** An event that is not logged, for whoever shows it live. */
