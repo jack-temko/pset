@@ -62,11 +62,13 @@ function errorBody(data: unknown): View {
 }
 
 /** One fetch wrapper for the whole app. JSON in, JSON out; 204 is
- *  `undefined`. A server that doesn't answer at all is `request.unreachable`. */
+ *  `undefined`. A server that doesn't answer at all is `request.unreachable`.
+ *  `keepalive` lets a small write outlive the page (a place, as it closes). */
 export async function api<T>(
   method: string,
   path: string,
   body?: unknown,
+  opts: { keepalive?: boolean } = {},
 ): Promise<T> {
   let res: Response;
   try {
@@ -75,6 +77,7 @@ export async function api<T>(
       headers:
         body === undefined ? undefined : { 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
+      keepalive: opts.keepalive,
     });
   } catch {
     throw new ApiError(0, viewOf('request.unreachable'));
