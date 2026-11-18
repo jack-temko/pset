@@ -109,6 +109,14 @@ func scopeOf(book Book, ref Ref, pages []string) (scope, bool) {
 	end = min(end+scopeSlack, book.PageCount, len(pages))
 	sc.lo, sc.hi = start, end
 	sc.where = fmt.Sprintf("%s (%s to %s)", name, book.Pages.Name(start), book.Pages.Name(end))
+	// Review questions are numbered like the problems (9.1 to 9.10, then
+	// the problems 9.1 on): the same label names two things.
+	for p := start; p <= end; p++ {
+		if hasReviewHeading(pages[p-1]) {
+			sc.hint += " The chapter also has Review Questions, numbered like the problems (the same labels) and printed before them: they are not the problems. Take the one under the \"Problems\" heading, never one under \"Review Questions\"."
+			break
+		}
+	}
 
 	// Where the contents put the part's problems, when they list them.
 	var probLo, probHi int
@@ -185,11 +193,24 @@ func isHeading(line string) bool {
 
 var problemHeading = regexp.MustCompile(`(?i)^\s*(problems|exercises|exercise set(?:\s+[\d.]+)?|problem set(?:\s+[\d.]+)?|homework problems|review problems)\s*[:.]?\s*$`)
 
-// afterHeading is a page's text from its problem heading on.
+var reviewHeading = regexp.MustCompile(`(?i)^\s*review questions\s*$`)
+
+func hasReviewHeading(text string) bool {
+	for _, l := range strings.Split(text, "\n") {
+		if reviewHeading.MatchString(l) {
+			return true
+		}
+	}
+	return false
+}
+
+// afterHeading is a page's text from its problem heading on. A page can
+// carry the word twice, once as its running head above the review
+// questions and once as the real heading: the last is the one.
 func afterHeading(text string) string {
 	lines := strings.Split(text, "\n")
-	for i, l := range lines {
-		if isHeading(l) {
+	for i := len(lines) - 1; i >= 0; i-- {
+		if isHeading(lines[i]) {
 			return strings.Join(lines[i+1:], "\n")
 		}
 	}
