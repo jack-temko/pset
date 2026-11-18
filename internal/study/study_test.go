@@ -91,8 +91,16 @@ func TestTheWeek(t *testing.T) {
 		}
 	}
 	w := e.week(noon.Add(-120 * time.Minute))
-	if w.Homework != 40 || w.Reading != 10 || w.Asking != 0 {
+	if w.Homework != 40 || w.Reading != 10 || w.Asking != 0 || w.Total != 50 {
 		t.Fatalf("by kind %+v", w)
+	}
+	// Reading in one tab while working in another is the same time: the
+	// total is the union, not the parts added up.
+	if err := e.save("e", "c1", KindReading, -50, -40); err != nil {
+		t.Fatal(err)
+	}
+	if w := e.week(noon.Add(-120 * time.Minute)); w.Reading != 20 || w.Total != 50 {
+		t.Fatalf("with overlapping kinds: reading %d (want 20), total %d (want 50)", w.Reading, w.Total)
 	}
 	if len(w.ByCourse) != 2 || w.ByCourse[0] != (CourseMinutes{"c1", 40}) || w.ByCourse[1] != (CourseMinutes{"c2", 10}) {
 		t.Fatalf("by course %+v", w.ByCourse)
@@ -100,7 +108,7 @@ func TestTheWeek(t *testing.T) {
 
 	// A removed course's time is left out.
 	e.write(`UPDATE courses SET removed_at = ? WHERE id = 'c2'`, db.Now())
-	if w := e.week(noon.Add(-120 * time.Minute)); len(w.ByCourse) != 1 || w.Reading != 0 {
+	if w := e.week(noon.Add(-120 * time.Minute)); len(w.ByCourse) != 1 || w.Reading != 10 {
 		t.Fatalf("with c2 removed %+v", w)
 	}
 }

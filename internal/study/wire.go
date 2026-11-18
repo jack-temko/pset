@@ -42,6 +42,10 @@ type Week struct {
 	Homework int `json:"homework"`
 	Reading  int `json:"reading"`
 	Asking   int `json:"asking"`
+	// Total is all the time, every kind's stretches together, an overlap
+	// once (reading in one tab while asking in another): never the parts
+	// added up.
+	Total int `json:"total"`
 	// ByCourse never holds a course with no minutes. Never null.
 	ByCourse []CourseMinutes `json:"byCourse"`
 }

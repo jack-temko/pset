@@ -64,6 +64,12 @@ export interface Week {
   reading: number /* int */;
   asking: number /* int */;
   /**
+   * Total is all the time, every kind's stretches together, an overlap
+   * once (reading in one tab while asking in another): never the parts
+   * added up.
+   */
+  total: number /* int */;
+  /**
    * ByCourse never holds a course with no minutes. Never null.
    */
   byCourse: CourseMinutes[];

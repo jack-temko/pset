@@ -98,6 +98,7 @@ func (s *Service) Week(ctx context.Context, since time.Time) (Week, error) {
 		return Week{}, errs.Database.Wrap(err)
 	}
 	defer cleanup.Close(rows)
+	var all []span
 	byKind := map[Kind][]span{}
 	byCourse := map[string][]span{}
 	for rows.Next() {
@@ -114,12 +115,14 @@ func (s *Service) Week(ctx context.Context, since time.Time) (Week, error) {
 		if !sp.to.After(sp.from) {
 			continue
 		}
+		all = append(all, sp)
 		byKind[k] = append(byKind[k], sp)
 		byCourse[course] = append(byCourse[course], sp)
 	}
 	if err := rows.Err(); err != nil {
 		return Week{}, errs.Database.Wrap(err)
 	}
+	w.Total = minutes(all)
 	w.Homework, w.Reading, w.Asking = minutes(byKind[KindHomework]), minutes(byKind[KindReading]), minutes(byKind[KindAsking])
 	for course, spans := range byCourse {
 		if m := minutes(spans); m > 0 {
