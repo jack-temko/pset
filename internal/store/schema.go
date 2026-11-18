@@ -291,6 +291,21 @@ CREATE TABLE places (
 	UNIQUE (owner_kind, owner_id, kind, tab_id)
 );
 
+-- Time spent (internal/study): stretches of study in a course, sent by the
+-- page as it goes. kind is reading, homework or asking; question_id names
+-- the problem a homework stretch was on. Not logged: no screen shows a
+-- stretch, only sums, and none is undone. It goes with its course.
+CREATE TABLE study (
+	id          TEXT PRIMARY KEY,
+	course_id   TEXT NOT NULL REFERENCES courses (id) ON DELETE CASCADE,
+	kind        TEXT NOT NULL CHECK (kind IN ('reading', 'homework', 'asking')),
+	started     TEXT NOT NULL,
+	ended       TEXT NOT NULL,
+	question_id TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX study_ended ON study (ended);
+CREATE INDEX study_question ON study (question_id) WHERE question_id != '';
+
 -- What the student saved in Settings (internal/settings): the key and
 -- their name, one JSON row each. Not logged: the key must never reach the
 -- change log, and neither is undone.

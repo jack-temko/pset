@@ -17,7 +17,7 @@ the order of work and the tracker. Branch
 | 4     | Courses and materials               | Built (#100); Jack measures (below)         | `material-import`  |
 | 5     | Work: sets, finds, readings, guides | Not started                                 |                    |
 | 6     | Ask                                 | Not started                                 |                    |
-| 7     | Undo, and the rest of the app       | 7a #99, 7b #101, 7c #102; 7d in progress    | `settings-store`   |
+| 7     | Undo, and the rest of the app       | 7a #99, 7b #101, 7c #102, 7d #103; 7d2      | `study-usage`      |
 | 8     | The web data layer and the screens  | Not started                                 |                    |
 | 9     | Cut over                            | Not started                                 |                    |
 

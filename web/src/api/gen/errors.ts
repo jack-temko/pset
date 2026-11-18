@@ -138,6 +138,12 @@ export type ErrorId =
   | "store.not_undoable"
   | "store.nothing_to_undo"
   | "store.rewritten_since"
+  | "study.bad_id"
+  | "study.bad_question_id"
+  | "study.bad_since"
+  | "study.bad_times"
+  | "study.not_homework"
+  | "study.unknown_kind"
   | "update.already_installing"
   | "update.check_unreachable"
   | "update.download_failed"
@@ -1165,6 +1171,42 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 409,
     owner: "store",
+  },
+  "study.bad_id": {
+    what: "Name the stretch with an id of up to 64 characters.",
+    scope: "field",
+    status: 422,
+    owner: "study",
+  },
+  "study.bad_question_id": {
+    what: "A question's id is up to 64 characters.",
+    scope: "field",
+    status: 422,
+    owner: "study",
+  },
+  "study.bad_since": {
+    what: "Say when the week starts, as an RFC 3339 time.",
+    scope: "field",
+    status: 422,
+    owner: "study",
+  },
+  "study.bad_times": {
+    what: "Say when the stretch started and ended, as RFC 3339 times.",
+    scope: "field",
+    status: 422,
+    owner: "study",
+  },
+  "study.not_homework": {
+    what: "Only homework time is for a question.",
+    scope: "field",
+    status: 422,
+    owner: "study",
+  },
+  "study.unknown_kind": {
+    what: "There's no activity called {kind}.",
+    scope: "field",
+    status: 422,
+    owner: "study",
   },
   "update.already_installing": {
     what: "An update is already being installed.",

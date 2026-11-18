@@ -225,3 +225,13 @@ packages:
     frontmatter: |
       // Generated from internal/health/wire.go by tygo. Do not edit.
       import type { Condition } from './condition'
+  - path: github.com/jackt/pset/internal/study
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/study.ts
+    frontmatter: '// Generated from internal/study/wire.go by tygo. Do not edit.'
+  - path: github.com/jackt/pset/internal/spend
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/spend.ts
+    frontmatter: '// Generated from internal/spend/wire.go by tygo. Do not edit.'
