@@ -106,9 +106,9 @@ type Change struct {
 }
 
 // The events on GET /api/changes (/api/events from the cut-over). Only
-// "change" is logged; the others say
-// what is happening right now and are lost on a reconnect, which costs
-// nothing, since the finished result arrives as a change.
+// "change" is logged; the others say what is happening right now and are
+// lost on a reconnect, which costs nothing, since the finished result
+// arrives as a change.
 const (
 	// EventChange carries a Change.
 	EventChange = "change"
