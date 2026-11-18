@@ -68,9 +68,19 @@ export function dispatch(
     case 'change':
       if (isChange(msg.data)) store.apply(msg.data);
       return;
-    case 'resync':
-      store.resync(id > 0 ? id : store.seq);
+    case 'resync': {
+      // Where the log starts now: in the data, else the event's id. Neither
+      // is a log that started again from nothing.
+      const data = msg.data as { seq?: unknown } | undefined;
+      const seq =
+        typeof data?.seq === 'number'
+          ? data.seq
+          : lastEventId !== '' && Number.isFinite(id)
+            ? id
+            : 0;
+      store.resync(seq);
       return;
+    }
     default:
       // Any event with an id says how far the log is: the first one on a
       // new connection says where it starts.
@@ -103,7 +113,9 @@ export function connect(
   let tries = 0;
   let retry: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
+  let wentEarly = false;
   const slow = setTimeout(() => {
+    wentEarly = true;
     store.readAnyway();
   }, OPEN_WAIT_MS);
 
@@ -117,7 +129,12 @@ export function connect(
       clearTimeout(slow);
       tries = 0;
       store.open();
-      if (again && from === 0) store.resync(store.seq);
+      // Reads that went before the stream could tell of changes after them
+      // (it was slow, or gone and with no seq to resume from): read again.
+      if (wentEarly || (again && from === 0)) {
+        wentEarly = false;
+        store.rereadAll();
+      }
     };
     src.onmessage = (ev: MessageEvent<string>) => {
       dispatch(store, ev.data, ev.lastEventId, live);

@@ -146,6 +146,23 @@ describe('the higher seq wins', () => {
     });
   });
 
+  it('starts again when the log is below what the page heard', async () => {
+    const { s, one, def } = world();
+    s.open();
+    s.watchThing(def, 'm1');
+    await tick();
+    one.calls[0]?.resolve(mat(5));
+    await tick();
+    s.heard(600);
+    s.resync(0);
+    await tick();
+    one.calls[1]?.resolve(mat(1, 'Fresh'));
+    await tick();
+    expect(s.thing<Mat>('material', 'm1')).toMatchObject({
+      value: { title: 'Fresh' },
+    });
+  });
+
   it('starts again from a lower seq when the log does', async () => {
     const { s, one, def } = world();
     s.open();
@@ -251,6 +268,34 @@ describe('changes', () => {
     });
   });
 
+  it('reads once more whatever was being read when a step changed', async () => {
+    const { s, one, many, def, list } = world();
+    s.open();
+    s.watchThing(def, 'm1');
+    s.watchList(list);
+    await tick();
+    s.apply(change({ seq: 2, kind: 'step', id: 'st9' }));
+    one.calls[0]?.resolve(mat(1));
+    many.calls[0]?.resolve([mat(1)]);
+    await tick();
+    expect(one.read).toHaveBeenCalledTimes(2);
+    expect(many.read).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps an unwatched list’s picture until it is read again', async () => {
+    const { s, many, list } = world();
+    s.open();
+    const unwatch = s.watchList(list);
+    await tick();
+    many.calls[0]?.resolve([mat(1)]);
+    await tick();
+    unwatch();
+    s.apply(change({ seq: 2 }));
+    expect(s.list<Mat>('materials:c1')).toMatchObject({
+      items: [{ id: 'm1' }],
+    });
+  });
+
   it('shows a patch in every list that holds the thing', async () => {
     const { s, many, list } = world();
     s.open();
@@ -333,6 +378,12 @@ describe('the stream’s messages', () => {
     dispatch(s, JSON.stringify({ type: 'resync' }), '90', live);
     dispatch(
       s,
+      JSON.stringify({ type: 'resync', data: { seq: 0 } }),
+      '90',
+      live,
+    );
+    dispatch(
+      s,
       JSON.stringify({ type: 'step.activity', data: { stepId: 'a' } }),
       '',
       live,
@@ -348,7 +399,9 @@ describe('the stream’s messages', () => {
     expect(s.seq).toBe(120);
     expect(apply).toHaveBeenCalledTimes(1);
     expect(apply).toHaveBeenCalledWith(c);
-    expect(resync).toHaveBeenCalledWith(90);
+    expect(resync).toHaveBeenNthCalledWith(1, 90);
+    // The data's seq wins over an id the browser kept from before.
+    expect(resync).toHaveBeenNthCalledWith(2, 0);
     expect(live).toHaveBeenCalledTimes(1);
     expect(live).toHaveBeenCalledWith({
       type: 'step.activity',

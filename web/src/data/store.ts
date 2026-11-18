@@ -62,7 +62,7 @@ export type ListState<T> =
   | { state: 'failed'; error: View };
 
 /** Whether the page hears about changes. "lost" is a page that reads but
- *  will not see what changes until it is reloaded. */
+ *  hears nothing until the stream opens again (it keeps trying). */
 export type Streaming = 'connecting' | 'open' | 'lost';
 
 interface ThingEntry {
@@ -251,8 +251,13 @@ export class Store {
         l.again = true;
       }
     }
-    // A step's change names only the step: whatever holds it reads again.
-    if (c.kind === 'step') this.refreshHolders(c.id);
+    // A step's change names only the step: whatever holds it reads again,
+    // and so does anything being read now, which may hold it unseen.
+    if (c.kind === 'step') {
+      this.refreshHolders(c.id);
+      for (const t of this.things.values()) if (t.reading) t.again = true;
+      for (const l of this.lists.values()) if (l.reading) l.again = true;
+    }
     if (c.op !== 'changed') {
       for (const l of this.lists.values()) {
         if (l.def.thing.kind === c.kind && l.def.covers(c)) {
@@ -262,8 +267,8 @@ export class Store {
     }
   }
 
-  /** The log no longer reaches back to the page: everything on screen is
-   *  read again, and nothing else is kept. */
+  /** The log no longer reaches back to the page, and starts at `seq`:
+   *  everything on screen is read again, and nothing else is kept. */
   resync(seq: number): void {
     // Below what the page heard, or below a copy it holds: the log can't
     // have gone back, so it started again.
@@ -282,6 +287,13 @@ export class Store {
       this.waiting = [];
     }
     this.heard(seq);
+    this.rereadAll();
+  }
+
+  /** Reads everything on screen again, forgetting the rest: the page may
+   *  have missed changes (it read before the stream opened, or it was
+   *  away), but the log has not started again. */
+  rereadAll(): void {
     for (const [key, e] of this.things) this.refresh(key, e, idOf(key));
     for (const l of this.lists.values()) this.refreshList(l);
   }
@@ -433,7 +445,9 @@ export class Store {
    *  gets a new snapshot, the rest keep theirs (so React skips them). */
   private redrawLists(): void {
     for (const l of this.lists.values()) {
-      if (l.ids !== undefined) {
+      // A list nobody shows keeps its last picture: shown again, it reads
+      // again behind it, and nothing jumps.
+      if (l.ids !== undefined && l.watchers > 0) {
         const items = this.itemsOf(l);
         const was = l.snap.state === 'ready' ? l.snap.items : [];
         if (items.some((v, i) => v !== was[i]) || items.length !== was.length) {
