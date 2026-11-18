@@ -115,7 +115,7 @@ const maxPurgePasses = 8
 // purgeOrder is the removable kinds, parents first and materials last.
 var purgeOrder = []change.Resource{
 	change.ResourceCourse, change.ResourceSet, change.ResourceQuestion, change.ResourceFind,
-	change.ResourceReading, change.ResourceTurn, change.ResourceMemory, change.ResourceMaterial,
+	change.ResourceReading, change.ResourceTurn, change.ResourceMemory, change.ResourceRead, change.ResourceMaterial,
 }
 
 // purgeRemoved deletes the things of kind k removed before the cutoff (the

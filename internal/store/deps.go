@@ -49,6 +49,7 @@ var Links = []Link{
 	{Child: change.ResourceQuestion, Parent: change.ResourceSet, Table: "questions", Column: "set_id"},
 	{Child: change.ResourceFind, Parent: change.ResourceQuestion, Table: "finds", Column: "question_id"},
 	{Child: change.ResourceReading, Parent: change.ResourceQuestion, Table: "readings", Column: "question_id"},
+	{Child: change.ResourceRead, Parent: change.ResourceCourse, Table: "reads", Column: "course_id"},
 	{Child: change.ResourceDocument, Parent: change.ResourceQuestion, Table: "documents", Column: "owner_id", KindColumn: "owner_kind"},
 	{Child: change.ResourceDocument, Parent: change.ResourceTurn, Table: "documents", Column: "owner_id", KindColumn: "owner_kind"},
 
@@ -56,6 +57,8 @@ var Links = []Link{
 	{Child: change.ResourceFind, Parent: change.ResourceFind, Table: "finds", Column: "earlier_id", Kind: Refers},
 	{Child: change.ResourceSet, Parent: change.ResourceMaterial, Table: "sets", Column: "sheet_id", Kind: Refers},
 	{Child: change.ResourceTurn, Parent: change.ResourceDocument, Table: "turns", Column: "answer_id", Kind: Refers},
+	{Child: change.ResourceRead, Parent: change.ResourceMaterial, Table: "reads", Column: "sheet_id", Kind: Refers},
+	{Child: change.ResourceRead, Parent: change.ResourceSet, Table: "reads", Column: "set_id", Kind: Refers},
 }
 
 // nameOf is each kind's table name.
