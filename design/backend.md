@@ -332,10 +332,16 @@ GET  /api/courses/{id}/materials   the course's materials not removed, with thei
 GET  /api/materials/{id}      one material, removed or not (a set may still use it)
 GET  /api/materials/{id}/contents  its contents as a tree of headings
 GET  /api/materials/{id}/pages/{n}/image?w=   a page as a JPEG, cached for good
+GET  /api/courses/{id}/sets   a course's sets, due soonest first, undated last
+GET  /api/sets                every course's sets not turned in, for Home
+GET  /api/sets/{id}           a set's detail: its questions in order (finds and
+                              readings come with track 5b)
 GET  /api/changes             the store's change stream (server-sent events): every
                               change after ?after= or Last-Event-ID, then each as it
                               is logged, and the unlogged events while connected.
                               /api/events from the cut-over
+GET  /api/conditions          every condition as kept, checking nothing: what the
+                              page greys buttons by; changes arrive on the stream
 GET  /api/health              every condition, in condition.All's order, checked
                               where PSet can check it: {condition, name, detail}
 POST /api/time                a stretch of study {id, courseId, kind, started, ended,
@@ -363,8 +369,22 @@ DELETE /api/places/{id}       a draft sent: the place emptied, purged later
   Settings opens, and kept as conditions through the runner (`Holds`, `Lacks`): an
   action that needs a missing one is refused before the student tries. The key,
   credit, provider and disk space are learned from calls and writes. Each fix PSet
-  can make is an action: `health.make_data_folder`, `health.get_embeddings`. The key
+  can make is an action: `health.make_data_folder`, `health.get_embeddings`. An
+  action refused for a missing condition (`action.blocked`) carries them as fields of
+  its view (`condition`, `fixAction`), so the page can offer the fix and watch the
+  condition. The key
   and the student's name are in the store's `settings` table (not logged).
+
+- **Work** (`internal/work`, track 5a): sets and questions on the store, every
+  change an action: `set.add`, `set.rename`, `set.due`, `set.turn_in`, `set.remove`;
+  `question.add` (drafts at the end; a textbook reference listing several problems
+  becomes one each, in the oldest textbook's numbering, carrying the professor's
+  notes), `question.done`, `question.reveal`, `question.notes`, `question.move`,
+  `question.remove`. A question says whether it is looked up (`find`) and the page
+  the student pointed to (`pinPage`). A removed question keeps its position, so
+  undoing it puts it back where it was and a new question never lands on it. The
+  old homework's rules and words are kept (titles, dates, caps, notes); its pure
+  reference and notes parsing is copied, until the cut-over deletes the old.
 
 - **Time spent** (`internal/study`): the old activity on courses, in the store's
   `study` table (not logged; it goes with its course). Overlapping stretches count

@@ -45,6 +45,11 @@ type View struct {
 	Scope  Scope  `json:"scope"`
 	Field  string `json:"field,omitempty"`
 	Ref    string `json:"ref,omitempty"`
+	// Condition is the condition an action waits on, when it was refused for
+	// one (action.blocked), and FixAction the action that fixes it, absent
+	// when none can: the page offers the fix and watches the condition.
+	Condition string `json:"condition,omitempty"`
+	FixAction string `json:"fixAction,omitempty"`
 	// Incident is the short id the error was kept under, when it was.
 	Incident string `json:"incident,omitempty"`
 	// Chain is the ids of every catalog error in the chain, outermost first.
