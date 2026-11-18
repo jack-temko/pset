@@ -263,7 +263,11 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	// What PSet depends on is checked once as it starts (A2 of
 	// ideas/actions-conditions-place-grill.md), and again each time Settings
 	// opens; Ollama can take its timeout, so the server does not wait.
-	go features.Health.AtStart(runCtx)
+	checksDone := make(chan struct{})
+	go func() {
+		features.Health.AtStart(runCtx)
+		close(checksDone)
+	}()
 	purgeDone := make(chan struct{})
 	go func() {
 		purgeDaily(runCtx, work, features.Materials, log)
@@ -306,6 +310,7 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	}
 	// A purge in flight finishes before the store closes.
 	<-purgeDone
+	<-checksDone
 	endHandlers()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

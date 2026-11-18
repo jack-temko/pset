@@ -264,7 +264,7 @@ func TestOutOfCreditPointsAtTheKey(t *testing.T) {
 
 // Saving a key that passed its test tells the runner the key and credit
 // hold again; a failed save tells it nothing.
-func TestSavingAKeyAndAPassingCheckHeal(t *testing.T) {
+func TestSavingAKeyHeals(t *testing.T) {
 	s := newServer(t)
 	var healed []condition.ID
 	s.svc.c.Heal = func(_ context.Context, id condition.ID) { healed = append(healed, id) }

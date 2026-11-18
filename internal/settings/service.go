@@ -52,8 +52,7 @@ type Config struct {
 	// alone: the new backend's store, open beside this one until it takes
 	// Reset over (track 7 of ideas/backend-courses.md).
 	Keep []string
-	// Heal, when set, is told a condition holds again: a key was saved, or a
-	// health check passed. The step runner runs what waited on it.
+	// Heal, when set, is told a condition holds again: a key was saved. The step runner runs what waited on it.
 	Heal func(ctx context.Context, condition condition.ID)
 }
 

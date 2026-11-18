@@ -181,7 +181,10 @@ Settings list, an incident's trace, Try again, the switch that forces an error);
 set), the old usage routes left frozen; study time is a per-course table in the
 store; health reads the conditions and each Fix is an action; Reset moves onto the
 store at the cut-over (track 9), since nobody uses this branch before then. 7d lands
-in two pull requests: health and the key, then study time and usage. Each later track
+in two pull requests: health and the key, then study time and usage. For track 9:
+the key and the name now live in the store, and nothing copies them from the old
+database, so an install that upgrades starts with neither (Jack imports again, and
+saves his key again). Each later track
 adds its own actions, and the catalog's walk test grows with them. Decided
 (Jack had no preference): one route for every action, `POST /api/actions/{action}`;
 the key and profile move to `store.db` in 7d. For track 8: an action that can't

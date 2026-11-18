@@ -27,3 +27,12 @@ checked: their rows are listed as they stand.
 Each is an action, not undoable: `health.make_data_folder` and
 `health.get_embeddings` (Ollama downloads the model, about 270 MB). Each
 checks its condition again once it is done.
+
+A passing check heals only the failures it disproves (`disprovable`): a
+program found disproves it missing, Ollama listing the model disproves it
+unreachable or without the model. An open incident waiting on the condition
+for anything else (Ollama answering an embedding with an error, a write
+refused inside the data folder) keeps it lacking, and its Try again is the way
+back. Each passing check's `Holds` counts a heal even when nothing was broken,
+so a step failing for want of it at that moment runs once more instead of
+waiting: once per Settings open, as before.

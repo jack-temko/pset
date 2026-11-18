@@ -2,14 +2,20 @@ package health
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/jackt/pset/internal/action"
+	"github.com/jackt/pset/internal/change"
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/condition"
+	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/runner"
 	"github.com/jackt/pset/internal/store"
@@ -190,5 +196,89 @@ func TestOllamaDownHasNoFix(t *testing.T) {
 	c := e.check()[condition.IDEmbeddings]
 	if c.Condition.Holds || c.Condition.Fix != "" || c.Condition.Error == nil || c.Condition.Error.ID != llm.EmbedUnreachable.ID {
 		t.Fatalf("ollama down: %+v", c)
+	}
+}
+
+func (e *env) write(q string, args ...any) {
+	e.t.Helper()
+	if err := e.s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
+		_, err := tx.Exec(q, args...)
+		return err
+	}); err != nil {
+		e.t.Fatal(err)
+	}
+}
+
+func (e *env) incidentState(id string) string {
+	e.t.Helper()
+	var state string
+	if err := e.s.DB.QueryRow(`SELECT state FROM incidents WHERE id = ?`, id).Scan(&state); err != nil {
+		e.t.Fatal(err)
+	}
+	return state
+}
+
+// A passing check heals only what it disproves: Tesseract found heals a scan
+// that waited for it, but Ollama listing its model does not heal an
+// embedding Ollama answered with an error, which only a real use can show.
+func TestAPassingCheckHealsOnlyWhatItDisproves(t *testing.T) {
+	e := newEnv(t)
+	now := db.Now()
+	for _, in := range []struct{ id, chain, clears string }{
+		{"SCAN01", `["material.read_failed","condition.scan_reader"]`, "scan_reader"},
+		{"EMBED1", `["material.search_failed","embed.failed"]`, "embeddings"},
+	} {
+		e.write(`INSERT INTO incidents (id, error, kind, born, state, first_at, last_at, clears)
+			VALUES (?, json_object('id', 'x', 'chain', json(?)), 'waiting_on_you', 'step', 'open', ?, ?, ?)`,
+			in.id, in.chain, now, now, in.clears)
+		e.write(`INSERT INTO conditions (id, holds, since, error) VALUES (?, 0, ?, '{"id":"x"}')`, in.clears, now)
+	}
+	got := e.check()
+	if s := e.incidentState("SCAN01"); s != "healed" || !got[condition.IDScanReader].Condition.Holds {
+		t.Fatalf("tesseract found: the scan's incident is %s, the condition %+v", s, got[condition.IDScanReader].Condition)
+	}
+	if s := e.incidentState("EMBED1"); s != "open" || got[condition.IDEmbeddings].Condition.Holds {
+		t.Fatalf("the model listed: Ollama's error is %s, the condition %+v", s, got[condition.IDEmbeddings].Condition)
+	}
+}
+
+// Finding a condition lacking is one change, its error and fix together;
+// once it holds again its fix is gone from the row, not only from the list.
+func TestLackingIsOneChangeAndHoldingDropsTheFix(t *testing.T) {
+	e := newEnv(t)
+	e.ollama.models = nil
+	e.check()
+	var n int
+	var fix string
+	if err := e.s.DB.QueryRow(`SELECT count(*) FROM changes WHERE kind = 'condition' AND res_id = 'embeddings'`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatalf("finding the model missing logged %d changes", n)
+	}
+	if _, err := e.c.Run(bg, fixEmbeddings, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.s.DB.QueryRow(`SELECT fix FROM conditions WHERE id = 'embeddings'`).Scan(&fix); err != nil {
+		t.Fatal(err)
+	}
+	if fix != "" {
+		t.Fatalf("a condition that holds keeps the fix %q", fix)
+	}
+}
+
+// The route lists every condition.
+func TestTheRoute(t *testing.T) {
+	e := newEnv(t)
+	mux := http.NewServeMux()
+	e.svc.Routes(mux)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/health", nil))
+	var h Health
+	if err := json.NewDecoder(rec.Body).Decode(&h); err != nil {
+		t.Fatal(err)
+	}
+	if rec.Code != http.StatusOK || len(h.Checks) != len(condition.All) {
+		t.Fatalf("%d, %d checks", rec.Code, len(h.Checks))
 	}
 }

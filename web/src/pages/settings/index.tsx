@@ -361,19 +361,19 @@ function YouForm({ saved }: { saved: string }) {
 // ---------------------------------------------------------------- health
 
 const HEALTH_NAMES = [
-  'Data directory',
-  'Database',
   'Poppler',
   'Tesseract',
+  'Data folder',
+  'Database',
   'Ollama',
 ];
 
 /** The checks' details name plumbing ("pdftoppm 24.02.0"); the purpose is
  *  ours to say, keyed by check id. */
 const HEALTH_PURPOSE: Record<string, string> = {
-  poppler: 'renders PDF pages',
-  tesseract: 'reads scanned pages',
-  ollama: 'searches your books',
+  pdf_reader: 'renders PDF pages',
+  scan_reader: 'reads scanned pages',
+  embeddings: 'searches your books',
 };
 
 /** The local system, checked on open, Ollama included: it runs on this

@@ -24,7 +24,6 @@ CREATE TABLE settings (
 
 const (
 	keyChat    = "chat"
-	keyEmbed   = "embeddings"
 	keyProfile = "profile"
 )
 

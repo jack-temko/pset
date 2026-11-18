@@ -166,7 +166,10 @@ func (s *Service) checkOne(ctx context.Context, id condition.ID) (string, bool) 
 	if s.c.Conditions != nil {
 		var err error
 		if f.why == nil {
-			err = s.c.Conditions.Holds(ctx, string(id))
+			var proves bool
+			if proves, err = s.disproves(ctx, id); err == nil && proves {
+				err = s.c.Conditions.Holds(ctx, string(id))
+			}
 		} else {
 			err = s.c.Conditions.Lacks(ctx, string(id), f.why, f.fix)
 		}
@@ -174,6 +177,38 @@ func (s *Service) checkOne(ctx context.Context, id condition.ID) (string, bool) 
 		cleanup.Log("health: keep "+string(id), err)
 	}
 	return f.detail, true
+}
+
+// disprovable is, for each check, the catalog errors its passing shows are
+// gone: a program found disproves it missing, Ollama listing the model
+// disproves it unreachable or without it. It does not disprove what only a
+// real use can (Ollama answering an embedding with an error, a write refused
+// somewhere inside the data folder): a passing check never heals those, and
+// their incident keeps its Try again.
+var disprovable = map[condition.ID][]string{
+	condition.IDPDFReader:  {condition.PDFReaderMissing.ID},
+	condition.IDScanReader: {condition.ScanReaderMissing.ID},
+	condition.IDDataFolder: {},
+	condition.IDDatabase:   {},
+	condition.IDEmbeddings: {llm.EmbedUnreachable.ID, EmbedModelMissing.ID},
+}
+
+// disproves is whether a passing check may say its condition holds: no
+// open incident waits on it for a cause the check can't disprove. A
+// condition the check itself found lacking has no incident, so it heals.
+func (s *Service) disproves(ctx context.Context, id condition.ID) (bool, error) {
+	ids, err := json.Marshal(disprovable[id])
+	if err != nil {
+		return false, errs.Data.Wrap(err)
+	}
+	var stuck int
+	err = s.c.Store.DB.QueryRowContext(ctx, `SELECT count(*) FROM incidents i WHERE i.state = 'open' AND i.clears = ?
+		AND NOT EXISTS (SELECT 1 FROM json_each(i.error, '$.chain') c WHERE c.value IN (SELECT value FROM json_each(?)))`,
+		string(id), string(ids)).Scan(&stuck)
+	if err != nil {
+		return false, errs.Database.Wrap(err)
+	}
+	return stuck == 0, nil
 }
 
 // read is every condition kept so far, by id.
