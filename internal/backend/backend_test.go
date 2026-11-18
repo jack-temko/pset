@@ -1,14 +1,19 @@
 package backend
 
 import (
+	"bufio"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackt/pset/internal/action"
 	"github.com/jackt/pset/internal/change"
@@ -183,4 +188,35 @@ func TestNoTwoActionsShareAKey(t *testing.T) {
 		}
 		seen[e.Key] = e.ID
 	}
+}
+
+// The store's change stream is mounted at GET /api/changes: a page that
+// asks from seq 0 gets the changes logged so far, as server-sent events.
+func TestTheChangeStreamIsMounted(t *testing.T) {
+	s, _, seed := world(t)
+	mux := http.NewServeMux()
+	New(s, Options{DataDir: t.TempDir()}).Routes(mux)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/api/changes?after=0", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup.Close(resp.Body)
+	if resp.StatusCode != http.StatusOK || !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/event-stream") {
+		t.Fatalf("GET /api/changes answered %d %q", resp.StatusCode, resp.Header.Get("Content-Type"))
+	}
+	lines := bufio.NewScanner(resp.Body)
+	for lines.Scan() {
+		if strings.HasPrefix(lines.Text(), "data:") && strings.Contains(lines.Text(), seed.CourseID) {
+			return
+		}
+	}
+	t.Fatalf("the stream never sent the course's change (%v)", lines.Err())
 }

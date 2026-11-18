@@ -282,7 +282,7 @@ var noStreaming = errs.Define(errs.Entry{
 	Status: http.StatusInternalServerError,
 })
 
-// Handler is GET /api/events: every change after the page's last seq (the
+// Handler is GET /api/changes (GET /api/events from the cut-over): every change after the page's last seq (the
 // Last-Event-ID header an EventSource sends again on reconnecting, or
 // ?after= on the first connection), then each change as it is logged, and
 // the unlogged events while connected. A change is sent with its seq as the

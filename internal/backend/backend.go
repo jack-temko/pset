@@ -41,6 +41,7 @@ type Options struct {
 
 // Backend is the features and their catalog.
 type Backend struct {
+	store     *store.Store
 	Actions   *action.Catalog
 	Courses   *course.Service
 	Materials *material.Service
@@ -61,6 +62,7 @@ func New(s *store.Store, o Options) *Backend {
 		hc.Conditions = o.Runner
 	}
 	return &Backend{
+		store:   s,
 		Actions: c,
 		Courses: course.New(s, c),
 		Materials: material.New(material.Config{
@@ -75,8 +77,11 @@ func New(s *store.Store, o Options) *Backend {
 	}
 }
 
-// Routes mounts the catalog's routes and every feature's reads.
+// Routes mounts the catalog's routes, every feature's reads, and the store's
+// change stream. The stream is GET /api/changes until the cut-over (track 9),
+// while the old screens keep GET /api/events; then it takes /api/events over.
 func (b *Backend) Routes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /api/changes", b.store.Handler)
 	b.Actions.Routes(mux)
 	b.Courses.Routes(mux)
 	b.Materials.Routes(mux)
