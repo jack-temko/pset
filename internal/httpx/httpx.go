@@ -53,7 +53,7 @@ func Fail(w http.ResponseWriter, r *http.Request, err error) {
 		JSON(w, v.Status, v)
 		return
 	}
-	v := errs.Respond(r.Context(), err, errs.Where{Route: route})
+	v := errs.Respond(r.Context(), err, errs.Where{Route: route, Action: r.PathValue("action")})
 	JSON(w, v.Status, v)
 }
 

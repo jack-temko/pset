@@ -179,11 +179,14 @@ packages:
     output_path: web/src/api/gen/incident.ts
     type_mappings:
       change.Resource: 'Resource'
+      change.Change: 'Change'
       errs.View: 'View'
+      step.Step: 'Step'
     frontmatter: |
       // Generated from internal/incident/wire.go by tygo. Do not edit.
-      import type { Resource } from './change'
+      import type { Change, Resource } from './change'
       import type { View } from './errs'
+      import type { Step } from './step'
   - path: github.com/jackt/pset/internal/condition
     include_files: [wire.go]
     enum_style: union

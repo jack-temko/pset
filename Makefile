@@ -54,6 +54,8 @@ fmt-check:
 # actionlint.
 lint:
 	go tool golangci-lint run
+	# The dev build's own files (cmd/pset/devforce.go) build only with -tags dev.
+	go tool golangci-lint run --build-tags dev ./cmd/pset
 	cd web && npx oxlint --type-aware
 	tools/shellcheck.sh $(SH_FILES)
 	go tool actionlint

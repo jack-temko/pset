@@ -3,6 +3,7 @@ package incident
 import (
 	"github.com/jackt/pset/internal/change"
 	"github.com/jackt/pset/internal/errs"
+	"github.com/jackt/pset/internal/step"
 )
 
 // Kind is the kind of failure, named by its catalog entry; how it looks and
@@ -103,8 +104,9 @@ type Incident struct {
 	// ResolvedAt is when it was resolved (RFC 3339); absent while open.
 	ResolvedAt string `json:"resolvedAt,omitempty"`
 	// Detail is the error's own text, for a bug report: never a key, a
-	// prompt or an answer.
-	Detail string `json:"detail"`
+	// prompt or an answer. Only in a trace, and in what Report answers;
+	// absent on Settings' list.
+	Detail string `json:"detail,omitempty"`
 }
 
 // Incidents is Settings' list: the open ones, then the ones resolved in the
@@ -136,3 +138,52 @@ type PageReport struct {
 	// Action is the id of the action the page was running, if any.
 	Action string `json:"action,omitempty"`
 }
+
+// Trace is an incident opened onto what led to it, for Settings: its step
+// and that step's model calls, and the changes to its subject around it.
+type Trace struct {
+	// Incident is the incident.
+	Incident Incident `json:"incident"`
+	// Step is the step that failed, when one did.
+	Step *step.Step `json:"step,omitempty"`
+	// Calls are the step's model calls, oldest first. Never null.
+	Calls []Call `json:"calls"`
+	// Changes are the changes to its subject from an hour before it first
+	// happened, oldest first, at most 50. Never null. Each says who changed
+	// what and how, without its after: a trace shows what happened, and the
+	// values are the subject's own.
+	Changes []change.Change `json:"changes"`
+}
+
+// Call is one model call a step made, as a trace shows it: never its
+// prompt or its answer.
+type Call struct {
+	// At is when it was made (RFC 3339).
+	At string `json:"at"`
+	// Attempt is which run of the step made it.
+	Attempt int `json:"attempt"`
+	// Model is the model asked; Answered the one that answered, if another.
+	Model    string `json:"model"`
+	Answered string `json:"answered,omitempty"`
+	// Ms is how long it took.
+	Ms int64 `json:"ms"`
+	// Tokens and Cost are what the provider counted; absent when it said
+	// nothing (a failed or stopped call).
+	Tokens *int     `json:"tokens,omitempty"`
+	Cost   *float64 `json:"cost,omitempty"`
+	// ErrorID is the catalog id it failed with, if it did.
+	ErrorID string `json:"errorId,omitempty"`
+}
+
+// The incident actions' inputs (internal/action).
+type (
+	// TryAgain reruns what an incident is about: its step, or, for one that
+	// waits on a condition, everything waiting on it.
+	TryAgain struct {
+		ID string `json:"id"`
+	}
+	// Dismiss puts an incident away.
+	Dismiss struct {
+		ID string `json:"id"`
+	}
+)

@@ -319,7 +319,7 @@ it, and replaces the rest of this file at the cut-over (track 9).
 
 ```
 GET  /api/actions             every action, sorted by id: the palette's list
-POST /api/actions/{id}        run it; body is its typed input
+POST /api/actions/{action}        run it; body is its typed input
                               -> {action?, kind?, id?, seq}; action is what Undo takes
 POST /api/undo                {action} or {newest: true} -> {action, undo, entry, said, kind, id, seq}
                               newest: Ctrl+Z, the newest not undone (never an empty action);
@@ -332,12 +332,37 @@ GET  /api/courses/{id}/materials   the course's materials not removed, with thei
 GET  /api/materials/{id}      one material, removed or not (a set may still use it)
 GET  /api/materials/{id}/contents  its contents as a tree of headings
 GET  /api/materials/{id}/pages/{n}/image?w=   a page as a JPEG, cached for good
+GET  /api/incidents           Settings' list: open, then resolved in the last week
+GET  /api/incidents/{id}      its trace: the incident, its step, the step's model
+                              calls and the changes to its subject around it
+POST /api/incidents           the page's own failure {chain, links, detail, route, ...}
+                              -> the incident it became
+POST /api/dev/force           dev builds only (make dev): {step, error, times}, the
+                              next runs of a step fail with that catalog error
 GET  /api/places?owner=kind:id&owner=...   the places of those things, read once
                               by a tab as it opens
 PUT  /api/places              a place {ownerKind, ownerId, kind, tabId?, ...its
                               fields} -> the place kept
 DELETE /api/places/{id}       a draft sent: the place emptied, purged later
 ```
+
+- **Incidents** (`internal/incident`): failures from steps (the runner), requests
+  (errs' recorder: a 5xx is kept, your input and refusals are not) and the page,
+  in the one `incidents` table, the same cause on the same subject counted again.
+  `incident.try_again` reruns a step's own failure or heals the condition one waits
+  on; `incident.dismiss` puts one away, and can be undone. A failed request is told
+  the id it was kept under, which is the open incident's when it was counted
+  again: the same error on the same route, action and subject (actions share one
+  route, so the action is part of it). Its kind and what clears it are the innermost
+  entry's that has one, as `errs.KindOf`. A request names no subject yet (httpx
+  reports the route and the action), so its course and set are empty; when a request
+  does name one, they come from the subject's last change. An old job's failure
+  names a book, which no subject can, so it has none and is never counted on another.
+  Settings' list leaves out each incident's detail; the trace has it. Known gaps:
+  undoing a dismiss after the same failure came back leaves two open incidents for
+  one cause; every repeat updates its incident, which is a change on the stream, so
+  a page that reloads a failing read on each change would loop (track 8 must not). The old `errlog` list keeps its routes
+  for the old screens but takes no new failures.
 
 - **Materials** (`internal/material`): `material.add` takes a staged upload into a
   course (refused when the course has the same file) and starts its five steps:

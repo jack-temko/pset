@@ -113,6 +113,9 @@ type Runner struct {
 	// healed counts each condition's Holds, so a run that fails for want
 	// of a condition can tell it came back while the run was going.
 	healed map[string]int
+	// forced is the development switch's errors, by step name: the next
+	// runs of that step fail with them (A5 of ideas/errors-grill.md).
+	forced map[step.Name]forcing
 	// failing, in tests, runs inside a failure's write, after it has
 	// decided to wait on a condition and before it commits.
 	failing func()
@@ -146,6 +149,63 @@ func New(s *store.Store, o Options, pipes ...Pipeline) *Runner {
 		r.pipes[p.Kind] = p
 	}
 	return r
+}
+
+// forcing is an error the next runs of a step fail with, and how many.
+type forcing struct {
+	entry *errs.Entry
+	times int
+}
+
+// Force makes the next times runs of the named step fail with entry, so
+// every state can be looked at on a real screen; times 0 stops it. For
+// development only: the route that calls it is built only with the dev
+// tag (A5). A step no pipeline on the runner has is refused, so a typo
+// does not silently force nothing.
+func (r *Runner) Force(name step.Name, entry *errs.Entry, times int) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if !r.hasStep(name) {
+		return errs.Gone.New("thing", "step")
+	}
+	if r.forced == nil {
+		r.forced = map[step.Name]forcing{}
+	}
+	if times <= 0 {
+		delete(r.forced, name)
+		return nil
+	}
+	r.forced[name] = forcing{entry, times}
+	return nil
+}
+
+// hasStep is whether a pipeline on the runner has the named step. The
+// caller holds r.mu.
+func (r *Runner) hasStep(name step.Name) bool {
+	for _, p := range r.pipes {
+		for _, h := range p.Steps {
+			if h.Name == name {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// forcedFor takes one forced failure for a step, if there is one.
+func (r *Runner) forcedFor(name step.Name) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	f, ok := r.forced[name]
+	if !ok {
+		return nil
+	}
+	if f.times--; f.times <= 0 {
+		delete(r.forced, name)
+	} else {
+		r.forced[name] = f
+	}
+	return f.entry.New()
 }
 
 // Add puts a pipeline on the runner, before Run: a feature that starts its
@@ -479,8 +539,8 @@ func (r *Runner) start(ctx context.Context, c candidate, h *Handler) error {
 		defer stop()
 		// What the inputs are as it starts: a failure to read them is this
 		// step's own, not the scheduler's.
-		var err error
-		if h.Input != nil {
+		err := r.forcedFor(run.Name)
+		if err == nil && h.Input != nil {
 			run.hash, err = h.Input(stepCtx, r.store.DB, c.subject)
 		}
 		if err == nil {

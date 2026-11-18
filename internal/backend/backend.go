@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackt/pset/internal/action"
 	"github.com/jackt/pset/internal/course"
+	"github.com/jackt/pset/internal/incident"
 	"github.com/jackt/pset/internal/library"
 	"github.com/jackt/pset/internal/material"
 	"github.com/jackt/pset/internal/place"
@@ -36,6 +37,7 @@ type Backend struct {
 	Actions   *action.Catalog
 	Courses   *course.Service
 	Materials *material.Service
+	Incidents *incident.Service
 	Places    *place.Service
 }
 
@@ -50,7 +52,8 @@ func New(s *store.Store, o Options) *Backend {
 			Store: s, Actions: c, Runner: o.Runner, DataDir: o.DataDir, Tools: o.Tools,
 			ChatModel: o.ChatModel, Embed: o.Embed, EmbedModel: o.EmbedModel,
 		}),
-		Places: place.New(s),
+		Incidents: incident.New(s, c, o.Runner),
+		Places:    place.New(s),
 	}
 }
 
@@ -59,5 +62,6 @@ func (b *Backend) Routes(mux *http.ServeMux) {
 	b.Actions.Routes(mux)
 	b.Courses.Routes(mux)
 	b.Materials.Routes(mux)
+	b.Incidents.Routes(mux)
 	b.Places.Routes(mux)
 }

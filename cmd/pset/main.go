@@ -157,9 +157,10 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 		},
 	})
 
-	// Every error a student is shown is kept here, for Settings to list.
+	// The old errors list: it keeps its routes for the old screens, but
+	// takes no new failures. Failed requests are the new store's incidents
+	// (errs.SetRecorder, below).
 	failures := errlog.New(d)
-	errs.SetRecorder(failures)
 
 	bus := events.NewBus()
 	// The old features' background work waits: it moves onto the step
@@ -216,6 +217,11 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 		Embed: ollama.Embed, EmbedModel: llm.EmbedModel,
 	})
 	features.Routes(mux)
+	// Failed requests are incidents, listed in Settings with the rest.
+	errs.SetRecorder(features.Incidents)
+	if devRoutes != nil {
+		devRoutes(mux, steps)
+	}
 	failures.Routes(mux)
 	cfg.Routes(mux)
 	books.Routes(mux)
@@ -397,6 +403,10 @@ func installTag(dir string) string {
 	sum := sha256.Sum256([]byte(dir))
 	return "pset-" + hex.EncodeToString(sum[:4])
 }
+
+// devRoutes mounts the development switch; set only in a dev build
+// (devforce.go).
+var devRoutes func(*http.ServeMux, *runner.Runner)
 
 // purgeDaily runs the store's purge at start and then once a day: what was
 // removed or changed more than a week ago goes for good.

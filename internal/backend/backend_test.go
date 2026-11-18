@@ -26,13 +26,17 @@ func world(t *testing.T) (*store.Store, *action.Catalog, action.Seed) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { cleanup.Close(s.DB) })
-	seed := action.Seed{CourseID: "c1", MaterialID: "m1"}
+	seed := action.Seed{CourseID: "c1", MaterialID: "m1", IncidentID: "INC001"}
 	if err := s.Write(context.Background(), change.ActorPSet, "", func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`INSERT INTO courses (id, name, created_at) VALUES (?, 'ECE 210', ?)`, seed.CourseID, db.Now()); err != nil {
 			return err
 		}
-		_, err := tx.Exec(`INSERT INTO materials (id, course_id, title, file_hash, added_at) VALUES (?, ?, 'Oppenheim', 'h1', ?)`,
-			seed.MaterialID, seed.CourseID, db.Now())
+		if _, err := tx.Exec(`INSERT INTO materials (id, course_id, title, file_hash, added_at) VALUES (?, ?, 'Oppenheim', 'h1', ?)`,
+			seed.MaterialID, seed.CourseID, db.Now()); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`INSERT INTO incidents (id, error, kind, born, first_at, last_at) VALUES (?, '{"id":"internal.unexpected"}', 'ours', 'step', ?, ?)`,
+			seed.IncidentID, db.Now(), db.Now())
 		return err
 	}); err != nil {
 		t.Fatal(err)

@@ -1,12 +1,15 @@
 // Generated from the action catalog (internal/action) by tools/actioncatalog. Do not edit.
 import type { Entry } from './action';
 import type * as course from './course';
+import type * as incident from './incident';
 import type * as material from './material';
 
 export type ActionId =
   | "course.add"
   | "course.remove"
   | "course.rename"
+  | "incident.dismiss"
+  | "incident.try_again"
   | "material.add"
   | "material.remove"
   | "material.rename"
@@ -34,6 +37,20 @@ export const ACTIONS: Record<ActionId, Entry> = {
     needs: [],
     undoable: true,
     costs: false,
+  },
+  "incident.dismiss": {
+    id: "incident.dismiss",
+    name: "Dismiss",
+    needs: [],
+    undoable: true,
+    costs: false,
+  },
+  "incident.try_again": {
+    id: "incident.try_again",
+    name: "Try again",
+    needs: [],
+    undoable: false,
+    costs: true,
   },
   "material.add": {
     id: "material.add",
@@ -65,11 +82,13 @@ export const ACTIONS: Record<ActionId, Entry> = {
   },
 };
 
-// What each action takes: the body of POST /api/actions/{id}.
+// What each action takes: the body of POST /api/actions/{action}.
 export interface ActionInputs {
   "course.add": course.Add;
   "course.remove": course.Remove;
   "course.rename": course.Rename;
+  "incident.dismiss": incident.Dismiss;
+  "incident.try_again": incident.TryAgain;
   "material.add": material.Add;
   "material.remove": material.Remove;
   "material.rename": material.Rename;

@@ -784,3 +784,66 @@ func TestASiblingsUnreadableInputDoesNotHoldAFinishedStep(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 	}
 }
+
+// The development switch: the next run of a step fails with the error
+// asked for, and the one after runs as it would.
+func TestForceFailsTheNextRunOnly(t *testing.T) {
+	e := newEnv(t)
+	var runs atomic.Int32
+	r := e.runner(nil, ok(stepA, &runs))
+	if err := r.Force(stepA, errs.Unexpected, 1); err != nil {
+		t.Fatal(err)
+	}
+	start(t, r)
+	e.begin(r, "s1")
+	failed := e.wait("s1", stepA, step.StateFailed)
+	if runs.Load() != 0 {
+		t.Fatal("a forced failure ran the handler")
+	}
+	if err := r.TryAgain(bg, failed.incident); err != nil {
+		t.Fatal(err)
+	}
+	e.wait("s1", stepA, step.StateDone)
+	if runs.Load() != 1 {
+		t.Fatalf("after the forced failure the step ran %d times", runs.Load())
+	}
+}
+
+// Forced twice, a step fails twice and then runs; forcing it 0 times stops
+// what was forced; a step no pipeline has is refused.
+func TestForceCountsAndStops(t *testing.T) {
+	e := newEnv(t)
+	var runs atomic.Int32
+	r := e.runner(nil, ok(stepA, &runs))
+	if err := r.Force("no_such_step", errs.Unexpected, 1); !errors.Is(err, errs.Gone) {
+		t.Fatalf("forcing a step no pipeline has: %v", err)
+	}
+	if err := r.Force(stepA, errs.Unexpected, 2); err != nil {
+		t.Fatal(err)
+	}
+	start(t, r)
+	e.begin(r, "s1")
+	for i := range 2 {
+		failed := e.wait("s1", stepA, step.StateFailed)
+		if runs.Load() != 0 {
+			t.Fatalf("forced failure %d ran the handler", i+1)
+		}
+		if err := r.TryAgain(bg, failed.incident); err != nil {
+			t.Fatal(err)
+		}
+	}
+	e.wait("s1", stepA, step.StateDone)
+	if runs.Load() != 1 {
+		t.Fatalf("after two forced failures the step ran %d times", runs.Load())
+	}
+
+	if err := r.Force(stepA, errs.Unexpected, 5); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Force(stepA, errs.Unexpected, 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.forcedFor(stepA); err != nil {
+		t.Fatalf("after forcing 0 times the step still fails: %v", err)
+	}
+}

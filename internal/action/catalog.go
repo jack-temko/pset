@@ -57,6 +57,8 @@ type Seed struct {
 	// MaterialID is a material in the course, not its textbook; UploadID a
 	// PDF staged and not yet added.
 	MaterialID, UploadID string
+	// IncidentID is an open incident, a step's own.
+	IncidentID string
 }
 
 // def is a declared action, its input no longer typed.
