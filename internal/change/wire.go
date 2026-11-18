@@ -105,6 +105,13 @@ type Change struct {
 	Action string `json:"action,omitempty"`
 }
 
+// Resync is a resync event's data: where the log stands now, from which the
+// page starts over. Always sent, 0 included (an emptied log), so the page can
+// tell the log started again even when its seq went down.
+type Resync struct {
+	Seq int64 `json:"seq"`
+}
+
 // The events on GET /api/changes (/api/events from the cut-over). Only
 // "change" is logged; the others say what is happening right now and are
 // lost on a reconnect, which costs nothing, since the finished result
@@ -116,7 +123,7 @@ const (
 	// where the log stood as the page connected, so an action whose reply
 	// seq is at or below it has already caught up.
 	EventOpen = "open"
-	// EventResync says the page asked to replay from a seq the log no
+	// EventResync (data: a Resync) says the page asked to replay from a seq the log no
 	// longer holds (it keeps a week): read everything on screen again.
 	EventResync = "resync"
 	// EventBlockStart carries a BlockStart.

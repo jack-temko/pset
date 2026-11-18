@@ -158,6 +158,14 @@ export interface Change {
   action?: string;
 }
 /**
+ * Resync is a resync event's data: where the log stands now, from which the
+ * page starts over. Always sent, 0 included (an emptied log), so the page can
+ * tell the log started again even when its seq went down.
+ */
+export interface Resync {
+  seq: number /* int64 */;
+}
+/**
  * EventChange carries a Change.
  */
 export const EventChange = "change";
@@ -168,7 +176,7 @@ export const EventChange = "change";
  */
 export const EventOpen = "open";
 /**
- * EventResync says the page asked to replay from a seq the log no
+ * EventResync (data: a Resync) says the page asked to replay from a seq the log no
  * longer holds (it keeps a week): read everything on screen again.
  */
 export const EventResync = "resync";

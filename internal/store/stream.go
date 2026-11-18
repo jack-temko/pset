@@ -342,7 +342,20 @@ func (s *Store) Handler(w http.ResponseWriter, r *http.Request) {
 				if last, err = s.Latest(ctx); err != nil {
 					return false
 				}
-				return send(last, change.EventResync, nil)
+				// Its id and its data say where the log stands, 0 included:
+				// send leaves out an id of 0, and an emptied log's seq is.
+				body, err := json.Marshal(struct {
+					Type string        `json:"type"`
+					Data change.Resync `json:"data"`
+				}{change.EventResync, change.Resync{Seq: last}})
+				if err != nil {
+					return false
+				}
+				if _, err := fmt.Fprintf(w, "id: %d\ndata: %s\n\n", last, body); err != nil {
+					return false
+				}
+				flusher.Flush()
+				return true
 			}
 			if err != nil || len(cs) == 0 {
 				return err == nil
