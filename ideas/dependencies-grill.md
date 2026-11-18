@@ -63,6 +63,9 @@ The `materials.textbook` role is gone (D8); "textbook" is a kind. As built (#108
 ### Open
 
 - What the finder does when a reference matches nothing visible: a "not found" state, defined in track 5's find design.
+- References kept inside JSON are not in the map yet: a turn's `about.questionId` and `remembered[].memoryId` (internal/turn/wire.go). The purge could drop a question or memory a live turn names. Track 6 declares them (a link with a JSON path) when it builds turns, before anything purges them.
+- Two removed things that refer into each other (finds whose earlier finds point at each other, or two removed courses each pointing into the other) are kept forever: the purge has no cycle rule. D10 makes this unlikely; tracks 5 and 8 must not create such references, or the purge learns to free a referrer that is itself purgeable.
+- A problem's removal will count its find and reading ("and its 1 find"): track 5 decides whether one-to-one children belong in the notice.
 
 ## Reversals
 

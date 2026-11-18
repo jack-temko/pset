@@ -246,4 +246,20 @@ func TestHiddenByIsTheNearestOwner(t *testing.T) {
 	if by != "" {
 		t.Fatalf("a turn removed itself is hidden by %q", by)
 	}
+	// A problem's guide, its set and course removed: its set is nearest.
+	write(t, s, `UPDATE sets SET removed_at = ? WHERE id = 's1'`, db.Now())
+	by, err = s.HiddenBy(bg, change.ResourceDocument, "g1")
+	must(t, err)
+	if by != change.ResourceSet {
+		t.Fatalf("a problem's guide, its set and course removed, is hidden by %q", by)
+	}
+	// Only the course removed: reached through the question and the turn
+	// alike, it is the course.
+	write(t, s, `UPDATE sets SET removed_at = '' WHERE id = 's1'`)
+	write(t, s, `UPDATE turns SET removed_at = '' WHERE id = 't'`)
+	by, err = s.HiddenBy(bg, change.ResourceDocument, "g1")
+	must(t, err)
+	if by != change.ResourceCourse {
+		t.Fatalf("a problem's guide, only its course removed, is hidden by %q", by)
+	}
 }

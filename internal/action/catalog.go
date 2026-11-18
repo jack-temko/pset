@@ -317,10 +317,10 @@ func (c *Catalog) Run(ctx context.Context, id string, input json.RawMessage) (Do
 			out.Action = do.id
 		}
 		if d.removes {
+			// Counted after the removal committed: a count that fails leaves
+			// the notice plainer, never the removal reported as failed.
 			owned, err := c.store.Owned(ctx, do.kind, do.resID)
-			if err != nil {
-				return Done{}, err
-			}
+			cleanup.Log("action: count what a removal took", err)
 			for _, o := range owned {
 				out.Took = append(out.Took, Took{Kind: o.Kind, N: o.N})
 			}
@@ -447,10 +447,10 @@ func (c *Catalog) undo(ctx context.Context, action string) (Undone, error) {
 	// A thing brought back that a removed owner still hides says so, or the
 	// undo would look like it did nothing (D6).
 	if out.Kind != "" {
+		// After the undo committed: a read that fails drops the note, never
+		// reports the undo as failed.
 		by, err := c.store.HiddenBy(ctx, out.Kind, out.ID)
-		if err != nil {
-			return Undone{}, err
-		}
+		cleanup.Log("action: what still hides what Undo brought back", err)
 		if by != "" {
 			out.Said = strings.TrimSuffix(out.Said, ".") + ". Its " + ownerWord[by] + " is still removed."
 		}

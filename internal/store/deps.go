@@ -198,8 +198,14 @@ func (s *Store) HiddenBy(ctx context.Context, k change.Resource, id string) (cha
 		}
 	}
 	for _, h := range hiddenBy(k, "?") {
+		// The id is bound once per ? in the SQL: an owner reached two ways (a
+		// document under a question or a turn) names it in each.
+		args := make([]any, strings.Count(h.SQL, "?"))
+		for i := range args {
+			args[i] = id
+		}
 		var hidden bool
-		if err := s.DB.QueryRowContext(ctx, `SELECT `+h.SQL, id).Scan(&hidden); err != nil {
+		if err := s.DB.QueryRowContext(ctx, `SELECT `+h.SQL, args...).Scan(&hidden); err != nil {
 			return "", errs.Database.Wrap(err)
 		}
 		if hidden {
