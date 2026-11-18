@@ -192,8 +192,8 @@ var (
 		Action: errs.ActionReload,
 		Status: http.StatusNotFound,
 	})
-	// Its link carries condition (the id that does not hold) and fixAction
-	// (the action that fixes it, empty when none can) beside its sentences.
+	// Its view carries condition (the id that does not hold) and fixAction
+	// (the action that fixes it, absent when none can) beside its sentences.
 	Blocked = errs.Define(errs.Entry{
 		ID:     "action.blocked",
 		Kind:   errs.KindWaitingOnYou,
@@ -358,11 +358,11 @@ func (c *Catalog) blocked(ctx context.Context, d *def) error {
 			}
 		}
 		// The condition's own sentences, their periods the entry's.
-		// The condition and the action that fixes it ride along (the view's
-		// links), so the page can offer the fix as a button and watch the
-		// condition for the action's button to come back.
-		return Blocked.New("name", d.entry.Name, "why", strings.TrimSuffix(why.What, "."), "fix", strings.TrimSuffix(why.Fix, "."),
-			"condition", string(need), "fixAction", fix)
+		// The condition and the action that fixes it ride along on the view,
+		// so the page can offer the fix as a button and watch the condition
+		// for the action's button to come back.
+		return Blocked.New("name", d.entry.Name, "why", strings.TrimSuffix(why.What, "."), "fix", strings.TrimSuffix(why.Fix, ".")).
+			Waiting(string(need), fix)
 	}
 	return nil
 }

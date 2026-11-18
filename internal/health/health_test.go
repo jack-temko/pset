@@ -148,12 +148,11 @@ func TestAMissingReaderBlocksUntilItIsBack(t *testing.T) {
 	})
 	e.missing["pdftoppm"] = true
 	e.check()
-	_, err := e.c.Run(bg, "test.needs_pdf", nil)
-	if !errors.Is(err, action.Blocked) {
+	if _, err := e.c.Run(bg, "test.needs_pdf", nil); !errors.Is(err, action.Blocked) {
 		t.Fatalf("with Poppler missing: %v", err)
 	}
-	if l := errs.Resolve(err).Links[0]; l["condition"] != string(condition.IDPDFReader) || l["fixAction"] != "" {
-		t.Fatalf("the refusal names %+v, want the PDF reader and no fix", l)
+	if code, v := e.post("test.needs_pdf"); code != http.StatusConflict || v.Condition != string(condition.IDPDFReader) || v.FixAction != "" {
+		t.Fatalf("the refusal over HTTP: %d %+v, want the PDF reader and no fix", code, v)
 	}
 	e.missing["pdftoppm"] = false
 	if c := e.check()[condition.IDPDFReader]; !c.Condition.Holds || c.Condition.Error != nil {
@@ -179,9 +178,8 @@ func TestTheFixesAreActions(t *testing.T) {
 		ID: "test.needs_folder", Name: "Save", Needs: []condition.ID{condition.IDDataFolder},
 		Run: func(context.Context, *action.Do, struct{}) error { return nil },
 	})
-	_, err := e.c.Run(bg, "test.needs_folder", nil)
-	if l := errs.Resolve(err).Links[0]; l["condition"] != string(condition.IDDataFolder) || l["fixAction"] != fixDataFolder {
-		t.Fatalf("the refusal names %+v, want the data folder and its fix", l)
+	if code, v := e.post("test.needs_folder"); code != http.StatusConflict || v.Condition != string(condition.IDDataFolder) || v.FixAction != fixDataFolder {
+		t.Fatalf("the refusal over HTTP: %d %+v, want the data folder and its fix", code, v)
 	}
 	for _, id := range []string{got[condition.IDDataFolder].Condition.Fix, got[condition.IDEmbeddings].Condition.Fix} {
 		if _, err := e.c.Run(bg, id, nil); err != nil {
@@ -314,6 +312,28 @@ func TestTheConditionsAreReadWithoutChecking(t *testing.T) {
 	if rec.Code != http.StatusOK || looked != 0 {
 		t.Fatalf("GET /api/conditions answered %d after %d checks", rec.Code, looked)
 	}
+	var body condition.Conditions
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Conditions) != len(condition.All) || body.Conditions[4].ID != condition.IDScanReader || body.Conditions[4].Holds {
+		t.Fatalf("GET /api/conditions sent %+v", body.Conditions)
+	}
+}
+
+// post runs an action over the catalog's route, as the page does, and reads
+// the refusal it answered with.
+func (e *env) post(id string) (int, errs.View) {
+	e.t.Helper()
+	mux := http.NewServeMux()
+	e.c.Routes(mux)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/actions/"+id, nil))
+	var v errs.View
+	if err := json.NewDecoder(rec.Body).Decode(&v); err != nil {
+		e.t.Fatal(err)
+	}
+	return rec.Code, v
 }
 
 // The route lists every condition.
