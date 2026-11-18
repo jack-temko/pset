@@ -4,7 +4,7 @@ import { errorView } from '@/api/client';
 import type { Undone } from '@/api/gen/action';
 import type { View } from '@/api/gen/errs';
 
-import { undoNewest } from './actions';
+import { redo, undoNewest } from './actions';
 import { useKey } from './keys';
 
 /**
@@ -39,6 +39,18 @@ export async function pressUndo(): Promise<void> {
   }
   // Said outside the try: a listener that throws is its own bug, not a
   // refusal of the undo.
+  set(next);
+}
+
+/** Redo, from the toast: puts back what an undo took back, and says that
+ *  instead. Never rejects. */
+export async function pressRedo(undone: Undone): Promise<void> {
+  let next: Pressed;
+  try {
+    next = { kind: 'undone', undone: await redo(undone) };
+  } catch (e) {
+    next = { kind: 'refused', error: errorView(e) };
+  }
   set(next);
 }
 

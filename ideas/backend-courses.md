@@ -313,6 +313,10 @@ offers Undo only when the action's reply carries an `action`.
     `subjectId`, so its trace has no step or calls and it isn't placed on its
     material. Seen on a fresh import with no key (2026-11-18). The page offers Try
     again by `born`, so it still works.
+12. **Undo's sentence says "set".** `internal/action/catalog.go` names a set "set"
+    in what Undo says ("Its set is still removed."), and the screens say
+    "assignment" to students (the design's word rule). Needed: "assignment" in
+    `ownerWord` and the names Undo says things by.
 
 **9. Cut over.**
 
