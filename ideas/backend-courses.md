@@ -255,6 +255,12 @@ offers Undo only when the action's reply carries an `action`.
    with the catalog). Not blocking: the keys can be drafted in the palette's design
    pass, then written into the catalog. A6's test that no two actions share a key on one screen
    comes with them, on whichever side writes the keys.
+5. **No catalog entry for the page's own failures.** `POST /api/incidents` takes a
+   chain of catalog ids, but the catalog has none for what only the page sees: a
+   crash, a promise nobody caught, a dead stream (`store.no_streaming` is the one
+   close). The page reports them all as `internal.unexpected`, so Settings can't
+   tell a crash from a lost stream. Needed: entries such as `page.crashed` and
+   `page.rejected` (kind ours), and a word on which the stream's loss should use.
 
 **9. Cut over.**
 
