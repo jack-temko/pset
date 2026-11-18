@@ -339,6 +339,11 @@ POST /api/incidents           the page's own failure {chain, links, detail, rout
                               -> the incident it became
 POST /api/dev/force           dev builds only (make dev): {step, error, times}, the
                               next runs of a step fail with that catalog error
+GET  /api/places?owner=kind:id&owner=...   the places of those things, read once
+                              by a tab as it opens
+PUT  /api/places              a place {ownerKind, ownerId, kind, tabId?, ...its
+                              fields} -> the place kept
+DELETE /api/places/{id}       a draft sent: the place emptied, purged later
 ```
 
 - **Incidents** (`internal/incident`): failures from steps (the runner), requests
@@ -361,6 +366,19 @@ POST /api/dev/force           dev builds only (make dev): {step, error, times}, 
   pauses its import; undoing the removal resumes it. Files live in
   `materials/<id>.pdf`; a daily sweep drops those the purge took and uploads past a
   day.
+
+- **Places** (`internal/place`): where the student was, how they laid it out and
+  what they had not sent, one per owner, kind and tab, by the rule in
+  `ideas/actions-conditions-place-grill.md`. A tab's spot in a material is also
+  the material's last spot; sides without a tab empty that tab's spot and zoom.
+  Logged (as PSet, without values) so a new tab finds them, but no action: Ctrl+Z
+  never moves the student back. A change says only the place's id, course and set,
+  and a tab reads places only as it opens (C6): it does not follow them. An empty draft clears its
+  place; a spot written after its tab closed keeps only the material's last; limits
+  on tabs, ids, text and pages keep a page bug from filling the store. Open: a
+  course has one layout, so two browser tabs on one course share it and the last
+  to write wins (C6 says each goes its own way). An emptied place reads as none and the purge takes it, as it takes
+  a place whose owner is gone.
 
 An action is refused before it runs when a condition it needs does not hold
 (`action.blocked`, with the condition's own why and fix). A catalog test runs

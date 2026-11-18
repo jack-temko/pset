@@ -650,3 +650,21 @@ func TestPurgeDropsAnActionsRecordWithItsChanges(t *testing.T) {
 		t.Fatal("the record of an action with no changes left was kept")
 	}
 }
+
+// A place goes once emptied, and with its owner.
+func TestPurgeTakesEmptiedPlacesAndThoseOfWhatIsGone(t *testing.T) {
+	s := open(t)
+	seed(t, s)
+	now := db.Now()
+	exec(t, s, change.ActorPSet, "",
+		`INSERT INTO places (id, owner_kind, owner_id, kind, value, updated_at) VALUES ('kept', 'set', 's1', 'problem', '{"questionId":"q1"}', '`+now+`')`,
+		`INSERT INTO places (id, owner_kind, owner_id, kind, value, updated_at) VALUES ('sent', 'course', 'c1', 'ask_draft', '{}', '`+now+`')`,
+		`INSERT INTO places (id, owner_kind, owner_id, kind, value, updated_at) VALUES ('orphan', 'question', 'q404', 'note_draft', '{"text":"x"}', '`+now+`')`)
+	must(t, s.Purge(bg, time.Now()))
+	if n := count(t, s, `SELECT count(*) FROM places WHERE id IN ('sent', 'orphan')`); n != 0 {
+		t.Fatalf("%d emptied or orphaned places kept", n)
+	}
+	if count(t, s, `SELECT count(*) FROM places WHERE id = 'kept'`) != 1 {
+		t.Fatal("a place still in use was purged")
+	}
+}

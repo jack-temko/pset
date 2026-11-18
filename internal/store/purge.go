@@ -55,6 +55,16 @@ func (s *Store) Purge(ctx context.Context, now time.Time) error {
 			OR (subject_kind = 'turn' AND NOT EXISTS (SELECT 1 FROM turns x WHERE x.id = steps.subject_id))`); err != nil {
 			return errs.Database.Wrap(err)
 		}
+		// Places go with their owner, and once emptied (a draft sent, a tab
+		// closed).
+		if _, err := tx.ExecContext(ctx, `DELETE FROM places WHERE value = '{}'
+			OR (owner_kind = 'course' AND NOT EXISTS (SELECT 1 FROM courses x WHERE x.id = places.owner_id))
+			OR (owner_kind = 'set' AND NOT EXISTS (SELECT 1 FROM sets x WHERE x.id = places.owner_id))
+			OR (owner_kind = 'material' AND NOT EXISTS (SELECT 1 FROM materials x WHERE x.id = places.owner_id))
+			OR (owner_kind = 'question' AND NOT EXISTS (SELECT 1 FROM questions x WHERE x.id = places.owner_id))
+			OR (owner_kind = 'document' AND NOT EXISTS (SELECT 1 FROM documents x WHERE x.id = places.owner_id))`); err != nil {
+			return errs.Database.Wrap(err)
+		}
 		// Incidents are kept while open, plus a week.
 		if _, err := tx.ExecContext(ctx, `DELETE FROM incidents WHERE resolved_at != '' AND resolved_at < ?`, cutoff); err != nil {
 			return errs.Database.Wrap(err)
