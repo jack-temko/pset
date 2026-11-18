@@ -60,7 +60,7 @@ func New(s *store.Store, c *action.Catalog) *Service {
 		Try: func(s action.Seed) Rename { return Rename{ID: s.CourseID, Name: "ECE 210 (spring)"} },
 	})
 	action.Add(c, action.Def[Remove]{
-		ID: "course.remove", Name: "Remove course", Undoable: true,
+		ID: "course.remove", Name: "Remove course", Undoable: true, Removes: true,
 		Undone: "Brought back {name}.", Redone: "Removed {name} again.",
 		Run: svc.remove,
 		Try: func(s action.Seed) Remove { return Remove{ID: s.CourseID} },
