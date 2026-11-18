@@ -252,6 +252,38 @@ func TestAScanIsRecognizedPageByPage(t *testing.T) {
 	}
 }
 
+// A scan's pages are read several at once, as many as there are workers and
+// no more, and every page is kept.
+func TestAScanIsReadSeveralPagesAtOnce(t *testing.T) {
+	e := newEnv(t)
+	e.svc.c.OCRWorkers = 3
+	var mu sync.Mutex
+	var now, most int
+	e.setOCR(func(_ context.Context, page int) (string, error) {
+		mu.Lock()
+		now++
+		most = max(most, now)
+		mu.Unlock()
+		time.Sleep(50 * time.Millisecond)
+		mu.Lock()
+		now--
+		mu.Unlock()
+		return fmt.Sprintf("page %d text", page), nil
+	})
+	e.start()
+	id := e.add("sample-scanned.pdf")
+	e.wait(id, step.NameReadPages, step.StateDone)
+	mu.Lock()
+	got := most
+	mu.Unlock()
+	if got != 3 {
+		t.Fatalf("at most %d pages were read at once, want 3", got)
+	}
+	if n := e.count(`SELECT count(*) FROM pages WHERE material_id = ? AND status = 'text'`, id); n != 6 {
+		t.Fatalf("%d of 6 pages kept", n)
+	}
+}
+
 // Killed while it reads a scan, it resumes where it stopped on the next
 // start: the pages already read are not read again.
 func TestReadingAScanResumesAfterAKill(t *testing.T) {
