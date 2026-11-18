@@ -18,7 +18,7 @@ the order of work and the tracker. Branch
 | 5     | Work: sets, finds, readings, guides | Not started                                 |                    |
 | 6     | Ask                                 | Not started                                 |                    |
 | 7     | Undo, and the rest of the app       | 7a #99, 7b #101, 7c #102, 7d #103; 7d2      | `study-usage`      |
-| 8     | The web data layer and the screens  | Not started                                 |                    |
+| 8     | The web data layer and the screens  | In progress: merged #106; actions and undo  | `actions-and-undo` |
 | 9     | Cut over                            | Not started                                 |                    |
 
 ## Information
@@ -224,6 +224,37 @@ offers Undo only when the action's reply carries an `action`.
   name. A new unit, with its own short design pass first.
 - Then each screen swaps its sample data for the hooks: Home, the course, the work
   pane, the material pane, Ask, Settings. Jack tries each.
+
+**How track 8 goes** (Jack's calls, 2026-11-18):
+
+- The cache is a normalized store of its own (each thing by kind and id, the higher
+  seq kept), not TanStack Query: Jack uses `dev` until track 8 is done, so the new
+  screens need not live beside the old hooks. It waits for the stream (gap 1).
+- Until then: actions and undo, the error module and places, each a pull request
+  into `design` that merges once green and reviewed. The new layer is
+  `web/src/data/`; the old `web/src/api/` hooks go at the cut-over.
+
+**Backend gaps found by track 8**, for the backend session (route or field, and why):
+
+1. **The store's change stream is not mounted.** `main.go` serves the old bus at
+   `GET /api/events`; `store.Handler` is on no route. Needed: mount it on a route of
+   its own until the cut-over (say `GET /api/changes`, replay from `Last-Event-ID`
+   or `?after=`), since the old screens still read the old bus. Blocks the store,
+   every hook and C6's places on a new tab.
+2. **No cheap read of the conditions.** C5 says a blocked action is said at its
+   button, before the student tries, so the page needs every condition while it
+   draws. `GET /api/health` runs the checks each time. Needed: a read that does
+   not check (`GET /api/conditions`, or `GET /api/health?check=false`), and the
+   conditions as changes on the stream so a healed one ungreys its buttons.
+3. **`action.blocked` names no condition.** The refusal carries only sentences
+   ("Add material can't run yet. ..."), so the page can't offer the fix as a
+   button, or tell which condition to watch. Needed: the condition's id and its
+   fix action's id on the reply (fields on the view, or a `blocked` object beside
+   it).
+4. **No action has a key.** Every catalog entry's `key` is empty (A6 drafts them
+   with the catalog). Not blocking: the keys can be drafted in the palette's design
+   pass, then written into the catalog. A6's test that no two actions share a key on one screen
+   comes with them, on whichever side writes the keys.
 
 **9. Cut over.**
 
