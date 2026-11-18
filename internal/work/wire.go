@@ -97,7 +97,10 @@ type Question struct {
 	Seq int64 `json:"seq"`
 	// SetID is the set it belongs to.
 	SetID string `json:"setId"`
-	// Position is its place in the set, from 0.
+	// Position orders it in its set, smaller first. It is not an index: a
+	// removed question keeps its number (undoing the removal puts it back
+	// where it was), so the numbers of those still there can skip. The page
+	// lists questions in order and moves one by its index in that list.
 	Position int `json:"position"`
 	// Text is what the student typed ("3.1 #7", or a problem written out in
 	// full).
@@ -431,7 +434,8 @@ type (
 		ID     string `json:"id"`
 		Reveal Reveal `json:"reveal"`
 	}
-	// QuestionMove moves a question to a place in its set, from 0.
+	// QuestionMove moves a question to a place in its set: its index among
+	// the set's questions as listed, from 0; past either end is that end.
 	QuestionMove struct {
 		ID       string `json:"id"`
 		Position int    `json:"position"`

@@ -111,6 +111,13 @@ func TestSets(t *testing.T) {
 	if _, err := e.run("set.add", AddSet{CourseID: "nope", Title: "Set"}); !errors.Is(err, errs.Gone) {
 		t.Fatalf("a course that isn't there: %v", err)
 	}
+	e.write(`INSERT INTO courses (id, name, created_at, removed_at) VALUES ('c2', 'Old', ?, ?)`, db.Now(), db.Now())
+	if _, err := e.run("set.add", AddSet{CourseID: "c2", Title: "Set"}); !errors.Is(err, errs.Gone) {
+		t.Fatalf("a removed course: %v", err)
+	}
+	if _, err := e.run("set.add", AddSet{CourseID: "c1", Title: strings.Repeat("x", 200)}); err != nil {
+		t.Fatalf("a title of 200: %v", err)
+	}
 	late := e.must("set.add", AddSet{CourseID: "c1", Title: "Problem  set   5", Due: "2026-12-08"}).ID
 	undated := e.must("set.add", AddSet{CourseID: "c1", Title: "Reading"}).ID
 	soon := e.must("set.add", AddSet{CourseID: "c1", Title: "Problem set 4", Due: "2026-12-01"}).ID
@@ -118,7 +125,7 @@ func TestSets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Sets) != 3 || got.Sets[0].ID != soon || got.Sets[1].ID != late || got.Sets[2].ID != undated || got.Sets[1].Title != "Problem set 5" {
+	if len(got.Sets) != 4 || got.Sets[0].ID != soon || got.Sets[1].ID != late || got.Sets[3].ID != undated || got.Sets[1].Title != "Problem set 5" {
 		t.Fatalf("the course's sets %+v", got.Sets)
 	}
 
@@ -131,7 +138,7 @@ func TestSets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(due.Sets) != 2 || due.Sets[0].ID != late {
+	if len(due.Sets) != 3 || due.Sets[0].ID != late {
 		t.Fatalf("Home's sets %+v", due.Sets)
 	}
 	e.must("set.turn_in", TurnIn{ID: soon, TurnedIn: false})
@@ -152,6 +159,10 @@ func TestAddingQuestions(t *testing.T) {
 	set := e.must("set.add", AddSet{CourseID: "c1", Title: "Problem set 4"}).ID
 	if _, err := e.run("question.add", AddQuestions{SetID: set, Drafts: []Draft{{Text: " "}}}); field(err) != "drafts" {
 		t.Fatalf("only blank drafts: %v", err)
+	}
+	// One reference listing more than 40 problems is refused whole.
+	if _, err := e.run("question.add", AddQuestions{SetID: set, Drafts: []Draft{{Text: "2.1: 1-30, 2.2: 1-15", Find: true}}}); errs.Resolve(err).ID != tooManyDrafts.ID {
+		t.Fatalf("one reference to 45 problems: %v", err)
 	}
 	many := make([]Draft, 41)
 	for i := range many {
@@ -188,6 +199,26 @@ func TestAddingQuestions(t *testing.T) {
 	if d := e.detail(set).Set; d.Total != 3 || len(d.Bar) != 3 {
 		t.Fatalf("the set counts %d, bar %d", d.Total, len(d.Bar))
 	}
+}
+
+// positions is each question's stored number, removed ones too.
+func positions(e *env, set string) map[string]int {
+	e.t.Helper()
+	rows, err := e.s.DB.Query(`SELECT id, position FROM questions WHERE set_id = ?`, set)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	defer cleanup.Close(rows)
+	out := map[string]int{}
+	for rows.Next() {
+		var id string
+		var p int
+		if err := rows.Scan(&id, &p); err != nil {
+			e.t.Fatal(err)
+		}
+		out[id] = p
+	}
+	return out
 }
 
 func noteText(notes [][]doc.Run) []string {
@@ -228,14 +259,25 @@ func TestAQuestionsOwnChanges(t *testing.T) {
 		t.Fatalf("the set counts %d done", got.Set.Done)
 	}
 
-	// Move the last first; a removed one in the middle keeps its number.
-	e.must("question.remove", RemoveQuestion{ID: b})
+	// Move the last first; the removed one in the middle keeps its number,
+	// and undoing its removal puts it back between them.
+	removedB := e.must("question.remove", RemoveQuestion{ID: b})
 	e.must("question.move", QuestionMove{ID: c, Position: 0})
-	qs = e.detail(set).Questions
-	if len(qs) != 2 || qs[0].ID != c || qs[1].ID != a {
-		t.Fatalf("after the move %v", []string{qs[0].Label, qs[1].Label})
+	if got := positions(e, set); got[c] != 0 || got[b] != 1 || got[a] != 2 {
+		t.Fatalf("the numbers after the move %v, want c 0, b 1, a 2", got)
 	}
-	if again := e.must("question.move", QuestionMove{ID: c, Position: -5}); again.Action != "" {
+	if _, err := e.c.Undo(bg, removedB.Action, false); err != nil {
+		t.Fatal(err)
+	}
+	if qs = e.detail(set).Questions; len(qs) != 3 || qs[0].ID != c || qs[1].ID != b || qs[2].ID != a {
+		t.Fatalf("after bringing b back: %v", []string{qs[0].Label, qs[1].Label, qs[2].Label})
+	}
+	// Moving down, past the end, is the end.
+	e.must("question.move", QuestionMove{ID: c, Position: 9})
+	if qs = e.detail(set).Questions; qs[2].ID != c {
+		t.Fatalf("moving down past the end: %v", []string{qs[0].Label, qs[1].Label, qs[2].Label})
+	}
+	if again := e.must("question.move", QuestionMove{ID: c, Position: 99}); again.Action != "" {
 		t.Fatal("moving to where it is changed something")
 	}
 }

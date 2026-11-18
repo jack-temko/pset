@@ -158,7 +158,10 @@ export interface Question {
    */
   setId: string;
   /**
-   * Position is its place in the set, from 0.
+   * Position orders it in its set, smaller first. It is not an index: a
+   * removed question keeps its number (undoing the removal puts it back
+   * where it was), so the numbers of those still there can skip. The page
+   * lists questions in order and moves one by its index in that list.
    */
   position: number /* int */;
   /**
@@ -683,7 +686,8 @@ export interface QuestionReveal {
   reveal: Reveal;
 }
 /**
- * QuestionMove moves a question to a place in its set, from 0.
+ * QuestionMove moves a question to a place in its set: its index among
+ * the set's questions as listed, from 0; past either end is that end.
  */
 export interface QuestionMove {
   id: string;

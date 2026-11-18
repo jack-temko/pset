@@ -87,7 +87,9 @@ func (s *Service) Due(ctx context.Context) (Sets, error) {
 }
 
 // Detail is one set with its questions in order, and what PSet found and
-// read for them (track 5b fills Finds and Readings).
+// read for them (track 5b fills Finds and Readings). It asks for each
+// question's guide and steps on its own: at most 40 small lookups on a local
+// database, simpler than a join while 5b and 5c change what a question has.
 func (s *Service) Detail(ctx context.Context, id string) (Detail, error) {
 	got, err := s.setsWhere(ctx, `t.id = ?`, id)
 	if err != nil {

@@ -321,11 +321,8 @@ func (s *Service) addQuestions(ctx context.Context, do *action.Do, in AddQuestio
 		}
 		drafts = append(drafts, d)
 	}
-	switch {
-	case len(drafts) == 0:
+	if len(drafts) == 0 {
 		return noDrafts.New().OnField("drafts")
-	case len(drafts) > maxDrafts:
-		return tooManyDrafts.New("max", strconv.Itoa(maxDrafts)).OnField("drafts")
 	}
 	return do.Write(ctx, change.ResourceSet, in.SetID, func(tx *sql.Tx) error {
 		if err := visible(ctx, tx, change.ResourceSet, in.SetID, "set"); err != nil {
@@ -335,6 +332,15 @@ func (s *Service) addQuestions(ctx context.Context, do *action.Do, in AddQuestio
 		if err != nil {
 			return err
 		}
+		// The cap is on the questions made, as the old homework kept it: one
+		// reference can list many problems.
+		var qs []split
+		for _, d := range drafts {
+			qs = append(qs, splitDraft(d, st)...)
+		}
+		if len(qs) > maxDrafts {
+			return tooManyDrafts.New("max", strconv.Itoa(maxDrafts)).OnField("drafts")
+		}
 		// After every row, removed ones too: a removal undone keeps its
 		// place, and a new one never lands on it.
 		var next int
@@ -342,18 +348,16 @@ func (s *Service) addQuestions(ctx context.Context, do *action.Do, in AddQuestio
 			return errs.Database.Wrap(err)
 		}
 		now := db.Now()
-		for _, d := range drafts {
-			for _, q := range splitDraft(d, st) {
-				notes, err := json.Marshal(runLists(q.notes))
-				if err != nil {
-					return errs.Data.Wrap(err)
-				}
-				if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, set_id, position, text, label, notes, find, created_at)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, uuid.NewString(), in.SetID, next, q.text, q.label, string(notes), q.find, now); err != nil {
-					return errs.Database.Wrap(err)
-				}
-				next++
+		for _, q := range qs {
+			notes, err := json.Marshal(runLists(q.notes))
+			if err != nil {
+				return errs.Data.Wrap(err)
 			}
+			if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, set_id, position, text, label, notes, find, created_at)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, uuid.NewString(), in.SetID, next, q.text, q.label, string(notes), q.find, now); err != nil {
+				return errs.Database.Wrap(err)
+			}
+			next++
 		}
 		return nil
 	})
@@ -443,7 +447,8 @@ func (s *Service) setNotes(ctx context.Context, do *action.Do, in QuestionNotes)
 }
 
 // move puts a question at a place among its set's questions still there,
-// from 0, and numbers them all again in order. A removed question keeps
+// from 0 as the page lists them (an index, not a position: a target past
+// either end is the end), and numbers them all again in order. A removed question keeps
 // its number: undoing its removal puts it back about where it was.
 func (s *Service) move(ctx context.Context, do *action.Do, in QuestionMove) error {
 	return do.Write(ctx, change.ResourceQuestion, in.ID, func(tx *sql.Tx) error {
