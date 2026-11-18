@@ -72,7 +72,8 @@ export const incidentsList: ListDef<Incident> = {
 
 // ---- hooks
 
-/** One thing, kept live while the component is on screen. */
+/** One thing, kept live while the component is on screen. Pass the same
+ *  def each render (a module constant). */
 export function useThing<T extends Held>(
   def: ThingDef<T>,
   id: string,

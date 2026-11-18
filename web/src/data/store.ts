@@ -155,7 +155,13 @@ export class Store {
     }
     const entry = e;
     entry.watchers++;
-    if (entry.ids === undefined && !entry.reading) void this.readList(entry);
+    if (entry.ids === undefined) {
+      if (!entry.reading) void this.readList(entry);
+    } else if (entry.watchers === 1) {
+      // Shown again after a while unwatched: its things may have been
+      // forgotten meanwhile. Read it again behind the copy it shows.
+      void this.readList(entry);
+    }
     return () => {
       entry.watchers--;
     };
@@ -163,7 +169,8 @@ export class Store {
 
   /** Settles once the page has heard of every change up to `seq` (an
    *  action's reply says how far the log had got), or at once if it never
-   *  will. */
+   *  will. Heard, not shown: a thing a change sent to be read again may
+   *  still be on its way. */
   caughtUp(seq: number): Promise<void> {
     if (seq <= this.seq || this.streaming === 'lost') return Promise.resolve();
     return new Promise((done) => {
@@ -180,7 +187,15 @@ export class Store {
     this.changed();
   }
 
-  /** The stream is gone for good: reads still go, nothing is live. */
+  /** The stream is slow to open: reads go anyway, and a change between a
+   *  read and the stream's opening may be missed until the thing changes
+   *  again. */
+  readAnyway(): void {
+    this.opened();
+  }
+
+  /** The stream is gone (until it opens again): reads still go, nothing is
+   *  live. */
   lose(): void {
     this.streaming = 'lost';
     this.opened();
@@ -220,9 +235,20 @@ export class Store {
       ) {
         // The student's own edit, with its values: no read needed.
         this.keep(e, { ...v, ...c.after, seq: c.seq });
+        // A read on its way set off before this edit, and its copy is now
+        // older than the one held: refused when it lands. Whatever made it
+        // set off still needs a read, so one more follows it.
+        if (e.reading) e.again = true;
         this.changed();
       } else if (v === undefined || c.seq > v.seq) {
         this.refresh(key, e, c.id);
+      }
+    }
+    // A list being read may hold this thing, read before the change: it
+    // reads once more.
+    for (const l of this.lists.values()) {
+      if (l.reading && l.def.thing.kind === c.kind && l.def.covers(c)) {
+        l.again = true;
       }
     }
     // A step's change names only the step: whatever holds it reads again.
@@ -239,6 +265,22 @@ export class Store {
   /** The log no longer reaches back to the page: everything on screen is
    *  read again, and nothing else is kept. */
   resync(seq: number): void {
+    // Below what the page heard, or below a copy it holds: the log can't
+    // have gone back, so it started again.
+    const restarted =
+      seq < this.seq ||
+      [...this.things.values()].some((e) => (e.value?.seq ?? 0) > seq);
+    if (restarted) {
+      // The log starts again lower (its database was made again): every seq
+      // the page holds is from before, so each copy held gives way to the
+      // next read, and nothing waits for a seq that won't come.
+      this.seq = seq;
+      for (const e of this.things.values()) {
+        if (e.value !== undefined) e.value = { ...e.value, seq: -1 };
+      }
+      for (const w of this.waiting) w.done();
+      this.waiting = [];
+    }
     this.heard(seq);
     for (const [key, e] of this.things) this.refresh(key, e, idOf(key));
     for (const l of this.lists.values()) this.refreshList(l);

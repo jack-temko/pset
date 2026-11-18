@@ -37,6 +37,18 @@ const isEnvelope = (x: unknown): x is Envelope =>
   'type' in x &&
   typeof x.type === 'string';
 
+const isChange = (x: unknown): x is Change =>
+  typeof x === 'object' &&
+  x !== null &&
+  'seq' in x &&
+  typeof x.seq === 'number' &&
+  'kind' in x &&
+  typeof x.kind === 'string' &&
+  'id' in x &&
+  typeof x.id === 'string' &&
+  'op' in x &&
+  typeof x.op === 'string';
+
 /** One message from the stream, given to the store. Exported for tests. */
 export function dispatch(
   store: Store,
@@ -54,40 +66,82 @@ export function dispatch(
   if (!isEnvelope(msg)) return;
   switch (msg.type) {
     case 'change':
-      store.apply(msg.data as Change);
+      if (isChange(msg.data)) store.apply(msg.data);
       return;
     case 'resync':
-      store.resync(Number.isFinite(id) ? id : store.seq);
+      store.resync(id > 0 ? id : store.seq);
       return;
     default:
-      live({ type: msg.type, data: msg.data });
+      // Any event with an id says how far the log is: the first one on a
+      // new connection says where it starts.
+      if (id > 0) store.heard(id);
+      if (msg.type !== 'open') live({ type: msg.type, data: msg.data });
   }
 }
+
+/** How long reads wait for the stream to open before going anyway. */
+export const OPEN_WAIT_MS = 3000;
+/** Waits before opening a closed stream again: doubling, up to the last. */
+export const RETRY_MS = [1000, 2000, 5000, 10_000, 30_000];
 
 /**
  * Opens the stream for a store; returns its close. `live` hears every event
  * that is not logged.
+ *
+ * EventSource opens a dropped connection again by itself, sending
+ * `Last-Event-ID`. It gives up only on an answer that isn't a stream (the
+ * server restarting behind a proxy, a missing route); then this opens a new
+ * one from the last seq the page heard, after a wait that grows. A page that
+ * had heard none reads everything on screen again once it is back.
  */
 export function connect(
   store: Store,
   live: (e: LiveEvent) => void = () => undefined,
   url: string = STREAM_URL,
 ): () => void {
-  const es = new EventSource(url);
-  es.onopen = () => {
-    store.open();
+  let es: EventSource | undefined;
+  let tries = 0;
+  let retry: ReturnType<typeof setTimeout> | undefined;
+  let closed = false;
+  const slow = setTimeout(() => {
+    store.readAnyway();
+  }, OPEN_WAIT_MS);
+
+  const open = (again: boolean) => {
+    const from = store.seq;
+    const src = new EventSource(
+      again && from > 0 ? `${url}?after=${String(from)}` : url,
+    );
+    es = src;
+    src.onopen = () => {
+      clearTimeout(slow);
+      tries = 0;
+      store.open();
+      if (again && from === 0) store.resync(store.seq);
+    };
+    src.onmessage = (ev: MessageEvent<string>) => {
+      dispatch(store, ev.data, ev.lastEventId, live);
+    };
+    src.onerror = () => {
+      if (src.readyState !== EventSource.CLOSED) {
+        store.reconnecting();
+        return;
+      }
+      store.lose();
+      if (closed) return;
+      const wait = RETRY_MS[Math.min(tries, RETRY_MS.length - 1)] ?? 30_000;
+      tries++;
+      retry = setTimeout(() => {
+        open(true);
+      }, wait);
+    };
   };
-  es.onmessage = (ev: MessageEvent<string>) => {
-    dispatch(store, ev.data, ev.lastEventId, live);
-  };
-  es.onerror = () => {
-    // EventSource tries again by itself after a dropped connection; it
-    // gives up (CLOSED) only on an answer that isn't a stream, such as a
-    // missing route.
-    if (es.readyState === EventSource.CLOSED) store.lose();
-    else store.reconnecting();
-  };
+  open(false);
+
   return () => {
-    es.close();
+    closed = true;
+    clearTimeout(slow);
+    clearTimeout(retry);
+    es?.close();
   };
 }

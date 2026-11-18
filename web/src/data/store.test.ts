@@ -8,6 +8,7 @@ import { dispatch } from './stream';
 
 interface Mat extends Held {
   title: string;
+  pages?: number;
   courseId: string;
   steps?: { id: string }[];
 }
@@ -125,16 +126,45 @@ describe('the higher seq wins', () => {
     await tick();
     one.calls[0]?.resolve(mat(5));
     await tick();
-    // PSet changed it: read again...
+    // PSet read more pages: read again...
     s.apply(change({ seq: 7 }));
     await tick();
     // ...and meanwhile the student's rename arrives.
     s.apply(change({ seq: 8, actor: 'student', after: { title: 'New' } }));
-    // The read lands with the copy from seq 7.
-    one.calls[1]?.resolve(mat(7, 'Book'));
+    // The read lands with the copy from seq 7: refused, it is older...
+    one.calls[1]?.resolve(mat(7, 'Book', { pages: 40 }));
     await tick();
     expect(s.thing<Mat>('material', 'm1')).toMatchObject({
       value: { title: 'New', seq: 8 },
+    });
+    // ...but what PSet changed at 7 is still to show: one more read.
+    expect(one.read).toHaveBeenCalledTimes(3);
+    one.calls[2]?.resolve(mat(8, 'New', { pages: 40 }));
+    await tick();
+    expect(s.thing<Mat>('material', 'm1')).toMatchObject({
+      value: { title: 'New', pages: 40, seq: 8 },
+    });
+  });
+
+  it('starts again from a lower seq when the log does', async () => {
+    const { s, one, def } = world();
+    s.open();
+    s.watchThing(def, 'm1');
+    await tick();
+    one.calls[0]?.resolve(mat(500));
+    await tick();
+    let done = false;
+    void s.caughtUp(900).then(() => {
+      done = true;
+    });
+    s.resync(3);
+    await tick();
+    expect(done).toBe(true);
+    expect(s.seq).toBe(3);
+    one.calls[1]?.resolve(mat(2, 'Fresh'));
+    await tick();
+    expect(s.thing<Mat>('material', 'm1')).toMatchObject({
+      value: { title: 'Fresh', seq: 2 },
     });
   });
 });
@@ -186,6 +216,39 @@ describe('changes', () => {
     s.apply(change({ seq: 4, id: 'm9', courseId: 'c1', op: 'changed' }));
     await tick();
     expect(many.read).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads a list again when one of its things changed during its read', async () => {
+    const { s, many, list } = world();
+    s.open();
+    s.watchList(list);
+    await tick();
+    // Read on the server before this change, answered after it.
+    s.apply(change({ seq: 2 }));
+    many.calls[0]?.resolve([mat(1)]);
+    await tick();
+    expect(many.read).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads a list again when it is shown after a while unwatched', async () => {
+    const { s, many, list } = world();
+    s.open();
+    const unwatch = s.watchList(list);
+    await tick();
+    many.calls[0]?.resolve([mat(1)]);
+    await tick();
+    unwatch();
+    // Its thing changed while nobody showed it: forgotten.
+    s.apply(change({ seq: 2 }));
+    s.watchList(list);
+    await tick();
+    expect(many.read).toHaveBeenCalledTimes(2);
+    many.calls[1]?.resolve([mat(2)]);
+    await tick();
+    expect(s.list<Mat>('materials:c1')).toMatchObject({
+      state: 'ready',
+      items: [{ seq: 2 }],
+    });
   });
 
   it('shows a patch in every list that holds the thing', async () => {
@@ -275,8 +338,18 @@ describe('the stream’s messages', () => {
       live,
     );
     dispatch(s, 'not json', '', live);
+    dispatch(
+      s,
+      JSON.stringify({ type: 'change', data: { nope: 1 } }),
+      '',
+      live,
+    );
+    dispatch(s, JSON.stringify({ type: 'open' }), '120', live);
+    expect(s.seq).toBe(120);
+    expect(apply).toHaveBeenCalledTimes(1);
     expect(apply).toHaveBeenCalledWith(c);
     expect(resync).toHaveBeenCalledWith(90);
+    expect(live).toHaveBeenCalledTimes(1);
     expect(live).toHaveBeenCalledWith({
       type: 'step.activity',
       data: { stepId: 'a' },
