@@ -69,8 +69,9 @@ export function dispatch(
       if (isChange(msg.data)) store.apply(msg.data);
       return;
     case 'resync': {
-      // Where the log starts now: in the data, else the event's id. Neither
-      // is a log that started again from nothing.
+      // Where the log starts now: in the data (#112 always sends it). The
+      // event's id is for a server that doesn't; with neither, the log
+      // started again from nothing.
       const data = msg.data as { seq?: unknown } | undefined;
       const seq =
         typeof data?.seq === 'number'

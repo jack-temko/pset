@@ -291,6 +291,8 @@ describe('changes', () => {
     await tick();
     unwatch();
     s.apply(change({ seq: 2 }));
+    // Anything that redraws: the list must not drop the forgotten thing.
+    s.open();
     expect(s.list<Mat>('materials:c1')).toMatchObject({
       items: [{ id: 'm1' }],
     });
