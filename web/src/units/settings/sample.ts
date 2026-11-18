@@ -12,12 +12,23 @@ export interface Check {
   fix?: string;
 }
 
-export interface KeptError {
-  /** The catalog id, such as E-KEY-401. */
+/** One incident as Settings lists it (ideas/errors-grill.md, E4): open
+ *  ones first, then those resolved in the last week. */
+export interface IncidentRow {
+  /** The short incident id, said when a failure is reported. */
   id: string;
-  reason: string;
-  fix: string;
+  /** What went wrong, in the catalog's words. */
+  what: string;
+  /** How to fix it, when the catalog says. */
+  fix?: string;
+  open: boolean;
+  /** When it last happened, as read: "Today, 9:41 pm". */
   when: string;
+  /** How many times the same cause came back. */
+  count: number;
+  /** Try again can rerun it: a step's failure, or one that waits on a
+   *  condition. */
+  canTry: boolean;
 }
 
 export interface SettingsData {
@@ -41,7 +52,7 @@ export interface SettingsData {
   /** The health checks; undefined while PSet is still running them, which
    *  takes a second or so (the slowest read in Settings). */
   checks?: readonly Check[];
-  errors: readonly KeptError[];
+  incidents: readonly IncidentRow[];
   /** What a reset would take, for the confirms. */
   counts: {
     courses: number;
@@ -111,7 +122,7 @@ export const FINE: SettingsData = {
     allTime: 41.8,
   },
   checks: CHECKS,
-  errors: [],
+  incidents: [],
   counts: {
     courses: 4,
     sets: 31,
@@ -183,24 +194,32 @@ export const CHECK_FAILING: SettingsData = {
 
 export const ERRORS_KEPT: SettingsData = {
   ...FINE,
-  errors: [
+  incidents: [
     {
-      id: 'E-KEY-401',
-      reason: 'The model key was refused',
-      fix: 'Paste the key again under Model key',
+      id: 'k4m2qa',
+      what: 'OpenRouter refused the model key.',
+      fix: 'Paste the key again under OpenRouter key.',
+      open: true,
       when: 'Today, 9:41 pm',
+      count: 3,
+      canTry: true,
     },
     {
-      id: 'E-READ-210',
-      reason: 'A page of Griffiths could not be read',
-      fix: 'Add the file again',
+      id: 'r7d1xc',
+      what: 'A page of Griffiths could not be read.',
+      fix: 'Try again, or add the file again.',
+      open: true,
       when: 'Yesterday, 4:12 pm',
+      count: 1,
+      canTry: true,
     },
     {
-      id: 'E-NET-003',
-      reason: 'PSet could not reach the internet',
-      fix: 'Check the connection, then try again',
+      id: 'n0w8ez',
+      what: 'PSet could not reach the internet.',
+      open: false,
       when: 'Oct 9, 7:30 pm',
+      count: 2,
+      canTry: false,
     },
   ],
 };
@@ -236,10 +255,13 @@ export const STRESS: SettingsData = {
     detail: LONG,
     fix: i % 2 === 0 ? undefined : 'Fix it',
   })),
-  errors: Array.from({ length: 12 }, (_, i) => ({
-    id: `E-LONG-${String(100 + i)}`,
-    reason: LONG,
+  incidents: Array.from({ length: 12 }, (_, i) => ({
+    id: `long${String(10 + i)}`,
+    what: LONG,
     fix: LONG,
+    open: i < 6,
     when: 'Oct 9, 7:30 pm',
+    count: 120 + i,
+    canTry: i % 2 === 0,
   })),
 };

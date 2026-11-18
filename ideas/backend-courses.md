@@ -247,6 +247,13 @@ offers Undo only when the action's reply carries an `action`.
   fake one (Jack, 2026-11-18); only its URL waits for gap 1.
 - Gap 1 was handed to the backend session on 2026-11-18. The palette is on hold
   until Jack needs it.
+- Screens (Jack, 2026-11-18): Settings first, since it is the one screen whose data is
+  all on the new backend; then the course page and Home, whose sets wait for track 5.
+  Each new screen replaces the old route on `design`. Removing is at once with Undo,
+  courses included; only what can't be undone (Clear study history, Reset) still asks.
+  An undo of something not on screen is said in a toast (E3 bent for this one case).
+  Questions about how a screen behaves before its backend is finished aren't worth
+  Jack's time: he uses `dev` until track 8 is done.
 - Until then: actions and undo, the error module and places, each a pull request
   into `design` that merges once green and reviewed. The new layer is
   `web/src/data/`; the old `web/src/api/` hooks go at the cut-over.
@@ -283,6 +290,21 @@ offers Undo only when the action's reply carries an `action`.
    step. The store reads again whatever it holds that lists the step, which works
    for a material on screen and misses a thing not yet read. Not blocking. Nice
    to have: the subject's kind and id on a step's change.
+7. **No spend over a range, and no totals.** Settings shows this month's spend, each
+   course's, and all time; `GET /api/{courses,materials,sets}/{id}/spend` answers one
+   thing, all time, by model. Needed: `GET /api/spend?since=` with a total and a total
+   per course. Until then Settings sums each course's all-time spend, one call each.
+8. **No all-time study total.** Clear study history says how many hours go;
+   `GET /api/time?since=` sums a week. Needed: the all-time minutes (no `since`), and
+   with track 5 the answers that go with them.
+9. **Reset counts the old library.** `GET /api/reset` answers `{books, pages}` from
+   `pset.db`; the dialog counts courses, sets, materials and memories. Comes with
+   Reset's move to the store (track 9): the counts from the dependency map, as a
+   course removal's `took` already does.
+10. **The catalog sends students to a Settings section that isn't there.** `key.missing`
+    (and the other key entries) say "Add your key in Settings, under Connections";
+    the key is under **Model**, as "OpenRouter key". Needed: the catalog's words, no
+    route.
 
 **9. Cut over.**
 
