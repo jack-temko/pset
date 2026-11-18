@@ -226,4 +226,12 @@ func TestARemovalCountsAndUndoSaysWhatStillHides(t *testing.T) {
 	if u.Said != "Brought back Oppenheim. Its course is still removed." {
 		t.Fatalf("undo said %q", u.Said)
 	}
+	// Redoing the removal removes it again: no note, it is removed itself.
+	redo, err := c.Undo(ctx, u.Undo, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if redo.Said != "Removed Oppenheim again." {
+		t.Fatalf("redo said %q", redo.Said)
+	}
 }

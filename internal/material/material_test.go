@@ -616,6 +616,34 @@ func TestDetectionShelvesUntilTheStudentMovesIt(t *testing.T) {
 	}
 }
 
+// A removed material keeps serving what points into it (D3 of
+// ideas/dependencies-grill.md): its pages' text and images, its contents
+// and search, for the finds that still show its pages.
+func TestARemovedMaterialStillServesItsPages(t *testing.T) {
+	e := newEnv(t)
+	e.start()
+	id := e.add("sample-digital.pdf")
+	e.wait(id, step.NameSearch, step.StateDone)
+	if err := e.s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
+		_, err := tx.Exec(`UPDATE materials SET removed_at = ? WHERE id = ?`, db.Now(), id)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if m, err := e.svc.Get(bg, id); err != nil || m.RemovedAt == "" {
+		t.Fatalf("the removed material: %+v %v", m, err)
+	}
+	if text, err := e.svc.PageText(bg, id, 1); err != nil || text == "" {
+		t.Fatalf("its page 1's text %q (%v)", text, err)
+	}
+	if img, err := e.svc.PageImage(bg, id, 1, 400); err != nil || len(img) == 0 {
+		t.Fatalf("its page 1's image: %d bytes (%v)", len(img), err)
+	}
+	if _, err := e.svc.Contents(bg, id); err != nil {
+		t.Fatalf("its contents: %v", err)
+	}
+}
+
 // The routes: an upload staged by multipart, then the course's list, a
 // material's contents and a page image, over HTTP.
 func TestTheRoutes(t *testing.T) {

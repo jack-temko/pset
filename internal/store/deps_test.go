@@ -10,6 +10,16 @@ import (
 	"github.com/jackt/pset/internal/db"
 )
 
+// rowsOwned are the rows that are no thing of the change log but go with
+// their owner: by a cascading foreign key, not the map.
+var rowsOwned = []struct{ table, column, parent string }{
+	{"pages", "material_id", "materials"},
+	{"sections", "material_id", "materials"},
+	{"embeddings", "material_id", "materials"},
+	{"calls", "step_id", "steps"},
+	{"study", "course_id", "courses"},
+}
+
 // notLinks are the columns that name another row but are no link of the
 // map, each with why. A new *_id column must be a link or listed here, so a
 // new table can't leave a dependency undeclared.
@@ -55,6 +65,14 @@ func TestTheMapMatchesTheSchema(t *testing.T) {
 			l.Table, l.Column, nameOf(l.Parent)).Scan(&cascades))
 		if cascades != 1 {
 			t.Errorf("%s.%s owns-links %s but is not a foreign key that cascades", l.Table, l.Column, l.Parent)
+		}
+	}
+	for _, r := range rowsOwned {
+		var cascades int
+		must(t, s.DB.QueryRow(`SELECT count(*) FROM pragma_foreign_key_list(?) WHERE "from" = ? AND "table" = ? AND on_delete = 'CASCADE'`,
+			r.table, r.column, r.parent).Scan(&cascades))
+		if cascades != 1 {
+			t.Errorf("%s.%s should go with %s by a cascading foreign key", r.table, r.column, r.parent)
 		}
 	}
 	for table, cs := range cols {
@@ -167,12 +185,19 @@ func TestThePurgeKeepsWhatIsStillReferred(t *testing.T) {
 	if count("sets", "s1") != 1 || count("materials", "m") != 1 {
 		t.Fatal("purged set 1 while set 2's find refers to its find, or the textbook while finds point into it")
 	}
-	// Set 2 goes too: nothing refers into set 1 now, and set 2's own
-	// reference into it went with set 2.
-	write(t, s, `UPDATE sets SET removed_at = ? WHERE id = 's2'`, old)
+	// A referrer removed but still inside its week keeps it too.
+	write(t, s, `UPDATE questions SET removed_at = ? WHERE id = 'q2'`, db.Now())
 	must(t, s.Purge(bg, time.Now()))
-	if count("sets", "s1") != 0 || count("sets", "s2") != 0 || count("finds", "f1") != 0 {
-		t.Fatal("the sets were not purged once nothing else referred into them")
+	if count("sets", "s1") != 1 {
+		t.Fatal("set 1 was purged while a problem removed this week still refers into it")
+	}
+	// Once that problem's week is up, it goes, and that frees set 1 in the
+	// same purge: the problem goes after the sets in a pass, so set 1 needs
+	// a second pass.
+	write(t, s, `UPDATE questions SET removed_at = ? WHERE id = 'q2'`, old)
+	must(t, s.Purge(bg, time.Now()))
+	if count("questions", "q2") != 0 || count("sets", "s1") != 0 || count("finds", "f1") != 0 {
+		t.Fatal("set 1 was not purged in the same purge as the problem that alone referred into it")
 	}
 	if count("materials", "m") != 0 {
 		t.Fatal("the textbook was kept with no find left pointing into it")
@@ -182,5 +207,43 @@ func TestThePurgeKeepsWhatIsStillReferred(t *testing.T) {
 	must(t, s.Purge(bg, time.Now()))
 	if count("turns", "t") != 0 || count("documents", "a") != 0 {
 		t.Fatal("a turn was kept by its own answer")
+	}
+}
+
+// A course is kept while another course's work points into it: a find in
+// course 2 into course 1's material.
+func TestThePurgeKeepsACourseOthersPointInto(t *testing.T) {
+	s := open(t)
+	world(t, s)
+	now := db.Now()
+	write(t, s, `INSERT INTO courses (id, name, created_at) VALUES ('c2', 'MATH 285', ?)`, now)
+	write(t, s, `INSERT INTO sets (id, course_id, title, created_at) VALUES ('s3', 'c2', 'Set 1', ?)`, now)
+	write(t, s, `INSERT INTO questions (id, set_id, position, text, created_at) VALUES ('q3', 's3', 0, '1.1', ?)`, now)
+	write(t, s, `INSERT INTO finds (id, question_id, material_id, page) VALUES ('f3', 'q3', 'm', 3)`)
+	write(t, s, `UPDATE courses SET removed_at = ? WHERE id = 'c'`, db.At(time.Now().Add(-2*Keep)))
+	must(t, s.Purge(bg, time.Now()))
+	var n int
+	must(t, s.DB.QueryRow(`SELECT count(*) FROM courses WHERE id = 'c'`).Scan(&n))
+	if n != 1 {
+		t.Fatal("a course was purged while another course's find points into its material")
+	}
+}
+
+// Undo's note names the nearest owner that hides a thing, and none when the
+// thing is removed itself.
+func TestHiddenByIsTheNearestOwner(t *testing.T) {
+	s := open(t)
+	world(t, s)
+	write(t, s, `UPDATE turns SET removed_at = ? WHERE id = 't'`, db.Now())
+	write(t, s, `UPDATE courses SET removed_at = ? WHERE id = 'c'`, db.Now())
+	by, err := s.HiddenBy(bg, change.ResourceDocument, "a")
+	must(t, err)
+	if by != change.ResourceTurn {
+		t.Fatalf("a turn's answer, its turn and course removed, is hidden by %q", by)
+	}
+	by, err = s.HiddenBy(bg, change.ResourceTurn, "t")
+	must(t, err)
+	if by != "" {
+		t.Fatalf("a turn removed itself is hidden by %q", by)
 	}
 }

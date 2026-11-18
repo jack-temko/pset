@@ -39,7 +39,8 @@ type Link struct {
 
 // Links is the map. Owned rows that are not things on the change log
 // (pages, sections, embeddings, calls, study) go with their owner by a
-// foreign key and need no entry; the walk test lists them.
+// cascading foreign key and need no entry; the walk test checks those keys
+// (rowsOwned).
 var Links = []Link{
 	{Child: change.ResourceMaterial, Parent: change.ResourceCourse, Table: "materials", Column: "course_id"},
 	{Child: change.ResourceSet, Parent: change.ResourceCourse, Table: "sets", Column: "course_id"},
@@ -178,11 +179,23 @@ func referenced(k change.Resource, idExpr string) string {
 }
 
 // HiddenBy is the kind of the nearest owner that hides the thing of kind k
-// with the id: its set, or its course; "" when none does (D6: Undo says
-// "its set is still removed").
+// with the id, while the thing itself is not removed: its set, or its
+// course; "" when none does (D6: Undo says "its set is still removed").
 func (s *Store) HiddenBy(ctx context.Context, k change.Resource, id string) (change.Resource, error) {
-	if _, ok := tableOf(string(k)); !ok {
+	t, ok := tableOf(string(k))
+	if !ok {
 		return "", nil
+	}
+	// A thing removed itself (a removal redone) is not hidden by an owner:
+	// it is removed, and says so on its own.
+	if t.Removed != "" {
+		var own int
+		if err := s.DB.QueryRowContext(ctx, fmt.Sprintf(`SELECT count(*) FROM %s WHERE id = ? AND %s != ''`, t.Name, t.Removed), id).Scan(&own); err != nil {
+			return "", errs.Database.Wrap(err)
+		}
+		if own > 0 {
+			return "", nil
+		}
 	}
 	for _, h := range hiddenBy(k, "?") {
 		var hidden bool
@@ -236,24 +249,28 @@ func hiddenBy(k change.Resource, idExpr string) []struct {
 		Kind change.Resource
 		SQL  string
 	}
+	// Breadth first, so the nearest owner comes first whichever branch it is
+	// on (a turn's document: the turn before the course).
 	seen := map[change.Resource]bool{}
-	var walk func(change.Resource)
-	walk = func(c change.Resource) {
-		for _, l := range owners(c) {
-			if seen[l.Parent] {
-				continue
+	for level := []change.Resource{k}; len(level) > 0; {
+		var next []change.Resource
+		for _, c := range level {
+			for _, l := range owners(c) {
+				if seen[l.Parent] {
+					continue
+				}
+				seen[l.Parent] = true
+				next = append(next, l.Parent)
+				if removable(l.Parent) {
+					id := ancestor(k, idExpr, l.Parent, 0)
+					out = append(out, struct {
+						Kind change.Resource
+						SQL  string
+					}{l.Parent, fmt.Sprintf("EXISTS (SELECT 1 FROM %s h WHERE h.id = %s AND h.removed_at != '')", nameOf(l.Parent), id)})
+				}
 			}
-			seen[l.Parent] = true
-			if removable(l.Parent) {
-				id := ancestor(k, idExpr, l.Parent, 0)
-				out = append(out, struct {
-					Kind change.Resource
-					SQL  string
-				}{l.Parent, fmt.Sprintf("EXISTS (SELECT 1 FROM %s h WHERE h.id = %s AND h.removed_at != '')", nameOf(l.Parent), id)})
-			}
-			walk(l.Parent)
 		}
+		level = next
 	}
-	walk(k)
 	return out
 }
