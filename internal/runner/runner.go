@@ -408,18 +408,11 @@ func (r *Runner) Run(ctx context.Context) error {
 	}
 }
 
-// visible is SQL true when step s's subject is not hidden: a step of a
-// removed thing waits where it is, and carries on if the removal is undone.
-const visible = `CASE s.subject_kind
-	WHEN 'question' THEN EXISTS (SELECT 1 FROM questions q JOIN sets t ON t.id = q.set_id JOIN courses c ON c.id = t.course_id
-		WHERE q.id = s.subject_id AND q.removed_at = '' AND t.removed_at = '' AND c.removed_at = '')
-	WHEN 'set' THEN EXISTS (SELECT 1 FROM sets t JOIN courses c ON c.id = t.course_id
-		WHERE t.id = s.subject_id AND t.removed_at = '' AND c.removed_at = '')
-	WHEN 'material' THEN EXISTS (SELECT 1 FROM materials m JOIN courses c ON c.id = m.course_id
-		WHERE m.id = s.subject_id AND m.removed_at = '' AND c.removed_at = '')
-	WHEN 'turn' THEN EXISTS (SELECT 1 FROM turns u JOIN courses c ON c.id = u.course_id
-		WHERE u.id = s.subject_id AND u.removed_at = '' AND c.removed_at = '')
-	ELSE 1 END`
+// visible is SQL true when step s's subject is not hidden, from the store's
+// dependency map: a step of a removed thing waits where it is, and carries
+// on if the removal is undone.
+var visible = store.VisibleSubject("s.subject_kind", "s.subject_id",
+	change.ResourceQuestion, change.ResourceSet, change.ResourceMaterial, change.ResourceTurn)
 
 type candidate struct {
 	id, kind, subject, name string

@@ -82,7 +82,7 @@ func New(c Config) *Service {
 		Try: func(sd action.Seed) Rename { return Rename{ID: sd.MaterialID, Title: "Signals and Systems"} },
 	})
 	action.Add(c.Actions, action.Def[Remove]{
-		ID: "material.remove", Name: "Remove material", Undoable: true,
+		ID: "material.remove", Name: "Remove material", Undoable: true, Removes: true,
 		Undone: "Brought back {name}.", Redone: "Removed {name} again.",
 		Run: s.remove,
 		Try: func(sd action.Seed) Remove { return Remove{ID: sd.MaterialID} },

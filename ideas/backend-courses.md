@@ -192,7 +192,9 @@ Settings list, an incident's trace, Try again, the switch that forces an error);
 set), the old usage routes left frozen; study time is a per-course table in the
 store; health reads the conditions and each Fix is an action; Reset moves onto the
 store at the cut-over (track 9), since nobody uses this branch before then. 7d lands
-in two pull requests: health and the key, then study time and usage. For track 9:
+in two pull requests: health and the key, then study time and usage. Then, from
+`ideas/dependencies-grill.md` (approved 2026-11-18): textbooks as a kind of material
+(#108) and the dependency map (`dependency-rules`). For track 9:
 the key and the name now live in the store, and nothing copies them from the old
 database, so an install that upgrades starts with neither (Jack imports again, and
 saves his key again). Also for track 9: once `make test-library` snapshots the

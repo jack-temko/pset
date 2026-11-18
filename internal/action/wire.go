@@ -45,6 +45,16 @@ type Done struct {
 	// Seq is how far the change log had got once it was done, so the page
 	// knows when its copies have caught up.
 	Seq int64 `json:"seq"`
+	// Took is what a removal took with it, the thing's own contents not
+	// removed on their own, for its notice: "Removed Problem set 4 and its
+	// 12 problems." Absent for any other action.
+	Took []Took `json:"took,omitempty"`
+}
+
+// Took is how many things of a kind went with a removal.
+type Took struct {
+	Kind change.Resource `json:"kind"`
+	N    int             `json:"n"`
 }
 
 // Undo is the undo call (Ctrl+Z, or the Undo on "Removed Problem set 4.
