@@ -11,6 +11,7 @@ import (
 	"github.com/jackt/pset/internal/course"
 	"github.com/jackt/pset/internal/library"
 	"github.com/jackt/pset/internal/material"
+	"github.com/jackt/pset/internal/place"
 	"github.com/jackt/pset/internal/runner"
 	"github.com/jackt/pset/internal/store"
 )
@@ -35,6 +36,7 @@ type Backend struct {
 	Actions   *action.Catalog
 	Courses   *course.Service
 	Materials *material.Service
+	Places    *place.Service
 }
 
 // New builds every feature on s. With a nil store and no runner it is the
@@ -48,6 +50,7 @@ func New(s *store.Store, o Options) *Backend {
 			Store: s, Actions: c, Runner: o.Runner, DataDir: o.DataDir, Tools: o.Tools,
 			ChatModel: o.ChatModel, Embed: o.Embed, EmbedModel: o.EmbedModel,
 		}),
+		Places: place.New(s),
 	}
 }
 
@@ -56,4 +59,5 @@ func (b *Backend) Routes(mux *http.ServeMux) {
 	b.Actions.Routes(mux)
 	b.Courses.Routes(mux)
 	b.Materials.Routes(mux)
+	b.Places.Routes(mux)
 }

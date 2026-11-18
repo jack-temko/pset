@@ -113,6 +113,7 @@ export type ErrorId =
   | "model.rejected"
   | "model.unknown"
   | "model.unreachable"
+  | "place.bad"
   | "request.foreign_origin"
   | "request.gone"
   | "request.invalid_json"
@@ -971,6 +972,15 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 502,
     owner: "llm",
+  },
+  "place.bad": {
+    what: "PSet couldn't remember where you were.",
+    why: "The page sent a place it can't keep: {why}.",
+    fix: "Reload the page.",
+    action: "reload",
+    scope: "inline",
+    status: 400,
+    owner: "place",
   },
   "request.foreign_origin": {
     what: "PSet refused that change.",

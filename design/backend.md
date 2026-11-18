@@ -332,6 +332,11 @@ GET  /api/courses/{id}/materials   the course's materials not removed, with thei
 GET  /api/materials/{id}      one material, removed or not (a set may still use it)
 GET  /api/materials/{id}/contents  its contents as a tree of headings
 GET  /api/materials/{id}/pages/{n}/image?w=   a page as a JPEG, cached for good
+GET  /api/places?owner=kind:id&owner=...   the places of those things, read once
+                              by a tab as it opens
+PUT  /api/places              a place {ownerKind, ownerId, kind, tabId?, ...its
+                              fields} -> the place kept
+DELETE /api/places/{id}       a draft sent: the place emptied, purged later
 ```
 
 - **Materials** (`internal/material`): `material.add` takes a staged upload into a
@@ -347,6 +352,19 @@ GET  /api/materials/{id}/pages/{n}/image?w=   a page as a JPEG, cached for good
   pauses its import; undoing the removal resumes it. Files live in
   `materials/<id>.pdf`; a daily sweep drops those the purge took and uploads past a
   day.
+
+- **Places** (`internal/place`): where the student was, how they laid it out and
+  what they had not sent, one per owner, kind and tab, by the rule in
+  `ideas/actions-conditions-place-grill.md`. A tab's spot in a material is also
+  the material's last spot; sides without a tab empty that tab's spot and zoom.
+  Logged (as PSet, without values) so a new tab finds them, but no action: Ctrl+Z
+  never moves the student back. A change says only the place's id, course and set,
+  and a tab reads places only as it opens (C6): it does not follow them. An empty draft clears its
+  place; a spot written after its tab closed keeps only the material's last; limits
+  on tabs, ids, text and pages keep a page bug from filling the store. Open: a
+  course has one layout, so two browser tabs on one course share it and the last
+  to write wins (C6 says each goes its own way). An emptied place reads as none and the purge takes it, as it takes
+  a place whose owner is gone.
 
 An action is refused before it runs when a condition it needs does not hold
 (`action.blocked`, with the condition's own why and fix). A catalog test runs

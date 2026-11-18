@@ -274,6 +274,23 @@ CREATE TABLE calls (
 );
 CREATE INDEX calls_step ON calls (step_id);
 
+-- The student's place (ideas/actions-conditions-place-grill.md): where
+-- they were, how they laid it out, what they had not sent. One per owner,
+-- kind and tab (a material's spot is per tab); value is the kind's fields.
+-- Logged, so a newly opened tab finds it, but written outside any action:
+-- Ctrl+Z never moves the student back (A4). It goes with its owner.
+CREATE TABLE places (
+	id         TEXT PRIMARY KEY,
+	owner_kind TEXT NOT NULL,
+	owner_id   TEXT NOT NULL,
+	kind       TEXT NOT NULL,
+	tab_id     TEXT NOT NULL DEFAULT '',
+	value      TEXT NOT NULL DEFAULT '{}',
+	updated_at TEXT NOT NULL,
+	seq        INTEGER NOT NULL DEFAULT 0,
+	UNIQUE (owner_kind, owner_id, kind, tab_id)
+);
+
 -- Each student action run, by the catalog entry it was (internal/action):
 -- what Undo says it took back, and where its Show goes. Not logged; it goes
 -- with its changes.
@@ -443,6 +460,23 @@ var (
 			PSet: []string{"error", "kind", "subject_kind", "subject_id", "course_id", "set_id", "step_id",
 				"action", "born", "route", "count", "first_at", "last_at", "resolved_at", "detail", "clears"},
 			Meta: []string{"seq"},
+		},
+		{
+			Name: "places", Kind: change.ResourcePlace,
+			SetID: "CASE {r}.owner_kind WHEN 'set' THEN {r}.owner_id WHEN 'question' THEN " + ofQuestion(questionSet, "owner_id") +
+				" WHEN 'document' THEN (SELECT CASE d.owner_kind WHEN 'question' THEN " + strings.ReplaceAll(questionSet, "{q}", "d.owner_id") +
+				" END FROM documents d WHERE d.id = {r}.owner_id) END",
+			CourseID: "CASE {r}.owner_kind WHEN 'course' THEN {r}.owner_id" +
+				" WHEN 'set' THEN (SELECT course_id FROM sets WHERE id = {r}.owner_id)" +
+				" WHEN 'material' THEN (SELECT course_id FROM materials WHERE id = {r}.owner_id)" +
+				" WHEN 'question' THEN " + ofQuestion(questionCourse, "owner_id") +
+				" WHEN 'document' THEN (SELECT CASE d.owner_kind WHEN 'question' THEN " + strings.ReplaceAll(questionCourse, "{q}", "d.owner_id") +
+				" WHEN 'turn' THEN (SELECT course_id FROM turns WHERE id = d.owner_id) END FROM documents d WHERE d.id = {r}.owner_id) END",
+			// The student's, but no action's: what it held is not logged
+			// (the page reads it again), and Undo never writes it back.
+			PSet: []string{"owner_kind", "owner_id", "kind", "tab_id", "value"},
+			Meta: []string{"updated_at", "seq"},
+			JSON: []string{"value"},
 		},
 		{
 			Name: "steps", Kind: change.ResourceStep,
