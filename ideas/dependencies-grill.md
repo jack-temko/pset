@@ -1,6 +1,6 @@
 # Dependencies, removal, undo and the purge: grill
 
-- status: awaiting OK
+- status: approved
 - date: 2026-11-18
 - brief: how the things in the new store depend on each other, and what removing, undoing and purging do to those links; judged from a student who removes things freely and expects nothing finished to break
 - sources: internal/store/schema.go, internal/store/undo.go, internal/store/purge.go, internal/runner/runner.go (visible, pauseHidden), internal/material/service.go (remove, textbook), internal/course/service.go, ideas/backend-courses-grill.md (D12 to D15), the real-import run of 2026-11-18
