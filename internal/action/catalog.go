@@ -192,6 +192,8 @@ var (
 		Action: errs.ActionReload,
 		Status: http.StatusNotFound,
 	})
+	// Its link carries condition (the id that does not hold) and fixAction
+	// (the action that fixes it, empty when none can) beside its sentences.
 	Blocked = errs.Define(errs.Entry{
 		ID:     "action.blocked",
 		Kind:   errs.KindWaitingOnYou,
@@ -336,7 +338,8 @@ func (c *Catalog) Run(ctx context.Context, id string, input json.RawMessage) (Do
 func (c *Catalog) blocked(ctx context.Context, d *def) error {
 	for _, need := range d.entry.Needs {
 		var raw sql.NullString
-		err := c.store.DB.QueryRowContext(ctx, `SELECT error FROM conditions WHERE id = ? AND holds = 0`, string(need)).Scan(&raw)
+		var fix string
+		err := c.store.DB.QueryRowContext(ctx, `SELECT error, fix FROM conditions WHERE id = ? AND holds = 0`, string(need)).Scan(&raw, &fix)
 		if errors.Is(err, sql.ErrNoRows) {
 			continue
 		}
@@ -355,7 +358,11 @@ func (c *Catalog) blocked(ctx context.Context, d *def) error {
 			}
 		}
 		// The condition's own sentences, their periods the entry's.
-		return Blocked.New("name", d.entry.Name, "why", strings.TrimSuffix(why.What, "."), "fix", strings.TrimSuffix(why.Fix, "."))
+		// The condition and the action that fixes it ride along (the view's
+		// links), so the page can offer the fix as a button and watch the
+		// condition for the action's button to come back.
+		return Blocked.New("name", d.entry.Name, "why", strings.TrimSuffix(why.What, "."), "fix", strings.TrimSuffix(why.Fix, "."),
+			"condition", string(need), "fixAction", fix)
 	}
 	return nil
 }

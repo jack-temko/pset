@@ -332,6 +332,8 @@ GET  /api/courses/{id}/materials   the course's materials not removed, with thei
 GET  /api/materials/{id}      one material, removed or not (a set may still use it)
 GET  /api/materials/{id}/contents  its contents as a tree of headings
 GET  /api/materials/{id}/pages/{n}/image?w=   a page as a JPEG, cached for good
+GET  /api/conditions          every condition as kept, checking nothing: what the
+                              page greys buttons by; changes arrive on the stream
 GET  /api/health              every condition, in condition.All's order, checked
                               where PSet can check it: {condition, name, detail}
 POST /api/time                a stretch of study {id, courseId, kind, started, ended,
@@ -359,7 +361,9 @@ DELETE /api/places/{id}       a draft sent: the place emptied, purged later
   Settings opens, and kept as conditions through the runner (`Holds`, `Lacks`): an
   action that needs a missing one is refused before the student tries. The key,
   credit, provider and disk space are learned from calls and writes. Each fix PSet
-  can make is an action: `health.make_data_folder`, `health.get_embeddings`. The key
+  can make is an action: `health.make_data_folder`, `health.get_embeddings`. An
+  action refused for a missing condition (`action.blocked`) carries `condition` and
+  `fixAction` in its link, so the page can offer the fix and watch the condition. The key
   and the student's name are in the store's `settings` table (not logged).
 
 - **Time spent** (`internal/study`): the old activity on courses, in the store's

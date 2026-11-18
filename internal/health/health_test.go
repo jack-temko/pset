@@ -16,6 +16,7 @@ import (
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/condition"
 	"github.com/jackt/pset/internal/db"
+	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/runner"
 	"github.com/jackt/pset/internal/store"
@@ -147,8 +148,12 @@ func TestAMissingReaderBlocksUntilItIsBack(t *testing.T) {
 	})
 	e.missing["pdftoppm"] = true
 	e.check()
-	if _, err := e.c.Run(bg, "test.needs_pdf", nil); !errors.Is(err, action.Blocked) {
+	_, err := e.c.Run(bg, "test.needs_pdf", nil)
+	if !errors.Is(err, action.Blocked) {
 		t.Fatalf("with Poppler missing: %v", err)
+	}
+	if l := errs.Resolve(err).Links[0]; l["condition"] != string(condition.IDPDFReader) || l["fixAction"] != "" {
+		t.Fatalf("the refusal names %+v, want the PDF reader and no fix", l)
 	}
 	e.missing["pdftoppm"] = false
 	if c := e.check()[condition.IDPDFReader]; !c.Condition.Holds || c.Condition.Error != nil {
@@ -168,6 +173,15 @@ func TestTheFixesAreActions(t *testing.T) {
 	got := e.check()
 	if c := got[condition.IDDataFolder]; c.Condition.Holds || c.Condition.Fix != fixDataFolder {
 		t.Fatalf("a missing data folder: %+v", c)
+	}
+	// An action that needs it is refused with the fix to offer.
+	action.Add(e.c, action.Def[struct{}]{
+		ID: "test.needs_folder", Name: "Save", Needs: []condition.ID{condition.IDDataFolder},
+		Run: func(context.Context, *action.Do, struct{}) error { return nil },
+	})
+	_, err := e.c.Run(bg, "test.needs_folder", nil)
+	if l := errs.Resolve(err).Links[0]; l["condition"] != string(condition.IDDataFolder) || l["fixAction"] != fixDataFolder {
+		t.Fatalf("the refusal names %+v, want the data folder and its fix", l)
 	}
 	for _, id := range []string{got[condition.IDDataFolder].Condition.Fix, got[condition.IDEmbeddings].Condition.Fix} {
 		if _, err := e.c.Run(bg, id, nil); err != nil {
@@ -264,6 +278,41 @@ func TestLackingIsOneChangeAndHoldingDropsTheFix(t *testing.T) {
 	}
 	if fix != "" {
 		t.Fatalf("a condition that holds keeps the fix %q", fix)
+	}
+}
+
+// The conditions are read as kept, without running a check: what a check
+// found last stands, and nothing is looked for.
+func TestTheConditionsAreReadWithoutChecking(t *testing.T) {
+	e := newEnv(t)
+	e.missing["tesseract"] = true
+	e.check()
+	looked := 0
+	e.svc.c.LookPath = func(string) (string, error) { looked++; return "/bin/true", nil }
+	got, err := e.svc.Conditions(bg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if looked != 0 {
+		t.Fatalf("reading the conditions ran %d checks", looked)
+	}
+	if len(got.Conditions) != len(condition.All) {
+		t.Fatalf("%d conditions", len(got.Conditions))
+	}
+	for i, c := range got.Conditions {
+		if c.ID != condition.All[i] {
+			t.Fatalf("condition %d is %s", i, c.ID)
+		}
+		if want := c.ID != condition.IDScanReader; c.Holds != want {
+			t.Fatalf("%s holds %v", c.ID, c.Holds)
+		}
+	}
+	mux := http.NewServeMux()
+	e.svc.Routes(mux)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/conditions", nil))
+	if rec.Code != http.StatusOK || looked != 0 {
+		t.Fatalf("GET /api/conditions answered %d after %d checks", rec.Code, looked)
 	}
 }
 
