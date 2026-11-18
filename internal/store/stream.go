@@ -295,6 +295,11 @@ func (s *Store) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
+	// The order here is what the page relies on: subscribe before reading
+	// where the log stands (Latest), and read it before the first byte is
+	// flushed (when the page's EventSource opens and the page starts its
+	// reads), so no change made between the page's read and this stream is
+	// missed. WriteHeader flushes nothing by itself.
 	wake, live, cancel := s.subscribe()
 	defer cancel()
 
@@ -356,7 +361,9 @@ func (s *Store) Handler(w http.ResponseWriter, r *http.Request) {
 		if last, err = s.Latest(ctx); err != nil {
 			return
 		}
-		if _, err := fmt.Fprintf(w, "id: %d\nretry: 1000\n\n", last); err != nil {
+		// Where the log stands, as an event with data, so the page reads it
+		// (an id alone fires no message).
+		if _, err := fmt.Fprintf(w, "id: %d\nretry: 1000\ndata: {\"type\":%q}\n\n", last, change.EventOpen); err != nil {
 			return
 		}
 		flusher.Flush()

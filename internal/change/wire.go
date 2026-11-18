@@ -112,6 +112,10 @@ type Change struct {
 const (
 	// EventChange carries a Change.
 	EventChange = "change"
+	// EventOpen starts a fresh connection (one that sent no seq): its id is
+	// where the log stood as the page connected, so an action whose reply
+	// seq is at or below it has already caught up.
+	EventOpen = "open"
 	// EventResync says the page asked to replay from a seq the log no
 	// longer holds (it keeps a week): read everything on screen again.
 	EventResync = "resync"

@@ -162,6 +162,12 @@ export interface Change {
  */
 export const EventChange = "change";
 /**
+ * EventOpen starts a fresh connection (one that sent no seq): its id is
+ * where the log stood as the page connected, so an action whose reply
+ * seq is at or below it has already caught up.
+ */
+export const EventOpen = "open";
+/**
  * EventResync says the page asked to replay from a seq the log no
  * longer holds (it keeps a week): read everything on screen again.
  */
@@ -197,7 +203,7 @@ export const EventStepActivity = "step.activity";
  * lost on a reconnect, which costs nothing, since the finished result
  * arrives as a change.
  */
-export type Event = typeof EventChange | typeof EventResync | typeof EventBlockStart | typeof EventBlockText | typeof EventBlockRepairing | typeof EventBlock | typeof EventBlockFailed | typeof EventStepActivity;
+export type Event = typeof EventChange | typeof EventOpen | typeof EventResync | typeof EventBlockStart | typeof EventBlockText | typeof EventBlockRepairing | typeof EventBlock | typeof EventBlockFailed | typeof EventStepActivity;
 /**
  * BlockStart says a document's next block is being written: draw its
  * skeleton.

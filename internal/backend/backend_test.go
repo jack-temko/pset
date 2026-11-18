@@ -220,3 +220,42 @@ func TestTheChangeStreamIsMounted(t *testing.T) {
 	}
 	t.Fatalf("the stream never sent the course's change (%v)", lines.Err())
 }
+
+// A page that connects with no seq first gets an open event, whose id is
+// where the log stood: an action whose reply seq is at or below it has
+// caught up.
+func TestAFreshStreamSaysWhereTheLogStands(t *testing.T) {
+	s, _, _ := world(t)
+	latest, err := s.Latest(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	New(s, Options{DataDir: t.TempDir()}).Routes(mux)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/api/changes", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup.Close(resp.Body)
+	lines := bufio.NewScanner(resp.Body)
+	var id, data string
+	for lines.Scan() && lines.Text() != "" {
+		switch {
+		case strings.HasPrefix(lines.Text(), "id: "):
+			id = strings.TrimPrefix(lines.Text(), "id: ")
+		case strings.HasPrefix(lines.Text(), "data: "):
+			data = strings.TrimPrefix(lines.Text(), "data: ")
+		}
+	}
+	if id != fmt.Sprint(latest) || data != `{"type":"open"}` {
+		t.Fatalf("the first event: id %q (want %d), data %q", id, latest, data)
+	}
+}
