@@ -199,3 +199,28 @@ func TestScopeTextHeadingStillLeads(t *testing.T) {
 		t.Fatalf("pages %v: want the problem's own line, then the contents' problems", sc.pages)
 	}
 }
+
+// A chapter's review questions carry the problems' labels, and the page
+// where the problems begin has the word "Problems" twice: as its running
+// head over the review questions and as the real heading below them.
+func TestScopeSkipsTheReviewQuestions(t *testing.T) {
+	pages := make([]string, 30)
+	for i := range pages {
+		pages[i] = "Text about circuits."
+	}
+	pages[19] = "401\nProblems\nReview Questions\n9.1 Which is not a way to write A cos wt?\n9.8 At what frequency is vo equal to v?\nProblems\nSection 9.2\n9.1 Find the amplitude."
+	pages[20] = "402\n9.8 Calculate these complex numbers:"
+	book := Book{
+		ID: "b", PageCount: len(pages), Pages: pagenum.Single(0),
+		Problems: probnum.Style{Form: probnum.FormChapter, Where: probnum.WhereChapter},
+		Parts:    []probnum.Part{{Number: "9", Title: "Chapter 9", Start: 2, End: 25}},
+	}
+	ref, _ := ParseRefs("9.8", book.Problems)
+	sc, ok := scopeOf(book, ref[0], pages)
+	if !ok || sc.pages[0] != 21 || sc.exact[20] {
+		t.Fatalf("pages %v, exact %v: the review question on p. 20 isn't the problem", sc.pages, sc.exact)
+	}
+	if !strings.Contains(sc.hint, "Review Questions") {
+		t.Fatalf("hint %q should warn about the review questions", sc.hint)
+	}
+}
