@@ -43,7 +43,7 @@ describe('incident rows', () => {
 
   it('offers Try again only for a step’s failure', () => {
     const [step, waiting] = incidentRows([
-      incident({ id: 's', stepId: 'st1', lastAt: '2026-11-18T11:00:00Z' }),
+      incident({ id: 's', born: 'step', lastAt: '2026-11-18T11:00:00Z' }),
       // A refused key from a request: waiting on the student, nothing to run.
       incident({ id: 'w', kind: 'waiting_on_you' }),
     ]);

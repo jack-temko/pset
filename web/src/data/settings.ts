@@ -137,8 +137,8 @@ export function incidentRows(all: readonly Incident[]): IncidentRow[] {
       when: whenOf(i.lastAt),
       count: i.count,
       // Only a step's failure can be run again (the runner refuses the
-      // rest); one waiting on a condition heals when the step reruns.
-      canTry: i.stepId !== undefined,
+      // rest). Read from `born`: a step's incident need not carry stepId.
+      canTry: i.born === 'step',
     }));
 }
 

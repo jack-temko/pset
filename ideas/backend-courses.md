@@ -308,6 +308,11 @@ offers Undo only when the action's reply carries an `action`.
     (and the other key entries) say "Add your key in Settings, under Connections";
     the key is under **Model**, as "OpenRouter key". Needed: the catalog's words, no
     route.
+11. **A step's incident can lose its step.** The `key.missing` incident from a
+    material's naming came back `born: "step"` with no `stepId`, `subjectKind` or
+    `subjectId`, so its trace has no step or calls and it isn't placed on its
+    material. Seen on a fresh import with no key (2026-11-18). The page offers Try
+    again by `born`, so it still works.
 
 **9. Cut over.**
 
