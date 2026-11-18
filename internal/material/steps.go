@@ -147,6 +147,7 @@ func (s *Service) readPages(ctx context.Context, run *runner.Run) error {
 	path := s.path(m.ID)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	run.Activity(fmt.Sprintf("Read %d of %d pages", len(settled), m.PageCount))
 	pages := make(chan int)
 	var (
 		mu     sync.Mutex
@@ -162,6 +163,14 @@ func (s *Service) readPages(ctx context.Context, run *runner.Run) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			// The runner recovers a panic only on the step's own goroutine;
+			// one here would take the server down, so it fails the step.
+			defer func() {
+				if p := recover(); p != nil {
+					once.Do(func() { first = errs.Unexpected.Wrap(fmt.Errorf("reading a page panicked: %v", p)) })
+					cancel()
+				}
+			}()
 			for n := range pages {
 				if err := s.readPage(ctx, run, m.ID, path, n, &failed, &mu); err != nil {
 					once.Do(func() { first = err })
@@ -202,7 +211,8 @@ feed:
 
 // readPage recognizes one page and saves it, adding it to failed when the
 // reader choked on it. It returns an error only for what stops every page:
-// a reader not installed, a stop, a write that failed.
+// a reader not installed, a stop, a write that failed. A page whose reading
+// was cut short by a stop is neither kept nor failed: it is read next time.
 func (s *Service) readPage(ctx context.Context, run *runner.Run, id, path string, n int, failed *[]int, mu *sync.Mutex) error {
 	text, err := s.c.Tools.OCR(ctx, path, n)
 	status := pageStatus(text)
