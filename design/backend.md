@@ -362,8 +362,9 @@ DELETE /api/places/{id}       a draft sent: the place emptied, purged later
   action that needs a missing one is refused before the student tries. The key,
   credit, provider and disk space are learned from calls and writes. Each fix PSet
   can make is an action: `health.make_data_folder`, `health.get_embeddings`. An
-  action refused for a missing condition (`action.blocked`) carries `condition` and
-  `fixAction` in its link, so the page can offer the fix and watch the condition. The key
+  action refused for a missing condition (`action.blocked`) carries them as fields of
+  its view (`condition`, `fixAction`), so the page can offer the fix and watch the
+  condition. The key
   and the student's name are in the store's `settings` table (not logged).
 
 - **Time spent** (`internal/study`): the old activity on courses, in the store's

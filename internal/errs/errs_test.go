@@ -252,3 +252,16 @@ func TestAnOldRowWithMergedParamsStillReads(t *testing.T) {
 		t.Errorf("old merged params: %+v", v)
 	}
 }
+
+// What an action waits on rides on the view from the outermost link that
+// names it, its condition and fix together.
+func TestWaitingIsTheOutermostLinks(t *testing.T) {
+	inner := Unexpected.New().Waiting("inner", "inner.fix")
+	outer := Gone.Wrap(inner, "thing", "set").Waiting("outer", "")
+	if v := Resolve(outer); v.Condition != "outer" || v.FixAction != "" {
+		t.Fatalf("the outer link's: %+v", v)
+	}
+	if v := Resolve(Gone.Wrap(inner, "thing", "set")); v.Condition != "inner" || v.FixAction != "inner.fix" {
+		t.Fatalf("an inner link's, when the outer names none: %+v", v)
+	}
+}

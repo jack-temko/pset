@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/jackt/pset/internal/action"
@@ -316,7 +317,8 @@ func TestTheConditionsAreReadWithoutChecking(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
-	if len(body.Conditions) != len(condition.All) || body.Conditions[4].ID != condition.IDScanReader || body.Conditions[4].Holds {
+	scan := slices.Index(condition.All, condition.IDScanReader)
+	if len(body.Conditions) != len(condition.All) || body.Conditions[scan].ID != condition.IDScanReader || body.Conditions[scan].Holds {
 		t.Fatalf("GET /api/conditions sent %+v", body.Conditions)
 	}
 }
