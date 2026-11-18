@@ -497,6 +497,37 @@ func TestDetectionShelvesUntilTheStudentMovesIt(t *testing.T) {
 	if !textbook("m2") || e.count(`SELECT textbook_set FROM materials WHERE id = 'm2'`) != 0 {
 		t.Fatal("undoing the move did not put it back under Textbooks, for detection again")
 	}
+
+	// Confirming where detection put it pins it: detection no longer moves it.
+	in, err = json.Marshal(Textbook{ID: "m3", Textbook: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.c.Run(bg, "material.textbook", in); err != nil {
+		t.Fatal(err)
+	}
+	shelf("m3", true)
+	if textbook("m3") {
+		t.Fatal("detection moved a material the student had confirmed under Materials")
+	}
+	if again, err := e.c.Run(bg, "material.textbook", in); err != nil || again.Action != "" {
+		t.Fatalf("the same move again changed something: %+v %v", again, err)
+	}
+
+	// A removed material can't be moved.
+	if err := e.s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
+		_, err := tx.Exec(`UPDATE materials SET removed_at = ? WHERE id = 'm1'`, db.Now())
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	in, err = json.Marshal(Textbook{ID: "m1", Textbook: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.c.Run(bg, "material.textbook", in); !errors.Is(err, errs.Gone) {
+		t.Fatalf("moving a removed material: %v", err)
+	}
 }
 
 // The routes: an upload staged by multipart, then the course's list, a

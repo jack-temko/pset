@@ -54,8 +54,9 @@ type Def[In any] struct {
 // holds. Each track adds the things it brings.
 type Seed struct {
 	CourseID string
-	// MaterialID is a material in the course, not its textbook; UploadID a
-	// PDF staged and not yet added.
+	// MaterialID is a material in the course under Materials, so moving it
+	// under Textbooks is a real change; UploadID a PDF staged and not yet
+	// added.
 	MaterialID, UploadID string
 	// IncidentID is an open incident, a step's own.
 	IncidentID string

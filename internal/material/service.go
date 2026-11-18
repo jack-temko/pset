@@ -300,6 +300,9 @@ func (s *Service) textbook(ctx context.Context, do *action.Do, in Textbook) erro
 		case is == in.Textbook && set:
 			return action.ErrUnchanged
 		}
+		// Even where detection already put it, the action pins it there (not
+		// yet the student's choice): a later detection can't move it, and it
+		// is a change Undo can take back.
 		res, err := tx.ExecContext(ctx, `UPDATE materials SET textbook = ?, textbook_set = 1 WHERE id = ?`, in.Textbook, in.ID)
 		return action.One(res, err, "material")
 	})
