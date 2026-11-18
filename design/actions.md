@@ -4,7 +4,7 @@
 
 Everything a student can do, as the catalog declares it. Each runs through `POST /api/actions/{action}`; the undoable ones are taken back by `POST /api/undo`. A key is corrected in the action's declaration, and this table follows.
 
-23 actions.
+26 actions.
 
 | Id | Name | Key | Needs | Undoable | Costs |
 |---|---|---|---|---|---|
@@ -25,6 +25,9 @@ Everything a student can do, as the catalog declares it. Each runs through `POST
 | `question.notes` | Edit notes |  |  | yes |  |
 | `question.remove` | Remove question |  |  | yes |  |
 | `question.reveal` | Show help |  |  | yes |  |
+| `read.dismiss` | Dismiss |  |  | yes |  |
+| `read.import` | Add the homework |  |  | yes |  |
+| `read.start` | Read an assignment |  |  |  |  |
 | `set.add` | Add set |  |  | yes |  |
 | `set.due` | Change due date |  |  | yes |  |
 | `set.remove` | Remove set |  |  | yes |  |

@@ -464,13 +464,11 @@ export interface Read {
    */
   courseId: string;
   /**
-   * Source is where it came from: a web page's address, a file's name, or
-   * "pasted".
+   * Source is where it came from: a file's name, or a web page's address.
    */
   source: string;
   /**
-   * SheetID is the material an uploaded sheet was kept as, once examined;
-   * absent for a web page or pasted text.
+   * SheetID is the material the sheet is kept as.
    */
   sheetId?: string;
   /**
@@ -713,4 +711,51 @@ export interface RemoveQuestion {
 export interface Draft {
   text: string;
   find: boolean;
+}
+/**
+ * StartRead reads an uploaded assignment sheet (a PDF staged by POST
+ * /api/uploads), keeping it as a material: for a set, when SetID names
+ * the one it updates.
+ */
+export interface StartRead {
+  courseId: string;
+  uploadId: string;
+  setId?: string;
+}
+/**
+ * DismissRead drops a read without adding anything.
+ */
+export interface DismissRead {
+  id: string;
+}
+/**
+ * ImportRead makes each group the student kept into a set, or updates
+ * the set it names, and is done with the read.
+ */
+export interface ImportRead {
+  readId: string;
+  groups: ImportGroup[];
+}
+/**
+ * ImportGroup is one date's lines as the student kept them.
+ */
+export interface ImportGroup {
+  title: string;
+  due: string;
+  rows: Draft[];
+  /**
+   * SetID updates that set instead of making one: the rows are added,
+   * skipping what it already has; Notes are rewritten and Remove taken
+   * out.
+   */
+  setId?: string;
+  notes?: NotesUpdate[];
+  remove?: string[];
+}
+/**
+ * NotesUpdate is a question's new professor's instructions.
+ */
+export interface NotesUpdate {
+  questionId: string;
+  notes: string[];
 }

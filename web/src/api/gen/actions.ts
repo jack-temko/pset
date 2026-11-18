@@ -23,6 +23,9 @@ export type ActionId =
   | "question.notes"
   | "question.remove"
   | "question.reveal"
+  | "read.dismiss"
+  | "read.import"
+  | "read.start"
   | "set.add"
   | "set.due"
   | "set.remove"
@@ -151,6 +154,27 @@ export const ACTIONS: Record<ActionId, Entry> = {
     undoable: true,
     costs: false,
   },
+  "read.dismiss": {
+    id: "read.dismiss",
+    name: "Dismiss",
+    needs: [],
+    undoable: true,
+    costs: false,
+  },
+  "read.import": {
+    id: "read.import",
+    name: "Add the homework",
+    needs: [],
+    undoable: true,
+    costs: false,
+  },
+  "read.start": {
+    id: "read.start",
+    name: "Read an assignment",
+    needs: [],
+    undoable: false,
+    costs: false,
+  },
   "set.add": {
     id: "set.add",
     name: "Add set",
@@ -214,6 +238,9 @@ export interface ActionInputs {
   "question.notes": work.QuestionNotes;
   "question.remove": work.RemoveQuestion;
   "question.reveal": work.QuestionReveal;
+  "read.dismiss": work.DismissRead;
+  "read.import": work.ImportRead;
+  "read.start": work.StartRead;
   "set.add": work.AddSet;
   "set.due": work.SetDue;
   "set.remove": work.RemoveSet;
