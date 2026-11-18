@@ -92,7 +92,7 @@ export const ACTIONS: Record<ActionId, Entry> = {
   },
   "material.textbook": {
     id: "material.textbook",
-    name: "Make it the textbook",
+    name: "Move between Textbooks and Materials",
     needs: [],
     undoable: true,
     costs: false,

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackt/pset/internal/change"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
 )
@@ -23,19 +24,31 @@ const Keep = 7 * 24 * time.Hour
 func (s *Store) Purge(ctx context.Context, now time.Time) error {
 	cutoff := db.At(now.Add(-Keep))
 	return s.write(ctx, purge, "", "", func(tx *sql.Tx) error {
-		gone := func(table string) string {
-			return fmt.Sprintf(`DELETE FROM %s WHERE removed_at != '' AND removed_at < ?`, table)
+		// Parents first: their owned children go with them by cascade.
+		// Materials last, once the work that used them may have gone. Each
+		// waits while anything outside it still refers to it or to
+		// something inside it (the dependency map, D4).
+		var stmts []string
+		for _, k := range purgeOrder {
+			stmts = append(stmts, purgeRemoved(k))
 		}
-		// Parents first: their children go with them by cascade. Materials
-		// last, once the work that used them has gone.
-		stmts := []string{
-			gone("courses"), gone("sets"), gone("questions"), gone("finds"), gone("readings"), gone("turns"), gone("memories"),
-			gone("materials") + ` AND NOT EXISTS (SELECT 1 FROM finds f WHERE f.material_id = materials.id)
-				AND NOT EXISTS (SELECT 1 FROM sets s WHERE s.sheet_id = materials.id)`,
-		}
-		for _, q := range stmts {
-			if _, err := tx.ExecContext(ctx, q, cutoff); err != nil {
-				return errs.Database.Wrap(err)
+		// Again until nothing more goes: purging one thing can free another
+		// that it alone referred into (set 2's find kept set 1).
+		for pass := 0; pass < maxPurgePasses; pass++ {
+			var gone int64
+			for _, q := range stmts {
+				res, err := tx.ExecContext(ctx, q, cutoff)
+				if err != nil {
+					return errs.Database.Wrap(err)
+				}
+				n, err := res.RowsAffected()
+				if err != nil {
+					return errs.Database.Wrap(err)
+				}
+				gone += n
+			}
+			if gone == 0 {
+				break
 			}
 		}
 		for _, q := range []string{
@@ -93,4 +106,21 @@ func (s *Store) Purge(ctx context.Context, now time.Time) error {
 		}
 		return nil
 	})
+}
+
+// maxPurgePasses bounds the purge's passes: each frees what the one before
+// alone held, so a chain longer than this finishes the next day.
+const maxPurgePasses = 8
+
+// purgeOrder is the removable kinds, parents first and materials last.
+var purgeOrder = []change.Resource{
+	change.ResourceCourse, change.ResourceSet, change.ResourceQuestion, change.ResourceFind,
+	change.ResourceReading, change.ResourceTurn, change.ResourceMemory, change.ResourceMaterial,
+}
+
+// purgeRemoved deletes the things of kind k removed before the cutoff (the
+// one argument) that nothing outside them refers to.
+func purgeRemoved(k change.Resource) string {
+	t := nameOf(k)
+	return fmt.Sprintf(`DELETE FROM %s WHERE removed_at != '' AND removed_at < ? AND NOT %s`, t, referenced(k, t+".id"))
 }

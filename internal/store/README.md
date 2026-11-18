@@ -48,6 +48,28 @@ A question's change to its place, done, removal or difficulty also logs a
 value-less change to its set (an echo) and bumps the set's `seq`, so the set's
 counts arrive with it.
 
+## The dependency map
+
+`Links` (`deps.go`) declares every link between things once (spec:
+`ideas/dependencies-grill.md`): its child and parent, the column, and
+whether the child **owns**-links (lives inside its parent: hidden with it,
+purged with it) or **refers** (points at something it doesn't own: keeps
+resolving after the target is removed, and keeps it from being purged).
+From it come:
+
+- `Visible(kind, idExpr)`: SQL true while a thing and every owner are not
+  removed; `VisibleSubject` for a kind and an id (the runner's steps).
+- The purge of removed things (`purgeRemoved`): after a week, and only once
+  nothing outside a thing refers to it or to anything inside it; repeated
+  until a pass frees nothing more.
+- `Owned`: what a removal takes with it, for its notice (`Done.Took`).
+- `HiddenBy`: the nearest removed owner, for Undo's "its course is still
+  removed".
+
+`deps_test.go` walks the map against the schema: every link's column
+exists, every single-parent owns-link is a cascading foreign key, and every
+`*_id` column is a link or says in `notLinks` why it isn't.
+
 ## Reading the log
 
 - `Since(seq, limit)`: each thing changed after `seq`, once, oldest first, with

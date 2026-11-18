@@ -50,10 +50,10 @@ export interface Material {
    */
   problems?: Style;
   /**
-   * Textbook is true for the course's textbook: where a reference like
-   * "3.1 #7" is looked for first. One material in a course at most; PSet
-   * picks the first that numbers its problems, and the student can change
-   * it.
+   * Textbook is true for a material under Textbooks, where references
+   * like "3.1 #7" are looked for first; false for one under Materials. A
+   * course may have several textbooks. PSet puts a material that numbers
+   * its problems under Textbooks, until the student moves it.
    */
   textbook: boolean;
   /**
@@ -181,9 +181,9 @@ export interface Remove {
   id: string;
 }
 /**
- * Textbook makes a material its course's textbook, where references
- * like "3.1 #7" are looked for first.
+ * Textbook puts a material under Textbooks (true) or Materials (false).
  */
 export interface Textbook {
   id: string;
+  textbook: boolean;
 }

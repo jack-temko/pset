@@ -18,5 +18,5 @@ Everything a student can do, as the catalog declares it. Each runs through `POST
 | `material.add` | Add material |  | `pdf_reader` | yes | yes |
 | `material.remove` | Remove material |  |  | yes |  |
 | `material.rename` | Rename material |  |  | yes |  |
-| `material.textbook` | Make it the textbook |  |  | yes |  |
+| `material.textbook` | Move between Textbooks and Materials |  |  | yes |  |
 | `time.clear` | Forget time spent |  |  |  |  |
