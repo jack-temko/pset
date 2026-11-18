@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackt/pset/internal/change"
 	"github.com/jackt/pset/internal/cleanup"
@@ -134,6 +135,35 @@ func TestTheRoutes(t *testing.T) {
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
 		if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), want) {
 			t.Fatalf("%s: %d %s", path, rec.Code, rec.Body)
+		}
+	}
+}
+
+// Since adds up every call from a time, in all and by course, the most
+// first; with no time it is all the calls kept.
+func TestSpendSince(t *testing.T) {
+	svc := New(newStore(t))
+	all, err := svc.Since(bg, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if all.Total.Calls != 6 || len(all.ByCourse) != 2 || all.ByCourse[0].CourseID != "c2" || all.ByCourse[1].Total.Calls != 5 {
+		t.Fatalf("all time %+v", all)
+	}
+	later, err := svc.Since(bg, db.At(time.Now().Add(time.Hour)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if later.Total.Calls != 0 || later.ByCourse == nil || len(later.ByCourse) != 0 {
+		t.Fatalf("from an hour ahead %+v", later)
+	}
+	mux := http.NewServeMux()
+	svc.Routes(mux)
+	for path, code := range map[string]int{"/api/spend": 200, "/api/spend?since=2026-11-01T00:00:00Z": 200, "/api/spend?since=monday": 422} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != code {
+			t.Fatalf("%s: %d", path, rec.Code)
 		}
 	}
 }

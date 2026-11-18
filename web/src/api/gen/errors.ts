@@ -132,6 +132,7 @@ export type ErrorId =
   | "settings.key_empty"
   | "settings.name_too_long"
   | "settings.test_failed"
+  | "spend.bad_since"
   | "store.already_undone"
   | "store.changed_since"
   | "store.no_streaming"
@@ -817,7 +818,7 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
   "key.missing": {
     what: "There's no OpenRouter key yet.",
     why: "PSet needs a key to read pages and write answers.",
-    fix: "Add your key in Settings, under Connections.",
+    fix: "Add your OpenRouter key in Settings, under Model.",
     action: "open_settings",
     scope: "inline",
     status: 422,
@@ -1136,6 +1137,12 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 422,
     owner: "settings",
+  },
+  "spend.bad_since": {
+    what: "Say when to count from, as an RFC 3339 time.",
+    scope: "field",
+    status: 422,
+    owner: "spend",
   },
   "store.already_undone": {
     what: "That was already undone.",

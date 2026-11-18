@@ -235,8 +235,13 @@ func (s *Service) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/time", httpx.Take(func(r *http.Request, st Stretch) error {
 		return s.Save(r.Context(), st)
 	}))
+	// With no since it is all the time kept: what clearing it would forget.
 	mux.HandleFunc("GET /api/time", httpx.Reply(func(r *http.Request) (Week, error) {
-		since, err := time.Parse(time.RFC3339, r.URL.Query().Get("since"))
+		raw := r.URL.Query().Get("since")
+		if raw == "" {
+			return s.Week(r.Context(), time.Time{})
+		}
+		since, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
 			return Week{}, badSince.New().OnField("since")
 		}

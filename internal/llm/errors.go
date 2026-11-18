@@ -19,7 +19,7 @@ var (
 		Clears: "key",
 		What:   "There's no OpenRouter key yet.",
 		Why:    "PSet needs a key to read pages and write answers.",
-		Fix:    "Add your key in Settings, under Connections.",
+		Fix:    "Add your OpenRouter key in Settings, under Model.",
 		Action: errs.ActionOpenSettings,
 		Status: http.StatusUnprocessableEntity,
 	})

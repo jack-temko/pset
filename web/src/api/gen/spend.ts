@@ -41,7 +41,23 @@ export interface Model {
  * Spend is what a course, a material or a set cost in model calls, by
  * model, the most tokens first, and the sums. Its calls are those of the
  * thing's steps; a thing purged takes them with it.
+ * CourseSpend is what one course's calls cost.
  */
+export interface CourseSpend {
+  courseId: string;
+  /**
+   * Total is its calls added up; its Model is empty.
+   */
+  total: Model;
+}
+/**
+ * Totals is what every call since a time cost, in all and by course, the
+ * most first: Settings' month and all time. Never null.
+ */
+export interface Totals {
+  total: Model;
+  byCourse: CourseSpend[];
+}
 export interface Spend {
   /**
    * Models is never null; empty when nothing was called.

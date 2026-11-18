@@ -4,7 +4,7 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-166 entries.
+167 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
@@ -95,7 +95,7 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `internal.database` | PSet's database didn't answer. | Reading or writing its data failed. | Try again. If it keeps happening, check the database in Settings. | `retry` | inline | errs |
 | `internal.disk` | PSet couldn't read or write a file. | The disk may be full, or PSet isn't allowed to use that folder. | Free some space or check the folder's permissions, then try again. | `retry` | inline | errs |
 | `internal.unexpected` | Something went wrong inside PSet. | PSet hit a problem it has no name for. | Try again. If it keeps happening, copy the details and report it. | `retry` | inline | errs |
-| `key.missing` | There's no OpenRouter key yet. | PSet needs a key to read pages and write answers. | Add your key in Settings, under Connections. | `open_settings` | inline | llm |
+| `key.missing` | There's no OpenRouter key yet. | PSet needs a key to read pages and write answers. | Add your OpenRouter key in Settings, under Model. | `open_settings` | inline | llm |
 | `key.out_of_credit` | PSet can't use OpenRouter. | Your OpenRouter account is out of credit. | Add credit on OpenRouter, then try again. |  | inline | llm |
 | `key.refused` | OpenRouter refused the key. | The key in Settings may be wrong, expired or deleted. | Check the key in Settings, then try again. | `open_settings` | inline | llm |
 | `library.bad_cover` | That isn't one of the cover colours. |  |  |  | field | library |
@@ -138,6 +138,7 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `settings.key_empty` | Paste your OpenRouter key first. |  |  |  | field | settings |
 | `settings.name_too_long` | Keep it under {max} characters. |  |  |  | field | settings |
 | `settings.test_failed` | Couldn't connect with that key. | PSet couldn't finish the test. | Try again in a minute. | `retry` | inline | settings |
+| `spend.bad_since` | Say when to count from, as an RFC 3339 time. |  |  |  | field | spend |
 | `store.already_undone` | That was already undone. | It was taken back earlier, perhaps from another tab. |  |  | inline | store |
 | `store.changed_since` | That can't be undone on its own. | You changed the same thing again afterwards. | Undo the newer change first. |  | inline | store |
 | `store.no_streaming` | PSet couldn't keep this page up to date. | The connection can't stream updates. | Reload the page. |  | inline | store |
