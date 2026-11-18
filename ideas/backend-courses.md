@@ -14,7 +14,7 @@ the order of work and the tracker. Branch
 | 1     | The contract                        | Done: #96                                   | `backend-contract` |
 | 2     | Schema, change log, events          | Done: #97                                   | `changelog`        |
 | 3     | The step runner                     | Done: #98                                   | `step-runner`      |
-| 4     | Courses and materials               | Waiting: the eval and a real import (below) |                    |
+| 4     | Courses and materials               | Built; Jack measures (below)                | `material-import`  |
 | 5     | Work: sets, finds, readings, guides | Not started                                 |                    |
 | 6     | Ask                                 | Not started                                 |                    |
 | 7     | Undo, and the rest of the app       | In progress: 7a, the action catalog         | `action-catalog`   |
@@ -144,13 +144,21 @@ tool that reports its own cost, fix this in track 5).
   and the new store's event stream is not mounted (no screen reads it before
   track 8).
 
-**4. Courses and materials.** Waiting (2026-11-17): the search step waits for the
-embeddings eval, which needs Jack's test library, Ollama and a model key; the "done
-when" needs a real textbook and a scan. Courses themselves were built in 7a.
+**4. Courses and materials.** Built 2026-11-17 in the cloud, without Jack's books:
+the five steps run on the repo's sample PDFs, a scan with OCR faked (no Tesseract
+there), a fake model and embedder. Search was ported as it was, embeddings and
+all; Jack's measurements decide whether they stay (the eval below). The search
+step's input is the embedding model's name, but a done step is only checked against
+its input when something calls the runner's Changed: a new embedder needs that call
+(or the step dropped) when the eval decides. Naming's calls are keyed to the
+contents step, with no separate "Naming" stage as the old usage store had. Not proven
+until Jack's run: a real textbook and a real scan, Tesseract, Ollama, naming and
+the contents against a real model. Courses were built in 7a.
 
 - Courses; a material's import as steps (examine, read pages, contents, numbering,
   search); textbook detection; page images.
-- Decided here: **embeddings** (below), before the search step is ported.
+- Decided here: **embeddings** (below). Still open: the search step was ported
+  as it was, embeddings and all, and Jack's eval decides.
 - Done when: a real textbook and a scan import, resume after a kill, and search.
 
 **5. Work.** The largest track; three pull requests.

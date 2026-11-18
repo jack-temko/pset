@@ -326,7 +326,27 @@ POST /api/undo                {action} or {newest: true} -> {action, undo, entry
                               action = a previous undo's id: redo
 GET  /api/courses             the courses not removed, in the order added
 GET  /api/courses/{id}        one course
+POST /api/uploads             multipart, field file -> {id, name}: a PDF staged for
+                              material.add, kept a day
+GET  /api/courses/{id}/materials   the course's materials not removed, with their steps
+GET  /api/materials/{id}      one material, removed or not (a set may still use it)
+GET  /api/materials/{id}/contents  its contents as a tree of headings
+GET  /api/materials/{id}/pages/{n}/image?w=   a page as a JPEG, cached for good
 ```
+
+- **Materials** (`internal/material`): `material.add` takes a staged upload into a
+  course (refused when the course has the same file) and starts its five steps:
+  examine (metadata, text layer, digital or scanned; a digital material's pages),
+  read pages (a scan, page by page, resuming; a page the reader chokes on fails the
+  step with the list, and Try again reads only those), contents (the title from its
+  first pages unless the student renamed it, then the outline, the printed contents
+  or picked headings), numbering (page runs, how it numbers problems; the first
+  material in a course that numbers its problems is the textbook), and search
+  (a vector per page from the local Ollama; without it, words alone). Their craft is
+  the old import's, called through `internal/library/craft.go`. Removing a material
+  pauses its import; undoing the removal resumes it. Files live in
+  `materials/<id>.pdf`; a daily sweep drops those the purge took and uploads past a
+  day.
 
 An action is refused before it runs when a condition it needs does not hold
 (`action.blocked`, with the condition's own why and fix). A catalog test runs

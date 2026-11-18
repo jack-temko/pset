@@ -461,7 +461,7 @@ func (s *Service) PageJPEG(ctx context.Context, bookID string, page, width int) 
 	if err != nil {
 		return nil, err
 	}
-	return s.scans.get(ctx, r, s.pdfPath(bookID), page, width)
+	return s.scans.get(ctx, r.ID, s.pdfPath(bookID), r.PageCount, r.Width, page, width)
 }
 
 // PDFPath is where a book's file lives, for features that read it

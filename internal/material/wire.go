@@ -90,3 +90,38 @@ type Contents struct {
 	// Entries is the top-level headings. Never null.
 	Entries []ContentsEntry `json:"entries"`
 }
+
+// Upload is a PDF staged for adding: POST /api/uploads takes the file, and
+// material.add names the upload. It is kept a day.
+type Upload struct {
+	// ID is the upload's id, for material.add.
+	ID string `json:"id"`
+	// Name is the file's own name, as it came.
+	Name string `json:"name"`
+}
+
+// The material actions' inputs (internal/action).
+type (
+	// Add adds a staged upload to a course as a material, and starts
+	// reading it in.
+	Add struct {
+		CourseID string `json:"courseId"`
+		UploadID string `json:"uploadId"`
+	}
+	// Rename gives a material a new title; reading it in never writes
+	// over it.
+	Rename struct {
+		ID    string `json:"id"`
+		Title string `json:"title"`
+	}
+	// Remove hides a material for a week; while a set still uses it, it
+	// stays readable underneath.
+	Remove struct {
+		ID string `json:"id"`
+	}
+	// Textbook makes a material its course's textbook, where references
+	// like "3.1 #7" are looked for first.
+	Textbook struct {
+		ID string `json:"id"`
+	}
+)

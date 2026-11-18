@@ -33,6 +33,7 @@ import (
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/library"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/material"
 	"github.com/jackt/pset/internal/memory"
 	"github.com/jackt/pset/internal/oldwork"
 	"github.com/jackt/pset/internal/pagenum"
@@ -206,7 +207,15 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	})
 
 	mux := http.NewServeMux()
-	backend.New(work).Routes(mux)
+	// The features on the new store. Search's vectors come from the local
+	// Ollama, as the old library's did, until the embeddings eval decides
+	// whether they stay (track 4 of ideas/backend-courses.md).
+	ollama := llm.New("", "", llm.EmbedEndpoint, llm.EmbedModel)
+	features := backend.New(work, backend.Options{
+		Runner: steps, DataDir: dir, ChatModel: llm.Writer.Model,
+		Embed: ollama.Embed, EmbedModel: llm.EmbedModel,
+	})
+	features.Routes(mux)
 	failures.Routes(mux)
 	cfg.Routes(mux)
 	books.Routes(mux)
@@ -246,7 +255,7 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	}()
 	purgeDone := make(chan struct{})
 	go func() {
-		purgeDaily(runCtx, work, log)
+		purgeDaily(runCtx, work, features.Materials, log)
 		close(purgeDone)
 	}()
 
@@ -391,12 +400,16 @@ func installTag(dir string) string {
 
 // purgeDaily runs the store's purge at start and then once a day: what was
 // removed or changed more than a week ago goes for good.
-func purgeDaily(ctx context.Context, s *store.Store, log *slog.Logger) {
+func purgeDaily(ctx context.Context, s *store.Store, materials *material.Service, log *slog.Logger) {
 	t := time.NewTicker(24 * time.Hour)
 	defer t.Stop()
 	for {
 		if err := s.Purge(ctx, time.Now()); err != nil && ctx.Err() == nil {
 			log.Warn("store: purge", "err", err)
+		}
+		// The files of what the purge took, and uploads never added.
+		if err := materials.Sweep(ctx); err != nil && ctx.Err() == nil {
+			log.Warn("material: sweep", "err", err)
 		}
 		select {
 		case <-ctx.Done():

@@ -148,6 +148,15 @@ func New(s *store.Store, o Options, pipes ...Pipeline) *Runner {
 	return r
 }
 
+// Add puts a pipeline on the runner, before Run: a feature that starts its
+// subjects' steps through the runner is built with it, then hands it its
+// pipeline.
+func (r *Runner) Add(p Pipeline) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.pipes[p.Kind] = p
+}
+
 func (r *Runner) handler(kind change.Resource, name step.Name) (*Handler, int, bool) {
 	p, ok := r.pipes[kind]
 	if !ok {

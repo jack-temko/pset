@@ -72,6 +72,11 @@ func (s *Store) Purge(ctx context.Context, now time.Time) error {
 				return errs.Database.Wrap(err)
 			}
 		}
+		// Sections a material's contents no longer has (a read again found
+		// fewer).
+		if _, err := tx.ExecContext(ctx, `DELETE FROM sections WHERE position < 0`); err != nil {
+			return errs.Database.Wrap(err)
+		}
 		// An action whose changes are all gone can no longer be undone.
 		if _, err := tx.ExecContext(ctx, `DELETE FROM actions WHERE NOT EXISTS (SELECT 1 FROM changes WHERE action_id = actions.id)`); err != nil {
 			return errs.Database.Wrap(err)
