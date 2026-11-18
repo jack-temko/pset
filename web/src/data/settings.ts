@@ -1,4 +1,4 @@
-import { api, ApiError, get, post, put } from '@/api/client';
+import { ApiError, get, post, put } from '@/api/client';
 import { ACTIONS, type ActionId } from '@/api/gen/actions';
 import type { Course } from '@/api/gen/course';
 import type { Health } from '@/api/gen/health';
@@ -12,18 +12,12 @@ import type {
 import type { Spend } from '@/api/gen/spend';
 import type { Week } from '@/api/gen/study';
 import type { Status } from '@/api/gen/update';
-import { applyTheme, getTheme } from '@/lib/theme';
 import type {
   KeyAnswer,
   SettingsActions,
   UpdateFound,
 } from '@/units/settings/actions';
-import type {
-  Appearance,
-  Check,
-  IncidentRow,
-  SettingsData,
-} from '@/units/settings/sample';
+import type { Check, IncidentRow, SettingsData } from '@/units/settings/sample';
 
 import { runAction } from './actions';
 import { dismiss, tryAgain } from './incidents';
@@ -55,20 +49,33 @@ export async function readSettings(
     get<Status>('/api/update'),
     get<Week>(`/api/time?since=${encodeURIComponent(weekStart())}`),
     get<ResetCounts>('/api/reset'),
-    Promise.all(
+    // One course's spend that can't be read leaves it out, not the page.
+    Promise.allSettled(
       courses.map(async (course) => ({
         course,
         spend: await get<Spend>(`/api/courses/${course.id}/spend`),
       })),
+    ).then((all) =>
+      all.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : [])),
     ),
   ]);
   return { settings, about, update, week, counts, spend };
 }
 
+/** Each check's fix, by check id, from the last read: what Fix runs. */
+const fixes = new Map<string, ActionId>();
+
 /** The checks PSet can run, each with its fix worded as its action. The
  *  key's own condition lives beside the key, not in Health. */
 export async function readChecks(): Promise<Check[]> {
   const h = await get<Health>('/api/health');
+  fixes.clear();
+  for (const c of h.checks) {
+    const fix = c.condition.fix;
+    if (fix !== undefined && fix in ACTIONS) {
+      fixes.set(c.condition.id, fix as ActionId);
+    }
+  }
   return h.checks
     .filter((c) => c.detail !== undefined)
     .map((c) => ({
@@ -129,12 +136,11 @@ export function incidentRows(all: readonly Incident[]): IncidentRow[] {
       open: i.state === 'open',
       when: whenOf(i.lastAt),
       count: i.count,
-      // A step's failure reruns; one waiting on a condition heals it.
-      canTry: i.stepId !== undefined || i.kind === 'waiting_on_you',
+      // Only a step's failure can be run again (the runner refuses the
+      // rest); one waiting on a condition heals when the step reruns.
+      canTry: i.stepId !== undefined,
     }));
 }
-
-const APPEARANCE_OF = { light: 'paper', dark: 'night', system: 'system' };
 
 /** Everything the page shows. `checks` is apart: it comes later. */
 export function settingsData(
@@ -143,8 +149,11 @@ export function settingsData(
   checks: Check[] | undefined,
   incidents: readonly Incident[],
 ): SettingsData {
+  // Named from the store's courses, so a rename shows here as it happens.
+  const nameOf = (c: Course) =>
+    courses.find((x) => x.id === c.id)?.name ?? c.name;
   const byCourse = r.spend
-    .map((s) => ({ name: s.course.name, cost: s.spend.total.cost }))
+    .map((s) => ({ name: nameOf(s.course), cost: s.spend.total.cost }))
     .filter((c) => c.cost > 0)
     .sort((a, b) => b.cost - a.cost);
   const allTime = byCourse.reduce((n, c) => n + c.cost, 0);
@@ -158,7 +167,6 @@ export function settingsData(
       value: r.settings.apiKey,
     },
     models: r.settings.models,
-    appearance: APPEARANCE_OF[getTheme()] as Appearance,
     update:
       checked?.newer === true
         ? {
@@ -176,16 +184,10 @@ export function settingsData(
     },
     checks,
     incidents: incidentRows(incidents),
-    // Gaps 8 and 9: no all-time study total, and reset counts the old
-    // library; courses are the store's.
-    counts: {
-      courses: courses.length,
-      sets: 0,
-      materials: r.counts.books,
-      memories: 0,
-      studyHours: Math.round(r.week.total / 60),
-      answers: 0,
-    },
+    // Gaps 8 and 9: no all-time study total, and Reset still clears the old
+    // library, not the store. Numbers that would be wrong are left out, and
+    // the confirms say what goes without them.
+    counts: undefined,
   };
 }
 
@@ -196,14 +198,23 @@ const notesOf = (notes: string): string[] =>
     .map((l) => l.replace(/^\s*[-*]\s*/, '').trim())
     .filter((l) => l !== '');
 
-const keyAnswer = async (send: () => Promise<unknown>): Promise<KeyAnswer> => {
+/** A key test's answer. A refused key, no credit or a provider that won't
+ *  answer is the answer, not a failure of the page: said with its cause and
+ *  fix ("OpenRouter refused this key. Check it and paste it again."), since
+ *  the outer words are the same for all three. Exported for tests. */
+export const keyAnswer = async (
+  send: () => Promise<unknown>,
+): Promise<KeyAnswer> => {
   try {
     await send();
     return { ok: true };
   } catch (e) {
-    // A refused key is the answer, not a failure of the page.
-    if (e instanceof ApiError && e.status < 500) {
-      return { ok: false, failure: e.view.what };
+    if (e instanceof ApiError && e.status >= 400 && e.status < 500) {
+      const v = e.view;
+      const failure = [v.why ?? v.what, v.fix]
+        .filter((x): x is string => x !== undefined && x !== '')
+        .join(' ');
+      return { ok: false, failure };
     }
     throw e;
   }
@@ -228,9 +239,12 @@ async function comesBack(version: string): Promise<void> {
       // Down while it restarts: expected.
     }
     if (Date.now() - began > GIVE_UP_MS) {
-      throw new Error(
-        `PSet did not come back as ${version}. Start it again by hand.`,
-      );
+      throw new ApiError(0, {
+        id: 'update.lost',
+        what: `PSet did not come back as ${version}. Start it again by hand.`,
+        scope: 'inline',
+        chain: ['update.lost'],
+      });
     }
   }
 }
@@ -256,9 +270,6 @@ export function serverActions(changed: {
       }
       return a;
     },
-    setAppearance: (a) => {
-      applyTheme(a === 'paper' ? 'light' : a === 'night' ? 'dark' : 'system');
-    },
     checkUpdate: async (): Promise<UpdateFound> => {
       const s = await post<Status>('/api/update/check');
       const c = s.checked;
@@ -271,13 +282,10 @@ export function serverActions(changed: {
       await comesBack(a.version);
     },
     fix: async (id) => {
-      const fix = (await get<Health>('/api/health')).checks.find(
-        (c) => c.condition.id === id,
-      )?.condition.fix;
-      // The fixes PSet makes take no input.
-      if (fix !== undefined && fix in ACTIONS) {
-        await api('POST', `/api/actions/${fix}`, {});
-      }
+      const fix = fixes.get(id);
+      // The fixes PSet makes take no input; through runAction, so they keep
+      // their place among the student's other actions.
+      if (fix !== undefined) await runAction(fix, {});
       changed.checks();
     },
     tryAgain: async (id) => {

@@ -1,5 +1,4 @@
 export type KeyStatus = 'none' | 'ok' | 'failed';
-export type Appearance = 'paper' | 'night' | 'system';
 export type UpdateStatus = 'current' | 'available' | 'updating';
 
 export interface Check {
@@ -37,7 +36,6 @@ export interface SettingsData {
   name: string;
   key: { status: KeyStatus; value: string; failure?: string };
   models: readonly { job: string; model: string }[];
-  appearance: Appearance;
   update: {
     status: UpdateStatus;
     latest?: string;
@@ -53,8 +51,9 @@ export interface SettingsData {
    *  takes a second or so (the slowest read in Settings). */
   checks?: readonly Check[];
   incidents: readonly IncidentRow[];
-  /** What a reset would take, for the confirms. */
-  counts: {
+  /** What a clear or a reset would take, for the confirms; absent while
+   *  PSet can't count it truly, and the confirm then names no numbers. */
+  counts?: {
     courses: number;
     sets: number;
     materials: number;
@@ -109,7 +108,6 @@ export const FINE: SettingsData = {
     { job: 'Guiding a problem', model: 'DeepSeek V3.2' },
     { job: 'Finding a passage', model: 'Luna' },
   ],
-  appearance: 'night',
   update: { status: 'current' },
   usage: {
     month: 'October',
@@ -202,7 +200,8 @@ export const ERRORS_KEPT: SettingsData = {
       open: true,
       when: 'Today, 9:41 pm',
       count: 3,
-      canTry: true,
+      // A request's failure, not a step's: nothing to run again.
+      canTry: false,
     },
     {
       id: 'r7d1xc',

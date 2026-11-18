@@ -254,6 +254,9 @@ offers Undo only when the action's reply carries an `action`.
   An undo of something not on screen is said in a toast (E3 bent for this one case).
   Questions about how a screen behaves before its backend is finished aren't worth
   Jack's time: he uses `dev` until track 8 is done.
+- One theme (Jack, 2026-11-18): the new design is Night only, as the foundations
+  were built; Settings has no Appearance row, and the old Paper and Night setting
+  leaves at the cut-over.
 - Until then: actions and undo, the error module and places, each a pull request
   into `design` that merges once green and reviewed. The new layer is
   `web/src/data/`; the old `web/src/api/` hooks go at the cut-over.

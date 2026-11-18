@@ -1,4 +1,4 @@
-import type { Appearance, UpdateStatus } from './sample';
+import type { UpdateStatus } from './sample';
 
 /** What a key test or save said. */
 export type KeyAnswer = { ok: true } | { ok: false; failure: string };
@@ -22,7 +22,6 @@ export interface SettingsActions {
   testKey: (key: string) => Promise<KeyAnswer>;
   /** Tests a key, then keeps it only if it works. */
   saveKey: (key: string) => Promise<KeyAnswer>;
-  setAppearance: (a: Appearance) => void;
   checkUpdate: () => Promise<UpdateFound>;
   /** Installs the newer version: PSet restarts, and the page reloads when
    *  it is back. */
@@ -60,7 +59,6 @@ export const SAMPLE_ACTIONS: SettingsActions = {
         };
   },
   saveKey: (key) => SAMPLE_ACTIONS.testKey(key),
-  setAppearance: () => undefined,
   checkUpdate: async () => {
     await wait(1000);
     return { status: 'current' };

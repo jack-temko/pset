@@ -80,7 +80,6 @@ export default defineSpec({
       name: 'Paste the first key',
       steps: ['test-key', 'save-key'],
     },
-    { id: 'switch-to-night', name: 'Switch to Night', steps: ['appearance'] },
     {
       id: 'update-pset',
       name: 'Update PSet',
@@ -108,11 +107,6 @@ export default defineSpec({
       id: 'save-key',
       label: 'Save',
       does: 'Tests the key first, and keeps it only if it works.',
-    },
-    {
-      id: 'appearance',
-      label: 'Paper, Night or System',
-      does: 'Applies the look at once. The design page is always dark, so the sample does not repaint.',
     },
     {
       id: 'check-updates',
@@ -466,6 +460,14 @@ export default defineSpec({
         'Only what can’t be undone still asks first: Clear study history and Reset everything. Everything else happens at once.',
       why: 'Jack, 2026-11-18: "Undo, no confirms" for everything Undo can take back; time.clear and reset are not undoable.',
       beat: 'A confirm on every destructive press',
+      date: '2026-11-18',
+    },
+    {
+      id: 'settings-d31',
+      decision:
+        'No Appearance row: the new design has one theme, Night (ideas/theme.md). Replaces settings-d6.',
+      why: 'Jack, 2026-11-18: "Night only, drop the row".',
+      beat: 'Keeping Paper, Night and System; a Paper theme of its own',
       date: '2026-11-18',
     },
   ],

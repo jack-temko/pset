@@ -13,22 +13,15 @@ import { List } from '@/units/list';
 import { ListRow } from '@/units/list-row';
 import { Meter } from '@/units/meter';
 import { SectionHeading } from '@/units/section-heading';
-import { SegmentedControl } from '@/units/segmented-control';
 import { Tag } from '@/units/tag';
 import { TextField } from '@/units/text-field';
 import { TopBar } from '@/units/top-bar';
 import { ErrorNotice } from '@/units/error-notice';
 import { SAMPLE_ACTIONS, type SettingsActions } from './actions';
-import type { Appearance, IncidentRow, SettingsData } from './sample';
+import type { IncidentRow, SettingsData } from './sample';
 
 /** How long a "Saved" stays under a field. */
 const SAVED_MS = 2000;
-
-const APPEARANCES = [
-  { id: 'paper', label: 'Paper' },
-  { id: 'night', label: 'Night' },
-  { id: 'system', label: 'System' },
-];
 
 /** One group of the page: a heading over an outlined box of rows
  *  (settings-d15). */
@@ -154,7 +147,6 @@ function Groups({
   );
   const [failure, setFailure] = useState(settings.key.failure);
   const [testing, setTesting] = useState(false);
-  const [appearance, setAppearance] = useState<Appearance>(settings.appearance);
   const [update, setUpdate] = useState(settings.update.status);
   const [found, setFound] = useState({
     latest: settings.update.latest,
@@ -167,6 +159,7 @@ function Groups({
   const [confirming, setConfirming] = useState<'history' | 'all'>();
   const [historyEl, setHistoryEl] = useState<HTMLElement | null>(null);
   const [fixing, setFixing] = useState<string>();
+  const [fixFailed, setFixFailed] = useState<Record<string, string>>({});
   const [resetFailure, setResetFailure] = useState<string>();
 
   const { counts } = settings;
@@ -235,11 +228,21 @@ function Groups({
       });
   };
 
+  /** Runs a check's fix; one that fails says why in the check's own line,
+   *  until it is pressed again. */
   const runFix = (id: string) => {
     setFixing(id);
+    setFixFailed((f) => {
+      const rest = { ...f };
+      // oxlint-disable-next-line typescript/no-dynamic-delete -- a map keyed by check id
+      delete rest[id];
+      return rest;
+    });
     actions
       .fix(id)
-      .catch(() => undefined)
+      .catch((e: unknown) => {
+        setFixFailed((f) => ({ ...f, [id]: errorView(e).what }));
+      })
       .finally(() => {
         setFixing(undefined);
       });
@@ -272,7 +275,13 @@ function Groups({
     <ListRow
       key={c.id}
       title={c.name}
-      meta={['detail' in c ? c.detail : <Bone key="detail" ch={28} />]}
+      meta={[
+        'detail' in c ? (
+          (fixFailed[c.id] ?? c.detail)
+        ) : (
+          <Bone key="detail" ch={28} />
+        ),
+      ]}
       aside={
         <div className="flex items-center justify-end gap-3">
           {'ok' in c && c.fix && (
@@ -320,17 +329,6 @@ function Groups({
               note={false}
             />
           </div>
-        </Row>
-        <Row name="Appearance" hint="Paper, Night, or follow your computer.">
-          <SegmentedControl
-            label="Appearance"
-            options={APPEARANCES}
-            value={appearance}
-            onChange={(id) => {
-              setAppearance(id as Appearance);
-              actions.setAppearance(id as Appearance);
-            }}
-          />
         </Row>
       </Group>
 
@@ -545,7 +543,11 @@ function Groups({
       {confirming === 'history' && (
         <Confirm
           anchor={historyEl}
-          message={`This deletes ${String(counts.studyHours)} h of study time and ${plural(counts.answers, 'answer', 'answers')}.`}
+          message={
+            counts === undefined
+              ? 'This deletes all the study time PSet has kept.'
+              : `This deletes ${String(counts.studyHours)} h of study time and ${plural(counts.answers, 'answer', 'answers')}.`
+          }
           confirmLabel="Clear study history"
           onConfirm={() => {
             void actions.clearHistory().catch(() => undefined);
@@ -559,7 +561,11 @@ function Groups({
       {confirming === 'all' && (
         <DangerDialog
           title="Reset everything"
-          message={`This deletes ${plural(counts.courses, 'course', 'courses')}, ${plural(counts.sets, 'assignment', 'assignments')}, ${plural(counts.materials, 'material', 'materials')} and ${plural(counts.memories, 'memory', 'memories')}.`}
+          message={
+            counts === undefined
+              ? 'This deletes every course, assignment, material and memory.'
+              : `This deletes ${plural(counts.courses, 'course', 'courses')}, ${plural(counts.sets, 'assignment', 'assignments')}, ${plural(counts.materials, 'material', 'materials')} and ${plural(counts.memories, 'memory', 'memories')}.`
+          }
           word="reset"
           confirmLabel="Reset everything"
           onConfirm={() => {
@@ -663,12 +669,17 @@ function IncidentItem({
   actions: SettingsActions;
 }) {
   const [busy, setBusy] = useState<'try' | 'dismiss'>();
+  const [failure, setFailure] = useState<string>();
   const [trace, setTrace] = useState<readonly string[]>();
   const [open, setOpen] = useState(false);
   const run = (which: 'try' | 'dismiss') => {
     setBusy(which);
+    setFailure(undefined);
     (which === 'try' ? actions.tryAgain(i.id) : actions.dismiss(i.id))
-      .catch(() => undefined)
+      .catch((e: unknown) => {
+        // Said in the row that asked: "Add material can't run yet. ..."
+        setFailure(errorView(e).what);
+      })
       .finally(() => {
         setBusy(undefined);
       });
@@ -687,7 +698,18 @@ function IncidentItem({
     <div>
       <ListRow
         title={i.what}
-        meta={[...(i.fix === undefined ? [] : [i.fix]), times]}
+        meta={[
+          ...(failure === undefined
+            ? i.fix === undefined
+              ? []
+              : [i.fix]
+            : [
+                <span key="failure" className="text-(--ds-danger)">
+                  {failure}
+                </span>,
+              ]),
+          times,
+        ]}
         status={
           i.open ? (
             <Tag tone="danger">Open</Tag>
