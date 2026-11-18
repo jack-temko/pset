@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackt/pset/internal/action"
 	"github.com/jackt/pset/internal/change"
@@ -199,19 +200,45 @@ func (s *Service) changes(ctx context.Context, i Incident) ([]change.Change, err
 // promise, a dead stream) as an incident, born on the page.
 func (s *Service) Report(ctx context.Context, p PageReport) (Incident, error) {
 	view := errs.Stored{Chain: p.Chain, Links: p.Links}.View()
-	kind, _ := errs.KindOf(errs.Unexpected.New())
-	if e, ok := errs.Lookup(view.ID); ok && e.Kind != "" {
-		kind = e.Kind
-	}
 	id, err := s.keep(ctx, record{
-		view: view, kind: Kind(kind), born: BornPage, route: p.Route, detail: p.Detail,
-		subjectKind: p.SubjectKind, subjectID: p.SubjectID, action: p.Action,
+		view: view, kind: kindOf(view), born: BornPage, route: clip(p.Route, maxName), detail: p.Detail,
+		subjectKind: change.Resource(clip(string(p.SubjectKind), maxName)), subjectID: clip(p.SubjectID, maxName),
+		action: clip(p.Action, maxName),
 	})
 	if err != nil {
 		return Incident{}, err
 	}
 	return s.Get(ctx, id)
 }
+
+// kindOf is the kind of a failure from its view: its entry's own kind, or
+// else what its status says (errs.KindOf, for a view rather than an error).
+func kindOf(v errs.View) Kind {
+	if e, ok := errs.Lookup(v.ID); ok && e.Kind != "" {
+		return Kind(e.Kind)
+	}
+	switch {
+	case v.Scope == errs.ScopeField:
+		return Kind(errs.KindYourInput)
+	case v.Status >= 500 || v.Status == 0:
+		return Kind(errs.KindOurs)
+	}
+	return Kind(errs.KindCant)
+}
+
+// clip cuts s to at most n bytes, on a rune boundary.
+func clip(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+	return s[:n]
+}
+
+// maxName bounds the route, action and subject the page reports.
+const maxName = 256
 
 // record is one failure to keep.
 type record struct {
@@ -221,6 +248,10 @@ type record struct {
 	route, detail, action, id string
 	subjectKind               change.Resource
 	subjectID                 string
+	// alone keeps it as a new incident even when one is open for the same
+	// cause, subject and route: an old job's failure names a book, which no
+	// subject here can, so two books' failures must not count as one.
+	alone bool
 }
 
 // keep writes a failure as an incident, or counts it again on the open one
@@ -230,9 +261,7 @@ func (s *Service) keep(ctx context.Context, r record) (string, error) {
 	if err != nil {
 		return "", errs.Data.Wrap(err)
 	}
-	if len(r.detail) > maxDetail {
-		r.detail = r.detail[:maxDetail]
-	}
+	r.detail = clip(r.detail, maxDetail)
 	id := r.id
 	if id == "" {
 		id = errs.NewIncident()
@@ -240,9 +269,12 @@ func (s *Service) keep(ctx context.Context, r record) (string, error) {
 	now := db.Now()
 	err = s.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
 		var open string
-		err := tx.QueryRowContext(ctx, `SELECT id FROM incidents WHERE state = 'open' AND born = ? AND route = ?
+		err := sql.ErrNoRows
+		if !r.alone {
+			err = tx.QueryRowContext(ctx, `SELECT id FROM incidents WHERE state = 'open' AND born = ? AND route = ?
 			AND json_extract(error, '$.id') = ? AND subject_kind = ? AND subject_id = ?`,
-			string(r.born), r.route, r.view.ID, string(r.subjectKind), r.subjectID).Scan(&open)
+				string(r.born), r.route, r.view.ID, string(r.subjectKind), r.subjectID).Scan(&open)
+		}
 		switch {
 		case err == nil:
 			id = open
@@ -251,9 +283,16 @@ func (s *Service) keep(ctx context.Context, r record) (string, error) {
 		case !errors.Is(err, sql.ErrNoRows):
 			return errs.Database.Wrap(err)
 		}
-		_, err = tx.ExecContext(ctx, `INSERT INTO incidents (id, error, kind, subject_kind, subject_id, action, born, route, state, first_at, last_at, detail)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)`,
-			id, string(raw), string(r.kind), string(r.subjectKind), r.subjectID, r.action, string(r.born), r.route, now, now, r.detail)
+		// The course and set are its subject's, as the subject's last change
+		// names them (as the runner does for a step's incident).
+		_, err = tx.ExecContext(ctx, `INSERT INTO incidents (id, error, kind, subject_kind, subject_id, course_id, set_id, action, born, route, state, first_at, last_at, detail)
+			SELECT ?, ?, ?, ?, ?,
+				ifnull((SELECT course_id FROM changes WHERE kind = ? AND res_id = ? ORDER BY seq DESC LIMIT 1), ''),
+				ifnull((SELECT set_id FROM changes WHERE kind = ? AND res_id = ? ORDER BY seq DESC LIMIT 1), ''),
+				?, ?, ?, 'open', ?, ?, ?`,
+			id, string(raw), string(r.kind), string(r.subjectKind), r.subjectID,
+			string(r.subjectKind), r.subjectID, string(r.subjectKind), r.subjectID,
+			r.action, string(r.born), r.route, now, now, r.detail)
 		return errs.Database.Of(err)
 	})
 	return id, err
@@ -264,20 +303,21 @@ const maxDetail = 16 << 10
 
 // Record keeps a failed request as an incident (errs.Recorder): the request
 // handler reports it once, and the student reads it in Settings.
-func (s *Service) Record(ctx context.Context, r errs.Record) error {
-	kind, _ := errs.KindOf(errs.Unexpected.New())
-	if e, ok := errs.Lookup(r.View.ID); ok && e.Kind != "" {
-		kind = e.Kind
+// It returns the id the failure is kept under, which is the open incident's
+// when the same failure was already open, so the student is told an id
+// Settings can find.
+func (s *Service) Record(ctx context.Context, r errs.Record) (string, error) {
+	rec := record{
+		view: r.View, kind: kindOf(r.View), born: BornRequest, route: r.Where.Route, detail: r.Detail, id: r.Incident,
+		alone: r.Where.Book != "",
 	}
-	rec := record{view: r.View, kind: Kind(kind), born: BornRequest, route: r.Where.Route, detail: r.Detail, id: r.Incident}
 	switch {
 	case r.Where.Question != "":
 		rec.subjectKind, rec.subjectID = change.ResourceQuestion, r.Where.Question
 	case r.Where.Set != "":
 		rec.subjectKind, rec.subjectID = change.ResourceSet, r.Where.Set
 	}
-	_, err := s.keep(context.WithoutCancel(ctx), rec)
-	return err
+	return s.keep(context.WithoutCancel(ctx), rec)
 }
 
 // Routes mounts Settings' list, an incident's trace, and the page's own

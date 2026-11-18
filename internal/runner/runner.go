@@ -160,18 +160,36 @@ type forcing struct {
 // Force makes the next times runs of the named step fail with entry, so
 // every state can be looked at on a real screen; times 0 stops it. For
 // development only: the route that calls it is built only with the dev
-// tag (A5).
-func (r *Runner) Force(name step.Name, entry *errs.Entry, times int) {
+// tag (A5). A step no pipeline on the runner has is refused, so a typo
+// does not silently force nothing.
+func (r *Runner) Force(name step.Name, entry *errs.Entry, times int) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if !r.hasStep(name) {
+		return errs.Gone.New("thing", "step")
+	}
 	if r.forced == nil {
 		r.forced = map[step.Name]forcing{}
 	}
 	if times <= 0 {
 		delete(r.forced, name)
-		return
+		return nil
 	}
 	r.forced[name] = forcing{entry, times}
+	return nil
+}
+
+// hasStep is whether a pipeline on the runner has the named step. The
+// caller holds r.mu.
+func (r *Runner) hasStep(name step.Name) bool {
+	for _, p := range r.pipes {
+		for _, h := range p.Steps {
+			if h.Name == name {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // forcedFor takes one forced failure for a step, if there is one.

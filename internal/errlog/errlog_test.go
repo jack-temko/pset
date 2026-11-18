@@ -75,7 +75,7 @@ func TestRoutesListAndClear(t *testing.T) {
 	s, _ := newStore(t)
 	mux := http.NewServeMux()
 	s.Routes(mux)
-	testx.Check(t, s.Record(context.Background(), errs.Record{
+	testx.Check(t, record(context.Background(), s, errs.Record{
 		Incident: "ABC123", View: errs.Resolve(inner.New()), Detail: "inner", Where: errs.Where{Route: "x"},
 	}))
 	rec := httptest.NewRecorder()
@@ -96,7 +96,7 @@ func TestAGroupListsAtMostMaxIncidentsButCountsThemAll(t *testing.T) {
 	s, _ := newStore(t)
 	ctx := context.Background()
 	for i := range maxIncidents + 10 {
-		testx.Check(t, s.Record(ctx, errs.Record{
+		testx.Check(t, record(ctx, s, errs.Record{
 			Incident: fmt.Sprintf("I%05d", i), View: errs.Resolve(inner.New()), Where: errs.Where{Route: "x"},
 			At: time.Now().Add(time.Duration(i) * time.Second),
 		}))
@@ -109,4 +109,10 @@ func TestAGroupListsAtMostMaxIncidentsButCountsThemAll(t *testing.T) {
 	if groups[0].Incidents[0].Incident != fmt.Sprintf("I%05d", maxIncidents+9) {
 		t.Errorf("newest first: %q", groups[0].Incidents[0].Incident)
 	}
+}
+
+// record keeps r, for a test that only cares whether it was kept.
+func record(ctx context.Context, s *Store, r errs.Record) error {
+	_, err := s.Record(ctx, r)
+	return err
 }

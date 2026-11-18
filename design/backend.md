@@ -350,8 +350,13 @@ DELETE /api/places/{id}       a draft sent: the place emptied, purged later
   (errs' recorder: a 5xx is kept, your input and refusals are not) and the page,
   in the one `incidents` table, the same cause on the same subject counted again.
   `incident.try_again` reruns a step's own failure or heals the condition one waits
-  on; `incident.dismiss` puts one away, and can be undone. The old `errlog` list
-  keeps its routes for the old screens but takes no new failures.
+  on; `incident.dismiss` puts one away, and can be undone. A failed request is told
+  the id it was kept under, which is the open incident's when it was counted
+  again. A request's incident takes its subject's course and set from the change
+  log; an old job's failure names a book, which no subject can, so it is never
+  counted on another. Known gap: undoing a dismiss after the same failure came back
+  leaves two open incidents for one cause. The old `errlog` list keeps its routes
+  for the old screens but takes no new failures.
 
 - **Materials** (`internal/material`): `material.add` takes a staged upload into a
   course (refused when the course has the same file) and starts its five steps:

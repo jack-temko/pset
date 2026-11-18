@@ -29,8 +29,7 @@ func init() {
 			if !ok && in.Times > 0 {
 				return errs.Gone.New("thing", "error")
 			}
-			r.Force(in.Step, e, in.Times)
-			return nil
+			return r.Force(in.Step, e, in.Times)
 		}))
 	}
 }

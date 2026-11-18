@@ -27,10 +27,12 @@ type Record struct {
 	At     time.Time
 }
 
-// Recorder keeps errors where the student can list them. The errlog package
-// is the one implementation.
+// Recorder keeps errors where the student can list them, and returns the
+// incident id the failure is kept under: r.Incident for a new one, or the id
+// of the open incident it was counted on again, so the id the student is shown
+// is one Settings can find.
 type Recorder interface {
-	Record(ctx context.Context, r Record) error
+	Record(ctx context.Context, r Record) (string, error)
 }
 
 var recorder atomic.Pointer[Recorder]
@@ -86,6 +88,16 @@ func Report(ctx context.Context, err error, where Where) View {
 	}
 	v.Incident = NewIncident()
 	detail := err.Error()
+	if r := recorder.Load(); r != nil {
+		rec := Record{Incident: v.Incident, View: v, Detail: detail, Where: where, At: time.Now().UTC()}
+		kept, rerr := (*r).Record(ctx, rec)
+		switch {
+		case rerr != nil:
+			slog.Warn("keep error", "incident", v.Incident, "err", rerr)
+		case kept != "":
+			v.Incident = kept
+		}
+	}
 	level := slog.LevelWarn
 	if v.Status >= 500 {
 		level = slog.LevelError
@@ -100,11 +112,5 @@ func Report(ctx context.Context, err error, where Where) View {
 		"question", where.Question,
 		"detail", detail,
 	)
-	if r := recorder.Load(); r != nil {
-		rec := Record{Incident: v.Incident, View: v, Detail: detail, Where: where, At: time.Now().UTC()}
-		if rerr := (*r).Record(ctx, rec); rerr != nil {
-			slog.Warn("keep error", "incident", v.Incident, "err", rerr)
-		}
-	}
 	return v
 }

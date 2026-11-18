@@ -106,6 +106,19 @@ func TestThePagesReportsAreIncidents(t *testing.T) {
 	}
 }
 
+// A page's report of a failure that is no fault of PSet's (a 4xx with no kind
+// of its own) is kept as one PSet can't do, not as PSet's own.
+func TestAPageReportsKindFollowsItsStatus(t *testing.T) {
+	e := newEnv(t)
+	got, err := e.svc.Report(bg, PageReport{Chain: []string{errs.Gone.ID}, Links: []map[string]string{{"thing": "set"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Kind != Kind(errs.KindCant) {
+		t.Fatalf("a page's gone is kept as %q", got.Kind)
+	}
+}
+
 // A failed request is recorded once, as an incident about what it named.
 func TestAFailedRequestIsAnIncident(t *testing.T) {
 	e := newEnv(t)
@@ -118,6 +131,69 @@ func TestAFailedRequestIsAnIncident(t *testing.T) {
 	}
 	if i.Born != BornRequest || i.SubjectKind != change.ResourceSet || i.SubjectID != "s1" || i.Route != "POST /api/actions/{id}" || i.Detail == "" {
 		t.Fatalf("the request's incident %+v", i)
+	}
+}
+
+// The same request failing again is counted on the open incident, and the
+// student is told that incident's id, which Settings can find. A failure
+// about a set is scoped to the set and its course.
+func TestTheSameFailedRequestIsOneIncident(t *testing.T) {
+	e := newEnv(t)
+	errs.SetRecorder(e.svc)
+	t.Cleanup(func() { errs.SetRecorder(nil) })
+	where := errs.Where{Route: "POST /api/actions/{id}", Set: "s1"}
+	first := errs.Report(bg, errors.New("boom"), where)
+	again := errs.Report(bg, errors.New("boom"), where)
+	if again.Incident != first.Incident {
+		t.Fatalf("the second failure was told %s, the incident is %s", again.Incident, first.Incident)
+	}
+	i, err := e.svc.Get(bg, again.Incident)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Count != 2 || i.SetID != "s1" || i.CourseID != "c1" {
+		t.Fatalf("the incident %+v", i)
+	}
+}
+
+// An old job's failures name a book, which no subject can, so two books'
+// failures are two incidents, not one counted twice.
+func TestTwoBooksFailuresAreTwoIncidents(t *testing.T) {
+	e := newEnv(t)
+	errs.SetRecorder(e.svc)
+	t.Cleanup(func() { errs.SetRecorder(nil) })
+	a := errs.Report(bg, errors.New("boom"), errs.Where{Route: "job", Book: "b1"})
+	b := errs.Report(bg, errors.New("boom"), errs.Where{Route: "job", Book: "b2"})
+	if a.Incident == b.Incident {
+		t.Fatal("two books' failures were counted as one")
+	}
+}
+
+// fieldOnly is a mistake in what the student typed.
+var fieldOnly = errs.Define(errs.Entry{ID: "test.incident_field", What: "Fix this.", Scope: errs.ScopeField})
+
+// A request refused for the student's own input, or for a thing that is
+// gone, is answered and not kept: only PSet's failures are incidents.
+func TestRefusalsAreNotIncidents(t *testing.T) {
+	e := newEnv(t)
+	errs.SetRecorder(e.svc)
+	t.Cleanup(func() { errs.SetRecorder(nil) })
+	where := errs.Where{Route: "POST /api/actions/{id}", Set: "s1"}
+	if v := errs.Respond(bg, errs.Gone.New("thing", "set"), where); v.Incident != "" {
+		t.Fatalf("a 404 was given incident %s", v.Incident)
+	}
+	if v := errs.Respond(bg, fieldOnly.New(), where); v.Incident != "" {
+		t.Fatalf("a field error was given incident %s", v.Incident)
+	}
+	var n int
+	if err := e.s.DB.QueryRow(`SELECT count(*) FROM incidents`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("%d incidents kept for refusals", n)
+	}
+	if v := errs.Respond(bg, errors.New("boom"), where); v.Incident == "" {
+		t.Fatal("a 500 was not kept")
 	}
 }
 
@@ -197,11 +273,27 @@ func TestDismiss(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.c.Run(bg, "incident.dismiss", in); err != nil {
+	done, err := e.c.Run(bg, "incident.dismiss", in)
+	if err != nil {
 		t.Fatal(err)
 	}
 	if i, err := e.svc.Get(bg, "OPEN01"); err != nil || i.State != StateDismissed || i.ResolvedAt == "" {
 		t.Fatalf("dismissed %+v (%v)", i, err)
+	}
+	// Undo brings it back open, with no resolved time for the purge to go
+	// by; redo puts it away again.
+	undone, err := e.c.Undo(bg, done.Action, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i, err := e.svc.Get(bg, "OPEN01"); err != nil || i.State != StateOpen || i.ResolvedAt != "" {
+		t.Fatalf("undone %+v (%v)", i, err)
+	}
+	if _, err := e.c.Undo(bg, undone.Undo, false); err != nil {
+		t.Fatal(err)
+	}
+	if i, err := e.svc.Get(bg, "OPEN01"); err != nil || i.State != StateDismissed || i.ResolvedAt == "" {
+		t.Fatalf("redone %+v (%v)", i, err)
 	}
 	if _, err := e.c.Run(bg, "incident.dismiss", in); !errors.Is(err, errs.Gone) {
 		t.Fatalf("dismissing it again: %v", err)
