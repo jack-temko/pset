@@ -448,13 +448,14 @@ func TestAFileThatIsntAPDFIsRefused(t *testing.T) {
 
 func stringsReader(s string) *strings.Reader { return strings.NewReader(s) }
 
-// The first material that numbers its problems is the textbook; a later one
-// is not, unless the first was removed.
-func TestTheFirstMaterialWithProblemsIsTheTextbook(t *testing.T) {
+// Detection puts every material that numbers its problems under Textbooks,
+// so a course can have several; once the student moves one, detection
+// leaves it where they put it, and Undo puts it back.
+func TestDetectionShelvesUntilTheStudentMovesIt(t *testing.T) {
 	e := newEnv(t)
-	claim := func(id string) {
+	shelf := func(id string, textbook bool) {
 		t.Helper()
-		if err := e.s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error { return claimTextbook(bg, tx, id) }); err != nil {
+		if err := e.s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error { return shelve(bg, tx, id, textbook) }); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -471,22 +472,30 @@ func TestTheFirstMaterialWithProblemsIsTheTextbook(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	claim("m1")
-	claim("m2")
-	if !textbook("m1") || textbook("m2") {
-		t.Fatal("the second material with problems took the textbook from the first")
+	shelf("m1", true)
+	shelf("m2", true)
+	shelf("m3", false)
+	if !textbook("m1") || !textbook("m2") || textbook("m3") {
+		t.Fatal("detection did not put both books with problems under Textbooks, and the handout under Materials")
 	}
-	if err := e.s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
-		_, err := tx.Exec(`UPDATE materials SET removed_at = ? WHERE id = 'm1'`, db.Now())
-		return err
-	}); err != nil {
+
+	in, err := json.Marshal(Textbook{ID: "m2", Textbook: false})
+	if err != nil {
 		t.Fatal(err)
 	}
-	// A removed textbook still counts until it is purged: undoing its
-	// removal never leaves two.
-	claim("m3")
-	if textbook("m3") {
-		t.Fatal("with the textbook only removed, another material took it")
+	done, err := e.c.Run(bg, "material.textbook", in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shelf("m2", true) // numbering run again
+	if textbook("m2") {
+		t.Fatal("detection moved a material the student had put under Materials")
+	}
+	if _, err := e.c.Undo(bg, done.Action, false); err != nil {
+		t.Fatal(err)
+	}
+	if !textbook("m2") || e.count(`SELECT textbook_set FROM materials WHERE id = 'm2'`) != 0 {
+		t.Fatal("undoing the move did not put it back under Textbooks, for detection again")
 	}
 }
 

@@ -30,10 +30,10 @@ type Material struct {
 	// Problems is how it numbers its problems, once worked out; absent for a
 	// material with no numbered problems.
 	Problems *probnum.Style `json:"problems,omitempty"`
-	// Textbook is true for the course's textbook: where a reference like
-	// "3.1 #7" is looked for first. One material in a course at most; PSet
-	// picks the first that numbers its problems, and the student can change
-	// it.
+	// Textbook is true for a material under Textbooks, where references
+	// like "3.1 #7" are looked for first; false for one under Materials. A
+	// course may have several textbooks. PSet puts a material that numbers
+	// its problems under Textbooks, until the student moves it.
 	Textbook bool `json:"textbook"`
 	// Progress is how far its import has got, while it is being read in;
 	// absent once its pages are all read.
@@ -119,9 +119,9 @@ type (
 	Remove struct {
 		ID string `json:"id"`
 	}
-	// Textbook makes a material its course's textbook, where references
-	// like "3.1 #7" are looked for first.
+	// Textbook puts a material under Textbooks (true) or Materials (false).
 	Textbook struct {
-		ID string `json:"id"`
+		ID       string `json:"id"`
+		Textbook bool   `json:"textbook"`
 	}
 )
