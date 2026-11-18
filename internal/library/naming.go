@@ -38,7 +38,7 @@ Answer with {"title":"Elementary Differential Equations and Boundary Value Probl
 // an error: a failed call or an answer that doesn't check out leaves the
 // name as it was.
 func (s *Service) nameBook(ctx context.Context, m model, b row, path string, pages []string, printed []int) error {
-	title, author, err := s.readName(ctx, m, b, path, pages, printed)
+	title, author, err := readName(ctx, m, s.images(b, path), b.ID, b.Title, b.Author, pages, printed)
 	if err != nil {
 		if ctx.Err() != nil {
 			return fmt.Errorf("stopped: %w", ctx.Err())
@@ -68,14 +68,16 @@ func (s *Service) nameBook(ctx context.Context, m model, b row, path string, pag
 // readName shows the model the pages before the contents (at most
 // namePages) and returns the title and author line that check out, empty
 // where nothing did.
-func (s *Service) readName(ctx context.Context, m model, b row, path string, pages []string, printed []int) (string, string, error) {
+// id names the book in the log; title and author are what it has now, a
+// hint for the model.
+func readName(ctx context.Context, m model, img pageImage, id, title, author string, pages []string, printed []int) (string, string, error) {
 	n := min(namePages, len(pages))
 	if len(printed) > 0 && printed[0] > 1 {
 		n = min(n, printed[0]-1)
 	}
-	content := llm.PartsContent(llm.TextPart(fmt.Sprintf("The file came named %q, by %q. Its first %d pages follow as images.", b.Title, b.Author, n)))
+	content := llm.PartsContent(llm.TextPart(fmt.Sprintf("The file came named %q, by %q. Its first %d pages follow as images.", title, author, n)))
 	for p := 1; p <= n; p++ {
-		data, err := s.scans.get(ctx, b, path, p, nameImageWidth)
+		data, err := img(ctx, p, nameImageWidth)
 		if err != nil {
 			return "", "", err
 		}
@@ -89,9 +91,9 @@ func (s *Service) readName(ctx context.Context, m model, b row, path string, pag
 	if err := m.askJSON(ctx, namePrompt, content, &reply); err != nil {
 		return "", "", err
 	}
-	title, author := checkName(reply.Title, reply.Authors, pages[:n])
-	slog.Info("naming", "book", b.ID, "read", reply.Title, "authors", reply.Authors, "kept", title, "author", author)
-	return title, author, nil
+	kept, by := checkName(reply.Title, reply.Authors, pages[:n])
+	slog.Info("naming", "book", id, "read", reply.Title, "authors", reply.Authors, "kept", kept, "author", by)
+	return kept, by, nil
 }
 
 // checkName keeps what the model read only where the pages' text shows

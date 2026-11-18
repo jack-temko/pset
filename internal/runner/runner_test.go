@@ -784,3 +784,25 @@ func TestASiblingsUnreadableInputDoesNotHoldAFinishedStep(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 	}
 }
+
+// The development switch: the next run of a step fails with the error
+// asked for, and the one after runs as it would.
+func TestForceFailsTheNextRunOnly(t *testing.T) {
+	e := newEnv(t)
+	var runs atomic.Int32
+	r := e.runner(nil, ok(stepA, &runs))
+	r.Force(stepA, errs.Unexpected, 1)
+	start(t, r)
+	e.begin(r, "s1")
+	failed := e.wait("s1", stepA, step.StateFailed)
+	if runs.Load() != 0 {
+		t.Fatal("a forced failure ran the handler")
+	}
+	if err := r.TryAgain(bg, failed.incident); err != nil {
+		t.Fatal(err)
+	}
+	e.wait("s1", stepA, step.StateDone)
+	if runs.Load() != 1 {
+		t.Fatalf("after the forced failure the step ran %d times", runs.Load())
+	}
+}
