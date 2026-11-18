@@ -242,6 +242,7 @@ func (s *Service) Adopt(uploadID string) (*Adopted, error) {
 // reuse: then that material is the one (a sheet uploaded again), and its id
 // is returned in place of the new one.
 func (a *Adopted) Insert(ctx context.Context, tx *sql.Tx, courseID string, reuse bool) (string, error) {
+	a.reused = false
 	var course bool
 	if err := tx.QueryRowContext(ctx, `SELECT `+store.Visible(change.ResourceCourse, "?"), courseID).Scan(&course); err != nil {
 		return "", errs.Database.Wrap(err)
@@ -413,12 +414,15 @@ func (s *Service) Get(ctx context.Context, id string) (Material, error) {
 // List is a course's materials not removed, in the order they were added,
 // sheets left out: they are listed with their sets.
 func (s *Service) List(ctx context.Context, courseID string) (Materials, error) {
-	// A sheet (some set's or read's) is listed with its set, not here
-	// (track 5a); it is still a material, found and opened by its id.
+	// A sheet is listed with its set (or its read under review), not here
+	// (track 5a); it is still a material, found and opened by its id. A
+	// sheet whose set and reads are all gone is listed again, and a
+	// textbook named as a sheet stays under Textbooks.
 	rows, err := s.c.Store.DB.QueryContext(ctx, `SELECT `+columns+` FROM materials
 		WHERE course_id = ? AND removed_at = ''
-		AND NOT EXISTS (SELECT 1 FROM sets WHERE sets.sheet_id = materials.id)
-		AND NOT EXISTS (SELECT 1 FROM reads WHERE reads.sheet_id = materials.id)
+		AND (textbook = 1 OR (
+			NOT EXISTS (SELECT 1 FROM sets WHERE sets.sheet_id = materials.id AND sets.removed_at = '')
+			AND NOT EXISTS (SELECT 1 FROM reads WHERE reads.sheet_id = materials.id AND reads.removed_at = '')))
 		ORDER BY added_at, id`, courseID)
 	if err != nil {
 		return Materials{}, errs.Database.Wrap(err)

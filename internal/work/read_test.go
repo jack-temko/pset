@@ -18,6 +18,7 @@ import (
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
 	"github.com/jackt/pset/internal/material"
+	"github.com/jackt/pset/internal/probnum"
 	"github.com/jackt/pset/internal/runner"
 	"github.com/jackt/pset/internal/step"
 	"github.com/jackt/pset/internal/store"
@@ -48,6 +49,14 @@ type readEnv struct {
 // any sheet as sheetReply.
 func newReadEnv(t *testing.T) *readEnv {
 	t.Helper()
+	e := newIdleReadEnv(t)
+	e.start()
+	return e
+}
+
+// newIdleReadEnv is newReadEnv with its runner not yet running.
+func newIdleReadEnv(t *testing.T) *readEnv {
+	t.Helper()
 	if _, err := os.Stat("/usr/bin/pdftotext"); err != nil {
 		t.Skip("needs poppler")
 	}
@@ -73,16 +82,27 @@ func newReadEnv(t *testing.T) *readEnv {
 	style := `{"form":"section","where":"chapter"}`
 	e.write(`INSERT INTO courses (id, name, created_at) VALUES ('c1', 'MATH 285', ?)`, db.Now())
 	e.write(`INSERT INTO materials (id, course_id, title, textbook, problems, added_at) VALUES ('m1', 'c1', 'Boyce', 1, ?, ?)`, style, db.Now())
+	return e
+}
+
+// start runs the runner until the test ends.
+func (e *readEnv) start() {
 	ctx, cancel := context.WithCancel(bg)
 	done := make(chan struct{})
 	go func() {
 		if err := e.r.Run(ctx); err != nil {
-			t.Error(err)
+			e.t.Error(err)
 		}
 		close(done)
 	}()
-	t.Cleanup(func() { cancel(); <-done })
-	return e
+	e.t.Cleanup(func() { cancel(); <-done })
+}
+
+// calls is how many times the model was asked to read a sheet.
+func (e *readEnv) calls() int {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.asked
 }
 
 // upload stages the sample sheet.
@@ -249,7 +269,7 @@ func TestImportRefusals(t *testing.T) {
 	if _, err := e.run("read.import", ImportRead{ReadID: r.ID, Groups: []ImportGroup{{Title: "x", Rows: []Draft{{Text: "y"}}}}}); !errors.Is(err, errs.Gone) {
 		t.Fatalf("a dismissed read: %v", err)
 	}
-	if e.asked == 0 {
+	if e.calls() == 0 {
 		t.Fatal("the model was never asked")
 	}
 }
@@ -271,5 +291,137 @@ func TestReadOut(t *testing.T) {
 	}
 	if got := defaultTitle("", "", true); got != "Homework" {
 		t.Fatalf("no name, no date: %q", got)
+	}
+}
+
+// A read dismissed before its step runs is never read: no call is spent.
+func TestADismissedReadSpendsNothing(t *testing.T) {
+	e := newIdleReadEnv(t)
+	id := e.must("read.start", StartRead{CourseID: "c1", UploadID: e.upload()}).ID
+	e.must("read.dismiss", DismissRead{ID: id})
+	e.start()
+	time.Sleep(300 * time.Millisecond)
+	if n := e.calls(); n != 0 {
+		t.Fatalf("a dismissed read asked the model %d times", n)
+	}
+}
+
+// A read never names, nor updates, another course's set; a refused start
+// puts the upload back, to start again.
+func TestAReadStaysInItsCourse(t *testing.T) {
+	e := newReadEnv(t)
+	e.write(`INSERT INTO courses (id, name, created_at) VALUES ('c2', 'ECE 210', ?)`, db.Now())
+	other := e.must("set.add", AddSet{CourseID: "c2", Title: "Elsewhere"}).ID
+	up := e.upload()
+	if _, err := e.run("read.start", StartRead{CourseID: "c1", UploadID: up, SetID: other}); !errors.Is(err, errs.Gone) {
+		t.Fatalf("a read naming another course's set: %v", err)
+	}
+	r := e.waitRead(e.must("read.start", StartRead{CourseID: "c1", UploadID: up}).ID)
+	if _, err := e.run("read.import", ImportRead{ReadID: r.ID, Groups: []ImportGroup{{SetID: other, Rows: []Draft{{Text: "x"}}}}}); !errors.Is(err, errs.Gone) {
+		t.Fatalf("an import into another course's set: %v", err)
+	}
+}
+
+// An import that changes nothing is refused, and a question outside the set
+// it updates is neither rewritten nor removed.
+func TestAnImportOnlyTouchesItsSet(t *testing.T) {
+	e := newReadEnv(t)
+	set := e.must("set.add", AddSet{CourseID: "c1", Title: "PS 4"}).ID
+	e.must("question.add", AddQuestions{SetID: set, Drafts: []Draft{{Text: "Sketch the circuit."}}})
+	other := e.must("set.add", AddSet{CourseID: "c1", Title: "PS 5"}).ID
+	e.must("question.add", AddQuestions{SetID: other, Drafts: []Draft{{Text: "2.1.1", Find: true}}})
+	stranger := e.detail(other).Questions[0].ID
+	r := e.waitRead(e.must("read.start", StartRead{CourseID: "c1", UploadID: e.upload(), SetID: set}).ID)
+	_, err := e.run("read.import", ImportRead{ReadID: r.ID, Groups: []ImportGroup{{
+		SetID: set, Rows: []Draft{{Text: "sketch the  circuit."}},
+		Notes: []NotesUpdate{{QuestionID: stranger, Notes: []string{"no"}}}, Remove: []string{stranger},
+	}}})
+	if errs.Resolve(err).ID != nothingToAdd.ID {
+		t.Fatalf("an import that changes nothing of its set: %v", err)
+	}
+	if q := e.detail(other).Questions; len(q) != 1 || len(q[0].Notes) != 0 {
+		t.Fatalf("the other set's question was touched: %+v", q)
+	}
+}
+
+// A sheet is listed with its set while a set or read names it, and under
+// Materials again once none does; a textbook named as a sheet stays listed.
+func TestASheetIsListedWithItsSet(t *testing.T) {
+	e := newReadEnv(t)
+	r := e.waitRead(e.must("read.start", StartRead{CourseID: "c1", UploadID: e.upload()}).ID)
+	listed := func() bool {
+		t.Helper()
+		got, err := e.mats.List(bg, "c1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range got.Materials {
+			if m.ID == r.SheetID {
+				return true
+			}
+		}
+		return false
+	}
+	if listed() {
+		t.Fatal("a read's sheet is listed under the course's materials")
+	}
+	dismissed := e.must("read.dismiss", DismissRead{ID: r.ID})
+	if !listed() {
+		t.Fatal("a sheet no read or set names is not listed again")
+	}
+	if _, err := e.c.Undo(bg, dismissed.Action, false); err != nil {
+		t.Fatal(err)
+	}
+	if listed() {
+		t.Fatal("bringing the read back left its sheet listed")
+	}
+	e.write(`UPDATE materials SET textbook = 1 WHERE id = ?`, r.SheetID)
+	if !listed() {
+		t.Fatal("a textbook named as a sheet is not listed")
+	}
+}
+
+// The purge keeps a removed sheet while a read names it, and takes the
+// read's step with the read.
+func TestThePurgeKeepsASheetARead(t *testing.T) {
+	e := newReadEnv(t)
+	r := e.waitRead(e.must("read.start", StartRead{CourseID: "c1", UploadID: e.upload()}).ID)
+	old := db.At(time.Now().Add(-2 * store.Keep))
+	e.write(`UPDATE materials SET removed_at = ? WHERE id = ?`, old, r.SheetID)
+	if err := e.s.Purge(bg, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	count := func(q string, args ...any) int {
+		t.Helper()
+		var n int
+		if err := e.s.DB.QueryRow(q, args...).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if count(`SELECT count(*) FROM materials WHERE id = ?`, r.SheetID) != 1 {
+		t.Fatal("a sheet a read names was purged")
+	}
+	e.write(`UPDATE reads SET removed_at = ? WHERE id = ?`, old, r.ID)
+	if err := e.s.Purge(bg, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if count(`SELECT count(*) FROM materials WHERE id = ?`, r.SheetID) != 0 || count(`SELECT count(*) FROM steps WHERE subject_id = ?`, r.ID) != 0 {
+		t.Fatal("the read's sheet or its step outlived the read")
+	}
+}
+
+// With no textbook whose numbering is known, the prompt says so and a
+// textbook line is read as typed, not placed by a guessed numbering.
+func TestReadingWithNoTextbook(t *testing.T) {
+	if b := assignmentBrief("", probnum.Style{}, time.Now()); !strings.Contains(b, "The course has no textbook yet.") || strings.Contains(b, `textbook is ""`) {
+		t.Fatalf("the prompt with no textbook: %q", b)
+	}
+	a, err := readOut(`{"title":"x","groups":[{"rows":[{"kind":"textbook","text":"2.1: 1, 4"}]}]}`, probnum.Style{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if row := a.Groups[0].Rows[0]; !row.Unread || len(row.Labels) != 0 {
+		t.Fatalf("a textbook line with no numbering known: %+v", row)
 	}
 }

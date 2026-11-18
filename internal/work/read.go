@@ -90,7 +90,7 @@ func (s *Service) startRead(ctx context.Context, do *action.Do, in StartRead) er
 	id := uuid.NewString()
 	err = do.Write(ctx, change.ResourceRead, id, func(tx *sql.Tx) error {
 		if in.SetID != "" {
-			if err := visible(ctx, tx, change.ResourceSet, in.SetID, "set"); err != nil {
+			if err := inCourse(ctx, tx, in.SetID, in.CourseID); err != nil {
 				return err
 			}
 		}
@@ -109,6 +109,22 @@ func (s *Service) startRead(ctx context.Context, do *action.Do, in StartRead) er
 	})
 	up.Settle(err)
 	return err
+}
+
+// inCourse fails Gone unless the set is there and in the course: a read
+// never names, nor updates, another course's set.
+func inCourse(ctx context.Context, tx *sql.Tx, setID, courseID string) error {
+	if err := visible(ctx, tx, change.ResourceSet, setID, "set"); err != nil {
+		return err
+	}
+	var n int
+	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM sets WHERE id = ? AND course_id = ?`, setID, courseID).Scan(&n); err != nil {
+		return errs.Database.Wrap(err)
+	}
+	if n == 0 {
+		return errs.Gone.New("thing", "set")
+	}
+	return nil
 }
 
 func (s *Service) dismissRead(ctx context.Context, do *action.Do, in DismissRead) error {
@@ -166,7 +182,7 @@ func (s *Service) readStep(ctx context.Context, run *runner.Run) error {
 	}
 	run.Activity("Reading the assignment")
 	reply, err := client.ChatOnce(ctx, run.Request(llm.ChatRequest{Model: llm.Reader.Model, Messages: []llm.Message{
-		llm.TextMessage("system", fmt.Sprintf(assignmentPrompt, time.Now().Format("Monday, January 2, 2006"), title, styleSentence(st))),
+		llm.TextMessage("system", assignmentBrief(title, st, time.Now())),
 		{Role: "user", Content: msg},
 	}}))
 	if err != nil {
@@ -221,6 +237,7 @@ func clip(s string, n int) string {
 // readOut is the model's reply as an assignment: dates as groups, within
 // the caps, each textbook line read as the questions it becomes.
 func readOut(reply string, st probnum.Style) (Assignment, error) {
+	known := st.Form != ""
 	var read struct {
 		Title  string `json:"title"`
 		Groups []struct {
@@ -251,7 +268,12 @@ func readOut(reply string, st probnum.Style) (Assignment, error) {
 			row := AssignmentRow{Kind: r.Kind, Text: text, Labels: []string{}, Notes: []string{}, Present: []string{}, Changed: []NotesChange{}}
 			switch r.Kind {
 			case RowKindTextbook:
-				row.Labels, row.Notes, row.Unread = readLine(text, st)
+				// With no textbook whose numbering is known, a line can't be
+				// placed: it is read as typed, for the student to look at.
+				row.Labels, row.Notes, row.Unread = []string{}, []string{}, true
+				if known {
+					row.Labels, row.Notes, row.Unread = readLine(text, st)
+				}
 			case RowKindOwn, RowKindOther:
 			default:
 				row.Kind = RowKindOther
@@ -308,6 +330,17 @@ func defaultTitle(name, due string, several bool) string {
 	return "Homework"
 }
 
+// assignmentBrief is the prompt filled in: today, and the course's textbook
+// and its numbering, or that it has none yet (the old homework always had a
+// book; a course may not).
+func assignmentBrief(title string, st probnum.Style, now time.Time) string {
+	textbook := fmt.Sprintf("The course's textbook is %q, and in it\n%s.", title, styleSentence(st))
+	if title == "" {
+		textbook = "The course has no textbook yet."
+	}
+	return fmt.Sprintf(assignmentPrompt, now.Format("Monday, January 2, 2006"), textbook)
+}
+
 // styleSentence says how a textbook numbers its problems, for the prompt.
 func styleSentence(st probnum.Style) string {
 	switch st.Form {
@@ -320,11 +353,10 @@ func styleSentence(st probnum.Style) string {
 }
 
 // assignmentPrompt is the old homework's, word for word (rule 1), but for the
-// row kind "book", which is "textbook" in the contract. Filled with today's
-// date, the textbook's title and how it numbers its problems.
+// row kind "book", which is "textbook" in the contract, and the textbook's
+// sentence, which says when there is none. Filled by assignmentBrief.
 const assignmentPrompt = `You read a course's homework assignment for a student, from what their professor gave them: a
-PDF, a web page, a photo, or pasted text. Today is %s. The course's textbook is %q, and in it
-%s.
+PDF, a web page, a photo, or pasted text. Today is %s. %s
 
 Reply with only JSON, no prose and no code fence:
 {"title": "Assignment #3", "groups": [{"due": "2026-09-15", "title": "Assignment #3", "rows": [
@@ -417,7 +449,7 @@ func (s *Service) importGroup(ctx context.Context, tx *sql.Tx, courseID, sheet s
 		}
 		return true, insertQuestions(ctx, tx, id, drafts)
 	}
-	if err := visible(ctx, tx, change.ResourceSet, g.SetID, "set"); err != nil {
+	if err := inCourse(ctx, tx, g.SetID, courseID); err != nil {
 		return false, err
 	}
 	has, err := setHas(ctx, tx, g.SetID, st)
