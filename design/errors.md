@@ -4,10 +4,13 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-126 entries.
+157 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
+| `action.blocked` | {name} can't run yet. | {why}. | {fix}. | `open_settings` | inline | action |
+| `action.unknown` | PSet doesn't know how to do that. | The page asked for an action this version of PSet doesn't have. | Reload the page. | `reload` | inline | action |
+| `action.wrote_twice` | Something went wrong inside PSet. | An action tried to save its changes in two parts. |  |  | inline | action |
 | `activity.bad_id` | Name the stretch with an id of up to 64 characters. |  |  |  | field | activity |
 | `activity.bad_question_id` | A question's id is up to 64 characters. |  |  |  | field | activity |
 | `activity.bad_since` | Say when the week starts, as an RFC 3339 time. |  |  |  | field | activity |
@@ -21,11 +24,21 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `ask.turn_failed` | Couldn't answer that. | Something went wrong while the tutor was answering. | Ask again. | `retry` | inline | ask |
 | `book.duplicate` | {title} is already on your shelf. | This is the same file as a book you already added. | Open the one on your shelf. | `open_book` | inline | library |
 | `book.not_found` | That book isn't on your shelf. | It was removed, or the link is out of date. | Go back to your shelf and open it from there. |  | inline | errs |
+| `condition.data_folder` | PSet can't use its data folder. | The folder is missing, or PSet isn't allowed to write to it. | Check the data folder in Settings, then try again. | `open_settings` | inline | condition |
+| `condition.database` | PSet can't open or write its database. | The file may be read-only, damaged, or on a drive that went away. | Check the database in Settings, then try again. | `open_settings` | inline | condition |
+| `condition.disk_space` | The disk is full. | PSet needs room for pages, images and its database. | Free some space, then try again. | `retry` | inline | condition |
+| `condition.pdf_reader` | PSet can't read PDFs on this computer. | Poppler, the program PSet reads PDFs with, isn't installed. | Install Poppler (Settings shows how), then try again. | `open_settings` | inline | condition |
+| `condition.scan_reader` | PSet can't read scanned pages on this computer. | Tesseract, the program PSet reads scans with, isn't installed. | Install Tesseract (Settings shows how), then try again. | `open_settings` | inline | condition |
+| `course.name_empty` | Give the course a name. |  |  |  | field | course |
+| `course.name_too_long` | Keep it under {max} characters. |  |  |  | field | course |
 | `embed.failed` | Ollama couldn't build the book's search. | Ollama answered with an error. It may be out of memory or missing its model. | Settings, under Health, says how to check it, then try again. | `open_settings` | inline | llm |
+| `embed.model_missing` | Ollama doesn't have {model} yet. | PSet searches your materials with it, and Ollama hasn't downloaded it. | Download it from Settings, under Health (about 270 MB). | `open_settings` | inline | health |
 | `embed.unreachable` | PSet couldn't reach Ollama. | Ollama searches your books, and it isn't running or isn't answering. | Settings, under Health, says how to start it. | `open_settings` | inline | llm |
 | `errors.clear_failed` | Couldn't clear the list of errors. | PSet's database didn't answer. | Try again. If it keeps happening, check the database in Settings. | `retry` | inline | errlog |
 | `errors.read_failed` | Couldn't read the list of errors. | PSet's database didn't answer. | Try again. If it keeps happening, check the database in Settings. | `retry` | inline | errlog |
 | `events.no_streaming` | PSet can't keep this page up to date. | The connection between the page and PSet can't carry live updates. | Reload the page. If it keeps happening, report it with the details. | `reload` | inline | events |
+| `health.make_folder_failed` | Couldn't create the data folder. | PSet isn't allowed to create it there, or the disk is full. | Create the folder yourself, or free up space, then check again. |  | inline | health |
+| `health.pull_failed` | Ollama couldn't download {model}. | Ollama isn't running, or the download was cut off. | Start Ollama and check the internet connection, then try again. | `retry` | inline | health |
 | `homework.bad_due_date` | That isn't a date. |  |  |  | field | homework |
 | `homework.bad_image` | That isn't a PNG or JPEG image. |  |  |  | field | homework |
 | `homework.bad_position` | Position {to} is outside the set (1 to {n}). |  |  |  | field | homework |
@@ -94,6 +107,14 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `library.run_outside` | Each PDF page has to be inside the book: 1 to {max}. |  |  |  | field | library |
 | `library.runs_empty` | Say where printed page 1 is. |  |  |  | field | library |
 | `library.title_empty` | A book needs a title. |  |  |  | field | library |
+| `material.duplicate` | {title} is already in this course. | This is the same file as a material the course already has. | Open the one the course has. |  | inline | material |
+| `material.not_pdf` | That isn't a PDF. |  |  |  | field | material |
+| `material.pages_unread` | Some pages couldn't be read. | PSet's text reader, Tesseract, failed on {count} ({list}). | Try again, or check that Tesseract works in Settings. | `retry` | inline | material |
+| `material.pdf_empty` | This PDF has no pages. | The file opened but holds nothing to read. | Try a different copy of the file. |  | inline | material |
+| `material.pdf_unreadable` | This PDF can't be read. | PSet couldn't open it, so it may be damaged or locked. | Try a different copy of the file. |  | inline | material |
+| `material.title_empty` | Give it a title. |  |  |  | field | material |
+| `material.title_too_long` | Keep it under {max} characters. |  |  |  | field | material |
+| `material.upload_gone` | That upload isn't there any more. | An upload is kept a day, or it was added already. | Choose the file again. |  | inline | material |
 | `memory.empty` | Write what to remember. |  |  |  | field | memory |
 | `memory.too_long` | Keep it to a sentence or two ({max} characters at most). |  |  |  | field | memory |
 | `model.busy` | OpenRouter didn't answer properly. | OpenRouter is busy or having trouble right now. | Try again in a minute. | `retry` | inline | llm |
@@ -101,6 +122,7 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `model.rejected` | OpenRouter turned the request down. | OpenRouter refused it for a reason PSet has no name for. | Try again. If it keeps happening, copy the details and report it. | `retry` | inline | llm |
 | `model.unknown` | OpenRouter doesn't know a model PSet uses. | A model PSet relies on was renamed or removed. | Check for a PSet update. | `check_update` | inline | llm |
 | `model.unreachable` | PSet couldn't reach OpenRouter. | The internet connection is down, or OpenRouter didn't answer in time. | Check the internet connection, then try again. | `retry` | inline | llm |
+| `place.bad` | PSet couldn't remember where you were. | The page sent a place it can't keep: {why}. | Reload the page. | `reload` | inline | place |
 | `request.foreign_origin` | PSet refused that change. | PSet takes changes only from its own page. | Make the change from PSet's own page. |  | inline | errs |
 | `request.gone` | That {thing} isn't there. | It was removed, or the page is out of date. | Reload the page to see what is there now. | `reload` | inline | errs |
 | `request.invalid_json` | PSet couldn't read what was sent. | The page and PSet's server are out of step, which happens after an update. | Reload the page and try again. | `reload` | inline | errs |
@@ -112,13 +134,22 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `request.too_large` | That's too much to send in one request. | A single request is limited to {limit} MB. | Send it in smaller pieces. |  | inline | errs |
 | `request.unreachable` | PSet can't reach its server. | The server may have stopped, or the computer went to sleep. | Start PSet again, then try again. | `retry` | screen | errs |
 | `request.upload_cut` | The upload was cut off. |  |  |  | field | httpx |
-| `settings.fix_data_dir` | Couldn't create the data folder. | PSet isn't allowed to create it there, or the disk is full. | Create the folder yourself, or free up space, then check again. |  | inline | settings |
-| `settings.fix_database` | Couldn't update the database. | The database can't be brought up to date, which means it is damaged or comes from a newer PSet. | Update PSet. If that doesn't help, reset PSet from this page. |  | inline | settings |
-| `settings.fix_ollama` | Ollama couldn't download {model}. | Ollama isn't running, or the download was cut off. | Start Ollama and check the internet connection, then try again. | `retry` | inline | settings |
+| `runner.incident_gone` | That problem is no longer there. | It was resolved, or what it was about was removed. |  |  | inline | runner |
 | `settings.key_empty` | Paste your OpenRouter key first. |  |  |  | field | settings |
 | `settings.name_too_long` | Keep it under {max} characters. |  |  |  | field | settings |
-| `settings.not_fixable` | PSet can't fix this one itself. | Fixing it needs something installed or changed outside PSet. | Follow the steps listed with the check, then check again. |  | inline | settings |
 | `settings.test_failed` | Couldn't connect with that key. | PSet couldn't finish the test. | Try again in a minute. | `retry` | inline | settings |
+| `store.already_undone` | That was already undone. | It was taken back earlier, perhaps from another tab. |  |  | inline | store |
+| `store.changed_since` | That can't be undone on its own. | You changed the same thing again afterwards. | Undo the newer change first. |  | inline | store |
+| `store.no_streaming` | PSet couldn't keep this page up to date. | The connection can't stream updates. | Reload the page. |  | inline | store |
+| `store.not_undoable` | That can't be undone. | It made something PSet has no way to take back. |  |  | inline | store |
+| `store.nothing_to_undo` | There's nothing to undo. | Nothing you did in the last week is left to take back. |  |  | inline | store |
+| `store.rewritten_since` | That can't be undone any more. | PSet has worked on it since, and undoing would throw that away. |  |  | inline | store |
+| `study.bad_id` | Name the stretch with an id of up to 64 characters. |  |  |  | field | study |
+| `study.bad_question_id` | A question's id is up to 64 characters. |  |  |  | field | study |
+| `study.bad_since` | Say when the week starts, as an RFC 3339 time. |  |  |  | field | study |
+| `study.bad_times` | Say when the stretch started and ended, as RFC 3339 times. |  |  |  | field | study |
+| `study.not_homework` | Only homework time is for a question. |  |  |  | field | study |
+| `study.unknown_kind` | There's no activity called {kind}. |  |  |  | field | study |
 | `update.already_installing` | An update is already being installed. | Another request started it a moment ago. | Wait for PSet to restart. |  | inline | update |
 | `update.check_unreachable` | Couldn't look for an update. | PSet couldn't reach GitHub. | Check the internet connection, then try again. | `retry` | inline | update |
 | `update.download_failed` | The update wasn't installed. | The download failed or broke off. Nothing was changed. | Check the internet connection, then try again. | `retry` | inline | update |

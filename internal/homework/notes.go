@@ -10,7 +10,7 @@ import (
 
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
-	"github.com/jackt/pset/internal/jobs"
+	"github.com/jackt/pset/internal/oldwork"
 )
 
 // The professor's notes on a problem: what to do ("do c", "also graph
@@ -123,7 +123,7 @@ func (s *Service) setNotes(ctx context.Context, q row, lines []string) (Question
 // rewrite changes a question and writes its guide again: whatever guide
 // it had, or was writing, is stopped and cleared, and next is queued. set
 // is the change, as SQL assignments with their arguments.
-func (s *Service) rewrite(ctx context.Context, q row, next jobs.Spec, set string, args ...any) (Question, error) {
+func (s *Service) rewrite(ctx context.Context, q row, next oldwork.Spec, set string, args ...any) (Question, error) {
 	if err := s.c.Queue.StopSubject(ctx, q.ID); err != nil {
 		return Question{}, err
 	}

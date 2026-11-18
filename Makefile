@@ -10,6 +10,7 @@ dev:
 gen:
 	go tool tygo generate
 	go run ./tools/errcatalog
+	go run ./tools/actioncatalog
 
 # The test library: a read-only snapshot of Jack's books and a sample of his
 # homework at ~/.local/share/pset-test-library, with no key. `make test-library`
@@ -23,7 +24,7 @@ seed:
 
 # Fails when a wire.go changed and the generated TS wasn't committed.
 check-gen: gen
-	git diff --exit-code -- web/src/api/gen design/errors.md
+	git diff --exit-code -- web/src/api/gen design/errors.md design/actions.md
 
 # The web app's KaTeX, bundled for the server to check math with
 # (internal/doc/katex-check.js, embedded). Run after changing the katex pin
@@ -53,6 +54,8 @@ fmt-check:
 # actionlint.
 lint:
 	go tool golangci-lint run
+	# The dev build's own files (cmd/pset/devforce.go) build only with -tags dev.
+	go tool golangci-lint run --build-tags dev ./cmd/pset
 	cd web && npx oxlint --type-aware
 	node tools/verify-classes.mjs web --source
 	tools/shellcheck.sh $(SH_FILES)

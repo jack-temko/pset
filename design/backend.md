@@ -104,7 +104,7 @@ GET    /api/due   GET /api/week?since=   POST /api/study
 DELETE /api/study                       (clear activity history)
 GET    /api/settings  PUT /api/settings  POST /api/settings/test
 PUT    /api/settings/profile             (the name)
-GET    /api/health    POST /api/health/{check}/fix
+GET    /api/health    (every condition; fixes are actions, below)
 GET    /api/reset (dry run)  POST /api/reset
 GET    /api/about     GET /api/events
 ```
@@ -249,6 +249,11 @@ on. Stop is an explicit call.
 
 ## Jobs
 
+On `backend` the job queue is gone from the app (track 3 of
+`ideas/backend-courses.md`): the step runner below replaces it, and the queue
+survives only as `internal/oldwork/oldworktest` for the old features' tests. What
+follows is the queue as it was.
+
 A small durable queue, with no notion of UI "tasks". A job has a kind, a
 lane, a subject id, a state (`queued`, `running`, `done`, `failed`,
 `cancelled`), a payload and an error. Features register a handler per
@@ -288,6 +293,133 @@ the scan carries on after it. Homework and Ask jobs are not resumable.
 Cancel cancels the handler's context. On restart, `running` goes back to
 `queued`. Retry re-enqueues with the same payload. Import's Stop leaves
 the book `failed` with "Stopped", per the import spec; Dismiss deletes it.
+
+## The new backend (on `backend`, being built)
+
+The rewrite of `ideas/backend-courses.md`, track by track; this section grows with
+it, and replaces the rest of this file at the cut-over (track 9).
+
+- **The store** (`internal/store`, `store.db` beside `pset.db`): one baseline
+  schema. Triggers log every change of a logged table into `changes`; a write
+  outside `Store.Write` is refused. `Write(ctx, actor, action, fn)` is one
+  transaction, by the student (with the action's id) or by PSet. Undo writes an
+  action's before values back; undoing an undo is redo. The daily purge drops
+  what was removed or changed more than a week ago.
+- **Steps** (`internal/runner`): every piece of background work, one row per
+  subject and step name in `steps`, its model calls in `calls`. See the
+  package's README.
+- **Actions** (`internal/action`): everything a student can do, declared once by
+  the package that owns it (`action.Add`), with its key, the conditions it
+  needs, whether it can be undone and whether it costs. `internal/backend`
+  assembles every feature and its actions. Generated to
+  `web/src/api/gen/actions.ts` and `design/actions.md` by `tools/actioncatalog`.
+  An action writes once, through `do.Write`; one that can't be undone writes as
+  PSet, outside the chain Ctrl+Z walks. The `actions` table records which entry
+  each run was and what it acted on, so Undo can say what it took back.
+
+```
+GET  /api/actions             every action, sorted by id: the palette's list
+POST /api/actions/{action}        run it; body is its typed input
+                              -> {action?, kind?, id?, seq}; action is what Undo takes
+POST /api/undo                {action} or {newest: true} -> {action, undo, entry, said, kind, id, seq}
+                              newest: Ctrl+Z, the newest not undone (never an empty action);
+                              action = a previous undo's id: redo
+GET  /api/courses             the courses not removed, in the order added
+GET  /api/courses/{id}        one course
+POST /api/uploads             multipart, field file -> {id, name}: a PDF staged for
+                              material.add, kept a day
+GET  /api/courses/{id}/materials   the course's materials not removed, with their steps
+GET  /api/materials/{id}      one material, removed or not (a set may still use it)
+GET  /api/materials/{id}/contents  its contents as a tree of headings
+GET  /api/materials/{id}/pages/{n}/image?w=   a page as a JPEG, cached for good
+GET  /api/health              every condition, in condition.All's order, checked
+                              where PSet can check it: {condition, name, detail}
+POST /api/time                a stretch of study {id, courseId, kind, started, ended,
+                              questionId?}: the same id again only moves its end on
+GET  /api/time?since=         the week's minutes by kind and by course
+GET  /api/courses/{id}/spend  what the model calls cost, by model: a course's,
+GET  /api/materials/{id}/spend   a material's import, a set's (its problems'
+GET  /api/sets/{id}/spend        included)
+GET  /api/incidents           Settings' list: open, then resolved in the last week
+GET  /api/incidents/{id}      its trace: the incident, its step, the step's model
+                              calls and the changes to its subject around it
+POST /api/incidents           the page's own failure {chain, links, detail, route, ...}
+                              -> the incident it became
+POST /api/dev/force           dev builds only (make dev): {step, error, times}, the
+                              next runs of a step fail with that catalog error
+GET  /api/places?owner=kind:id&owner=...   the places of those things, read once
+                              by a tab as it opens
+PUT  /api/places              a place {ownerKind, ownerId, kind, tabId?, ...its
+                              fields} -> the place kept
+DELETE /api/places/{id}       a draft sent: the place emptied, purged later
+```
+
+- **Health** (`internal/health`): the PDF and scan readers, the data folder, the
+  store's database and Ollama's search model are checked at start and each time
+  Settings opens, and kept as conditions through the runner (`Holds`, `Lacks`): an
+  action that needs a missing one is refused before the student tries. The key,
+  credit, provider and disk space are learned from calls and writes. Each fix PSet
+  can make is an action: `health.make_data_folder`, `health.get_embeddings`. The key
+  and the student's name are in the store's `settings` table (not logged).
+
+- **Time spent** (`internal/study`): the old activity on courses, in the store's
+  `study` table (not logged; it goes with its course). Overlapping stretches count
+  once; a removed course's time is left out. `time.clear` forgets it all (not
+  undoable). Questions and sets worked come with track 5.
+
+- **Spend** (`internal/spend`): the store's `calls`, through the steps that made
+  them, grouped by the model that answered (the one asked for when none did), the
+  most tokens first, with failed and uncounted calls. A thing purged takes its calls.
+
+- **Incidents** (`internal/incident`): failures from steps (the runner), requests
+  (errs' recorder: a 5xx is kept, your input and refusals are not) and the page,
+  in the one `incidents` table, the same cause on the same subject counted again.
+  `incident.try_again` reruns a step's own failure or heals the condition one waits
+  on; `incident.dismiss` puts one away, and can be undone. A failed request is told
+  the id it was kept under, which is the open incident's when it was counted
+  again: the same error on the same route, action and subject (actions share one
+  route, so the action is part of it). Its kind and what clears it are the innermost
+  entry's that has one, as `errs.KindOf`. A request names no subject yet (httpx
+  reports the route and the action), so its course and set are empty; when a request
+  does name one, they come from the subject's last change. An old job's failure
+  names a book, which no subject can, so it has none and is never counted on another.
+  Settings' list leaves out each incident's detail; the trace has it. Known gaps:
+  undoing a dismiss after the same failure came back leaves two open incidents for
+  one cause; every repeat updates its incident, which is a change on the stream, so
+  a page that reloads a failing read on each change would loop (track 8 must not). The old `errlog` list keeps its routes
+  for the old screens but takes no new failures.
+
+- **Materials** (`internal/material`): `material.add` takes a staged upload into a
+  course (refused when the course has the same file) and starts its five steps:
+  examine (metadata, text layer, digital or scanned; a digital material's pages),
+  read pages (a scan, page by page, resuming; a page the reader chokes on fails the
+  step with the list, and Try again reads only those), contents (the title from its
+  first pages unless the student renamed it, then the outline, the printed contents
+  or picked headings), numbering (page runs, how it numbers problems; the first
+  material in a course that numbers its problems is the textbook), and search
+  (a vector per page from the local Ollama; without it, words alone). Their craft is
+  the old import's, called through `internal/library/craft.go`. Removing a material
+  pauses its import; undoing the removal resumes it. Files live in
+  `materials/<id>.pdf`; a daily sweep drops those the purge took and uploads past a
+  day.
+
+- **Places** (`internal/place`): where the student was, how they laid it out and
+  what they had not sent, one per owner, kind and tab, by the rule in
+  `ideas/actions-conditions-place-grill.md`. A tab's spot in a material is also
+  the material's last spot; sides without a tab empty that tab's spot and zoom.
+  Logged (as PSet, without values) so a new tab finds them, but no action: Ctrl+Z
+  never moves the student back. A change says only the place's id, course and set,
+  and a tab reads places only as it opens (C6): it does not follow them. An empty draft clears its
+  place; a spot written after its tab closed keeps only the material's last; limits
+  on tabs, ids, text and pages keep a page bug from filling the store. Open: a
+  course has one layout, so two browser tabs on one course share it and the last
+  to write wins (C6 says each goes its own way). An emptied place reads as none and the purge takes it, as it takes
+  a place whose owner is gone.
+
+An action is refused before it runs when a condition it needs does not hold
+(`action.blocked`, with the condition's own why and fix). A catalog test runs
+every undoable action in a fresh world with its declared `Try` input, undoes it,
+redoes it, and compares every logged table each time.
 
 ## The document (structured guides)
 

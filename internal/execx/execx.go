@@ -15,10 +15,21 @@ import (
 // (check with errors.Is); the message names the program.
 var ErrNotInstalled = errors.New("program not on PATH")
 
+// NotInstalledError is a program that isn't on PATH, by name, for a caller
+// that needs to know which (errors.As).
+type NotInstalledError struct {
+	Name string
+}
+
+func (e *NotInstalledError) Error() string { return ErrNotInstalled.Error() + ": " + e.Name }
+
+// Is makes errors.Is(err, ErrNotInstalled) hold.
+func (e *NotInstalledError) Is(target error) bool { return target == ErrNotInstalled }
+
 // Look reports the program missing before anything is asked of it.
 func Look(name string) error {
 	if _, err := exec.LookPath(name); err != nil {
-		return fmt.Errorf("%w: %s", ErrNotInstalled, name)
+		return &NotInstalledError{Name: name}
 	}
 	return nil
 }

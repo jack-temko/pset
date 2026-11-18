@@ -17,8 +17,8 @@ import (
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/errs"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/oldwork"
 	"github.com/jackt/pset/internal/usage"
 )
 
@@ -33,7 +33,7 @@ type questionPayload struct {
 
 // chained is a step queued from inside a run: the same run as the one
 // queuing it.
-func chained(spec jobs.Spec, run string) jobs.Spec {
+func chained(spec oldwork.Spec, run string) oldwork.Spec {
 	if p, ok := spec.Payload.(questionPayload); ok {
 		p.Run = run
 		spec.Payload = p
@@ -68,19 +68,19 @@ func problemName(q row) string {
 
 // nextStep is the job for what a question needs next: finding it, while
 // it's in the book and not yet found, else writing its guide.
-func nextStep(id string, find bool) jobs.Spec {
+func nextStep(id string, find bool) oldwork.Spec {
 	p := questionPayload{QuestionID: id}
 	if find {
-		return jobs.Spec{Kind: JobLocate, Subject: id, Priority: locateFirst, Payload: p}
+		return oldwork.Spec{Kind: JobLocate, Subject: id, Priority: locateFirst, Payload: p}
 	}
-	return jobs.Spec{Kind: JobGuide, Subject: id, Payload: p}
+	return oldwork.Spec{Kind: JobGuide, Subject: id, Payload: p}
 }
 
 // readStep is the job that reads a found question's figures. It runs
 // with the finds, ahead of every guide, so a set's readings are there to
 // check while its guides wait.
-func readStep(id string) jobs.Spec {
-	return jobs.Spec{Kind: JobRead, Subject: id, Priority: locateFirst, Payload: questionPayload{QuestionID: id}}
+func readStep(id string) oldwork.Spec {
+	return oldwork.Spec{Kind: JobRead, Subject: id, Priority: locateFirst, Payload: questionPayload{QuestionID: id}}
 }
 
 // waiting is the state a question waits for its next step in: a found
@@ -94,25 +94,25 @@ func waiting(q row) State {
 
 // runLocate is a question's first step: find it in the book, then queue
 // its guide.
-func (s *Service) runLocate(ctx context.Context, j jobs.Job) error {
+func (s *Service) runLocate(ctx context.Context, j oldwork.Job) error {
 	return s.runStep(ctx, j, s.find)
 }
 
 // runRead is a found question's step when it has figures: read them
 // into words, then queue its guide.
-func (s *Service) runRead(ctx context.Context, j jobs.Job) error {
+func (s *Service) runRead(ctx context.Context, j oldwork.Job) error {
 	return s.runStep(ctx, j, s.read)
 }
 
 // runGuide is a question's last step: write its hint and walkthrough.
-func (s *Service) runGuide(ctx context.Context, j jobs.Job) error {
+func (s *Service) runGuide(ctx context.Context, j oldwork.Job) error {
 	return s.runStep(ctx, j, s.write)
 }
 
 // runStep runs one step of a question's job and settles what it leaves:
 // a question stopped on shutdown goes back to waiting (its job resumes on
 // the next run), and a failure is the question's, in words.
-func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Context, model, Book, row) error) error {
+func (s *Service) runStep(ctx context.Context, j oldwork.Job, step func(context.Context, model, Book, row) error) error {
 	var p questionPayload
 	if err := j.Decode(&p); err != nil {
 		return err
@@ -140,7 +140,7 @@ func (s *Service) runStep(ctx context.Context, j jobs.Job, step func(context.Con
 	switch {
 	case err == nil:
 		return nil
-	case jobs.Stopped(ctx):
+	case s.c.Queue.Stopped(ctx):
 		return err // removed; nothing left to update
 	case ctx.Err() != nil:
 		// Shutting down: the step runs again on the next start. A find

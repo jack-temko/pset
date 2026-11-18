@@ -53,6 +53,8 @@ Nothing blocking.
 
 ## Reversals
 
+- 2026-11-17, by `ideas/errors-grill.md`: D12 is reversed (errors are kept while open and for a week after they resolve, with no Clear all), and D11's catalog error on each failed row is replaced by one `incidents` table.
+
 ## Disagreements
 
 - D2: recommended per-package declarations for upkeep; Jack first kept one central file, then said: "If you truly can keep them separated without weird error edge cases where more than one part needs it than you can keep the errors where they are used." Settled per package with an ownership rule for shared errors.

@@ -23,8 +23,8 @@ import (
 	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/events"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/oldwork"
 	"github.com/jackt/pset/internal/usage"
 )
 
@@ -91,14 +91,9 @@ type Time interface {
 	QuestionSeconds(ctx context.Context, ids []string) (map[string]int, error)
 }
 
-// Queue is the job queue as homework uses it.
-type Queue interface {
-	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
-	// Wake starts what was enqueued, once its transaction has committed.
-	Wake()
-	StopSubject(ctx context.Context, subject string) error
-	Handle(kind, lane string, h jobs.Handler)
-}
+// Queue is where homework's background work goes: in the app, oldwork.Idle,
+// so it waits until it is moved onto the step runner.
+type Queue = oldwork.Queue
 
 // Config is what the service is built from.
 type Config struct {

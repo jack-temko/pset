@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -29,10 +30,10 @@ import (
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/errs"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/llm/llmtest"
 	"github.com/jackt/pset/internal/memory"
+	"github.com/jackt/pset/internal/oldwork/oldworktest"
 	"github.com/jackt/pset/internal/usage"
 )
 
@@ -119,7 +120,7 @@ type env struct {
 	llm    *llmtest.Server
 	events *recorder
 	cfg    *settings
-	queue  *jobs.Queue
+	queue  *oldworktest.Queue
 }
 
 const guide = `{"type":"hint","text":"Start from Ohm's law [p. 1]."}
@@ -180,7 +181,7 @@ func newEnvWith(t *testing.T, mem agent.Memory) *env {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { cleanup.Close(d) })
-	migs := append(jobs.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
+	migs := append(oldworktest.Migrations(), db.Migration{Name: "test/books", SQL: `CREATE TABLE books (id TEXT PRIMARY KEY)`})
 	migs = append(migs, usage.Migrations()...)
 	migs = append(migs, memory.Migrations()...)
 	migs = append(migs, Migrations()...)
@@ -192,7 +193,7 @@ func newEnvWith(t *testing.T, mem agent.Memory) *env {
 	e := &env{llm: llmtest.New(t), events: &recorder{}}
 	e.llm.Fallback(fakeModel)
 	e.cfg = &settings{cfg: e.llm.Config()}
-	q := jobs.New(d, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	q := oldworktest.New(d, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	q.Lane(LaneQuestion, 2)
 	q.Lane(LaneAssignment, 2)
 	e.queue = q
@@ -262,6 +263,22 @@ func (e *env) wait(t *testing.T, id string, st State) Question {
 	q, _ := getQuestion(context.Background(), e.svc.c.DB, id)
 	t.Fatalf("question %s: %s (%+v), want %s", id, q.State, q.Error, st)
 	return Question{}
+}
+
+// settled waits until no job is queued or running: a question can read
+// failed while the job that failed it is still returning.
+func (e *env) settled(t *testing.T) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		var n int
+		err := e.svc.c.DB.QueryRowContext(context.Background(), `SELECT count(*) FROM jobs WHERE state IN ('queued', 'running')`).Scan(&n)
+		if err == nil && n == 0 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("jobs still queued or running")
 }
 
 // ---------------------------------------------------------------- tests
@@ -587,12 +604,21 @@ func TestGuideComputesAndShowsWhatItsDoing(t *testing.T) {
 	if q.Activity != "" {
 		t.Fatalf("activity left behind: %q", q.Activity)
 	}
+	// Snapshots can arrive out of order, so read them as the client does:
+	// one with a Rev no higher than the last kept is older, and dropped.
 	var saw []string
+	last := -1
 	for _, ev := range e.events.all() {
-		for _, a := range []string{"Thinking…", "Computing…", "Writing the guide…"} {
-			if strings.Contains(ev, `"activity":"`+a+`"`) && (len(saw) == 0 || saw[len(saw)-1] != a) {
-				saw = append(saw, a)
-			}
+		var c QuestionChanged
+		if !strings.HasPrefix(ev, EventQuestionChanged+" ") ||
+			json.Unmarshal([]byte(strings.TrimPrefix(ev, EventQuestionChanged+" ")), &c) != nil ||
+			c.Question.ID != q.ID || c.Question.Rev <= last {
+			continue
+		}
+		last = c.Question.Rev
+		a := c.Question.Activity
+		if slices.Contains([]string{"Thinking…", "Computing…", "Writing the guide…"}, a) && (len(saw) == 0 || saw[len(saw)-1] != a) {
+			saw = append(saw, a)
 		}
 	}
 	if strings.Join(saw, " > ") != "Thinking… > Computing… > Writing the guide…" {

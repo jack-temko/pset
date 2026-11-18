@@ -50,12 +50,15 @@ func newScanCache(dir string, render func(context.Context, string, int, int) ([]
 	return &scanCache{dir: dir, render: render, sem: make(chan struct{}, maxRenders), inflight: map[string]*flight{}}
 }
 
-func (c *scanCache) get(ctx context.Context, b row, path string, page, width int) ([]byte, error) {
-	if page < 1 || page > b.PageCount {
+// get is one page of the PDF at path as a JPEG about width pixels across,
+// cached under id. pageCount bounds the page; widthPts is the page's width
+// in points, 0 when unknown.
+func (c *scanCache) get(ctx context.Context, id, path string, pageCount int, widthPts float64, page, width int) ([]byte, error) {
+	if page < 1 || page > pageCount {
 		return nil, fmt.Errorf("page %d: %w", page, errNotFound)
 	}
 	w := bucket(width)
-	file := filepath.Join(c.dir, b.ID, strconv.Itoa(page)+"-"+strconv.Itoa(w)+".jpg")
+	file := filepath.Join(c.dir, id, strconv.Itoa(page)+"-"+strconv.Itoa(w)+".jpg")
 	if data, err := os.ReadFile(file); err == nil {
 		return data, nil
 	}
@@ -75,7 +78,7 @@ func (c *scanCache) get(ctx context.Context, b row, path string, page, width int
 	c.inflight[file] = f
 	c.mu.Unlock()
 
-	f.data, f.err = c.renderTo(context.WithoutCancel(ctx), b, path, page, w, file)
+	f.data, f.err = c.renderTo(context.WithoutCancel(ctx), widthPts, path, page, w, file)
 	close(f.done)
 	c.mu.Lock()
 	delete(c.inflight, file)
@@ -83,12 +86,11 @@ func (c *scanCache) get(ctx context.Context, b row, path string, page, width int
 	return f.data, f.err
 }
 
-func (c *scanCache) renderTo(ctx context.Context, b row, path string, page, w int, file string) ([]byte, error) {
+func (c *scanCache) renderTo(ctx context.Context, widthPts float64, path string, page, w int, file string) ([]byte, error) {
 	c.sem <- struct{}{}
 	defer func() { <-c.sem }()
-	// DPI for w pixels across a page b.Width points wide (72 points an
+	// DPI for w pixels across a page widthPts points wide (72 points an
 	// inch); Letter width when the size is unknown.
-	widthPts := b.Width
 	if widthPts <= 0 {
 		widthPts = 612
 	}

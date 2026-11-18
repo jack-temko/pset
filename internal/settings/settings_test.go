@@ -9,32 +9,22 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/condition"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/store"
 	"github.com/jackt/pset/internal/testx"
 )
 
-type fakeDialer struct {
-	chatErr   error
-	ollama    []string
-	ollamaErr error
-	pulled    string
-}
+type fakeDialer struct{ chatErr error }
 
 func (f *fakeDialer) Chat(context.Context, string) error { return f.chatErr }
-func (f *fakeDialer) Ollama(context.Context) ([]string, error) {
-	return f.ollama, f.ollamaErr
-}
-func (f *fakeDialer) Pull(_ context.Context, m string) error {
-	f.pulled = m
-	f.ollama = append(f.ollama, m+":latest")
-	return nil
-}
 
 type fakeLibrary struct{}
 
@@ -60,11 +50,17 @@ func newServer(t *testing.T) *server {
 	if err := db.Migrate(context.Background(), d, migs); err != nil {
 		t.Fatal(err)
 	}
+	// The key and the name are kept in the store's database, beside it.
+	storePath := filepath.Join(dir, "store.db")
+	st, err := store.Open(context.Background(), storePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { cleanup.Close(st.DB) })
 	dial := &fakeDialer{}
 	svc := New(Config{
-		DB: d, DataDir: dir, DBPath: path, Version: "1.2.3", Migrations: migs,
-		Dialer: dial, Library: fakeLibrary{},
-		LookPath: func(string) (string, error) { return "", errors.New("missing") },
+		DB: d, Saved: st.DB, DataDir: dir, DBPath: path, Version: "1.2.3", Migrations: migs,
+		Dialer: dial, Library: fakeLibrary{}, Keep: []string{storePath},
 	})
 	mux := http.NewServeMux()
 	svc.Routes(mux)
@@ -119,20 +115,6 @@ func TestSaveTestsThenWrites(t *testing.T) {
 	want := llm.Config{ChatEndpoint: llm.OpenRouter, APIKey: "sk-or-good", ChatModel: llm.Writer.Model, EmbedEndpoint: llm.EmbedEndpoint, EmbedModel: llm.EmbedModel}
 	if cfg != want {
 		t.Fatalf("llm config %+v", cfg)
-	}
-}
-
-// A key saved before PSet chose its models, for an endpoint other than
-// OpenRouter, isn't one it can use.
-func TestAKeyForAnotherEndpointIsntReady(t *testing.T) {
-	s := newServer(t)
-	for endpoint, want := range map[string]bool{"https://openrouter.ai/api/v1/": true, "http://localhost:11434/v1": false} {
-		testx.Check(t, save(context.Background(), s.svc.c.DB, keyChat, map[string]string{"endpoint": endpoint, "apiKey": "k", "model": "m"}))
-		var got Settings
-		s.do(t, "GET", "/api/settings", nil, &got)
-		if got.Ready.Key != want {
-			t.Errorf("%s: ready %v, want %v", endpoint, got.Ready.Key, want)
-		}
 	}
 }
 
@@ -194,71 +176,6 @@ func TestErrors(t *testing.T) {
 	}
 }
 
-func TestHealthAndFix(t *testing.T) {
-	s := newServer(t)
-	var h Health
-	s.do(t, "GET", "/api/health", nil, &h)
-	byID := map[string]HealthCheck{}
-	for _, c := range h.Checks {
-		byID[c.ID] = c
-	}
-	if len(h.Checks) != 5 {
-		t.Fatalf("checks %+v", h.Checks)
-	}
-	if dd := byID["data_dir"]; !dd.OK {
-		t.Fatalf("data dir: %+v", dd)
-	}
-	if !byID["database"].OK {
-		t.Fatalf("database %+v", byID["database"])
-	}
-	if p := byID["poppler"]; p.OK || p.Fixable {
-		t.Fatalf("missing tool: %+v", p)
-	}
-	// Fixing a check that passes is a no-op that answers the check.
-	var fixed HealthCheck
-	if code := s.do(t, "POST", "/api/health/data_dir/fix", nil, &fixed); code != 200 || !fixed.OK {
-		t.Fatalf("fix: %d %+v", code, fixed)
-	}
-	s.svc.c.Migrations = append(s.svc.c.Migrations, db.Migration{Name: "settings/99", SQL: `CREATE TABLE extra (x)`})
-	s.do(t, "GET", "/api/health", nil, &h)
-	if h.Checks[1].OK || !h.Checks[1].Fixable {
-		t.Fatalf("pending migration not reported: %+v", h.Checks[1])
-	}
-	if code := s.do(t, "POST", "/api/health/database/fix", nil, &fixed); code != 200 || !fixed.OK {
-		t.Fatalf("database fix: %d %+v", code, fixed)
-	}
-	var e errs.View
-	if code := s.do(t, "POST", "/api/health/poppler/fix", nil, &e); code != 422 || e.ID != "settings.not_fixable" {
-		t.Fatalf("unfixable fix: %d %+v", code, e)
-	}
-	if code := s.do(t, "POST", "/api/health/nope/fix", nil, &e); code != 404 || e.ID != "request.gone" {
-		t.Fatalf("unknown check: %d %+v", code, e)
-	}
-}
-
-// Ollama down can't be fixed from here; Ollama without the model can,
-// by pulling it.
-func TestOllamaCheck(t *testing.T) {
-	s := newServer(t)
-	check := func() HealthCheck {
-		var h Health
-		s.do(t, "GET", "/api/health", nil, &h)
-		return h.Checks[len(h.Checks)-1]
-	}
-	s.dial.ollamaErr = errors.New("connection refused")
-	if c := check(); c.ID != "ollama" || c.OK || c.Fixable || !strings.Contains(c.Detail, "not running") {
-		t.Fatalf("down: %+v", c)
-	}
-	s.dial.ollamaErr, s.dial.ollama = nil, []string{"llama3:latest"}
-	if c := check(); c.OK || !c.Fixable {
-		t.Fatalf("no model: %+v", c)
-	}
-	var fixed HealthCheck
-	if code := s.do(t, "POST", "/api/health/ollama/fix", nil, &fixed); code != 200 || !fixed.OK || s.dial.pulled != llm.EmbedModel {
-		t.Fatalf("fix: %d %+v, pulled %q", code, fixed, s.dial.pulled)
-	}
-}
-
 func TestResetIsAFreshInstall(t *testing.T) {
 	s := newServer(t)
 	s.do(t, "PUT", "/api/settings", goodKey, nil)
@@ -283,6 +200,21 @@ func TestResetIsAFreshInstall(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(s.dir, "pset.db")); err != nil {
 		t.Fatal("reset removed the open database")
+	}
+}
+
+// The new backend's store, open beside the old database, is not Reset's.
+func TestResetLeavesTheDatabasesItIsToldToKeep(t *testing.T) {
+	s := newServer(t)
+	s.svc.c.Keep = []string{filepath.Join(s.dir, "store.db")}
+	for _, n := range []string{"store.db", "store.db-wal", "other.db"} {
+		testx.Check(t, os.WriteFile(filepath.Join(s.dir, n), []byte("x"), 0o600))
+	}
+	testx.Check(t, s.svc.Reset(context.Background()))
+	for n, want := range map[string]bool{"store.db": true, "store.db-wal": true, "other.db": false} {
+		if _, err := os.Stat(filepath.Join(s.dir, n)); (err == nil) != want {
+			t.Errorf("%s kept %v, want %v", n, err == nil, want)
+		}
 	}
 }
 
@@ -327,5 +259,23 @@ func TestOutOfCreditPointsAtTheKey(t *testing.T) {
 		if v.Field != "apiKey" || v.Chain[len(v.Chain)-1] != "key.out_of_credit" || !strings.Contains(v.Why, "out of credit") {
 			t.Errorf("%d: got %+v, want out of credit on apiKey", le.Status, v)
 		}
+	}
+}
+
+// Saving a key that passed its test tells the runner the key and credit
+// hold again; a failed save tells it nothing.
+func TestSavingAKeyHeals(t *testing.T) {
+	s := newServer(t)
+	var healed []condition.ID
+	s.svc.c.Heal = func(_ context.Context, id condition.ID) { healed = append(healed, id) }
+	s.dial.chatErr = errors.New("refused")
+	s.do(t, "PUT", "/api/settings", goodKey, nil)
+	if len(healed) != 0 {
+		t.Fatalf("a refused key healed %v", healed)
+	}
+	s.dial.chatErr = nil
+	s.do(t, "PUT", "/api/settings", goodKey, nil)
+	if !slices.Equal(healed, []condition.ID{condition.IDKey, condition.IDCredit}) {
+		t.Fatalf("saving a key healed %v, want key and credit", healed)
 	}
 }

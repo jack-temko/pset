@@ -25,7 +25,7 @@ import (
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
-	"github.com/jackt/pset/internal/jobs"
+	"github.com/jackt/pset/internal/oldwork"
 
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pdf"
@@ -105,7 +105,7 @@ func (s *Service) StartRead(ctx context.Context, bookID string, file *Assignment
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, bookID, source, in.SetID, pageURL, text, data, ReadStateReading, now, now); err != nil {
 			return errs.Database.Wrap(err)
 		}
-		_, err := s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobAssignment, Subject: id, Payload: readJob{ReadID: id}})
+		_, err := s.c.Queue.Enqueue(ctx, tx, oldwork.Spec{Kind: JobAssignment, Subject: id, Payload: readJob{ReadID: id}})
 		return err
 	})
 	if err != nil {
@@ -126,7 +126,7 @@ func (s *Service) RetryRead(ctx context.Context, id string) (AssignmentRead, err
 		if n, _ := res.RowsAffected(); n == 0 {
 			return errs.Stale.New("thing", "assignment")
 		}
-		_, err = s.c.Queue.Enqueue(ctx, tx, jobs.Spec{Kind: JobAssignment, Subject: id, Payload: readJob{ReadID: id}})
+		_, err = s.c.Queue.Enqueue(ctx, tx, oldwork.Spec{Kind: JobAssignment, Subject: id, Payload: readJob{ReadID: id}})
 		return err
 	})
 	if err != nil {
@@ -146,7 +146,7 @@ type readJob struct {
 
 // runAssignmentRead reads one assignment out. A failure is the read's,
 // said in a sentence on it; the job itself only fails on a fault.
-func (s *Service) runAssignmentRead(ctx context.Context, j jobs.Job) error {
+func (s *Service) runAssignmentRead(ctx context.Context, j oldwork.Job) error {
 	var p readJob
 	if err := j.Decode(&p); err != nil {
 		return err
