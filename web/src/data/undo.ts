@@ -28,21 +28,18 @@ function set(next: Pressed | null) {
   });
 }
 
-// Presses go to the server one after another: two sent together could both
-// pick the same newest action, and the second would be refused as already
-// undone instead of taking back the one before it.
-let queue: Promise<void> = Promise.resolve();
-
-/** Ctrl+Z pressed: the next undo, after any still on its way. */
-export function pressUndo(): Promise<void> {
-  queue = queue.then(async () => {
-    try {
-      set({ kind: 'undone', undone: await undoNewest() });
-    } catch (e) {
-      set({ kind: 'refused', error: errorView(e) });
-    }
-  });
-  return queue;
+/** Ctrl+Z pressed: the next undo, after every action and undo still on its
+ *  way (`undoNewest` keeps them in order). Never rejects. */
+export async function pressUndo(): Promise<void> {
+  let next: Pressed;
+  try {
+    next = { kind: 'undone', undone: await undoNewest() };
+  } catch (e) {
+    next = { kind: 'refused', error: errorView(e) };
+  }
+  // Said outside the try: a listener that throws is its own bug, not a
+  // refusal of the undo.
+  set(next);
 }
 
 /** Forgets what the last press said: the student moved on. */
@@ -50,17 +47,16 @@ export function clearPressed(): void {
   set(null);
 }
 
+function subscribe(l: () => void) {
+  listeners.add(l);
+  return () => {
+    listeners.delete(l);
+  };
+}
+
 /** What the last Ctrl+Z did, until it is cleared. */
 export function usePressed(): Pressed | null {
-  return useSyncExternalStore(
-    (l) => {
-      listeners.add(l);
-      return () => {
-        listeners.delete(l);
-      };
-    },
-    () => last,
-  );
+  return useSyncExternalStore(subscribe, () => last);
 }
 
 /** Binds Ctrl+Z for the whole app; mounted once, by the shell. */

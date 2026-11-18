@@ -18,7 +18,7 @@ the order of work and the tracker. Branch
 | 5     | Work: sets, finds, readings, guides | Not started                                 |                    |
 | 6     | Ask                                 | Not started                                 |                    |
 | 7     | Undo, and the rest of the app       | 7a #99, 7b #101, 7c #102, 7d #103; 7d2      | `study-usage`      |
-| 8     | The web data layer and the screens  | In progress: merged #106; actions and undo  | `actions-and-undo` |
+| 8     | The web data layer and the screens  | In progress: after #106, actions and undo   | `actions-and-undo` |
 | 9     | Cut over                            | Not started                                 |                    |
 
 ## Information
@@ -253,7 +253,8 @@ offers Undo only when the action's reply carries an `action`.
    it).
 4. **No action has a key.** Every catalog entry's `key` is empty (A6 drafts them
    with the catalog). Not blocking: the keys can be drafted in the palette's design
-   pass, then written into the catalog.
+   pass, then written into the catalog. A6's test that no two actions share a key on one screen
+   comes with them, on whichever side writes the keys.
 
 **9. Cut over.**
 

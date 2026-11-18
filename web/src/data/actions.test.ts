@@ -1,10 +1,16 @@
+import { act, createElement } from 'react';
+import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Condition } from '@/api/gen/condition';
 
 import { blockedBy, canUndo, redo, runAction, undoAction } from './actions';
-import { bindKey, isTyping, keyOf } from './keys';
+import { bindKey, isTyping, keyOf, useKey } from './keys';
 import { clearPressed, pressUndo } from './undo';
+
+(
+  globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -200,5 +206,76 @@ describe('Ctrl+Z', () => {
     await pressUndo();
     await pressUndo();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('waits for an action on its way, so it takes back that one', async () => {
+    const order: string[] = [];
+    fetchMock.mockImplementation(async (url) => {
+      const u = typeof url === 'string' ? url : '';
+      // The rename is slow; the undo must still go after it.
+      if (u.includes('rename')) await new Promise((r) => setTimeout(r, 10));
+      order.push(u);
+      return reply(200, { action: 'a', undo: 'u', said: 'x', seq: 1 });
+    });
+    const rename = runAction('course.rename', { id: 'c1', name: 'Calc' });
+    await pressUndo();
+    await rename;
+    expect(order).toEqual(['/api/actions/course.rename', '/api/undo']);
+  });
+
+  it('keeps going after the server could not be reached', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(
+        reply(200, { action: 'a', undo: 'u', said: 'x', seq: 1 }),
+      );
+    await expect(pressUndo()).resolves.toBeUndefined();
+    await pressUndo();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('keys, more', () => {
+  it('reads a letter from its place on a keyboard of another alphabet', () => {
+    const k = keyOf(
+      new KeyboardEvent('keydown', { key: 'я', code: 'KeyZ', ctrlKey: true }),
+    );
+    expect(k).toBe('ctrl+z');
+  });
+
+  it('keeps a binding under a dialog when it is switched off and on', () => {
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    const page = vi.fn();
+    const dialog = vi.fn();
+    const Page = ({ on }: { on: boolean }) => {
+      useKey('escape', page, { enabled: on });
+      return null;
+    };
+    const Dialog = () => {
+      useKey('escape', dialog);
+      return null;
+    };
+    const draw = (on: boolean) => {
+      act(() => {
+        root.render(
+          createElement(
+            'div',
+            null,
+            createElement(Page, { on }),
+            createElement(Dialog),
+          ),
+        );
+      });
+    };
+    draw(true);
+    draw(false);
+    draw(true);
+    press({ key: 'Escape' });
+    expect(dialog).toHaveBeenCalledTimes(1);
+    expect(page).not.toHaveBeenCalled();
+    act(() => {
+      root.unmount();
+    });
   });
 });
