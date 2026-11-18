@@ -61,22 +61,6 @@ export interface SaveResult {
   detail: string;
 }
 /**
- * HealthCheck is one local-system check.
- */
-export interface HealthCheck {
-  id: string;
-  name: string;
-  ok: boolean;
-  detail: string;
-  fixable: boolean;
-}
-/**
- * Health is the checks of what PSet needs to run.
- */
-export interface Health {
-  checks: HealthCheck[];
-}
-/**
  * ResetCounts is Reset's dry run, for the confirm dialog.
  */
 export interface ResetCounts {

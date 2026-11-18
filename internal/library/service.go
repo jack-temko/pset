@@ -26,7 +26,6 @@ import (
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/events"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/usage"
@@ -37,22 +36,11 @@ type Models interface {
 	LLM(ctx context.Context) (llm.Config, error)
 }
 
-// Queue is what the library needs from the job queue.
-type Queue interface {
-	Enqueue(ctx context.Context, ex jobs.Execer, s jobs.Spec) (string, error)
-	// Wake starts what was enqueued, once its transaction has committed.
-	Wake()
-	StopSubject(ctx context.Context, subject string) error
-	Handle(kind, lane string, h jobs.Handler)
-	Resumable(kind string)
-}
-
 // Config is what the service is built from.
 type Config struct {
 	DB      *sql.DB
 	DataDir string
 	Events  events.Publisher
-	Queue   Queue
 	Models  Models
 	Tools   Tools
 	// ForgetCalls, if set, runs as a book is removed, while its questions
@@ -69,42 +57,13 @@ type Service struct {
 	pacer *pacer
 }
 
-// Importing a book is two jobs in one lane, one at a time: examining it
-// (title, pages, digital or scanned), then preparing it (reading a scan,
-// the contents, search). Every queued book is examined first, then
-// digital books are prepared ahead of scans, and preparing is resumable:
-// a scan's reading steps aside for a book ahead of it and carries on
-// after, having lost at most the page it was on.
-const (
-	// JobExamine keeps the name of the one import job it grew out of, so
-	// an import queued before the split still runs.
-	JobExamine = "import"
-	JobPrepare = "prepare"
-	LaneImport = "import"
-)
-
-// Priorities in the import lane; a scan prepares at 0.
-const (
-	examineFirst = 2
-	digitalFirst = 1
-)
-
-// examineJob is a book's first import job.
-func examineJob(id string) jobs.Spec {
-	return jobs.Spec{Kind: JobExamine, Subject: id, Priority: examineFirst, Payload: importPayload{BookID: id}}
-}
-
-// New builds the service and registers its job handlers on the queue.
+// New builds the service.
 func New(c Config) *Service {
 	if c.Tools.Metadata == nil {
 		c.Tools = LiveTools()
 	}
 	s := &Service{c: c, scans: newScanCache(filepath.Join(c.DataDir, "cache", "pages"), c.Tools.PageImage)}
 	s.pacer = newPacer()
-	c.Queue.Handle(JobExamine, LaneImport, s.runExamine)
-	c.Queue.Handle(JobPrepare, LaneImport, s.runPrepare)
-	// It saves every page read and every batch embedded as it goes.
-	c.Queue.Resumable(JobPrepare)
 	if err := fillCovers(context.Background(), c.DB); err != nil {
 		slog.Error("library: giving books their colours", "err", err)
 	}
@@ -201,8 +160,8 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 			id, sha, filenameTitle(filename), pickCover(sha, used), now, now); err != nil {
 			return errs.Database.Wrap(err)
 		}
-		_, err := s.c.Queue.Enqueue(ctx, tx, examineJob(id))
-		return err
+		// It waits queued: importing moves onto the step runner in track 4.
+		return nil
 	})
 	if err != nil {
 		cleanup.Remove(s.pdfPath(id))
@@ -216,9 +175,7 @@ func (s *Service) Upload(ctx context.Context, r io.Reader, filename string) (Boo
 	// Published before the wake, so the shelf hears "queued" before the
 	// worker's "preparing". The worker also polls, so it can still have
 	// started by the time the book is read back.
-	b, err := s.publish(ctx, id)
-	s.c.Queue.Wake()
-	return b, err
+	return s.publish(ctx, id)
 }
 
 // headSniffer keeps the first bytes of a stream, to check it's a PDF.
@@ -311,9 +268,6 @@ func (s *Service) Remove(ctx context.Context, id string) error {
 	if _, err := s.Get(ctx, id); err != nil {
 		return err
 	}
-	if err := s.c.Queue.StopSubject(ctx, id); err != nil {
-		return err
-	}
 	// The import's own calls, and, through the hook, the ones the book's
 	// questions and turns owe — all before the rows they hang off go.
 	if err := usage.Forget(ctx, s.c.DB, usage.SubjectBook, id); err != nil {
@@ -342,9 +296,6 @@ func (s *Service) Stop(ctx context.Context, id string) (Book, error) {
 	}
 	if b.State.Kind != StateQueued && b.State.Kind != StatePreparing {
 		return b, nil
-	}
-	if err := s.c.Queue.StopSubject(ctx, id); err != nil {
-		return Book{}, err
 	}
 	why := errs.Resolve(importStopped.New("title", b.Title))
 	if b.State.Kind == StateQueued && b.Kind == KindUnknown {
@@ -396,17 +347,10 @@ func (s *Service) Retry(ctx context.Context, id string) (Book, error) {
 	if err := preparable(ctx, cfg); err != nil {
 		return Book{}, err
 	}
-	err = db.Tx(ctx, s.c.DB, func(tx *sql.Tx) error {
-		if err := setState(ctx, tx, id, BookState{Kind: StateQueued}); err != nil {
-			return err
-		}
-		_, err := s.c.Queue.Enqueue(ctx, tx, examineJob(id))
-		return err
-	})
-	if err != nil {
+	// It waits queued: importing moves onto the step runner in track 4.
+	if err := setState(ctx, s.c.DB, id, BookState{Kind: StateQueued}); err != nil {
 		return Book{}, err
 	}
-	s.c.Queue.Wake()
 	return s.publish(ctx, id)
 }
 
@@ -517,7 +461,7 @@ func (s *Service) PageJPEG(ctx context.Context, bookID string, page, width int) 
 	if err != nil {
 		return nil, err
 	}
-	return s.scans.get(ctx, r, s.pdfPath(bookID), page, width)
+	return s.scans.get(ctx, r.ID, s.pdfPath(bookID), r.PageCount, r.Width, page, width)
 }
 
 // PDFPath is where a book's file lives, for features that read it

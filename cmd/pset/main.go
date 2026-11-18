@@ -1,5 +1,5 @@
 // Command pset serves the PSet web app and its API. This file is wiring
-// only: open the database, build the features, start the queue, serve.
+// only: open the databases, build the features, start the step runner, serve.
 package main
 
 import (
@@ -22,20 +22,26 @@ import (
 	"github.com/jackt/pset/internal/activity"
 	"github.com/jackt/pset/internal/agent"
 	"github.com/jackt/pset/internal/ask"
+	"github.com/jackt/pset/internal/backend"
 	"github.com/jackt/pset/internal/cleanup"
+	"github.com/jackt/pset/internal/condition"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/errlog"
 	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/events"
+	"github.com/jackt/pset/internal/health"
 	"github.com/jackt/pset/internal/homework"
 	"github.com/jackt/pset/internal/httpx"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/library"
 	"github.com/jackt/pset/internal/llm"
+	"github.com/jackt/pset/internal/material"
 	"github.com/jackt/pset/internal/memory"
+	"github.com/jackt/pset/internal/oldwork"
 	"github.com/jackt/pset/internal/pagenum"
 	"github.com/jackt/pset/internal/platform"
+	"github.com/jackt/pset/internal/runner"
 	"github.com/jackt/pset/internal/settings"
+	"github.com/jackt/pset/internal/store"
 	"github.com/jackt/pset/internal/update"
 	"github.com/jackt/pset/internal/usage"
 	"github.com/jackt/pset/web"
@@ -88,8 +94,8 @@ func main() {
 // asked to start the new one once it has shut down.
 var restarting atomic.Bool
 
-// restartSelf asks for a clean shutdown (the same path as Ctrl+C: running jobs
-// go back to queued and resume), after which main starts the new program.
+// restartSelf asks for a clean shutdown (the same path as Ctrl+C: running steps
+// go back to waiting and resume), after which main starts the new program.
 func restartSelf() {
 	restarting.Store(true)
 	cleanup.Log("restart: ask for a shutdown", syscall.Kill(syscall.Getpid(), syscall.SIGTERM))
@@ -107,7 +113,6 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	// before the table.
 	migrations := concat(
 		errlog.Migrations(),
-		jobs.Migrations(),
 		settings.Migrations(),
 		usage.Migrations(),
 		library.Migrations(),
@@ -133,34 +138,53 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	llm.SetSessionPrefix(installTag(dir))
 	// Every call's cost, recorded on what it was spent on.
 	llm.OnCall(usage.Sink(d))
-	if err := usage.Sweep(ctx, d); err != nil {
-		log.Warn("usage: sweep", "err", err)
-	}
 
-	// Every error a student is shown is kept here, for Settings to list.
+	// The new backend's store (ideas/backend-courses.md): its own database
+	// beside the old one until the cut-over, and the step runner over it,
+	// with the one model client every step uses. No pipeline is on it yet;
+	// they come with each feature's track.
+	storePath := filepath.Join(dir, "store.db")
+	work, err := store.Open(ctx, storePath)
+	if err != nil {
+		return err
+	}
+	defer cleanup.Close(work.DB)
+	var cfg *settings.Service
+	steps := runner.New(work, runner.Options{
+		DataDir: dir,
+		Key: func(ctx context.Context) (string, error) {
+			c, err := cfg.LLM(ctx)
+			return c.APIKey, err
+		},
+	})
+
+	// The old errors list: it keeps its routes for the old screens, but
+	// takes no new failures. Failed requests are the new store's incidents
+	// (errs.SetRecorder, below).
 	failures := errlog.New(d)
-	errs.SetRecorder(failures)
 
 	bus := events.NewBus()
-	queue := jobs.New(d, log)
-	queue.Lane(library.LaneImport, 1)
-	queue.Lane(homework.LaneQuestion, 2)
-	queue.Lane(homework.LaneAssignment, 2)
-	// Many books may be answering at once; each book one question at a time.
-	queue.Lane(ask.LaneTurn, 8)
+	// The old features' background work waits: it moves onto the step
+	// runner track by track (ideas/backend-courses.md).
+	idle := oldwork.Idle{}
 
-	cfg := settings.New(settings.Config{
-		DB: d, DataDir: dir, DBPath: dbPath, Version: Version,
+	cfg = settings.New(settings.Config{
+		DB: d, Saved: work.DB, DataDir: dir, DBPath: dbPath, Version: Version,
 		Migrations: migrations,
 		Dialer:     settings.LiveDialer{},
-		Queue:      queue,
+		Keep:       []string{storePath},
+		Heal: func(ctx context.Context, id condition.ID) {
+			if err := steps.Holds(ctx, string(id)); err != nil {
+				log.Warn("runner: heal", "condition", id, "err", err)
+			}
+		},
 	})
 	// The book remover deletes a book's homework and turn usage through
 	// these, which the features fill in once built.
 	var sets *homework.Service
 	var tutor *ask.Service
 	books := library.New(library.Config{
-		DB: d, DataDir: dir, Events: bus, Queue: queue, Models: cfg,
+		DB: d, DataDir: dir, Events: bus, Models: cfg,
 		ForgetCalls: func(ctx context.Context, bookID string) error {
 			if err := sets.ForgetBookCalls(ctx, bookID); err != nil {
 				return err
@@ -174,17 +198,31 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	// turn reads "questions worked" from: built first, told after.
 	clock := activity.New(d, nil)
 	sets = homework.New(homework.Config{
-		DB: d, Events: bus, Queue: queue, Library: homeworkLibrary{books}, Settings: cfg,
+		DB: d, Events: bus, Queue: idle, Library: homeworkLibrary{books}, Settings: cfg,
 		Memory: agentMemory{memories}, Time: clock,
 	})
 	clock.SetHomework(sets)
 
 	tutor = ask.New(ask.Config{
-		DB: d, Events: bus, Queue: queue, Library: askLibrary{books}, Settings: cfg,
+		DB: d, Events: bus, Queue: idle, Library: askLibrary{books}, Settings: cfg,
 		Memory: agentMemory{memories},
 	})
 
 	mux := http.NewServeMux()
+	// The features on the new store. Search's vectors come from the local
+	// Ollama, as the old library's did, until the embeddings eval decides
+	// whether they stay (track 4 of ideas/backend-courses.md).
+	ollama := llm.New("", "", llm.EmbedEndpoint, llm.EmbedModel)
+	features := backend.New(work, backend.Options{
+		Runner: steps, DataDir: dir, ChatModel: llm.Writer.Model,
+		Embed: ollama.Embed, EmbedModel: llm.EmbedModel, Ollama: health.LiveOllama{},
+	})
+	features.Routes(mux)
+	// Failed requests are incidents, listed in Settings with the rest.
+	errs.SetRecorder(features.Incidents)
+	if devRoutes != nil {
+		devRoutes(mux, steps)
+	}
 	failures.Routes(mux)
 	cfg.Routes(mux)
 	books.Routes(mux)
@@ -194,10 +232,9 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	clock.Routes(mux)
 	updater := update.New(update.Config{
 		Version: Version, PublicKey: update.PublicKey,
-		Busy: func(ctx context.Context) (n int, err error) {
-			err = d.QueryRowContext(ctx, `SELECT count(*) FROM jobs WHERE state IN ('queued', 'running')`).Scan(&n)
-			return
-		},
+		// A step cut short by the restart resumes after it, so only one
+		// running now is in the way.
+		Busy:    func(context.Context) (int, error) { return len(steps.Running()), nil },
 		Restart: restartSelf,
 	})
 	updater.Routes(mux)
@@ -205,8 +242,8 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	mux.HandleFunc("/api/", httpx.NotFoundAPI)
 	mux.Handle("/", httpx.SPAFrom(web.Dist, "dist"))
 
-	// The port is taken before the queue starts: a second copy on the same
-	// data would otherwise put the first one's running jobs back to queued,
+	// The port is taken before the runner starts: a second copy on the same
+	// data would otherwise put the first one's running steps back to waiting,
 	// and start them again, before finding the port busy.
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -216,12 +253,25 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 
 	runCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	queueDone := make(chan struct{})
+	stepsDone := make(chan struct{})
 	go func() {
-		if err := queue.Run(runCtx); err != nil {
-			log.Error("queue stopped", "err", err)
+		if err := steps.Run(runCtx); err != nil {
+			log.Error("the step runner stopped", "err", err)
 		}
-		close(queueDone)
+		close(stepsDone)
+	}()
+	// What PSet depends on is checked once as it starts (A2 of
+	// ideas/actions-conditions-place-grill.md), and again each time Settings
+	// opens; Ollama can take its timeout, so the server does not wait.
+	checksDone := make(chan struct{})
+	go func() {
+		features.Health.AtStart(runCtx)
+		close(checksDone)
+	}()
+	purgeDone := make(chan struct{})
+	go func() {
+		purgeDaily(runCtx, work, features.Materials, log)
+		close(purgeDone)
 	}()
 
 	// Handlers hang off a context of their own so shutdown can end the
@@ -252,12 +302,15 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	case <-runCtx.Done():
 	}
 
-	// Running jobs go back to queued and resume on the next start.
+	// Running steps go back to waiting and resume on the next start.
 	select {
-	case <-queueDone:
+	case <-stepsDone:
 	case <-time.After(30 * time.Second):
-		log.Warn("the queue did not stop in time")
+		log.Warn("the step runner did not stop in time")
 	}
+	// A purge in flight finishes before the store closes.
+	<-purgeDone
+	<-checksDone
 	endHandlers()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -359,4 +412,29 @@ func installTag(dir string) string {
 	}
 	sum := sha256.Sum256([]byte(dir))
 	return "pset-" + hex.EncodeToString(sum[:4])
+}
+
+// devRoutes mounts the development switch; set only in a dev build
+// (devforce.go).
+var devRoutes func(*http.ServeMux, *runner.Runner)
+
+// purgeDaily runs the store's purge at start and then once a day: what was
+// removed or changed more than a week ago goes for good.
+func purgeDaily(ctx context.Context, s *store.Store, materials *material.Service, log *slog.Logger) {
+	t := time.NewTicker(24 * time.Hour)
+	defer t.Stop()
+	for {
+		if err := s.Purge(ctx, time.Now()); err != nil && ctx.Err() == nil {
+			log.Warn("store: purge", "err", err)
+		}
+		// The files of what the purge took, and uploads never added.
+		if err := materials.Sweep(ctx); err != nil && ctx.Err() == nil {
+			log.Warn("material: sweep", "err", err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
 }

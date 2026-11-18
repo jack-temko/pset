@@ -49,7 +49,7 @@ func main() {
 		}
 		if goMod.After(lastGo) {
 			lastGo = goMod
-			if run("go", "build", "-o", bin, "./cmd/pset") {
+			if run("go", "build", "-tags", "dev", "-o", bin, "./cmd/pset") {
 				halt(server)
 				server = exec.Command(bin, "-data", data, "-open=false")
 				server.Stdout, server.Stderr = os.Stdout, os.Stderr

@@ -139,9 +139,9 @@ func TestNewIncidentIsSixCrockfordCharacters(t *testing.T) {
 
 type memory struct{ got []Record }
 
-func (m *memory) Record(_ context.Context, r Record) error {
+func (m *memory) Record(_ context.Context, r Record) (string, error) {
 	m.got = append(m.got, r)
-	return nil
+	return r.Incident, nil
 }
 
 func TestReportKeepsFailuresButNotFieldErrors(t *testing.T) {

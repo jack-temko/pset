@@ -101,3 +101,137 @@ packages:
     enum_style: union
     output_path: web/src/api/gen/activity.ts
     frontmatter: '// Generated from internal/activity/wire.go by tygo. Do not edit.'
+  # The backend rewrite's contract (ideas/backend-contract.md): wire types
+  # only, beside the old packages until the later tracks replace them.
+  - path: github.com/jackt/pset/internal/change
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/change.ts
+    type_mappings:
+      doc.Block: 'Block'
+      doc.Run: 'Run'
+    frontmatter: |
+      // Generated from internal/change/wire.go by tygo. Do not edit.
+      import type { Block, Run } from './doc'
+  - path: github.com/jackt/pset/internal/step
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/step.ts
+    type_mappings:
+      change.Resource: 'Resource'
+      usage.Usage: 'Usage'
+    frontmatter: |
+      // Generated from internal/step/wire.go by tygo. Do not edit.
+      import type { Resource } from './change'
+      import type { Usage } from './usage'
+  - path: github.com/jackt/pset/internal/course
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/course.ts
+    frontmatter: '// Generated from internal/course/wire.go by tygo. Do not edit.'
+  - path: github.com/jackt/pset/internal/material
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/material.ts
+    type_mappings:
+      pagenum.Run: 'Run'
+      probnum.Style: 'Style'
+      step.Step: 'Step'
+    frontmatter: |
+      // Generated from internal/material/wire.go by tygo. Do not edit.
+      import type { Run } from './pagenum'
+      import type { Style } from './probnum'
+      import type { Step } from './step'
+  - path: github.com/jackt/pset/internal/work
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/work.ts
+    type_mappings:
+      doc.Run: 'Run'
+      step.Step: 'Step'
+    frontmatter: |
+      // Generated from internal/work/wire.go by tygo. Do not edit.
+      import type { Run } from './doc'
+      import type { Step } from './step'
+  - path: github.com/jackt/pset/internal/document
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/document.ts
+    type_mappings:
+      change.Resource: 'Resource'
+      doc.Block: 'Block'
+    frontmatter: |
+      // Generated from internal/document/wire.go by tygo. Do not edit.
+      import type { Resource } from './change'
+      import type { Block } from './doc'
+  - path: github.com/jackt/pset/internal/turn
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/turn.ts
+    type_mappings:
+      step.Step: 'Step'
+    frontmatter: |
+      // Generated from internal/turn/wire.go by tygo. Do not edit.
+      import type { Step } from './step'
+  - path: github.com/jackt/pset/internal/incident
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/incident.ts
+    type_mappings:
+      change.Resource: 'Resource'
+      change.Change: 'Change'
+      errs.View: 'View'
+      step.Step: 'Step'
+    frontmatter: |
+      // Generated from internal/incident/wire.go by tygo. Do not edit.
+      import type { Change, Resource } from './change'
+      import type { View } from './errs'
+      import type { Step } from './step'
+  - path: github.com/jackt/pset/internal/condition
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/condition.ts
+    type_mappings:
+      errs.View: 'View'
+    frontmatter: |
+      // Generated from internal/condition/wire.go by tygo. Do not edit.
+      import type { View } from './errs'
+  - path: github.com/jackt/pset/internal/place
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/place.ts
+    type_mappings:
+      change.Resource: 'Resource'
+    frontmatter: |
+      // Generated from internal/place/wire.go by tygo. Do not edit.
+      import type { Resource } from './change'
+  - path: github.com/jackt/pset/internal/action
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/action.ts
+    type_mappings:
+      change.Resource: 'Resource'
+      condition.ID: 'ConditionID'
+    frontmatter: |
+      // Generated from internal/action/wire.go by tygo. Do not edit.
+      import type { Resource } from './change'
+      import type { ID as ConditionID } from './condition'
+  - path: github.com/jackt/pset/internal/health
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/health.ts
+    type_mappings:
+      condition.Condition: 'Condition'
+    frontmatter: |
+      // Generated from internal/health/wire.go by tygo. Do not edit.
+      import type { Condition } from './condition'
+  - path: github.com/jackt/pset/internal/study
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/study.ts
+    frontmatter: '// Generated from internal/study/wire.go by tygo. Do not edit.'
+  - path: github.com/jackt/pset/internal/spend
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/spend.ts
+    frontmatter: '// Generated from internal/spend/wire.go by tygo. Do not edit.'

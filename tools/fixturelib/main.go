@@ -28,7 +28,6 @@ import (
 	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/homework"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/library"
 	"github.com/jackt/pset/internal/memory"
 	"github.com/jackt/pset/internal/pdf"
@@ -159,7 +158,7 @@ func build(ctx context.Context, dir string, now time.Time) error {
 	}
 	defer func() { _ = d.Close() }()
 	var migs []db.Migration
-	for _, ms := range [][]db.Migration{jobs.Migrations(), settings.Migrations(), usage.Migrations(), library.Migrations(),
+	for _, ms := range [][]db.Migration{settings.Migrations(), usage.Migrations(), library.Migrations(),
 		memory.Migrations(), homework.Migrations(), ask.Migrations(), activity.Migrations()} {
 		migs = append(migs, ms...)
 	}

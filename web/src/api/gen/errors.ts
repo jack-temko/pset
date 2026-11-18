@@ -2,6 +2,9 @@
 import type { Action, Scope } from './errs';
 
 export type ErrorId =
+  | "action.blocked"
+  | "action.unknown"
+  | "action.wrote_twice"
   | "activity.bad_id"
   | "activity.bad_question_id"
   | "activity.bad_since"
@@ -15,11 +18,21 @@ export type ErrorId =
   | "ask.turn_failed"
   | "book.duplicate"
   | "book.not_found"
+  | "condition.data_folder"
+  | "condition.database"
+  | "condition.disk_space"
+  | "condition.pdf_reader"
+  | "condition.scan_reader"
+  | "course.name_empty"
+  | "course.name_too_long"
   | "embed.failed"
+  | "embed.model_missing"
   | "embed.unreachable"
   | "errors.clear_failed"
   | "errors.read_failed"
   | "events.no_streaming"
+  | "health.make_folder_failed"
+  | "health.pull_failed"
   | "homework.bad_due_date"
   | "homework.bad_image"
   | "homework.bad_position"
@@ -88,6 +101,14 @@ export type ErrorId =
   | "library.run_outside"
   | "library.runs_empty"
   | "library.title_empty"
+  | "material.duplicate"
+  | "material.not_pdf"
+  | "material.pages_unread"
+  | "material.pdf_empty"
+  | "material.pdf_unreadable"
+  | "material.title_empty"
+  | "material.title_too_long"
+  | "material.upload_gone"
   | "memory.empty"
   | "memory.too_long"
   | "model.busy"
@@ -95,6 +116,7 @@ export type ErrorId =
   | "model.rejected"
   | "model.unknown"
   | "model.unreachable"
+  | "place.bad"
   | "request.foreign_origin"
   | "request.gone"
   | "request.invalid_json"
@@ -106,13 +128,22 @@ export type ErrorId =
   | "request.too_large"
   | "request.unreachable"
   | "request.upload_cut"
-  | "settings.fix_data_dir"
-  | "settings.fix_database"
-  | "settings.fix_ollama"
+  | "runner.incident_gone"
   | "settings.key_empty"
   | "settings.name_too_long"
-  | "settings.not_fixable"
   | "settings.test_failed"
+  | "store.already_undone"
+  | "store.changed_since"
+  | "store.no_streaming"
+  | "store.not_undoable"
+  | "store.nothing_to_undo"
+  | "store.rewritten_since"
+  | "study.bad_id"
+  | "study.bad_question_id"
+  | "study.bad_since"
+  | "study.bad_times"
+  | "study.not_homework"
+  | "study.unknown_kind"
   | "update.already_installing"
   | "update.check_unreachable"
   | "update.download_failed"
@@ -141,6 +172,31 @@ export interface CatalogEntry {
 }
 
 export const ERRORS: Record<ErrorId, CatalogEntry> = {
+  "action.blocked": {
+    what: "{name} can't run yet.",
+    why: "{why}.",
+    fix: "{fix}.",
+    action: "open_settings",
+    scope: "inline",
+    status: 409,
+    owner: "action",
+  },
+  "action.unknown": {
+    what: "PSet doesn't know how to do that.",
+    why: "The page asked for an action this version of PSet doesn't have.",
+    fix: "Reload the page.",
+    action: "reload",
+    scope: "inline",
+    status: 404,
+    owner: "action",
+  },
+  "action.wrote_twice": {
+    what: "Something went wrong inside PSet.",
+    why: "An action tried to save its changes in two parts.",
+    scope: "inline",
+    status: 500,
+    owner: "action",
+  },
   "activity.bad_id": {
     what: "Name the stretch with an id of up to 64 characters.",
     scope: "field",
@@ -230,6 +286,63 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 404,
     owner: "errs",
   },
+  "condition.data_folder": {
+    what: "PSet can't use its data folder.",
+    why: "The folder is missing, or PSet isn't allowed to write to it.",
+    fix: "Check the data folder in Settings, then try again.",
+    action: "open_settings",
+    scope: "inline",
+    status: 503,
+    owner: "condition",
+  },
+  "condition.database": {
+    what: "PSet can't open or write its database.",
+    why: "The file may be read-only, damaged, or on a drive that went away.",
+    fix: "Check the database in Settings, then try again.",
+    action: "open_settings",
+    scope: "inline",
+    status: 503,
+    owner: "condition",
+  },
+  "condition.disk_space": {
+    what: "The disk is full.",
+    why: "PSet needs room for pages, images and its database.",
+    fix: "Free some space, then try again.",
+    action: "retry",
+    scope: "inline",
+    status: 507,
+    owner: "condition",
+  },
+  "condition.pdf_reader": {
+    what: "PSet can't read PDFs on this computer.",
+    why: "Poppler, the program PSet reads PDFs with, isn't installed.",
+    fix: "Install Poppler (Settings shows how), then try again.",
+    action: "open_settings",
+    scope: "inline",
+    status: 503,
+    owner: "condition",
+  },
+  "condition.scan_reader": {
+    what: "PSet can't read scanned pages on this computer.",
+    why: "Tesseract, the program PSet reads scans with, isn't installed.",
+    fix: "Install Tesseract (Settings shows how), then try again.",
+    action: "open_settings",
+    scope: "inline",
+    status: 503,
+    owner: "condition",
+  },
+  "course.name_empty": {
+    what: "Give the course a name.",
+    scope: "field",
+    status: 422,
+    owner: "course",
+  },
+  "course.name_too_long": {
+    what: "Keep it under {max} characters.",
+    scope: "field",
+    status: 422,
+    owner: "course",
+  },
   "embed.failed": {
     what: "Ollama couldn't build the book's search.",
     why: "Ollama answered with an error. It may be out of memory or missing its model.",
@@ -238,6 +351,15 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 502,
     owner: "llm",
+  },
+  "embed.model_missing": {
+    what: "Ollama doesn't have {model} yet.",
+    why: "PSet searches your materials with it, and Ollama hasn't downloaded it.",
+    fix: "Download it from Settings, under Health (about 270 MB).",
+    action: "open_settings",
+    scope: "inline",
+    status: 503,
+    owner: "health",
   },
   "embed.unreachable": {
     what: "PSet couldn't reach Ollama.",
@@ -274,6 +396,23 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 500,
     owner: "events",
+  },
+  "health.make_folder_failed": {
+    what: "Couldn't create the data folder.",
+    why: "PSet isn't allowed to create it there, or the disk is full.",
+    fix: "Create the folder yourself, or free up space, then check again.",
+    scope: "inline",
+    status: 422,
+    owner: "health",
+  },
+  "health.pull_failed": {
+    what: "Ollama couldn't download {model}.",
+    why: "Ollama isn't running, or the download was cut off.",
+    fix: "Start Ollama and check the internet connection, then try again.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "health",
   },
   "homework.bad_due_date": {
     what: "That isn't a date.",
@@ -749,6 +888,65 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 422,
     owner: "library",
   },
+  "material.duplicate": {
+    what: "{title} is already in this course.",
+    why: "This is the same file as a material the course already has.",
+    fix: "Open the one the course has.",
+    scope: "inline",
+    status: 409,
+    owner: "material",
+  },
+  "material.not_pdf": {
+    what: "That isn't a PDF.",
+    scope: "field",
+    status: 422,
+    owner: "material",
+  },
+  "material.pages_unread": {
+    what: "Some pages couldn't be read.",
+    why: "PSet's text reader, Tesseract, failed on {count} ({list}).",
+    fix: "Try again, or check that Tesseract works in Settings.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "material",
+  },
+  "material.pdf_empty": {
+    what: "This PDF has no pages.",
+    why: "The file opened but holds nothing to read.",
+    fix: "Try a different copy of the file.",
+    scope: "inline",
+    status: 422,
+    owner: "material",
+  },
+  "material.pdf_unreadable": {
+    what: "This PDF can't be read.",
+    why: "PSet couldn't open it, so it may be damaged or locked.",
+    fix: "Try a different copy of the file.",
+    scope: "inline",
+    status: 422,
+    owner: "material",
+  },
+  "material.title_empty": {
+    what: "Give it a title.",
+    scope: "field",
+    status: 422,
+    owner: "material",
+  },
+  "material.title_too_long": {
+    what: "Keep it under {max} characters.",
+    scope: "field",
+    status: 422,
+    owner: "material",
+  },
+  "material.upload_gone": {
+    what: "That upload isn't there any more.",
+    why: "An upload is kept a day, or it was added already.",
+    fix: "Choose the file again.",
+    scope: "inline",
+    status: 404,
+    owner: "material",
+  },
   "memory.empty": {
     what: "Write what to remember.",
     scope: "field",
@@ -805,6 +1003,15 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 502,
     owner: "llm",
+  },
+  "place.bad": {
+    what: "PSet couldn't remember where you were.",
+    why: "The page sent a place it can't keep: {why}.",
+    fix: "Reload the page.",
+    action: "reload",
+    scope: "inline",
+    status: 400,
+    owner: "place",
   },
   "request.foreign_origin": {
     what: "PSet refused that change.",
@@ -893,30 +1100,12 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 422,
     owner: "httpx",
   },
-  "settings.fix_data_dir": {
-    what: "Couldn't create the data folder.",
-    why: "PSet isn't allowed to create it there, or the disk is full.",
-    fix: "Create the folder yourself, or free up space, then check again.",
+  "runner.incident_gone": {
+    what: "That problem is no longer there.",
+    why: "It was resolved, or what it was about was removed.",
     scope: "inline",
-    status: 422,
-    owner: "settings",
-  },
-  "settings.fix_database": {
-    what: "Couldn't update the database.",
-    why: "The database can't be brought up to date, which means it is damaged or comes from a newer PSet.",
-    fix: "Update PSet. If that doesn't help, reset PSet from this page.",
-    scope: "inline",
-    status: 422,
-    owner: "settings",
-  },
-  "settings.fix_ollama": {
-    what: "Ollama couldn't download {model}.",
-    why: "Ollama isn't running, or the download was cut off.",
-    fix: "Start Ollama and check the internet connection, then try again.",
-    action: "retry",
-    scope: "inline",
-    status: 422,
-    owner: "settings",
+    status: 404,
+    owner: "runner",
   },
   "settings.key_empty": {
     what: "Paste your OpenRouter key first.",
@@ -930,14 +1119,6 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 422,
     owner: "settings",
   },
-  "settings.not_fixable": {
-    what: "PSet can't fix this one itself.",
-    why: "Fixing it needs something installed or changed outside PSet.",
-    fix: "Follow the steps listed with the check, then check again.",
-    scope: "inline",
-    status: 422,
-    owner: "settings",
-  },
   "settings.test_failed": {
     what: "Couldn't connect with that key.",
     why: "PSet couldn't finish the test.",
@@ -946,6 +1127,86 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 422,
     owner: "settings",
+  },
+  "store.already_undone": {
+    what: "That was already undone.",
+    why: "It was taken back earlier, perhaps from another tab.",
+    scope: "inline",
+    status: 409,
+    owner: "store",
+  },
+  "store.changed_since": {
+    what: "That can't be undone on its own.",
+    why: "You changed the same thing again afterwards.",
+    fix: "Undo the newer change first.",
+    scope: "inline",
+    status: 409,
+    owner: "store",
+  },
+  "store.no_streaming": {
+    what: "PSet couldn't keep this page up to date.",
+    why: "The connection can't stream updates.",
+    fix: "Reload the page.",
+    scope: "inline",
+    status: 500,
+    owner: "store",
+  },
+  "store.not_undoable": {
+    what: "That can't be undone.",
+    why: "It made something PSet has no way to take back.",
+    scope: "inline",
+    status: 409,
+    owner: "store",
+  },
+  "store.nothing_to_undo": {
+    what: "There's nothing to undo.",
+    why: "Nothing you did in the last week is left to take back.",
+    scope: "inline",
+    status: 404,
+    owner: "store",
+  },
+  "store.rewritten_since": {
+    what: "That can't be undone any more.",
+    why: "PSet has worked on it since, and undoing would throw that away.",
+    scope: "inline",
+    status: 409,
+    owner: "store",
+  },
+  "study.bad_id": {
+    what: "Name the stretch with an id of up to 64 characters.",
+    scope: "field",
+    status: 422,
+    owner: "study",
+  },
+  "study.bad_question_id": {
+    what: "A question's id is up to 64 characters.",
+    scope: "field",
+    status: 422,
+    owner: "study",
+  },
+  "study.bad_since": {
+    what: "Say when the week starts, as an RFC 3339 time.",
+    scope: "field",
+    status: 422,
+    owner: "study",
+  },
+  "study.bad_times": {
+    what: "Say when the stretch started and ended, as RFC 3339 times.",
+    scope: "field",
+    status: 422,
+    owner: "study",
+  },
+  "study.not_homework": {
+    what: "Only homework time is for a question.",
+    scope: "field",
+    status: 422,
+    owner: "study",
+  },
+  "study.unknown_kind": {
+    what: "There's no activity called {kind}.",
+    scope: "field",
+    status: 422,
+    owner: "study",
   },
   "update.already_installing": {
     what: "An update is already being installed.",

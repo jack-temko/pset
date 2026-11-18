@@ -8,6 +8,7 @@
   "ignorePatterns": [
     "web/src/api/gen",
     "design/errors.md",
+    "design/actions.md",
     "**/package-lock.json",
     "web/dist",
     "**/node_modules",

@@ -7,9 +7,9 @@ name: CI
 # ideas/git-workflow-grill.md.
 on:
   push:
-    branches: [dev, main, design]
+    branches: [dev, main, design, backend]
   pull_request:
-    branches: [dev, main, design]
+    branches: [dev, main, design, backend]
 
 jobs:
   check:

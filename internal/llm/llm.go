@@ -57,8 +57,11 @@ var transport = &http.Transport{
 // Client talks to one chat endpoint and one embeddings endpoint, both
 // OpenAI-shaped. The zero value is not usable; use New.
 type Client struct {
-	apiBaseURL   string
-	apiKey       string
+	apiBaseURL string
+	apiKey     string
+	// key, when set, is read for each request instead of apiKey: a client
+	// built once (NewKeyed) follows the key the student saves.
+	key          func(context.Context) (string, error)
 	embedBaseURL string
 	embedModel   string
 	http         *http.Client
@@ -74,6 +77,15 @@ func New(apiBaseURL, apiKey, embedBaseURL, embedModel string) *Client {
 		embedModel:   embedModel,
 		http:         &http.Client{Timeout: DefaultTimeout, Transport: transport},
 	}
+}
+
+// NewKeyed builds a chat client that reads its key for each request, so
+// one client lasts the whole run while the student saves or changes the
+// key. A blank key fails the request as KeyMissing.
+func NewKeyed(apiBaseURL string, key func(context.Context) (string, error)) *Client {
+	c := New(apiBaseURL, "", "", "")
+	c.key = key
+	return c
 }
 
 // Config is a saved, tested connection pair, the one shape every feature
@@ -98,7 +110,11 @@ func Open(c Config) *Client {
 }
 
 // ChatConfigured reports whether the chat endpoint has a base URL and key.
-func (c *Client) ChatConfigured() bool { return c.apiBaseURL != "" && c.apiKey != "" }
+// A keyed client (NewKeyed) has a key source, and is configured: whether a
+// key is saved right now is asked of that source.
+func (c *Client) ChatConfigured() bool {
+	return c.apiBaseURL != "" && (c.apiKey != "" || c.key != nil)
+}
 
 // EmbedConfigured reports whether the embeddings endpoint is reachable in
 // principle (a base URL is set).
@@ -333,6 +349,10 @@ type ChatRequest struct {
 	// OnReasoning, if set, receives a thinking model's reasoning as it
 	// streams: the part it writes before, and apart from, its answer.
 	OnReasoning func(text string) `json:"-"`
+	// OnDone, when set, is handed this call once it finishes, beside the
+	// global sink: the step runner keys each call to its step this way,
+	// with nothing carried in the context.
+	OnDone func(Call) `json:"-"`
 }
 
 // ReasoningOptions is OpenRouter's reasoning object: an effort, or just
@@ -975,7 +995,16 @@ func (c *Client) request(ctx context.Context, method, url string, body any) (*ht
 		return nil, fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	key := c.apiKey
+	if c.key != nil {
+		if key, err = c.key(ctx); err != nil {
+			return nil, err
+		}
+		if key == "" {
+			return nil, KeyMissing.New()
+		}
+	}
+	req.Header.Set("Authorization", "Bearer "+key)
 	return req, nil
 }
 

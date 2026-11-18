@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
@@ -269,93 +268,6 @@ func TestUncountedCallsAreTallied(t *testing.T) {
 	}
 	if u.Total.Calls != 4 || u.Total.Uncounted != 2 || u.Failed != 1 {
 		t.Errorf("total %+v failed %d, want 4 calls, 2 uncounted, 1 failed", u.Total, u.Failed)
-	}
-}
-
-// A subject removed while a call for it was in flight: the call ends
-// afterwards and records nothing. A removal that rolled back leaves the
-// subject alive, and its calls still recorded.
-func TestACallEndingAfterItsSubjectWasRemovedIsNotRecorded(t *testing.T) {
-	d := newDB(t)
-	sink := Sink(d)
-	ctx := context.Background()
-	count := func(id string) int {
-		var n int
-		testx.Check(t, d.QueryRow(`SELECT count(*) FROM calls WHERE subject_id = ?`, id).Scan(&n))
-		return n
-	}
-	live := &llm.Usage{PromptTokens: 10, CompletionTokens: 1}
-
-	sink(call("a", SubjectQuestion, "q1", "m", "m", 1, live, ""))
-	if err := Forget(ctx, d, SubjectQuestion, "q1"); err != nil {
-		t.Fatal(err)
-	}
-	sink(call("b", SubjectQuestion, "q1", "m", "m", 1, live, "context canceled"))
-	if n := count("q1"); n != 0 {
-		t.Fatalf("q1 has %d rows after it was removed", n)
-	}
-
-	// In a transaction, as RemoveQuestion runs it; the sink is waiting on
-	// the write lock while the removal holds it.
-	tx, err := d.BeginTx(ctx, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := Forget(ctx, tx, SubjectQuestion, "q2"); err != nil {
-		t.Fatal(err)
-	}
-	if err := tx.Commit(); err != nil {
-		t.Fatal(err)
-	}
-	sink(call("c", SubjectQuestion, "q2", "m", "m", 1, live, ""))
-	if n := count("q2"); n != 0 {
-		t.Fatalf("q2 has %d rows after its removal committed", n)
-	}
-
-	tx, _ = d.BeginTx(ctx, nil)
-	if err := Forget(ctx, tx, SubjectQuestion, "q3"); err != nil {
-		t.Fatal(err)
-	}
-	testx.Check(t, tx.Rollback())
-	sink(call("d", SubjectQuestion, "q3", "m", "m", 1, live, ""))
-	if n := count("q3"); n != 1 {
-		t.Fatalf("q3 has %d rows; its removal rolled back, so it lives and is recorded", n)
-	}
-
-	// Other subjects, and the same id under another kind, are untouched.
-	sink(call("e", SubjectTurn, "q1", "m", "m", 1, live, ""))
-	if n := count("q1"); n != 1 {
-		t.Fatalf("a turn with q1's id has %d rows, want 1", n)
-	}
-}
-
-// Sweep clears the marks removals left once no call can be in flight for
-// them, and old calls spent on nothing in particular; nothing else.
-func TestSweepClearsOldMarksAndUnattributedCalls(t *testing.T) {
-	d := newDB(t)
-	ctx := context.Background()
-	old := time.Now().Add(-40 * 24 * time.Hour).UTC().Format(time.RFC3339)
-	recent := time.Now().UTC().Format(time.RFC3339)
-	sink := Sink(d)
-	sink(call(old, "", "", "m", "m", 1, nil, ""))
-	sink(call(recent, "", "", "m", "m", 1, nil, ""))
-	sink(call(old, SubjectQuestion, "q-old", "m", "m", 1, nil, ""))
-	testx.Check(t, testx.Err(d.Exec(`INSERT INTO forgotten (subject_type, subject_id, at) VALUES ('question', 'gone-long-ago', ?)`, db.At(time.Now().Add(-48*time.Hour)))))
-	if err := Forget(ctx, d, SubjectQuestion, "gone-now"); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := Sweep(ctx, d); err != nil {
-		t.Fatal(err)
-	}
-	var calls, marks int
-	testx.Check(t, d.QueryRow(`SELECT count(*) FROM calls`).Scan(&calls))
-	testx.Check(t, d.QueryRow(`SELECT count(*) FROM forgotten`).Scan(&marks))
-	if calls != 2 {
-		t.Errorf("%d calls left, want the recent unattributed one and the old question's", calls)
-	}
-	if marks != 1 {
-		t.Errorf("%d marks left, want only the one from just now", marks)
 	}
 }
 

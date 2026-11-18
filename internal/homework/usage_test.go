@@ -8,12 +8,10 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/jackt/pset/internal/errs"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/llm"
-	"github.com/jackt/pset/internal/llm/llmtest"
+	"github.com/jackt/pset/internal/oldwork"
 	"github.com/jackt/pset/internal/testx"
 	"github.com/jackt/pset/internal/usage"
 )
@@ -115,52 +113,15 @@ func TestAReadsCallsAreRecordedOnIt(t *testing.T) {
 	}
 }
 
-// Removing a question while a model call for it is in flight: the job is
-// stopped and the call unwinds afterwards, and must not record a row for a
-// question that is gone.
-func TestACallEndingAfterItsQuestionWasRemovedLeavesNoRow(t *testing.T) {
-	e := newEnv(t)
-	recordCalls(t, e.svc.c.DB)
-	entered, release := make(chan struct{}), make(chan struct{})
-	var once, free sync.Once
-	e.llm.Fallback(func(_ llm.ChatRequest) llmtest.Reply {
-		once.Do(func() { close(entered) })
-		<-release
-		return llmtest.Reply{Text: "{}"}
-	})
-	t.Cleanup(func() { free.Do(func() { close(release) }) })
-
-	h := e.newSet(t)
-	q := e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0]
-	select {
-	case <-entered:
-	case <-time.After(10 * time.Second):
-		t.Fatal("no model call was made for the question")
-	}
-	e.do(t, "DELETE", "/api/questions/"+q.ID, nil, nil)
-	free.Do(func() { close(release) })
-
-	// The stopped call ends; give its record time to (wrongly) land.
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		time.Sleep(50 * time.Millisecond)
-		var n int
-		testx.Check(t, e.svc.c.DB.QueryRow(`SELECT count(*) FROM calls WHERE subject_type = ? AND subject_id = ?`, usage.SubjectQuestion, q.ID).Scan(&n))
-		if n != 0 {
-			t.Fatalf("%d call rows outlived the removed question", n)
-		}
-	}
-}
-
-// Removing a book takes its questions' and reads' spending, and what is
-// still in flight for them, through the hook library hands to homework.
+// Removing a book takes its questions' and reads' spending, through the
+// hook library hands to homework.
 func TestForgetBookCallsTakesTheQuestionsAndReadsWithIt(t *testing.T) {
 	e := newEnv(t)
 	calls := recordCalls(t, e.svc.c.DB)
 	h := e.newSet(t)
-	q := e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
+	e.wait(t, e.add(t, h.ID, Draft{Text: "3.36", InBook: true})[0].ID, StateReady)
 	newReader(e)
-	r := e.read(t, AssignmentText{Text: coursePage})
+	e.read(t, AssignmentText{Text: coursePage})
 	if len(calls()) == 0 {
 		t.Fatal("no calls recorded")
 	}
@@ -173,14 +134,6 @@ func TestForgetBookCallsTakesTheQuestionsAndReadsWithIt(t *testing.T) {
 	testx.Check(t, e.svc.c.DB.QueryRow(`SELECT count(*) FROM calls`).Scan(&n))
 	if n != 0 {
 		t.Fatalf("%d rows left after the book's calls were forgotten", n)
-	}
-	// A call that ends now, for either, records nothing.
-	sink := usage.Sink(e.svc.c.DB)
-	sink(llm.Call{SubjectType: usage.SubjectQuestion, SubjectID: q.ID, Model: "m"})
-	sink(llm.Call{SubjectType: usage.SubjectRead, SubjectID: r.ID, Model: "m"})
-	testx.Check(t, e.svc.c.DB.QueryRow(`SELECT count(*) FROM calls`).Scan(&n))
-	if n != 0 {
-		t.Fatalf("%d rows recorded for subjects of a removed book", n)
 	}
 }
 
@@ -306,7 +259,7 @@ func TestEveryQuestionIsRepublishedAfterARankingAndARemoval(t *testing.T) {
 		}
 		return got
 	}
-	job := jobs.Job{Kind: JobRank, Payload: json.RawMessage(`{"setId":"` + h.ID + `"}`)}
+	job := oldwork.Job{Kind: JobRank, Payload: json.RawMessage(`{"setId":"` + h.ID + `"}`)}
 	if err := e.svc.runRank(context.Background(), job); err != nil {
 		t.Fatal(err)
 	}

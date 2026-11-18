@@ -31,7 +31,6 @@ import (
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/doc"
 	"github.com/jackt/pset/internal/homework"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/library"
 	"github.com/jackt/pset/internal/memory"
 	"github.com/jackt/pset/internal/settings"
@@ -72,7 +71,7 @@ func run(dir string) error {
 	// The same migrations the server runs, so a directory the server has
 	// never started in works too.
 	var migs []db.Migration
-	for _, m := range [][]db.Migration{jobs.Migrations(), settings.Migrations(), usage.Migrations(), library.Migrations(),
+	for _, m := range [][]db.Migration{settings.Migrations(), usage.Migrations(), library.Migrations(),
 		memory.Migrations(), homework.Migrations(), ask.Migrations(), activity.Migrations()} {
 		migs = append(migs, m...)
 	}

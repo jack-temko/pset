@@ -16,9 +16,9 @@ import (
 	"github.com/jackt/pset/internal/cleanup"
 	"github.com/jackt/pset/internal/db"
 	"github.com/jackt/pset/internal/homework"
-	"github.com/jackt/pset/internal/jobs"
 	"github.com/jackt/pset/internal/library"
 	"github.com/jackt/pset/internal/memory"
+	"github.com/jackt/pset/internal/oldwork/oldworktest"
 	"github.com/jackt/pset/internal/settings"
 	"github.com/jackt/pset/internal/testx"
 	"github.com/jackt/pset/internal/usage"
@@ -27,7 +27,7 @@ import (
 func migrations() []db.Migration {
 	var all []db.Migration
 	for _, m := range [][]db.Migration{
-		jobs.Migrations(), settings.Migrations(), usage.Migrations(), library.Migrations(),
+		oldworktest.Migrations(), settings.Migrations(), usage.Migrations(), library.Migrations(),
 		memory.Migrations(), homework.Migrations(), ask.Migrations(), activity.Migrations(),
 	} {
 		all = append(all, m...)
@@ -92,7 +92,6 @@ func fixture(t *testing.T) (string, *sql.DB) {
 	for _, c := range [][2]string{{"question", "q5"}, {"question", "q1"}, {"set", "h5"}, {"set", "h1"}, {"book", "b1"}, {"turn", "t6"}, {"turn", "t1"}, {"read", "r1"}} {
 		exec(t, d, `INSERT INTO calls (at, subject_type, subject_id, model, ms) VALUES (?, ?, ?, 'm', 1)`, ts, c[0], c[1])
 	}
-	exec(t, d, `INSERT INTO forgotten (subject_type, subject_id, at) VALUES ('turn', 't0', ?)`, ts)
 	exec(t, d, `INSERT INTO jobs (id, kind, lane, state, created_at, updated_at) VALUES ('j1', 'k', 'l', 'queued', ?, ?)`, ts, ts)
 	exec(t, d, `INSERT INTO settings (key, value, updated_at) VALUES ('chat', '{"model":"m/one","apiKey":"sk-secret-00000000000"}', ?)`, ts)
 	exec(t, d, `INSERT INTO settings (key, value, updated_at) VALUES ('embeddings', '{"endpoint":"http://localhost:11434","model":"e/one","api_key":"sk-embed-0000000000000","accessToken":"tok-1234567890","nested":{"auth":{"password":"pw-1234567890"},"list":[{"secret":"scrt-1234567890","ok":"fine"}]}}', ?)`, ts)
@@ -184,7 +183,7 @@ func TestStripKeepsTheSampleAndDropsTheRest(t *testing.T) {
 		t.Error("check passed with an orphan call")
 	}
 	exec(t, d, `DELETE FROM calls WHERE subject_id = 'gone'`)
-	for _, tbl := range []string{"assignment_reads", "memories", "study", "forgotten", "jobs"} {
+	for _, tbl := range []string{"assignment_reads", "memories", "study", "jobs"} {
 		if n := count(t, d, "SELECT count(*) FROM "+tbl); n != 0 {
 			t.Errorf("%s has %d rows", tbl, n)
 		}
