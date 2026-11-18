@@ -668,3 +668,24 @@ func TestPurgeTakesEmptiedPlacesAndThoseOfWhatIsGone(t *testing.T) {
 		t.Fatal("a place still in use was purged")
 	}
 }
+
+// A page that asks after a seq an emptied (or remade) log never reached is
+// told to start over from 0: the resync carries its seq as its id and in its
+// data, 0 included, so the page sees the log started again.
+func TestAResyncOntoAnEmptyLogSaysZero(t *testing.T) {
+	s := open(t)
+	srv := httptest.NewServer(http.HandlerFunc(s.Handler))
+	defer srv.Close()
+	res, err := http.Get(srv.URL + "?after=500")
+	must(t, err)
+	defer cleanup.Close(res.Body)
+	id, e := read(t, bufio.NewScanner(res.Body))
+	if e.Type != change.EventResync || id != "0" {
+		t.Fatalf("got id %q %s, want a resync at 0", id, e.Type)
+	}
+	raw, err := json.Marshal(e.Data)
+	must(t, err)
+	if string(raw) != `{"seq":0}` {
+		t.Fatalf("the resync's data is %s, want its seq", raw)
+	}
+}

@@ -142,7 +142,8 @@ tool that reports its own cost, fix this in track 5).
   reset once the rewrite is done, so a migration here never needs a way back.
 - Not done here: no Try again route yet (the action comes with track 7's catalog),
   and the new store's event stream is not mounted (no screen reads it before
-  track 8).
+  track 8). Mounted 2026-11-18 at `GET /api/changes` for track 8 (the old screens
+  keep `GET /api/events`; the stream takes that path at the cut-over).
 
 **4. Courses and materials.** Built 2026-11-17 in the cloud, without Jack's books:
 the five steps run on the repo's sample PDFs, a scan with OCR faked (no Tesseract
