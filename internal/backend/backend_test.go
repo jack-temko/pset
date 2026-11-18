@@ -255,7 +255,7 @@ func TestAFreshStreamSaysWhereTheLogStands(t *testing.T) {
 			data = strings.TrimPrefix(lines.Text(), "data: ")
 		}
 	}
-	if id != fmt.Sprint(latest) || data != `{"type":"open"}` {
+	if id != fmt.Sprint(latest) || data != fmt.Sprintf(`{"type":"open","data":{"seq":%d}}`, latest) {
 		t.Fatalf("the first event: id %q (want %d), data %q", id, latest, data)
 	}
 }

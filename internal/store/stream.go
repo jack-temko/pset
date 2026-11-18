@@ -284,8 +284,8 @@ var noStreaming = errs.Define(errs.Entry{
 
 // Handler is GET /api/changes (GET /api/events from the cut-over): every
 // change after the page's last seq (the Last-Event-ID header an EventSource
-// sends again on reconnecting, or ?after= on the first connection), then each change as it is logged, and
-// the unlogged events while connected. A change is sent with its seq as the
+// sends again on reconnecting, or ?after= on the first connection), then
+// each change as it is logged, and the unlogged events while connected. A change is sent with its seq as the
 // event id; an unlogged event has none, so a reconnect resumes from the
 // last change. A page that sends no seq starts from now.
 func (s *Store) Handler(w http.ResponseWriter, r *http.Request) {
@@ -376,12 +376,25 @@ func (s *Store) Handler(w http.ResponseWriter, r *http.Request) {
 		}
 		// Where the log stands, as an event with data, so the page reads it
 		// (an id alone fires no message).
-		if _, err := fmt.Fprintf(w, "id: %d\nretry: 1000\ndata: {\"type\":%q}\n\n", last, change.EventOpen); err != nil {
+		body, err := json.Marshal(struct {
+			Type string        `json:"type"`
+			Data change.Resync `json:"data"`
+		}{change.EventOpen, change.Resync{Seq: last}})
+		if err != nil {
+			return
+		}
+		if _, err := fmt.Fprintf(w, "id: %d\nretry: 1000\ndata: %s\n\n", last, body); err != nil {
 			return
 		}
 		flusher.Flush()
-	} else if !replay() {
-		return
+	} else {
+		// A replaying page reconnects as quickly as a fresh one.
+		if _, err := fmt.Fprint(w, "retry: 1000\n\n"); err != nil {
+			return
+		}
+		if !replay() {
+			return
+		}
 	}
 
 	tick := time.NewTicker(keepAlive)

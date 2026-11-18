@@ -158,8 +158,8 @@ export interface Change {
   action?: string;
 }
 /**
- * Resync is a resync event's data: where the log stands now, from which the
- * page starts over. Always sent, 0 included (an emptied log), so the page can
+ * Resync is the data of a resync event and of an open event: where the log
+ * stands now (from which the page starts over, on a resync). Always sent, 0 included (an emptied log), so the page can
  * tell the log started again even when its seq went down.
  */
 export interface Resync {
@@ -170,14 +170,15 @@ export interface Resync {
  */
 export const EventChange = "change";
 /**
- * EventOpen starts a fresh connection (one that sent no seq): its id is
- * where the log stood as the page connected, so an action whose reply
- * seq is at or below it has already caught up.
+ * EventOpen (data: a Resync) starts a fresh connection (one that sent no
+ * seq): its id and data say where the log stood as the page connected,
+ * so an action whose reply seq is at or below it has already caught up.
  */
 export const EventOpen = "open";
 /**
- * EventResync (data: a Resync) says the page asked to replay from a seq the log no
- * longer holds (it keeps a week): read everything on screen again.
+ * EventResync (data: a Resync) says the page asked to replay from a seq
+ * the log no longer holds (it keeps a week, or was emptied): read
+ * everything on screen again, from its seq.
  */
 export const EventResync = "resync";
 /**
