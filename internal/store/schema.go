@@ -463,7 +463,9 @@ var (
 		},
 		{
 			Name: "places", Kind: change.ResourcePlace,
-			SetID: "CASE {r}.owner_kind WHEN 'set' THEN {r}.owner_id WHEN 'question' THEN " + ofQuestion(questionSet, "owner_id") + " END",
+			SetID: "CASE {r}.owner_kind WHEN 'set' THEN {r}.owner_id WHEN 'question' THEN " + ofQuestion(questionSet, "owner_id") +
+				" WHEN 'document' THEN (SELECT CASE d.owner_kind WHEN 'question' THEN " + strings.ReplaceAll(questionSet, "{q}", "d.owner_id") +
+				" END FROM documents d WHERE d.id = {r}.owner_id) END",
 			CourseID: "CASE {r}.owner_kind WHEN 'course' THEN {r}.owner_id" +
 				" WHEN 'set' THEN (SELECT course_id FROM sets WHERE id = {r}.owner_id)" +
 				" WHEN 'material' THEN (SELECT course_id FROM materials WHERE id = {r}.owner_id)" +

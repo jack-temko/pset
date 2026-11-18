@@ -184,7 +184,7 @@ func checkSides(sides []Side) error {
 			seen[t.ID] = true
 			open = open || t.ID == s.Open
 		}
-		if len(s.Tabs) > 0 && !open {
+		if (len(s.Tabs) > 0 && !open) || (len(s.Tabs) == 0 && s.Open != "") {
 			return refuse("a side shows one of its own tabs")
 		}
 	}
@@ -288,13 +288,6 @@ func (s *Service) Set(ctx context.Context, p Place) (Place, error) {
 				tabs = append(tabs, p.TabID)
 			}
 		}
-		var before []Side
-		if p.Kind == KindSides {
-			var err error
-			if before, err = storedSides(ctx, tx, p.OwnerID); err != nil {
-				return err
-			}
-		}
 		for _, tab := range tabs {
 			if empty {
 				_, err := tx.ExecContext(ctx, `UPDATE places SET value = '{}', updated_at = ? WHERE owner_kind = ? AND owner_id = ? AND kind = ? AND tab_id = ? AND value != '{}'`,
@@ -312,7 +305,7 @@ func (s *Service) Set(ctx context.Context, p Place) (Place, error) {
 			}
 		}
 		if p.Kind == KindSides {
-			return closeTabs(ctx, tx, p.OwnerID, before, v.Sides)
+			return closeTabs(ctx, tx, p.OwnerID, v.Sides)
 		}
 		return nil
 	})
@@ -341,25 +334,9 @@ func (s *Service) Set(ctx context.Context, p Place) (Place, error) {
 	return Place{}, errs.Gone.New("thing", "place")
 }
 
-// storedSides is a course's sides as kept, nil when it has none.
-func storedSides(ctx context.Context, tx *sql.Tx, courseID string) ([]Side, error) {
-	var raw string
-	err := tx.QueryRowContext(ctx, `SELECT value FROM places WHERE owner_kind = 'course' AND owner_id = ? AND kind = 'sides' AND tab_id = ''`, courseID).Scan(&raw)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, errs.Database.Wrap(err)
-	}
-	var v value
-	if err := json.Unmarshal([]byte(raw), &v); err != nil {
-		return nil, errs.Data.Wrap(err)
-	}
-	return v.Sides, nil
-}
-
-// tabOpen is whether a material's course has the tab open, or keeps no
-// sides yet (a first visit writes its spot before its layout).
+// tabOpen is whether a material's course has the tab open on this material,
+// or keeps no sides yet (a first visit writes its spot before its layout;
+// the layout's first write then empties any spot it doesn't have open).
 func tabOpen(ctx context.Context, tx *sql.Tx, materialID, tabID string) (bool, error) {
 	var course string
 	if err := tx.QueryRowContext(ctx, `SELECT course_id FROM materials WHERE id = ?`, materialID).Scan(&course); err != nil {
@@ -379,7 +356,7 @@ func tabOpen(ctx context.Context, tx *sql.Tx, materialID, tabID string) (bool, e
 	}
 	for _, sd := range v.Sides {
 		for _, t := range sd.Tabs {
-			if t.ID == tabID {
+			if t.ID == tabID && t.Kind == TabKindMaterial && t.ThingID == materialID {
 				return true, nil
 			}
 		}
@@ -387,27 +364,45 @@ func tabOpen(ctx context.Context, tx *sql.Tx, materialID, tabID string) (bool, e
 	return false, nil
 }
 
-// closeTabs empties the per-tab spots and zooms of the tabs the course's
-// sides had before and no longer have. A course has one layout, so two
-// browser tabs on it share it: the last to write wins, and closes the other's
-// tabs (an open question against C6). Like any place cleared, an empty one
-// reads as none and the purge takes it: only the purge deletes.
-func closeTabs(ctx context.Context, tx *sql.Tx, courseID string, before, after []Side) error {
+// closeTabs empties every per-tab spot and zoom of the course's materials
+// whose tab the new sides don't have open, whenever and however it was
+// written. A course has one layout, so two browser tabs on it share it: the
+// last to write wins, and closes the other's tabs (an open question against
+// C6). Like any place cleared, an empty one reads as none and the purge
+// takes it: only the purge deletes.
+func closeTabs(ctx context.Context, tx *sql.Tx, courseID string, after []Side) error {
 	open := map[string]bool{}
 	for _, s := range after {
 		for _, t := range s.Tabs {
-			open[t.ID] = true
+			if t.Kind == TabKindMaterial {
+				open[t.ID+"\x00"+t.ThingID] = true
+			}
 		}
 	}
-	for _, s := range before {
-		for _, t := range s.Tabs {
-			if open[t.ID] || t.Kind != TabKindMaterial {
-				continue
-			}
-			if _, err := tx.ExecContext(ctx, `UPDATE places SET value = '{}' WHERE owner_kind = 'material' AND owner_id = ? AND tab_id = ? AND value != '{}'
-				AND owner_id IN (SELECT id FROM materials WHERE course_id = ?)`, t.ThingID, t.ID, courseID); err != nil {
-				return errs.Database.Wrap(err)
-			}
+	rows, err := tx.QueryContext(ctx, `SELECT id, tab_id, owner_id FROM places WHERE owner_kind = 'material' AND tab_id != '' AND value != '{}'
+		AND owner_id IN (SELECT id FROM materials WHERE course_id = ?)`, courseID)
+	if err != nil {
+		return errs.Database.Wrap(err)
+	}
+	var shut []string
+	for rows.Next() {
+		var id, tab, material string
+		if err := rows.Scan(&id, &tab, &material); err != nil {
+			cleanup.Close(rows)
+			return errs.Database.Wrap(err)
+		}
+		if !open[tab+"\x00"+material] {
+			shut = append(shut, id)
+		}
+	}
+	err = rows.Err()
+	cleanup.Close(rows)
+	if err != nil {
+		return errs.Database.Wrap(err)
+	}
+	for _, id := range shut {
+		if _, err := tx.ExecContext(ctx, `UPDATE places SET value = '{}' WHERE id = ?`, id); err != nil {
+			return errs.Database.Wrap(err)
 		}
 	}
 	return nil

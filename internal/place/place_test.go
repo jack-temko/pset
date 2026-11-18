@@ -370,3 +370,34 @@ func TestAnEmptySideIsAList(t *testing.T) {
 		t.Fatal("an empty side's tabs are null")
 	}
 }
+
+// Spots written before any layout, or by a tab for a material it doesn't
+// hold, never outlive the layout that doesn't have them open.
+func TestNoSpotOutlivesItsLayout(t *testing.T) {
+	svc, _ := setup(t)
+	for _, p := range []Place{
+		{OwnerKind: change.ResourceMaterial, OwnerID: "m1", Kind: KindPage, TabID: "x1", Page: 2},
+		{OwnerKind: change.ResourceMaterial, OwnerID: "m1", Kind: KindPage, TabID: "x2", Page: 3},
+		sides("c1", map[string]string{"t1": "m1"}),
+		// t1 holds m1: its write for m2 keeps only m2's last spot.
+		{OwnerKind: change.ResourceMaterial, OwnerID: "m2", Kind: KindPage, TabID: "t1", Page: 5},
+	} {
+		if _, err := svc.Set(bg, p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, m := range []string{"m1", "m2"} {
+		for _, p := range places(t, svc, change.ResourceMaterial, m) {
+			if p.TabID != "" {
+				t.Fatalf("%s kept a spot for tab %s", m, p.TabID)
+			}
+		}
+	}
+}
+
+func TestAnEmptySideOpensNothing(t *testing.T) {
+	svc, _ := setup(t)
+	if _, err := svc.Set(bg, Place{OwnerKind: change.ResourceCourse, OwnerID: "c1", Kind: KindSides, Sides: []Side{{Open: "t1"}}}); !errors.Is(err, bad) {
+		t.Fatalf("an empty side opening a tab: %v", err)
+	}
+}

@@ -359,7 +359,7 @@ DELETE /api/places/{id}       a draft sent: the place emptied, purged later
   the material's last spot; sides without a tab empty that tab's spot and zoom.
   Logged (as PSet, without values) so a new tab finds them, but no action: Ctrl+Z
   never moves the student back. A change says only the place's id, course and set,
-  so a tab that cares reads its owners' places again. An empty draft clears its
+  and a tab reads places only as it opens (C6): it does not follow them. An empty draft clears its
   place; a spot written after its tab closed keeps only the material's last; limits
   on tabs, ids, text and pages keep a page bug from filling the store. Open: a
   course has one layout, so two browser tabs on one course share it and the last
