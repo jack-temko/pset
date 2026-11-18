@@ -44,6 +44,9 @@ CREATE TABLE materials (
 	-- 1 once the student renamed it: reading its title never writes over
 	-- theirs. The student's, so undoing the rename lets PSet name it again.
 	renamed    INTEGER NOT NULL DEFAULT 0,
+	-- 1 once the student put it under Textbooks or Materials themselves:
+	-- detection then leaves textbook alone.
+	textbook_set INTEGER NOT NULL DEFAULT 0,
 	added_at   TEXT NOT NULL,
 	removed_at TEXT NOT NULL DEFAULT '',
 	seq        INTEGER NOT NULL DEFAULT 0
@@ -398,7 +401,7 @@ var (
 		{
 			Name: "materials", Kind: change.ResourceMaterial,
 			CourseID: "{r}.course_id",
-			Student:  []string{"title", "textbook", "removed_at", "renamed"},
+			Student:  []string{"title", "textbook", "removed_at", "renamed", "textbook_set"},
 			PSet:     []string{"course_id", "file_hash", "page_count", "aspect", "page_runs", "problems", "pages_read", "kind", "page_width"},
 			Meta:     []string{"added_at", "seq"},
 			Removed:  "removed_at",

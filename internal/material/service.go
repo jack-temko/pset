@@ -88,10 +88,10 @@ func New(c Config) *Service {
 		Try: func(sd action.Seed) Remove { return Remove{ID: sd.MaterialID} },
 	})
 	action.Add(c.Actions, action.Def[Textbook]{
-		ID: "material.textbook", Name: "Make it the textbook", Undoable: true,
-		Undone: "{name} is no longer the textbook.", Redone: "{name} is the textbook again.",
+		ID: "material.textbook", Name: "Move between Textbooks and Materials", Undoable: true,
+		Undone: "{name} is back where it was.", Redone: "Moved {name} again.",
 		Run: s.textbook,
-		Try: func(sd action.Seed) Textbook { return Textbook{ID: sd.MaterialID} },
+		Try: func(sd action.Seed) Textbook { return Textbook{ID: sd.MaterialID, Textbook: true} },
 	})
 	if c.Runner != nil {
 		c.Runner.Add(s.pipeline())
@@ -287,24 +287,26 @@ func (s *Service) remove(ctx context.Context, do *action.Do, in Remove) error {
 	})
 }
 
-// textbook makes one material its course's textbook, and no other.
+// textbook puts a material under Textbooks or Materials, as the student
+// says: a course may have any number of textbooks (ideas/dependencies-
+// grill.md, D8). The student's choice stands from then on: detection no
+// longer moves it.
 func (s *Service) textbook(ctx context.Context, do *action.Do, in Textbook) error {
 	return do.Write(ctx, change.ResourceMaterial, in.ID, func(tx *sql.Tx) error {
-		var course string
-		var is bool
-		err := tx.QueryRowContext(ctx, `SELECT course_id, textbook FROM materials WHERE id = ? AND removed_at = ''`, in.ID).Scan(&course, &is)
+		var is, set bool
+		err := tx.QueryRowContext(ctx, `SELECT textbook, textbook_set FROM materials WHERE id = ? AND removed_at = ''`, in.ID).Scan(&is, &set)
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
 			return errs.Gone.New("thing", "material")
 		case err != nil:
 			return errs.Database.Wrap(err)
-		case is:
+		case is == in.Textbook && set:
 			return action.ErrUnchanged
 		}
-		if _, err := tx.ExecContext(ctx, `UPDATE materials SET textbook = 0 WHERE course_id = ? AND textbook = 1`, course); err != nil {
-			return errs.Database.Wrap(err)
-		}
-		res, err := tx.ExecContext(ctx, `UPDATE materials SET textbook = 1 WHERE id = ?`, in.ID)
+		// Even where detection already put it, the action pins it there (not
+		// yet the student's choice): a later detection can't move it, and it
+		// is a change Undo can take back.
+		res, err := tx.ExecContext(ctx, `UPDATE materials SET textbook = ?, textbook_set = 1 WHERE id = ?`, in.Textbook, in.ID)
 		return action.One(res, err, "material")
 	})
 }

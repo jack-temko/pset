@@ -458,8 +458,9 @@ func (s *Service) sections(ctx context.Context, id string) ([]library.Section, e
 }
 
 // numbering works out how the material's printed page numbers run and how
-// it numbers its problems. The first material in a course that numbers its
-// problems is its textbook, until the student says otherwise (A2).
+// it numbers its problems. A material that numbers its problems goes under
+// Textbooks, one that doesn't under Materials, until the student moves it
+// (ideas/dependencies-grill.md, D9).
 func (s *Service) numbering(ctx context.Context, run *runner.Run) error {
 	m, err := s.get(ctx, run.SubjectID)
 	if err != nil {
@@ -486,7 +487,7 @@ func (s *Service) numbering(ctx context.Context, run *runner.Run) error {
 			}
 		}
 		if !haveProblems {
-			return nil
+			return shelve(ctx, tx, m.ID, false)
 		}
 		b, err := json.Marshal(style)
 		if err != nil {
@@ -495,18 +496,14 @@ func (s *Service) numbering(ctx context.Context, run *runner.Run) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE materials SET problems = ? WHERE id = ?`, string(b), m.ID); err != nil {
 			return errs.Database.Wrap(err)
 		}
-		return claimTextbook(ctx, tx, m.ID)
+		return shelve(ctx, tx, m.ID, true)
 	})
 }
 
-// claimTextbook makes a material that numbers its problems its course's
-// textbook, unless the course has one already (A2): the student's choice,
-// or an earlier material's. A removed textbook still counts until it is
-// purged, so undoing its removal never leaves two.
-func claimTextbook(ctx context.Context, tx *sql.Tx, id string) error {
-	_, err := tx.ExecContext(ctx, `UPDATE materials SET textbook = 1 WHERE id = ?1 AND NOT EXISTS
-		(SELECT 1 FROM materials o WHERE o.course_id = (SELECT course_id FROM materials WHERE id = ?1)
-			AND o.id != ?1 AND o.textbook = 1)`, id)
+// shelve puts a material under Textbooks or Materials by what detection
+// found, unless the student has put it somewhere themselves.
+func shelve(ctx context.Context, tx *sql.Tx, id string, textbook bool) error {
+	_, err := tx.ExecContext(ctx, `UPDATE materials SET textbook = ? WHERE id = ? AND textbook_set = 0`, textbook, id)
 	return errs.Database.Of(err)
 }
 
