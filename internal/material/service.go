@@ -99,9 +99,12 @@ func New(c Config) *Service {
 	return s
 }
 
-func (s *Service) uploadsDir() string          { return filepath.Join(s.c.DataDir, "uploads") }
-func (s *Service) filesDir() string            { return filepath.Join(s.c.DataDir, "materials") }
-func (s *Service) path(id string) string       { return filepath.Join(s.filesDir(), id+".pdf") }
+func (s *Service) uploadsDir() string    { return filepath.Join(s.c.DataDir, "uploads") }
+func (s *Service) filesDir() string      { return filepath.Join(s.c.DataDir, "materials") }
+func (s *Service) path(id string) string { return filepath.Join(s.filesDir(), id+".pdf") }
+
+// File is where a material's PDF is kept.
+func (s *Service) File(id string) string       { return s.path(id) }
 func (s *Service) staged(id string) string     { return filepath.Join(s.uploadsDir(), id+".pdf") }
 func (s *Service) stagedMeta(id string) string { return filepath.Join(s.uploadsDir(), id+".json") }
 
@@ -407,10 +410,16 @@ func (s *Service) Get(ctx context.Context, id string) (Material, error) {
 	return s.wire(ctx, r)
 }
 
-// List is a course's materials not removed, in the order they were added.
+// List is a course's materials not removed, in the order they were added,
+// sheets left out: they are listed with their sets.
 func (s *Service) List(ctx context.Context, courseID string) (Materials, error) {
+	// A sheet (some set's or read's) is listed with its set, not here
+	// (track 5a); it is still a material, found and opened by its id.
 	rows, err := s.c.Store.DB.QueryContext(ctx, `SELECT `+columns+` FROM materials
-		WHERE course_id = ? AND removed_at = '' ORDER BY added_at, id`, courseID)
+		WHERE course_id = ? AND removed_at = ''
+		AND NOT EXISTS (SELECT 1 FROM sets WHERE sets.sheet_id = materials.id)
+		AND NOT EXISTS (SELECT 1 FROM reads WHERE reads.sheet_id = materials.id)
+		ORDER BY added_at, id`, courseID)
 	if err != nil {
 		return Materials{}, errs.Database.Wrap(err)
 	}

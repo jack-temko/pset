@@ -224,13 +224,17 @@ type Count struct {
 	N    int
 }
 
+// uncounted are the kinds a removal's notice leaves out: a reading under
+// way is not something the student keeps, though it goes with its course.
+var uncounted = map[change.Resource]bool{change.ResourceRead: true}
+
 // Owned counts what the thing of kind k with the id owns directly and is not
 // removed on its own: what a removal takes with it, for its notice ("and its
 // 12 problems"). Kinds with none are left out.
 func (s *Store) Owned(ctx context.Context, k change.Resource, id string) ([]Count, error) {
 	var out []Count
 	for _, l := range Links {
-		if l.Kind != Owns || l.Parent != k || !removable(l.Child) {
+		if l.Kind != Owns || l.Parent != k || !removable(l.Child) || uncounted[l.Child] {
 			continue
 		}
 		q := fmt.Sprintf(`SELECT count(*) FROM %s WHERE %s = ? AND removed_at = ''`, l.Table, l.Column)

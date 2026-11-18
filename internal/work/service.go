@@ -28,6 +28,9 @@ type Config struct {
 	Actions *action.Catalog
 	// Runner is nil when the service is built only to declare its actions.
 	Runner *runner.Runner
+	// Materials keeps a read's sheet; nil when no read is started (a test,
+	// the catalog generator).
+	Materials Materials
 	// Seconds is the time spent on each question (internal/study); nil
 	// leaves Seconds out.
 	Seconds func(ctx context.Context, ids []string) (map[string]int, error)
@@ -121,6 +124,7 @@ func New(c Config) *Service {
 		Run: s.removeQuestion,
 		Try: func(sd action.Seed) RemoveQuestion { return RemoveQuestion{ID: sd.QuestionID} },
 	})
+	s.declareReads()
 	return s
 }
 
@@ -327,56 +331,72 @@ func style(ctx context.Context, tx *sql.Tx, setID string) (probnum.Style, error)
 }
 
 func (s *Service) addQuestions(ctx context.Context, do *action.Do, in AddQuestions) error {
-	var drafts []Draft
-	for _, d := range in.Drafts {
-		if strings.TrimSpace(d.Text) == "" {
-			continue
-		}
-		if utf8.RuneCountInString(d.Text) > maxDraft {
-			return draftTooLong.New("max", strconv.Itoa(maxDraft)).OnField("drafts")
-		}
-		drafts = append(drafts, d)
-	}
-	if len(drafts) == 0 {
-		return noDrafts.New().OnField("drafts")
+	drafts, err := cleanDrafts(in.Drafts)
+	if err != nil {
+		return err
 	}
 	return do.Write(ctx, change.ResourceSet, in.SetID, func(tx *sql.Tx) error {
 		if err := visible(ctx, tx, change.ResourceSet, in.SetID, "set"); err != nil {
 			return err
 		}
-		st, err := style(ctx, tx, in.SetID)
+		return insertQuestions(ctx, tx, in.SetID, drafts)
+	})
+}
+
+// cleanDrafts is the drafts with text, each within the cap; at least one.
+func cleanDrafts(in []Draft) ([]Draft, error) {
+	var drafts []Draft
+	for _, d := range in {
+		if strings.TrimSpace(d.Text) == "" {
+			continue
+		}
+		if utf8.RuneCountInString(d.Text) > maxDraft {
+			return nil, draftTooLong.New("max", strconv.Itoa(maxDraft)).OnField("drafts")
+		}
+		drafts = append(drafts, d)
+	}
+	if len(drafts) == 0 {
+		return nil, noDrafts.New().OnField("drafts")
+	}
+	return drafts, nil
+}
+
+// insertQuestions adds drafts at the end of a set, inside a write: a
+// reference listing several problems one question each, in the textbook's
+// numbering, with the professor's notes it carries.
+func insertQuestions(ctx context.Context, tx *sql.Tx, setID string, drafts []Draft) error {
+	st, err := style(ctx, tx, setID)
+	if err != nil {
+		return err
+	}
+	// The cap is on the questions made, as the old homework kept it: one
+	// reference can list many problems.
+	var qs []split
+	for _, d := range drafts {
+		qs = append(qs, splitDraft(d, st)...)
+	}
+	if len(qs) > maxDrafts {
+		return tooManyDrafts.New("max", strconv.Itoa(maxDrafts)).OnField("drafts")
+	}
+	// After every row, removed ones too: a removal undone keeps its place,
+	// and a new one never lands on it.
+	var next int
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(position) + 1, 0) FROM questions WHERE set_id = ?`, setID).Scan(&next); err != nil {
+		return errs.Database.Wrap(err)
+	}
+	now := db.Now()
+	for _, q := range qs {
+		notes, err := json.Marshal(runLists(fitNotes(q.notes)))
 		if err != nil {
-			return err
+			return errs.Data.Wrap(err)
 		}
-		// The cap is on the questions made, as the old homework kept it: one
-		// reference can list many problems.
-		var qs []split
-		for _, d := range drafts {
-			qs = append(qs, splitDraft(d, st)...)
-		}
-		if len(qs) > maxDrafts {
-			return tooManyDrafts.New("max", strconv.Itoa(maxDrafts)).OnField("drafts")
-		}
-		// After every row, removed ones too: a removal undone keeps its
-		// place, and a new one never lands on it.
-		var next int
-		if err := tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(position) + 1, 0) FROM questions WHERE set_id = ?`, in.SetID).Scan(&next); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, set_id, position, text, label, notes, find, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, uuid.NewString(), setID, next, q.text, q.label, string(notes), q.find, now); err != nil {
 			return errs.Database.Wrap(err)
 		}
-		now := db.Now()
-		for _, q := range qs {
-			notes, err := json.Marshal(runLists(fitNotes(q.notes)))
-			if err != nil {
-				return errs.Data.Wrap(err)
-			}
-			if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, set_id, position, text, label, notes, find, created_at)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, uuid.NewString(), in.SetID, next, q.text, q.label, string(notes), q.find, now); err != nil {
-				return errs.Database.Wrap(err)
-			}
-			next++
-		}
-		return nil
-	})
+		next++
+	}
+	return nil
 }
 
 // updateQuestion writes a visible question's columns, by a function of its
