@@ -26,7 +26,7 @@ var (
 	draftTooLong = errs.Define(errs.Entry{
 		ID:    "work.draft_too_long",
 		Kind:  errs.KindYourInput,
-		What:  "One of these is too long for a single question.",
+		What:  "Keep each question under {max} characters.",
 		Scope: errs.ScopeField,
 	})
 	noDrafts = errs.Define(errs.Entry{

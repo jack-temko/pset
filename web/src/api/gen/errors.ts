@@ -1353,7 +1353,7 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     owner: "work",
   },
   "work.draft_too_long": {
-    what: "One of these is too long for a single question.",
+    what: "Keep each question under {max} characters.",
     scope: "field",
     status: 422,
     owner: "work",

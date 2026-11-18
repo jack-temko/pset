@@ -432,7 +432,7 @@ var (
 			Meta:     []string{"created_at", "seq"},
 			Removed:  "removed_at",
 			JSON:     []string{"notes", "revealed"},
-			Wire:     map[string]Field{"done_at": {"done", set}, "find": {"find", truth}},
+			Wire:     map[string]Field{"done_at": {"done", set}, "find": {"find", truth}, "pin_page": {"pinPage", nonzero}},
 			Echo:     setCount,
 		},
 		{

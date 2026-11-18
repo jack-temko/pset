@@ -44,8 +44,8 @@ func world(t *testing.T) (*store.Store, *action.Catalog, action.Seed) {
 			seed.SetID, seed.CourseID, db.Now()); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(`INSERT INTO questions (id, set_id, position, text, label, created_at) VALUES
-			(?, ?, 0, '3.1 #7', '3.1 #7', ?), ('q2', ?, 1, '3.1 #9', '3.1 #9', ?)`,
+		if _, err := tx.Exec(`INSERT INTO questions (id, set_id, position, text, label, find, created_at) VALUES
+			(?, ?, 0, '3.1 #7', '3.1 #7', 1, ?), ('q2', ?, 1, '3.1 #9', '3.1 #9', 1, ?)`,
 			seed.QuestionID, seed.SetID, db.Now(), seed.SetID, db.Now()); err != nil {
 			return err
 		}
