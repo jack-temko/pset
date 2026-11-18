@@ -229,7 +229,10 @@ offers Undo only when the action's reply carries an `action`.
 
 - The cache is a normalized store of its own (each thing by kind and id, the higher
   seq kept), not TanStack Query: Jack uses `dev` until track 8 is done, so the new
-  screens need not live beside the old hooks. It waits for the stream (gap 1).
+  screens need not live beside the old hooks. Built ahead of the stream against a
+  fake one (Jack, 2026-11-18); only its URL waits for gap 1.
+- Gap 1 was handed to the backend session on 2026-11-18. The palette is on hold
+  until Jack needs it.
 - Until then: actions and undo, the error module and places, each a pull request
   into `design` that merges once green and reviewed. The new layer is
   `web/src/data/`; the old `web/src/api/` hooks go at the cut-over.
@@ -255,6 +258,17 @@ offers Undo only when the action's reply carries an `action`.
    with the catalog). Not blocking: the keys can be drafted in the palette's design
    pass, then written into the catalog. A6's test that no two actions share a key on one screen
    comes with them, on whichever side writes the keys.
+5. **No catalog entry for the page's own failures.** `POST /api/incidents` takes a
+   chain of catalog ids, but the catalog has none for what only the page sees: a
+   crash, a promise nobody caught, a dead stream (`store.no_streaming` is the one
+   close). The page reports them all as `internal.unexpected`, so Settings can't
+   tell a crash from a lost stream. Needed: entries such as `page.crashed` and
+   `page.rejected` (kind ours), and a word on which the stream's loss should use.
+6. **A step's change names no subject.** A change of kind `step` carries the step's
+   id (and course and set), but not what it is a step of, and no route reads one
+   step. The store reads again whatever it holds that lists the step, which works
+   for a material on screen and misses a thing not yet read. Not blocking. Nice
+   to have: the subject's kind and id on a step's change.
 
 **9. Cut over.**
 
