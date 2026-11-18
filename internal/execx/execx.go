@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -38,11 +39,20 @@ func Look(name string) error {
 // the command line and what the program said on stderr. Cancelling ctx
 // kills the program.
 func Run(ctx context.Context, name string, args ...string) (string, error) {
+	return RunEnv(ctx, nil, name, args...)
+}
+
+// RunEnv is Run with extra environment variables ("KEY=value") on top of
+// PSet's own.
+func RunEnv(ctx context.Context, env []string, name string, args ...string) (string, error) {
 	if err := Look(name); err != nil {
 		return "", err
 	}
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, name, args...)
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
+	}
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {

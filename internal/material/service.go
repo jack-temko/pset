@@ -43,6 +43,9 @@ type Config struct {
 	DataDir string
 	// Tools read PDFs: library.LiveTools, or a test's.
 	Tools library.Tools
+	// OCRWorkers is how many pages of a scan are read at once; 0 is half
+	// the cores, one to four.
+	OCRWorkers int
 	// ChatModel is the model naming and the contents ask.
 	ChatModel string
 	// Embed makes search's vectors, in EmbedModel's space; nil leaves a

@@ -252,6 +252,38 @@ func TestAScanIsRecognizedPageByPage(t *testing.T) {
 	}
 }
 
+// A scan's pages are read several at once, as many as there are workers and
+// no more, and every page is kept.
+func TestAScanIsReadSeveralPagesAtOnce(t *testing.T) {
+	e := newEnv(t)
+	e.svc.c.OCRWorkers = 3
+	var mu sync.Mutex
+	var now, most int
+	e.setOCR(func(_ context.Context, page int) (string, error) {
+		mu.Lock()
+		now++
+		most = max(most, now)
+		mu.Unlock()
+		time.Sleep(50 * time.Millisecond)
+		mu.Lock()
+		now--
+		mu.Unlock()
+		return fmt.Sprintf("page %d text", page), nil
+	})
+	e.start()
+	id := e.add("sample-scanned.pdf")
+	e.wait(id, step.NameReadPages, step.StateDone)
+	mu.Lock()
+	got := most
+	mu.Unlock()
+	if got != 3 {
+		t.Fatalf("at most %d pages were read at once, want 3", got)
+	}
+	if n := e.count(`SELECT count(*) FROM pages WHERE material_id = ? AND status = 'text'`, id); n != 6 {
+		t.Fatalf("%d of 6 pages kept", n)
+	}
+}
+
 // Killed while it reads a scan, it resumes where it stopped on the next
 // start: the pages already read are not read again.
 func TestReadingAScanResumesAfterAKill(t *testing.T) {
@@ -349,6 +381,60 @@ func TestAScanWaitsForTheReader(t *testing.T) {
 	}
 	if st := e.wait(id, step.NameReadPages, step.StateWaiting); st.IncidentID == "" {
 		t.Fatalf("read pages is %+v", st)
+	}
+}
+
+// A reader that isn't installed stops the other workers, which are mid-page
+// (as tesseract would be), and the step waits on it: nothing hangs, and no
+// page is kept.
+func TestOneWorkersMissingReaderStopsTheRest(t *testing.T) {
+	e := newEnv(t)
+	e.svc.c.OCRWorkers = 3
+	e.setOCR(func(ctx context.Context, page int) (string, error) {
+		if page == 1 {
+			return "", &execx.NotInstalledError{Name: "tesseract"}
+		}
+		<-ctx.Done()
+		return "", ctx.Err()
+	})
+	e.start()
+	id := e.add("sample-scanned.pdf")
+	deadline := time.Now().Add(10 * time.Second)
+	for e.count(`SELECT count(*) FROM incidents WHERE clears = 'scan_reader' AND state = 'open'`) == 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("reading never waited on the scan reader: the other workers hung")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if n := e.count(`SELECT count(*) FROM pages WHERE material_id = ?`, id); n != 0 {
+		t.Fatalf("%d pages kept from workers that were stopped", n)
+	}
+}
+
+// Pages the reader chokes on, finished out of order by different workers,
+// are listed in page order.
+func TestFailedPagesAreListedInOrder(t *testing.T) {
+	e := newEnv(t)
+	e.svc.c.OCRWorkers = 3
+	e.setOCR(func(_ context.Context, page int) (string, error) {
+		switch page {
+		case 2:
+			time.Sleep(100 * time.Millisecond)
+			return "", errors.New("tesseract choked")
+		case 5:
+			return "", errors.New("tesseract choked")
+		}
+		return fmt.Sprintf("page %d text", page), nil
+	})
+	e.start()
+	id := e.add("sample-scanned.pdf")
+	st := e.wait(id, step.NameReadPages, step.StateFailed)
+	var raw string
+	if err := e.s.DB.QueryRow(`SELECT error FROM incidents WHERE id = ?`, st.IncidentID).Scan(&raw); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(raw, "p. 2, p. 5") {
+		t.Fatalf("the failed pages are not listed in order: %s", raw)
 	}
 }
 
