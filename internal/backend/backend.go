@@ -53,7 +53,7 @@ func New(s *store.Store, o Options) *Backend {
 			ChatModel: o.ChatModel, Embed: o.Embed, EmbedModel: o.EmbedModel,
 		}),
 		Incidents: incident.New(s, c, o.Runner),
-		Places: place.New(s),
+		Places:    place.New(s),
 	}
 }
 
