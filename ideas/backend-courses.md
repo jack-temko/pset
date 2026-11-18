@@ -18,7 +18,7 @@ the order of work and the tracker. Branch
 | 5     | Work: sets, finds, readings, guides | Not started                                 |                    |
 | 6     | Ask                                 | Not started                                 |                    |
 | 7     | Undo, and the rest of the app       | 7a #99, 7b #101, 7c #102, 7d #103; 7d2      | `study-usage`      |
-| 8     | The web data layer and the screens  | In progress: after #106, actions and undo   | `actions-and-undo` |
+| 8     | The web data layer and the screens  | In progress: merged #106; actions and undo  | `actions-and-undo` |
 | 9     | Cut over                            | Not started                                 |                    |
 
 ## Information
