@@ -332,6 +332,10 @@ GET  /api/courses/{id}/materials   the course's materials not removed, with thei
 GET  /api/materials/{id}      one material, removed or not (a set may still use it)
 GET  /api/materials/{id}/contents  its contents as a tree of headings
 GET  /api/materials/{id}/pages/{n}/image?w=   a page as a JPEG, cached for good
+GET  /api/changes             the store's change stream (server-sent events): every
+                              change after ?after= or Last-Event-ID, then each as it
+                              is logged, and the unlogged events while connected.
+                              /api/events from the cut-over
 GET  /api/health              every condition, in condition.All's order, checked
                               where PSet can check it: {condition, name, detail}
 POST /api/time                a stretch of study {id, courseId, kind, started, ended,

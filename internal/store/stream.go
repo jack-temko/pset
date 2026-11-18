@@ -282,10 +282,10 @@ var noStreaming = errs.Define(errs.Entry{
 	Status: http.StatusInternalServerError,
 })
 
-// Handler is GET /api/events: every change after the page's last seq (the
-// Last-Event-ID header an EventSource sends again on reconnecting, or
-// ?after= on the first connection), then each change as it is logged, and
-// the unlogged events while connected. A change is sent with its seq as the
+// Handler is GET /api/changes (GET /api/events from the cut-over): every
+// change after the page's last seq (the Last-Event-ID header an EventSource
+// sends again on reconnecting, or ?after= on the first connection), then
+// each change as it is logged, and the unlogged events while connected. A change is sent with its seq as the
 // event id; an unlogged event has none, so a reconnect resumes from the
 // last change. A page that sends no seq starts from now.
 func (s *Store) Handler(w http.ResponseWriter, r *http.Request) {
@@ -295,6 +295,11 @@ func (s *Store) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
+	// The order here is what the page relies on: subscribe before reading
+	// where the log stands (Latest), and read it before the first byte is
+	// flushed (when the page's EventSource opens and the page starts its
+	// reads), so no change made between the page's read and this stream is
+	// missed. WriteHeader flushes nothing by itself.
 	wake, live, cancel := s.subscribe()
 	defer cancel()
 
@@ -337,7 +342,20 @@ func (s *Store) Handler(w http.ResponseWriter, r *http.Request) {
 				if last, err = s.Latest(ctx); err != nil {
 					return false
 				}
-				return send(last, change.EventResync, nil)
+				// Its id and its data say where the log stands, 0 included:
+				// send leaves out an id of 0, and an emptied log's seq is.
+				body, err := json.Marshal(struct {
+					Type string        `json:"type"`
+					Data change.Resync `json:"data"`
+				}{change.EventResync, change.Resync{Seq: last}})
+				if err != nil {
+					return false
+				}
+				if _, err := fmt.Fprintf(w, "id: %d\ndata: %s\n\n", last, body); err != nil {
+					return false
+				}
+				flusher.Flush()
+				return true
 			}
 			if err != nil || len(cs) == 0 {
 				return err == nil
@@ -356,12 +374,27 @@ func (s *Store) Handler(w http.ResponseWriter, r *http.Request) {
 		if last, err = s.Latest(ctx); err != nil {
 			return
 		}
-		if _, err := fmt.Fprintf(w, "id: %d\nretry: 1000\n\n", last); err != nil {
+		// Where the log stands, as an event with data, so the page reads it
+		// (an id alone fires no message).
+		body, err := json.Marshal(struct {
+			Type string        `json:"type"`
+			Data change.Resync `json:"data"`
+		}{change.EventOpen, change.Resync{Seq: last}})
+		if err != nil {
+			return
+		}
+		if _, err := fmt.Fprintf(w, "id: %d\nretry: 1000\ndata: %s\n\n", last, body); err != nil {
 			return
 		}
 		flusher.Flush()
-	} else if !replay() {
-		return
+	} else {
+		// A replaying page reconnects as quickly as a fresh one.
+		if _, err := fmt.Fprint(w, "retry: 1000\n\n"); err != nil {
+			return
+		}
+		if !replay() {
+			return
+		}
 	}
 
 	tick := time.NewTicker(keepAlive)
