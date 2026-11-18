@@ -332,6 +332,10 @@ GET  /api/courses/{id}/materials   the course's materials not removed, with thei
 GET  /api/materials/{id}      one material, removed or not (a set may still use it)
 GET  /api/materials/{id}/contents  its contents as a tree of headings
 GET  /api/materials/{id}/pages/{n}/image?w=   a page as a JPEG, cached for good
+GET  /api/changes             the store's change stream (server-sent events): every
+                              change after ?after= or Last-Event-ID, then each as it
+                              is logged, and the unlogged events while connected.
+                              /api/events from the cut-over
 GET  /api/health              every condition, in condition.All's order, checked
                               where PSet can check it: {condition, name, detail}
 POST /api/time                a stretch of study {id, courseId, kind, started, ended,
@@ -395,8 +399,10 @@ DELETE /api/places/{id}       a draft sent: the place emptied, purged later
   read pages (a scan, page by page, resuming; a page the reader chokes on fails the
   step with the list, and Try again reads only those), contents (the title from its
   first pages unless the student renamed it, then the outline, the printed contents
-  or picked headings), numbering (page runs, how it numbers problems; the first
-  material in a course that numbers its problems is the textbook), and search
+  or picked headings), numbering (page runs, how it numbers problems; a material
+  that numbers its problems goes under Textbooks, any other under Materials, until
+  the student moves it with `material.textbook {id, textbook}`; a course may have
+  several textbooks: ideas/dependencies-grill.md, D8 and D9), and search
   (a vector per page from the local Ollama; without it, words alone). Their craft is
   the old import's, called through `internal/library/craft.go`. Removing a material
   pauses its import; undoing the removal resumes it. Files live in

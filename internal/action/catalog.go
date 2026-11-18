@@ -38,8 +38,9 @@ type Def[In any] struct {
 	// Needs are the conditions that must hold for it to run.
 	Needs []condition.ID
 	// Undoable says Undo can take it back. Costs says it starts work that
-	// spends on model calls.
-	Undoable, Costs bool
+	// spends on model calls. Removes says it removes the thing it names, so
+	// its reply counts what went with it (Done.Took).
+	Undoable, Costs, Removes bool
 	// Undone is what Undo says once it is taken back, and Redone what undoing
 	// that undo says. {name} is the thing's name as it is then.
 	Undone, Redone string
@@ -54,8 +55,9 @@ type Def[In any] struct {
 // holds. Each track adds the things it brings.
 type Seed struct {
 	CourseID string
-	// MaterialID is a material in the course, not its textbook; UploadID a
-	// PDF staged and not yet added.
+	// MaterialID is a material in the course under Materials, so moving it
+	// under Textbooks is a real change; UploadID a PDF staged and not yet
+	// added.
 	MaterialID, UploadID string
 	// IncidentID is an open incident, a step's own.
 	IncidentID string
@@ -66,6 +68,7 @@ type def struct {
 	entry          Entry
 	input          Input
 	undone, redone string
+	removes        bool
 	run            func(ctx context.Context, do *Do, raw json.RawMessage) error
 	try            func(Seed) json.RawMessage
 }
@@ -105,7 +108,7 @@ func Add[In any](c *Catalog, d Def[In]) {
 	x := &def{
 		input:  Input{Package: path.Base(in.PkgPath()), Name: in.Name()},
 		entry:  Entry{ID: d.ID, Name: d.Name, Key: d.Key, Needs: needs, Undoable: d.Undoable, Costs: d.Costs},
-		undone: d.Undone, redone: d.Redone,
+		undone: d.Undone, redone: d.Redone, removes: d.Removes,
 		run: func(ctx context.Context, do *Do, raw json.RawMessage) error {
 			var in In
 			dec := json.NewDecoder(bytes.NewReader(raw))
@@ -313,6 +316,15 @@ func (c *Catalog) Run(ctx context.Context, id string, input json.RawMessage) (Do
 		if do.undoable {
 			out.Action = do.id
 		}
+		if d.removes {
+			// Counted after the removal committed: a count that fails leaves
+			// the notice plainer, never the removal reported as failed.
+			owned, err := c.store.Owned(ctx, do.kind, do.resID)
+			cleanup.Log("action: count what a removal took", err)
+			for _, o := range owned {
+				out.Took = append(out.Took, Took{Kind: o.Kind, N: o.N})
+			}
+		}
 	}
 	var err error
 	out.Seq, err = c.store.Latest(ctx)
@@ -432,7 +444,26 @@ func (c *Catalog) undo(ctx context.Context, action string) (Undone, error) {
 			out.Said = strings.ReplaceAll(said, "{name}", n)
 		}
 	}
+	// A thing brought back that a removed owner still hides says so, or the
+	// undo would look like it did nothing (D6).
+	if out.Kind != "" {
+		// After the undo committed: a read that fails drops the note, never
+		// reports the undo as failed.
+		by, err := c.store.HiddenBy(ctx, out.Kind, out.ID)
+		cleanup.Log("action: what still hides what Undo brought back", err)
+		if by != "" {
+			out.Said = strings.TrimSuffix(out.Said, ".") + ". Its " + ownerWord[by] + " is still removed."
+		}
+	}
 	return out, nil
+}
+
+// ownerWord is what Undo calls an owner that hides what it brought back.
+var ownerWord = map[change.Resource]string{
+	change.ResourceCourse:   "course",
+	change.ResourceSet:      "set",
+	change.ResourceQuestion: "problem",
+	change.ResourceTurn:     "question",
 }
 
 func (c *Catalog) name(ctx context.Context, kind change.Resource, id string) string {

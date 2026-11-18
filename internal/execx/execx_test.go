@@ -26,3 +26,15 @@ func TestRun(t *testing.T) {
 		t.Fatal("a cancelled run finished")
 	}
 }
+
+// RunEnv adds its variables to the program's environment, on top of PSet's.
+func TestRunEnvAddsToTheEnvironment(t *testing.T) {
+	t.Setenv("PSET_EXECX_BASE", "kept")
+	out, err := RunEnv(context.Background(), []string{"PSET_EXECX_EXTRA=added"}, "sh", "-c", `echo "$PSET_EXECX_BASE $PSET_EXECX_EXTRA"`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(out); got != "kept added" {
+		t.Fatalf("the program saw %q", got)
+	}
+}

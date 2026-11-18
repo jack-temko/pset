@@ -1,14 +1,19 @@
 package backend
 
 import (
+	"bufio"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackt/pset/internal/action"
 	"github.com/jackt/pset/internal/change"
@@ -182,5 +187,126 @@ func TestNoTwoActionsShareAKey(t *testing.T) {
 			t.Errorf("%s and %s both answer to %q", other, e.ID, e.Key)
 		}
 		seen[e.Key] = e.ID
+	}
+}
+
+// The store's change stream is mounted at GET /api/changes: a page that
+// asks from seq 0 gets the changes logged so far, as server-sent events.
+func TestTheChangeStreamIsMounted(t *testing.T) {
+	s, _, seed := world(t)
+	mux := http.NewServeMux()
+	New(s, Options{DataDir: t.TempDir()}).Routes(mux)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/api/changes?after=0", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup.Close(resp.Body)
+	if resp.StatusCode != http.StatusOK || !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/event-stream") {
+		t.Fatalf("GET /api/changes answered %d %q", resp.StatusCode, resp.Header.Get("Content-Type"))
+	}
+	lines := bufio.NewScanner(resp.Body)
+	for lines.Scan() {
+		if strings.HasPrefix(lines.Text(), "data:") && strings.Contains(lines.Text(), seed.CourseID) {
+			return
+		}
+	}
+	t.Fatalf("the stream never sent the course's change (%v)", lines.Err())
+}
+
+// A page that connects with no seq first gets an open event, whose id is
+// where the log stood: an action whose reply seq is at or below it has
+// caught up.
+func TestAFreshStreamSaysWhereTheLogStands(t *testing.T) {
+	s, _, _ := world(t)
+	latest, err := s.Latest(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	New(s, Options{DataDir: t.TempDir()}).Routes(mux)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/api/changes", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup.Close(resp.Body)
+	lines := bufio.NewScanner(resp.Body)
+	var id, data string
+	for lines.Scan() && lines.Text() != "" {
+		switch {
+		case strings.HasPrefix(lines.Text(), "id: "):
+			id = strings.TrimPrefix(lines.Text(), "id: ")
+		case strings.HasPrefix(lines.Text(), "data: "):
+			data = strings.TrimPrefix(lines.Text(), "data: ")
+		}
+	}
+	if id != fmt.Sprint(latest) || data != fmt.Sprintf(`{"type":"open","data":{"seq":%d}}`, latest) {
+		t.Fatalf("the first event: id %q (want %d), data %q", id, latest, data)
+	}
+}
+
+// A removal's reply counts what went with it; undoing the removal of a thing
+// whose course is removed says it is still hidden (ideas/dependencies-
+// grill.md, A2 and D6).
+func TestARemovalCountsAndUndoSaysWhatStillHides(t *testing.T) {
+	ctx := context.Background()
+	_, c, seed := world(t)
+	run := func(id string, in any) action.Done {
+		t.Helper()
+		raw, err := json.Marshal(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		done, err := c.Run(ctx, id, raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return done
+	}
+	removedCourse := run("course.remove", map[string]string{"id": seed.CourseID})
+	if want := []action.Took{{Kind: change.ResourceMaterial, N: 1}}; !reflect.DeepEqual(removedCourse.Took, want) {
+		t.Fatalf("removing the course took %+v, want %+v", removedCourse.Took, want)
+	}
+	if _, err := c.Undo(ctx, removedCourse.Action, false); err != nil {
+		t.Fatal(err)
+	}
+	// The material removed on its own, then its course: undoing the
+	// material's removal brings it back, still hidden by the course.
+	removedMaterial := run("material.remove", map[string]string{"id": seed.MaterialID})
+	if len(removedMaterial.Took) != 0 {
+		t.Fatalf("a material took %+v", removedMaterial.Took)
+	}
+	if again := run("course.remove", map[string]string{"id": seed.CourseID}); len(again.Took) != 0 {
+		t.Fatalf("a course whose only material is removed took %+v", again.Took)
+	}
+	u, err := c.Undo(ctx, removedMaterial.Action, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.Said != "Brought back Oppenheim. Its course is still removed." {
+		t.Fatalf("undo said %q", u.Said)
+	}
+	// Redoing the removal removes it again: no note, it is removed itself.
+	redo, err := c.Undo(ctx, u.Undo, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if redo.Said != "Removed Oppenheim again." {
+		t.Fatalf("redo said %q", redo.Said)
 	}
 }

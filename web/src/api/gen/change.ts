@@ -158,12 +158,27 @@ export interface Change {
   action?: string;
 }
 /**
+ * Resync is the data of a resync event and of an open event: where the log
+ * stands now (from which the page starts over, on a resync). Always sent, 0 included (an emptied log), so the page can
+ * tell the log started again even when its seq went down.
+ */
+export interface Resync {
+  seq: number /* int64 */;
+}
+/**
  * EventChange carries a Change.
  */
 export const EventChange = "change";
 /**
- * EventResync says the page asked to replay from a seq the log no
- * longer holds (it keeps a week): read everything on screen again.
+ * EventOpen (data: a Resync) starts a fresh connection (one that sent no
+ * seq): its id and data say where the log stood as the page connected,
+ * so an action whose reply seq is at or below it has already caught up.
+ */
+export const EventOpen = "open";
+/**
+ * EventResync (data: a Resync) says the page asked to replay from a seq
+ * the log no longer holds (it keeps a week, or was emptied): read
+ * everything on screen again, from its seq.
  */
 export const EventResync = "resync";
 /**
@@ -192,11 +207,12 @@ export const EventBlockFailed = "document.block.failed";
  */
 export const EventStepActivity = "step.activity";
 /**
- * The events on GET /api/events. Only "change" is logged; the others say
- * what is happening right now and are lost on a reconnect, which costs
- * nothing, since the finished result arrives as a change.
+ * The events on GET /api/changes (/api/events from the cut-over). Only
+ * "change" is logged; the others say what is happening right now and are
+ * lost on a reconnect, which costs nothing, since the finished result
+ * arrives as a change.
  */
-export type Event = typeof EventChange | typeof EventResync | typeof EventBlockStart | typeof EventBlockText | typeof EventBlockRepairing | typeof EventBlock | typeof EventBlockFailed | typeof EventStepActivity;
+export type Event = typeof EventChange | typeof EventOpen | typeof EventResync | typeof EventBlockStart | typeof EventBlockText | typeof EventBlockRepairing | typeof EventBlock | typeof EventBlockFailed | typeof EventStepActivity;
 /**
  * BlockStart says a document's next block is being written: draw its
  * skeleton.
