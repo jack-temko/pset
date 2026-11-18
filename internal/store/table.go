@@ -65,6 +65,22 @@ type Echo struct {
 // set is a non-empty stamp: a marker column read as a yes or no.
 func set(v any) any { s, ok := v.(string); return ok && s != "" }
 
+// nonzero is an INTEGER where 0 means none: sent as null, as the reads leave
+// it out (a question's pinPage).
+func nonzero(v any) any {
+	switch n := v.(type) {
+	case int64:
+		if n == 0 {
+			return nil
+		}
+	case float64:
+		if n == 0 {
+			return nil
+		}
+	}
+	return v
+}
+
 // truth is an INTEGER flag read as a yes or no.
 func truth(v any) any {
 	switch n := v.(type) {

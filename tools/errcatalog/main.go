@@ -34,6 +34,7 @@ import (
 	_ "github.com/jackt/pset/internal/store"
 	_ "github.com/jackt/pset/internal/study"
 	_ "github.com/jackt/pset/internal/update"
+	_ "github.com/jackt/pset/internal/work"
 )
 
 func main() {

@@ -183,6 +183,40 @@ the contents against a real model. Courses were built in 7a.
 - Done when: the evals match track 0's bar, and a ten-problem set is ready to work in
   under half the time it took in track 0.
 
+Decided for 5a (Jack, 2026-11-18), from a map of the old homework code:
+
+- **Every sheet is a material.** An uploaded PDF or image goes through the material
+  import; a web page becomes a text material (its URL kept on it). A set points at its
+  sheet (`sets.sheet_id`). "Check again" on a web page replaces the material's text
+  (undoable), and the read compares the new rows with the set as today (added, changed,
+  gone). This replaces the old `source` column: a set's source is its sheet's.
+- **Pasted text is dropped** as a way to bring an assignment (Jack has not used it; the
+  file upload covers professors' text). Typed questions stay.
+- **Sheets are shown with their set**, not under Textbooks or Materials; still a
+  material underneath, so finds can point into one.
+- **A question says whether it is looked up** (`questions.find`) and which page the
+  student pointed to (`questions.pin_page`, 0 for none): both the student's own and
+  undoable. The old `in_book` and `pinned_page`.
+- **Assignment reads use the Reader role**, keyed to their step, not the old chat
+  setting. Its quality against track 0 is part of 5's evals.
+
+The build plan for 5a, from the map (the old code's pure parts are reused as they are,
+rule 1; what touched the old database or queue is rewritten on the store, runner and
+catalog):
+
+1. Schema: `questions.find`, `questions.pin_page`; a material's `url` and its text-only
+   kind for web pages; an `assignment_reads` table (the read's state is a step's, its
+   result JSON kept) beside the sets it imports into.
+2. Actions: `set.add`, `set.rename`, `set.due`, `set.turn_in`, `set.remove`;
+   `question.add` (drafts, references split into one per problem), `question.edit`,
+   `question.move`, `question.done`, `question.reveal`, `question.notes`,
+   `question.remove`; `read.start` (upload or URL), `read.import`, `read.dismiss`. Old
+   rules kept: titles, dates, caps, notes, positions (removed rows skipped).
+3. Steps: `read` (fetch or extract, then one Reader call with the old assignment
+   prompt; rows `book` renamed `textbook` with the prompt and parser together), the
+   sheet's material import run as its own steps.
+4. Reads and routes for the page: a course's sets, a set's detail, a read's review.
+
 **6. Ask.** Turns per course on the same documents and stream; memory.
 
 **7. Undo, and the rest.** Built ahead of 4 to 6, in four pull requests: 7a the

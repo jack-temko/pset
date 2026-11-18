@@ -118,18 +118,13 @@ func (s *Service) Check(ctx context.Context) (Health, error) {
 			details[id] = d
 		}
 	}
-	held, err := s.read(ctx)
+	conds, err := s.Conditions(ctx)
 	if err != nil {
 		return Health{}, err
 	}
-	out := Health{Checks: make([]Check, 0, len(condition.All))}
-	for _, id := range condition.All {
-		c, ok := held[id]
-		if !ok {
-			// Never found wanting: it holds.
-			c = condition.Condition{ID: id, Holds: true}
-		}
-		out.Checks = append(out.Checks, Check{Condition: c, Name: names[id], Detail: details[id]})
+	out := Health{Checks: make([]Check, 0, len(conds.Conditions))}
+	for _, c := range conds.Conditions {
+		out.Checks = append(out.Checks, Check{Condition: c, Name: names[c.ID], Detail: details[c.ID]})
 	}
 	return out, nil
 }
@@ -348,10 +343,34 @@ func (s *Service) checkOllama(ctx context.Context) found {
 	}
 }
 
-// Routes mounts Settings' health list; each fix is an action.
+// Conditions is every condition as kept, in condition.All's order, without
+// checking anything: what the page reads as it draws, to grey an action whose
+// condition does not hold (C5). A condition never found wanting holds. Later
+// changes arrive on the change stream.
+func (s *Service) Conditions(ctx context.Context) (condition.Conditions, error) {
+	held, err := s.read(ctx)
+	if err != nil {
+		return condition.Conditions{}, err
+	}
+	out := condition.Conditions{Conditions: make([]condition.Condition, 0, len(condition.All))}
+	for _, id := range condition.All {
+		c, ok := held[id]
+		if !ok {
+			c = condition.Condition{ID: id, Holds: true}
+		}
+		out.Conditions = append(out.Conditions, c)
+	}
+	return out, nil
+}
+
+// Routes mounts Settings' health list (it checks) and the conditions as kept
+// (it doesn't); each fix is an action.
 func (s *Service) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/health", httpx.Reply(func(r *http.Request) (Health, error) {
 		return s.Check(r.Context())
+	}))
+	mux.HandleFunc("GET /api/conditions", httpx.Reply(func(r *http.Request) (condition.Conditions, error) {
+		return s.Conditions(r.Context())
 	}))
 }
 
