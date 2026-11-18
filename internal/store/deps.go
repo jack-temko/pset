@@ -18,10 +18,10 @@ import (
 type LinkKind int
 
 const (
-	// Owns: the child lives inside its parent. It is hidden while the parent
+	// Owns means the child lives inside its parent. It is hidden while the parent
 	// is (D2), and purged with it.
 	Owns LinkKind = iota
-	// Refers: the child points at something it doesn't own. The target keeps
+	// Refers means the child points at something it does not own. The target keeps
 	// resolving for it once removed (D3), and is not purged while it does
 	// (D4).
 	Refers
