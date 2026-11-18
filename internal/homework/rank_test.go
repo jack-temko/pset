@@ -253,10 +253,16 @@ func TestAFailedQuestionSaysWhenAndHowManyTimes(t *testing.T) {
 	if first.Attempts != 0 || first.FailedAt == "" {
 		t.Fatalf("first failure: attempts %d, failedAt %q", first.Attempts, first.FailedAt)
 	}
+	// The retry's reply is read back after its job is queued, and the find
+	// fails at once: held, the queue can't fail it again before the reply.
+	// Settled first, so the pause cancels nothing still returning.
+	e.settled(t)
+	e.queue.Pause()
 	var again Question
 	if code := e.do(t, "POST", "/api/questions/"+qs[0].ID+"/retry", Retry{}, &again); code != 200 {
 		t.Fatalf("retry %d", code)
 	}
+	e.queue.Resume()
 	if again.Attempts != 1 || again.FailedAt != "" {
 		t.Fatalf("while trying again: attempts %d, failedAt %q (only a failed question has one)", again.Attempts, again.FailedAt)
 	}
@@ -265,6 +271,7 @@ func TestAFailedQuestionSaysWhenAndHowManyTimes(t *testing.T) {
 		t.Fatalf("second failure: attempts %d, failedAt %q after %q", second.Attempts, second.FailedAt, first.FailedAt)
 	}
 	// Pasting the problem is another try, and works: no longer failed.
+	e.settled(t)
 	text := "Find the current through R1."
 	e.do(t, "POST", "/api/questions/"+qs[0].ID+"/retry", Retry{Text: &text}, nil)
 	ready := e.wait(t, qs[0].ID, StateReady)
