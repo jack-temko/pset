@@ -209,13 +209,15 @@ func (s *Service) ResetCounts(ctx context.Context) (ResetCounts, error) {
 // except the open databases goes. The store's database is left (Keep) until
 // track 9 moves Reset onto it.
 func (s *Service) Reset(ctx context.Context) error {
-	if err := db.Wipe(ctx, s.c.DB, s.c.Migrations); err != nil {
-		return fmt.Errorf("wipe database: %w", err)
-	}
 	// The key and the name are in the store's database, which Reset leaves
-	// until track 9 moves Reset onto it: they go, as a fresh install has none.
+	// until track 9 moves Reset onto it. They go first: a fresh install has
+	// none, and a store from before its settings table stops Reset before
+	// it wipes anything.
 	if _, err := s.c.Saved.ExecContext(ctx, `DELETE FROM settings`); err != nil {
 		return errs.Database.Wrap(err)
+	}
+	if err := db.Wipe(ctx, s.c.DB, s.c.Migrations); err != nil {
+		return fmt.Errorf("wipe database: %w", err)
 	}
 	entries, err := os.ReadDir(s.c.DataDir)
 	if err != nil {

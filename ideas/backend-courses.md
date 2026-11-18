@@ -184,7 +184,12 @@ store at the cut-over (track 9), since nobody uses this branch before then. 7d l
 in two pull requests: health and the key, then study time and usage. For track 9:
 the key and the name now live in the store, and nothing copies them from the old
 database, so an install that upgrades starts with neither (Jack imports again, and
-saves his key again). Each later track
+saves his key again). Also for track 9: once `make test-library` snapshots the
+store, it strips the store's `settings` table (the key). For track 8: a condition's
+row holds the last error said about it, from a step or a check, so Settings shows
+`condition.error` and not only the check's detail; a check's heal and a step's
+failure at the same moment can still cross (the count of what it can't disprove
+and Holds are two transactions). Each later track
 adds its own actions, and the catalog's walk test grows with them. Decided
 (Jack had no preference): one route for every action, `POST /api/actions/{action}`;
 the key and profile move to `store.db` in 7d. For track 8: an action that can't

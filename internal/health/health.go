@@ -163,6 +163,11 @@ func (s *Service) checkOne(ctx context.Context, id condition.ID) (string, bool) 
 	default:
 		return "", false
 	}
+	// A check cut short (Settings closed as it ran) found nothing: what it
+	// failed on is the cancel, not the condition.
+	if ctx.Err() != nil {
+		return f.detail, true
+	}
 	if s.c.Conditions != nil {
 		var err error
 		if f.why == nil {
