@@ -68,6 +68,19 @@ export interface Done {
    * knows when its copies have caught up.
    */
   seq: number /* int64 */;
+  /**
+   * Took is what a removal took with it, the thing's own contents not
+   * removed on their own, for its notice: "Removed Problem set 4 and its
+   * 12 problems." Absent for any other action.
+   */
+  took?: Took[];
+}
+/**
+ * Took is how many things of a kind went with a removal.
+ */
+export interface Took {
+  kind: Resource;
+  n: number /* int */;
 }
 /**
  * Undo is the undo call (Ctrl+Z, or the Undo on "Removed Problem set 4.
