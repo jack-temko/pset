@@ -8,6 +8,8 @@ export type ActionId =
   | "course.add"
   | "course.remove"
   | "course.rename"
+  | "health.get_embeddings"
+  | "health.make_data_folder"
   | "incident.dismiss"
   | "incident.try_again"
   | "material.add"
@@ -36,6 +38,20 @@ export const ACTIONS: Record<ActionId, Entry> = {
     name: "Rename course",
     needs: [],
     undoable: true,
+    costs: false,
+  },
+  "health.get_embeddings": {
+    id: "health.get_embeddings",
+    name: "Download the search model",
+    needs: [],
+    undoable: false,
+    costs: false,
+  },
+  "health.make_data_folder": {
+    id: "health.make_data_folder",
+    name: "Make the data folder",
+    needs: [],
+    undoable: false,
     costs: false,
   },
   "incident.dismiss": {
@@ -87,6 +103,8 @@ export interface ActionInputs {
   "course.add": course.Add;
   "course.remove": course.Remove;
   "course.rename": course.Rename;
+  "health.get_embeddings": Record<string, never>;
+  "health.make_data_folder": Record<string, never>;
   "incident.dismiss": incident.Dismiss;
   "incident.try_again": incident.TryAgain;
   "material.add": material.Add;

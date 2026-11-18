@@ -104,7 +104,7 @@ GET    /api/due   GET /api/week?since=   POST /api/study
 DELETE /api/study                       (clear activity history)
 GET    /api/settings  PUT /api/settings  POST /api/settings/test
 PUT    /api/settings/profile             (the name)
-GET    /api/health    POST /api/health/{check}/fix
+GET    /api/health    (every condition; fixes are actions, below)
 GET    /api/reset (dry run)  POST /api/reset
 GET    /api/about     GET /api/events
 ```
@@ -332,6 +332,8 @@ GET  /api/courses/{id}/materials   the course's materials not removed, with thei
 GET  /api/materials/{id}      one material, removed or not (a set may still use it)
 GET  /api/materials/{id}/contents  its contents as a tree of headings
 GET  /api/materials/{id}/pages/{n}/image?w=   a page as a JPEG, cached for good
+GET  /api/health              every condition, in condition.All's order, checked
+                              where PSet can check it: {condition, name, detail}
 GET  /api/incidents           Settings' list: open, then resolved in the last week
 GET  /api/incidents/{id}      its trace: the incident, its step, the step's model
                               calls and the changes to its subject around it
@@ -345,6 +347,14 @@ PUT  /api/places              a place {ownerKind, ownerId, kind, tabId?, ...its
                               fields} -> the place kept
 DELETE /api/places/{id}       a draft sent: the place emptied, purged later
 ```
+
+- **Health** (`internal/health`): the PDF and scan readers, the data folder, the
+  store's database and Ollama's search model are checked at start and each time
+  Settings opens, and kept as conditions through the runner (`Holds`, `Lacks`): an
+  action that needs a missing one is refused before the student tries. The key,
+  credit, provider and disk space are learned from calls and writes. Each fix PSet
+  can make is an action: `health.make_data_folder`, `health.get_embeddings`. The key
+  and the student's name are in the store's `settings` table (not logged).
 
 - **Incidents** (`internal/incident`): failures from steps (the runner), requests
   (errs' recorder: a 5xx is kept, your input and refusals are not) and the page,

@@ -29,6 +29,9 @@ const (
 	IDEmbeddings ID = "embeddings"
 )
 
+// All is every condition, in the order Settings lists them.
+var All = []ID{IDKey, IDCredit, IDProvider, IDPDFReader, IDScanReader, IDDataFolder, IDDatabase, IDDiskSpace, IDEmbeddings}
+
 // Condition is one thing PSet depends on, and whether it holds. A missing
 // one is said at the action it blocks, before the student tries.
 type Condition struct {

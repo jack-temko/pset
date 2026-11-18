@@ -10,8 +10,9 @@ import (
 	"github.com/jackt/pset/internal/errs"
 )
 
-// Migrations creates one row per saved side, as JSON. Two sides don't earn a
-// column each, and a new field is then no migration at all.
+// Migrations creates the old database's settings table, which nothing reads
+// now: the key and the name are in the store's (load and save), and the
+// table goes with the old database at the cut-over.
 func Migrations() []db.Migration {
 	return []db.Migration{{Name: "settings/1", SQL: `
 CREATE TABLE settings (

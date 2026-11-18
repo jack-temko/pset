@@ -2,11 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { get, post, put } from './client';
 import { on } from './events';
+import type { Health as Conditions } from './gen/health';
 import type {
   About,
-  Health,
   KeyInput,
-  HealthCheck,
   Profile,
   ResetCounts,
   SaveResult,
@@ -57,25 +56,60 @@ export function useSaveKey() {
   });
 }
 
+/** One check as the old Settings page draws it. The server now lists
+ *  conditions (gen/health); this keeps the page's shape until track 8
+ *  rebuilds Settings on them. */
+export interface HealthCheck {
+  id: string;
+  name: string;
+  ok: boolean;
+  fixable: boolean;
+  detail: string;
+  /** The action that fixes it, when PSet can. */
+  fix?: string;
+}
+
+export interface Health {
+  checks: HealthCheck[];
+}
+
 /** Health is the local system, which changes under us: always refetched
- *  when Settings opens. */
+ *  when Settings opens. Only the conditions PSet checks are listed (those
+ *  with a detail); the key's lives beside the key. */
 export const useHealth = () =>
   useQuery({
     queryKey: settingsKeys.health,
-    queryFn: () => get<Health>('/api/health'),
+    queryFn: async (): Promise<Health> => {
+      const h = await get<Conditions>('/api/health');
+      return {
+        checks: h.checks
+          .filter((c) => c.detail !== undefined)
+          .map((c) => ({
+            id: c.condition.id,
+            name: c.name,
+            ok: c.condition.holds,
+            fixable: c.condition.fix !== undefined,
+            detail: c.detail ?? '',
+            fix: c.condition.fix,
+          })),
+      };
+    },
     staleTime: 0,
   });
 
+/** Runs a check's fix, an action, by the check's id; the list is then
+ *  checked again. */
 export function useFixCheck() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => post<HealthCheck>(`/api/health/${id}/fix`),
-    onSuccess: (fixed) =>
-      qc.setQueryData<Health>(
-        settingsKeys.health,
-        (h) =>
-          h && { checks: h.checks.map((c) => (c.id === fixed.id ? fixed : c)) },
-      ),
+    mutationFn: async (id: string) => {
+      const fix = qc
+        .getQueryData<Health>(settingsKeys.health)
+        ?.checks.find((c) => c.id === id)?.fix;
+      if (fix !== undefined) await post(`/api/actions/${fix}`);
+    },
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: settingsKeys.health }),
   });
 }
 

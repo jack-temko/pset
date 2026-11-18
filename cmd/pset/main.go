@@ -29,6 +29,7 @@ import (
 	"github.com/jackt/pset/internal/errlog"
 	"github.com/jackt/pset/internal/errs"
 	"github.com/jackt/pset/internal/events"
+	"github.com/jackt/pset/internal/health"
 	"github.com/jackt/pset/internal/homework"
 	"github.com/jackt/pset/internal/httpx"
 	"github.com/jackt/pset/internal/library"
@@ -168,7 +169,7 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	idle := oldwork.Idle{}
 
 	cfg = settings.New(settings.Config{
-		DB: d, DataDir: dir, DBPath: dbPath, Version: Version,
+		DB: d, Saved: work.DB, DataDir: dir, DBPath: dbPath, Version: Version,
 		Migrations: migrations,
 		Dialer:     settings.LiveDialer{},
 		Keep:       []string{storePath},
@@ -214,7 +215,7 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 	ollama := llm.New("", "", llm.EmbedEndpoint, llm.EmbedModel)
 	features := backend.New(work, backend.Options{
 		Runner: steps, DataDir: dir, ChatModel: llm.Writer.Model,
-		Embed: ollama.Embed, EmbedModel: llm.EmbedModel,
+		Embed: ollama.Embed, EmbedModel: llm.EmbedModel, Ollama: health.LiveOllama{},
 	})
 	features.Routes(mux)
 	// Failed requests are incidents, listed in Settings with the rest.
@@ -259,6 +260,10 @@ func serve(addr, dir string, open bool, log *slog.Logger) error {
 		}
 		close(stepsDone)
 	}()
+	// What PSet depends on is checked once as it starts (A2 of
+	// ideas/actions-conditions-place-grill.md), and again each time Settings
+	// opens; Ollama can take its timeout, so the server does not wait.
+	go features.Health.AtStart(runCtx)
 	purgeDone := make(chan struct{})
 	go func() {
 		purgeDaily(runCtx, work, features.Materials, log)

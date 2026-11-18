@@ -861,6 +861,28 @@ func (r *Runner) Holds(ctx context.Context, condition string) error {
 	return nil
 }
 
+// Lacks says a condition does not hold, found by a check rather than by a
+// failed step (Settings' health, at start and when it opens: A2 of
+// ideas/actions-conditions-place-grill.md): why is what is missing, and fix
+// the action that fixes it, if one does. An action that needs it is refused
+// from then on, before the student tries, until Holds. When it already lacks
+// it for the same reason the row is unchanged, so no change is logged.
+func (r *Runner) Lacks(ctx context.Context, condition string, why error, fix string) error {
+	view := errs.Resolve(why)
+	// Marked before the write, as a failed step marks it: a call that works
+	// from here on heals it.
+	r.mu.Lock()
+	r.broken[condition] = true
+	r.mu.Unlock()
+	return r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
+		if err := setCondition(ctx, tx, condition, false, view); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx, `UPDATE conditions SET fix = ? WHERE id = ?`, fix, condition)
+		return errs.Database.Of(err)
+	})
+}
+
 // IncidentGone is Try again on an incident that is not there.
 var IncidentGone = errs.Define(errs.Entry{
 	ID:     "runner.incident_gone",

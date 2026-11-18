@@ -46,20 +46,6 @@ type SaveResult struct {
 	Detail   string   `json:"detail"`
 }
 
-// HealthCheck is one local-system check.
-type HealthCheck struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	OK      bool   `json:"ok"`
-	Detail  string `json:"detail"`
-	Fixable bool   `json:"fixable"`
-}
-
-// Health is the checks of what PSet needs to run.
-type Health struct {
-	Checks []HealthCheck `json:"checks"`
-}
-
 // ResetCounts is Reset's dry run, for the confirm dialog.
 type ResetCounts struct {
 	Books int `json:"books"`
