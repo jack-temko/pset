@@ -38,9 +38,6 @@ export interface Model {
   ms: number /* int64 */;
 }
 /**
- * Spend is what a course, a material or a set cost in model calls, by
- * model, the most tokens first, and the sums. Its calls are those of the
- * thing's steps; a thing purged takes them with it.
  * CourseSpend is what one course's calls cost.
  */
 export interface CourseSpend {
@@ -58,6 +55,11 @@ export interface Totals {
   total: Model;
   byCourse: CourseSpend[];
 }
+/**
+ * Spend is what a course, a material or a set cost in model calls, by
+ * model, the most tokens first, and the sums. Its calls are those of the
+ * thing's steps; a thing purged takes them with it.
+ */
 export interface Spend {
   /**
    * Models is never null; empty when nothing was called.

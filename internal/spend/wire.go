@@ -21,9 +21,6 @@ type Model struct {
 	Ms int64 `json:"ms"`
 }
 
-// Spend is what a course, a material or a set cost in model calls, by
-// model, the most tokens first, and the sums. Its calls are those of the
-// thing's steps; a thing purged takes them with it.
 // CourseSpend is what one course's calls cost.
 type CourseSpend struct {
 	CourseID string `json:"courseId"`
@@ -38,6 +35,9 @@ type Totals struct {
 	ByCourse []CourseSpend `json:"byCourse"`
 }
 
+// Spend is what a course, a material or a set cost in model calls, by
+// model, the most tokens first, and the sums. Its calls are those of the
+// thing's steps; a thing purged takes them with it.
 type Spend struct {
 	// Models is never null; empty when nothing was called.
 	Models []Model `json:"models"`
