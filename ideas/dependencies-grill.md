@@ -50,7 +50,7 @@ Every link between things is declared once, in one map in the store, and that ma
 | set           | its sheet (a material)    | refers | sets.sheet_id            |
 | turn          | its answer (a document)   | refers | turns.answer_id          |
 
-The `materials.textbook` role is gone (D8); "textbook" is a kind. An incident keeps its own week once resolved, as now.
+The `materials.textbook` role is gone (D8); "textbook" is a kind. As built (#108) it is the boolean `materials.textbook` (under Textbooks or not, several per course) with `materials.textbook_set` for the student's choice, since `materials.kind` already says digital or scanned; track 5's finder reads `textbook`. An incident keeps its own week once resolved, as now.
 
 ### Assumed
 
