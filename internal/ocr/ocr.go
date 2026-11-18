@@ -35,7 +35,10 @@ func Page(ctx context.Context, pdfPath string, n int, lang string) (string, erro
 	if err := os.WriteFile(path, img, 0o600); err != nil {
 		return "", fmt.Errorf("write rasterized page: %w", err)
 	}
-	text, err := execx.Run(ctx, "tesseract", path, "stdout", "-l", lang)
+	// One thread per tesseract: a scan's pages are read several at once,
+	// one per worker, and tesseract's own threads on top of that only fight
+	// over the same cores (its docs say the same for running it in parallel).
+	text, err := execx.RunEnv(ctx, []string{"OMP_THREAD_LIMIT=1"}, "tesseract", path, "stdout", "-l", lang)
 	if err != nil {
 		return "", fmt.Errorf("tesseract page %d: %w", n, err)
 	}

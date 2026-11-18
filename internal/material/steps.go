@@ -7,7 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime"
+	"slices"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 
@@ -116,11 +119,13 @@ func savePage(ctx context.Context, tx *sql.Tx, id string, n int, text, status st
 	return errs.Database.Of(err)
 }
 
-// readPages recognizes a scan page by page. Pages already read are skipped,
-// so a stopped or retried read picks up where it stopped. A page the
-// reader chokes on is kept as failed and the step fails with the list; a
-// blank page is not a failure. A digital material's pages were stored when
-// it was examined.
+// readPages recognizes a scan, several pages at once (ocrWorkers). Pages
+// already read are skipped, so a stopped or retried read picks up where it
+// stopped: each page is saved as it is read, in whatever order the workers
+// finish. A page the reader chokes on is kept as failed and the step fails
+// with the list; a blank page is not a failure. A reader that isn't
+// installed stops every worker, and the step waits on it. A digital
+// material's pages were stored when it was examined.
 func (s *Service) readPages(ctx context.Context, run *runner.Run) error {
 	m, err := s.get(ctx, run.SubjectID)
 	if err != nil {
@@ -133,45 +138,119 @@ func (s *Service) readPages(ctx context.Context, run *runner.Run) error {
 	if err != nil {
 		return err
 	}
-	path := s.path(m.ID)
-	var failed []int
+	var todo []int
 	for n := 1; n <= m.PageCount; n++ {
-		if settled[n] {
-			continue
-		}
-		if ctx.Err() != nil {
-			return stopped(ctx)
-		}
-		run.Activity(fmt.Sprintf("Reading page %d of %d", n, m.PageCount))
-		text, err := s.c.Tools.OCR(ctx, path, n)
-		status := pageStatus(text)
-		switch {
-		case err != nil && ctx.Err() != nil:
-			return stopped(ctx)
-		case err != nil:
-			// A reader that isn't installed is the computer's, not this
-			// page's: the step waits on it (condition.Cause).
-			if errors.Is(err, execx.ErrNotInstalled) {
-				return err
-			}
-			text, status = "", "failed"
-			failed = append(failed, n)
-		}
-		err = run.Write(ctx, func(tx *sql.Tx) error {
-			if err := savePage(ctx, tx, m.ID, n, text, status); err != nil {
-				return err
-			}
-			_, err := tx.ExecContext(ctx, `UPDATE materials SET pages_read = (SELECT count(*) FROM pages WHERE material_id = ?1 AND status != 'failed') WHERE id = ?1`, m.ID)
-			return errs.Database.Of(err)
-		})
-		if err != nil {
-			return err
+		if !settled[n] {
+			todo = append(todo, n)
 		}
 	}
+	path := s.path(m.ID)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	run.Activity(fmt.Sprintf("Read %d of %d pages", len(settled), m.PageCount))
+	pages := make(chan int)
+	var (
+		mu     sync.Mutex
+		failed []int
+		read   = len(settled)
+		wg     sync.WaitGroup
+		// first is the first error that stopped a worker, which stops the
+		// rest: what the step ends with.
+		first error
+		once  sync.Once
+	)
+	for range min(s.ocrWorkers(), max(len(todo), 1)) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// The runner recovers a panic only on the step's own goroutine;
+			// one here would take the server down, so it fails the step.
+			defer func() {
+				if p := recover(); p != nil {
+					once.Do(func() { first = errs.Unexpected.Wrap(fmt.Errorf("reading a page panicked: %v", p)) })
+					cancel()
+				}
+			}()
+			for n := range pages {
+				if err := s.readPage(ctx, run, m.ID, path, n, &failed, &mu); err != nil {
+					once.Do(func() { first = err })
+					cancel()
+					return
+				}
+				mu.Lock()
+				read++
+				run.Activity(fmt.Sprintf("Read %d of %d pages", read, m.PageCount))
+				mu.Unlock()
+			}
+		}()
+	}
+feed:
+	for _, n := range todo {
+		select {
+		case pages <- n:
+		case <-ctx.Done():
+			break feed
+		}
+	}
+	close(pages)
+	wg.Wait()
+	// A worker's own error (a reader not installed, a write refused) is the
+	// step's; a stop from the runner (a kill, a removal) ends it as stopped.
+	if first != nil {
+		return first
+	}
+	if ctx.Err() != nil {
+		return stopped(ctx)
+	}
 	if len(failed) > 0 {
+		slices.Sort(failed)
 		return pagesUnread.New("count", plural(len(failed), "page"), "list", pageList(failed))
 	}
 	return nil
+}
+
+// readPage recognizes one page and saves it, adding it to failed when the
+// reader choked on it. It returns an error only for what stops every page:
+// a reader not installed, a stop, a write that failed. A page whose reading
+// was cut short by a stop is neither kept nor failed: it is read next time.
+func (s *Service) readPage(ctx context.Context, run *runner.Run, id, path string, n int, failed *[]int, mu *sync.Mutex) error {
+	text, err := s.c.Tools.OCR(ctx, path, n)
+	status := pageStatus(text)
+	switch {
+	case err != nil && ctx.Err() != nil:
+		return stopped(ctx)
+	case err != nil:
+		// A reader that isn't installed is the computer's, not this
+		// page's: the step waits on it (condition.Cause).
+		if errors.Is(err, execx.ErrNotInstalled) {
+			return err
+		}
+		text, status = "", "failed"
+		mu.Lock()
+		*failed = append(*failed, n)
+		mu.Unlock()
+	}
+	// A page read is kept even when the step is stopping (a kill, another
+	// worker's failure): reading it was the slow part, and the write is
+	// quick. Not keeping it would read it again on resume.
+	ctx = context.WithoutCancel(ctx)
+	return run.Write(ctx, func(tx *sql.Tx) error {
+		if err := savePage(ctx, tx, id, n, text, status); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx, `UPDATE materials SET pages_read = (SELECT count(*) FROM pages WHERE material_id = ?1 AND status != 'failed') WHERE id = ?1`, id)
+		return errs.Database.Of(err)
+	})
+}
+
+// ocrWorkers is how many pages of a scan are read at once: half the cores,
+// at least one and at most four, so a laptop stays usable (and cooler)
+// while a book imports. Config.OCRWorkers overrides it.
+func (s *Service) ocrWorkers() int {
+	if s.c.OCRWorkers > 0 {
+		return s.c.OCRWorkers
+	}
+	return min(max(runtime.NumCPU()/2, 1), 4)
 }
 
 func (s *Service) settled(ctx context.Context, id string) (map[int]bool, error) {
@@ -379,8 +458,9 @@ func (s *Service) sections(ctx context.Context, id string) ([]library.Section, e
 }
 
 // numbering works out how the material's printed page numbers run and how
-// it numbers its problems. The first material in a course that numbers its
-// problems is its textbook, until the student says otherwise (A2).
+// it numbers its problems. A material that numbers its problems goes under
+// Textbooks, one that doesn't under Materials, until the student moves it
+// (ideas/dependencies-grill.md, D9).
 func (s *Service) numbering(ctx context.Context, run *runner.Run) error {
 	m, err := s.get(ctx, run.SubjectID)
 	if err != nil {
@@ -407,7 +487,7 @@ func (s *Service) numbering(ctx context.Context, run *runner.Run) error {
 			}
 		}
 		if !haveProblems {
-			return nil
+			return shelve(ctx, tx, m.ID, false)
 		}
 		b, err := json.Marshal(style)
 		if err != nil {
@@ -416,18 +496,14 @@ func (s *Service) numbering(ctx context.Context, run *runner.Run) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE materials SET problems = ? WHERE id = ?`, string(b), m.ID); err != nil {
 			return errs.Database.Wrap(err)
 		}
-		return claimTextbook(ctx, tx, m.ID)
+		return shelve(ctx, tx, m.ID, true)
 	})
 }
 
-// claimTextbook makes a material that numbers its problems its course's
-// textbook, unless the course has one already (A2): the student's choice,
-// or an earlier material's. A removed textbook still counts until it is
-// purged, so undoing its removal never leaves two.
-func claimTextbook(ctx context.Context, tx *sql.Tx, id string) error {
-	_, err := tx.ExecContext(ctx, `UPDATE materials SET textbook = 1 WHERE id = ?1 AND NOT EXISTS
-		(SELECT 1 FROM materials o WHERE o.course_id = (SELECT course_id FROM materials WHERE id = ?1)
-			AND o.id != ?1 AND o.textbook = 1)`, id)
+// shelve puts a material under Textbooks or Materials by what detection
+// found, unless the student has put it somewhere themselves.
+func shelve(ctx context.Context, tx *sql.Tx, id string, textbook bool) error {
+	_, err := tx.ExecContext(ctx, `UPDATE materials SET textbook = ? WHERE id = ? AND textbook_set = 0`, textbook, id)
 	return errs.Database.Of(err)
 }
 

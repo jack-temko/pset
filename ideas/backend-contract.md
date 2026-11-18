@@ -127,7 +127,7 @@ failure shows as "trying again in 8 s", which is neither waiting nor failed.
 | `aspect`    | page height over width, so pages hold their box before they arrive        |
 | `pageRuns`  | how printed page numbers run against PDF pages                            |
 | `problems`  | how it numbers its problems, once worked out                              |
-| `textbook`  | true for the course's textbook, where references are looked for first     |
+| `textbook`  | true when under Textbooks (several per course), where references go first |
 | `progress`  | while being read in: pages done, pages total, about how many seconds left |
 | `steps`     | its import: examine, read pages, contents, numbering, search              |
 | `addedAt`   | when it was added                                                         |

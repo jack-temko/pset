@@ -157,8 +157,19 @@ the contents against a real model. Courses were built in 7a.
 
 - Courses; a material's import as steps (examine, read pages, contents, numbering,
   search); textbook detection; page images.
-- Decided here: **embeddings** (below). Still open: the search step was ported
-  as it was, embeddings and all, and Jack's eval decides.
+- Decided here: **embeddings stay** (2026-11-18, from Jack's run of the real-import
+  check on Yates and Goodman, 514 pages): with embeddings search found the definition
+  and theorem pages a student wants (152 exponential, 156 Erlang, 185 to 188 joint
+  PMF) where words alone missed them or returned index pages; the search step took
+  5 min 42 s on his laptop's CPU, against none. The Ask and guide evals were never
+  built, and this settled it without them.
+- Measured: a textbook imports and resumes after a kill (7 min 27 s with
+  embeddings, 48 s without; one model call, $0.0011; 3 of 514 pages without text).
+  A scan read about 30 s a page on one core, under load: about 5 hours for 640
+  pages. Fixed by reading pages several at once, one tesseract thread each
+  (`parallel-ocr`); the scan run is to be repeated with the improved check
+  (`internal/material/real_test.go`, which waits up to 6 h, logs pages read every
+  minute, reports even on giving up, and writes the whole contents to a file).
 - Done when: a real textbook and a scan import, resume after a kill, and search.
 
 **5. Work.** The largest track; three pull requests.
@@ -237,17 +248,17 @@ offers Undo only when the action's reply carries an `action`.
 
 ### What is still open, and where each gets decided
 
-| Open                                         | Decided in    | How                                                                                                                              |
-| -------------------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Whether embeddings and Ollama stay           | Track 4       | Run the Ask and guide evals with text search alone. If they match, the embed step, its health check and its table are not ported |
-| Poppler and Tesseract as programs to install | After track 9 | A spike of an embedded PDF library. Not on the path: the leaves are kept, so it can change later without touching the rest       |
-| The limits per model, in numbers             | Track 5       | Raise each until the provider pushes back, then halve                                                                            |
-| Porting the old library                      | After track 9 | Its own small grill, if Jack still wants it. The old folder is kept until then                                                   |
-| Routes and wire types                        | Tracks 1 to 7 | Written into `design/backend.md` as each part is built                                                                           |
-| A history screen                             | Not planned   | The log keeps a week; a screen needs its own grill                                                                               |
-| The palette's design and each action's key   | Track 8       | The palette's design pass on `/design`; keys drafted with the catalog and corrected in the palette                               |
-| The look of "waiting" and the one notice     | Track 8       | The error notice's design pass on `design`                                                                                       |
-| Step replay and the cost ledger              | After track 9 | Ideas, not decided: [step-replay.md](step-replay.md), [cost-ledger.md](cost-ledger.md)                                           |
+| Open                                         | Decided in    | How                                                                                                                        |
+| -------------------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Whether embeddings and Ollama stay           | Track 4       | Decided 2026-11-18: they stay (track 4's measurements, above)                                                              |
+| Poppler and Tesseract as programs to install | After track 9 | A spike of an embedded PDF library. Not on the path: the leaves are kept, so it can change later without touching the rest |
+| The limits per model, in numbers             | Track 5       | Raise each until the provider pushes back, then halve                                                                      |
+| Porting the old library                      | After track 9 | Its own small grill, if Jack still wants it. The old folder is kept until then                                             |
+| Routes and wire types                        | Tracks 1 to 7 | Written into `design/backend.md` as each part is built                                                                     |
+| A history screen                             | Not planned   | The log keeps a week; a screen needs its own grill                                                                         |
+| The palette's design and each action's key   | Track 8       | The palette's design pass on `/design`; keys drafted with the catalog and corrected in the palette                         |
+| The look of "waiting" and the one notice     | Track 8       | The error notice's design pass on `design`                                                                                 |
+| Step replay and the cost ledger              | After track 9 | Ideas, not decided: [step-replay.md](step-replay.md), [cost-ledger.md](cost-ledger.md)                                     |
 
 ### What could go wrong
 

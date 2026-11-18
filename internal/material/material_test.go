@@ -252,6 +252,38 @@ func TestAScanIsRecognizedPageByPage(t *testing.T) {
 	}
 }
 
+// A scan's pages are read several at once, as many as there are workers and
+// no more, and every page is kept.
+func TestAScanIsReadSeveralPagesAtOnce(t *testing.T) {
+	e := newEnv(t)
+	e.svc.c.OCRWorkers = 3
+	var mu sync.Mutex
+	var now, most int
+	e.setOCR(func(_ context.Context, page int) (string, error) {
+		mu.Lock()
+		now++
+		most = max(most, now)
+		mu.Unlock()
+		time.Sleep(50 * time.Millisecond)
+		mu.Lock()
+		now--
+		mu.Unlock()
+		return fmt.Sprintf("page %d text", page), nil
+	})
+	e.start()
+	id := e.add("sample-scanned.pdf")
+	e.wait(id, step.NameReadPages, step.StateDone)
+	mu.Lock()
+	got := most
+	mu.Unlock()
+	if got != 3 {
+		t.Fatalf("at most %d pages were read at once, want 3", got)
+	}
+	if n := e.count(`SELECT count(*) FROM pages WHERE material_id = ? AND status = 'text'`, id); n != 6 {
+		t.Fatalf("%d of 6 pages kept", n)
+	}
+}
+
 // Killed while it reads a scan, it resumes where it stopped on the next
 // start: the pages already read are not read again.
 func TestReadingAScanResumesAfterAKill(t *testing.T) {
@@ -352,6 +384,60 @@ func TestAScanWaitsForTheReader(t *testing.T) {
 	}
 }
 
+// A reader that isn't installed stops the other workers, which are mid-page
+// (as tesseract would be), and the step waits on it: nothing hangs, and no
+// page is kept.
+func TestOneWorkersMissingReaderStopsTheRest(t *testing.T) {
+	e := newEnv(t)
+	e.svc.c.OCRWorkers = 3
+	e.setOCR(func(ctx context.Context, page int) (string, error) {
+		if page == 1 {
+			return "", &execx.NotInstalledError{Name: "tesseract"}
+		}
+		<-ctx.Done()
+		return "", ctx.Err()
+	})
+	e.start()
+	id := e.add("sample-scanned.pdf")
+	deadline := time.Now().Add(10 * time.Second)
+	for e.count(`SELECT count(*) FROM incidents WHERE clears = 'scan_reader' AND state = 'open'`) == 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("reading never waited on the scan reader: the other workers hung")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if n := e.count(`SELECT count(*) FROM pages WHERE material_id = ?`, id); n != 0 {
+		t.Fatalf("%d pages kept from workers that were stopped", n)
+	}
+}
+
+// Pages the reader chokes on, finished out of order by different workers,
+// are listed in page order.
+func TestFailedPagesAreListedInOrder(t *testing.T) {
+	e := newEnv(t)
+	e.svc.c.OCRWorkers = 3
+	e.setOCR(func(_ context.Context, page int) (string, error) {
+		switch page {
+		case 2:
+			time.Sleep(100 * time.Millisecond)
+			return "", errors.New("tesseract choked")
+		case 5:
+			return "", errors.New("tesseract choked")
+		}
+		return fmt.Sprintf("page %d text", page), nil
+	})
+	e.start()
+	id := e.add("sample-scanned.pdf")
+	st := e.wait(id, step.NameReadPages, step.StateFailed)
+	var raw string
+	if err := e.s.DB.QueryRow(`SELECT error FROM incidents WHERE id = ?`, st.IncidentID).Scan(&raw); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(raw, "p. 2, p. 5") {
+		t.Fatalf("the failed pages are not listed in order: %s", raw)
+	}
+}
+
 // Removing a material while it is read in pauses it; undoing the removal
 // lets it carry on.
 func TestRemovingAMaterialPausesItsReading(t *testing.T) {
@@ -448,13 +534,14 @@ func TestAFileThatIsntAPDFIsRefused(t *testing.T) {
 
 func stringsReader(s string) *strings.Reader { return strings.NewReader(s) }
 
-// The first material that numbers its problems is the textbook; a later one
-// is not, unless the first was removed.
-func TestTheFirstMaterialWithProblemsIsTheTextbook(t *testing.T) {
+// Detection puts every material that numbers its problems under Textbooks,
+// so a course can have several; once the student moves one, detection
+// leaves it where they put it, and Undo puts it back.
+func TestDetectionShelvesUntilTheStudentMovesIt(t *testing.T) {
 	e := newEnv(t)
-	claim := func(id string) {
+	shelf := func(id string, textbook bool) {
 		t.Helper()
-		if err := e.s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error { return claimTextbook(bg, tx, id) }); err != nil {
+		if err := e.s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error { return shelve(bg, tx, id, textbook) }); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -471,22 +558,61 @@ func TestTheFirstMaterialWithProblemsIsTheTextbook(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	claim("m1")
-	claim("m2")
-	if !textbook("m1") || textbook("m2") {
-		t.Fatal("the second material with problems took the textbook from the first")
+	shelf("m1", true)
+	shelf("m2", true)
+	shelf("m3", false)
+	if !textbook("m1") || !textbook("m2") || textbook("m3") {
+		t.Fatal("detection did not put both books with problems under Textbooks, and the handout under Materials")
 	}
+
+	in, err := json.Marshal(Textbook{ID: "m2", Textbook: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	done, err := e.c.Run(bg, "material.textbook", in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shelf("m2", true) // numbering run again
+	if textbook("m2") {
+		t.Fatal("detection moved a material the student had put under Materials")
+	}
+	if _, err := e.c.Undo(bg, done.Action, false); err != nil {
+		t.Fatal(err)
+	}
+	if !textbook("m2") || e.count(`SELECT textbook_set FROM materials WHERE id = 'm2'`) != 0 {
+		t.Fatal("undoing the move did not put it back under Textbooks, for detection again")
+	}
+
+	// Confirming where detection put it pins it: detection no longer moves it.
+	in, err = json.Marshal(Textbook{ID: "m3", Textbook: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.c.Run(bg, "material.textbook", in); err != nil {
+		t.Fatal(err)
+	}
+	shelf("m3", true)
+	if textbook("m3") {
+		t.Fatal("detection moved a material the student had confirmed under Materials")
+	}
+	if again, err := e.c.Run(bg, "material.textbook", in); err != nil || again.Action != "" {
+		t.Fatalf("the same move again changed something: %+v %v", again, err)
+	}
+
+	// A removed material can't be moved.
 	if err := e.s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
 		_, err := tx.Exec(`UPDATE materials SET removed_at = ? WHERE id = 'm1'`, db.Now())
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
-	// A removed textbook still counts until it is purged: undoing its
-	// removal never leaves two.
-	claim("m3")
-	if textbook("m3") {
-		t.Fatal("with the textbook only removed, another material took it")
+	in, err = json.Marshal(Textbook{ID: "m1", Textbook: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.c.Run(bg, "material.textbook", in); !errors.Is(err, errs.Gone) {
+		t.Fatalf("moving a removed material: %v", err)
 	}
 }
 
