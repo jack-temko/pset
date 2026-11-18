@@ -21,6 +21,7 @@ import (
 	_ "github.com/jackt/pset/internal/errlog"
 	"github.com/jackt/pset/internal/errs"
 	_ "github.com/jackt/pset/internal/events"
+	_ "github.com/jackt/pset/internal/health"
 	_ "github.com/jackt/pset/internal/homework"
 	_ "github.com/jackt/pset/internal/httpx"
 	_ "github.com/jackt/pset/internal/library"

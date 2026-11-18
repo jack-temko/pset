@@ -291,6 +291,15 @@ CREATE TABLE places (
 	UNIQUE (owner_kind, owner_id, kind, tab_id)
 );
 
+-- What the student saved in Settings (internal/settings): the key and
+-- their name, one JSON row each. Not logged: the key must never reach the
+-- change log, and neither is undone.
+CREATE TABLE settings (
+	key        TEXT PRIMARY KEY,
+	value      TEXT NOT NULL,
+	updated_at TEXT NOT NULL
+);
+
 -- Each student action run, by the catalog entry it was (internal/action):
 -- what Undo says it took back, and where its Show goes. Not logged; it goes
 -- with its changes.

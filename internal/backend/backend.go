@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackt/pset/internal/action"
 	"github.com/jackt/pset/internal/course"
+	"github.com/jackt/pset/internal/health"
 	"github.com/jackt/pset/internal/incident"
 	"github.com/jackt/pset/internal/library"
 	"github.com/jackt/pset/internal/material"
@@ -30,6 +31,10 @@ type Options struct {
 	// alone.
 	Embed      func(ctx context.Context, texts []string) ([][]float32, error)
 	EmbedModel string
+	// Ollama is what health checks the search model on; nil checks none.
+	Ollama health.Ollama
+	// LookPath finds a program, for health; exec.LookPath when nil.
+	LookPath func(string) (string, error)
 }
 
 // Backend is the features and their catalog.
@@ -39,12 +44,18 @@ type Backend struct {
 	Materials *material.Service
 	Incidents *incident.Service
 	Places    *place.Service
+	Health    *health.Service
 }
 
 // New builds every feature on s. With a nil store and no runner it is the
 // catalog alone, for generating it: nothing runs.
 func New(s *store.Store, o Options) *Backend {
 	c := action.New(s)
+	hc := health.Config{Store: s, Actions: c, DataDir: o.DataDir, Ollama: o.Ollama, LookPath: o.LookPath}
+	if o.Runner != nil {
+		// A nil runner in the interface would not be nil.
+		hc.Conditions = o.Runner
+	}
 	return &Backend{
 		Actions: c,
 		Courses: course.New(s, c),
@@ -54,6 +65,7 @@ func New(s *store.Store, o Options) *Backend {
 		}),
 		Incidents: incident.New(s, c, o.Runner),
 		Places:    place.New(s),
+		Health:    health.New(hc),
 	}
 }
 
@@ -64,4 +76,5 @@ func (b *Backend) Routes(mux *http.ServeMux) {
 	b.Materials.Routes(mux)
 	b.Incidents.Routes(mux)
 	b.Places.Routes(mux)
+	b.Health.Routes(mux)
 }

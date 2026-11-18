@@ -6,10 +6,9 @@ about. Spec: `design/settings.md`. Which model does which job is `llm`'s
 
 ## Tables
 
-`settings`: one row per saved thing, as JSON, keyed by name. `chat` is the
-key (`{apiKey}`; a row from before PSet chose its models may carry an
-`endpoint`, and a key saved for anywhere but OpenRouter doesn't count as
-saved), `profile` is the student's name.
+The store's `settings` (internal/store, not logged): one row per saved thing,
+as JSON, keyed by name. `chat` is the key (`{apiKey}`), `profile` is the
+student's name. The old database's `settings` table is no longer read.
 
 ## Key
 
@@ -32,23 +31,15 @@ saved), `profile` is the student's name.
 
 ## Health
 
-`GET /api/health`, the local system only, in this order: data directory,
-database (`quick_check`, and migrations not yet applied), poppler,
-tesseract, Ollama (running, and with `nomic-embed-text`). OpenRouter isn't
-here; its status lives beside the key.
-
-`POST /api/health/{id}/fix` repairs one that can be repaired and answers
-its check run again: creates the data directory, applies pending
-migrations, or has Ollama pull the embeddings model (about 270 MB). One
-that can't be (a missing tool, Ollama not running) is refused `invalid`
-with how to install or start it.
+Moved to `internal/health`: the checks keep what they find as conditions.
 
 ## Reset
 
 `GET /api/reset` counts books and pages (through the library); `POST`
-pauses the queue, wipes every table, deletes every file in the data
-directory except the open database, and resumes. A fresh install, the key
-included.
+wipes the old database's tables, deletes the key and the name from the
+store, and deletes every file in the data directory except the open
+databases. The store's other tables stay: Reset moves onto the store at the
+cut-over (track 9 of `ideas/backend-courses.md`).
 
 ## About
 

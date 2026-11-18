@@ -216,3 +216,12 @@ packages:
       // Generated from internal/action/wire.go by tygo. Do not edit.
       import type { Resource } from './change'
       import type { ID as ConditionID } from './condition'
+  - path: github.com/jackt/pset/internal/health
+    include_files: [wire.go]
+    enum_style: union
+    output_path: web/src/api/gen/health.ts
+    type_mappings:
+      condition.Condition: 'Condition'
+    frontmatter: |
+      // Generated from internal/health/wire.go by tygo. Do not edit.
+      import type { Condition } from './condition'

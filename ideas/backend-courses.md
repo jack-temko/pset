@@ -14,10 +14,10 @@ the order of work and the tracker. Branch
 | 1     | The contract                        | Done: #96                                   | `backend-contract` |
 | 2     | Schema, change log, events          | Done: #97                                   | `changelog`        |
 | 3     | The step runner                     | Done: #98                                   | `step-runner`      |
-| 4     | Courses and materials               | Built; Jack measures (below)                | `material-import`  |
+| 4     | Courses and materials               | Built (#100); Jack measures (below)         | `material-import`  |
 | 5     | Work: sets, finds, readings, guides | Not started                                 |                    |
 | 6     | Ask                                 | Not started                                 |                    |
-| 7     | Undo, and the rest of the app       | In progress: 7a, the action catalog         | `action-catalog`   |
+| 7     | Undo, and the rest of the app       | 7a #99, 7b #101, 7c #102; 7d in progress    | `settings-store`   |
 | 8     | The web data layer and the screens  | Not started                                 |                    |
 | 9     | Cut over                            | Not started                                 |                    |
 
@@ -176,7 +176,20 @@ the contents against a real model. Courses were built in 7a.
 **7. Undo, and the rest.** Built ahead of 4 to 6, in four pull requests: 7a the
 action catalog, its route, Undo and the course actions; 7b places; 7c errors (the
 Settings list, an incident's trace, Try again, the switch that forces an error);
-7d Settings, health, study time, usage and Reset on the new store. Each later track
+7d Settings, health, study time, usage and Reset on the new store. Decided for 7d
+(2026-11-18): usage is new reads over the store's `calls` (per course, material and
+set), the old usage routes left frozen; study time is a per-course table in the
+store; health reads the conditions and each Fix is an action; Reset moves onto the
+store at the cut-over (track 9), since nobody uses this branch before then. 7d lands
+in two pull requests: health and the key, then study time and usage. For track 9:
+the key and the name now live in the store, and nothing copies them from the old
+database, so an install that upgrades starts with neither (Jack imports again, and
+saves his key again). Also for track 9: once `make test-library` snapshots the
+store, it strips the store's `settings` table (the key). For track 8: a condition's
+row holds the last error said about it, from a step or a check, so Settings shows
+`condition.error` and not only the check's detail; a check's heal and a step's
+failure at the same moment can still cross (the count of what it can't disprove
+and Holds are two transactions). Each later track
 adds its own actions, and the catalog's walk test grows with them. Decided
 (Jack had no preference): one route for every action, `POST /api/actions/{action}`;
 the key and profile move to `store.db` in 7d. For track 8: an action that can't

@@ -720,7 +720,8 @@ func (r *Runner) fail(ctx context.Context, run *Run, err error) error {
 			if err != nil {
 				return err
 			}
-			if err := setCondition(ctx, tx, clears, false, view); err != nil {
+			// A step's failure names no fix: Settings' check finds one.
+			if err := setCondition(ctx, tx, clears, false, view, ""); err != nil {
 				return err
 			}
 			_, err = tx.ExecContext(ctx, `UPDATE steps SET state = 'waiting', ended_at = ?, incident_id = ? WHERE id = ?`,
@@ -839,7 +840,7 @@ func (r *Runner) Holds(ctx context.Context, condition string) error {
 			return errs.Database.Wrap(err)
 		}
 		if broken > 0 {
-			if err := setCondition(ctx, tx, condition, true, errs.View{}); err != nil {
+			if err := setCondition(ctx, tx, condition, true, errs.View{}, ""); err != nil {
 				return err
 			}
 		}
@@ -859,6 +860,24 @@ func (r *Runner) Holds(ctx context.Context, condition string) error {
 	r.mu.Unlock()
 	r.Wake()
 	return nil
+}
+
+// Lacks says a condition does not hold, found by a check rather than by a
+// failed step (Settings' health, at start and when it opens: A2 of
+// ideas/actions-conditions-place-grill.md): why is what is missing, and fix
+// the action that fixes it, if one does. An action that needs it is refused
+// from then on, before the student tries, until Holds. When it already lacks
+// it for the same reason the row is unchanged, so no change is logged.
+func (r *Runner) Lacks(ctx context.Context, condition string, why error, fix string) error {
+	view := errs.Resolve(why)
+	// Marked before the write, as a failed step marks it: a call that works
+	// from here on heals it.
+	r.mu.Lock()
+	r.broken[condition] = true
+	r.mu.Unlock()
+	return r.store.Write(ctx, change.ActorPSet, "", func(tx *sql.Tx) error {
+		return setCondition(ctx, tx, condition, false, view, fix)
+	})
 }
 
 // IncidentGone is Try again on an incident that is not there.
@@ -924,8 +943,9 @@ func (r *Runner) callWorked() {
 }
 
 // setCondition writes whether a condition holds, with what is wrong while
-// it does not.
-func setCondition(ctx context.Context, tx *sql.Tx, id string, holds bool, why errs.View) error {
+// it does not and the action that fixes it, if one does: a condition that
+// holds is written with no fix, so a fix never outlives its error.
+func setCondition(ctx context.Context, tx *sql.Tx, id string, holds bool, why errs.View, fix string) error {
 	raw := "null"
 	if !holds {
 		var err error
@@ -933,10 +953,10 @@ func setCondition(ctx context.Context, tx *sql.Tx, id string, holds bool, why er
 			return err
 		}
 	}
-	_, err := tx.ExecContext(ctx, `INSERT INTO conditions (id, holds, since, error) VALUES (?, ?, ?, ?)
-		ON CONFLICT (id) DO UPDATE SET holds = excluded.holds, error = excluded.error,
+	_, err := tx.ExecContext(ctx, `INSERT INTO conditions (id, holds, since, error, fix) VALUES (?, ?, ?, ?, ?)
+		ON CONFLICT (id) DO UPDATE SET holds = excluded.holds, error = excluded.error, fix = excluded.fix,
 			since = CASE WHEN conditions.holds = excluded.holds THEN conditions.since ELSE excluded.since END`,
-		id, holds, db.Now(), raw)
+		id, holds, db.Now(), raw, fix)
 	return errs.Database.Of(err)
 }
 

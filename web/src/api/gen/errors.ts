@@ -26,10 +26,13 @@ export type ErrorId =
   | "course.name_empty"
   | "course.name_too_long"
   | "embed.failed"
+  | "embed.model_missing"
   | "embed.unreachable"
   | "errors.clear_failed"
   | "errors.read_failed"
   | "events.no_streaming"
+  | "health.make_folder_failed"
+  | "health.pull_failed"
   | "homework.bad_due_date"
   | "homework.bad_image"
   | "homework.bad_position"
@@ -126,12 +129,8 @@ export type ErrorId =
   | "request.unreachable"
   | "request.upload_cut"
   | "runner.incident_gone"
-  | "settings.fix_data_dir"
-  | "settings.fix_database"
-  | "settings.fix_ollama"
   | "settings.key_empty"
   | "settings.name_too_long"
-  | "settings.not_fixable"
   | "settings.test_failed"
   | "store.already_undone"
   | "store.changed_since"
@@ -347,6 +346,15 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 502,
     owner: "llm",
   },
+  "embed.model_missing": {
+    what: "Ollama doesn't have {model} yet.",
+    why: "PSet searches your materials with it, and Ollama hasn't downloaded it.",
+    fix: "Download it from Settings, under Health (about 270 MB).",
+    action: "open_settings",
+    scope: "inline",
+    status: 503,
+    owner: "health",
+  },
   "embed.unreachable": {
     what: "PSet couldn't reach Ollama.",
     why: "Ollama searches your books, and it isn't running or isn't answering.",
@@ -382,6 +390,23 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 500,
     owner: "events",
+  },
+  "health.make_folder_failed": {
+    what: "Couldn't create the data folder.",
+    why: "PSet isn't allowed to create it there, or the disk is full.",
+    fix: "Create the folder yourself, or free up space, then check again.",
+    scope: "inline",
+    status: 422,
+    owner: "health",
+  },
+  "health.pull_failed": {
+    what: "Ollama couldn't download {model}.",
+    why: "Ollama isn't running, or the download was cut off.",
+    fix: "Start Ollama and check the internet connection, then try again.",
+    action: "retry",
+    scope: "inline",
+    status: 422,
+    owner: "health",
   },
   "homework.bad_due_date": {
     what: "That isn't a date.",
@@ -1076,31 +1101,6 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 404,
     owner: "runner",
   },
-  "settings.fix_data_dir": {
-    what: "Couldn't create the data folder.",
-    why: "PSet isn't allowed to create it there, or the disk is full.",
-    fix: "Create the folder yourself, or free up space, then check again.",
-    scope: "inline",
-    status: 422,
-    owner: "settings",
-  },
-  "settings.fix_database": {
-    what: "Couldn't update the database.",
-    why: "The database can't be brought up to date, which means it is damaged or comes from a newer PSet.",
-    fix: "Update PSet. If that doesn't help, reset PSet from this page.",
-    scope: "inline",
-    status: 422,
-    owner: "settings",
-  },
-  "settings.fix_ollama": {
-    what: "Ollama couldn't download {model}.",
-    why: "Ollama isn't running, or the download was cut off.",
-    fix: "Start Ollama and check the internet connection, then try again.",
-    action: "retry",
-    scope: "inline",
-    status: 422,
-    owner: "settings",
-  },
   "settings.key_empty": {
     what: "Paste your OpenRouter key first.",
     scope: "field",
@@ -1110,14 +1110,6 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
   "settings.name_too_long": {
     what: "Keep it under {max} characters.",
     scope: "field",
-    status: 422,
-    owner: "settings",
-  },
-  "settings.not_fixable": {
-    what: "PSet can't fix this one itself.",
-    why: "Fixing it needs something installed or changed outside PSet.",
-    fix: "Follow the steps listed with the check, then check again.",
-    scope: "inline",
     status: 422,
     owner: "settings",
   },
