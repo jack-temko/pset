@@ -61,6 +61,9 @@ type Seed struct {
 	MaterialID, UploadID string
 	// IncidentID is an open incident, a step's own.
 	IncidentID string
+	// SetID is a set in the course, QuestionID a question in it, with a
+	// second question after it (so a move moves it).
+	SetID, QuestionID string
 }
 
 // def is a declared action, its input no longer typed.
@@ -192,6 +195,8 @@ var (
 		Action: errs.ActionReload,
 		Status: http.StatusNotFound,
 	})
+	// Its view carries condition (the id that does not hold) and fixAction
+	// (the action that fixes it, absent when none can) beside its sentences.
 	Blocked = errs.Define(errs.Entry{
 		ID:     "action.blocked",
 		Kind:   errs.KindWaitingOnYou,
@@ -336,7 +341,8 @@ func (c *Catalog) Run(ctx context.Context, id string, input json.RawMessage) (Do
 func (c *Catalog) blocked(ctx context.Context, d *def) error {
 	for _, need := range d.entry.Needs {
 		var raw sql.NullString
-		err := c.store.DB.QueryRowContext(ctx, `SELECT error FROM conditions WHERE id = ? AND holds = 0`, string(need)).Scan(&raw)
+		var fix string
+		err := c.store.DB.QueryRowContext(ctx, `SELECT error, fix FROM conditions WHERE id = ? AND holds = 0`, string(need)).Scan(&raw, &fix)
 		if errors.Is(err, sql.ErrNoRows) {
 			continue
 		}
@@ -355,7 +361,11 @@ func (c *Catalog) blocked(ctx context.Context, d *def) error {
 			}
 		}
 		// The condition's own sentences, their periods the entry's.
-		return Blocked.New("name", d.entry.Name, "why", strings.TrimSuffix(why.What, "."), "fix", strings.TrimSuffix(why.Fix, "."))
+		// The condition and the action that fixes it ride along on the view,
+		// so the page can offer the fix as a button and watch the condition
+		// for the action's button to come back.
+		return Blocked.New("name", d.entry.Name, "why", strings.TrimSuffix(why.What, "."), "fix", strings.TrimSuffix(why.Fix, ".")).
+			Waiting(string(need), fix)
 	}
 	return nil
 }

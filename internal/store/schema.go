@@ -128,6 +128,11 @@ CREATE TABLE questions (
 	done_at    TEXT NOT NULL DEFAULT '',
 	revealed   TEXT NOT NULL DEFAULT '[]',
 	difficulty INTEGER NOT NULL DEFAULT 0,
+	-- find is 1 for a problem looked up in the course's textbooks, 0 for one
+	-- the student typed out; pin_page the page they pointed to, 0 for none.
+	-- Both the student's, undoable (track 5a).
+	find       INTEGER NOT NULL DEFAULT 0,
+	pin_page   INTEGER NOT NULL DEFAULT 0,
 	created_at TEXT NOT NULL,
 	removed_at TEXT NOT NULL DEFAULT '',
 	seq        INTEGER NOT NULL DEFAULT 0
@@ -422,12 +427,12 @@ var (
 			Name: "questions", Kind: change.ResourceQuestion,
 			SetID:    "{r}.set_id",
 			CourseID: "(SELECT course_id FROM sets WHERE id = {r}.set_id)",
-			Student:  []string{"position", "text", "label", "notes", "done_at", "revealed", "removed_at"},
+			Student:  []string{"position", "text", "label", "notes", "done_at", "revealed", "removed_at", "find", "pin_page"},
 			PSet:     []string{"set_id", "difficulty"},
 			Meta:     []string{"created_at", "seq"},
 			Removed:  "removed_at",
 			JSON:     []string{"notes", "revealed"},
-			Wire:     map[string]Field{"done_at": {"done", set}},
+			Wire:     map[string]Field{"done_at": {"done", set}, "find": {"find", truth}, "pin_page": {"pinPage", nonzero}},
 			Echo:     setCount,
 		},
 		{

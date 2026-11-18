@@ -3,6 +3,7 @@ import type { Entry } from './action';
 import type * as course from './course';
 import type * as incident from './incident';
 import type * as material from './material';
+import type * as work from './work';
 
 export type ActionId =
   | "course.add"
@@ -16,6 +17,17 @@ export type ActionId =
   | "material.remove"
   | "material.rename"
   | "material.textbook"
+  | "question.add"
+  | "question.done"
+  | "question.move"
+  | "question.notes"
+  | "question.remove"
+  | "question.reveal"
+  | "set.add"
+  | "set.due"
+  | "set.remove"
+  | "set.rename"
+  | "set.turn_in"
   | "time.clear"
 ;
 
@@ -97,6 +109,83 @@ export const ACTIONS: Record<ActionId, Entry> = {
     undoable: true,
     costs: false,
   },
+  "question.add": {
+    id: "question.add",
+    name: "Add questions",
+    needs: [],
+    undoable: true,
+    costs: false,
+  },
+  "question.done": {
+    id: "question.done",
+    name: "Mark done",
+    needs: [],
+    undoable: true,
+    costs: false,
+  },
+  "question.move": {
+    id: "question.move",
+    name: "Move question",
+    needs: [],
+    undoable: true,
+    costs: false,
+  },
+  "question.notes": {
+    id: "question.notes",
+    name: "Edit notes",
+    needs: [],
+    undoable: true,
+    costs: false,
+  },
+  "question.remove": {
+    id: "question.remove",
+    name: "Remove question",
+    needs: [],
+    undoable: true,
+    costs: false,
+  },
+  "question.reveal": {
+    id: "question.reveal",
+    name: "Show help",
+    needs: [],
+    undoable: true,
+    costs: false,
+  },
+  "set.add": {
+    id: "set.add",
+    name: "Add set",
+    needs: [],
+    undoable: true,
+    costs: false,
+  },
+  "set.due": {
+    id: "set.due",
+    name: "Change due date",
+    needs: [],
+    undoable: true,
+    costs: false,
+  },
+  "set.remove": {
+    id: "set.remove",
+    name: "Remove set",
+    needs: [],
+    undoable: true,
+    costs: false,
+  },
+  "set.rename": {
+    id: "set.rename",
+    name: "Rename set",
+    needs: [],
+    undoable: true,
+    costs: false,
+  },
+  "set.turn_in": {
+    id: "set.turn_in",
+    name: "Turn in",
+    needs: [],
+    undoable: true,
+    costs: false,
+  },
   "time.clear": {
     id: "time.clear",
     name: "Forget time spent",
@@ -119,5 +208,16 @@ export interface ActionInputs {
   "material.remove": material.Remove;
   "material.rename": material.Rename;
   "material.textbook": material.Textbook;
+  "question.add": work.AddQuestions;
+  "question.done": work.QuestionMark;
+  "question.move": work.QuestionMove;
+  "question.notes": work.QuestionNotes;
+  "question.remove": work.RemoveQuestion;
+  "question.reveal": work.QuestionReveal;
+  "set.add": work.AddSet;
+  "set.due": work.SetDue;
+  "set.remove": work.RemoveSet;
+  "set.rename": work.RenameSet;
+  "set.turn_in": work.TurnIn;
   "time.clear": Record<string, never>;
 }

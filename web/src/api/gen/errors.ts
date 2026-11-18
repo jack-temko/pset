@@ -159,6 +159,15 @@ export type ErrorId =
   | "update.source_build"
   | "update.unreadable_release"
   | "update.unsupported_system"
+  | "work.bad_due_date"
+  | "work.bad_reveal"
+  | "work.draft_too_long"
+  | "work.no_drafts"
+  | "work.note_too_long"
+  | "work.title_empty"
+  | "work.title_too_long"
+  | "work.too_many_drafts"
+  | "work.too_many_notes"
 ;
 
 export interface CatalogEntry {
@@ -1330,5 +1339,59 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     scope: "inline",
     status: 422,
     owner: "update",
+  },
+  "work.bad_due_date": {
+    what: "That isn't a date.",
+    scope: "field",
+    status: 422,
+    owner: "work",
+  },
+  "work.bad_reveal": {
+    what: "There's no help step called {stage}.",
+    scope: "field",
+    status: 422,
+    owner: "work",
+  },
+  "work.draft_too_long": {
+    what: "Keep each question under {max} characters.",
+    scope: "field",
+    status: 422,
+    owner: "work",
+  },
+  "work.no_drafts": {
+    what: "Write at least one question.",
+    scope: "field",
+    status: 422,
+    owner: "work",
+  },
+  "work.note_too_long": {
+    what: "Keep each note under {max} characters.",
+    scope: "field",
+    status: 422,
+    owner: "work",
+  },
+  "work.title_empty": {
+    what: "Give it a title.",
+    scope: "field",
+    status: 422,
+    owner: "work",
+  },
+  "work.title_too_long": {
+    what: "Keep the title under {max} characters.",
+    scope: "field",
+    status: 422,
+    owner: "work",
+  },
+  "work.too_many_drafts": {
+    what: "That's more than {max} questions at once. Add them in smaller batches.",
+    scope: "field",
+    status: 422,
+    owner: "work",
+  },
+  "work.too_many_notes": {
+    what: "Keep it to {max} notes.",
+    scope: "field",
+    status: 422,
+    owner: "work",
   },
 };
