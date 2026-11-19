@@ -153,6 +153,9 @@ type Error struct {
 	cause  error
 	field  string
 	ref    string
+	// condition and fixAction: what an action waits on, and the action that
+	// fixes it (Waiting).
+	condition, fixAction string
 }
 
 // New raises the entry. Params are name, value pairs for its placeholders.
@@ -195,6 +198,15 @@ func pairs(id string, kv []string) map[string]string {
 func (e *Error) OnField(field string) *Error {
 	c := *e
 	c.field = field
+	return &c
+}
+
+// Waiting returns a copy of e that names the condition an action waits on
+// and the action that fixes it ("" when none can), for the page to offer the
+// fix and watch the condition (action.blocked).
+func (e *Error) Waiting(condition, fixAction string) *Error {
+	c := *e
+	c.condition, c.fixAction = condition, fixAction
 	return &c
 }
 
@@ -297,6 +309,9 @@ func resolve(chain []*Error) View {
 		}
 		if e.field != "" && v.Field == "" {
 			v.Field = e.field
+		}
+		if e.condition != "" && v.Condition == "" {
+			v.Condition, v.FixAction = e.condition, e.fixAction
 		}
 		if e.ref != "" && v.Ref == "" {
 			v.Ref = e.ref

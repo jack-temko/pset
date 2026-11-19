@@ -97,7 +97,10 @@ type Question struct {
 	Seq int64 `json:"seq"`
 	// SetID is the set it belongs to.
 	SetID string `json:"setId"`
-	// Position is its place in the set, from 0.
+	// Position orders it in its set, smaller first. It is not an index: a
+	// removed question keeps its number (undoing the removal puts it back
+	// where it was), so the numbers of those still there can skip. The page
+	// lists questions in order and moves one by its index in that list.
 	Position int `json:"position"`
 	// Text is what the student typed ("3.1 #7", or a problem written out in
 	// full).
@@ -110,6 +113,12 @@ type Question struct {
 	// one a line, as runs: shown above the problem and followed by the
 	// guide over the book. Never null, nor any line in it.
 	Notes [][]doc.Run `json:"notes"`
+	// Find is true for a problem looked up in the course's textbooks (it
+	// was typed as a reference, "3.1 #7"); false for one written out in full.
+	Find bool `json:"find"`
+	// PinPage is the page the student pointed it to ("it's on page 95"),
+	// for its find; absent when they haven't.
+	PinPage int `json:"pinPage,omitempty"`
 	// Done is true once the student has marked it done.
 	Done bool `json:"done"`
 	// Revealed is the help steps the student has opened. Never null.
@@ -378,4 +387,73 @@ type SetQuestion struct {
 	QuestionID string `json:"questionId"`
 	// Label is its label.
 	Label string `json:"label"`
+}
+
+// The work's action inputs (internal/action).
+type (
+	// AddSet makes a set in a course.
+	AddSet struct {
+		CourseID string `json:"courseId"`
+		Title    string `json:"title"`
+		// Due is a date (YYYY-MM-DD), or empty.
+		Due string `json:"due"`
+	}
+	// RenameSet renames a set.
+	RenameSet struct {
+		ID    string `json:"id"`
+		Title string `json:"title"`
+	}
+	// SetDue changes a set's due date; empty clears it.
+	SetDue struct {
+		ID  string `json:"id"`
+		Due string `json:"due"`
+	}
+	// TurnIn marks a set turned in, or not.
+	TurnIn struct {
+		ID       string `json:"id"`
+		TurnedIn bool   `json:"turnedIn"`
+	}
+	// RemoveSet removes a set and, with it, its questions.
+	RemoveSet struct {
+		ID string `json:"id"`
+	}
+	// AddQuestions adds questions at the end of a set. A draft that is a
+	// textbook reference listing several problems ("2.1: 1, 4, 6") becomes
+	// one question each.
+	AddQuestions struct {
+		SetID  string  `json:"setId"`
+		Drafts []Draft `json:"drafts"`
+	}
+	// QuestionMark marks a question done, or not.
+	QuestionMark struct {
+		ID   string `json:"id"`
+		Done bool   `json:"done"`
+	}
+	// QuestionReveal opens one help step of a question.
+	QuestionReveal struct {
+		ID     string `json:"id"`
+		Reveal Reveal `json:"reveal"`
+	}
+	// QuestionMove moves a question to a place in its set: its index among
+	// the set's questions as listed, from 0; past either end is that end.
+	QuestionMove struct {
+		ID       string `json:"id"`
+		Position int    `json:"position"`
+	}
+	// QuestionNotes replaces a question's notes, one a line.
+	QuestionNotes struct {
+		ID    string   `json:"id"`
+		Notes []string `json:"notes"`
+	}
+	// RemoveQuestion removes a question.
+	RemoveQuestion struct {
+		ID string `json:"id"`
+	}
+)
+
+// Draft is a question as the student typed it: a reference to look up in
+// the textbooks (Find), or a problem written out in full.
+type Draft struct {
+	Text string `json:"text"`
+	Find bool   `json:"find"`
 }

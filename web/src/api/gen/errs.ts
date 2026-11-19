@@ -63,6 +63,13 @@ export interface View {
   field?: string;
   ref?: string;
   /**
+   * Condition is the condition an action waits on, when it was refused for
+   * one (action.blocked), and FixAction the action that fixes it, absent
+   * when none can: the page offers the fix and watches the condition.
+   */
+  condition?: string;
+  fixAction?: string;
+  /**
    * Incident is the short id the error was kept under, when it was.
    */
   incident?: string;
