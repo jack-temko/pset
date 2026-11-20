@@ -412,7 +412,7 @@ func (r *Runner) Run(ctx context.Context) error {
 // dependency map: a step of a removed thing waits where it is, and carries
 // on if the removal is undone.
 var visible = store.VisibleSubject("s.subject_kind", "s.subject_id",
-	change.ResourceQuestion, change.ResourceSet, change.ResourceMaterial, change.ResourceTurn)
+	change.ResourceQuestion, change.ResourceSet, change.ResourceMaterial, change.ResourceTurn, change.ResourceRead)
 
 type candidate struct {
 	id, kind, subject, name string

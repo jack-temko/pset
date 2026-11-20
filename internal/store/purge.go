@@ -65,7 +65,8 @@ func (s *Store) Purge(ctx context.Context, now time.Time) error {
 			(subject_kind = 'question' AND NOT EXISTS (SELECT 1 FROM questions x WHERE x.id = steps.subject_id))
 			OR (subject_kind = 'set' AND NOT EXISTS (SELECT 1 FROM sets x WHERE x.id = steps.subject_id))
 			OR (subject_kind = 'material' AND NOT EXISTS (SELECT 1 FROM materials x WHERE x.id = steps.subject_id))
-			OR (subject_kind = 'turn' AND NOT EXISTS (SELECT 1 FROM turns x WHERE x.id = steps.subject_id))`); err != nil {
+			OR (subject_kind = 'turn' AND NOT EXISTS (SELECT 1 FROM turns x WHERE x.id = steps.subject_id))
+			OR (subject_kind = 'read' AND NOT EXISTS (SELECT 1 FROM reads x WHERE x.id = steps.subject_id))`); err != nil {
 			return errs.Database.Wrap(err)
 		}
 		// Places go with their owner, and once emptied (a draft sent, a tab
@@ -115,7 +116,7 @@ const maxPurgePasses = 8
 // purgeOrder is the removable kinds, parents first and materials last.
 var purgeOrder = []change.Resource{
 	change.ResourceCourse, change.ResourceSet, change.ResourceQuestion, change.ResourceFind,
-	change.ResourceReading, change.ResourceTurn, change.ResourceMemory, change.ResourceMaterial,
+	change.ResourceReading, change.ResourceTurn, change.ResourceMemory, change.ResourceRead, change.ResourceMaterial,
 }
 
 // purgeRemoved deletes the things of kind k removed before the cutoff (the

@@ -291,12 +291,10 @@ type Read struct {
 	Seq int64 `json:"seq"`
 	// CourseID is the course it is for.
 	CourseID string `json:"courseId"`
-	// Source is where it came from: a web page's address, a file's name, or
-	// "pasted".
+	// Source is where it came from: a file's name, or a web page's address.
 	Source string `json:"source"`
-	// SheetID is the material an uploaded sheet was kept as, once examined;
-	// absent for a web page or pasted text.
-	SheetID string `json:"sheetId,omitempty"`
+	// SheetID is the material the sheet is kept as. Always there.
+	SheetID string `json:"sheetId"`
 	// SetID is the set it was read to update, when it was.
 	SetID string `json:"setId,omitempty"`
 	// Steps is its one step, read. Never null.
@@ -456,4 +454,45 @@ type (
 type Draft struct {
 	Text string `json:"text"`
 	Find bool   `json:"find"`
+}
+
+// The reads' action inputs.
+type (
+	// StartRead reads an uploaded assignment sheet (a PDF staged by POST
+	// /api/uploads), keeping it as a material: for a set, when SetID names
+	// the one it updates.
+	StartRead struct {
+		CourseID string `json:"courseId"`
+		UploadID string `json:"uploadId"`
+		SetID    string `json:"setId,omitempty"`
+	}
+	// DismissRead drops a read without adding anything.
+	DismissRead struct {
+		ID string `json:"id"`
+	}
+	// ImportRead makes each group the student kept into a set, or updates
+	// the set it names, and is done with the read.
+	ImportRead struct {
+		ReadID string        `json:"readId"`
+		Groups []ImportGroup `json:"groups"`
+	}
+)
+
+// ImportGroup is one date's lines as the student kept them.
+type ImportGroup struct {
+	Title string  `json:"title"`
+	Due   string  `json:"due"`
+	Rows  []Draft `json:"rows"`
+	// SetID updates that set instead of making one: the rows are added,
+	// skipping what it already has; Notes are rewritten and Remove taken
+	// out.
+	SetID  string        `json:"setId,omitempty"`
+	Notes  []NotesUpdate `json:"notes,omitempty"`
+	Remove []string      `json:"remove,omitempty"`
+}
+
+// NotesUpdate is a question's new professor's instructions.
+type NotesUpdate struct {
+	QuestionID string   `json:"questionId"`
+	Notes      []string `json:"notes"`
 }
