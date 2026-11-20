@@ -217,6 +217,28 @@ catalog):
    sheet's material import run as its own steps.
 4. Reads and routes for the page: a course's sets, a set's detail, a read's review.
 
+5a lands in three pull requests: sets and questions (#117); then reads of uploaded
+sheets; then web pages as text materials.
+
+- **Reads of uploads.** A `reads` table (logged, owned by its course; refers to its
+  sheet and the set it updates). `read.start {courseId, uploadId, setId?}` adds the
+  upload as a material (the material import, unchanged) and the read in one write,
+  and starts the read's one step. The step reads the file itself, as the old one
+  did (a PDF's text, or a scan's first four pages as images at 150 dpi), and makes
+  one Reader call with the old assignment prompt, rows `book` renamed `textbook` in
+  the prompt and the parser together; its result is kept on the read. A material a
+  set or read still there names as its sheet is listed with that set, not under
+  Textbooks or Materials; it is listed again once nothing names it, and a textbook
+  named as a sheet stays under Textbooks. A new sheet is pinned under Materials, so
+  detection never makes it the course's textbook. `GET /api/courses/{id}/reads` marks each group against the sets
+  (present, added, changed, gone), as the old review did. `read.import` makes or
+  updates the sets in one write (a new set points at the sheet), and dismisses the
+  read; `read.dismiss` drops it.
+- **Web pages.** A material kind with no PDF: its text kept as pages, its URL on
+  it; the material import skips what needs a file. `read.start {courseId, url}`
+  fetches the page (the old fetch, 20 s, tables kept on a line) and keeps it as a
+  web material; checking again replaces its text, and the read compares as above.
+
 **6. Ask.** Turns per course on the same documents and stream; memory.
 
 **7. Undo, and the rest.** Built ahead of 4 to 6, in four pull requests: 7a the

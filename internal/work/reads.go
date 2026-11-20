@@ -155,4 +155,5 @@ func (s *Service) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/sets/{id}", httpx.Reply(func(r *http.Request) (Detail, error) {
 		return s.Detail(r.Context(), r.PathValue("id"))
 	}))
+	s.readRoutes(mux)
 }

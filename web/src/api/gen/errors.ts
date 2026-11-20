@@ -164,7 +164,12 @@ export type ErrorId =
   | "work.bad_reveal"
   | "work.draft_too_long"
   | "work.no_drafts"
+  | "work.no_groups"
+  | "work.no_homework_found"
   | "work.note_too_long"
+  | "work.nothing_to_add"
+  | "work.pdf_unreadable"
+  | "work.reply_unreadable"
   | "work.title_empty"
   | "work.title_too_long"
   | "work.too_many_drafts"
@@ -1371,9 +1376,46 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     status: 422,
     owner: "work",
   },
+  "work.no_groups": {
+    what: "Pick at least one due date to add.",
+    scope: "field",
+    status: 422,
+    owner: "work",
+  },
+  "work.no_homework_found": {
+    what: "Didn't find any homework in it.",
+    why: "The model read it and found no problems to do.",
+    fix: "If the homework is there, upload just the pages with it.",
+    scope: "inline",
+    status: 422,
+    owner: "work",
+  },
   "work.note_too_long": {
     what: "Keep each note under {max} characters.",
     scope: "field",
+    status: 422,
+    owner: "work",
+  },
+  "work.nothing_to_add": {
+    what: "There's nothing left to add or change in those.",
+    scope: "field",
+    status: 422,
+    owner: "work",
+  },
+  "work.pdf_unreadable": {
+    what: "That PDF couldn't be read.",
+    why: "PSet couldn't get any text or pages out of it.",
+    fix: "Upload a clearer copy of the sheet.",
+    scope: "inline",
+    status: 422,
+    owner: "work",
+  },
+  "work.reply_unreadable": {
+    what: "Couldn't make out the assignment's homework.",
+    why: "The model's answer wasn't in a form PSet could read.",
+    fix: "Try again.",
+    action: "retry",
+    scope: "inline",
     status: 422,
     owner: "work",
   },

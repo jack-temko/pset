@@ -77,7 +77,7 @@ func New(s *store.Store, o Options) *Backend {
 		Study:     study.New(s, c),
 		Spend:     spend.New(s),
 	}
-	b.Work = work.New(work.Config{Store: s, Actions: c, Runner: o.Runner, Seconds: b.Study.QuestionSeconds})
+	b.Work = work.New(work.Config{Store: s, Actions: c, Runner: o.Runner, Materials: b.Materials, Seconds: b.Study.QuestionSeconds})
 	return b
 }
 

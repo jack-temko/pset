@@ -212,3 +212,37 @@ func TestSpendSince(t *testing.T) {
 		}
 	}
 }
+
+// A sheet's read counts toward its course, in the course's spend and since.
+func TestAReadsSpend(t *testing.T) {
+	s := newStore(t)
+	svc := New(s)
+	if err := s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
+		for _, q := range []string{
+			`INSERT INTO reads (id, course_id, source, created_at) VALUES ('r1', 'c2', 'sheet.pdf', ?1)`,
+			`INSERT INTO steps (id, subject_kind, subject_id, name, position, state, created_at) VALUES ('st-r1', 'read', 'r1', 'read', 0, 'done', ?1)`,
+			`INSERT INTO calls (step_id, attempt, at, model, answered, prompt_tokens, completion_tokens, cost, ms, counted, error_id) VALUES
+				('st-r1', 1, ?1, 'a/reader', 'a/reader', 10, 0, 0.003, 10, 1, '')`,
+		} {
+			if _, err := tx.Exec(q, db.Now()); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	course, err := svc.Course(bg, "c2")
+	if err != nil || course.Total.Calls != 2 {
+		t.Fatalf("c2's spend with its read: %+v %v", course.Total, err)
+	}
+	all, err := svc.Since(bg, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range all.ByCourse {
+		if c.CourseID == "" || (c.CourseID == "c2" && c.Total.Calls != 2) {
+			t.Fatalf("since, with a read %+v", all.ByCourse)
+		}
+	}
+}

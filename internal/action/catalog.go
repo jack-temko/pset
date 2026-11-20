@@ -64,6 +64,8 @@ type Seed struct {
 	// SetID is a set in the course, QuestionID a question in it, with a
 	// second question after it (so a move moves it).
 	SetID, QuestionID string
+	// ReadID is an assignment read, read and waiting for review.
+	ReadID string
 }
 
 // def is a declared action, its input no longer typed.

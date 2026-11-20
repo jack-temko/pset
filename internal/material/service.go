@@ -99,9 +99,12 @@ func New(c Config) *Service {
 	return s
 }
 
-func (s *Service) uploadsDir() string          { return filepath.Join(s.c.DataDir, "uploads") }
-func (s *Service) filesDir() string            { return filepath.Join(s.c.DataDir, "materials") }
-func (s *Service) path(id string) string       { return filepath.Join(s.filesDir(), id+".pdf") }
+func (s *Service) uploadsDir() string    { return filepath.Join(s.c.DataDir, "uploads") }
+func (s *Service) filesDir() string      { return filepath.Join(s.c.DataDir, "materials") }
+func (s *Service) path(id string) string { return filepath.Join(s.filesDir(), id+".pdf") }
+
+// File is where a material's PDF is kept.
+func (s *Service) File(id string) string       { return s.path(id) }
 func (s *Service) staged(id string) string     { return filepath.Join(s.uploadsDir(), id+".pdf") }
 func (s *Service) stagedMeta(id string) string { return filepath.Join(s.uploadsDir(), id+".json") }
 
@@ -184,63 +187,111 @@ func (h *sniffer) isPDF() bool { return strings.Contains(string(h.b), "%PDF-") }
 // it in. The file moves to the materials folder first, and back if the
 // write fails.
 func (s *Service) add(ctx context.Context, do *action.Do, in Add) error {
-	if in.UploadID == "" || strings.ContainsAny(in.UploadID, `/\.`) {
-		return uploadGone.New()
-	}
-	raw, err := os.ReadFile(s.stagedMeta(in.UploadID))
+	up, err := s.Adopt(in.UploadID)
 	if err != nil {
-		return uploadGone.New()
+		return err
 	}
-	var st staging
-	if err := json.Unmarshal(raw, &st); err != nil {
-		return errs.Data.Wrap(err)
+	err = do.Write(ctx, change.ResourceMaterial, up.ID, func(tx *sql.Tx) error {
+		_, err := up.Insert(ctx, tx, in.CourseID, false)
+		return err
+	})
+	up.Settle(err)
+	return err
+}
+
+// Adopted is an upload moved in as a material's file, waiting for its row:
+// Insert it inside the write that makes the material, then Settle.
+type Adopted struct {
+	// ID is the material it becomes.
+	ID     string
+	s      *Service
+	upload string
+	st     staging
+	reused bool
+}
+
+// Adopt moves a staged upload in as a new material's file, before the write
+// that adds it.
+func (s *Service) Adopt(uploadID string) (*Adopted, error) {
+	if uploadID == "" || strings.ContainsAny(uploadID, `/\.`) {
+		return nil, uploadGone.New()
+	}
+	raw, err := os.ReadFile(s.stagedMeta(uploadID))
+	if err != nil {
+		return nil, uploadGone.New()
+	}
+	a := &Adopted{ID: uuid.NewString(), s: s, upload: uploadID}
+	if err := json.Unmarshal(raw, &a.st); err != nil {
+		return nil, errs.Data.Wrap(err)
 	}
 	if err := os.MkdirAll(s.filesDir(), 0o700); err != nil {
-		return errs.Disk.Wrap(err)
+		return nil, errs.Disk.Wrap(err)
 	}
-	id := uuid.NewString()
-	if err := os.Rename(s.staged(in.UploadID), s.path(id)); err != nil {
-		return uploadGone.Wrap(err)
+	if err := os.Rename(s.staged(uploadID), s.path(a.ID)); err != nil {
+		return nil, uploadGone.Wrap(err)
 	}
 	// A rename keeps the upload's time; the sweep spares a file by its age,
 	// so it is made new as it moves in.
 	now := time.Now()
-	cleanup.Log("material: date a file moved in", os.Chtimes(s.path(id), now, now))
-	err = do.Write(ctx, change.ResourceMaterial, id, func(tx *sql.Tx) error {
-		var course int
-		if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM courses WHERE id = ? AND removed_at = ''`, in.CourseID).Scan(&course); err != nil {
-			return errs.Database.Wrap(err)
-		}
-		if course == 0 {
-			return errs.Gone.New("thing", "course")
-		}
-		var have, title string
-		err := tx.QueryRowContext(ctx, `SELECT id, title FROM materials WHERE course_id = ? AND file_hash = ? AND removed_at = ''`,
-			in.CourseID, st.Hash).Scan(&have, &title)
-		switch {
-		case err == nil:
-			return duplicate.New("title", title).About(have)
-		case !errors.Is(err, sql.ErrNoRows):
-			return errs.Database.Wrap(err)
-		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO materials (id, course_id, title, file_hash, added_at) VALUES (?, ?, ?, ?, ?)`,
-			id, in.CourseID, library.FilenameTitle(st.Name), st.Hash, db.Now()); err != nil {
-			return errs.Database.Wrap(err)
-		}
-		if s.c.Runner == nil {
-			return nil
-		}
-		return s.c.Runner.Start(ctx, tx, change.ResourceMaterial, id)
-	})
-	if err != nil {
-		cleanup.Log("material: put an upload back", os.Rename(s.path(id), s.staged(in.UploadID)))
-		return err
+	cleanup.Log("material: date a file moved in", os.Chtimes(s.path(a.ID), now, now))
+	return a, nil
+}
+
+// Insert adds the material's row to a visible course, and starts its import.
+// The same file already in the course is refused as a duplicate, unless
+// reuse (a sheet): then that material is the one (a sheet uploaded again),
+// and its id is returned in place of the new one; a new sheet is pinned
+// under Materials.
+func (a *Adopted) Insert(ctx context.Context, tx *sql.Tx, courseID string, reuse bool) (string, error) {
+	a.reused = false
+	var course bool
+	if err := tx.QueryRowContext(ctx, `SELECT `+store.Visible(change.ResourceCourse, "?"), courseID).Scan(&course); err != nil {
+		return "", errs.Database.Wrap(err)
 	}
-	cleanup.Remove(s.stagedMeta(in.UploadID))
-	if s.c.Runner != nil {
-		s.c.Runner.Wake()
+	if !course {
+		return "", errs.Gone.New("thing", "course")
 	}
-	return nil
+	var have, title string
+	err := tx.QueryRowContext(ctx, `SELECT id, title FROM materials WHERE course_id = ? AND file_hash = ? AND removed_at = ''`,
+		courseID, a.st.Hash).Scan(&have, &title)
+	switch {
+	case err == nil && reuse:
+		a.reused = true
+		return have, nil
+	case err == nil:
+		return "", duplicate.New("title", title).About(have)
+	case !errors.Is(err, sql.ErrNoRows):
+		return "", errs.Database.Wrap(err)
+	}
+	// A sheet is pinned under Materials: detection never makes one the
+	// course's textbook, however many references it lists.
+	if _, err := tx.ExecContext(ctx, `INSERT INTO materials (id, course_id, title, file_hash, textbook_set, added_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		a.ID, courseID, library.FilenameTitle(a.st.Name), a.st.Hash, reuse, db.Now()); err != nil {
+		return "", errs.Database.Wrap(err)
+	}
+	if a.s.c.Runner == nil {
+		return a.ID, nil
+	}
+	return a.ID, a.s.c.Runner.Start(ctx, tx, change.ResourceMaterial, a.ID)
+}
+
+// Name is the upload's own file name.
+func (a *Adopted) Name() string { return a.st.Name }
+
+// Settle finishes after the write: a failed write puts the upload back to
+// add again, a material reused drops the copy, and a new one is read in.
+func (a *Adopted) Settle(err error) {
+	switch {
+	case err != nil:
+		cleanup.Log("material: put an upload back", os.Rename(a.s.path(a.ID), a.s.staged(a.upload)))
+		return
+	case a.reused:
+		cleanup.Remove(a.s.path(a.ID))
+	}
+	cleanup.Remove(a.s.stagedMeta(a.upload))
+	if a.s.c.Runner != nil {
+		a.s.c.Runner.Wake()
+	}
 }
 
 // maxTitle is the longest a material's title may be.
@@ -363,10 +414,19 @@ func (s *Service) Get(ctx context.Context, id string) (Material, error) {
 	return s.wire(ctx, r)
 }
 
-// List is a course's materials not removed, in the order they were added.
+// List is a course's materials not removed, in the order they were added,
+// sheets left out: they are listed with their sets.
 func (s *Service) List(ctx context.Context, courseID string) (Materials, error) {
+	// A sheet is listed with its set (or its read under review), not here
+	// (track 5a); it is still a material, found and opened by its id. A
+	// sheet whose set and reads are all gone is listed again, and a
+	// textbook named as a sheet stays under Textbooks.
 	rows, err := s.c.Store.DB.QueryContext(ctx, `SELECT `+columns+` FROM materials
-		WHERE course_id = ? AND removed_at = '' ORDER BY added_at, id`, courseID)
+		WHERE course_id = ? AND removed_at = ''
+		AND (textbook = 1 OR (
+			NOT EXISTS (SELECT 1 FROM sets WHERE sets.sheet_id = materials.id AND sets.removed_at = '')
+			AND NOT EXISTS (SELECT 1 FROM reads WHERE reads.sheet_id = materials.id AND reads.removed_at = '')))
+		ORDER BY added_at, id`, courseID)
 	if err != nil {
 		return Materials{}, errs.Database.Wrap(err)
 	}

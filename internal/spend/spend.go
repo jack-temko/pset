@@ -35,7 +35,8 @@ const (
 		OR (s.subject_kind = 'set' AND s.subject_id IN (SELECT id FROM sets WHERE course_id = ?1))
 		OR (s.subject_kind = 'question' AND s.subject_id IN
 			(SELECT q.id FROM questions q JOIN sets x ON x.id = q.set_id WHERE x.course_id = ?1))
-		OR (s.subject_kind = 'turn' AND s.subject_id IN (SELECT id FROM turns WHERE course_id = ?1))`
+		OR (s.subject_kind = 'turn' AND s.subject_id IN (SELECT id FROM turns WHERE course_id = ?1))
+		OR (s.subject_kind = 'read' AND s.subject_id IN (SELECT id FROM reads WHERE course_id = ?1))`
 )
 
 // Material is what a material's import cost.
@@ -93,6 +94,7 @@ const courseOf = `CASE s.subject_kind
 	WHEN 'set' THEN (SELECT course_id FROM sets WHERE id = s.subject_id)
 	WHEN 'question' THEN (SELECT x.course_id FROM questions q JOIN sets x ON x.id = q.set_id WHERE q.id = s.subject_id)
 	WHEN 'turn' THEN (SELECT course_id FROM turns WHERE id = s.subject_id)
+	WHEN 'read' THEN (SELECT course_id FROM reads WHERE id = s.subject_id)
 	END`
 
 // Since is what every call since a time cost, in all and by course, the

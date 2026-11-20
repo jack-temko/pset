@@ -299,6 +299,23 @@ CREATE TABLE places (
 	UNIQUE (owner_kind, owner_id, kind, tab_id)
 );
 
+-- An assignment sheet being read into rows (internal/work, track 5a): its
+-- sheet is a material (an upload), its result the rows read, JSON, kept for
+-- the student's review until they add or dismiss it. Its one step says how
+-- the reading goes.
+CREATE TABLE reads (
+	id         TEXT PRIMARY KEY,
+	course_id  TEXT NOT NULL REFERENCES courses (id) ON DELETE CASCADE,
+	source     TEXT NOT NULL,
+	sheet_id   TEXT NOT NULL DEFAULT '',
+	set_id     TEXT NOT NULL DEFAULT '',
+	result     TEXT NOT NULL DEFAULT 'null',
+	created_at TEXT NOT NULL,
+	removed_at TEXT NOT NULL DEFAULT '',
+	seq        INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX reads_course ON reads (course_id);
+
 -- Time spent (internal/study): stretches of study in a course, sent by the
 -- page as it goes. kind is reading, homework or asking; question_id names
 -- the problem a homework stretch was on. Not logged: no screen shows a
@@ -466,6 +483,16 @@ var (
 			PSet: []string{"owner_kind", "owner_id", "blocks", "state", "corrected"},
 			// Saved model rounds can hold images, and are never shown.
 			Meta: []string{"rounds", "seq"},
+		},
+		{
+			Name: "reads", Kind: change.ResourceRead,
+			CourseID: "{r}.course_id",
+			SetID:    "NULLIF({r}.set_id, '')",
+			Student:  []string{"removed_at"},
+			PSet:     []string{"course_id", "source", "sheet_id", "set_id", "result"},
+			Meta:     []string{"created_at", "seq"},
+			Removed:  "removed_at",
+			JSON:     []string{"result"},
 		},
 		{
 			Name: "turns", Kind: change.ResourceTurn,
