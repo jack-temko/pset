@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -139,16 +140,41 @@ func TestTheRoutes(t *testing.T) {
 	}
 }
 
-// Since adds up every call from a time, in all and by course, the most
-// first; with no time it is all the calls kept.
+// Since adds up every call from a time, in all and by course, the most cost
+// first; with no time it is all the calls kept. A call whose subject is gone
+// still counts, under no course.
 func TestSpendSince(t *testing.T) {
-	svc := New(newStore(t))
+	s := newStore(t)
+	svc := New(s)
+	week := time.Now().Add(-7 * 24 * time.Hour)
+	if err := s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`INSERT INTO steps (id, subject_kind, subject_id, name, position, state, created_at) VALUES
+			('st-gone', 'material', 'm-gone', 'contents', 0, 'done', ?)`, db.Now()); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`INSERT INTO calls (step_id, attempt, at, model, answered, prompt_tokens, completion_tokens, cost, ms, counted, error_id) VALUES
+			('st-m1', 2, ?1, 'a/writer', 'a/writer', 10, 0, 1, 10, 1, ''),
+			('st-gone', 1, ?1, 'a/writer', 'a/writer', 5, 0, 0.001, 10, 1, '')`, db.At(week.Add(-time.Hour)))
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
 	all, err := svc.Since(bg, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if all.Total.Calls != 6 || len(all.ByCourse) != 2 || all.ByCourse[0].CourseID != "c2" || all.ByCourse[1].Total.Calls != 5 {
+	if all.Total.Calls != 8 || all.Total.Tokens != 1000+100+100+400+15 || !near(all.Total.Cost, 0.57+1.001) || len(all.ByCourse) != 3 ||
+		all.ByCourse[0].CourseID != "c1" || all.ByCourse[2].CourseID != "" || all.ByCourse[2].Total.Calls != 1 {
 		t.Fatalf("all time %+v", all)
+	}
+	recent, err := svc.Since(bg, db.At(week))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recent.Total.Calls != 6 || !near(recent.Total.Cost, 0.57) || len(recent.ByCourse) != 2 ||
+		recent.ByCourse[0].CourseID != "c2" || recent.ByCourse[1].Total.Calls != 5 || recent.ByCourse[1].Total.Failed != 2 {
+		t.Fatalf("this week %+v", recent)
 	}
 	later, err := svc.Since(bg, db.At(time.Now().Add(time.Hour)))
 	if err != nil {
@@ -157,13 +183,18 @@ func TestSpendSince(t *testing.T) {
 	if later.Total.Calls != 0 || later.ByCourse == nil || len(later.ByCourse) != 0 {
 		t.Fatalf("from an hour ahead %+v", later)
 	}
+
 	mux := http.NewServeMux()
 	svc.Routes(mux)
-	for path, code := range map[string]int{"/api/spend": 200, "/api/spend?since=2026-11-01T00:00:00Z": 200, "/api/spend?since=monday": 422} {
+	for path, want := range map[string]string{
+		"/api/spend": `"calls":8`,
+		"/api/spend?since=" + url.QueryEscape(week.Format(time.RFC3339)): `"calls":6`,
+		"/api/spend?since=monday": `"field":"since"`,
+	} {
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
-		if rec.Code != code {
-			t.Fatalf("%s: %d", path, rec.Code)
+		if !strings.Contains(rec.Body.String(), want) {
+			t.Fatalf("%s: %d %s", path, rec.Code, rec.Body)
 		}
 	}
 }

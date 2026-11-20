@@ -96,7 +96,9 @@ const courseOf = `CASE s.subject_kind
 	END`
 
 // Since is what every call since a time cost, in all and by course, the
-// most first. The zero time is all the calls kept.
+// most cost first. The zero time is all the calls kept. Every call counts,
+// as it was paid for: a removed course's under its id, and one whose subject
+// is gone under no course ("").
 func (s *Service) Since(ctx context.Context, since string) (Totals, error) {
 	rows, err := s.s.DB.QueryContext(ctx, `SELECT ifnull(`+courseOf+`, ''), count(*), count(nullif(c.error_id, '')),
 			count(*) - sum(c.counted), sum(c.prompt_tokens + c.completion_tokens), sum(c.cost), sum(c.ms)
