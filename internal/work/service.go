@@ -50,7 +50,7 @@ func New(c Config) *Service {
 	s := &Service{c}
 	a := c.Actions
 	action.Add(a, action.Def[AddSet]{
-		ID: "set.add", Name: "Add set", Undoable: true,
+		ID: "set.add", Name: "Add assignment", Undoable: true,
 		Undone: "Took back adding {name}.", Redone: "Added {name} again.",
 		Run: s.addSet,
 		Try: func(sd action.Seed) AddSet {
@@ -58,7 +58,7 @@ func New(c Config) *Service {
 		},
 	})
 	action.Add(a, action.Def[RenameSet]{
-		ID: "set.rename", Name: "Rename set", Undoable: true,
+		ID: "set.rename", Name: "Rename assignment", Undoable: true,
 		Undone: "Renamed back to {name}.", Redone: "Renamed to {name} again.",
 		Run: s.renameSet,
 		Try: func(sd action.Seed) RenameSet { return RenameSet{ID: sd.SetID, Title: "Problem set 4 (corrected)"} },
@@ -76,14 +76,14 @@ func New(c Config) *Service {
 		Try: func(sd action.Seed) TurnIn { return TurnIn{ID: sd.SetID, TurnedIn: true} },
 	})
 	action.Add(a, action.Def[RemoveSet]{
-		ID: "set.remove", Name: "Remove set", Undoable: true, Removes: true,
+		ID: "set.remove", Name: "Remove assignment", Undoable: true, Removes: true,
 		Undone: "Brought back {name}.", Redone: "Removed {name} again.",
 		Run: s.removeSet,
 		Try: func(sd action.Seed) RemoveSet { return RemoveSet{ID: sd.SetID} },
 	})
 	action.Add(a, action.Def[AddQuestions]{
-		ID: "question.add", Name: "Add questions", Undoable: true,
-		Undone: "Took back the questions added to {name}.", Redone: "Added the questions to {name} again.",
+		ID: "question.add", Name: "Add problems", Undoable: true,
+		Undone: "Took back the problems added to {name}.", Redone: "Added the problems to {name} again.",
 		Run: s.addQuestions,
 		Try: func(sd action.Seed) AddQuestions {
 			return AddQuestions{SetID: sd.SetID, Drafts: []Draft{{Text: "3.1 #7", Find: true}, {Text: "Sketch the circuit."}}}
@@ -116,7 +116,7 @@ func New(c Config) *Service {
 		},
 	})
 	action.Add(a, action.Def[RemoveQuestion]{
-		ID: "question.remove", Name: "Remove question", Undoable: true, Removes: true,
+		ID: "question.remove", Name: "Remove problem", Undoable: true, Removes: true,
 		Undone: "Brought back {name}.", Redone: "Removed {name} again.",
 		Run: s.removeQuestion,
 		Try: func(sd action.Seed) RemoveQuestion { return RemoveQuestion{ID: sd.QuestionID} },

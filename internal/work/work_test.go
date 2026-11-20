@@ -383,3 +383,20 @@ func TestAQuestionOnTheStream(t *testing.T) {
 		t.Fatalf("unpinned, pinPage is %v (sent %v), want null", v, ok)
 	}
 }
+
+// Undo says a problem brought back is still hidden by its assignment, in the
+// screens' words.
+func TestUndoNamesTheAssignment(t *testing.T) {
+	e := newEnv(t)
+	set := e.must("set.add", AddSet{CourseID: "c1", Title: "PS 4"}).ID
+	e.must("question.add", AddQuestions{SetID: set, Drafts: []Draft{{Text: "Sketch the circuit."}}})
+	removed := e.must("question.remove", RemoveQuestion{ID: e.detail(set).Questions[0].ID})
+	e.must("set.remove", RemoveSet{ID: set})
+	u, err := e.c.Undo(bg, removed.Action, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasSuffix(u.Said, ". Its assignment is still removed.") {
+		t.Fatalf("undo said %q", u.Said)
+	}
+}

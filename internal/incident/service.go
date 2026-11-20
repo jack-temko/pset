@@ -40,7 +40,7 @@ func New(s *store.Store, c *action.Catalog, r *runner.Runner) *Service {
 	})
 	action.Add(c, action.Def[Dismiss]{
 		ID: "incident.dismiss", Name: "Dismiss", Undoable: true,
-		Undone: "Brought the problem back.", Redone: "Dismissed it again.",
+		Undone: "Brought the error back.", Redone: "Dismissed it again.",
 		Run: svc.dismiss,
 		Try: func(s action.Seed) Dismiss { return Dismiss{ID: s.IncidentID} },
 	})
@@ -110,7 +110,7 @@ func (s *Service) List(ctx context.Context) (Incidents, error) {
 func (s *Service) Get(ctx context.Context, id string) (Incident, error) {
 	i, err := scan(s.store.DB.QueryRowContext(ctx, `SELECT `+columns+` FROM incidents WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
-		return Incident{}, errs.Gone.New("thing", "problem")
+		return Incident{}, errs.Gone.New("thing", "error")
 	}
 	return i, errs.Database.Of(err)
 }

@@ -468,10 +468,11 @@ func (c *Catalog) undo(ctx context.Context, action string) (Undone, error) {
 	return out, nil
 }
 
-// ownerWord is what Undo calls an owner that hides what it brought back.
+// ownerWord is what Undo calls an owner that hides what it brought back, in
+// the screens' words: a set is an "assignment", a question a "problem".
 var ownerWord = map[change.Resource]string{
 	change.ResourceCourse:   "course",
-	change.ResourceSet:      "set",
+	change.ResourceSet:      "assignment",
 	change.ResourceQuestion: "problem",
 	change.ResourceTurn:     "question",
 }

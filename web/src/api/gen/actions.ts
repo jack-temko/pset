@@ -111,7 +111,7 @@ export const ACTIONS: Record<ActionId, Entry> = {
   },
   "question.add": {
     id: "question.add",
-    name: "Add questions",
+    name: "Add problems",
     needs: [],
     undoable: true,
     costs: false,
@@ -139,7 +139,7 @@ export const ACTIONS: Record<ActionId, Entry> = {
   },
   "question.remove": {
     id: "question.remove",
-    name: "Remove question",
+    name: "Remove problem",
     needs: [],
     undoable: true,
     costs: false,
@@ -153,7 +153,7 @@ export const ACTIONS: Record<ActionId, Entry> = {
   },
   "set.add": {
     id: "set.add",
-    name: "Add set",
+    name: "Add assignment",
     needs: [],
     undoable: true,
     costs: false,
@@ -167,14 +167,14 @@ export const ACTIONS: Record<ActionId, Entry> = {
   },
   "set.remove": {
     id: "set.remove",
-    name: "Remove set",
+    name: "Remove assignment",
     needs: [],
     undoable: true,
     costs: false,
   },
   "set.rename": {
     id: "set.rename",
-    name: "Rename set",
+    name: "Rename assignment",
     needs: [],
     undoable: true,
     costs: false,
