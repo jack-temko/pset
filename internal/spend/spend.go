@@ -100,12 +100,13 @@ const courseOf = `CASE s.subject_kind
 // as it was paid for: a removed course's under its id, and one whose subject
 // is gone under no course ("").
 func (s *Service) Since(ctx context.Context, since string) (Totals, error) {
-	rows, err := s.s.DB.QueryContext(ctx, `SELECT ifnull(`+courseOf+`, ''), count(*), count(nullif(c.error_id, '')),
-			count(*) - sum(c.counted), sum(c.prompt_tokens + c.completion_tokens), sum(c.cost), sum(c.ms)
-		FROM calls c JOIN steps s ON s.id = c.step_id
-		WHERE c.at >= ?
-		GROUP BY 1
-		ORDER BY 6 DESC, 1`, since)
+	rows, err := s.s.DB.QueryContext(ctx, `SELECT g.*, ifnull((SELECT removed_at != '' FROM courses WHERE id = g.course), 0)
+		FROM (SELECT ifnull(`+courseOf+`, '') course, count(*), count(nullif(c.error_id, '')),
+				count(*) - sum(c.counted), sum(c.prompt_tokens + c.completion_tokens) tokens, sum(c.cost) cost, sum(c.ms)
+			FROM calls c JOIN steps s ON s.id = c.step_id
+			WHERE c.at >= ?
+			GROUP BY 1) g
+		ORDER BY g.cost DESC, g.course`, since)
 	if err != nil {
 		return Totals{}, errs.Database.Wrap(err)
 	}
@@ -114,7 +115,7 @@ func (s *Service) Since(ctx context.Context, since string) (Totals, error) {
 	for rows.Next() {
 		var c CourseSpend
 		m := &c.Total
-		if err := rows.Scan(&c.CourseID, &m.Calls, &m.Failed, &m.Uncounted, &m.Tokens, &m.Cost, &m.Ms); err != nil {
+		if err := rows.Scan(&c.CourseID, &m.Calls, &m.Failed, &m.Uncounted, &m.Tokens, &m.Cost, &m.Ms, &c.Removed); err != nil {
 			return Totals{}, errs.Database.Wrap(err)
 		}
 		out.ByCourse = append(out.ByCourse, c)

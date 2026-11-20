@@ -41,7 +41,16 @@ export interface Model {
  * CourseSpend is what one course's calls cost.
  */
 export interface CourseSpend {
+  /**
+   * CourseID is "" for calls whose subject is gone (until the purge takes
+   * them).
+   */
   courseId: string;
+  /**
+   * Removed is true for a removed course: its calls were paid for and
+   * still count, but the course lists no longer name it.
+   */
+  removed: boolean;
   /**
    * Total is its calls added up; its Model is empty.
    */
@@ -49,7 +58,8 @@ export interface CourseSpend {
 }
 /**
  * Totals is what every call since a time cost, in all and by course, the
- * most first: Settings' month and all time. Never null.
+ * most cost first: Settings' month and all time. "All time" is the calls
+ * kept: the purge takes a gone thing's calls with it. Never null.
  */
 export interface Totals {
   total: Model;

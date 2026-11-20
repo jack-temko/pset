@@ -168,6 +168,20 @@ func TestSpendSince(t *testing.T) {
 		all.ByCourse[0].CourseID != "c1" || all.ByCourse[2].CourseID != "" || all.ByCourse[2].Total.Calls != 1 {
 		t.Fatalf("all time %+v", all)
 	}
+	// A removed course's calls still count, under its id, marked removed.
+	if err := s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
+		_, err := tx.Exec(`UPDATE courses SET removed_at = ? WHERE id = 'c2'`, db.Now())
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	removed, err := svc.Since(bg, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if removed.Total.Calls != 8 || removed.ByCourse[1].CourseID != "c2" || !removed.ByCourse[1].Removed || removed.ByCourse[0].Removed || removed.ByCourse[2].Removed {
+		t.Fatalf("with c2 removed %+v", removed)
+	}
 	recent, err := svc.Since(bg, db.At(week))
 	if err != nil {
 		t.Fatal(err)

@@ -235,7 +235,8 @@ func (s *Service) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/time", httpx.Take(func(r *http.Request, st Stretch) error {
 		return s.Save(r.Context(), st)
 	}))
-	// With no since it is all the time kept: what clearing it would forget.
+	// With no since it is all the time kept, in the courses still there
+	// (clearing also forgets a removed course's).
 	mux.HandleFunc("GET /api/time", httpx.Reply(func(r *http.Request) (Week, error) {
 		raw := r.URL.Query().Get("since")
 		if raw == "" {
