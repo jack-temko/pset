@@ -62,8 +62,8 @@ export default defineSpec({
     {
       id: 'errors-kept',
       name: 'Errors kept',
-      when: 'Errors are kept: "Recent errors (3)" is unfolded with each id, reason and fix, and Clear all.',
-      text: 'Clear all',
+      when: '"Recent errors (2 open)" unfolded: open incidents first, with Try again and Dismiss, then one resolved this week. Details opens a trace.',
+      text: 'Recent errors (2 open)',
     },
     {
       id: 'failed',
@@ -73,14 +73,13 @@ export default defineSpec({
     },
   ],
   stress:
-    'A 38 character name, a 140 character key, 8 models, 8 notes, 12 courses and 12 errors with 95 character reasons: long text wraps or truncates.',
+    'A 38 character name, a 140 character key, 8 models, 8 notes, 12 courses and 12 incidents with 95 character reasons: long text wraps or truncates.',
   flows: [
     {
       id: 'first-key',
       name: 'Paste the first key',
       steps: ['test-key', 'save-key'],
     },
-    { id: 'switch-to-night', name: 'Switch to Night', steps: ['appearance'] },
     {
       id: 'update-pset',
       name: 'Update PSet',
@@ -110,11 +109,6 @@ export default defineSpec({
       does: 'Tests the key first, and keeps it only if it works.',
     },
     {
-      id: 'appearance',
-      label: 'Paper, Night or System',
-      does: 'Applies the look at once. The design page is always dark, so the sample does not repaint.',
-    },
-    {
       id: 'check-updates',
       label: 'Check for updates',
       does: 'Asks whether a newer version exists and says what it found.',
@@ -130,10 +124,19 @@ export default defineSpec({
       does: 'Runs the check’s own fix, worded for it: "Start Ollama".',
     },
     {
-      id: 'clear-errors',
-      label: 'Clear all',
-      does: 'Asks first, in a small confirm beside the button that counts the kept errors, then forgets them.',
-      target: { unit: 'confirm', state: 'errors' },
+      id: 'try-again',
+      label: 'Try again',
+      does: 'Reruns the failed step, or heals what it waits on (incident.try_again). Only on an open incident that can be tried.',
+    },
+    {
+      id: 'dismiss',
+      label: 'Dismiss',
+      does: 'Puts an open incident away at once (incident.dismiss); Ctrl+Z brings it back. No confirm.',
+    },
+    {
+      id: 'details',
+      label: 'Details',
+      does: 'Opens the incident in place: its id to quote, its step, the model calls and what changed around it.',
     },
     {
       id: 'clear-history',
@@ -179,6 +182,11 @@ export default defineSpec({
     },
     { name: 'failed', does: 'The read failed: shows the failed page.' },
     { name: 'unfolded', does: 'Opens every fold (the design page only).' },
+    {
+      name: 'actions',
+      does: 'What the page does: save, test, update, fix, Try again, Dismiss, reset. The design page passes fakes that save nothing.',
+    },
+    { name: 'onRetry', does: 'Reads the settings again after a failed read.' },
     { name: 'homeHref', does: 'Where the wordmark and "Home" go.' },
     { name: 'settingsHref', does: 'Where Settings goes.' },
   ],
@@ -437,6 +445,30 @@ export default defineSpec({
       why: 'Jack, 2026-11-17, on the shimmer on Checking: "anywhere else that could use it?", then "build all as described".',
       beat: 'A spinner beside the text; plain text',
       date: '2026-11-16',
+    },
+    {
+      id: 'settings-d29',
+      decision:
+        'Recent errors are the incidents: open first, with Try again and Dismiss, then resolved this week; Details opens the trace. No Clear all.',
+      why: 'ideas/errors-grill.md (E4, the trace) and Undo instead of confirms (Jack, 2026-11-18): a dismiss is undone, not asked about.',
+      beat: 'Kept errors with Clear all behind a confirm',
+      date: '2026-11-18',
+    },
+    {
+      id: 'settings-d30',
+      decision:
+        'Only what can’t be undone still asks first: Clear study history and Reset everything. Everything else happens at once.',
+      why: 'Jack, 2026-11-18: "Undo, no confirms" for everything Undo can take back; time.clear and reset are not undoable.',
+      beat: 'A confirm on every destructive press',
+      date: '2026-11-18',
+    },
+    {
+      id: 'settings-d31',
+      decision:
+        'No Appearance row: the new design has one theme, Night (ideas/theme.md). Replaces settings-d6.',
+      why: 'Jack, 2026-11-18: "Night only, drop the row".',
+      beat: 'Keeping Paper, Night and System; a Paper theme of its own',
+      date: '2026-11-18',
     },
   ],
 });

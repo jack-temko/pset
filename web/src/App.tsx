@@ -9,7 +9,7 @@ import '@/api/homework';
 import '@/api/ask';
 import '@/api/memory';
 import { Home } from '@/pages/home';
-import { Settings } from '@/pages/settings';
+import { SettingsScreen } from '@/screens/settings';
 import { Errors as ErrorCatalog } from '@/pages/errors';
 import { Workspace } from '@/pages/workspace';
 
@@ -38,12 +38,14 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* The new backend's screens, which replace the old ones one by one
+            (track 8): they need no old event bus. */}
+        <Route path="/settings" element={<SettingsScreen />} />
         <Route element={<Live />}>
           <Route path="/" element={<Home />} />
           <Route path="/books/:id" element={<Workspace />} />
           {/* Home's due list lands straight in a set's walkthrough. */}
           <Route path="/books/:id/homework/:homework" element={<Workspace />} />
-          <Route path="/settings" element={<Settings />} />
         </Route>
         {/* Not in the nav: where you look at what a change did. */}
         <Route

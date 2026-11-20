@@ -281,6 +281,16 @@ offers Undo only when the action's reply carries an `action`.
   fake one (Jack, 2026-11-18); only its URL waits for gap 1.
 - Gap 1 was handed to the backend session on 2026-11-18. The palette is on hold
   until Jack needs it.
+- Screens (Jack, 2026-11-18): Settings first, since it is the one screen whose data is
+  all on the new backend; then the course page and Home, whose sets wait for track 5.
+  Each new screen replaces the old route on `design`. Removing is at once with Undo,
+  courses included; only what can't be undone (Clear study history, Reset) still asks.
+  An undo of something not on screen is said in a toast (E3 bent for this one case).
+  Questions about how a screen behaves before its backend is finished aren't worth
+  Jack's time: he uses `dev` until track 8 is done.
+- One theme (Jack, 2026-11-18): the new design is Night only, as the foundations
+  were built; Settings has no Appearance row, and the old Paper and Night setting
+  leaves at the cut-over.
 - Until then: actions and undo, the error module and places, each a pull request
   into `design` that merges once green and reviewed. The new layer is
   `web/src/data/`; the old `web/src/api/` hooks go at the cut-over.
@@ -317,6 +327,39 @@ offers Undo only when the action's reply carries an `action`.
    step. The store reads again whatever it holds that lists the step, which works
    for a material on screen and misses a thing not yet read. Not blocking. Nice
    to have: the subject's kind and id on a step's change.
+7. **No spend over a range, and no totals.** Settings shows this month's spend, each
+   course's, and all time; `GET /api/{courses,materials,sets}/{id}/spend` answers one
+   thing, all time, by model. Needed: `GET /api/spend?since=` with a total and a total
+   per course. Until then Settings sums each course's all-time spend, one call each.
+   In review on `settings-gaps` into `backend` (2026-11-18): `GET /api/spend?since=`
+   answers `{total, byCourse:[{courseId, total}]}`, all time with no `since`.
+   Settings moves onto it once it is in `design`. From review (#121): each
+   `CourseSpend` has `removed: boolean`, so a removed course's calls still count
+   under its id and are named without the live list; `courseId: ""` is calls whose
+   subject is gone. "All time" is the calls kept, never labelled lifetime.
+8. **No all-time study total.** Clear study history says how many hours go;
+   `GET /api/time?since=` sums a week. Needed: the all-time minutes (no `since`), and
+   with track 5 the answers that go with them. In review on `settings-gaps`: no
+   `since` covers all time.
+9. **Reset counts the old library.** `GET /api/reset` answers `{books, pages}` from
+   `pset.db`; the dialog counts courses, sets, materials and memories. Comes with
+   Reset's move to the store (track 9): the counts from the dependency map, as a
+   course removal's `took` already does.
+10. **The catalog sends students to a Settings section that isn't there.** `key.missing`
+    (and the other key entries) say "Add your key in Settings, under Connections";
+    the key is under **Model**, as "OpenRouter key". Needed: the catalog's words, no
+    route. In #121: "Add your OpenRouter key in Settings, under Model."
+11. **A step's incident can lose its step.** The `key.missing` incident from a
+    material's naming came back `born: "step"` with no `stepId`, `subjectKind` or
+    `subjectId`, so its trace has no step or calls and it isn't placed on its
+    material. Seen on a fresh import with no key (2026-11-18). The page offers Try
+    again by `born`, so it still works. **Not a gap: by design** (E1, the backend
+    session, 2026-11-18). A failure that waits on a condition (`key.missing`, credit,
+    a reader, the data folder) is one incident per condition, shared by every step
+    waiting on it, so it has no step, subject or calls. It is placed at its condition
+    (`clears`: the key field, or an app-wide notice), and on a material when one of
+    its steps has `incidentId` equal to the incident's id. The backend offered
+    `waiting: Step[]` on the trace; not needed while the material view shows it.
 
 **9. Cut over.**
 

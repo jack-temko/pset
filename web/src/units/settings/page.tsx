@@ -6,27 +6,22 @@ import { money, plural } from '@/lib/format';
 import { Bone } from '@/units/bone';
 import { Button } from '@/units/button';
 import { Confirm } from '@/units/confirm';
+import { errorView } from '@/api/client';
 import { DangerDialog } from '@/units/danger-dialog';
 import { Fold } from '@/units/fold';
 import { List } from '@/units/list';
 import { ListRow } from '@/units/list-row';
 import { Meter } from '@/units/meter';
 import { SectionHeading } from '@/units/section-heading';
-import { SegmentedControl } from '@/units/segmented-control';
 import { Tag } from '@/units/tag';
 import { TextField } from '@/units/text-field';
 import { TopBar } from '@/units/top-bar';
 import { ErrorNotice } from '@/units/error-notice';
-import type { Appearance, SettingsData } from './sample';
+import { SAMPLE_ACTIONS, type SettingsActions } from './actions';
+import type { IncidentRow, SettingsData } from './sample';
 
 /** How long a "Saved" stays under a field. */
 const SAVED_MS = 2000;
-
-const APPEARANCES = [
-  { id: 'paper', label: 'Paper' },
-  { id: 'night', label: 'Night' },
-  { id: 'system', label: 'System' },
-];
 
 /** One group of the page: a heading over an outlined box of rows
  *  (settings-d15). */
@@ -135,9 +130,11 @@ function useLater() {
 function Groups({
   settings,
   unfolded,
+  actions,
 }: {
   settings: SettingsData;
   unfolded?: boolean;
+  actions: SettingsActions;
 }) {
   const later = useLater();
   const [name, setName] = useState(settings.name);
@@ -150,50 +147,105 @@ function Groups({
   );
   const [failure, setFailure] = useState(settings.key.failure);
   const [testing, setTesting] = useState(false);
-  const [appearance, setAppearance] = useState<Appearance>(settings.appearance);
   const [update, setUpdate] = useState(settings.update.status);
+  const [found, setFound] = useState({
+    latest: settings.update.latest,
+    notes: settings.update.notes,
+  });
+  const [updateFailure, setUpdateFailure] = useState<string>();
+  const [nameFailure, setNameFailure] = useState<string>();
   const [checking, setChecking] = useState(false);
   const [upToDate, setUpToDate] = useState(false);
-  const [errors, setErrors] = useState(settings.errors);
-  const [confirming, setConfirming] = useState<'history' | 'errors' | 'all'>();
+  const [confirming, setConfirming] = useState<'history' | 'all'>();
   const [historyEl, setHistoryEl] = useState<HTMLElement | null>(null);
-  const [errorsEl, setErrorsEl] = useState<HTMLElement | null>(null);
+  const [fixing, setFixing] = useState<string>();
+  const [fixFailed, setFixFailed] = useState<Record<string, string>>({});
+  const [resetFailure, setResetFailure] = useState<string>();
 
   const { counts } = settings;
 
   const commitName = () => {
-    setSaved(true);
-    later(() => {
-      setSaved(false);
-    }, SAVED_MS);
+    setNameFailure(undefined);
+    actions.saveName(name.trim()).then(
+      () => {
+        setSaved(true);
+        later(() => {
+          setSaved(false);
+        }, SAVED_MS);
+      },
+      (e: unknown) => {
+        setNameFailure(errorView(e).what);
+      },
+    );
   };
 
-  /** Tests the key; the sample accepts any that looks like one. Save tests
-   *  first, then keeps it. */
+  /** Tests the key, or tests it and keeps it if it works. What it said
+   *  takes the hint's place: "The key works.", "Saved", or why not. */
   const test = (save: boolean) => {
     setTesting(true);
-    later(() => {
-      setTesting(false);
-      if (key.trim().startsWith('sk-or-')) {
-        setResult(save ? 'saved' : 'ok');
-        if (save) setSavedKey(key);
-        later(() => {
-          setResult((r) => (r === 'failed' ? r : undefined));
-        }, SAVED_MS);
-      } else {
-        setResult('failed');
-        setFailure('OpenRouter refused this key. Check it and paste it again.');
-      }
-    }, 800);
+    (save ? actions.saveKey(key) : actions.testKey(key))
+      .then(
+        (a) => {
+          if (a.ok) {
+            setResult(save ? 'saved' : 'ok');
+            if (save) setSavedKey(key);
+            later(() => {
+              setResult((r) => (r === 'failed' ? r : undefined));
+            }, SAVED_MS);
+          } else {
+            setResult('failed');
+            setFailure(a.failure);
+          }
+        },
+        (e: unknown) => {
+          setResult('failed');
+          setFailure(errorView(e).what);
+        },
+      )
+      .finally(() => {
+        setTesting(false);
+      });
   };
 
   const check = () => {
     setChecking(true);
     setUpToDate(false);
-    later(() => {
-      setChecking(false);
-      setUpToDate(true);
-    }, 1000);
+    setUpdateFailure(undefined);
+    actions
+      .checkUpdate()
+      .then(
+        (f) => {
+          setUpdate(f.status);
+          setFound({ latest: f.latest, notes: f.notes });
+          setUpToDate(f.status === 'current');
+        },
+        (e: unknown) => {
+          setUpdateFailure(errorView(e).what);
+        },
+      )
+      .finally(() => {
+        setChecking(false);
+      });
+  };
+
+  /** Runs a check's fix; one that fails says why in the check's own line,
+   *  until it is pressed again. */
+  const runFix = (id: string) => {
+    setFixing(id);
+    setFixFailed((f) => {
+      const rest = { ...f };
+      // oxlint-disable-next-line typescript/no-dynamic-delete -- a map keyed by check id
+      delete rest[id];
+      return rest;
+    });
+    actions
+      .fix(id)
+      .catch((e: unknown) => {
+        setFixFailed((f) => ({ ...f, [id]: errorView(e).what }));
+      })
+      .finally(() => {
+        setFixing(undefined);
+      });
   };
 
   const needsKey =
@@ -223,10 +275,25 @@ function Groups({
     <ListRow
       key={c.id}
       title={c.name}
-      meta={['detail' in c ? c.detail : <Bone key="detail" ch={28} />]}
+      meta={[
+        'detail' in c ? (
+          (fixFailed[c.id] ?? c.detail)
+        ) : (
+          <Bone key="detail" ch={28} />
+        ),
+      ]}
       aside={
         <div className="flex items-center justify-end gap-3">
-          {'ok' in c && c.fix && <Button>{c.fix}</Button>}
+          {'ok' in c && c.fix && (
+            <Button
+              busy={fixing === c.id}
+              onPress={() => {
+                runFix(c.id);
+              }}
+            >
+              {c.fix}
+            </Button>
+          )}
           {!('ok' in c) ? (
             <span className="ds-small">
               <Bone ch={7} />
@@ -248,8 +315,8 @@ function Groups({
         <Row
           name="Name"
           hint="What PSet calls you."
-          note={saved ? 'Saved' : undefined}
-          tone="success"
+          note={nameFailure ?? (saved ? 'Saved' : undefined)}
+          tone={nameFailure === undefined ? 'success' : 'danger'}
         >
           <div className="w-[280px]">
             <TextField
@@ -262,16 +329,6 @@ function Groups({
               note={false}
             />
           </div>
-        </Row>
-        <Row name="Appearance" hint="Paper, Night, or follow your computer.">
-          <SegmentedControl
-            label="Appearance"
-            options={APPEARANCES}
-            value={appearance}
-            onChange={(id) => {
-              setAppearance(id as Appearance);
-            }}
-          />
         </Row>
       </Group>
 
@@ -368,6 +425,8 @@ function Groups({
       <Group title="PSet">
         <Row
           name={`PSet ${settings.version}`}
+          note={updateFailure}
+          tone="danger"
           hint={
             update === 'current'
               ? upToDate
@@ -375,7 +434,7 @@ function Groups({
                 : 'Up to date.'
               : update === 'updating'
                 ? 'Updating in place. PSet restarts when it is done.'
-                : `${settings.update.latest ?? ''} is available.`
+                : `${found.latest ?? ''} is available.`
           }
         >
           <Button busy={checking} onPress={check}>
@@ -387,7 +446,7 @@ function Groups({
           // and the hint above says what is happening (settings-d19).
           <div className="flex min-w-0 items-center justify-between gap-4 px-4 py-3">
             <ul className="ds-small min-w-0 list-disc space-y-1 pl-5 text-(--ds-fg-muted)">
-              {(settings.update.notes ?? []).map((n) => (
+              {(found.notes ?? []).map((n) => (
                 <li key={n} className="[overflow-wrap:anywhere]">
                   {n}
                 </li>
@@ -399,9 +458,14 @@ function Groups({
               busyLabel="Updating"
               onPress={() => {
                 setUpdate('updating');
+                setUpdateFailure(undefined);
+                actions.applyUpdate().catch((e: unknown) => {
+                  setUpdate('available');
+                  setUpdateFailure(errorView(e).what);
+                });
               }}
             >
-              {`Update to ${settings.update.latest ?? ''}`}
+              {`Update to ${found.latest ?? ''}`}
             </Button>
           </div>
         )}
@@ -427,29 +491,10 @@ function Groups({
         <FoldRow label="Checks" open={unfolded || failing.length > 0}>
           {rows}
         </FoldRow>
-        {errors.length > 0 && (
-          <FoldRow
-            label={`Recent errors (${String(errors.length)})`}
-            open={unfolded}
-            action={
-              <div ref={setErrorsEl} className="pr-2">
-                <Button
-                  onPress={() => {
-                    setConfirming('errors');
-                  }}
-                >
-                  Clear all
-                </Button>
-              </div>
-            }
-          >
-            {errors.map((e) => (
-              <ListRow
-                key={e.id}
-                title={e.reason}
-                meta={[e.fix, e.when]}
-                status={<span className="ds-code">{e.id}</span>}
-              />
+        {settings.incidents.length > 0 && (
+          <FoldRow label={incidentsLabel(settings.incidents)} open={unfolded}>
+            {settings.incidents.map((i) => (
+              <IncidentItem key={i.id} incident={i} actions={actions} />
             ))}
           </FoldRow>
         )}
@@ -478,6 +523,8 @@ function Groups({
         <Row
           name="Reset everything"
           hint="Removes every course, assignment, material and memory."
+          note={resetFailure}
+          tone="danger"
         >
           {/* Outlined: the solid red is the dialog's final button only
               (settings-d23). */}
@@ -491,19 +538,19 @@ function Groups({
         </Row>
       </Group>
 
-      {(confirming === 'history' || confirming === 'errors') && (
+      {/* These two can't be undone, so they still ask first: everything
+          that can be undone is done at once and offers Undo instead. */}
+      {confirming === 'history' && (
         <Confirm
-          anchor={confirming === 'history' ? historyEl : errorsEl}
+          anchor={historyEl}
           message={
-            confirming === 'history'
-              ? `This deletes ${String(counts.studyHours)} h of study time and ${plural(counts.answers, 'answer', 'answers')}.`
-              : `This clears ${plural(errors.length, 'kept error', 'kept errors')}.`
+            counts === undefined
+              ? 'This deletes all the study time PSet has kept.'
+              : `This deletes ${String(counts.studyHours)} h of study time and ${plural(counts.answers, 'answer', 'answers')}.`
           }
-          confirmLabel={
-            confirming === 'history' ? 'Clear study history' : 'Clear errors'
-          }
+          confirmLabel="Clear study history"
           onConfirm={() => {
-            if (confirming === 'errors') setErrors([]);
+            void actions.clearHistory().catch(() => undefined);
             setConfirming(undefined);
           }}
           onCancel={() => {
@@ -514,11 +561,19 @@ function Groups({
       {confirming === 'all' && (
         <DangerDialog
           title="Reset everything"
-          message={`This deletes ${plural(counts.courses, 'course', 'courses')}, ${plural(counts.sets, 'assignment', 'assignments')}, ${plural(counts.materials, 'material', 'materials')} and ${plural(counts.memories, 'memory', 'memories')}.`}
+          message={
+            counts === undefined
+              ? 'This deletes every course, assignment, material and memory.'
+              : `This deletes ${plural(counts.courses, 'course', 'courses')}, ${plural(counts.sets, 'assignment', 'assignments')}, ${plural(counts.materials, 'material', 'materials')} and ${plural(counts.memories, 'memory', 'memories')}.`
+          }
           word="reset"
           confirmLabel="Reset everything"
           onConfirm={() => {
             setConfirming(undefined);
+            setResetFailure(undefined);
+            actions.reset().catch((e: unknown) => {
+              setResetFailure(errorView(e).what);
+            });
           }}
           onCancel={() => {
             setConfirming(undefined);
@@ -536,6 +591,8 @@ export function Page({
   settings,
   failed,
   unfolded,
+  actions = SAMPLE_ACTIONS,
+  onRetry,
   homeHref = '/',
   settingsHref = '/settings',
   loading,
@@ -545,6 +602,10 @@ export function Page({
     failed?: boolean;
     /** Opens every fold (the design page only). */
     unfolded?: boolean;
+    /** What the page does; the design page's fakes by default. */
+    actions?: SettingsActions;
+    /** Reads the settings again, after a failed read. */
+    onRetry?: () => void;
     homeHref?: string;
     settingsHref?: string;
   },
@@ -572,15 +633,136 @@ export function Page({
                     why: "PSet couldn't read your settings. Nothing was changed.",
                     chain: ['settings.load'],
                   }}
-                  actions={[{ label: 'Try again' }]}
+                  actions={[{ label: 'Try again', onPress: onRetry }]}
                 />
               </div>
             ) : loading === true ? null : (
-              <Groups settings={settings} unfolded={unfolded} />
+              <Groups
+                settings={settings}
+                unfolded={unfolded}
+                actions={actions}
+              />
             )}
           </Arrives>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** "Recent errors (3 open)": open ones are what matters; resolved ones are
+ *  listed under them for a week. */
+function incidentsLabel(all: readonly IncidentRow[]): string {
+  const open = all.filter((i) => i.open).length;
+  return open === 0
+    ? `Recent errors (${String(all.length)}, all resolved)`
+    : `Recent errors (${String(open)} open)`;
+}
+
+/** One incident: what went wrong and its fix, when and how often, its id
+ *  to quote, and what can be done. Details opens its trace in place. */
+function IncidentItem({
+  incident: i,
+  actions,
+}: {
+  incident: IncidentRow;
+  actions: SettingsActions;
+}) {
+  const [busy, setBusy] = useState<'try' | 'dismiss'>();
+  const [failure, setFailure] = useState<string>();
+  const [trace, setTrace] = useState<readonly string[]>();
+  const [open, setOpen] = useState(false);
+  const run = (which: 'try' | 'dismiss') => {
+    setBusy(which);
+    setFailure(undefined);
+    (which === 'try' ? actions.tryAgain(i.id) : actions.dismiss(i.id))
+      .catch((e: unknown) => {
+        // Said in the row that asked: "Add material can't run yet. ..."
+        setFailure(errorView(e).what);
+      })
+      .finally(() => {
+        setBusy(undefined);
+      });
+  };
+  const details = () => {
+    setOpen((o) => !o);
+    if (trace === undefined) {
+      actions.trace(i.id).then(setTrace, (e: unknown) => {
+        setTrace([errorView(e).what]);
+      });
+    }
+  };
+  const times =
+    i.count > 1 ? `${String(i.count)} times, last ${i.when}` : i.when;
+  return (
+    <div>
+      <ListRow
+        title={i.what}
+        meta={[
+          ...(failure === undefined
+            ? i.fix === undefined
+              ? []
+              : [i.fix]
+            : [
+                <span key="failure" className="text-(--ds-danger)">
+                  {failure}
+                </span>,
+              ]),
+          times,
+        ]}
+        status={
+          i.open ? (
+            <Tag tone="danger">Open</Tag>
+          ) : (
+            <span className="ds-small text-(--ds-fg-muted)">Resolved</span>
+          )
+        }
+        aside={
+          <div className="flex items-center justify-end gap-2">
+            <Button variant="quiet" onPress={details}>
+              {open ? 'Hide details' : 'Details'}
+            </Button>
+            {i.open && i.canTry && (
+              <Button
+                busy={busy === 'try'}
+                onPress={() => {
+                  run('try');
+                }}
+              >
+                Try again
+              </Button>
+            )}
+            {i.open && (
+              <Button
+                busy={busy === 'dismiss'}
+                onPress={() => {
+                  run('dismiss');
+                }}
+              >
+                Dismiss
+              </Button>
+            )}
+          </div>
+        }
+        asideWidth={320}
+      />
+      {open && (
+        <div className="px-4 pb-3">
+          <p className="ds-code text-(--ds-fg-muted)">{i.id}</p>
+          {trace === undefined ? (
+            <p className="ds-small ds-shimmer">Reading its trace</p>
+          ) : (
+            <ul className="ds-small space-y-1 text-(--ds-fg-muted)">
+              {trace.map((line, n) => (
+                // oxlint-disable-next-line react/no-array-index-key -- lines of one trace, fixed once read
+                <li key={n} className="[overflow-wrap:anywhere]">
+                  {line}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
