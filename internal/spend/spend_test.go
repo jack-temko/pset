@@ -6,9 +6,11 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackt/pset/internal/change"
 	"github.com/jackt/pset/internal/cleanup"
@@ -134,6 +136,113 @@ func TestTheRoutes(t *testing.T) {
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
 		if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), want) {
 			t.Fatalf("%s: %d %s", path, rec.Code, rec.Body)
+		}
+	}
+}
+
+// Since adds up every call from a time, in all and by course, the most cost
+// first; with no time it is all the calls kept. A call whose subject is gone
+// still counts, under no course.
+func TestSpendSince(t *testing.T) {
+	s := newStore(t)
+	svc := New(s)
+	week := time.Now().Add(-7 * 24 * time.Hour)
+	if err := s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`INSERT INTO steps (id, subject_kind, subject_id, name, position, state, created_at) VALUES
+			('st-gone', 'material', 'm-gone', 'contents', 0, 'done', ?)`, db.Now()); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`INSERT INTO calls (step_id, attempt, at, model, answered, prompt_tokens, completion_tokens, cost, ms, counted, error_id) VALUES
+			('st-m1', 2, ?1, 'a/writer', 'a/writer', 10, 0, 1, 10, 1, ''),
+			('st-gone', 1, ?1, 'a/writer', 'a/writer', 5, 0, 0.001, 10, 1, '')`, db.At(week.Add(-time.Hour)))
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	all, err := svc.Since(bg, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if all.Total.Calls != 8 || all.Total.Tokens != 1000+100+100+400+15 || !near(all.Total.Cost, 0.57+1.001) || len(all.ByCourse) != 3 ||
+		all.ByCourse[0].CourseID != "c1" || all.ByCourse[2].CourseID != "" || all.ByCourse[2].Total.Calls != 1 {
+		t.Fatalf("all time %+v", all)
+	}
+	// A removed course's calls still count, under its id, marked removed.
+	if err := s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
+		_, err := tx.Exec(`UPDATE courses SET removed_at = ? WHERE id = 'c2'`, db.Now())
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	removed, err := svc.Since(bg, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if removed.Total.Calls != 8 || removed.ByCourse[1].CourseID != "c2" || !removed.ByCourse[1].Removed || removed.ByCourse[0].Removed || removed.ByCourse[2].Removed {
+		t.Fatalf("with c2 removed %+v", removed)
+	}
+	recent, err := svc.Since(bg, db.At(week))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recent.Total.Calls != 6 || !near(recent.Total.Cost, 0.57) || len(recent.ByCourse) != 2 ||
+		recent.ByCourse[0].CourseID != "c2" || recent.ByCourse[1].Total.Calls != 5 || recent.ByCourse[1].Total.Failed != 2 {
+		t.Fatalf("this week %+v", recent)
+	}
+	later, err := svc.Since(bg, db.At(time.Now().Add(time.Hour)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if later.Total.Calls != 0 || later.ByCourse == nil || len(later.ByCourse) != 0 {
+		t.Fatalf("from an hour ahead %+v", later)
+	}
+
+	mux := http.NewServeMux()
+	svc.Routes(mux)
+	for path, want := range map[string]string{
+		"/api/spend": `"calls":8`,
+		"/api/spend?since=" + url.QueryEscape(week.Format(time.RFC3339)): `"calls":6`,
+		"/api/spend?since=monday": `"field":"since"`,
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if !strings.Contains(rec.Body.String(), want) {
+			t.Fatalf("%s: %d %s", path, rec.Code, rec.Body)
+		}
+	}
+}
+
+// A sheet's read counts toward its course, in the course's spend and since.
+func TestAReadsSpend(t *testing.T) {
+	s := newStore(t)
+	svc := New(s)
+	if err := s.Write(bg, change.ActorPSet, "", func(tx *sql.Tx) error {
+		for _, q := range []string{
+			`INSERT INTO reads (id, course_id, source, created_at) VALUES ('r1', 'c2', 'sheet.pdf', ?1)`,
+			`INSERT INTO steps (id, subject_kind, subject_id, name, position, state, created_at) VALUES ('st-r1', 'read', 'r1', 'read', 0, 'done', ?1)`,
+			`INSERT INTO calls (step_id, attempt, at, model, answered, prompt_tokens, completion_tokens, cost, ms, counted, error_id) VALUES
+				('st-r1', 1, ?1, 'a/reader', 'a/reader', 10, 0, 0.003, 10, 1, '')`,
+		} {
+			if _, err := tx.Exec(q, db.Now()); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	course, err := svc.Course(bg, "c2")
+	if err != nil || course.Total.Calls != 2 {
+		t.Fatalf("c2's spend with its read: %+v %v", course.Total, err)
+	}
+	all, err := svc.Since(bg, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range all.ByCourse {
+		if c.CourseID == "" || (c.CourseID == "c2" && c.Total.Calls != 2) {
+			t.Fatalf("since, with a read %+v", all.ByCourse)
 		}
 	}
 }

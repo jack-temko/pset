@@ -21,6 +21,26 @@ type Model struct {
 	Ms int64 `json:"ms"`
 }
 
+// CourseSpend is what one course's calls cost.
+type CourseSpend struct {
+	// CourseID is "" for calls whose subject is gone (until the purge takes
+	// them).
+	CourseID string `json:"courseId"`
+	// Removed is true for a removed course: its calls were paid for and
+	// still count, but the course lists no longer name it.
+	Removed bool `json:"removed"`
+	// Total is its calls added up; its Model is empty.
+	Total Model `json:"total"`
+}
+
+// Totals is what every call since a time cost, in all and by course, the
+// most cost first: Settings' month and all time. "All time" is the calls
+// kept: the purge takes a gone thing's calls with it. Never null.
+type Totals struct {
+	Total    Model         `json:"total"`
+	ByCourse []CourseSpend `json:"byCourse"`
+}
+
 // Spend is what a course, a material or a set cost in model calls, by
 // model, the most tokens first, and the sums. Its calls are those of the
 // thing's steps; a thing purged takes them with it.

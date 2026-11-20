@@ -226,6 +226,12 @@ func TestTheRoutes(t *testing.T) {
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"reading":5`) {
 		t.Fatalf("week answered %d %s", rec.Code, rec.Body)
 	}
+	// No since is all the time kept.
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/time", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"total":5`) {
+		t.Fatalf("all time answered %d %s", rec.Code, rec.Body)
+	}
 	rec = httptest.NewRecorder()
 	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/time?since=monday", nil))
 	if rec.Code != http.StatusUnprocessableEntity {

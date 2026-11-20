@@ -31,6 +31,7 @@ import (
 	_ "github.com/jackt/pset/internal/place"
 	_ "github.com/jackt/pset/internal/runner"
 	_ "github.com/jackt/pset/internal/settings"
+	_ "github.com/jackt/pset/internal/spend"
 	_ "github.com/jackt/pset/internal/store"
 	_ "github.com/jackt/pset/internal/study"
 	_ "github.com/jackt/pset/internal/update"
