@@ -468,9 +468,9 @@ export interface Read {
    */
   source: string;
   /**
-   * SheetID is the material the sheet is kept as.
+   * SheetID is the material the sheet is kept as. Always there.
    */
-  sheetId?: string;
+  sheetId: string;
   /**
    * SetID is the set it was read to update, when it was.
    */

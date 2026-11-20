@@ -425,3 +425,62 @@ func TestReadingWithNoTextbook(t *testing.T) {
 		t.Fatalf("a textbook line with no numbering known: %+v", row)
 	}
 }
+
+// A textbook still being read in is named without a guessed numbering, and
+// a sheet is never taken for the textbook.
+func TestTheTextbookAReadGoesBy(t *testing.T) {
+	if b := assignmentBrief("Boyce", probnum.Style{}, time.Now()); !strings.Contains(b, `The course's textbook is "Boyce".`) || strings.Contains(b, "numbered") {
+		t.Fatalf("a textbook with no numbering yet: %q", b)
+	}
+	e := newReadEnv(t)
+	e.write(`UPDATE materials SET problems = 'null' WHERE id = 'm1'`)
+	r := e.waitRead(e.must("read.start", StartRead{CourseID: "c1", UploadID: e.upload()}).ID)
+	// Pinned under Materials, so detection (shelve) leaves it there.
+	var shelved, pinned bool
+	if err := e.s.DB.QueryRow(`SELECT textbook, textbook_set FROM materials WHERE id = ?`, r.SheetID).Scan(&shelved, &pinned); err != nil {
+		t.Fatal(err)
+	}
+	if shelved || !pinned {
+		t.Fatalf("a sheet: textbook %v, pinned %v", shelved, pinned)
+	}
+	e.write(`UPDATE materials SET textbook = 1, problems = '{"form":"section"}', added_at = '0' WHERE id = ?`, r.SheetID)
+	title, _, err := textbook(bg, e.s.DB, "c1")
+	if err != nil || title != "Boyce" {
+		t.Fatalf("the textbook a read goes by: %q, %v", title, err)
+	}
+	// A newer textbook whose numbering is known goes before an older one
+	// still being read in.
+	e.write(`INSERT INTO materials (id, course_id, title, textbook, problems, added_at) VALUES ('m2', 'c1', 'Strang', 1, '{"form":"section"}', ?)`, db.Now())
+	if title, _, err := textbook(bg, e.s.DB, "c1"); err != nil || title != "Strang" {
+		t.Fatalf("with a newer textbook whose numbering is known: %q, %v", title, err)
+	}
+}
+
+// An update to a set refuses a line too long, as a new set does.
+func TestAnUpdateCapsItsLines(t *testing.T) {
+	e := newReadEnv(t)
+	set := e.must("set.add", AddSet{CourseID: "c1", Title: "PS 4"}).ID
+	r := e.waitRead(e.must("read.start", StartRead{CourseID: "c1", UploadID: e.upload(), SetID: set}).ID)
+	_, err := e.run("read.import", ImportRead{ReadID: r.ID, Groups: []ImportGroup{{SetID: set, Rows: []Draft{{Text: strings.Repeat("x", maxDraft+1)}}}}})
+	if errs.Resolve(err).ID != draftTooLong.ID {
+		t.Fatalf("a line too long into a set: %v", err)
+	}
+}
+
+// A read whose set has since gone marks nothing against it.
+func TestAReadWhoseSetIsGone(t *testing.T) {
+	e := newReadEnv(t)
+	set := e.must("set.add", AddSet{CourseID: "c1", Title: "PS 4"}).ID
+	id := e.must("read.start", StartRead{CourseID: "c1", UploadID: e.upload(), SetID: set}).ID
+	e.waitRead(id)
+	e.must("set.remove", RemoveSet{ID: set})
+	r := e.waitRead(id)
+	if r.SetID != "" {
+		t.Fatalf("the read still names its removed set: %q", r.SetID)
+	}
+	for _, g := range r.Assignment.Groups {
+		if g.SetID != "" || g.Imported {
+			t.Fatalf("a group marked against a removed set: %+v", g)
+		}
+	}
+}

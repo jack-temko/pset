@@ -293,8 +293,8 @@ type Read struct {
 	CourseID string `json:"courseId"`
 	// Source is where it came from: a file's name, or a web page's address.
 	Source string `json:"source"`
-	// SheetID is the material the sheet is kept as.
-	SheetID string `json:"sheetId,omitempty"`
+	// SheetID is the material the sheet is kept as. Always there.
+	SheetID string `json:"sheetId"`
 	// SetID is the set it was read to update, when it was.
 	SetID string `json:"setId,omitempty"`
 	// Steps is its one step, read. Never null.

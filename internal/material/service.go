@@ -239,8 +239,9 @@ func (s *Service) Adopt(uploadID string) (*Adopted, error) {
 
 // Insert adds the material's row to a visible course, and starts its import.
 // The same file already in the course is refused as a duplicate, unless
-// reuse: then that material is the one (a sheet uploaded again), and its id
-// is returned in place of the new one.
+// reuse (a sheet): then that material is the one (a sheet uploaded again),
+// and its id is returned in place of the new one; a new sheet is pinned
+// under Materials.
 func (a *Adopted) Insert(ctx context.Context, tx *sql.Tx, courseID string, reuse bool) (string, error) {
 	a.reused = false
 	var course bool
@@ -262,8 +263,10 @@ func (a *Adopted) Insert(ctx context.Context, tx *sql.Tx, courseID string, reuse
 	case !errors.Is(err, sql.ErrNoRows):
 		return "", errs.Database.Wrap(err)
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO materials (id, course_id, title, file_hash, added_at) VALUES (?, ?, ?, ?, ?)`,
-		a.ID, courseID, library.FilenameTitle(a.st.Name), a.st.Hash, db.Now()); err != nil {
+	// A sheet is pinned under Materials: detection never makes one the
+	// course's textbook, however many references it lists.
+	if _, err := tx.ExecContext(ctx, `INSERT INTO materials (id, course_id, title, file_hash, textbook_set, added_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		a.ID, courseID, library.FilenameTitle(a.st.Name), a.st.Hash, reuse, db.Now()); err != nil {
 		return "", errs.Database.Wrap(err)
 	}
 	if a.s.c.Runner == nil {

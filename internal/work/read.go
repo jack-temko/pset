@@ -10,8 +10,10 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 
@@ -138,14 +140,18 @@ func (s *Service) dismissRead(ctx context.Context, do *action.Do, in DismissRead
 }
 
 // textbook is the course's textbook a read and a split go by: the oldest
-// that has worked out its numbering (track 5b picks per set, D11). Empty
-// when the course has none.
+// that has worked out its numbering (track 5b picks per set, D11), else the
+// oldest still being read in, with no numbering yet. Empty when the course
+// has none.
 func textbook(ctx context.Context, q interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 }, courseID string) (title string, st probnum.Style, err error) {
 	var raw string
-	err = q.QueryRowContext(ctx, `SELECT title, problems FROM materials WHERE course_id = ? AND textbook = 1
-		AND removed_at = '' AND problems != 'null' ORDER BY added_at, id LIMIT 1`, courseID).Scan(&title, &raw)
+	// The oldest whose numbering is known, else the oldest still being
+	// read in (its title is known, its numbering not yet). Never a sheet.
+	err = q.QueryRowContext(ctx, `SELECT title, problems FROM materials m WHERE course_id = ? AND textbook = 1 AND removed_at = ''
+		AND NOT EXISTS (SELECT 1 FROM sets WHERE sets.sheet_id = m.id) AND NOT EXISTS (SELECT 1 FROM reads WHERE reads.sheet_id = m.id)
+		ORDER BY problems = 'null', added_at, id LIMIT 1`, courseID).Scan(&title, &raw)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return "", st, nil
@@ -335,8 +341,11 @@ func defaultTitle(name, due string, several bool) string {
 // book; a course may not).
 func assignmentBrief(title string, st probnum.Style, now time.Time) string {
 	textbook := fmt.Sprintf("The course's textbook is %q, and in it\n%s.", title, styleSentence(st))
-	if title == "" {
+	switch {
+	case title == "":
 		textbook = "The course has no textbook yet."
+	case st.Form == "":
+		textbook = fmt.Sprintf("The course's textbook is %q.", title)
 	}
 	return fmt.Sprintf(assignmentPrompt, now.Format("Monday, January 2, 2006"), textbook)
 }
@@ -352,9 +361,12 @@ func styleSentence(st probnum.Style) string {
 	return "problems are numbered like 4.27 (chapter, then problem)"
 }
 
-// assignmentPrompt is the old homework's, word for word (rule 1), but for the
-// row kind "book", which is "textbook" in the contract, and the textbook's
-// sentence, which says when there is none. Filled by assignmentBrief.
+// assignmentPrompt is the old homework's, word for word (rule 1), but for two
+// changes: "book" became "textbook", in the row kind and the prose about it
+// (the contract's word), and the textbook's sentence is filled in, saying so
+// when the course has none or its numbering isn't known yet. No eval covers
+// assignment reads: track 0's bar has none, and track 5's evals should.
+// Filled by assignmentBrief.
 const assignmentPrompt = `You read a course's homework assignment for a student, from what their professor gave them: a
 PDF, a web page, a photo, or pasted text. Today is %s. %s
 
@@ -422,9 +434,13 @@ func (s *Service) importRead(ctx context.Context, do *action.Do, in ImportRead) 
 func (s *Service) importGroup(ctx context.Context, tx *sql.Tx, courseID, sheet string, g ImportGroup, st probnum.Style) (bool, error) {
 	var rows []Draft
 	for _, r := range g.Rows {
-		if strings.TrimSpace(r.Text) != "" {
-			rows = append(rows, r)
+		if strings.TrimSpace(r.Text) == "" {
+			continue
 		}
+		if utf8.RuneCountInString(r.Text) > maxDraft {
+			return false, draftTooLong.New("max", strconv.Itoa(maxDraft)).OnField("groups")
+		}
+		rows = append(rows, r)
 	}
 	if g.SetID == "" {
 		if len(rows) == 0 {
@@ -685,8 +701,20 @@ func (s *Service) Reads(ctx context.Context, courseID string) (Reads, error) {
 // mark marks each group against the set it updates: the one the read names,
 // or the one made from the same sheet with the group's due date.
 func (s *Service) mark(ctx context.Context, st probnum.Style, r *Read, a *Assignment) error {
+	named := r.SetID
+	if named != "" {
+		var there bool
+		if err := s.c.Store.DB.QueryRowContext(ctx, `SELECT `+store.Visible(change.ResourceSet, "?"), named).Scan(&there); err != nil {
+			return errs.Database.Wrap(err)
+		}
+		if !there {
+			// The set it was read for has gone since: its dates update
+			// nothing, and read.import would refuse it.
+			named, r.SetID = "", ""
+		}
+	}
 	sets := map[string]string{}
-	if r.SetID == "" {
+	if named == "" {
 		rows, err := s.c.Store.DB.QueryContext(ctx, `SELECT due, id FROM sets t WHERE sheet_id = ? AND due != '' AND `+
 			store.Visible(change.ResourceSet, "t.id")+` ORDER BY created_at`, r.SheetID)
 		if err != nil {
@@ -705,11 +733,11 @@ func (s *Service) mark(ctx context.Context, st probnum.Style, r *Read, a *Assign
 	}
 	for gi := range a.Groups {
 		g := &a.Groups[gi]
-		id := r.SetID
+		id := named
 		if id == "" && g.Due != "" {
 			id = sets[g.Due]
 		}
-		g.Imported, g.SetID = r.SetID == "" && id != "", id
+		g.Imported, g.SetID = named == "" && id != "", id
 		c, err := setHas(ctx, s.c.Store.DB, id, st)
 		if err != nil {
 			return err

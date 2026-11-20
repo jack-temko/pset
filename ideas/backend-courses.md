@@ -226,9 +226,11 @@ sheets; then web pages as text materials.
   and starts the read's one step. The step reads the file itself, as the old one
   did (a PDF's text, or a scan's first four pages as images at 150 dpi), and makes
   one Reader call with the old assignment prompt, rows `book` renamed `textbook` in
-  the prompt and the parser together; its result is kept on the read. A material
-  some set or read names as its sheet is listed with that set, not under Textbooks
-  or Materials. `GET /api/courses/{id}/reads` marks each group against the sets
+  the prompt and the parser together; its result is kept on the read. A material a
+  set or read still there names as its sheet is listed with that set, not under
+  Textbooks or Materials; it is listed again once nothing names it, and a textbook
+  named as a sheet stays under Textbooks. A new sheet is pinned under Materials, so
+  detection never makes it the course's textbook. `GET /api/courses/{id}/reads` marks each group against the sets
   (present, added, changed, gone), as the old review did. `read.import` makes or
   updates the sets in one write (a new set points at the sheet), and dismisses the
   read; `read.dismiss` drops it.
