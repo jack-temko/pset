@@ -53,7 +53,7 @@ func New(c Config) *Service {
 	s := &Service{c}
 	a := c.Actions
 	action.Add(a, action.Def[AddSet]{
-		ID: "set.add", Name: "Add set", Undoable: true,
+		ID: "set.add", Name: "Add assignment", Undoable: true,
 		Undone: "Took back adding {name}.", Redone: "Added {name} again.",
 		Run: s.addSet,
 		Try: func(sd action.Seed) AddSet {
@@ -61,7 +61,7 @@ func New(c Config) *Service {
 		},
 	})
 	action.Add(a, action.Def[RenameSet]{
-		ID: "set.rename", Name: "Rename set", Undoable: true,
+		ID: "set.rename", Name: "Rename assignment", Undoable: true,
 		Undone: "Renamed back to {name}.", Redone: "Renamed to {name} again.",
 		Run: s.renameSet,
 		Try: func(sd action.Seed) RenameSet { return RenameSet{ID: sd.SetID, Title: "Problem set 4 (corrected)"} },
@@ -79,14 +79,14 @@ func New(c Config) *Service {
 		Try: func(sd action.Seed) TurnIn { return TurnIn{ID: sd.SetID, TurnedIn: true} },
 	})
 	action.Add(a, action.Def[RemoveSet]{
-		ID: "set.remove", Name: "Remove set", Undoable: true, Removes: true,
+		ID: "set.remove", Name: "Remove assignment", Undoable: true, Removes: true,
 		Undone: "Brought back {name}.", Redone: "Removed {name} again.",
 		Run: s.removeSet,
 		Try: func(sd action.Seed) RemoveSet { return RemoveSet{ID: sd.SetID} },
 	})
 	action.Add(a, action.Def[AddQuestions]{
-		ID: "question.add", Name: "Add questions", Undoable: true,
-		Undone: "Took back the questions added to {name}.", Redone: "Added the questions to {name} again.",
+		ID: "question.add", Name: "Add problems", Undoable: true,
+		Undone: "Took back the problems added to {name}.", Redone: "Added the problems to {name} again.",
 		Run: s.addQuestions,
 		Try: func(sd action.Seed) AddQuestions {
 			return AddQuestions{SetID: sd.SetID, Drafts: []Draft{{Text: "3.1 #7", Find: true}, {Text: "Sketch the circuit."}}}
@@ -105,7 +105,7 @@ func New(c Config) *Service {
 		Try: func(sd action.Seed) QuestionReveal { return QuestionReveal{ID: sd.QuestionID, Reveal: RevealHint} },
 	})
 	action.Add(a, action.Def[QuestionMove]{
-		ID: "question.move", Name: "Move question", Undoable: true,
+		ID: "question.move", Name: "Move problem", Undoable: true,
 		Undone: "Moved {name} back.", Redone: "Moved {name} again.",
 		Run: s.move,
 		Try: func(sd action.Seed) QuestionMove { return QuestionMove{ID: sd.QuestionID, Position: 1} },
@@ -119,7 +119,7 @@ func New(c Config) *Service {
 		},
 	})
 	action.Add(a, action.Def[RemoveQuestion]{
-		ID: "question.remove", Name: "Remove question", Undoable: true, Removes: true,
+		ID: "question.remove", Name: "Remove problem", Undoable: true, Removes: true,
 		Undone: "Brought back {name}.", Redone: "Removed {name} again.",
 		Run: s.removeQuestion,
 		Try: func(sd action.Seed) RemoveQuestion { return RemoveQuestion{ID: sd.QuestionID} },
@@ -190,7 +190,7 @@ func (s *Service) addSet(ctx context.Context, do *action.Do, in AddSet) error {
 // value.
 func (s *Service) updateSet(ctx context.Context, do *action.Do, id, column, value string) error {
 	return do.Write(ctx, change.ResourceSet, id, func(tx *sql.Tx) error {
-		if err := visible(ctx, tx, change.ResourceSet, id, "set"); err != nil {
+		if err := visible(ctx, tx, change.ResourceSet, id, "assignment"); err != nil {
 			return err
 		}
 		var cur string
@@ -201,7 +201,7 @@ func (s *Service) updateSet(ctx context.Context, do *action.Do, id, column, valu
 			return action.ErrUnchanged
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE sets SET `+column+` = ? WHERE id = ?`, value, id)
-		return action.One(res, err, "set")
+		return action.One(res, err, "assignment")
 	})
 }
 
@@ -225,7 +225,7 @@ func (s *Service) setDue(ctx context.Context, do *action.Do, in SetDue) error {
 // that moment if it is marked again; unmarking clears it.
 func (s *Service) turnIn(ctx context.Context, do *action.Do, in TurnIn) error {
 	return do.Write(ctx, change.ResourceSet, in.ID, func(tx *sql.Tx) error {
-		if err := visible(ctx, tx, change.ResourceSet, in.ID, "set"); err != nil {
+		if err := visible(ctx, tx, change.ResourceSet, in.ID, "assignment"); err != nil {
 			return err
 		}
 		var at string
@@ -240,17 +240,17 @@ func (s *Service) turnIn(ctx context.Context, do *action.Do, in TurnIn) error {
 			next = db.Now()
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE sets SET turned_in_at = ? WHERE id = ?`, next, in.ID)
-		return action.One(res, err, "set")
+		return action.One(res, err, "assignment")
 	})
 }
 
 func (s *Service) removeSet(ctx context.Context, do *action.Do, in RemoveSet) error {
 	return do.Write(ctx, change.ResourceSet, in.ID, func(tx *sql.Tx) error {
-		if err := visible(ctx, tx, change.ResourceSet, in.ID, "set"); err != nil {
+		if err := visible(ctx, tx, change.ResourceSet, in.ID, "assignment"); err != nil {
 			return err
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE sets SET removed_at = ? WHERE id = ?`, db.Now(), in.ID)
-		return action.One(res, err, "set")
+		return action.One(res, err, "assignment")
 	})
 }
 
@@ -336,7 +336,7 @@ func (s *Service) addQuestions(ctx context.Context, do *action.Do, in AddQuestio
 		return err
 	}
 	return do.Write(ctx, change.ResourceSet, in.SetID, func(tx *sql.Tx) error {
-		if err := visible(ctx, tx, change.ResourceSet, in.SetID, "set"); err != nil {
+		if err := visible(ctx, tx, change.ResourceSet, in.SetID, "assignment"); err != nil {
 			return err
 		}
 		return insertQuestions(ctx, tx, in.SetID, drafts)
@@ -403,7 +403,7 @@ func insertQuestions(ctx context.Context, tx *sql.Tx, setID string, drafts []Dra
 // current row; nil from fn is nothing to change.
 func (s *Service) updateQuestion(ctx context.Context, do *action.Do, id string, fn func(tx *sql.Tx) (string, []any, error)) error {
 	return do.Write(ctx, change.ResourceQuestion, id, func(tx *sql.Tx) error {
-		if err := visible(ctx, tx, change.ResourceQuestion, id, "question"); err != nil {
+		if err := visible(ctx, tx, change.ResourceQuestion, id, "problem"); err != nil {
 			return err
 		}
 		set, args, err := fn(tx)
@@ -414,7 +414,7 @@ func (s *Service) updateQuestion(ctx context.Context, do *action.Do, id string, 
 			return action.ErrUnchanged
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE questions SET `+set+` WHERE id = ?`, append(args, id)...)
-		return action.One(res, err, "question")
+		return action.One(res, err, "problem")
 	})
 }
 
@@ -488,7 +488,7 @@ func (s *Service) setNotes(ctx context.Context, do *action.Do, in QuestionNotes)
 // its number: undoing its removal puts it back about where it was.
 func (s *Service) move(ctx context.Context, do *action.Do, in QuestionMove) error {
 	return do.Write(ctx, change.ResourceQuestion, in.ID, func(tx *sql.Tx) error {
-		if err := visible(ctx, tx, change.ResourceQuestion, in.ID, "question"); err != nil {
+		if err := visible(ctx, tx, change.ResourceQuestion, in.ID, "problem"); err != nil {
 			return err
 		}
 		rows, err := tx.QueryContext(ctx, `SELECT id, position FROM questions WHERE removed_at = ''
@@ -536,10 +536,10 @@ func (s *Service) move(ctx context.Context, do *action.Do, in QuestionMove) erro
 
 func (s *Service) removeQuestion(ctx context.Context, do *action.Do, in RemoveQuestion) error {
 	return do.Write(ctx, change.ResourceQuestion, in.ID, func(tx *sql.Tx) error {
-		if err := visible(ctx, tx, change.ResourceQuestion, in.ID, "question"); err != nil {
+		if err := visible(ctx, tx, change.ResourceQuestion, in.ID, "problem"); err != nil {
 			return err
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE questions SET removed_at = ? WHERE id = ?`, db.Now(), in.ID)
-		return action.One(res, err, "question")
+		return action.One(res, err, "problem")
 	})
 }

@@ -877,7 +877,7 @@ func (r *Runner) Lacks(ctx context.Context, condition string, why error, fix str
 var IncidentGone = errs.Define(errs.Entry{
 	ID:     "runner.incident_gone",
 	Kind:   errs.KindCant,
-	What:   "That problem is no longer there.",
+	What:   "That error is no longer there.",
 	Why:    "It was resolved, or what it was about was removed.",
 	Status: http.StatusNotFound,
 })

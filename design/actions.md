@@ -19,18 +19,18 @@ Everything a student can do, as the catalog declares it. Each runs through `POST
 | `material.remove` | Remove material |  |  | yes |  |
 | `material.rename` | Rename material |  |  | yes |  |
 | `material.textbook` | Move between Textbooks and Materials |  |  | yes |  |
-| `question.add` | Add questions |  |  | yes |  |
+| `question.add` | Add problems |  |  | yes |  |
 | `question.done` | Mark done |  |  | yes |  |
-| `question.move` | Move question |  |  | yes |  |
+| `question.move` | Move problem |  |  | yes |  |
 | `question.notes` | Edit notes |  |  | yes |  |
-| `question.remove` | Remove question |  |  | yes |  |
+| `question.remove` | Remove problem |  |  | yes |  |
 | `question.reveal` | Show help |  |  | yes |  |
 | `read.dismiss` | Dismiss |  |  | yes |  |
 | `read.import` | Add the homework |  |  | yes |  |
 | `read.start` | Read an assignment |  |  |  |  |
-| `set.add` | Add set |  |  | yes |  |
+| `set.add` | Add assignment |  |  | yes |  |
 | `set.due` | Change due date |  |  | yes |  |
-| `set.remove` | Remove set |  |  | yes |  |
-| `set.rename` | Rename set |  |  | yes |  |
+| `set.remove` | Remove assignment |  |  | yes |  |
+| `set.rename` | Rename assignment |  |  | yes |  |
 | `set.turn_in` | Turn in |  |  | yes |  |
 | `time.clear` | Forget time spent |  |  |  |  |

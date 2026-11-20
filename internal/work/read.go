@@ -116,7 +116,7 @@ func (s *Service) startRead(ctx context.Context, do *action.Do, in StartRead) er
 // inCourse fails Gone unless the set is there and in the course: a read
 // never names, nor updates, another course's set.
 func inCourse(ctx context.Context, tx *sql.Tx, setID, courseID string) error {
-	if err := visible(ctx, tx, change.ResourceSet, setID, "set"); err != nil {
+	if err := visible(ctx, tx, change.ResourceSet, setID, "assignment"); err != nil {
 		return err
 	}
 	var n int
@@ -124,7 +124,7 @@ func inCourse(ctx context.Context, tx *sql.Tx, setID, courseID string) error {
 		return errs.Database.Wrap(err)
 	}
 	if n == 0 {
-		return errs.Gone.New("thing", "set")
+		return errs.Gone.New("thing", "assignment")
 	}
 	return nil
 }

@@ -134,7 +134,7 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `request.too_large` | That's too much to send in one request. | A single request is limited to {limit} MB. | Send it in smaller pieces. |  | inline | errs |
 | `request.unreachable` | PSet can't reach its server. | The server may have stopped, or the computer went to sleep. | Start PSet again, then try again. | `retry` | screen | errs |
 | `request.upload_cut` | The upload was cut off. |  |  |  | field | httpx |
-| `runner.incident_gone` | That problem is no longer there. | It was resolved, or what it was about was removed. |  |  | inline | runner |
+| `runner.incident_gone` | That error is no longer there. | It was resolved, or what it was about was removed. |  |  | inline | runner |
 | `settings.key_empty` | Paste your OpenRouter key first. |  |  |  | field | settings |
 | `settings.name_too_long` | Keep it under {max} characters. |  |  |  | field | settings |
 | `settings.test_failed` | Couldn't connect with that key. | PSet couldn't finish the test. | Try again in a minute. | `retry` | inline | settings |

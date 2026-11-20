@@ -96,7 +96,7 @@ func (s *Service) Detail(ctx context.Context, id string) (Detail, error) {
 		return Detail{}, err
 	}
 	if len(got.Sets) == 0 {
-		return Detail{}, errs.Gone.New("thing", "set")
+		return Detail{}, errs.Gone.New("thing", "assignment")
 	}
 	out := Detail{Set: got.Sets[0], Questions: []Question{}, Finds: []Find{}, Readings: []Reading{}}
 	rows, err := s.c.Store.DB.QueryContext(ctx, `SELECT id, seq, set_id, position, text, label, notes, done_at != '', revealed,

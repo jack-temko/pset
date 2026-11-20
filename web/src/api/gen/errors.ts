@@ -1116,7 +1116,7 @@ export const ERRORS: Record<ErrorId, CatalogEntry> = {
     owner: "httpx",
   },
   "runner.incident_gone": {
-    what: "That problem is no longer there.",
+    what: "That error is no longer there.",
     why: "It was resolved, or what it was about was removed.",
     scope: "inline",
     status: 404,
