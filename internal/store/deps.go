@@ -49,6 +49,7 @@ var Links = []Link{
 	{Child: change.ResourceQuestion, Parent: change.ResourceSet, Table: "questions", Column: "set_id"},
 	{Child: change.ResourceFind, Parent: change.ResourceQuestion, Table: "finds", Column: "question_id"},
 	{Child: change.ResourceReading, Parent: change.ResourceQuestion, Table: "readings", Column: "question_id"},
+	{Child: change.ResourceRead, Parent: change.ResourceCourse, Table: "reads", Column: "course_id"},
 	{Child: change.ResourceDocument, Parent: change.ResourceQuestion, Table: "documents", Column: "owner_id", KindColumn: "owner_kind"},
 	{Child: change.ResourceDocument, Parent: change.ResourceTurn, Table: "documents", Column: "owner_id", KindColumn: "owner_kind"},
 
@@ -56,6 +57,8 @@ var Links = []Link{
 	{Child: change.ResourceFind, Parent: change.ResourceFind, Table: "finds", Column: "earlier_id", Kind: Refers},
 	{Child: change.ResourceSet, Parent: change.ResourceMaterial, Table: "sets", Column: "sheet_id", Kind: Refers},
 	{Child: change.ResourceTurn, Parent: change.ResourceDocument, Table: "turns", Column: "answer_id", Kind: Refers},
+	{Child: change.ResourceRead, Parent: change.ResourceMaterial, Table: "reads", Column: "sheet_id", Kind: Refers},
+	{Child: change.ResourceRead, Parent: change.ResourceSet, Table: "reads", Column: "set_id", Kind: Refers},
 }
 
 // nameOf is each kind's table name.
@@ -221,13 +224,17 @@ type Count struct {
 	N    int
 }
 
+// uncounted are the kinds a removal's notice leaves out: a reading under
+// way is not something the student keeps, though it goes with its course.
+var uncounted = map[change.Resource]bool{change.ResourceRead: true}
+
 // Owned counts what the thing of kind k with the id owns directly and is not
 // removed on its own: what a removal takes with it, for its notice ("and its
 // 12 problems"). Kinds with none are left out.
 func (s *Store) Owned(ctx context.Context, k change.Resource, id string) ([]Count, error) {
 	var out []Count
 	for _, l := range Links {
-		if l.Kind != Owns || l.Parent != k || !removable(l.Child) {
+		if l.Kind != Owns || l.Parent != k || !removable(l.Child) || uncounted[l.Child] {
 			continue
 		}
 		q := fmt.Sprintf(`SELECT count(*) FROM %s WHERE %s = ? AND removed_at = ''`, l.Table, l.Column)

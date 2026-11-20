@@ -4,7 +4,7 @@
 
 Every error PSet can show. An id is stable; the words are read from the catalog when shown. How to add one, and how a chain of errors is composed, is in `design/backend.md`, Errors.
 
-166 entries.
+171 entries.
 
 | Id | What | Why | Fix | Action | Scope | Owner |
 |---|---|---|---|---|---|---|
@@ -134,7 +134,7 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `request.too_large` | That's too much to send in one request. | A single request is limited to {limit} MB. | Send it in smaller pieces. |  | inline | errs |
 | `request.unreachable` | PSet can't reach its server. | The server may have stopped, or the computer went to sleep. | Start PSet again, then try again. | `retry` | screen | errs |
 | `request.upload_cut` | The upload was cut off. |  |  |  | field | httpx |
-| `runner.incident_gone` | That problem is no longer there. | It was resolved, or what it was about was removed. |  |  | inline | runner |
+| `runner.incident_gone` | That error is no longer there. | It was resolved, or what it was about was removed. |  |  | inline | runner |
 | `settings.key_empty` | Paste your OpenRouter key first. |  |  |  | field | settings |
 | `settings.name_too_long` | Keep it under {max} characters. |  |  |  | field | settings |
 | `settings.test_failed` | Couldn't connect with that key. | PSet couldn't finish the test. | Try again in a minute. | `retry` | inline | settings |
@@ -169,7 +169,12 @@ Every error PSet can show. An id is stable; the words are read from the catalog 
 | `work.bad_reveal` | There's no help step called {stage}. |  |  |  | field | work |
 | `work.draft_too_long` | Keep each question under {max} characters. |  |  |  | field | work |
 | `work.no_drafts` | Write at least one question. |  |  |  | field | work |
+| `work.no_groups` | Pick at least one due date to add. |  |  |  | field | work |
+| `work.no_homework_found` | Didn't find any homework in it. | The model read it and found no problems to do. | If the homework is there, upload just the pages with it. |  | inline | work |
 | `work.note_too_long` | Keep each note under {max} characters. |  |  |  | field | work |
+| `work.nothing_to_add` | There's nothing left to add or change in those. |  |  |  | field | work |
+| `work.pdf_unreadable` | That PDF couldn't be read. | PSet couldn't get any text or pages out of it. | Upload a clearer copy of the sheet. |  | inline | work |
+| `work.reply_unreadable` | Couldn't make out the assignment's homework. | The model's answer wasn't in a form PSet could read. | Try again. | `retry` | inline | work |
 | `work.title_empty` | Give it a title. |  |  |  | field | work |
 | `work.title_too_long` | Keep the title under {max} characters. |  |  |  | field | work |
 | `work.too_many_drafts` | That's more than {max} questions at once. Add them in smaller batches. |  |  |  | field | work |

@@ -28,6 +28,9 @@ type Config struct {
 	Actions *action.Catalog
 	// Runner is nil when the service is built only to declare its actions.
 	Runner *runner.Runner
+	// Materials keeps a read's sheet; nil when no read is started (a test,
+	// the catalog generator).
+	Materials Materials
 	// Seconds is the time spent on each question (internal/study); nil
 	// leaves Seconds out.
 	Seconds func(ctx context.Context, ids []string) (map[string]int, error)
@@ -102,7 +105,7 @@ func New(c Config) *Service {
 		Try: func(sd action.Seed) QuestionReveal { return QuestionReveal{ID: sd.QuestionID, Reveal: RevealHint} },
 	})
 	action.Add(a, action.Def[QuestionMove]{
-		ID: "question.move", Name: "Move question", Undoable: true,
+		ID: "question.move", Name: "Move problem", Undoable: true,
 		Undone: "Moved {name} back.", Redone: "Moved {name} again.",
 		Run: s.move,
 		Try: func(sd action.Seed) QuestionMove { return QuestionMove{ID: sd.QuestionID, Position: 1} },
@@ -121,6 +124,7 @@ func New(c Config) *Service {
 		Run: s.removeQuestion,
 		Try: func(sd action.Seed) RemoveQuestion { return RemoveQuestion{ID: sd.QuestionID} },
 	})
+	s.declareReads()
 	return s
 }
 
@@ -186,7 +190,7 @@ func (s *Service) addSet(ctx context.Context, do *action.Do, in AddSet) error {
 // value.
 func (s *Service) updateSet(ctx context.Context, do *action.Do, id, column, value string) error {
 	return do.Write(ctx, change.ResourceSet, id, func(tx *sql.Tx) error {
-		if err := visible(ctx, tx, change.ResourceSet, id, "set"); err != nil {
+		if err := visible(ctx, tx, change.ResourceSet, id, "assignment"); err != nil {
 			return err
 		}
 		var cur string
@@ -197,7 +201,7 @@ func (s *Service) updateSet(ctx context.Context, do *action.Do, id, column, valu
 			return action.ErrUnchanged
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE sets SET `+column+` = ? WHERE id = ?`, value, id)
-		return action.One(res, err, "set")
+		return action.One(res, err, "assignment")
 	})
 }
 
@@ -221,7 +225,7 @@ func (s *Service) setDue(ctx context.Context, do *action.Do, in SetDue) error {
 // that moment if it is marked again; unmarking clears it.
 func (s *Service) turnIn(ctx context.Context, do *action.Do, in TurnIn) error {
 	return do.Write(ctx, change.ResourceSet, in.ID, func(tx *sql.Tx) error {
-		if err := visible(ctx, tx, change.ResourceSet, in.ID, "set"); err != nil {
+		if err := visible(ctx, tx, change.ResourceSet, in.ID, "assignment"); err != nil {
 			return err
 		}
 		var at string
@@ -236,17 +240,17 @@ func (s *Service) turnIn(ctx context.Context, do *action.Do, in TurnIn) error {
 			next = db.Now()
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE sets SET turned_in_at = ? WHERE id = ?`, next, in.ID)
-		return action.One(res, err, "set")
+		return action.One(res, err, "assignment")
 	})
 }
 
 func (s *Service) removeSet(ctx context.Context, do *action.Do, in RemoveSet) error {
 	return do.Write(ctx, change.ResourceSet, in.ID, func(tx *sql.Tx) error {
-		if err := visible(ctx, tx, change.ResourceSet, in.ID, "set"); err != nil {
+		if err := visible(ctx, tx, change.ResourceSet, in.ID, "assignment"); err != nil {
 			return err
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE sets SET removed_at = ? WHERE id = ?`, db.Now(), in.ID)
-		return action.One(res, err, "set")
+		return action.One(res, err, "assignment")
 	})
 }
 
@@ -327,63 +331,79 @@ func style(ctx context.Context, tx *sql.Tx, setID string) (probnum.Style, error)
 }
 
 func (s *Service) addQuestions(ctx context.Context, do *action.Do, in AddQuestions) error {
+	drafts, err := cleanDrafts(in.Drafts)
+	if err != nil {
+		return err
+	}
+	return do.Write(ctx, change.ResourceSet, in.SetID, func(tx *sql.Tx) error {
+		if err := visible(ctx, tx, change.ResourceSet, in.SetID, "assignment"); err != nil {
+			return err
+		}
+		return insertQuestions(ctx, tx, in.SetID, drafts)
+	})
+}
+
+// cleanDrafts is the drafts with text, each within the cap; at least one.
+func cleanDrafts(in []Draft) ([]Draft, error) {
 	var drafts []Draft
-	for _, d := range in.Drafts {
+	for _, d := range in {
 		if strings.TrimSpace(d.Text) == "" {
 			continue
 		}
 		if utf8.RuneCountInString(d.Text) > maxDraft {
-			return draftTooLong.New("max", strconv.Itoa(maxDraft)).OnField("drafts")
+			return nil, draftTooLong.New("max", strconv.Itoa(maxDraft)).OnField("drafts")
 		}
 		drafts = append(drafts, d)
 	}
 	if len(drafts) == 0 {
-		return noDrafts.New().OnField("drafts")
+		return nil, noDrafts.New().OnField("drafts")
 	}
-	return do.Write(ctx, change.ResourceSet, in.SetID, func(tx *sql.Tx) error {
-		if err := visible(ctx, tx, change.ResourceSet, in.SetID, "set"); err != nil {
-			return err
-		}
-		st, err := style(ctx, tx, in.SetID)
+	return drafts, nil
+}
+
+// insertQuestions adds drafts at the end of a set, inside a write: a
+// reference listing several problems one question each, in the textbook's
+// numbering, with the professor's notes it carries.
+func insertQuestions(ctx context.Context, tx *sql.Tx, setID string, drafts []Draft) error {
+	st, err := style(ctx, tx, setID)
+	if err != nil {
+		return err
+	}
+	// The cap is on the questions made, as the old homework kept it: one
+	// reference can list many problems.
+	var qs []split
+	for _, d := range drafts {
+		qs = append(qs, splitDraft(d, st)...)
+	}
+	if len(qs) > maxDrafts {
+		return tooManyDrafts.New("max", strconv.Itoa(maxDrafts)).OnField("drafts")
+	}
+	// After every row, removed ones too: a removal undone keeps its place,
+	// and a new one never lands on it.
+	var next int
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(position) + 1, 0) FROM questions WHERE set_id = ?`, setID).Scan(&next); err != nil {
+		return errs.Database.Wrap(err)
+	}
+	now := db.Now()
+	for _, q := range qs {
+		notes, err := json.Marshal(runLists(fitNotes(q.notes)))
 		if err != nil {
-			return err
+			return errs.Data.Wrap(err)
 		}
-		// The cap is on the questions made, as the old homework kept it: one
-		// reference can list many problems.
-		var qs []split
-		for _, d := range drafts {
-			qs = append(qs, splitDraft(d, st)...)
-		}
-		if len(qs) > maxDrafts {
-			return tooManyDrafts.New("max", strconv.Itoa(maxDrafts)).OnField("drafts")
-		}
-		// After every row, removed ones too: a removal undone keeps its
-		// place, and a new one never lands on it.
-		var next int
-		if err := tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(position) + 1, 0) FROM questions WHERE set_id = ?`, in.SetID).Scan(&next); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, set_id, position, text, label, notes, find, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, uuid.NewString(), setID, next, q.text, q.label, string(notes), q.find, now); err != nil {
 			return errs.Database.Wrap(err)
 		}
-		now := db.Now()
-		for _, q := range qs {
-			notes, err := json.Marshal(runLists(fitNotes(q.notes)))
-			if err != nil {
-				return errs.Data.Wrap(err)
-			}
-			if _, err := tx.ExecContext(ctx, `INSERT INTO questions (id, set_id, position, text, label, notes, find, created_at)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, uuid.NewString(), in.SetID, next, q.text, q.label, string(notes), q.find, now); err != nil {
-				return errs.Database.Wrap(err)
-			}
-			next++
-		}
-		return nil
-	})
+		next++
+	}
+	return nil
 }
 
 // updateQuestion writes a visible question's columns, by a function of its
 // current row; nil from fn is nothing to change.
 func (s *Service) updateQuestion(ctx context.Context, do *action.Do, id string, fn func(tx *sql.Tx) (string, []any, error)) error {
 	return do.Write(ctx, change.ResourceQuestion, id, func(tx *sql.Tx) error {
-		if err := visible(ctx, tx, change.ResourceQuestion, id, "question"); err != nil {
+		if err := visible(ctx, tx, change.ResourceQuestion, id, "problem"); err != nil {
 			return err
 		}
 		set, args, err := fn(tx)
@@ -394,7 +414,7 @@ func (s *Service) updateQuestion(ctx context.Context, do *action.Do, id string, 
 			return action.ErrUnchanged
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE questions SET `+set+` WHERE id = ?`, append(args, id)...)
-		return action.One(res, err, "question")
+		return action.One(res, err, "problem")
 	})
 }
 
@@ -468,7 +488,7 @@ func (s *Service) setNotes(ctx context.Context, do *action.Do, in QuestionNotes)
 // its number: undoing its removal puts it back about where it was.
 func (s *Service) move(ctx context.Context, do *action.Do, in QuestionMove) error {
 	return do.Write(ctx, change.ResourceQuestion, in.ID, func(tx *sql.Tx) error {
-		if err := visible(ctx, tx, change.ResourceQuestion, in.ID, "question"); err != nil {
+		if err := visible(ctx, tx, change.ResourceQuestion, in.ID, "problem"); err != nil {
 			return err
 		}
 		rows, err := tx.QueryContext(ctx, `SELECT id, position FROM questions WHERE removed_at = ''
@@ -516,10 +536,10 @@ func (s *Service) move(ctx context.Context, do *action.Do, in QuestionMove) erro
 
 func (s *Service) removeQuestion(ctx context.Context, do *action.Do, in RemoveQuestion) error {
 	return do.Write(ctx, change.ResourceQuestion, in.ID, func(tx *sql.Tx) error {
-		if err := visible(ctx, tx, change.ResourceQuestion, in.ID, "question"); err != nil {
+		if err := visible(ctx, tx, change.ResourceQuestion, in.ID, "problem"); err != nil {
 			return err
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE questions SET removed_at = ? WHERE id = ?`, db.Now(), in.ID)
-		return action.One(res, err, "question")
+		return action.One(res, err, "problem")
 	})
 }

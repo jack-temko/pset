@@ -59,4 +59,35 @@ var (
 		What:  "Keep it to {max} notes.",
 		Scope: errs.ScopeField,
 	})
+	pdfUnreadable = errs.Define(errs.Entry{
+		ID:   "work.pdf_unreadable",
+		What: "That PDF couldn't be read.",
+		Why:  "PSet couldn't get any text or pages out of it.",
+		Fix:  "Upload a clearer copy of the sheet.",
+	})
+	replyUnreadable = errs.Define(errs.Entry{
+		ID:     "work.reply_unreadable",
+		What:   "Couldn't make out the assignment's homework.",
+		Why:    "The model's answer wasn't in a form PSet could read.",
+		Fix:    "Try again.",
+		Action: errs.ActionRetry,
+	})
+	noHomeworkFound = errs.Define(errs.Entry{
+		ID:   "work.no_homework_found",
+		What: "Didn't find any homework in it.",
+		Why:  "The model read it and found no problems to do.",
+		Fix:  "If the homework is there, upload just the pages with it.",
+	})
+	noGroups = errs.Define(errs.Entry{
+		ID:    "work.no_groups",
+		Kind:  errs.KindYourInput,
+		What:  "Pick at least one due date to add.",
+		Scope: errs.ScopeField,
+	})
+	nothingToAdd = errs.Define(errs.Entry{
+		ID:    "work.nothing_to_add",
+		Kind:  errs.KindYourInput,
+		What:  "There's nothing left to add or change in those.",
+		Scope: errs.ScopeField,
+	})
 )

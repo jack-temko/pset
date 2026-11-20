@@ -412,7 +412,7 @@ func (r *Runner) Run(ctx context.Context) error {
 // dependency map: a step of a removed thing waits where it is, and carries
 // on if the removal is undone.
 var visible = store.VisibleSubject("s.subject_kind", "s.subject_id",
-	change.ResourceQuestion, change.ResourceSet, change.ResourceMaterial, change.ResourceTurn)
+	change.ResourceQuestion, change.ResourceSet, change.ResourceMaterial, change.ResourceTurn, change.ResourceRead)
 
 type candidate struct {
 	id, kind, subject, name string
@@ -877,7 +877,7 @@ func (r *Runner) Lacks(ctx context.Context, condition string, why error, fix str
 var IncidentGone = errs.Define(errs.Entry{
 	ID:     "runner.incident_gone",
 	Kind:   errs.KindCant,
-	What:   "That problem is no longer there.",
+	What:   "That error is no longer there.",
 	Why:    "It was resolved, or what it was about was removed.",
 	Status: http.StatusNotFound,
 })

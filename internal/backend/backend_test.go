@@ -31,7 +31,7 @@ func world(t *testing.T) (*store.Store, *action.Catalog, action.Seed) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { cleanup.Close(s.DB) })
-	seed := action.Seed{CourseID: "c1", MaterialID: "m1", IncidentID: "INC001", SetID: "s1", QuestionID: "q1"}
+	seed := action.Seed{CourseID: "c1", MaterialID: "m1", IncidentID: "INC001", SetID: "s1", QuestionID: "q1", ReadID: "rd1"}
 	if err := s.Write(context.Background(), change.ActorPSet, "", func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`INSERT INTO courses (id, name, created_at) VALUES (?, 'ECE 210', ?)`, seed.CourseID, db.Now()); err != nil {
 			return err
@@ -47,6 +47,10 @@ func world(t *testing.T) (*store.Store, *action.Catalog, action.Seed) {
 		if _, err := tx.Exec(`INSERT INTO questions (id, set_id, position, text, label, find, created_at) VALUES
 			(?, ?, 0, '3.1 #7', '3.1 #7', 1, ?), ('q2', ?, 1, '3.1 #9', '3.1 #9', 1, ?)`,
 			seed.QuestionID, seed.SetID, db.Now(), seed.SetID, db.Now()); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`INSERT INTO reads (id, course_id, source, sheet_id, result, created_at) VALUES (?, ?, 'ps5.pdf', ?, '{"title":"PS 5","groups":[]}', ?)`,
+			seed.ReadID, seed.CourseID, seed.MaterialID, db.Now()); err != nil {
 			return err
 		}
 		_, err := tx.Exec(`INSERT INTO incidents (id, error, kind, born, first_at, last_at) VALUES (?, '{"id":"internal.unexpected"}', 'ours', 'step', ?, ?)`,

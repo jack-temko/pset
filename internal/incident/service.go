@@ -52,7 +52,7 @@ func New(s *store.Store, c *action.Catalog, r *runner.Runner) *Service {
 // take back, so it writes nothing as the student.
 func (s *Service) tryAgain(ctx context.Context, _ *action.Do, in TryAgain) error {
 	if s.runner == nil {
-		return errs.Gone.New("thing", "incident")
+		return errs.Gone.New("thing", "error")
 	}
 	return s.runner.TryAgain(ctx, in.ID)
 }
