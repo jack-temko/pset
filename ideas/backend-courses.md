@@ -365,7 +365,8 @@ offers Undo only when the action's reply carries an `action`.
     "assignment" to students (the design's word rule). Needed: "assignment" in
     `ownerWord` and the names Undo says things by. An incident is named "the
     problem" ("Brought the problem back."), which reads as a homework problem:
-    "the error" fits what Settings calls them.
+    "the error" fits what Settings calls them. In review as #122 ("assignment" in
+    `ownerWord` and the palette names, "Brought the error back.").
 
 **9. Cut over.**
 
